@@ -139,6 +139,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3404. Display queue name on application page. (Ryu Kobayashi via jianhe)
 
+    YARN-2696. Queue sorting in CapacityScheduler should consider node label.
+    (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

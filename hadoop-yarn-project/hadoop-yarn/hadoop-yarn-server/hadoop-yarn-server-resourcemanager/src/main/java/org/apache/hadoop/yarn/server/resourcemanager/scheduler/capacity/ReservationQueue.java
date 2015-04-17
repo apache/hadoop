@@ -63,10 +63,9 @@ public class ReservationQueue extends LeafQueue {
           + " from " + newlyParsedQueue.getQueuePath());
     }
     super.reinitialize(newlyParsedQueue, clusterResource);
-    CSQueueUtils.updateQueueStatistics(
-        parent.schedulerContext.getResourceCalculator(), newlyParsedQueue,
-        parent, parent.schedulerContext.getClusterResource(),
-        parent.schedulerContext.getMinimumResourceCapability());
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        minimumAllocation, this, labelManager, null);
+
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
         parent.getMaxApplicationsForReservations(),

@@ -271,8 +271,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.acls = csContext.getConfiguration().getAcls(getQueuePath());
 
     // Update metrics
-    CSQueueUtils.updateQueueStatistics(
-        resourceCalculator, this, parent, clusterResource, minimumAllocation);
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        minimumAllocation, this, labelManager, null);
     
     // Check if labels of this queue is a subset of parent queue, only do this
     // when we not root
@@ -351,16 +351,16 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueUsage.incUsed(nodePartition, resource);
 
     ++numContainers;
-    CSQueueUtils.updateQueueStatistics(resourceCalculator, this, getParent(),
-        clusterResource, minimumAllocation);
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        minimumAllocation, this, labelManager, nodePartition);
   }
   
   protected synchronized void releaseResource(Resource clusterResource,
       Resource resource, String nodePartition) {
     queueUsage.decUsed(nodePartition, resource);
 
-    CSQueueUtils.updateQueueStatistics(resourceCalculator, this, getParent(),
-        clusterResource, minimumAllocation);
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        minimumAllocation, this, labelManager, nodePartition);
     --numContainers;
   }
   
