@@ -30,8 +30,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
-import com.google.common.collect.Sets;
-
 public class QueueCapacities {
   private static final String NL = CommonNodeLabelsManager.NO_LABEL;
   private static final float LABEL_DOESNT_EXIST_CAP = 0f;
@@ -250,6 +248,15 @@ public class QueueCapacities {
     try {
       readLock.lock();
       return this.capacitiesMap.toString();
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  public Set<String> getNodePartitionsSet() {
+    try {
+      readLock.lock();
+      return capacitiesMap.keySet();
     } finally {
       readLock.unlock();
     }

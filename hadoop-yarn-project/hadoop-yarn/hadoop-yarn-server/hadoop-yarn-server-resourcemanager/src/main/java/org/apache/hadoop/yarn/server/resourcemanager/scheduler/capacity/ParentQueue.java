@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -68,7 +69,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   protected final Set<CSQueue> childQueues;  
   private final boolean rootQueue;
-  final Comparator<CSQueue> queueComparator;
+  final Comparator<CSQueue> nonPartitionedQueueComparator;
+  final PartitionedQueueComparator partitionQueueComparator;
   volatile int numApplications;
   private final CapacitySchedulerContext scheduler;
 
@@ -79,7 +81,8 @@ public class ParentQueue extends AbstractCSQueue {
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
     this.scheduler = cs;
-    this.queueComparator = cs.getQueueComparator();
+    this.nonPartitionedQueueComparator = cs.getNonPartitionedQueueComparator();
+    this.partitionQueueComparator = cs.getPartitionedQueueComparator();
 
     this.rootQueue = (parent == null);
 
@@ -92,7 +95,7 @@ public class ParentQueue extends AbstractCSQueue {
           ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
     }
     
-    this.childQueues = new TreeSet<CSQueue>(queueComparator);
+    this.childQueues = new TreeSet<CSQueue>(nonPartitionedQueueComparator);
     
     setupQueueConfigs(cs.getClusterResource());
 
@@ -522,6 +525,17 @@ public class ParentQueue extends AbstractCSQueue {
     return new ResourceLimits(childLimit);
   }
   
+  private Iterator<CSQueue> sortAndGetChildrenAllocationIterator(FiCaSchedulerNode node) {
+    if (node.getPartition().equals(RMNodeLabelsManager.NO_LABEL)) {
+      return childQueues.iterator();
+    }
+
+    partitionQueueComparator.setPartitionToLookAt(node.getPartition());
+    List<CSQueue> childrenList = new ArrayList<>(childQueues);
+    Collections.sort(childrenList, partitionQueueComparator);
+    return childrenList.iterator();
+  }
+  
   private synchronized CSAssignment assignContainersToChildQueues(
       Resource cluster, FiCaSchedulerNode node, ResourceLimits limits,
       SchedulingMode schedulingMode) {
@@ -531,7 +545,8 @@ public class ParentQueue extends AbstractCSQueue {
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
-    for (Iterator<CSQueue> iter = childQueues.iterator(); iter.hasNext();) {
+    for (Iterator<CSQueue> iter = sortAndGetChildrenAllocationIterator(node); iter
+        .hasNext();) {
       CSQueue childQueue = iter.next();
       if(LOG.isDebugEnabled()) {
         LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
@@ -554,13 +569,17 @@ public class ParentQueue extends AbstractCSQueue {
       if (Resources.greaterThan(
               resourceCalculator, cluster, 
               assignment.getResource(), Resources.none())) {
-        // Remove and re-insert to sort
-        iter.remove();
-        LOG.info("Re-sorting assigned queue: " + childQueue.getQueuePath() + 
-            " stats: " + childQueue);
-        childQueues.add(childQueue);
-        if (LOG.isDebugEnabled()) {
-          printChildQueues();
+        // Only update childQueues when we doing non-partitioned node
+        // allocation.
+        if (RMNodeLabelsManager.NO_LABEL.equals(node.getPartition())) {
+          // Remove and re-insert to sort
+          iter.remove();
+          LOG.info("Re-sorting assigned queue: " + childQueue.getQueuePath()
+              + " stats: " + childQueue);
+          childQueues.add(childQueue);
+          if (LOG.isDebugEnabled()) {
+            printChildQueues();
+          }
         }
         break;
       }
@@ -647,9 +666,8 @@ public class ParentQueue extends AbstractCSQueue {
       childQueue.updateClusterResource(clusterResource, childLimits);
     }
     
-    // Update metrics
-    CSQueueUtils.updateQueueStatistics(
-        resourceCalculator, this, parent, clusterResource, minimumAllocation);
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        minimumAllocation, this, labelManager, null);
   }
   
   @Override
