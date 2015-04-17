@@ -593,7 +593,8 @@ public class TestYarnClient {
           "diagnostics",
           YarnApplicationAttemptState.FINISHED,
           ContainerId.newContainerId(
-              newApplicationReport.getCurrentApplicationAttemptId(), 1));
+                  newApplicationReport.getCurrentApplicationAttemptId(), 1), 0,
+              0);
       appAttempts.add(attempt);
       ApplicationAttemptReport attempt1 = ApplicationAttemptReport.newInstance(
           ApplicationAttemptId.newInstance(applicationId, 2),

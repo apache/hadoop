@@ -37,6 +37,8 @@ public class AppAttemptInfo {
   protected String diagnosticsInfo;
   protected YarnApplicationAttemptState appAttemptState;
   protected String amContainerId;
+  protected long startedTime;
+  protected long finishedTime;
 
   public AppAttemptInfo() {
     // JAXB needs this
@@ -53,6 +55,8 @@ public class AppAttemptInfo {
     if (appAttempt.getAMContainerId() != null) {
       amContainerId = appAttempt.getAMContainerId().toString();
     }
+    startedTime = appAttempt.getStartTime();
+    finishedTime = appAttempt.getFinishTime();
   }
 
   public String getAppAttemptId() {
@@ -85,6 +89,14 @@ public class AppAttemptInfo {
 
   public String getAmContainerId() {
     return amContainerId;
+  }
+
+  public long getStartedTime() {
+    return startedTime;
+  }
+
+  public long getFinishedTime() {
+    return finishedTime;
   }
 
 }

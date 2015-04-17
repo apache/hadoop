@@ -1906,7 +1906,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       attemptReport = ApplicationAttemptReport.newInstance(this
           .getAppAttemptId(), this.getHost(), this.getRpcPort(), this
           .getTrackingUrl(), this.getOriginalTrackingUrl(), this.getDiagnostics(),
-          YarnApplicationAttemptState .valueOf(this.getState().toString()), amId);
+              YarnApplicationAttemptState.valueOf(this.getState().toString()),
+              amId, this.startTime, this.finishTime);
     } finally {
       this.readLock.unlock();
     }
