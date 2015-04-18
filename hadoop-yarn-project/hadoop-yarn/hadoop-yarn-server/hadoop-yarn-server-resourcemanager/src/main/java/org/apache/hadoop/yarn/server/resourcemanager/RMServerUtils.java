@@ -90,11 +90,11 @@ public class RMServerUtils {
    * Utility method to validate a list resource requests, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
    */
-  public static void validateResourceRequests(List<ResourceRequest> ask,
+  public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
       Resource maximumResource, String queueName, YarnScheduler scheduler)
       throws InvalidResourceRequestException {
     for (ResourceRequest resReq : ask) {
-      SchedulerUtils.validateResourceRequest(resReq, maximumResource,
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maximumResource,
           queueName, scheduler);
     }
   }

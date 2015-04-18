@@ -1011,4 +1011,30 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
   }
+
+  /**
+   * Test validateAndCreateResourceRequest fails on recovery, app should ignore
+   * this Exception and continue
+   */
+  @Test (timeout = 30000)
+  public void testAppFailToValidateResourceRequestOnRecovery() throws Exception{
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app1 = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // Change the config so that validateAndCreateResourceRequest throws
+    // exception on recovery
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 50);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 100);
+
+    rm2 = new MockRM(conf, memStore);
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    rm2.start();
+  }
 }
