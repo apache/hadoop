@@ -224,6 +224,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3021. YARN's delegation-token handling disallows certain trust setups
     to operate properly over DistCp. (Yongjun Zhang via jianhe)
 
+    YARN-3493. RM fails to come up with error "Failed to load/recover state" 
+    when mem settings are changed. (Jian He via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
