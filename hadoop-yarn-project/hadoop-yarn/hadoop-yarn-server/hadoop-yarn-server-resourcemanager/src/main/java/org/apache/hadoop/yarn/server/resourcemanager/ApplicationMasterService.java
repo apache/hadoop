@@ -298,32 +298,35 @@ public class ApplicationMasterService extends AbstractService implements
 
       // For work-preserving AM restart, retrieve previous attempts' containers
       // and corresponding NM tokens.
-      List<Container> transferredContainers =
-          ((AbstractYarnScheduler) rScheduler)
+      if (app.getApplicationSubmissionContext()
+          .getKeepContainersAcrossApplicationAttempts()) {
+        List<Container> transferredContainers = ((AbstractYarnScheduler) rScheduler)
             .getTransferredContainers(applicationAttemptId);
-      if (!transferredContainers.isEmpty()) {
-        response.setContainersFromPreviousAttempts(transferredContainers);
-        List<NMToken> nmTokens = new ArrayList<NMToken>();
-        for (Container container : transferredContainers) {
-          try {
-            NMToken token = rmContext.getNMTokenSecretManager()
-                .createAndGetNMToken(app.getUser(), applicationAttemptId,
-                    container);
-            if (null != token) {
-              nmTokens.add(token);
-            }
-          } catch (IllegalArgumentException e) {
-            // if it's a DNS issue, throw UnknowHostException directly and that
-            // will be automatically retried by RMProxy in RPC layer.
-            if (e.getCause() instanceof UnknownHostException) {
-              throw (UnknownHostException) e.getCause();
+        if (!transferredContainers.isEmpty()) {
+          response.setContainersFromPreviousAttempts(transferredContainers);
+          List<NMToken> nmTokens = new ArrayList<NMToken>();
+          for (Container container : transferredContainers) {
+            try {
+              NMToken token = rmContext.getNMTokenSecretManager()
+                  .createAndGetNMToken(app.getUser(), applicationAttemptId,
+                      container);
+              if (null != token) {
+                nmTokens.add(token);
+              }
+            } catch (IllegalArgumentException e) {
+              // if it's a DNS issue, throw UnknowHostException directly and
+              // that
+              // will be automatically retried by RMProxy in RPC layer.
+              if (e.getCause() instanceof UnknownHostException) {
+                throw (UnknownHostException) e.getCause();
+              }
             }
           }
+          response.setNMTokensFromPreviousAttempts(nmTokens);
+          LOG.info("Application " + appID + " retrieved "
+              + transferredContainers.size() + " containers from previous"
+              + " attempts and " + nmTokens.size() + " NM tokens.");
         }
-        response.setNMTokensFromPreviousAttempts(nmTokens);
-        LOG.info("Application " + appID + " retrieved "
-            + transferredContainers.size() + " containers from previous"
-            + " attempts and " + nmTokens.size() + " NM tokens.");
       }
 
       response.setSchedulerResourceTypes(rScheduler
