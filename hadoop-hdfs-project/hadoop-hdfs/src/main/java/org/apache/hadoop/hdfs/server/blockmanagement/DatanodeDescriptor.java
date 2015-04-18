@@ -32,8 +32,8 @@ import java.util.Set;
 import java.util.Arrays;
 
 import com.google.common.annotations.VisibleForTesting;
-
 import com.google.common.collect.ImmutableList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -96,34 +97,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
-    }
-  }
-
-  /** Block and targets pair */
-  @InterfaceAudience.Private
-  @InterfaceStability.Evolving
-  public static class BlockECRecoveryInfo {
-    public final ExtendedBlock block;
-    public final DatanodeDescriptor[] sources;
-    public final DatanodeStorageInfo[] targets;
-    public final short[] liveBlockIndices;
-
-    BlockECRecoveryInfo(ExtendedBlock block, DatanodeDescriptor[] sources,
-        DatanodeStorageInfo[] targets, short[] liveBlockIndices) {
-      this.block = block;
-      this.sources = sources;
-      this.targets = targets;
-      this.liveBlockIndices = liveBlockIndices;
-    }
-
-    @Override
-    public String toString() {
-      return new StringBuilder().append("BlockECRecoveryInfo(\n  ").
-          append("Recovering ").append(block).
-          append(" From: ").append(Arrays.asList(sources)).
-          append(" To: ").append(Arrays.asList(targets)).append(")\n").
-          append(" Block Indices: ").append(Arrays.asList(liveBlockIndices)).
-          toString();
     }
   }
 

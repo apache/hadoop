@@ -21,6 +21,7 @@ option java_outer_classname = "ErasureCodingProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
+import "hdfs.proto";
 
 /**
  * ECSchema options entry
@@ -86,4 +87,16 @@ message GetECZoneInfoRequestProto {
 
 message GetECZoneInfoResponseProto {
   optional ECZoneInfoProto ECZoneInfo = 1;
+}
+
+/**
+ * Block erasure coding recovery info
+ */
+message BlockECRecoveryInfoProto {
+  required ExtendedBlockProto block = 1;
+  required DatanodeInfosProto sourceDnInfos = 2;
+  required DatanodeInfosProto targetDnInfos = 3;
+  required StorageUuidsProto targetStorageUuids = 4;
+  required StorageTypesProto targetStorageTypes = 5;
+  repeated uint32 liveBlockIndices = 6;
 }

@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -115,10 +115,10 @@ public class TestRecoverStripedBlocks {
         last.getNumberOfBlocksToBeErasureCoded());
     List<BlockECRecoveryInfo> recovery = last.getErasureCodeCommand(numBlocks);
     for (BlockECRecoveryInfo info : recovery) {
-      assertEquals(1, info.targets.length);
-      assertEquals(last, info.targets[0].getDatanodeDescriptor());
-      assertEquals(GROUP_SIZE - 1, info.sources.length);
-      assertEquals(GROUP_SIZE - 1, info.liveBlockIndices.length);
+      assertEquals(1, info.getTargetDnInfos().length);
+      assertEquals(last, info.getTargetDnInfos()[0]);
+      assertEquals(GROUP_SIZE - 1, info.getSourceDnInfos().length);
+      assertEquals(GROUP_SIZE - 1, info.getLiveBlockIndices().length);
     }
   }
 }

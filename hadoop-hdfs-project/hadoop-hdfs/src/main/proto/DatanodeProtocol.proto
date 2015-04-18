@@ -33,6 +33,7 @@ package hadoop.hdfs.datanode;
 
 import "HAServiceProtocol.proto";
 import "hdfs.proto";
+import "erasurecoding.proto";
 
 /**
  * Information to identify a datanode to a namenode
@@ -142,6 +143,13 @@ message KeyUpdateCommandProto {
  */
 message RegisterCommandProto {
   // void
+}
+
+/**
+ * Block Erasure coding recovery command
+ */
+message BlockECRecoveryCommandProto {
+  repeated BlockECRecoveryInfoProto blockECRecoveryinfo = 1;
 }
 
 /**

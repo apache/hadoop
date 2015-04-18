@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +101,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTyp
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
+import org.apache.hadoop.hdfs.protocol.proto.*;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
@@ -121,6 +122,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmI
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
@@ -132,11 +134,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDele
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaOptionEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECZoneInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
@@ -184,7 +186,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StripedBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.InotifyProtos;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
@@ -204,8 +205,10 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -3149,5 +3152,133 @@ public class PBHelper {
   public static ECZoneInfo convertECZoneInfo(ECZoneInfoProto ecZoneInfoProto) {
     return new ECZoneInfo(ecZoneInfoProto.getDir(),
         convertECSchema(ecZoneInfoProto.getSchema()));
+  }
+  
+  public static BlockECRecoveryInfo convertBlockECRecoveryInfo(
+      BlockECRecoveryInfoProto blockEcRecoveryInfoProto) {
+    ExtendedBlockProto blockProto = blockEcRecoveryInfoProto.getBlock();
+    ExtendedBlock block = convert(blockProto);
+
+    DatanodeInfosProto sourceDnInfosProto = blockEcRecoveryInfoProto
+        .getSourceDnInfos();
+    DatanodeInfo[] sourceDnInfos = convert(sourceDnInfosProto);
+
+    DatanodeInfosProto targetDnInfosProto = blockEcRecoveryInfoProto
+        .getTargetDnInfos();
+    DatanodeInfo[] targetDnInfos = convert(targetDnInfosProto);
+
+    StorageUuidsProto targetStorageUuidsProto = blockEcRecoveryInfoProto
+        .getTargetStorageUuids();
+    String[] targetStorageUuids = convert(targetStorageUuidsProto);
+
+    StorageTypesProto targetStorageTypesProto = blockEcRecoveryInfoProto
+        .getTargetStorageTypes();
+    StorageType[] convertStorageTypes = convertStorageTypes(
+        targetStorageTypesProto.getStorageTypesList(), targetStorageTypesProto
+            .getStorageTypesList().size());
+
+    List<Integer> liveBlockIndicesList = blockEcRecoveryInfoProto
+        .getLiveBlockIndicesList();
+    short[] liveBlkIndices = new short[liveBlockIndicesList.size()];
+    for (int i = 0; i < liveBlockIndicesList.size(); i++) {
+      liveBlkIndices[i] = liveBlockIndicesList.get(i).shortValue();
+    }
+
+    return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
+        targetStorageUuids, convertStorageTypes, liveBlkIndices);
+  }
+
+  public static BlockECRecoveryInfoProto convertBlockECRecoveryInfo(
+      BlockECRecoveryInfo blockEcRecoveryInfo) {
+    BlockECRecoveryInfoProto.Builder builder = BlockECRecoveryInfoProto
+        .newBuilder();
+    builder.setBlock(convert(blockEcRecoveryInfo.getExtendedBlock()));
+
+    DatanodeInfo[] sourceDnInfos = blockEcRecoveryInfo.getSourceDnInfos();
+    builder.setSourceDnInfos(convertToDnInfosProto(sourceDnInfos));
+
+    DatanodeInfo[] targetDnInfos = blockEcRecoveryInfo.getTargetDnInfos();
+    builder.setTargetDnInfos(convertToDnInfosProto(targetDnInfos));
+
+    String[] targetStorageIDs = blockEcRecoveryInfo.getTargetStorageIDs();
+    builder.setTargetStorageUuids(convertStorageIDs(targetStorageIDs));
+
+    StorageType[] targetStorageTypes = blockEcRecoveryInfo
+        .getTargetStorageTypes();
+    builder.setTargetStorageTypes(convertStorageTypesProto(targetStorageTypes));
+
+    short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
+    builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
+
+    return builder.build();
+  }
+
+  private static List<Integer> convertIntArray(short[] liveBlockIndices) {
+    List<Integer> liveBlockIndicesList = new ArrayList<Integer>();
+    for (short s : liveBlockIndices) {
+      liveBlockIndicesList.add((int) s);
+    }
+    return liveBlockIndicesList;
+  }
+
+  private static StorageTypesProto convertStorageTypesProto(
+      StorageType[] targetStorageTypes) {
+    StorageTypesProto.Builder builder = StorageTypesProto.newBuilder();
+    for (StorageType storageType : targetStorageTypes) {
+      builder.addStorageTypes(convertStorageType(storageType));
+    }
+    return builder.build();
+  }
+
+  private static StorageUuidsProto convertStorageIDs(String[] targetStorageIDs) {
+    StorageUuidsProto.Builder builder = StorageUuidsProto.newBuilder();
+    for (String storageUuid : targetStorageIDs) {
+      builder.addStorageUuids(storageUuid);
+    }
+    return builder.build();
+  }
+
+  private static DatanodeInfosProto convertToDnInfosProto(DatanodeInfo[] dnInfos) {
+    DatanodeInfosProto.Builder builder = DatanodeInfosProto.newBuilder();
+    for (DatanodeInfo datanodeInfo : dnInfos) {
+      builder.addDatanodes(convert(datanodeInfo));
+    }
+    return builder.build();
+  }
+
+  private static String[] convert(StorageUuidsProto targetStorageUuidsProto) {
+    List<String> storageUuidsList = targetStorageUuidsProto
+        .getStorageUuidsList();
+    String[] storageUuids = new String[storageUuidsList.size()];
+    for (int i = 0; i < storageUuidsList.size(); i++) {
+      storageUuids[i] = storageUuidsList.get(i);
+    }
+    return storageUuids;
+  }
+  
+  public static BlockECRecoveryCommandProto convert(
+      BlockECRecoveryCommand blkECRecoveryCmd) {
+    BlockECRecoveryCommandProto.Builder builder = BlockECRecoveryCommandProto
+        .newBuilder();
+    Collection<BlockECRecoveryInfo> blockECRecoveryInfos = blkECRecoveryCmd
+        .getECTasks();
+    for (BlockECRecoveryInfo blkECRecoveryInfo : blockECRecoveryInfos) {
+      builder
+          .addBlockECRecoveryinfo(convertBlockECRecoveryInfo(blkECRecoveryInfo));
+    }
+    return builder.build();
+  }
+  
+  public static BlockECRecoveryCommand convert(
+      BlockECRecoveryCommandProto blkECRecoveryCmdProto) {
+    Collection<BlockECRecoveryInfo> blkECRecoveryInfos = new ArrayList<BlockECRecoveryInfo>();
+    List<BlockECRecoveryInfoProto> blockECRecoveryinfoList = blkECRecoveryCmdProto
+        .getBlockECRecoveryinfoList();
+    for (BlockECRecoveryInfoProto blockECRecoveryInfoProto : blockECRecoveryinfoList) {
+      blkECRecoveryInfos
+          .add(convertBlockECRecoveryInfo(blockECRecoveryInfoProto));
+    }
+    return new BlockECRecoveryCommand(DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY,
+        blkECRecoveryInfos);
   }
 }

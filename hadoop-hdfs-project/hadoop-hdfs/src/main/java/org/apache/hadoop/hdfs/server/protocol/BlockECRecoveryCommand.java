@@ -18,10 +18,15 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 import com.google.common.base.Joiner;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockECRecoveryInfo;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -59,5 +64,78 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     Joiner.on("\n  ").appendTo(sb, ecTasks);
     sb.append("\n)");
     return sb.toString();
+  }
+
+  /** Block and targets pair */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  public static class BlockECRecoveryInfo {
+    private final ExtendedBlock block;
+    private final DatanodeInfo[] sources;
+    private DatanodeInfo[] targets;
+    private String[] targetStorageIDs;
+    private StorageType[] targetStorageTypes;
+    private final short[] liveBlockIndices;
+
+    public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
+        DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices) {
+      this.block = block;
+      this.sources = sources;
+      this.targets = DatanodeStorageInfo.toDatanodeInfos(targetDnStorageInfo);
+      this.targetStorageIDs = DatanodeStorageInfo
+          .toStorageIDs(targetDnStorageInfo);
+      this.targetStorageTypes = DatanodeStorageInfo
+          .toStorageTypes(targetDnStorageInfo);
+      this.liveBlockIndices = liveBlockIndices;
+    }
+    
+    public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
+        DatanodeInfo[] targets, String[] targetStorageIDs,
+        StorageType[] targetStorageTypes, short[] liveBlockIndices) {
+      this.block = block;
+      this.sources = sources;
+      this.targets = targets;
+      this.targetStorageIDs = targetStorageIDs;
+      this.targetStorageTypes = targetStorageTypes;
+      this.liveBlockIndices = liveBlockIndices;
+    }
+
+    public ExtendedBlock getExtendedBlock() {
+      return block;
+    }
+
+    public DatanodeInfo[] getSourceDnInfos() {
+      return sources;
+    }
+
+    public DatanodeInfo[] getTargetDnInfos() {
+      return targets;
+    }
+
+    public String[] getTargetStorageIDs() {
+      return targetStorageIDs;
+    }
+    
+    public StorageType[] getTargetStorageTypes() {
+      return targetStorageTypes;
+    }
+
+    public short[] getLiveBlockIndices() {
+      return liveBlockIndices;
+    }
+
+    @Override
+    public String toString() {
+      return new StringBuilder().append("BlockECRecoveryInfo(\n  ")
+          .append("Recovering ").append(block).append(" From: ")
+          .append(Arrays.asList(sources)).append(" To: [")
+          .append(Arrays.asList(targets)).append(")\n")
+          .append(" Block Indices: ").append(Arrays.asList(liveBlockIndices))
+          .toString();
+    }
+  }
+
+  public Collection<BlockECRecoveryInfo> getECTasks() {
+    return this.ecTasks;
   }
 }
