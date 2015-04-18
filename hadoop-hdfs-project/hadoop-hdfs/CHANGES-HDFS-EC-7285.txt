@@ -87,3 +87,6 @@
     startup. (Hui Zheng via szetszwo)
 
     HDFS-8167. BlockManager.addBlockCollectionWithCheck should check if the block is a striped block. (Hui Zheng via zhz).
+
+    HDFS-8146. Protobuf changes for BlockECRecoveryCommand and its fields for
+    making it ready for transfer to DN (Uma Maheswara Rao G via vinayakumarb)
