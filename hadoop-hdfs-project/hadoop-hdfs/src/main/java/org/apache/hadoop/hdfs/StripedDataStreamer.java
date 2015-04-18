@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -37,6 +36,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_DATA_BLOCKS;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_PARITY_BLOCKS;
+
 /****************************************************************************
  * The StripedDataStreamer class is used by {@link DFSStripedOutputStream}.
  * There are two kinds of StripedDataStreamer, leading streamer and ordinary
@@ -47,9 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
  ****************************************************************************/
 public class StripedDataStreamer extends DataStreamer {
   private final short index;
-  private final  List<BlockingQueue<LocatedBlock>> stripedBlocks;
-  private static short blockGroupSize = HdfsConstants.NUM_DATA_BLOCKS
-      + HdfsConstants.NUM_PARITY_BLOCKS;
+  private final List<BlockingQueue<LocatedBlock>> stripedBlocks;
   private boolean hasCommittedBlock = false;
 
   StripedDataStreamer(HdfsFileStatus stat, ExtendedBlock block,
@@ -88,53 +89,25 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   private boolean isParityStreamer() {
-    return index >= HdfsConstants.NUM_DATA_BLOCKS;
+    return index >= NUM_DATA_BLOCKS;
   }
 
   @Override
   protected void endBlock() {
     if (!isLeadingStreamer() && !isParityStreamer()) {
-      //before retrieving a new block, transfer the finished block to
-      //leading streamer
+      // before retrieving a new block, transfer the finished block to
+      // leading streamer
       LocatedBlock finishedBlock = new LocatedBlock(
           new ExtendedBlock(block.getBlockPoolId(), block.getBlockId(),
-                       block.getNumBytes(),block.getGenerationStamp()), null);
-      try{
+              block.getNumBytes(), block.getGenerationStamp()), null);
+      try {
         boolean offSuccess = stripedBlocks.get(0).offer(finishedBlock, 30,
             TimeUnit.SECONDS);
-      }catch (InterruptedException ie) {
-      //TODO: Handle InterruptedException (HDFS-7786)
+      } catch (InterruptedException ie) {
+        // TODO: Handle InterruptedException (HDFS-7786)
       }
     }
     super.endBlock();
-  }
-
-  /**
-   * This function is called after the streamer is closed.
-   */
-  void countTailingBlockGroupBytes () throws IOException {
-    if (isLeadingStreamer()) {
-      //when committing a block group, leading streamer has to adjust
-      // {@link block} including the size of block group
-      for (int i = 1; i < HdfsConstants.NUM_DATA_BLOCKS; i++) {
-        try {
-          LocatedBlock finishedLocatedBlock = stripedBlocks.get(0).poll(30,
-              TimeUnit.SECONDS);
-          if (finishedLocatedBlock == null) {
-            throw new IOException("Fail to get finished LocatedBlock " +
-                "from streamer, i=" + i);
-          }
-          ExtendedBlock finishedBlock = finishedLocatedBlock.getBlock();
-          long bytes = finishedBlock == null ? 0 : finishedBlock.getNumBytes();
-          if (block != null) {
-            block.setNumBytes(block.getNumBytes() + bytes);
-          }
-        } catch (InterruptedException ie) {
-          DFSClient.LOG.info("InterruptedException received when " +
-              "putting a block to stripeBlocks, ie = " + ie);
-        }
-      }
-    }
   }
 
   @Override
@@ -142,12 +115,12 @@ public class StripedDataStreamer extends DataStreamer {
       throws IOException {
     LocatedBlock lb = null;
     if (isLeadingStreamer()) {
-      if(hasCommittedBlock) {
+      if (hasCommittedBlock) {
         /**
          * when committing a block group, leading streamer has to adjust
          * {@link block} to include the size of block group
          */
-        for (int i = 1; i < HdfsConstants.NUM_DATA_BLOCKS; i++) {
+        for (int i = 1; i < NUM_DATA_BLOCKS; i++) {
           try {
             LocatedBlock finishedLocatedBlock = stripedBlocks.get(0).poll(30,
                 TimeUnit.SECONDS);
@@ -157,7 +130,7 @@ public class StripedDataStreamer extends DataStreamer {
             }
             ExtendedBlock finishedBlock = finishedLocatedBlock.getBlock();
             long bytes = finishedBlock == null ? 0 : finishedBlock.getNumBytes();
-            if(block != null) {
+            if (block != null) {
               block.setNumBytes(block.getNumBytes() + bytes);
             }
           } catch (InterruptedException ie) {
@@ -171,14 +144,13 @@ public class StripedDataStreamer extends DataStreamer {
       hasCommittedBlock = true;
       assert lb instanceof LocatedStripedBlock;
       DFSClient.LOG.debug("Leading streamer obtained bg " + lb);
-      LocatedBlock[] blocks = StripedBlockUtil.
-          parseStripedBlockGroup((LocatedStripedBlock) lb,
-              HdfsConstants.BLOCK_STRIPED_CELL_SIZE, HdfsConstants.NUM_DATA_BLOCKS,
-              HdfsConstants.NUM_PARITY_BLOCKS
-          );
-      assert blocks.length == blockGroupSize :
+      LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
+          (LocatedStripedBlock) lb, BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS,
+          NUM_PARITY_BLOCKS);
+      assert blocks.length == (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) :
           "Fail to get block group from namenode: blockGroupSize: " +
-              blockGroupSize + ", blocks.length: " + blocks.length;
+              (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) + ", blocks.length: " +
+              blocks.length;
       lb = blocks[0];
       for (int i = 1; i < blocks.length; i++) {
         try {
@@ -199,7 +171,7 @@ public class StripedDataStreamer extends DataStreamer {
       }
     } else {
       try {
-        //wait 90 seconds to get a block from the queue
+        // wait 90 seconds to get a block from the queue
         lb = stripedBlocks.get(index).poll(90, TimeUnit.SECONDS);
       } catch (InterruptedException ie) {
         DFSClient.LOG.info("InterruptedException received when retrieving " +

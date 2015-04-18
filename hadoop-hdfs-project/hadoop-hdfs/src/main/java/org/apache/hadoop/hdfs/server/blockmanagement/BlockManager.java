@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -598,8 +599,20 @@ public class BlockManager {
   }
 
   public short getMinStorageNum(BlockInfo block) {
-    return block.isStriped() ?
-        ((BlockInfoStriped) block).getDataBlockNum() : minReplication;
+    if (block.isStriped()) {
+      final BlockInfoStriped sblock = (BlockInfoStriped) block;
+      short dataBlockNum = sblock.getDataBlockNum();
+      if (sblock.isComplete() ||
+          sblock.getBlockUCState() == BlockUCState.COMMITTED) {
+        // if the sblock is committed/completed and its length is less than a
+        // full stripe, the minimum storage number needs to be adjusted
+        dataBlockNum = (short) Math.min(dataBlockNum,
+            (sblock.getNumBytes() - 1) / HdfsConstants.BLOCK_STRIPED_CELL_SIZE + 1);
+      }
+      return dataBlockNum;
+    } else {
+      return minReplication;
+    }
   }
 
   public boolean hasMinStorage(BlockInfo block) {
