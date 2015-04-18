@@ -203,8 +203,27 @@ public class BlockInfoStriped extends BlockInfo {
     // In case striped blocks, total usage by this striped blocks should
     // be the total of data blocks and parity blocks because
     // `getNumBytes` is the total of actual data block size.
-    return ((getNumBytes() - 1) / (dataBlockNum * BLOCK_STRIPED_CELL_SIZE) + 1)
-        * BLOCK_STRIPED_CELL_SIZE * parityBlockNum + getNumBytes();
+
+    // 0. Calculate the total bytes per stripes <Num Bytes per Stripes>
+    long numBytesPerStripe = dataBlockNum * BLOCK_STRIPED_CELL_SIZE;
+    if (getNumBytes() % numBytesPerStripe == 0) {
+      return getNumBytes() / dataBlockNum * getTotalBlockNum();
+    }
+    // 1. Calculate the number of stripes in this block group. <Num Stripes>
+    long numStripes = (getNumBytes() - 1) / numBytesPerStripe + 1;
+    // 2. Calculate the parity cell length in the last stripe. Note that the
+    //    size of parity cells should equal the size of the first cell, if it
+    //    is not full. <Last Stripe Parity Cell Length>
+    long lastStripeParityCellLen = Math.min(getNumBytes() % numBytesPerStripe,
+        BLOCK_STRIPED_CELL_SIZE);
+    // 3. Total consumed space is the total of
+    //     - The total of the full cells of data blocks and parity blocks.
+    //     - The remaining of data block which does not make a stripe.
+    //     - The last parity block cells. These size should be same
+    //       to the first cell in this stripe.
+    return getTotalBlockNum() * (BLOCK_STRIPED_CELL_SIZE * (numStripes - 1))
+        + getNumBytes() % numBytesPerStripe
+        + lastStripeParityCellLen * parityBlockNum;
   }
 
   @Override
