@@ -190,6 +190,8 @@ Release 2.7.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
+    calling getQueue (Jason Lowe via wangda)
 
     YARN-3462. Patches applied for YARN-2424 are inconsistent between
     trunk and branch-2. (Naganarasimha G R via harsh)

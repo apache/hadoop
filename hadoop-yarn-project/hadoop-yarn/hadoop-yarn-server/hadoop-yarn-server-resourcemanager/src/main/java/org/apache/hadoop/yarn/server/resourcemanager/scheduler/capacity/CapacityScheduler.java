@@ -642,7 +642,7 @@ public class CapacityScheduler extends
     return queue;
   }
 
-  public synchronized CSQueue getQueue(String queueName) {
+  public CSQueue getQueue(String queueName) {
     if (queueName == null) {
       return null;
     }
@@ -940,11 +940,7 @@ public class CapacityScheduler extends
       boolean includeChildQueues, boolean recursive) 
   throws IOException {
     CSQueue queue = null;
-
-    synchronized (this) {
-      queue = this.queues.get(queueName); 
-    }
-
+    queue = this.queues.get(queueName);
     if (queue == null) {
       throw new IOException("Unknown queue: " + queueName);
     }
