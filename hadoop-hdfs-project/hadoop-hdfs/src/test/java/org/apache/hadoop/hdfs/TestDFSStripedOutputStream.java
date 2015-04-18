@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -20,6 +21,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.After;
@@ -42,8 +45,8 @@ public class TestDFSStripedOutputStream {
   private DistributedFileSystem fs;
   private final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   private final int stripesPerBlock = 4;
-  int blockSize = cellSize * stripesPerBlock;
-  private int mod = 29;
+  private final int blockSize = cellSize * stripesPerBlock;
+  private final RawErasureEncoder encoder = new RSRawEncoder();
 
   @Before
   public void setup() throws IOException {
@@ -53,6 +56,7 @@ public class TestDFSStripedOutputStream {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
     fs = cluster.getFileSystem();
+    encoder.initialize(dataBlocks, parityBlocks, cellSize);
   }
 
   @After
@@ -144,60 +148,27 @@ public class TestDFSStripedOutputStream {
   }
 
   private byte getByte(long pos) {
+    int mod = 29;
     return (byte) (pos % mod + 1);
-  }
-
-  private void testOneFileUsingDFSStripedInputStream(String src, int writeBytes)
-      throws IOException {
-    Path TestPath = new Path(src);
-    byte[] bytes = generateBytes(writeBytes);
-    DFSTestUtil.writeFile(fs, TestPath, new String(bytes));
-
-    //check file length
-    FileStatus status = fs.getFileStatus(TestPath);
-    long fileLength = status.getLen();
-    if (fileLength != writeBytes) {
-      Assert.fail("File Length error: expect=" + writeBytes
-          + ", actual=" + fileLength);
-    }
-
-    DFSStripedInputStream dis = new DFSStripedInputStream(
-        fs.getClient(), src, true);
-    byte[] buf = new byte[writeBytes + 100];
-    int readLen = dis.read(0, buf, 0, buf.length);
-    readLen = readLen >= 0 ? readLen : 0;
-    if (readLen != writeBytes) {
-      Assert.fail("The length of file is not correct.");
-    }
-
-    for (int i = 0; i < writeBytes; i++) {
-      if (getByte(i) != buf[i]) {
-        Assert.fail("Byte at i = " + i + " is wrongly written.");
-      }
-    }
   }
 
   private void testOneFile(String src, int writeBytes)
       throws IOException {
-    Path TestPath = new Path(src);
+    Path testPath = new Path(src);
 
-    int allBlocks = dataBlocks + parityBlocks;
     byte[] bytes = generateBytes(writeBytes);
-    DFSTestUtil.writeFile(fs, TestPath, new String(bytes));
+    DFSTestUtil.writeFile(fs, testPath, new String(bytes));
 
-    //check file length
-    FileStatus status = fs.getFileStatus(TestPath);
+    // check file length
+    FileStatus status = fs.getFileStatus(testPath);
     long fileLength = status.getLen();
-    if (fileLength != writeBytes) {
-      Assert.fail("File Length error: expect=" + writeBytes
-          + ", actual=" + fileLength);
-    }
+    Assert.assertEquals(writeBytes, fileLength);
 
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
     LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0L);
 
     for (LocatedBlock firstBlock : lbs.getLocatedBlocks()) {
-      assert firstBlock instanceof LocatedStripedBlock;
+      Assert.assertTrue(firstBlock instanceof LocatedStripedBlock);
       LocatedBlock[] blocks = StripedBlockUtil.
           parseStripedBlockGroup((LocatedStripedBlock) firstBlock,
               cellSize, dataBlocks, parityBlocks);
@@ -205,15 +176,14 @@ public class TestDFSStripedOutputStream {
       blockGroupList.add(oneGroup);
     }
 
-    //test each block group
+    // test each block group
     for (int group = 0; group < blockGroupList.size(); group++) {
       //get the data of this block
       List<LocatedBlock> blockList = blockGroupList.get(group);
       byte[][] dataBlockBytes = new byte[dataBlocks][];
-      byte[][] parityBlockBytes = new byte[allBlocks - dataBlocks][];
+      byte[][] parityBlockBytes = new byte[parityBlocks][];
 
-
-      //for each block, use BlockReader to read data
+      // for each block, use BlockReader to read data
       for (int i = 0; i < blockList.size(); i++) {
         LocatedBlock lblock = blockList.get(i);
         if (lblock == null) {
@@ -269,19 +239,20 @@ public class TestDFSStripedOutputStream {
               }
             }).build();
 
-        blockReader.readAll(blockBytes, 0, (int)block.getNumBytes());
+        blockReader.readAll(blockBytes, 0, (int) block.getNumBytes());
         blockReader.close();
       }
 
-      //check if we write the data correctly
-      for (int blkIdxInGroup = 0; blkIdxInGroup < dataBlockBytes.length; blkIdxInGroup++) {
-        byte[] actualBlkBytes = dataBlockBytes[blkIdxInGroup];
+      // check if we write the data correctly
+      for (int blkIdxInGroup = 0; blkIdxInGroup < dataBlockBytes.length;
+           blkIdxInGroup++) {
+        final byte[] actualBlkBytes = dataBlockBytes[blkIdxInGroup];
         if (actualBlkBytes == null) {
           continue;
         }
         for (int posInBlk = 0; posInBlk < actualBlkBytes.length; posInBlk++) {
           byte expected;
-          //calculate the postion of this byte in the file
+          // calculate the position of this byte in the file
           long posInFile = StripedBlockUtil.offsetInBlkToOffsetInBG(cellSize,
               dataBlocks, posInBlk, blkIdxInGroup) +
               group * blockSize * dataBlocks;
@@ -291,15 +262,94 @@ public class TestDFSStripedOutputStream {
             expected = getByte(posInFile);
           }
 
-          if (expected != actualBlkBytes[posInBlk]) {
-            Assert.fail("Unexpected byte " + actualBlkBytes[posInBlk] + ", expect " + expected
-                + ". Block group index is " + group +
-                ", stripe index is " + posInBlk / cellSize +
-                ", cell index is " + blkIdxInGroup + ", byte index is " + posInBlk % cellSize);
-          }
+          String s = "Unexpected byte " + actualBlkBytes[posInBlk]
+              + ", expect " + expected
+              + ". Block group index is " + group
+              + ", stripe index is " + posInBlk / cellSize
+              + ", cell index is " + blkIdxInGroup
+              + ", byte index is " + posInBlk % cellSize;
+          Assert.assertEquals(s, expected, actualBlkBytes[posInBlk]);
         }
+      }
+
+      // verify the parity blocks
+      final ByteBuffer[] parityBuffers = new ByteBuffer[parityBlocks];
+      final long groupSize = lbs.getLocatedBlocks().get(group).getBlockSize();
+      int parityBlkSize = (int) StripedBlockUtil.getInternalBlockLength(groupSize,
+          cellSize, dataBlocks, dataBlocks);
+      for (int i = 0; i < parityBlocks; i++) {
+        parityBuffers[i] = ByteBuffer.allocate(parityBlkSize);
+      }
+      final int numStripes = (int) (groupSize - 1) / stripeDataSize() + 1;
+      for (int i = 0; i < numStripes; i++) {
+        final int parityCellSize = i < numStripes - 1 || parityBlkSize % cellSize == 0
+            ? cellSize : parityBlkSize % cellSize;
+        ByteBuffer[] stripeBuf = new ByteBuffer[dataBlocks];
+        for (int k = 0; k < stripeBuf.length; k++) {
+          stripeBuf[k] = ByteBuffer.allocate(cellSize);
+        }
+        for (int j = 0; j < dataBlocks; j++) {
+          if (dataBlockBytes[j] != null) {
+            int length = Math.min(cellSize,
+                dataBlockBytes[j].length - cellSize * i);
+            if (length > 0) {
+              stripeBuf[j].put(dataBlockBytes[j], cellSize * i, length);
+            }
+          }
+          final long pos = stripeBuf[j].position();
+          for (int k = 0; k < parityCellSize - pos; k++) {
+            stripeBuf[j].put((byte) 0);
+          }
+          stripeBuf[j].flip();
+        }
+        ByteBuffer[] parityBuf = new ByteBuffer[parityBlocks];
+        for (int j = 0; j < parityBlocks; j++) {
+          parityBuf[j] = ByteBuffer.allocate(cellSize);
+          for (int k = 0; k < parityCellSize; k++) {
+            parityBuf[j].put((byte) 0);
+          }
+          parityBuf[j].flip();
+        }
+
+        encoder.encode(stripeBuf, parityBuf);
+        for (int j = 0; j < parityBlocks; j++) {
+          parityBuffers[j].put(parityBuf[j]);
+        }
+      }
+
+      for (int i = 0; i < parityBlocks; i++) {
+        Assert.assertArrayEquals(parityBuffers[i].array(), parityBlockBytes[i]);
       }
     }
   }
 
+  private void testReadWriteOneFile(String src, int writeBytes)
+      throws IOException {
+    Path TestPath = new Path(src);
+    byte[] bytes = generateBytes(writeBytes);
+    DFSTestUtil.writeFile(fs, TestPath, new String(bytes));
+
+    //check file length
+    FileStatus status = fs.getFileStatus(TestPath);
+    long fileLength = status.getLen();
+    if (fileLength != writeBytes) {
+      Assert.fail("File Length error: expect=" + writeBytes
+          + ", actual=" + fileLength);
+    }
+
+    DFSStripedInputStream dis = new DFSStripedInputStream(
+        fs.getClient(), src, true);
+    byte[] buf = new byte[writeBytes + 100];
+    int readLen = dis.read(0, buf, 0, buf.length);
+    readLen = readLen >= 0 ? readLen : 0;
+    if (readLen != writeBytes) {
+      Assert.fail("The length of file is not correct.");
+    }
+
+    for (int i = 0; i < writeBytes; i++) {
+      if (getByte(i) != buf[i]) {
+        Assert.fail("Byte at i = " + i + " is wrongly written.");
+      }
+    }
+  }
 }
