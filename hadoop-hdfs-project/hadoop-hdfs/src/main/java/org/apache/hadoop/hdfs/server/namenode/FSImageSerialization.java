@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
@@ -139,17 +140,15 @@ public class FSImageSerialization {
       blocksStriped = new BlockInfoStriped[numBlocks];
       int i = 0;
       for (; i < numBlocks - 1; i++) {
-        short dataBlockNum = in.readShort();
-        short parityBlockNum = in.readShort();
-        blocksStriped[i] = new BlockInfoStriped(new Block(), dataBlockNum,
-            parityBlockNum);
+        blocksStriped[i] = new BlockInfoStriped(new Block(),
+            HdfsConstants.NUM_DATA_BLOCKS,
+            HdfsConstants.NUM_PARITY_BLOCKS);
         blocksStriped[i].readFields(in);
       }
       if (numBlocks > 0) {
-        short dataBlockNum = in.readShort();
-        short parityBlockNum = in.readShort();
         blocksStriped[i] = new BlockInfoStripedUnderConstruction(new Block(),
-            dataBlockNum, parityBlockNum, BlockUCState.UNDER_CONSTRUCTION, null);
+            HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS,
+            BlockUCState.UNDER_CONSTRUCTION, null);
         blocksStriped[i].readFields(in);
       }
     } else {

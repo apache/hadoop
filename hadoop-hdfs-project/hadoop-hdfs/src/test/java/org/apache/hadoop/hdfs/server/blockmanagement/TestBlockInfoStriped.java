@@ -21,7 +21,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 
@@ -43,12 +42,8 @@ public class TestBlockInfoStriped {
   private static final int TOTAL_NUM_BLOCKS = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
   private static final long BASE_ID = -1600;
   private static final Block baseBlock = new Block(BASE_ID);
-  private BlockInfoStriped info;
-
-  @Before
-  public void setup() {
-    info = new BlockInfoStriped(baseBlock, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
-  }
+  private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
+      NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
 
   private Block[] createReportedBlocks(int num) {
     Block[] blocks = new Block[num];
@@ -230,17 +225,14 @@ public class TestBlockInfoStriped {
     long blkID = 1;
     long numBytes = 1;
     long generationStamp = 1;
-    short dataBlockNum = 6;
-    short parityBlockNum = 3;
-    ByteBuffer byteBuffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE*3
-            + Short.SIZE/Byte.SIZE*2);
-    byteBuffer.putShort(dataBlockNum).putShort(parityBlockNum)
-            .putLong(blkID).putLong(numBytes).putLong(generationStamp);
+    ByteBuffer byteBuffer = ByteBuffer.allocate(Long.SIZE / Byte.SIZE * 3);
+    byteBuffer.putLong(blkID).putLong(numBytes).putLong(generationStamp);
 
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutput out = new DataOutputStream(byteStream);
-    BlockInfoStriped blk = new BlockInfoStriped(new Block(1,1,1),
-            (short)6,(short)3);
+    BlockInfoStriped blk = new BlockInfoStriped(new Block(blkID, numBytes,
+        generationStamp), NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+
     try {
       blk.write(out);
     } catch(Exception ex) {
@@ -249,5 +241,4 @@ public class TestBlockInfoStriped {
     assertEquals(byteBuffer.array().length, byteStream.toByteArray().length);
     assertArrayEquals(byteBuffer.array(), byteStream.toByteArray());
   }
-
 }

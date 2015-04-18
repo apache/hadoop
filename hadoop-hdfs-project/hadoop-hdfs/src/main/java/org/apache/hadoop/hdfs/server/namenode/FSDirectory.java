@@ -1237,7 +1237,7 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  public boolean getECPolicy(INodesInPath iip) throws IOException {
+  public boolean isInECZone(INodesInPath iip) throws IOException {
     return getECSchema(iip) != null;
   }
 

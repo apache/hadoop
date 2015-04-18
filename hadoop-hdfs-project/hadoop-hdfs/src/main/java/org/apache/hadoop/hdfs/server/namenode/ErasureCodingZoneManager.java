@@ -54,10 +54,6 @@ public class ErasureCodingZoneManager {
     this.dir = dir;
   }
 
-  boolean getECPolicy(INodesInPath iip) throws IOException {
-    return getECSchema(iip) != null;
-  }
-
   ECSchema getECSchema(INodesInPath iip) throws IOException {
     ECZoneInfo ecZoneInfo = getECZoneInfo(iip);
     return ecZoneInfo == null ? null : ecZoneInfo.getSchema();
@@ -109,7 +105,7 @@ public class ErasureCodingZoneManager {
       throw new IOException("Attempt to create an erasure coding zone " +
           "for a file.");
     }
-    if (getECPolicy(srcIIP)) {
+    if (getECSchema(srcIIP) != null) {
       throw new IOException("Directory " + src + " is already in an " +
           "erasure coding zone.");
     }
@@ -132,8 +128,10 @@ public class ErasureCodingZoneManager {
   void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
       throws IOException {
     assert dir.hasReadLock();
-    if (getECPolicy(srcIIP)
-        != getECPolicy(dstIIP)) {
+    final ECSchema srcSchema = getECSchema(srcIIP);
+    final ECSchema dstSchema = getECSchema(dstIIP);
+    if ((srcSchema != null && !srcSchema.equals(dstSchema)) ||
+        (dstSchema != null && !dstSchema.equals(srcSchema))) {
       throw new IOException(
           src + " can't be moved because the source and destination have " +
               "different erasure coding policies.");
