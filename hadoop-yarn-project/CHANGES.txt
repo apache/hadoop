@@ -238,6 +238,8 @@ Release 2.7.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
+    calling getQueue (Jason Lowe via wangda)
 
 Release 2.7.0 - UNRELEASED
 
