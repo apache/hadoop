@@ -771,10 +771,8 @@ public class FSImageFormat {
       if (isStriped) {
         blocks = new Block[numBlocks];
         for (int j = 0; j < numBlocks; j++) {
-          short dataBlockNum = in.readShort();
-          short parityBlockNum = in.readShort();
           blocks[j] = new BlockInfoStriped(new Block(),
-                  dataBlockNum, parityBlockNum);
+              HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS);
           blocks[j].readFields(in);
         }
       } else {

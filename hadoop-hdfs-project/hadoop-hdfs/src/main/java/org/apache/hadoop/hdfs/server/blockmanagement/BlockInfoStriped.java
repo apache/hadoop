@@ -244,13 +244,6 @@ public class BlockInfoStriped extends BlockInfo {
     return num;
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeShort(dataBlockNum);
-    out.writeShort(parityBlockNum);
-    super.write(out);
-  }
-
   /**
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
