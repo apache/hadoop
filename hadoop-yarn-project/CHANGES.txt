@@ -126,6 +126,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3493. RM fails to come up with error "Failed to load/recover state" 
     when mem settings are changed. (Jian He via wangda)
 
+    YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
+    calling getQueue (Jason Lowe via wangda)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
