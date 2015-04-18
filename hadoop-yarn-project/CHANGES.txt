@@ -227,6 +227,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3493. RM fails to come up with error "Failed to load/recover state" 
     when mem settings are changed. (Jian He via wangda)
 
+    YARN-3136. Fixed a synchronization problem of
+    AbstractYarnScheduler#getTransferredContainers. (Sunil G via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
