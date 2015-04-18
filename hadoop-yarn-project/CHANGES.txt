@@ -123,6 +123,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
     renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
 
+    YARN-3493. RM fails to come up with error "Failed to load/recover state" 
+    when mem settings are changed. (Jian He via wangda)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

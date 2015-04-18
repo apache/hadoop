@@ -271,7 +271,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     RMAppImpl application =
-        createAndPopulateNewRMApp(submissionContext, submitTime, user);
+        createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
     ApplicationId appId = submissionContext.getApplicationId();
 
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -308,16 +308,18 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-          appState.getUser());
+            appState.getUser(), true);
+
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
-      ApplicationSubmissionContext submissionContext,
-      long submitTime, String user)
-      throws YarnException {
+      ApplicationSubmissionContext submissionContext, long submitTime,
+      String user, boolean isRecovery) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
-    ResourceRequest amReq = validateAndCreateResourceRequest(submissionContext);
+    ResourceRequest amReq =
+        validateAndCreateResourceRequest(submissionContext, isRecovery);
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
@@ -335,7 +337,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String message = "Application with id " + applicationId
           + " is already present! Cannot add a duplicate!";
       LOG.warn(message);
-      throw RPCUtil.getRemoteException(message);
+      throw new YarnException(message);
     }
     // Inform the ACLs Manager
     this.applicationACLsManager.addApplication(applicationId,
@@ -348,7 +350,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   }
 
   private ResourceRequest validateAndCreateResourceRequest(
-      ApplicationSubmissionContext submissionContext)
+      ApplicationSubmissionContext submissionContext, boolean isRecovery)
       throws InvalidResourceRequestException {
     // Validation of the ApplicationSubmissionContext needs to be completed
     // here. Only those fields that are dependent on RM's configuration are
@@ -357,16 +359,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Check whether AM resource requirements are within required limits
     if (!submissionContext.getUnmanagedAM()) {
-      ResourceRequest amReq;
-      if (submissionContext.getAMContainerResourceRequest() != null) {
-        amReq = submissionContext.getAMContainerResourceRequest();
-      } else {
-        amReq =
-            BuilderUtils.newResourceRequest(
-                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-                submissionContext.getResource(), 1);
+      ResourceRequest amReq = submissionContext.getAMContainerResourceRequest();
+      if (amReq == null) {
+        amReq = BuilderUtils
+            .newResourceRequest(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
+                ResourceRequest.ANY, submissionContext.getResource(), 1);
       }
-      
+
       // set label expression for AM container
       if (null == amReq.getNodeLabelExpression()) {
         amReq.setNodeLabelExpression(submissionContext
@@ -374,15 +373,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
 
       try {
-        SchedulerUtils.validateResourceRequest(amReq,
+        SchedulerUtils.normalizeAndValidateRequest(amReq,
             scheduler.getMaximumResourceCapability(),
-            submissionContext.getQueue(), scheduler);
+            submissionContext.getQueue(), scheduler, isRecovery);
       } catch (InvalidResourceRequestException e) {
         LOG.warn("RM app submission failed in validating AM resource request"
             + " for application " + submissionContext.getApplicationId(), e);
         throw e;
       }
-      
       return amReq;
     }
     

@@ -188,6 +188,50 @@ public class SchedulerUtils {
     ask.setCapability(normalized);
   }
 
+  private static void normalizeNodeLabelExpressionInRequest(
+      ResourceRequest resReq, QueueInfo queueInfo) {
+
+    String labelExp = resReq.getNodeLabelExpression();
+
+    // if queue has default label expression, and RR doesn't have, use the
+    // default label expression of queue
+    if (labelExp == null && queueInfo != null && ResourceRequest.ANY
+        .equals(resReq.getResourceName())) {
+      labelExp = queueInfo.getDefaultNodeLabelExpression();
+    }
+
+    // If labelExp still equals to null, set it to be NO_LABEL
+    if (labelExp == null) {
+      labelExp = RMNodeLabelsManager.NO_LABEL;
+    }
+    resReq.setNodeLabelExpression(labelExp);
+  }
+
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      boolean isRecovery)
+      throws InvalidResourceRequestException {
+
+    QueueInfo queueInfo = null;
+    try {
+      queueInfo = scheduler.getQueueInfo(queueName, false, false);
+    } catch (IOException e) {
+      // it is possible queue cannot get when queue mapping is set, just ignore
+      // the queueInfo here, and move forward
+    }
+    SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
+    if (!isRecovery) {
+      validateResourceRequest(resReq, maximumResource, queueInfo);
+    }
+  }
+
+  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        false);
+  }
+
   /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
@@ -196,7 +240,7 @@ public class SchedulerUtils {
    *         request
    */
   public static void validateResourceRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      Resource maximumResource, QueueInfo queueInfo)
       throws InvalidResourceRequestException {
     if (resReq.getCapability().getMemory() < 0 ||
         resReq.getCapability().getMemory() > maximumResource.getMemory()) {
@@ -216,25 +260,7 @@ public class SchedulerUtils {
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
     }
-    
-    // Get queue from scheduler
-    QueueInfo queueInfo = null;
-    try {
-      queueInfo = scheduler.getQueueInfo(queueName, false, false);
-    } catch (IOException e) {
-      // it is possible queue cannot get when queue mapping is set, just ignore
-      // the queueInfo here, and move forward
-    }
-
-    // check labels in the resource request.
     String labelExp = resReq.getNodeLabelExpression();
-    
-    // if queue has default label expression, and RR doesn't have, use the
-    // default label expression of queue
-    if (labelExp == null && queueInfo != null) {
-      labelExp = queueInfo.getDefaultNodeLabelExpression();
-      resReq.setNodeLabelExpression(labelExp);
-    }
     
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
       if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),

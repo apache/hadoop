@@ -498,7 +498,7 @@ public class ApplicationMasterService extends AbstractService implements
               
       // sanity check
       try {
-        RMServerUtils.validateResourceRequests(ask,
+        RMServerUtils.normalizeAndValidateRequests(ask,
             rScheduler.getMaximumResourceCapability(), app.getQueue(),
             rScheduler);
       } catch (InvalidResourceRequestException e) {
