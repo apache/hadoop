@@ -33,7 +33,7 @@ import static org.junit.Assert.fail;
 public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
   @Test
   public void testPlacementOnRamDisk() throws IOException {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -43,7 +43,7 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
 
   @Test
   public void testPlacementOnSizeLimitedRamDisk() throws IOException {
-    startUpCluster(true, 3);
+    getClusterBuilder().setRamDiskReplicaCapacity(3).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
     Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
@@ -62,7 +62,7 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
    */
   @Test
   public void testFallbackToDisk() throws IOException {
-    startUpCluster(false, -1);
+    getClusterBuilder().setHasTransientStorage(false).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -76,7 +76,7 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
    */
   @Test
   public void testFallbackToDiskFull() throws Exception {
-    startUpCluster(false, 0);
+    getClusterBuilder().setRamDiskReplicaCapacity(0).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -95,7 +95,7 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
   @Test
   public void testFallbackToDiskPartial()
       throws IOException, InterruptedException {
-    startUpCluster(true, 2);
+    getClusterBuilder().setRamDiskReplicaCapacity(2).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -134,7 +134,7 @@ public class TestLazyPersistReplicaPlacement extends LazyPersistTestCase {
    */
   @Test
   public void testRamDiskNotChosenByDefault() throws IOException {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 

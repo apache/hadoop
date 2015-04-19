@@ -70,9 +70,11 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
   @Test
   public void testRamDiskShortCircuitRead()
     throws IOException, InterruptedException {
-    startUpCluster(REPL_FACTOR,
-      new StorageType[]{RAM_DISK, DEFAULT},
-      2 * BLOCK_SIZE - 1, true);  // 1 replica + delta, SCR read
+    getClusterBuilder().setNumDatanodes(REPL_FACTOR)
+                       .setStorageTypes(new StorageType[]{RAM_DISK, DEFAULT})
+                       .setRamDiskStorageLimit(2 * BLOCK_SIZE - 1)
+                       .setUseScr(true)
+                       .build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final int SEED = 0xFADED;
     Path path = new Path("/" + METHOD_NAME + ".dat");
@@ -111,8 +113,14 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
   @Test
   public void testRamDiskEvictionWithShortCircuitReadHandle()
     throws IOException, InterruptedException {
-    startUpCluster(REPL_FACTOR, new StorageType[] { RAM_DISK, DEFAULT },
-      (6 * BLOCK_SIZE -1), true);  // 5 replica + delta, SCR.
+    // 5 replica + delta, SCR.
+    getClusterBuilder().setNumDatanodes(REPL_FACTOR)
+                       .setStorageTypes(new StorageType[]{RAM_DISK, DEFAULT})
+                       .setRamDiskStorageLimit(6 * BLOCK_SIZE - 1)
+                       .setEvictionLowWatermarkReplicas(3)
+                       .setUseScr(true)
+                       .build();
+
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
     Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
@@ -156,14 +164,20 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
   public void testShortCircuitReadAfterEviction()
       throws IOException, InterruptedException {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, false);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(false)
+                       .build();
     doShortCircuitReadAfterEvictionTest();
   }
 
   @Test
   public void testLegacyShortCircuitReadAfterEviction()
       throws IOException, InterruptedException {
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, true);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(true)
+                       .build();
     doShortCircuitReadAfterEvictionTest();
   }
 
@@ -220,14 +234,20 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
   public void testShortCircuitReadBlockFileCorruption() throws IOException,
       InterruptedException {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, false);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(false)
+                       .build();
     doShortCircuitReadBlockFileCorruptionTest();
   }
 
   @Test
   public void testLegacyShortCircuitReadBlockFileCorruption() throws IOException,
       InterruptedException {
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, true);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(true)
+                       .build();
     doShortCircuitReadBlockFileCorruptionTest();
   }
 
@@ -260,14 +280,20 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
   public void testShortCircuitReadMetaFileCorruption() throws IOException,
       InterruptedException {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, false);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(false)
+                       .build();
     doShortCircuitReadMetaFileCorruptionTest();
   }
 
   @Test
   public void testLegacyShortCircuitReadMetaFileCorruption() throws IOException,
       InterruptedException {
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK, true, true);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK)
+                       .setUseScr(true)
+                       .setUseLegacyBlockReaderLocal(true)
+                       .build();
     doShortCircuitReadMetaFileCorruptionTest();
   }
 

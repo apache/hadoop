@@ -39,7 +39,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   @Test
   public void testLazyPersistBlocksAreSaved()
       throws IOException, InterruptedException {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -63,7 +63,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
    */
   @Test
   public void testRamDiskEviction() throws Exception {
-    startUpCluster(true, 1 + EVICTION_LOW_WATERMARK);
+    getClusterBuilder().setRamDiskReplicaCapacity(1 + EVICTION_LOW_WATERMARK).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
     Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
@@ -99,7 +99,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   @Test
   public void testRamDiskEvictionBeforePersist()
       throws IOException, InterruptedException {
-    startUpCluster(true, 1);
+    getClusterBuilder().setRamDiskReplicaCapacity(1).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
     Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
@@ -133,7 +133,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   public void testRamDiskEvictionIsLru()
       throws Exception {
     final int NUM_PATHS = 5;
-    startUpCluster(true, NUM_PATHS + EVICTION_LOW_WATERMARK);
+    getClusterBuilder().setRamDiskReplicaCapacity(NUM_PATHS + EVICTION_LOW_WATERMARK).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path paths[] = new Path[NUM_PATHS * 2];
 
@@ -194,7 +194,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   @Test
   public void testDeleteBeforePersist()
       throws Exception {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -221,7 +221,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   @Test
   public void testDeleteAfterPersist()
       throws Exception {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -249,7 +249,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
   @Test
   public void testDfsUsageCreateDelete()
       throws IOException, InterruptedException {
-    startUpCluster(true, 4);
+    getClusterBuilder().setRamDiskReplicaCapacity(4).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 

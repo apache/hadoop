@@ -19,11 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,17 +29,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.ArrayList;
-import java.util.Collections;
 
-import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestLazyPersistFiles extends LazyPersistTestCase {
@@ -56,7 +46,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
    */
   @Test
   public void testAppendIsDenied() throws IOException {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -77,7 +67,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
    */
   @Test
   public void testTruncateIsDenied() throws IOException {
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -99,7 +89,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
   @Test
   public void testCorruptFilesAreDiscarded()
       throws IOException, InterruptedException {
-    startUpCluster(true, 2);
+    getClusterBuilder().setRamDiskReplicaCapacity(2).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
 
@@ -136,7 +126,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
   @Test
   public void testConcurrentRead()
     throws Exception {
-    startUpCluster(true, 2);
+    getClusterBuilder().setRamDiskReplicaCapacity(2).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final Path path1 = new Path("/" + METHOD_NAME + ".dat");
 
@@ -187,7 +177,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
   @Test
   public void testConcurrentWrites()
     throws IOException, InterruptedException {
-    startUpCluster(true, 9);
+    getClusterBuilder().setRamDiskReplicaCapacity(9).build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final int SEED = 0xFADED;
     final int NUM_WRITERS = 4;
