@@ -32,7 +32,7 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
   public void testDnRestartWithSavedReplicas()
       throws IOException, InterruptedException {
 
-    startUpCluster(true, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
 
@@ -57,7 +57,7 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
   public void testDnRestartWithUnsavedReplicas()
       throws IOException, InterruptedException {
 
-    startUpCluster(true, 1);
+    getClusterBuilder().build();
     FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
     final String METHOD_NAME = GenericTestUtils.getMethodName();

@@ -34,7 +34,7 @@ import static org.junit.Assert.assertThat;
 public class TestLazyPersistPolicy extends LazyPersistTestCase {
   @Test
   public void testPolicyNotSetByDefault() throws IOException {
-    startUpCluster(false, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -47,7 +47,7 @@ public class TestLazyPersistPolicy extends LazyPersistTestCase {
 
   @Test
   public void testPolicyPropagation() throws IOException {
-    startUpCluster(false, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -59,7 +59,7 @@ public class TestLazyPersistPolicy extends LazyPersistTestCase {
 
   @Test
   public void testPolicyPersistenceInEditLog() throws IOException {
-    startUpCluster(false, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
@@ -73,7 +73,7 @@ public class TestLazyPersistPolicy extends LazyPersistTestCase {
 
   @Test
   public void testPolicyPersistenceInFsImage() throws IOException {
-    startUpCluster(false, -1);
+    getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path path = new Path("/" + METHOD_NAME + ".dat");
 
