@@ -520,6 +520,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7863. Missing description of some methods and parameters in javadoc of
     FSDirDeleteOp. (Brahma Reddy Battula via ozawa)
 
+    HDFS-8043. NPE in MiniDFSCluster teardown. (Brahma Reddy Battula via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

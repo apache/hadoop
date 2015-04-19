@@ -1744,11 +1744,14 @@ public class MiniDFSCluster {
         nameNode = null;
       }
     }
-    if (deleteDfsDir) {
+    if (base_dir != null) {
+      if (deleteDfsDir) {
         base_dir.delete();
-    } else {
+      } else {
         base_dir.deleteOnExit();
+      }
     }
+
   }
   
   /**

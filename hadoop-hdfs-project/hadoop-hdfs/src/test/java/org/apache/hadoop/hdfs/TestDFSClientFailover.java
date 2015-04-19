@@ -85,7 +85,9 @@ public class TestDFSClientFailover {
   
   @After
   public void tearDownCluster() throws IOException {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   @After
