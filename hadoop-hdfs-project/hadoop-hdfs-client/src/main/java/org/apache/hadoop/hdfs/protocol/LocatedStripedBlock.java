@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 
 import java.util.Arrays;
 
@@ -41,14 +40,6 @@ public class LocatedStripedBlock extends LocatedBlock {
     assert indices != null && indices.length == locs.length;
     this.blockIndices = new int[indices.length];
     System.arraycopy(indices, 0, blockIndices, 0, indices.length);
-  }
-
-  public LocatedStripedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages,
-      int[] indices, long startOffset, boolean corrupt) {
-    this(b, DatanodeStorageInfo.toDatanodeInfos(storages),
-        DatanodeStorageInfo.toStorageIDs(storages),
-        DatanodeStorageInfo.toStorageTypes(storages), indices,
-        startOffset, corrupt, EMPTY_LOCS);
   }
 
   @Override
