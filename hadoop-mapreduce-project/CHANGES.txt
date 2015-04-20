@@ -334,6 +334,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6266. Job#getTrackingURL should consistently return a proper URL
     (rchiang via rkanter)
 
+    MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
+    which is a regression from MR1 (zxu via rkanter)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
