@@ -378,21 +378,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         dfsClientConf);
 
     if (dfsClientConf.getHedgedReadThreadpoolSize() > 0) {
-      this.initThreadsNumForHedgedReads(dfsClientConf.getHedgedReadThreadpoolSize());
+      this.initThreadsNumForHedgedReads(dfsClientConf.
+          getHedgedReadThreadpoolSize());
     }
-    numThreads = conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_SIZE,
-        DFSConfigKeys.DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_DEFAULT_SIZE);
-    if (numThreads <= 0) {
-      LOG.warn("The value of "
-          + DFSConfigKeys.DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_SIZE
-          + " must be greater than 0. The current setting is " + numThreads
-          + ". Reset it to the default value "
-          + DFSConfigKeys.DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_DEFAULT_SIZE);
-      numThreads =
-          DFSConfigKeys.DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_DEFAULT_SIZE;
-    }
-    this.initThreadsNumForStripedReads(numThreads);
+
+    this.initThreadsNumForStripedReads(dfsClientConf.
+        getStripedReadThreadpoolSize());
     this.saslClient = new SaslDataTransferClient(
       conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
       TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);

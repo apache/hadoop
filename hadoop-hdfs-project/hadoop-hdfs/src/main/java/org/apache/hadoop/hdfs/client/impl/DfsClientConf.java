@@ -38,6 +38,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIM
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -100,6 +101,8 @@ public class DfsClientConf {
   
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
+
+  private final int stripedReadThreadpoolSize;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout 
@@ -191,7 +194,7 @@ public class DfsClientConf {
     connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
         DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
     hdfsBlocksMetadataEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
+        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
         DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
     fileBlockStorageLocationsNumThreads = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS,
@@ -215,6 +218,13 @@ public class DfsClientConf {
     hedgedReadThreadpoolSize = conf.getInt(
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT);
+
+    stripedReadThreadpoolSize = conf.getInt(
+        HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY,
+        HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_DEFAULT);
+    Preconditions.checkArgument(stripedReadThreadpoolSize > 0, "The value of " +
+        HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
+        " must be greater than 0.");
   }
 
   private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -489,6 +499,13 @@ public class DfsClientConf {
    */
   public int getHedgedReadThreadpoolSize() {
     return hedgedReadThreadpoolSize;
+  }
+
+  /**
+   * @return the stripedReadThreadpoolSize
+   */
+  public int getStripedReadThreadpoolSize() {
+    return stripedReadThreadpoolSize;
   }
 
   /**
