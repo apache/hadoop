@@ -1012,10 +1012,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public FsServerDefaults getServerDefaults() throws IOException {
     long now = Time.monotonicNow();
-    if (now - serverDefaultsLastUpdate > SERVER_DEFAULTS_VALIDITY_PERIOD) {
+    if ((serverDefaults == null) ||
+        (now - serverDefaultsLastUpdate > SERVER_DEFAULTS_VALIDITY_PERIOD)) {
       serverDefaults = namenode.getServerDefaults();
       serverDefaultsLastUpdate = now;
     }
+    assert serverDefaults != null;
     return serverDefaults;
   }
   
