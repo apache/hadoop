@@ -67,7 +67,7 @@ public class ContainerManagementProtocolProxy {
 
   public ContainerManagementProtocolProxy(Configuration conf,
       NMTokenCache nmTokenCache) {
-    this.conf = conf;
+    this.conf = new Configuration(conf);
     this.nmTokenCache = nmTokenCache;
 
     maxConnectedNMs =
@@ -88,7 +88,7 @@ public class ContainerManagementProtocolProxy {
       cmProxy = Collections.emptyMap();
       // Connections are not being cached so ensure connections close quickly
       // to avoid creating thousands of RPC client threads on large clusters.
-      conf.setInt(
+      this.conf.setInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
           0);
     }
