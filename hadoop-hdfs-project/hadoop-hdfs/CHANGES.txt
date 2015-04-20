@@ -526,6 +526,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8043. NPE in MiniDFSCluster teardown. (Brahma Reddy Battula via ozawa)
 
+    HDFS-8173. NPE thrown at DataNode shutdown when HTTP server was not able to
+    create (surendra singh lilhore via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

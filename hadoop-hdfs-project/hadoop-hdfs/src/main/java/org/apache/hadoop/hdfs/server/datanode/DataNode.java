@@ -1721,10 +1721,12 @@ public class DataNode extends ReconfigurableBase
         LOG.warn("Exception shutting down DataNode", e);
       }
     }
-    try {
-      httpServer.close();
-    } catch (Exception e) {
-      LOG.warn("Exception shutting down DataNode HttpServer", e);
+    if (httpServer != null) {
+      try {
+        httpServer.close();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down DataNode HttpServer", e);
+      }
     }
 
     if (pauseMonitor != null) {
