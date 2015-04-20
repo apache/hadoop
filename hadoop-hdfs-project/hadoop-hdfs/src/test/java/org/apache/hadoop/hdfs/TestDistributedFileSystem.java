@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -1024,6 +1025,20 @@ public class TestDistributedFileSystem {
       } catch (Throwable t) {
         Assert.fail("wrong exception:"+t);
       }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testGetServerDefaults() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      FsServerDefaults fsServerDefaults = dfs.getServerDefaults();
+      Assert.assertNotNull(fsServerDefaults);
     } finally {
       cluster.shutdown();
     }
