@@ -83,10 +83,24 @@
 
     HDFS-7349. Support DFS command for the EC encoding (vinayakumarb)
 
+    HDFS-8120. Erasure coding: created util class to analyze striped block groups.
+    (Contributed by Zhe Zhang and Li Bo via Jing Zhao)
+
     HDFS-7994. Detect if resevered EC Block ID is already used during namenode
     startup. (Hui Zheng via szetszwo)
 
     HDFS-8167. BlockManager.addBlockCollectionWithCheck should check if the block is a striped block. (Hui Zheng via zhz).
 
+    HDFS-8166. DFSStripedOutputStream should not create empty blocks. (Jing Zhao)
+
+    HDFS-7937. Erasure Coding: INodeFile quota computation unit tests.
+    (Kai Sasaki via Jing Zhao)
+
+    HDFS-8145. Fix the editlog corruption exposed by failed TestAddStripedBlocks.
+    (Jing Zhao)
+
     HDFS-8146. Protobuf changes for BlockECRecoveryCommand and its fields for
     making it ready for transfer to DN (Uma Maheswara Rao G via vinayakumarb)
+
+    HDFS-8181. createErasureCodingZone sets retryCache state as false always
+    (Uma Maheswara Rao G via vinayakumarb)
