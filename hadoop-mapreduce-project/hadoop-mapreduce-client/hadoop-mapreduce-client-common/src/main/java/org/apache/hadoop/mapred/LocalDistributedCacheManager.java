@@ -100,18 +100,12 @@ class LocalDistributedCacheManager {
     Path[] archiveClassPaths = DistributedCache.getArchiveClassPaths(conf);
     if (archiveClassPaths != null) {
       for (Path p : archiveClassPaths) {
-        FileSystem remoteFS = p.getFileSystem(conf);
-        p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
-            remoteFS.getWorkingDirectory()));
         classpaths.put(p.toUri().getPath().toString(), p);
       }
     }
     Path[] fileClassPaths = DistributedCache.getFileClassPaths(conf);
     if (fileClassPaths != null) {
       for (Path p : fileClassPaths) {
-        FileSystem remoteFS = p.getFileSystem(conf);
-        p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
-            remoteFS.getWorkingDirectory()));
         classpaths.put(p.toUri().getPath().toString(), p);
       }
     }
