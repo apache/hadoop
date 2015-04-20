@@ -561,6 +561,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8153. Error Message points to wrong parent directory in case of
     path component name length error (Anu Engineer via jitendra)
 
+    HDFS-8179. DFSClient#getServerDefaults returns null within 1
+    hour of system start. (Xiaoyu Yao via Arpit Agarwal)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
