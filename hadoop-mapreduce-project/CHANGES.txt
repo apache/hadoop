@@ -337,6 +337,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
     which is a regression from MR1 (zxu via rkanter)
 
+    MAPREDUCE-6293. Set job classloader on uber-job's LocalContainerLauncher
+    event thread. (Sangjin Lee via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

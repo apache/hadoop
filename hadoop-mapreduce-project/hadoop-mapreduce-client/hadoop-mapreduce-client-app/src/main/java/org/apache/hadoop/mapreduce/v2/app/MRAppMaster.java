@@ -889,7 +889,7 @@ public class MRAppMaster extends CompositeService {
     protected void serviceStart() throws Exception {
       if (job.isUber()) {
         this.containerLauncher = new LocalContainerLauncher(context,
-            (TaskUmbilicalProtocol) taskAttemptListener);
+            (TaskUmbilicalProtocol) taskAttemptListener, jobClassLoader);
       } else {
         this.containerLauncher = new ContainerLauncherImpl(context);
       }
