@@ -239,7 +239,7 @@ public class DelegationTokenAuthenticationFilter
         if (doAsUser != null) {
           ugi = UserGroupInformation.createProxyUser(doAsUser, ugi);
           try {
-            ProxyUsers.authorize(ugi, request.getRemoteHost());
+            ProxyUsers.authorize(ugi, request.getRemoteAddr());
           } catch (AuthorizationException ex) {
             HttpExceptionUtils.createServletExceptionResponse(response,
                 HttpServletResponse.SC_FORBIDDEN, ex);
