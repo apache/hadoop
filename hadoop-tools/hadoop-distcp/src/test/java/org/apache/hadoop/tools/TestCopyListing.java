@@ -32,6 +32,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.junit.Test;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -40,9 +43,12 @@ import org.junit.AfterClass;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
+@RunWith(value = Parameterized.class)
 public class TestCopyListing extends SimpleCopyListing {
   private static final Log LOG = LogFactory.getLog(TestCopyListing.class);
 
@@ -63,9 +69,15 @@ public class TestCopyListing extends SimpleCopyListing {
       cluster.shutdown();
     }
   }
-  
-  public TestCopyListing() {
-    super(config, CREDENTIALS);
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    Object[][] data = new Object[][] { { 1 }, { 2 }, { 10 }, { 20} };
+    return Arrays.asList(data);
+  }
+
+  public TestCopyListing(int numListstatusThreads) {
+    super(config, CREDENTIALS, numListstatusThreads);
   }
 
   protected TestCopyListing(Configuration configuration) {

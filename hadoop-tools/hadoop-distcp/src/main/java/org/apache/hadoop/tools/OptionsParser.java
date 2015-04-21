@@ -185,6 +185,18 @@ public class OptionsParser {
           getOptionValue(DistCpOptionSwitch.SSL_CONF.getSwitch()));
     }
 
+    if (command.hasOption(DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch())) {
+      try {
+        Integer numThreads = Integer.parseInt(getVal(command,
+              DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()).trim());
+        option.setNumListstatusThreads(numThreads);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException(
+            "Number of liststatus threads is invalid: " + getVal(command,
+                DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()), e);
+      }
+    }
+
     if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
       try {
         Integer maps = Integer.parseInt(

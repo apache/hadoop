@@ -499,6 +499,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11819. HttpServerFunctionalTest#prepareTestWebapp should create web
     app directory if it does not exist. (Rohith via vinayakumarb)
 
+    HADOOP-11827. Speed-up distcp buildListing() using threadpool
+    (Zoran Dimitrijevic via raviprak)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

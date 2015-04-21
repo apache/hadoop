@@ -83,7 +83,14 @@ public enum DistCpOptionSwitch {
   SSL_CONF(DistCpConstants.CONF_LABEL_SSL_CONF,
       new Option("mapredSslConf", true, "Configuration for ssl config file" +
           ", to use with hftps://")),
-
+  /**
+   * Number of threads for building source file listing (before map-reduce
+   * phase, max one listStatus per thread at a time).
+   */
+  NUM_LISTSTATUS_THREADS(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
+      new Option("numListstatusThreads", true, "Number of threads to " +
+          "use for building file listing (max " +
+          DistCpOptions.maxNumListstatusThreads + ").")),
   /**
    * Max number of maps to use during copy. DistCp will split work
    * as equally as possible among these maps
