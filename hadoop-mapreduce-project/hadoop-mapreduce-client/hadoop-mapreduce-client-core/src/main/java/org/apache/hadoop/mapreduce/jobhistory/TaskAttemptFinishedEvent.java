@@ -25,6 +25,9 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 /**
  * Event to record successful task completion
@@ -134,6 +137,22 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
     return getTaskId().getTaskType() == TaskType.MAP 
            ? EventType.MAP_ATTEMPT_FINISHED
            : EventType.REDUCE_ATTEMPT_FINISHED;
+  }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("TASK_TYPE", getTaskType().toString());
+    tEvent.addInfo("ATTEMPT_ID", getAttemptId() == null ?
+        "" : getAttemptId().toString());
+    tEvent.addInfo("FINISH_TIME", getFinishTime());
+    tEvent.addInfo("STATUS", getTaskStatus());
+    tEvent.addInfo("STATE", getState());
+    tEvent.addInfo("COUNTERS_GROUPS",
+        JobHistoryEventUtils.countersToJSON(getCounters()));
+    tEvent.addInfo("HOSTNAME", getHostname());
+    return tEvent;
   }
 
 }

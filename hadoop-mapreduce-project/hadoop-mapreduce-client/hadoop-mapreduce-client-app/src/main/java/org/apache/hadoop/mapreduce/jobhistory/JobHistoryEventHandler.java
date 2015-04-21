@@ -19,6 +19,9 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -50,11 +53,13 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -75,6 +80,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 import org.codehaus.jackson.node.ObjectNode;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -126,14 +133,24 @@ public class JobHistoryEventHandler extends AbstractService
 
   protected static final Map<JobId, MetaInfo> fileMap =
     Collections.<JobId,MetaInfo>synchronizedMap(new HashMap<JobId,MetaInfo>());
+  
+  // For posting entities in new timeline service in a non-blocking way
+  // TODO YARN-3367 replace with event loop in TimelineClient.
+  private static ExecutorService threadPool =
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
+          .build());
 
   // should job completion be force when the AM shuts down?
   protected volatile boolean forceJobCompletion = false;
 
   protected TimelineClient timelineClient;
+  
+  private boolean newTimelineServiceEnabled = false;
 
   private static String MAPREDUCE_JOB_ENTITY_TYPE = "MAPREDUCE_JOB";
   private static String MAPREDUCE_TASK_ENTITY_TYPE = "MAPREDUCE_TASK";
+  private static String MAPREDUCE_TASK_ATTEMPT_ENTITY_TYPE = "MAPREDUCE_TASK_ATTEMPT";
 
   public JobHistoryEventHandler(AppContext context, int startCount) {
     super("JobHistoryEventHandler");
@@ -253,13 +270,22 @@ public class JobHistoryEventHandler extends AbstractService
             MRJobConfig.MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD,
             MRJobConfig.DEFAULT_MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD);
 
+    // TODO replace MR specific configurations on timeline service with getting 
+    // configuration from RM through registerApplicationMaster() in 
+    // ApplicationMasterProtocol with return value for timeline service 
+    // configuration status: off, on_with_v1 or on_with_v2.
     if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA,
         MRJobConfig.DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA)) {
       if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-        timelineClient = TimelineClient.createTimelineClient();
+        
+        timelineClient = 
+            ((MRAppMaster.RunningAppContext)context).getTimelineClient();
         timelineClient.init(conf);
-        LOG.info("Timeline service is enabled");
+        newTimelineServiceEnabled = conf.getBoolean(
+            MRJobConfig.MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED,
+            MRJobConfig.DEFAULT_MAPREDUCE_JOB_NEW_TIMELINE_SERVICE_ENABLED);
+        LOG.info("Timeline service is enabled: " + (newTimelineServiceEnabled? "v2" : "v1"));
         LOG.info("Emitting job history data to the timeline server is enabled");
       } else {
         LOG.info("Timeline service is not enabled");
@@ -433,8 +459,25 @@ public class JobHistoryEventHandler extends AbstractService
     if (timelineClient != null) {
       timelineClient.stop();
     }
+    shutdownAndAwaitTermination();
     LOG.info("Stopped JobHistoryEventHandler. super.stop()");
     super.serviceStop();
+  }
+  
+  // TODO remove threadPool after adding non-blocking call in TimelineClient
+  private static void shutdownAndAwaitTermination() {
+    threadPool.shutdown();
+    try {
+      if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+        threadPool.shutdownNow(); 
+        if (!threadPool.awaitTermination(60, TimeUnit.SECONDS))
+            LOG.error("ThreadPool did not terminate");
+      }
+    } catch (InterruptedException ie) {
+      threadPool.shutdownNow();
+      // Preserve interrupt status
+      Thread.currentThread().interrupt();
+    }
   }
 
   protected EventWriter createEventWriter(Path historyFilePath)
@@ -590,8 +633,13 @@ public class JobHistoryEventHandler extends AbstractService
         processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
             event.getJobID());
         if (timelineClient != null) {
-          processEventForTimelineServer(historyEvent, event.getJobID(),
-              event.getTimestamp());
+          if (newTimelineServiceEnabled) {
+            processEventForNewTimelineService(historyEvent, event.getJobID(),
+                event.getTimestamp());
+          } else {
+            processEventForTimelineServer(historyEvent, event.getJobID(),
+                event.getTimestamp());
+          }
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("In HistoryEventHandler "
@@ -832,11 +880,11 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("FINISHED_MAPS", jfe.getFinishedMaps());
         tEvent.addEventInfo("FINISHED_REDUCES", jfe.getFinishedReduces());
         tEvent.addEventInfo("MAP_COUNTERS_GROUPS",
-                countersToJSON(jfe.getMapCounters()));
+            JobHistoryEventUtils.countersToJSON(jfe.getMapCounters()));
         tEvent.addEventInfo("REDUCE_COUNTERS_GROUPS",
-                countersToJSON(jfe.getReduceCounters()));
+            JobHistoryEventUtils.countersToJSON(jfe.getReduceCounters()));
         tEvent.addEventInfo("TOTAL_COUNTERS_GROUPS",
-                countersToJSON(jfe.getTotalCounters()));
+            JobHistoryEventUtils.countersToJSON(jfe.getTotalCounters()));
         tEvent.addEventInfo("JOB_STATUS", JobState.SUCCEEDED.toString());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(jobId.toString());
@@ -862,7 +910,7 @@ public class JobHistoryEventHandler extends AbstractService
                 tfe.getFailedAttemptID() == null ?
                 "" : tfe.getFailedAttemptID().toString());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(tfe.getCounters()));
+            JobHistoryEventUtils.countersToJSON(tfe.getCounters()));
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(tfe.getTaskId().toString());
         tEntity.setEntityType(MAPREDUCE_TASK_ENTITY_TYPE);
@@ -880,7 +928,7 @@ public class JobHistoryEventHandler extends AbstractService
         TaskFinishedEvent tfe2 = (TaskFinishedEvent) event;
         tEvent.addEventInfo("TASK_TYPE", tfe2.getTaskType().toString());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(tfe2.getCounters()));
+            JobHistoryEventUtils.countersToJSON(tfe2.getCounters()));
         tEvent.addEventInfo("FINISH_TIME", tfe2.getFinishTime());
         tEvent.addEventInfo("STATUS", TaskStatus.State.SUCCEEDED.toString());
         tEvent.addEventInfo("SUCCESSFUL_TASK_ATTEMPT_ID",
@@ -902,7 +950,6 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("START_TIME", tase.getStartTime());
         tEvent.addEventInfo("HTTP_PORT", tase.getHttpPort());
         tEvent.addEventInfo("TRACKER_NAME", tase.getTrackerName());
-        tEvent.addEventInfo("TASK_TYPE", tase.getTaskType().toString());
         tEvent.addEventInfo("SHUFFLE_PORT", tase.getShufflePort());
         tEvent.addEventInfo("CONTAINER_ID", tase.getContainerId() == null ?
             "" : tase.getContainerId().toString());
@@ -935,7 +982,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("SORT_FINISH_TIME", tauce.getFinishTime());
         tEvent.addEventInfo("MAP_FINISH_TIME", tauce.getFinishTime());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(tauce.getCounters()));
+            JobHistoryEventUtils.countersToJSON(tauce.getCounters()));
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(tauce.getTaskId().toString());
         tEntity.setEntityType(MAPREDUCE_TASK_ENTITY_TYPE);
@@ -949,7 +996,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("STATE", mafe.getState());
         tEvent.addEventInfo("MAP_FINISH_TIME", mafe.getMapFinishTime());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(mafe.getCounters()));
+            JobHistoryEventUtils.countersToJSON(mafe.getCounters()));
         tEvent.addEventInfo("HOSTNAME", mafe.getHostname());
         tEvent.addEventInfo("PORT", mafe.getPort());
         tEvent.addEventInfo("RACK_NAME", mafe.getRackName());
@@ -971,7 +1018,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("SHUFFLE_FINISH_TIME", rafe.getShuffleFinishTime());
         tEvent.addEventInfo("SORT_FINISH_TIME", rafe.getSortFinishTime());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(rafe.getCounters()));
+            JobHistoryEventUtils.countersToJSON(rafe.getCounters()));
         tEvent.addEventInfo("HOSTNAME", rafe.getHostname());
         tEvent.addEventInfo("PORT", rafe.getPort());
         tEvent.addEventInfo("RACK_NAME", rafe.getRackName());
@@ -990,7 +1037,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("STATUS", tafe.getTaskStatus());
         tEvent.addEventInfo("STATE", tafe.getState());
         tEvent.addEventInfo("COUNTERS_GROUPS",
-                countersToJSON(tafe.getCounters()));
+            JobHistoryEventUtils.countersToJSON(tafe.getCounters()));
         tEvent.addEventInfo("HOSTNAME", tafe.getHostname());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(tafe.getTaskId().toString());
@@ -1017,7 +1064,7 @@ public class JobHistoryEventHandler extends AbstractService
       default:
         break;
     }
-
+    
     try {
       TimelinePutResponse response = timelineClient.putEntities(tEntity);
       List<TimelinePutResponse.TimelinePutError> errors = response.getErrors();
@@ -1058,6 +1105,165 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
     return nodes;
+  }
+
+  private void putEntityWithoutBlocking(final TimelineClient timelineClient,
+      final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity) {
+    Runnable publishWrapper = new Runnable() {
+      public void run() {
+        try {
+          timelineClient.putEntities(entity);
+        } catch (IOException|YarnException e) {
+          LOG.error("putEntityNonBlocking get failed: " + e);
+          throw new RuntimeException(e.toString());
+        }
+      }
+    };
+    threadPool.execute(publishWrapper);
+  }
+  
+  // create JobEntity from HistoryEvent with adding other info, like: 
+  // jobId, timestamp and entityType.
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+      createJobEntity(HistoryEvent event, long timestamp, JobId jobId, 
+      String entityType) {
+    
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
+        createBaseEntity(event, timestamp, entityType);
+    entity.setId(jobId.toString());
+    return entity;
+  }
+  
+  // create BaseEntity from HistoryEvent with adding other info, like: 
+  // timestamp and entityType.
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+      createBaseEntity(HistoryEvent event, long timestamp, String entityType) {
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent tEvent = 
+        event.toTimelineEvent();
+    tEvent.setTimestamp(timestamp);
+    
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
+        new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
+    entity.addEvent(tEvent);
+    entity.setType(entityType);
+    return entity;
+  }
+  
+  // create TaskEntity from HistoryEvent with adding other info, like: 
+  // taskId, jobId, timestamp, entityType and relatedJobEntity.
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+      createTaskEntity(HistoryEvent event, long timestamp, String taskId,
+      String entityType, String relatedJobEntity, JobId jobId) {
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
+        createBaseEntity(event, timestamp, entityType);
+    entity.setId(taskId);
+    entity.addIsRelatedToEntity(relatedJobEntity, jobId.toString());
+    return entity;
+  }
+  
+  // create TaskAttemptEntity from HistoryEvent with adding other info, like: 
+  // timestamp, taskAttemptId, entityType, relatedTaskEntity and taskId.
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+      createTaskAttemptEntity(HistoryEvent event, long timestamp, 
+      String taskAttemptId, String entityType, String relatedTaskEntity, 
+      String taskId) {
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
+        createBaseEntity(event, timestamp, entityType);
+    entity.setId(taskAttemptId);
+    entity.addIsRelatedToEntity(relatedTaskEntity, taskId);
+    return entity;
+  }
+  
+  private void processEventForNewTimelineService(HistoryEvent event, JobId jobId,
+      long timestamp) {
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity tEntity = null;
+    String taskId = null;
+    String taskAttemptId = null;
+
+    switch (event.getEventType()) {
+      // Handle job events
+      case JOB_SUBMITTED:
+      case JOB_STATUS_CHANGED:
+      case JOB_INFO_CHANGED:
+      case JOB_INITED:
+      case JOB_PRIORITY_CHANGED:
+      case JOB_QUEUE_CHANGED:
+      case JOB_FAILED:
+      case JOB_KILLED:
+      case JOB_ERROR:
+      case JOB_FINISHED:
+      case AM_STARTED:
+      case NORMALIZED_RESOURCE:
+        break;
+      // Handle task events
+      case TASK_STARTED:
+        taskId = ((TaskStartedEvent)event).getTaskId().toString();
+        break;
+      case TASK_FAILED:
+        taskId = ((TaskFailedEvent)event).getTaskId().toString();
+        break;
+      case TASK_UPDATED:
+        taskId = ((TaskUpdatedEvent)event).getTaskId().toString();
+        break;
+      case TASK_FINISHED:
+        taskId = ((TaskFinishedEvent)event).getTaskId().toString();
+        break;
+      case MAP_ATTEMPT_STARTED:
+      case CLEANUP_ATTEMPT_STARTED:
+      case REDUCE_ATTEMPT_STARTED:
+      case SETUP_ATTEMPT_STARTED:
+        taskId = ((TaskAttemptStartedEvent)event).getTaskId().toString();
+        taskAttemptId = ((TaskAttemptStartedEvent)event).
+            getTaskAttemptId().toString();
+        break;
+      case MAP_ATTEMPT_FAILED:
+      case CLEANUP_ATTEMPT_FAILED:
+      case REDUCE_ATTEMPT_FAILED:
+      case SETUP_ATTEMPT_FAILED:
+      case MAP_ATTEMPT_KILLED:
+      case CLEANUP_ATTEMPT_KILLED:
+      case REDUCE_ATTEMPT_KILLED:
+      case SETUP_ATTEMPT_KILLED:
+        taskId = ((TaskAttemptUnsuccessfulCompletionEvent)event).getTaskId().toString();
+        taskAttemptId = ((TaskAttemptUnsuccessfulCompletionEvent)event).
+            getTaskAttemptId().toString();
+        break;
+      case MAP_ATTEMPT_FINISHED:
+        taskId = ((MapAttemptFinishedEvent)event).getTaskId().toString();
+        taskAttemptId = ((MapAttemptFinishedEvent)event).getAttemptId().toString();
+        break;
+      case REDUCE_ATTEMPT_FINISHED:
+        taskId = ((ReduceAttemptFinishedEvent)event).getTaskId().toString();
+        taskAttemptId = ((ReduceAttemptFinishedEvent)event).getAttemptId().toString();
+        break;
+      case SETUP_ATTEMPT_FINISHED:
+      case CLEANUP_ATTEMPT_FINISHED:
+        taskId = ((TaskAttemptFinishedEvent)event).getTaskId().toString();
+        taskAttemptId = ((TaskAttemptFinishedEvent)event).getAttemptId().toString();
+        break;
+      default:
+        LOG.warn("EventType: " + event.getEventType() + " cannot be recognized" +
+            " and handled by timeline service.");
+        return;
+    }
+    if (taskId == null) {
+      // JobEntity
+      tEntity = createJobEntity(event, timestamp, jobId,
+          MAPREDUCE_JOB_ENTITY_TYPE);
+    } else {
+      if (taskAttemptId == null) {
+        // TaskEntity
+        tEntity = createTaskEntity(event, timestamp, taskId,
+            MAPREDUCE_TASK_ENTITY_TYPE, MAPREDUCE_JOB_ENTITY_TYPE, jobId);
+      } else {
+        // TaskAttemptEntity
+        tEntity = createTaskAttemptEntity(event, timestamp, taskAttemptId,
+            MAPREDUCE_TASK_ATTEMPT_ENTITY_TYPE, MAPREDUCE_TASK_ENTITY_TYPE,
+            taskId);
+      }
+    }
+
+    putEntityWithoutBlocking(timelineClient, tEntity);
   }
 
   private void setSummarySlotSeconds(JobSummary summary, Counters allCounters) {
