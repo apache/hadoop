@@ -57,6 +57,9 @@ Release 2.7.1 - 2015-07-06
 
   OPTIMIZATIONS
 
+    HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
+    split calculation (gera)
+
   BUG FIXES
 
     HADOOP-11868. Invalid user logins trigger large backtraces in server log
