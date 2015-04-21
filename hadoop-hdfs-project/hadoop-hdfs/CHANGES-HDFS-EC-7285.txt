@@ -104,3 +104,6 @@
 
     HDFS-8181. createErasureCodingZone sets retryCache state as false always
     (Uma Maheswara Rao G via vinayakumarb)
+
+    HDFS-8190. StripedBlockUtil.getInternalBlockLength may have overflow error.
+    (szetszwo)
