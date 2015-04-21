@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * This class provides tests for BlockInfo class, which is used in BlocksMap.
@@ -46,6 +47,15 @@ public class TestBlockInfo {
   private static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.hdfs.TestBlockInfo");
 
+  @Test
+  public void testIsDeleted() {
+    BlockInfoContiguous blockInfo = new BlockInfoContiguous((short) 3);
+    BlockCollection bc = Mockito.mock(BlockCollection.class);
+    blockInfo.setBlockCollection(bc);
+    Assert.assertFalse(blockInfo.isDeleted());
+    blockInfo.setBlockCollection(null);
+    Assert.assertTrue(blockInfo.isDeleted());
+  }
 
   @Test
   public void testAddStorage() throws Exception {
