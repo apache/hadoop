@@ -637,6 +637,13 @@
     </description>
 </property>
 
+ <property>
+    <name>mapreduce.job.new-timeline-service.enabled</name>
+    <value>false</value>
+    <description>Specifies if posting job and task events to new timeline service.
+    </description>
+</property>
+
 <property>
   <name>mapreduce.input.fileinputformat.split.minsize</name>
   <value>0</value>

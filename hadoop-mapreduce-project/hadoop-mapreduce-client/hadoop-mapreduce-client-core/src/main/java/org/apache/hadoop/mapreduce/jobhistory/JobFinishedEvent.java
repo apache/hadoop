@@ -23,6 +23,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 /**
  * Event to record successful completion of job
@@ -132,5 +135,27 @@ public class JobFinishedEvent  implements HistoryEvent {
   /** Get the reduce counters for the job */
   public Counters getReduceCounters() {
     return reduceCounters;
+  }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("FINISH_TIME", getFinishTime());
+    tEvent.addInfo("NUM_MAPS", getFinishedMaps());
+    tEvent.addInfo("NUM_REDUCES", getFinishedReduces());
+    tEvent.addInfo("FAILED_MAPS", getFailedMaps());
+    tEvent.addInfo("FAILED_REDUCES", getFailedReduces());
+    tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
+    tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
+    tEvent.addInfo("MAP_COUNTERS_GROUPS",
+        JobHistoryEventUtils.countersToJSON(getMapCounters()));
+    tEvent.addInfo("REDUCE_COUNTERS_GROUPS",
+        JobHistoryEventUtils.countersToJSON(getReduceCounters()));
+    tEvent.addInfo("TOTAL_COUNTERS_GROUPS",
+        JobHistoryEventUtils.countersToJSON(getTotalCounters()));
+    // TODO replace SUCCEEDED with JobState.SUCCEEDED.toString()
+    tEvent.addInfo("JOB_STATUS", "SUCCEEDED");
+    return tEvent;
   }
 }

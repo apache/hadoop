@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 import org.apache.avro.util.Utf8;
 
@@ -63,6 +65,14 @@ public class JobPriorityChangeEvent implements HistoryEvent {
   /** Get the event type */
   public EventType getEventType() {
     return EventType.JOB_PRIORITY_CHANGED;
+  }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("PRIORITY", getPriority().toString());
+    return tEvent;
   }
 
 }
