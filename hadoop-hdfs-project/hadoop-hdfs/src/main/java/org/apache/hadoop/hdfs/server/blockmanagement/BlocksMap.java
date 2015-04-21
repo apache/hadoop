@@ -193,7 +193,7 @@ class BlocksMap {
     boolean removed = node.removeBlock(info);
 
     if (info.getDatanode(0) == null     // no datanodes left
-              && info.getBlockCollection() == null) {  // does not belong to a file
+              && info.isDeleted()) {  // does not belong to a file
       blocks.remove(b);  // remove block from the map
     }
     return removed;

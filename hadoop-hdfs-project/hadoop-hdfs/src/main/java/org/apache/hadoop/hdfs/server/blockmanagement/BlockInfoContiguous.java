@@ -89,6 +89,10 @@ public class BlockInfoContiguous extends Block
     this.bc = bc;
   }
 
+  public boolean isDeleted() {
+    return (bc == null);
+  }
+
   public DatanodeDescriptor getDatanode(int index) {
     DatanodeStorageInfo storage = getStorageInfo(index);
     return storage == null ? null : storage.getDatanodeDescriptor();
