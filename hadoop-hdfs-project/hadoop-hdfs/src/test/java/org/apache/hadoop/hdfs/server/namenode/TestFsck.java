@@ -779,6 +779,77 @@ public class TestFsck {
     }
   }
 
+  @Test(timeout = 60000)
+  public void testFsckReplicaDetails() throws Exception {
+
+    final short REPL_FACTOR = 1;
+    short NUM_DN = 1;
+    final long blockSize = 512;
+    final long fileSize = 1024;
+    boolean checkDecommissionInProgress = false;
+    String[] racks = { "/rack1" };
+    String[] hosts = { "host1" };
+
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+
+    MiniDFSCluster cluster;
+    DistributedFileSystem dfs;
+    cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DN).hosts(hosts).racks(racks).build();
+    cluster.waitClusterUp();
+    dfs = cluster.getFileSystem();
+
+    // create files
+    final String testFile = new String("/testfile");
+    final Path path = new Path(testFile);
+    DFSTestUtil.createFile(dfs, path, fileSize, REPL_FACTOR, 1000L);
+    DFSTestUtil.waitReplication(dfs, path, REPL_FACTOR);
+    try {
+      // make sure datanode that has replica is fine before decommission
+      String fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks", "-replicaDetails");
+      assertTrue(fsckOut.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(fsckOut.contains("(LIVE)"));
+
+      // decommission datanode
+      ExtendedBlock eb = DFSTestUtil.getFirstBlock(dfs, path);
+      DatanodeDescriptor dn =
+          cluster.getNameNode().getNamesystem().getBlockManager()
+              .getBlockCollection(eb.getLocalBlock()).getBlocks()[0].getDatanode(0);
+      cluster.getNameNode().getNamesystem().getBlockManager().getDatanodeManager()
+          .getDecomManager().startDecommission(dn);
+      String dnName = dn.getXferAddr();
+
+      // check the replica status while decommissioning
+      fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks", "-replicaDetails");
+      assertTrue(fsckOut.contains("(DECOMMISSIONING)"));
+
+      // Start 2nd Datanode and wait for decommission to start
+      cluster.startDataNodes(conf, 1, true, null, null, null);
+      DatanodeInfo datanodeInfo = null;
+      do {
+        Thread.sleep(2000);
+        for (DatanodeInfo info : dfs.getDataNodeStats()) {
+          if (dnName.equals(info.getXferAddr())) {
+            datanodeInfo = info;
+          }
+        }
+        if (!checkDecommissionInProgress && datanodeInfo != null
+            && datanodeInfo.isDecommissionInProgress()) {
+          checkDecommissionInProgress = true;
+        }
+      } while (datanodeInfo != null && !datanodeInfo.isDecommissioned());
+
+      // check the replica status after decommission is done
+      fsckOut = runFsck(conf, 0, true, testFile, "-files", "-blocks", "-replicaDetails");
+      assertTrue(fsckOut.contains("(DECOMMISSIONED)"));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   /** Test if fsck can return -1 in case of failure
    * 
