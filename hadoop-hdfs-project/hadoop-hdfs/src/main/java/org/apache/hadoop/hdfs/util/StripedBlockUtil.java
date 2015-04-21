@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Utility class for analyzing striped block groups
  */
@@ -81,46 +83,43 @@ public class StripedBlockUtil {
   /**
    * Get the size of an internal block at the given index of a block group
    *
-   * @param numBytesInGroup Size of the block group only counting data blocks
+   * @param dataSize Size of the block group only counting data blocks
    * @param cellSize The size of a striping cell
-   * @param dataBlkNum The number of data blocks
-   * @param idxInGroup The logical index in the striped block group
+   * @param numDataBlocks The number of data blocks
+   * @param i The logical index in the striped block group
    * @return The size of the internal block at the specified index
    */
-  public static long getInternalBlockLength(long numBytesInGroup,
-      int cellSize, int dataBlkNum, int idxInGroup) {
+  public static long getInternalBlockLength(long dataSize,
+      int cellSize, int numDataBlocks, int i) {
+    Preconditions.checkArgument(dataSize >= 0);
+    Preconditions.checkArgument(cellSize > 0);
+    Preconditions.checkArgument(numDataBlocks > 0);
+    Preconditions.checkArgument(i >= 0);
     // Size of each stripe (only counting data blocks)
-    final long numBytesPerStripe = cellSize * dataBlkNum;
-    assert numBytesPerStripe  > 0:
-        "getInternalBlockLength should only be called on valid striped blocks";
+    final int stripeSize = cellSize * numDataBlocks;
     // If block group ends at stripe boundary, each internal block has an equal
     // share of the group
-    if (numBytesInGroup % numBytesPerStripe == 0) {
-      return numBytesInGroup / dataBlkNum;
+    final int lastStripeDataLen = (int)(dataSize % stripeSize);
+    if (lastStripeDataLen == 0) {
+      return dataSize / numDataBlocks;
     }
 
-    int numStripes = (int) ((numBytesInGroup - 1) / numBytesPerStripe + 1);
-    assert numStripes >= 1 : "There should be at least 1 stripe";
-
-    // All stripes but the last one are full stripes. The block should at least
-    // contain (numStripes - 1) full cells.
-    long blkSize = (numStripes - 1) * cellSize;
-
-    long lastStripeLen = numBytesInGroup % numBytesPerStripe;
-    // Size of parity cells should equal the size of the first cell, if it
-    // is not full.
-    long lastParityCellLen = Math.min(cellSize, lastStripeLen);
-
-    if (idxInGroup >= dataBlkNum) {
-      // for parity blocks
-      blkSize += lastParityCellLen;
-    } else {
-      // for data blocks
-      blkSize +=  Math.min(cellSize,
-          Math.max(0, lastStripeLen - cellSize * idxInGroup));
+    final int numStripes = (int) ((dataSize - 1) / stripeSize + 1);
+    return (numStripes - 1L)*cellSize
+        + lastCellSize(lastStripeDataLen, cellSize, numDataBlocks, i);
+  }
+  
+  private static int lastCellSize(int size, int cellSize, int numDataBlocks,
+      int i) {
+    if (i < numDataBlocks) {
+      // parity block size (i.e. i >= numDataBlocks) is the same as 
+      // the first data block size (i.e. i = 0).
+      size -= i*cellSize;
+      if (size < 0) {
+        size = 0;
+      }
     }
-
-    return blkSize;
+    return size > cellSize? cellSize: size;
   }
 
   /**
