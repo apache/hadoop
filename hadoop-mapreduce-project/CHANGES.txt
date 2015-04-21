@@ -340,6 +340,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6293. Set job classloader on uber-job's LocalContainerLauncher
     event thread. (Sangjin Lee via gera)
 
+    MAPREDUCE-6297. Task Id of the failed task in diagnostics should link to
+    the task page. (Siqi Li via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
