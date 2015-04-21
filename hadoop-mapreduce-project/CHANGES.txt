@@ -1,5 +1,20 @@
 Hadoop MapReduce Change Log
 
+Branch YARN-2928: Timeline Server Next Generation: Phase 1
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-6327. Made MR AM use timeline service v2 API to write history
+    events and counters. (Junping Du via zjshen)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

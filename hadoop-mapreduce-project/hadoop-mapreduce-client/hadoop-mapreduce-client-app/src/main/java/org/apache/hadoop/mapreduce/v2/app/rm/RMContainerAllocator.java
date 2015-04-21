@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -769,6 +770,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     computeIgnoreBlacklisting();
 
     handleUpdatedNodes(response);
+    String collectorAddr = response.getCollectorAddr();
+    MRAppMaster.RunningAppContext appContext = 
+        (MRAppMaster.RunningAppContext)this.getContext();
+    if (collectorAddr != null && !collectorAddr.isEmpty()
+        && appContext.getTimelineClient() != null) {
+      appContext.getTimelineClient().setTimelineServiceAddress(
+        response.getCollectorAddr());
+    }
 
     for (ContainerStatus cont : finishedContainers) {
       LOG.info("Received completed container " + cont.getContainerId());

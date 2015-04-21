@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 import org.apache.avro.util.Utf8;
 
@@ -205,5 +207,26 @@ public class JobSubmittedEvent implements HistoryEvent {
   }
   /** Get the event type */
   public EventType getEventType() { return EventType.JOB_SUBMITTED; }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("SUBMIT_TIME", getSubmitTime());
+    tEvent.addInfo("QUEUE_NAME", getJobQueueName());
+    tEvent.addInfo("JOB_NAME", getJobName());
+    tEvent.addInfo("USER_NAME", getUserName());
+    tEvent.addInfo("JOB_CONF_PATH", getJobConfPath());
+    tEvent.addInfo("ACLS", getJobAcls());
+    tEvent.addInfo("JOB_QUEUE_NAME", getJobQueueName());
+    tEvent.addInfo("WORKLFOW_ID", getWorkflowId());
+    tEvent.addInfo("WORKFLOW_NAME", getWorkflowName());
+    tEvent.addInfo("WORKFLOW_NODE_NAME", getWorkflowNodeName());
+    tEvent.addInfo("WORKFLOW_ADJACENCIES",
+        getWorkflowAdjacencies());
+    tEvent.addInfo("WORKFLOW_TAGS", getWorkflowTags());
+    
+    return tEvent;
+  }
 
 }

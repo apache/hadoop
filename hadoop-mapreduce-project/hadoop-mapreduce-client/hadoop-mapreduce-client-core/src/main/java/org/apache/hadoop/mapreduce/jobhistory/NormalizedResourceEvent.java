@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.jobhistory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 /**
  * Event to record the normalized map/reduce requirements.
@@ -70,5 +72,14 @@ public class NormalizedResourceEvent implements HistoryEvent {
   @Override
   public void setDatum(Object datum) {
     throw new UnsupportedOperationException("Not a seriable object");
+  }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("MEMORY", "" + getMemory());
+    tEvent.addInfo("TASK_TYPE", getTaskType());
+    return tEvent;
   }
 }
