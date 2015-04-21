@@ -527,6 +527,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11704. DelegationTokenAuthenticationFilter must pass ipaddress
     instead of hostname to ProxyUsers#authorize (Anubhav Dhoot via asuresh)
 
+    HADOOP-11846 TestCertificateUtil.testCorruptPEM failing on Jenkins JDK8.
+    (Larry McCay via stevel)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
