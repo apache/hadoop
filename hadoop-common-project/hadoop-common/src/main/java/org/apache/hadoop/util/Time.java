@@ -42,6 +42,8 @@ public final class Time {
    * milliseconds, and not affected by settimeofday or similar system clock
    * changes.  This is appropriate to use when computing how much longer to
    * wait for an interval to expire.
+   * This function can return a negative value and it must be handled correctly
+   * by callers. See the documentation of System#nanoTime for caveats.
    * @return a monotonic clock that counts in milliseconds.
    */
   public static long monotonicNow() {
