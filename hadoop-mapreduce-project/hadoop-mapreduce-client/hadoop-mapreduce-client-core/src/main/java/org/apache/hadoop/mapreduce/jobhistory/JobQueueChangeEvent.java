@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.jobhistory;
 
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 
 @SuppressWarnings("deprecation")
 public class JobQueueChangeEvent implements HistoryEvent {
@@ -58,6 +60,14 @@ public class JobQueueChangeEvent implements HistoryEvent {
       return datum.jobQueueName.toString();
     }
     return null;
+  }
+  
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("QUEUE_NAMES", getJobQueueName());
+    return tEvent;
   }
 
 }
