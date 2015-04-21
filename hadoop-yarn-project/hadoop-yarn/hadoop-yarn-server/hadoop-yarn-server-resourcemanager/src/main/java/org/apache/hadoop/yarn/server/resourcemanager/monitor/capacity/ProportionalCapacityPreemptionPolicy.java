@@ -550,9 +550,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
         // lock the leafqueue while we scan applications and unreserve
         synchronized (qT.leafQueue) {
-          NavigableSet<FiCaSchedulerApp> ns = 
-              (NavigableSet<FiCaSchedulerApp>) qT.leafQueue.getApplications();
-          Iterator<FiCaSchedulerApp> desc = ns.descendingIterator();
+          Iterator<FiCaSchedulerApp> desc =   
+            qT.leafQueue.getOrderingPolicy().getPreemptionIterator();
           qT.actuallyPreempted = Resources.clone(resToObtain);
           while (desc.hasNext()) {
             FiCaSchedulerApp fc = desc.next();

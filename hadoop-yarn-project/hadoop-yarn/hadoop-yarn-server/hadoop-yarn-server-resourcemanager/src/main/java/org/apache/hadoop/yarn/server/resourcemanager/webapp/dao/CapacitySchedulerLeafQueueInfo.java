@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
@@ -39,6 +40,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected ResourceInfo usedAMResource;
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
+  
+  @XmlTransient
+  protected String orderingPolicyInfo;
 
   CapacitySchedulerLeafQueueInfo() {
   };
@@ -57,6 +61,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
     userAMResourceLimit = new ResourceInfo(q.getUserAMResourceLimit());
     preemptionDisabled = q.getPreemptionDisabled();
+    orderingPolicyInfo = q.getOrderingPolicy().getInfo();
   }
 
   public int getNumActiveApplications() {
@@ -106,5 +111,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public boolean getPreemptionDisabled() {
     return preemptionDisabled;
+  }
+  
+  public String getOrderingPolicyInfo() {
+    return orderingPolicyInfo;
   }
 }

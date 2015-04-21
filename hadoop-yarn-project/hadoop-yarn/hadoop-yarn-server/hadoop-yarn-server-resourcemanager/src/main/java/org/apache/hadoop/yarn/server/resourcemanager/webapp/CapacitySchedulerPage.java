@@ -94,6 +94,7 @@ class CapacitySchedulerPage extends RmView {
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
           _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
           _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
+          _("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
           _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
 
       html._(InfoBlock.class);

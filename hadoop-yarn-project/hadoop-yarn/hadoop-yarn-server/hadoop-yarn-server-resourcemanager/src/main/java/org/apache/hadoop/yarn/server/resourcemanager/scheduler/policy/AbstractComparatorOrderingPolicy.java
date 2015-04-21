@@ -68,15 +68,6 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
     schedulableEntities.add(schedulableEntity);
   }
   
-  public void setComparator(Comparator<SchedulableEntity> comparator) {
-    this.comparator = comparator;
-    TreeSet<S> schedulableEntities = new TreeSet<S>(comparator);
-    if (this.schedulableEntities != null) {
-      schedulableEntities.addAll(this.schedulableEntities);
-    }
-    this.schedulableEntities = schedulableEntities;
-  }
-  
   @VisibleForTesting
   public Comparator<SchedulableEntity> getComparator() {
     return comparator; 
@@ -103,7 +94,7 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   }
   
   @Override
-  public abstract void configure(String conf);
+  public abstract void configure(Map<String, String> conf);
   
   @Override
   public abstract void containerAllocated(S schedulableEntity, 
@@ -114,6 +105,6 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
     RMContainer r);
   
   @Override
-  public abstract String getStatusMessage();
+  public abstract String getInfo();
   
 }
