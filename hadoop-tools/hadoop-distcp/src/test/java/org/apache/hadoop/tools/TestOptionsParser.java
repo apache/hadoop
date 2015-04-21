@@ -304,6 +304,48 @@ public class TestOptionsParser {
   }
 
   @Test
+  public void testParseNumListstatusThreads() {
+    DistCpOptions options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    // If command line argument isn't set, we expect .getNumListstatusThreads
+    // option to be zero (so that we know when to override conf properties).
+    Assert.assertEquals(0, options.getNumListstatusThreads());
+
+    options = OptionsParser.parse(new String[] {
+        "--numListstatusThreads",
+        "12",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(12, options.getNumListstatusThreads());
+
+    options = OptionsParser.parse(new String[] {
+        "--numListstatusThreads",
+        "0",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(0, options.getNumListstatusThreads());
+
+    try {
+      OptionsParser.parse(new String[] {
+          "--numListstatusThreads",
+          "hello",
+          "hdfs://localhost:8020/source/first",
+          "hdfs://localhost:8020/target/"});
+      Assert.fail("Non numberic numListstatusThreads parsed");
+    } catch (IllegalArgumentException ignore) { }
+
+    // Ignore large number of threads.
+    options = OptionsParser.parse(new String[] {
+        "--numListstatusThreads",
+        "100",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(DistCpOptions.maxNumListstatusThreads,
+                        options.getNumListstatusThreads());
+  }
+
+  @Test
   public void testSourceListing() {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "-f",

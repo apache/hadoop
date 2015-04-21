@@ -44,6 +44,8 @@ public class DistCpOptions {
   private boolean blocking = true;
   private boolean useDiff = false;
 
+  public static final int maxNumListstatusThreads = 40;
+  private int numListstatusThreads = 0;  // Indicates that flag is not set.
   private int maxMaps = DistCpConstants.DEFAULT_MAPS;
   private int mapBandwidth = DistCpConstants.DEFAULT_BANDWIDTH_MB;
 
@@ -124,6 +126,7 @@ public class DistCpOptions {
       this.overwrite = that.overwrite;
       this.skipCRC = that.skipCRC;
       this.blocking = that.blocking;
+      this.numListstatusThreads = that.numListstatusThreads;
       this.maxMaps = that.maxMaps;
       this.mapBandwidth = that.mapBandwidth;
       this.sslConfigurationFile = that.getSslConfigurationFile();
@@ -310,6 +313,30 @@ public class DistCpOptions {
   public void setSkipCRC(boolean skipCRC) {
     validate(DistCpOptionSwitch.SKIP_CRC, skipCRC);
     this.skipCRC = skipCRC;
+  }
+
+  /** Get the number of threads to use for listStatus
+   *
+   * @return Number of threads to do listStatus
+   */
+  public int getNumListstatusThreads() {
+    return numListstatusThreads;
+  }
+
+  /** Set the number of threads to use for listStatus. We allow max 40
+   *  threads. Setting numThreads to zero signify we should use the value
+   *  from conf properties.
+   *
+   * @param numThreads - Number of threads
+   */
+  public void setNumListstatusThreads(int numThreads) {
+    if (numThreads > maxNumListstatusThreads) {
+      this.numListstatusThreads = maxNumListstatusThreads;
+    } else if (numThreads > 0) {
+      this.numListstatusThreads = numThreads;
+    } else {
+      this.numListstatusThreads = 0;
+    }
   }
 
   /** Get the max number of maps to use for this copy
