@@ -155,6 +155,7 @@ public class TestApplicationLimits {
     doReturn(applicationAttemptId). when(application).getApplicationAttemptId();
     doReturn(user).when(application).getUser();
     doReturn(amResource).when(application).getAMResource();
+    when(application.compareInputOrderTo(any(FiCaSchedulerApp.class))).thenCallRealMethod(); 
     return application;
   }
   
@@ -469,7 +470,7 @@ public class TestApplicationLimits {
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(1, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
-    assertTrue(queue.activeApplications.contains(app_0));
+    assertTrue(queue.getApplications().contains(app_0));
 
     // Submit second application
     FiCaSchedulerApp app_1 = getMockApplication(APPLICATION_ID++, user_0,
@@ -479,7 +480,7 @@ public class TestApplicationLimits {
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
-    assertTrue(queue.activeApplications.contains(app_1));
+    assertTrue(queue.getApplications().contains(app_1));
 
     // Submit third application, should remain pending
     FiCaSchedulerApp app_2 = getMockApplication(APPLICATION_ID++, user_0,
@@ -508,7 +509,7 @@ public class TestApplicationLimits {
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(1, queue.getNumPendingApplications(user_0));
     assertFalse(queue.pendingApplications.contains(app_2));
-    assertFalse(queue.activeApplications.contains(app_2));
+    assertFalse(queue.getApplications().contains(app_2));
 
     // Finish 1st application, app_3 should become active
     queue.finishApplicationAttempt(app_0, A);
@@ -516,9 +517,9 @@ public class TestApplicationLimits {
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
-    assertTrue(queue.activeApplications.contains(app_3));
+    assertTrue(queue.getApplications().contains(app_3));
     assertFalse(queue.pendingApplications.contains(app_3));
-    assertFalse(queue.activeApplications.contains(app_0));
+    assertFalse(queue.getApplications().contains(app_0));
 
     // Finish 2nd application
     queue.finishApplicationAttempt(app_1, A);
@@ -526,7 +527,7 @@ public class TestApplicationLimits {
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(1, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
-    assertFalse(queue.activeApplications.contains(app_1));
+    assertFalse(queue.getApplications().contains(app_1));
 
     // Finish 4th application
     queue.finishApplicationAttempt(app_3, A);
@@ -534,7 +535,7 @@ public class TestApplicationLimits {
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(0, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
-    assertFalse(queue.activeApplications.contains(app_3));
+    assertFalse(queue.getApplications().contains(app_3));
   }
 
   @Test

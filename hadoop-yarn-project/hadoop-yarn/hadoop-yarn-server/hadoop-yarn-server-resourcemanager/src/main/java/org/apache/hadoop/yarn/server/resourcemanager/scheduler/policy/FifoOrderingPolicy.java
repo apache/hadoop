@@ -28,11 +28,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 public class FifoOrderingPolicy<S extends SchedulableEntity> extends AbstractComparatorOrderingPolicy<S> {
   
   public FifoOrderingPolicy() {
-    setComparator(new FifoComparator());
+    this.comparator = new FifoComparator();
+    this.schedulableEntities = new TreeSet<S>(comparator);
   }
   
   @Override
-  public void configure(String conf) {
+  public void configure(Map<String, String> conf) {
     
   }
   
@@ -47,7 +48,7 @@ public class FifoOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
     }
   
   @Override
-  public String getStatusMessage() {
+  public String getInfo() {
     return "FifoOrderingPolicy";
   }
   

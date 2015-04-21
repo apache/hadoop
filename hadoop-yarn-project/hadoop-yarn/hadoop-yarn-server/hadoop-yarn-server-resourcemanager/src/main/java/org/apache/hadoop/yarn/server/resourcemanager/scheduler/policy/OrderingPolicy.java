@@ -83,7 +83,7 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
    * Provides configuration information for the policy from the scheduler
    * configuration
    */
-  public void configure(String conf);
+  public void configure(Map<String, String> conf);
   
   /**
    * The passed SchedulableEntity has been allocated the passed Container,
@@ -104,6 +104,6 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
   /**
    * Display information regarding configuration & status
    */
-  public String getStatusMessage();
+  public String getInfo();
   
 }

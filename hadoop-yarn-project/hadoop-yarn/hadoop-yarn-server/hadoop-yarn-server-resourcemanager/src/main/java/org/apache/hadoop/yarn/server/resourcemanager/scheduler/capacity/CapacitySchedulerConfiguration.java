@@ -48,6 +48,9 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.*;
+
+
 import com.google.common.collect.ImmutableSet;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
@@ -116,7 +119,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final String MAXIMUM_ALLOCATION_VCORES =
       "maximum-allocation-vcores";
-
+  
+  public static final String ORDERING_POLICY = "ordering-policy";
+  
+  public static final String DEFAULT_ORDERING_POLICY = "fifo";
+  
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
   
@@ -377,6 +384,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
     return userLimit;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public <S extends SchedulableEntity> OrderingPolicy<S> getOrderingPolicy(
+      String queue) {
+  
+    String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY, 
+      DEFAULT_ORDERING_POLICY);
+    
+    OrderingPolicy<S> orderingPolicy;
+    
+    if (policyType.trim().equals("fifo")) {
+       policyType = FifoOrderingPolicy.class.getName();
+    }
+    try {
+      orderingPolicy = (OrderingPolicy<S>)
+        Class.forName(policyType).newInstance();
+    } catch (Exception e) {
+      String message = "Unable to construct ordering policy for: " + policyType + ", " + e.getMessage();
+      throw new RuntimeException(message, e);
+    }
+    return orderingPolicy;
   }
 
   public void setUserLimit(String queue, int userLimit) {

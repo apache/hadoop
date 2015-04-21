@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainer
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
+
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -72,7 +74,7 @@ import com.google.common.collect.Multiset;
  */
 @Private
 @Unstable
-public class SchedulerApplicationAttempt {
+public class SchedulerApplicationAttempt implements SchedulableEntity {
   
   private static final Log LOG = LogFactory
     .getLog(SchedulerApplicationAttempt.class);
@@ -710,4 +712,24 @@ public class SchedulerApplicationAttempt {
   public ResourceUsage getAppAttemptResourceUsage() {
     return this.attemptResourceUsage;
   }
+  
+  @Override
+  public String getId() {
+    return getApplicationId().toString();
+  }
+  
+  @Override
+  public int compareInputOrderTo(SchedulableEntity other) {
+    if (other instanceof SchedulerApplicationAttempt) {
+      return getApplicationId().compareTo(
+        ((SchedulerApplicationAttempt)other).getApplicationId());
+    }
+    return 1;//let other types go before this, if any
+  }
+  
+  @Override
+  public synchronized ResourceUsage getSchedulingResourceUsage() {
+    return attemptResourceUsage;
+  }
+  
 }
