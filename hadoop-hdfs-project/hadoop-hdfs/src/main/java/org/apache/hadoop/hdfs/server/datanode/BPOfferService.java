@@ -429,7 +429,7 @@ class BPOfferService {
    */
   void scheduleBlockReport(long delay) {
     for (BPServiceActor actor : bpServices) {
-      actor.scheduleBlockReport(delay);
+      actor.getScheduler().scheduleBlockReport(delay);
     }
   }
 

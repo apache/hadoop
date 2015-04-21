@@ -566,6 +566,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7916. 'reportBadBlocks' from datanodes to standby Node BPServiceActor
     goes for infinite loop (vinayakumarb)
 
+    HDFS-8163. Using monotonicNow for block report scheduling causes
+    test failures on recently restarted systems. (Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
