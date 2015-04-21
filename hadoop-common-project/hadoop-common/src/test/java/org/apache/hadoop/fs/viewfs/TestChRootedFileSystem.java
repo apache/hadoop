@@ -395,6 +395,20 @@ public class TestChRootedFileSystem {
     verify(mockFs).getAclStatus(rawPath);
   }
 
+  @Test
+  public void testListLocatedFileStatus() throws IOException {
+    final Path mockMount = new Path("mockfs://foo/user");
+    final Path mockPath = new Path("/usermock");
+    final Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+    ConfigUtil.addLink(conf, mockPath.toString(), mockMount.toUri());
+    FileSystem vfs = FileSystem.get(URI.create("viewfs:///"), conf);
+    vfs.listLocatedStatus(mockPath);
+    final FileSystem mockFs = ((MockFileSystem)mockMount.getFileSystem(conf))
+        .getRawFileSystem();
+    verify(mockFs).listLocatedStatus(new Path(mockMount.toUri().getPath()));
+  }
+
   static class MockFileSystem extends FilterFileSystem {
     MockFileSystem() {
       super(mock(FileSystem.class));

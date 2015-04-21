@@ -32,6 +32,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 public class LocatedFileStatus extends FileStatus {
   private BlockLocation[] locations;
 
+
+  public LocatedFileStatus() {
+    super();
+  }
+
   /**
    * Constructor 
    * @param stat a file status
@@ -43,7 +48,7 @@ public class LocatedFileStatus extends FileStatus {
         stat.getBlockSize(), stat.getModificationTime(),
         stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
         stat.getGroup(), null, stat.getPath(), locations);
-    if (isSymlink()) {
+    if (stat.isSymlink()) {
       setSymlink(stat.getSymlink());
     }
   }
