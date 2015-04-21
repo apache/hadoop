@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.junit.Test;
 
 public class TestEvents {
@@ -404,7 +405,12 @@ public class TestEvents {
     public void setDatum(Object datum) {
       this.datum = datum;
     }
-
+    
+    @Override
+    public TimelineEvent toTimelineEvent() {
+      return null;
+    }
+    
   }
 
 }
