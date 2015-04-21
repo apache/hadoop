@@ -12,6 +12,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
     (Dapeng Sun via Yongjun Zhang)
 
+    HADOOP-11746. rewrite test-patch.sh (aw)
+
   IMPROVEMENTS
 
     HADOOP-11719. [Fsshell] Remove bin/hadoop reference from
