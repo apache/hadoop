@@ -239,6 +239,8 @@ public class NodeManager extends CompositeService
     this.dispatcher = new AsyncDispatcher();
 
     nodeHealthChecker = new NodeHealthCheckerService();
+    dirsHandler = new LocalDirsHandlerService(metrics);
+
     addService(nodeHealthChecker);
     dirsHandler = nodeHealthChecker.getDiskHandler();
 

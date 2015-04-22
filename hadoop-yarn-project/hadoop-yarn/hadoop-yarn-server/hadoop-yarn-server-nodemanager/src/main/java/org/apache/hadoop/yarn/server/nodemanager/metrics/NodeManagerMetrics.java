@@ -48,6 +48,15 @@ public class NodeManagerMetrics {
   @Metric MutableGaugeInt availableVCores;
   @Metric("Container launch duration")
       MutableRate containerLaunchDuration;
+  @Metric("# of bad local dirs")
+      MutableGaugeInt badLocalDirs;
+  @Metric("# of bad log dirs")
+      MutableGaugeInt badLogDirs;
+  @Metric("Disk utilization % on good local dirs")
+      MutableGaugeInt goodLocalDirsDiskUtilizationPerc;
+  @Metric("Disk utilization % on good log dirs")
+      MutableGaugeInt goodLogDirsDiskUtilizationPerc;
+
 
   private long allocatedMB;
   private long availableMB;
@@ -125,6 +134,24 @@ public class NodeManagerMetrics {
     containerLaunchDuration.add(value);
   }
 
+  public void setBadLocalDirs(int badLocalDirs) {
+    this.badLocalDirs.set(badLocalDirs);
+  }
+
+  public void setBadLogDirs(int badLogDirs) {
+    this.badLogDirs.set(badLogDirs);
+  }
+
+  public void setGoodLocalDirsDiskUtilizationPerc(
+      int goodLocalDirsDiskUtilizationPerc) {
+    this.goodLocalDirsDiskUtilizationPerc.set(goodLocalDirsDiskUtilizationPerc);
+  }
+
+  public void setGoodLogDirsDiskUtilizationPerc(
+      int goodLogDirsDiskUtilizationPerc) {
+    this.goodLogDirsDiskUtilizationPerc.set(goodLogDirsDiskUtilizationPerc);
+  }
+
   public int getRunningContainers() {
     return containersRunning.value();
   }
@@ -143,4 +170,25 @@ public class NodeManagerMetrics {
   public int getCompletedContainers() {
     return containersCompleted.value();
   }
+
+  @VisibleForTesting
+  public int getBadLogDirs() {
+    return badLogDirs.value();
+  }
+
+  @VisibleForTesting
+  public int getBadLocalDirs() {
+    return badLocalDirs.value();
+  }
+
+  @VisibleForTesting
+  public int getGoodLogDirsDiskUtilizationPerc() {
+    return goodLogDirsDiskUtilizationPerc.value();
+  }
+
+  @VisibleForTesting
+  public int getGoodLocalDirsDiskUtilizationPerc() {
+    return goodLocalDirsDiskUtilizationPerc.value();
+  }
+
 }
