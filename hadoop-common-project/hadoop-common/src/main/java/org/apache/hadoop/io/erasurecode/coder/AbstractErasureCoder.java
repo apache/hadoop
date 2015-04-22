@@ -66,7 +66,7 @@ public abstract class AbstractErasureCoder
    * @param isEncoder
    * @return raw coder
    */
-  protected static RawErasureCoder createRawCoder(Configuration conf,
+  public static RawErasureCoder createRawCoder(Configuration conf,
       String rawCoderFactoryKey, boolean isEncoder) {
 
     if (conf == null) {

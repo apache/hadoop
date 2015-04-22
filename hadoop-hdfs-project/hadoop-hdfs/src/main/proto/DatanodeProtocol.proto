@@ -59,6 +59,7 @@ message DatanodeCommandProto {
     UnusedUpgradeCommand = 6;
     NullDatanodeCommand = 7;
     BlockIdCommand = 8;
+    BlockECRecoveryCommand = 9;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -72,6 +73,7 @@ message DatanodeCommandProto {
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
   optional BlockIdCommandProto blkIdCmd = 8;
+  optional BlockECRecoveryCommandProto blkECRecoveryCmd = 9;
 }
 
 /**
