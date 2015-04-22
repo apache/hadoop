@@ -38,6 +38,7 @@ import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
@@ -50,6 +51,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
@@ -75,6 +78,8 @@ public class RMAdminCLI extends HAAdmin {
       "No cluster node-labels are specified";
   private static final String NO_MAPPING_ERR_MSG =
       "No node-to-labels mappings are specified";
+  private static final String INVALID_TIMEOUT_ERR_MSG =
+      "Invalid timeout specified : ";
 
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder()
@@ -82,8 +87,11 @@ public class RMAdminCLI extends HAAdmin {
               "Reload the queues' acls, states and scheduler specific " +
                   "properties. \n\t\tResourceManager will reload the " +
                   "mapred-queues configuration file."))
-          .put("-refreshNodes", new UsageInfo("",
-              "Refresh the hosts information at the ResourceManager."))
+          .put("-refreshNodes", new UsageInfo("[-g [timeout in seconds]]",
+              "Refresh the hosts information at the ResourceManager. Here "
+              + "[-g [timeout in seconds] is optional, if we specify the "
+              + "timeout then ResourceManager will wait for timeout before "
+              + "marking the NodeManager as decommissioned."))
           .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",
               "Refresh superuser proxy groups mappings"))
           .put("-refreshUserToGroupsMappings", new UsageInfo("",
@@ -202,7 +210,7 @@ public class RMAdminCLI extends HAAdmin {
     summary.append("The full syntax is: \n\n" +
     "yarn rmadmin" +
       " [-refreshQueues]" +
-      " [-refreshNodes]" +
+      " [-refreshNodes [-g [timeout in seconds]]]" +
       " [-refreshSuperUserGroupsConfiguration]" +
       " [-refreshUserToGroupsMappings]" +
       " [-refreshAdminAcls]" +
@@ -275,12 +283,60 @@ public class RMAdminCLI extends HAAdmin {
   private int refreshNodes() throws IOException, YarnException {
     // Refresh the nodes
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
-    RefreshNodesRequest request = 
-      recordFactory.newRecordInstance(RefreshNodesRequest.class);
+    RefreshNodesRequest request = RefreshNodesRequest
+        .newInstance(DecommissionType.NORMAL);
     adminProtocol.refreshNodes(request);
     return 0;
   }
-  
+
+  private int refreshNodes(long timeout) throws IOException, YarnException {
+    // Graceful decommissioning with timeout
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    RefreshNodesRequest gracefulRequest = RefreshNodesRequest
+        .newInstance(DecommissionType.GRACEFUL);
+    adminProtocol.refreshNodes(gracefulRequest);
+    CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest = recordFactory
+        .newRecordInstance(CheckForDecommissioningNodesRequest.class);
+    long waitingTime;
+    boolean nodesDecommissioning = true;
+    // timeout=-1 means wait for all the nodes to be gracefully
+    // decommissioned
+    for (waitingTime = 0; waitingTime < timeout || timeout == -1; waitingTime++) {
+      // wait for one second to check nodes decommissioning status
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        // Ignore the InterruptedException
+      }
+      CheckForDecommissioningNodesResponse checkForDecommissioningNodes = adminProtocol
+          .checkForDecommissioningNodes(checkForDecommissioningNodesRequest);
+      Set<NodeId> decommissioningNodes = checkForDecommissioningNodes
+          .getDecommissioningNodes();
+      if (decommissioningNodes.isEmpty()) {
+        nodesDecommissioning = false;
+        break;
+      } else {
+        StringBuilder nodes = new StringBuilder();
+        for (NodeId nodeId : decommissioningNodes) {
+          nodes.append(nodeId).append(",");
+        }
+        nodes.deleteCharAt(nodes.length() - 1);
+        System.out.println("Nodes '" + nodes + "' are still decommissioning.");
+      }
+    }
+    if (nodesDecommissioning) {
+      System.out.println("Graceful decommissioning not completed in " + timeout
+          + " seconds, issueing forceful decommissioning command.");
+      RefreshNodesRequest forcefulRequest = RefreshNodesRequest
+          .newInstance(DecommissionType.FORCEFUL);
+      adminProtocol.refreshNodes(forcefulRequest);
+    } else {
+      System.out.println("Graceful decommissioning completed in " + waitingTime
+          + " seconds.");
+    }
+    return 0;
+  }
+
   private int refreshUserToGroupsMappings() throws IOException,
       YarnException {
     // Refresh the user-to-groups mappings
@@ -518,7 +574,7 @@ public class RMAdminCLI extends HAAdmin {
     // verify that we have enough command line parameters
     //
     if ("-refreshAdminAcls".equals(cmd) || "-refreshQueues".equals(cmd) ||
-        "-refreshNodes".equals(cmd) || "-refreshServiceAcl".equals(cmd) ||
+        "-refreshServiceAcl".equals(cmd) ||
         "-refreshUserToGroupsMappings".equals(cmd) ||
         "-refreshSuperUserGroupsConfiguration".equals(cmd)) {
       if (args.length != 1) {
@@ -531,7 +587,21 @@ public class RMAdminCLI extends HAAdmin {
       if ("-refreshQueues".equals(cmd)) {
         exitCode = refreshQueues();
       } else if ("-refreshNodes".equals(cmd)) {
-        exitCode = refreshNodes();
+        if (args.length == 1) {
+          exitCode = refreshNodes();
+        } else if (args.length == 3) {
+          // if the graceful timeout specified
+          if ("-g".equals(args[1])) {
+            long timeout = validateTimeout(args[2]);
+            exitCode = refreshNodes(timeout);
+          } else {
+            printUsage(cmd, isHAEnabled);
+            return -1;
+          }
+        } else {
+          printUsage(cmd, isHAEnabled);
+          return -1;
+        }
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
         exitCode = refreshUserToGroupsMappings();
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -577,7 +647,7 @@ public class RMAdminCLI extends HAAdmin {
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
-      // out the first line of the error mesage, ignore the stack trace.
+      // out the first line of the error message, ignore the stack trace.
       exitCode = -1;
       try {
         String[] content;
@@ -597,6 +667,19 @@ public class RMAdminCLI extends HAAdmin {
       localNodeLabelsManager.stop();
     }
     return exitCode;
+  }
+
+  private long validateTimeout(String strTimeout) {
+    long timeout;
+    try {
+      timeout = Long.parseLong(strTimeout);
+    } catch (NumberFormatException ex) {
+      throw new IllegalArgumentException(INVALID_TIMEOUT_ERR_MSG + strTimeout);
+    }
+    if (timeout < -1) {
+      throw new IllegalArgumentException(INVALID_TIMEOUT_ERR_MSG + timeout);
+    }
+    return timeout;
   }
 
   @Override

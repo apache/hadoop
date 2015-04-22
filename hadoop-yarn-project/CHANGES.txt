@@ -93,6 +93,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3410. YARN admin should be able to remove individual application 
     records from RMStateStore. (Rohith Sharmaks via wangda)
 
+    YARN-3225. New parameter of CLI for decommissioning node gracefully in 
+    RMAdmin CLI. (Devaraj K via junping_du)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA

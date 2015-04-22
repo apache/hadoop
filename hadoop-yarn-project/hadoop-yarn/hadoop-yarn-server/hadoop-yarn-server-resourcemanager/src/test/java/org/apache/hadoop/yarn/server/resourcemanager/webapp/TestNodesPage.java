@@ -40,7 +40,7 @@ import com.google.inject.Module;
 public class TestNodesPage {
   
   final int numberOfRacks = 2;
-  final int numberOfNodesPerRack = 6;
+  final int numberOfNodesPerRack = 7;
   // The following is because of the way TestRMWebApp.mockRMContext creates
   // nodes.
   final int numberOfLostNodesPerRack = numberOfNodesPerRack

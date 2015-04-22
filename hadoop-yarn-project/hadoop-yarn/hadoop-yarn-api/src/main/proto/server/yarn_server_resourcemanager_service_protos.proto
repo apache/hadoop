@@ -36,6 +36,7 @@ message RefreshQueuesResponseProto {
 }
 
 message RefreshNodesRequestProto {
+  optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
 }
 message RefreshNodesResponseProto {
 }
@@ -105,6 +106,17 @@ message UpdateNodeLabelsRequestProto {
 message UpdateNodeLabelsResponseProto {
 }
 
+message CheckForDecommissioningNodesRequestProto {
+}
+message CheckForDecommissioningNodesResponseProto {
+  repeated NodeIdProto decommissioningNodes = 1;
+}
+
+enum DecommissionTypeProto {
+  NORMAL = 1;
+  GRACEFUL = 2;
+  FORCEFUL = 3;
+}
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////
