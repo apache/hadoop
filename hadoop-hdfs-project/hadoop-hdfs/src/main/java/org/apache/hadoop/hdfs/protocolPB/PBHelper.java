@@ -973,6 +973,8 @@ public class PBHelper {
       return REG_CMD;
     case BlockIdCommand:
       return PBHelper.convert(proto.getBlkIdCmd());
+    case BlockECRecoveryCommand:
+      return PBHelper.convert(proto.getBlkECRecoveryCmd());
     default:
       return null;
     }
@@ -1122,6 +1124,11 @@ public class PBHelper {
     case DatanodeProtocol.DNA_UNCACHE:
       builder.setCmdType(DatanodeCommandProto.Type.BlockIdCommand).
         setBlkIdCmd(PBHelper.convert((BlockIdCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY:
+      builder.setCmdType(DatanodeCommandProto.Type.BlockECRecoveryCommand)
+          .setBlkECRecoveryCmd(
+              convert((BlockECRecoveryCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
