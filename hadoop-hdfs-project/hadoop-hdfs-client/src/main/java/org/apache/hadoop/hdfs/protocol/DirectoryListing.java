@@ -28,13 +28,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class DirectoryListing {
   private HdfsFileStatus[] partialListing;
   private int remainingEntries;
-  
+
   /**
    * constructor
    * @param partialListing a partial listing of a directory
    * @param remainingEntries number of entries that are left to be listed
    */
-  public DirectoryListing(HdfsFileStatus[] partialListing, 
+  public DirectoryListing(HdfsFileStatus[] partialListing,
       int remainingEntries) {
     if (partialListing == null) {
       throw new IllegalArgumentException("partial listing should not be null");
@@ -54,7 +54,7 @@ public class DirectoryListing {
   public HdfsFileStatus[] getPartialListing() {
     return partialListing;
   }
-  
+
   /**
    * Get the number of remaining entries that are left to be listed
    * @return the number of remaining entries that are left to be listed
@@ -62,7 +62,7 @@ public class DirectoryListing {
   public int getRemainingEntries() {
     return remainingEntries;
   }
-  
+
   /**
    * Check if there are more entries that are left to be listed
    * @return true if there are more entries that are left to be listed;
@@ -71,7 +71,7 @@ public class DirectoryListing {
   public boolean hasMore() {
     return remainingEntries != 0;
   }
-  
+
   /**
    * Get the last name in this list
    * @return the last name in the list if it is not empty; otherwise return null

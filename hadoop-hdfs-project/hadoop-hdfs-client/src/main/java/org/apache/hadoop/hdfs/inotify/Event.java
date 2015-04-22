@@ -154,7 +154,7 @@ public abstract class Event {
         this.symlinkTarget = symlinkTarget;
         return this;
       }
-      
+
       public Builder overwrite(boolean overwrite) {
         this.overwrite = overwrite;
         return this;
@@ -224,7 +224,7 @@ public abstract class Event {
     public String getSymlinkTarget() {
       return symlinkTarget;
     }
-    
+
     public boolean getOverwrite() {
       return overwrite;
     }

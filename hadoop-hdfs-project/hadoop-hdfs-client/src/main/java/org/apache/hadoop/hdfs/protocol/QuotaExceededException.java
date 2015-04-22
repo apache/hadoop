@@ -18,43 +18,48 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * This exception is thrown when modification to HDFS results in violation
+ * of a directory quota. A directory quota might be namespace quota (limit
+ * on number of files and directories) or a diskspace quota (limit on space
+ * taken by all the file under the directory tree). <br> <br>
+ *
+ * The message for the exception specifies the directory where the quota
+ * was violated and actual quotas. Specific message is generated in the
+ * corresponding Exception class:
+ *  DSQuotaExceededException or
+ *  NSQuotaExceededException
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class NSQuotaExceededException extends QuotaExceededException {
+public class QuotaExceededException extends IOException {
   protected static final long serialVersionUID = 1L;
-  
-  private String prefix;
-  
-  public NSQuotaExceededException() {}
+  protected String pathName=null;
+  protected long quota; // quota
+  protected long count; // actual value
 
-  public NSQuotaExceededException(String msg) {
+  protected QuotaExceededException() {}
+
+  protected QuotaExceededException(String msg) {
     super(msg);
   }
-  
-  public NSQuotaExceededException(long quota, long count) {
-    super(quota, count);
+
+  protected QuotaExceededException(long quota, long count) {
+    this.quota = quota;
+    this.count = count;
+  }
+
+  public void setPathName(String path) {
+    this.pathName = path;
   }
 
   @Override
   public String getMessage() {
-    String msg = super.getMessage();
-    if (msg == null) {
-      msg = "The NameSpace quota (directories and files)" + 
-      (pathName==null?"":(" of directory " + pathName)) + 
-          " is exceeded: quota=" + quota + " file count=" + count; 
-
-      if (prefix != null) {
-        msg = prefix + ": " + msg;
-      }
-    }
-    return msg;
-  }
-
-  /** Set a prefix for the error message. */
-  public void setMessagePrefix(final String prefix) {
-    this.prefix = prefix;
+    return super.getMessage();
   }
 }

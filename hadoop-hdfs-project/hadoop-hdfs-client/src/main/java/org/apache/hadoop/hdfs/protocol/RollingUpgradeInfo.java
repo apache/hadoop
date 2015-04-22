@@ -31,7 +31,7 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
   private final long startTime;
   private long finalizeTime;
   private boolean createdRollbackImages;
-  
+
   public RollingUpgradeInfo(String blockPoolId, boolean createdRollbackImages,
       long startTime, long finalizeTime) {
     super(blockPoolId, finalizeTime != 0);
@@ -39,7 +39,7 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
     this.startTime = startTime;
     this.finalizeTime = finalizeTime;
   }
-  
+
   public boolean createdRollbackImages() {
     return createdRollbackImages;
   }
@@ -51,7 +51,7 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
   public boolean isStarted() {
     return startTime != 0;
   }
-  
+
   /** @return The rolling upgrade starting time. */
   public long getStartTime() {
     return startTime;
@@ -102,7 +102,7 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
       +  "\n     Start Time: " + (startTime == 0? "<NOT STARTED>": timestamp2String(startTime))
       +  "\n  Finalize Time: " + (finalizeTime == 0? "<NOT FINALIZED>": timestamp2String(finalizeTime));
   }
-  
+
   private static String timestamp2String(long timestamp) {
     return new Date(timestamp) + " (=" + timestamp + ")";
   }
