@@ -533,6 +533,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11846 TestCertificateUtil.testCorruptPEM failing on Jenkins JDK8.
     (Larry McCay via stevel)
 
+    HADOOP-11859. PseudoAuthenticationHandler fails with httpcomponents v4.4.
+    (Eugene Koifman via jitendra)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
