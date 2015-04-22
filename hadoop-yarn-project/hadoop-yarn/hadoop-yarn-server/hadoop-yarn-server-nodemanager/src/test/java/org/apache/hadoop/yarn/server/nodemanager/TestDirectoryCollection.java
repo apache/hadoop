@@ -129,24 +129,38 @@ public class TestDirectoryCollection {
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, 100.0F);
+    int utilizedSpacePerc =
+        (int) ((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(utilizedSpacePerc,
+      dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, testDir.getTotalSpace() / (1024 * 1024));
     dc.checkDirs();
     Assert.assertEquals(0, dc.getGoodDirs().size());
     Assert.assertEquals(1, dc.getFailedDirs().size());
     Assert.assertEquals(1, dc.getFullDirs().size());
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
 
     dc = new DirectoryCollection(dirs, 100.0F, 0);
+    utilizedSpacePerc =
+        (int)((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
     dc.checkDirs();
     Assert.assertEquals(1, dc.getGoodDirs().size());
     Assert.assertEquals(0, dc.getFailedDirs().size());
     Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertEquals(utilizedSpacePerc,
+      dc.getGoodDirsDiskUtilizationPercentage());
   }
 
   @Test

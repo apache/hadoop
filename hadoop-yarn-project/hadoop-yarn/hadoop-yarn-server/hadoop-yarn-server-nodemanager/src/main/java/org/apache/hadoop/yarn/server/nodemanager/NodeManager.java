@@ -258,7 +258,7 @@ public class NodeManager extends CompositeService
     // NodeManager level dispatcher
     this.dispatcher = new AsyncDispatcher();
 
-    dirsHandler = new LocalDirsHandlerService();
+    dirsHandler = new LocalDirsHandlerService(metrics);
     nodeHealthChecker =
         new NodeHealthCheckerService(
             getNodeHealthScriptRunner(conf), dirsHandler);

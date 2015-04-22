@@ -154,6 +154,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3494. Expose AM resource limit and usage in CS QueueMetrics. (Rohith
     Sharmaks via jianhe)
 
+    YARN-3503. Expose disk utilization percentage and bad local and log dir 
+    counts in NM metrics. (Varun Vasudev via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
