@@ -43,6 +43,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -459,7 +460,8 @@ public class TestRMAdminService {
     rm.start();
 
     try {
-      rm.adminService.refreshNodes(RefreshNodesRequest.newInstance());
+      rm.adminService.refreshNodes(RefreshNodesRequest
+          .newInstance(DecommissionType.NORMAL));
     } catch (Exception ex) {
       fail("Using localConfigurationProvider. Should not get any exception.");
     }
@@ -500,7 +502,8 @@ public class TestRMAdminService {
         + "/excludeHosts");
     uploadConfiguration(yarnConf, YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
 
-    rm.adminService.refreshNodes(RefreshNodesRequest.newInstance());
+    rm.adminService.refreshNodes(RefreshNodesRequest
+        .newInstance(DecommissionType.NORMAL));
     Set<String> excludeHosts =
         rm.getNodesListManager().getHostsReader().getExcludedHosts();
     Assert.assertTrue(excludeHosts.size() == 1);

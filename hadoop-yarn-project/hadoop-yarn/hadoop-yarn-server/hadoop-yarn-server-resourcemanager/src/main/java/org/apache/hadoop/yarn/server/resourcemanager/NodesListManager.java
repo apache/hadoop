@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,6 +33,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -107,6 +110,18 @@ public class NodesListManager extends AbstractService implements
 
   public void refreshNodes(Configuration yarnConf) throws IOException,
       YarnException {
+    refreshHostsReader(yarnConf);
+
+    for (NodeId nodeId: rmContext.getRMNodes().keySet()) {
+      if (!isValidNode(nodeId.getHost())) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+      }
+    }
+  }
+
+  private void refreshHostsReader(Configuration yarnConf) throws IOException,
+      YarnException {
     synchronized (hostsReader) {
       if (null == yarnConf) {
         yarnConf = new YarnConfiguration();
@@ -125,13 +140,6 @@ public class NodesListManager extends AbstractService implements
               : this.rmContext.getConfigurationProvider()
                   .getConfigurationInputStream(this.conf, excludesFile));
       printConfiguredHosts();
-    }
-
-    for (NodeId nodeId: rmContext.getRMNodes().keySet()) {
-      if (!isValidNode(nodeId.getHost())) {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
-      }
     }
   }
 
@@ -235,5 +243,58 @@ public class NodesListManager extends AbstractService implements
                 : this.rmContext.getConfigurationProvider()
                     .getConfigurationInputStream(this.conf, excludesFile));
     return hostsReader;
+  }
+
+  /**
+   * Refresh the nodes gracefully
+   *
+   * @param conf
+   * @throws IOException
+   * @throws YarnException
+   */
+  public void refreshNodesGracefully(Configuration conf) throws IOException,
+      YarnException {
+    refreshHostsReader(conf);
+    for (Entry<NodeId, RMNode> entry:rmContext.getRMNodes().entrySet()) {
+      NodeId nodeId = entry.getKey();
+      if (!isValidNode(nodeId.getHost())) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION_WITH_TIMEOUT));
+      } else {
+        // Recommissioning the nodes
+        if (entry.getValue().getState() == NodeState.DECOMMISSIONING
+            || entry.getValue().getState() == NodeState.DECOMMISSIONED) {
+          this.rmContext.getDispatcher().getEventHandler()
+              .handle(new RMNodeEvent(nodeId, RMNodeEventType.RECOMMISSION));
+        }
+      }
+    }
+  }
+
+  /**
+   * It checks for any nodes in decommissioning state
+   *
+   * @return decommissioning nodes
+   */
+  public Set<NodeId> checkForDecommissioningNodes() {
+    Set<NodeId> decommissioningNodes = new HashSet<NodeId>();
+    for (Entry<NodeId, RMNode> entry : rmContext.getRMNodes().entrySet()) {
+      if (entry.getValue().getState() == NodeState.DECOMMISSIONING) {
+        decommissioningNodes.add(entry.getKey());
+      }
+    }
+    return decommissioningNodes;
+  }
+
+  /**
+   * Forcefully decommission the nodes if they are in DECOMMISSIONING state
+   */
+  public void refreshNodesForcefully() {
+    for (Entry<NodeId, RMNode> entry : rmContext.getRMNodes().entrySet()) {
+      if (entry.getValue().getState() == NodeState.DECOMMISSIONING) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(entry.getKey(), RMNodeEventType.DECOMMISSION));
+      }
+    }
   }
 }

@@ -16,39 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
+import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.util.Records;
 
-/**
- * <p>State of a <code>Node</code>.</p>
- */
-@Public
+@Private
 @Unstable
-public enum NodeState {
-  /** New node */
-  NEW, 
-  
-  /** Running node */
-  RUNNING, 
-  
-  /** Node is unhealthy */
-  UNHEALTHY, 
-  
-  /** Node is out of service */
-  DECOMMISSIONED, 
-  
-  /** Node has not sent a heartbeat for some configured time threshold*/
-  LOST, 
-  
-  /** Node has rebooted */
-  REBOOTED,
-
-  /** Node decommission is in progress */
-  DECOMMISSIONING;
-  
-  public boolean isUnusable() {
-    return (this == UNHEALTHY || this == DECOMMISSIONED || this == LOST);
+public abstract class CheckForDecommissioningNodesResponse {
+  @Private
+  @Unstable
+  public static CheckForDecommissioningNodesResponse newInstance(
+      Set<NodeId> decommissioningNodes) {
+    CheckForDecommissioningNodesResponse response = Records
+        .newRecord(CheckForDecommissioningNodesResponse.class);
+    response.setDecommissioningNodes(decommissioningNodes);
+    return response;
   }
+
+  public abstract void setDecommissioningNodes(Set<NodeId> decommissioningNodes);
+
+  public abstract Set<NodeId> getDecommissioningNodes();
 }

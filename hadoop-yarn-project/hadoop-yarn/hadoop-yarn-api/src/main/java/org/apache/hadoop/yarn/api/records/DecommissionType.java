@@ -15,36 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api.records;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+public enum DecommissionType {
+  /** Decomissioning nodes in normal way **/
+  NORMAL,
 
-public enum RMNodeEventType {
-  
-  STARTED,
-  
-  // Source: AdminService
-  DECOMMISSION,
-  DECOMMISSION_WITH_TIMEOUT,
-  RECOMMISSION,
-  
-  // Source: AdminService, ResourceTrackerService
-  RESOURCE_UPDATE,
+  /** Graceful decommissioning of nodes **/
+  GRACEFUL,
 
-  // ResourceTrackerService
-  STATUS_UPDATE,
-  REBOOTING,
-  RECONNECTED,
-
-  // Source: Application
-  CLEANUP_APP,
-
-  // Source: Container
-  CONTAINER_ALLOCATED,
-  CLEANUP_CONTAINER,
-
-  // Source: RMAppAttempt
-  FINISHED_CONTAINERS_PULLED_BY_AM,
-
-  // Source: NMLivelinessMonitor
-  EXPIRE
+  /** Forceful decommissioning of nodes which are already in progress **/
+  FORCEFUL
 }
