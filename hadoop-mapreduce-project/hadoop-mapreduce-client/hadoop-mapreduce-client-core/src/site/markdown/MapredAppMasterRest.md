@@ -1916,7 +1916,7 @@ A Task Attempt resource contains information about a particular task attempt wit
 
 Use the following URI to obtain an Task Attempt Object, from a task identified by the attemptid value.
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}
+      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
 
 ### HTTP Operations Supported
 
@@ -2031,7 +2031,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 ### URI
 
-      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}/counters
+      * http://<proxy http address:port>/proxy/{appid}/ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
 
 ### HTTP Operations Supported
 
