@@ -343,7 +343,7 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6297. Task Id of the failed task in diagnostics should link to
     the task page. (Siqi Li via gera)
 
-    MAPREDUCE-6330. Fix typo in some Task Attempt API's URL.
+    MAPREDUCE-6330. Fix typo in Task Attempt API's URL in documentations.
     (Ryu Kobayashi via ozawa)
 
 Release 2.7.1 - UNRELEASED
