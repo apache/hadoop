@@ -2315,7 +2315,7 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public Void doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        dfs.createErasureCodingZone(getPathName(p), null);
+        dfs.createErasureCodingZone(getPathName(p), schema);
         return null;
       }
 
