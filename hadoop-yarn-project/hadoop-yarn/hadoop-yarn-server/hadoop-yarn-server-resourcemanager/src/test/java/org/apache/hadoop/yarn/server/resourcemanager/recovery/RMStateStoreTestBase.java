@@ -591,6 +591,21 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     }
   }
 
+  public void testRemoveApplication(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    int noOfApps = 2;
+    ArrayList<RMApp> appList =
+        createAndStoreApps(stateStoreHelper, store, noOfApps);
+
+    RMApp rmApp1 = appList.get(0);
+    store.removeApplication(rmApp1.getApplicationId());
+    Assert.assertFalse(stateStoreHelper.appExists(rmApp1));
+
+    RMApp rmApp2 = appList.get(1);
+    Assert.assertTrue(stateStoreHelper.appExists(rmApp2));
+  }
+
   protected void modifyAppState() throws Exception {
 
   }

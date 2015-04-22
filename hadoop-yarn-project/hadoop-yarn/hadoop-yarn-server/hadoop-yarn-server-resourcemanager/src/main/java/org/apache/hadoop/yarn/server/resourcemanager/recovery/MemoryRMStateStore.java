@@ -251,4 +251,8 @@ public class MemoryRMStateStore extends RMStateStore {
   public void deleteStore() throws Exception {
   }
 
+  @Override
+  public void removeApplication(ApplicationId removeAppId) throws Exception {
+  }
+
 }

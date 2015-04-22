@@ -907,6 +907,15 @@ public abstract class RMStateStore extends AbstractService {
    */
   public abstract void deleteStore() throws Exception;
 
+  /**
+   * Derived classes must implement this method to remove application from the
+   * state store
+   * 
+   * @throws Exception
+   */
+  public abstract void removeApplication(ApplicationId removeAppId)
+      throws Exception;
+
   public void setResourceManager(ResourceManager rm) {
     this.resourceManager = rm;
   }

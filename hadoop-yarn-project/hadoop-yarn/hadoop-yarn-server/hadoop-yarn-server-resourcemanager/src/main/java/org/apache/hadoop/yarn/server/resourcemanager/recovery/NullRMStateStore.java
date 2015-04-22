@@ -150,4 +150,9 @@ public class NullRMStateStore extends RMStateStore {
     // Do nothing
   }
 
+  @Override
+  public void removeApplication(ApplicationId removeAppId) throws Exception {
+    // Do nothing
+  }
+
 }

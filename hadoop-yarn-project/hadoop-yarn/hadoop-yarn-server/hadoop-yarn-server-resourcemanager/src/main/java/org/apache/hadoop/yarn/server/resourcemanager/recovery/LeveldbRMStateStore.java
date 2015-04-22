@@ -659,6 +659,18 @@ public class LeveldbRMStateStore extends RMStateStore {
     fs.delete(root, true);
   }
 
+  @Override
+  public synchronized void removeApplication(ApplicationId removeAppId)
+      throws IOException {
+    String appKey = getApplicationNodeKey(removeAppId);
+    LOG.info("Removing state for app " + removeAppId);
+    try {
+      db.delete(bytes(appKey));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
   @VisibleForTesting
   int getNumEntriesInDatabase() throws IOException {
     int numEntries = 0;
