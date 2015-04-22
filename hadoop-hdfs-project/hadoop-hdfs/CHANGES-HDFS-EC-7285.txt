@@ -107,3 +107,6 @@
 
     HDFS-8190. StripedBlockUtil.getInternalBlockLength may have overflow error.
     (szetszwo)
+
+    HDFS-8216. TestDFSStripedOutputStream should use BlockReaderTestUtil to 
+    create BlockReader. (szetszwo via Zhe Zhang)
