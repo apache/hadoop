@@ -110,3 +110,6 @@
 
     HDFS-8216. TestDFSStripedOutputStream should use BlockReaderTestUtil to 
     create BlockReader. (szetszwo via Zhe Zhang)
+    
+    HDFS-8212. DistributedFileSystem.createErasureCodingZone should pass schema
+    in FileSystemLinkResolver. (szetszwo via Zhe Zhang)
