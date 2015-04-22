@@ -151,6 +151,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3451. Display attempt start time and elapsed time on the web UI.
     (Rohith Sharmaks via jianhe)
 
+    YARN-3494. Expose AM resource limit and usage in CS QueueMetrics. (Rohith
+    Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

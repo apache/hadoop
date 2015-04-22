@@ -432,10 +432,16 @@ public class TestLeafQueue {
         .getMockApplicationAttemptId(0, 2);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a, null,
         spyRMContext);
+    app_1.setAMResource(Resource.newInstance(100, 1));
     a.submitApplicationAttempt(app_1, user_0); // same user
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(1, a.getMetrics().getAppsPending());
+    assertEquals(1, a.getUser(user_0).getActiveApplications());
+    assertEquals(app_1.getAMResource().getMemory(), a.getMetrics()
+        .getUsedAMResourceMB());
+    assertEquals(app_1.getAMResource().getVirtualCores(), a.getMetrics()
+        .getUsedAMResourceVCores());
     
     event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
         RMAppAttemptState.FINISHED, false);

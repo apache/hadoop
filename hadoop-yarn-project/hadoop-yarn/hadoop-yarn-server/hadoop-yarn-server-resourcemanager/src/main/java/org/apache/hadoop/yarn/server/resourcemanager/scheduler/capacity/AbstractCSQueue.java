@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -67,7 +66,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   final Resource minimumAllocation;
   Resource maximumAllocation;
   QueueState state;
-  final QueueMetrics metrics;
+  final CSQueueMetrics metrics;
   protected final PrivilegedEntity queueEntity;
 
   final ResourceCalculator resourceCalculator;
@@ -100,10 +99,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.resourceCalculator = cs.getResourceCalculator();
     
     // must be called after parent and queueName is set
-    this.metrics = old != null ? old.getMetrics() :
-        QueueMetrics.forQueue(getQueuePath(), parent,
-            cs.getConfiguration().getEnableUserMetrics(),
-            cs.getConf());
+    this.metrics =
+        old != null ? (CSQueueMetrics) old.getMetrics() : CSQueueMetrics
+            .forQueue(getQueuePath(), parent, cs.getConfiguration()
+                .getEnableUserMetrics(), cs.getConf());
 
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();
@@ -171,7 +170,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   @Override
-  public QueueMetrics getMetrics() {
+  public CSQueueMetrics getMetrics() {
     return metrics;
   }
   
