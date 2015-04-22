@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,25 +27,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,7 +46,6 @@ public class TestDFSStripedOutputStream {
   private int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
 
   private MiniDFSCluster cluster;
-  private Configuration conf = new Configuration();
   private DistributedFileSystem fs;
   private final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   private final int stripesPerBlock = 4;
@@ -173,7 +159,11 @@ public class TestDFSStripedOutputStream {
     // check file length
     FileStatus status = fs.getFileStatus(testPath);
     Assert.assertEquals(writeBytes, status.getLen());
+    
+    checkData(src, writeBytes);
+  }
 
+  void checkData(String src, int writeBytes) throws IOException {
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
     LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0L);
 
@@ -199,11 +189,7 @@ public class TestDFSStripedOutputStream {
         if (lblock == null) {
           continue;
         }
-        DatanodeInfo[] nodes = lblock.getLocations();
         ExtendedBlock block = lblock.getBlock();
-        InetSocketAddress targetAddr = NetUtils.createSocketAddr(
-            nodes[0].getXferAddr());
-
         byte[] blockBytes = new byte[(int)block.getNumBytes()];
         if (i < dataBlocks) {
           dataBlockBytes[i] = blockBytes;
@@ -215,40 +201,8 @@ public class TestDFSStripedOutputStream {
           continue;
         }
 
-        BlockReader blockReader = new BlockReaderFactory(new DfsClientConf(conf)).
-            setFileName(src).
-            setBlock(block).
-            setBlockToken(lblock.getBlockToken()).
-            setInetSocketAddress(targetAddr).
-            setStartOffset(0).
-            setLength(block.getNumBytes()).
-            setVerifyChecksum(true).
-            setClientName("TestStripeLayoutWrite").
-            setDatanodeInfo(nodes[0]).
-            setCachingStrategy(CachingStrategy.newDefaultStrategy()).
-            setClientCacheContext(ClientContext.getFromConf(conf)).
-            setConfiguration(conf).
-            setRemotePeerFactory(new RemotePeerFactory() {
-              @Override
-              public Peer newConnectedPeer(InetSocketAddress addr,
-                                           Token<BlockTokenIdentifier> blockToken,
-                                           DatanodeID datanodeId)
-                  throws IOException {
-                Peer peer = null;
-                Socket sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
-                try {
-                  sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
-                  sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
-                  peer = TcpPeerServer.peerFromSocket(sock);
-                } finally {
-                  if (peer == null) {
-                    IOUtils.closeSocket(sock);
-                  }
-                }
-                return peer;
-              }
-            }).build();
-
+        final BlockReader blockReader = BlockReaderTestUtil.getBlockReader(
+            fs, lblock, 0, block.getNumBytes());
         blockReader.readAll(blockBytes, 0, (int) block.getNumBytes());
         blockReader.close();
       }
