@@ -554,6 +554,9 @@ Release 2.7.1 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11868. Invalid user logins trigger large backtraces in server log
+    (Chang Li via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
