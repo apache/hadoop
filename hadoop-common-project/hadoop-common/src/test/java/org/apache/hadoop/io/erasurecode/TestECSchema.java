@@ -49,6 +49,6 @@ public class TestECSchema {
     assertEquals(numParityUnits, schema.getNumParityUnits());
     assertEquals(chunkSize, schema.getChunkSize());
     assertEquals(codec, schema.getCodecName());
-    assertEquals(extraOptionValue, schema.getOptions().get(extraOption));
+    assertEquals(extraOptionValue, schema.getExtraOptions().get(extraOption));
   }
 }
