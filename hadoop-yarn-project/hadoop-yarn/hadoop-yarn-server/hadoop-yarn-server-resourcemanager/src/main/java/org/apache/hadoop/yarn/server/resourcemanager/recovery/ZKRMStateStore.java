@@ -823,6 +823,15 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
+  @Override
+  public synchronized void removeApplication(ApplicationId removeAppId)
+      throws Exception {
+    String appIdRemovePath = getNodePath(rmAppRoot, removeAppId.toString());
+    if (existsWithRetries(appIdRemovePath, true) != null) {
+      deleteWithRetries(appIdRemovePath, true);
+    }
+  }
+
   // ZK related code
   /**
    * Watcher implementation which forward events to the ZKRMStateStore This

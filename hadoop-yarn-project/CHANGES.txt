@@ -90,6 +90,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3463. Integrate OrderingPolicy Framework with CapacityScheduler.
     (Craig Welch via wangda)
 
+    YARN-3410. YARN admin should be able to remove individual application 
+    records from RMStateStore. (Rohith Sharmaks via wangda)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA

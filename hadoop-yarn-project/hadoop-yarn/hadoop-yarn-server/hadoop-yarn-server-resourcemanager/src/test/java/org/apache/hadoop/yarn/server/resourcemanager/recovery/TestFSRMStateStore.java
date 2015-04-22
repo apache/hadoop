@@ -171,6 +171,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testEpoch(fsTester);
       testAppDeletion(fsTester);
       testDeleteStore(fsTester);
+      testRemoveApplication(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
     } finally {
       cluster.shutdown();
