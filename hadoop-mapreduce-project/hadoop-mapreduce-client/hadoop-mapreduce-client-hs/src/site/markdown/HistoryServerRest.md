@@ -1995,7 +1995,7 @@ With the task attempt counters API, you can object a collection of resources tha
 
 #### URI
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}/counters
+      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters
 
 #### HTTP Operations Supported
 
