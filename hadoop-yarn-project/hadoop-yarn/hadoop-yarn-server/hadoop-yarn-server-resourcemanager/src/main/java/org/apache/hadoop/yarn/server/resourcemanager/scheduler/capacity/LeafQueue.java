@@ -563,10 +563,12 @@ public class LeafQueue extends AbstractCSQueue {
      }
      Resource queueCap = Resources.max(resourceCalculator, lastClusterResource,
        absoluteCapacityResource, queueCurrentLimit);
-     return Resources.multiplyAndNormalizeUp( 
-          resourceCalculator,
-          queueCap, 
-          maxAMResourcePerQueuePercent, minimumAllocation);
+    Resource amResouceLimit =
+        Resources.multiplyAndNormalizeUp(resourceCalculator, queueCap,
+            maxAMResourcePerQueuePercent, minimumAllocation);
+
+    metrics.setAMResouceLimit(amResouceLimit);
+    return amResouceLimit;
   }
   
   public synchronized Resource getUserAMResourceLimit() {
@@ -645,6 +647,8 @@ public class LeafQueue extends AbstractCSQueue {
       orderingPolicy.addSchedulableEntity(application);
       queueUsage.incAMUsed(application.getAMResource());
       user.getResourceUsage().incAMUsed(application.getAMResource());
+      metrics.incAMUsed(application.getUser(), application.getAMResource());
+      metrics.setAMResouceLimitForUser(application.getUser(), userAMLimit);
       i.remove();
       LOG.info("Application " + application.getApplicationId() +
           " from user: " + application.getUser() + 
@@ -698,6 +702,7 @@ public class LeafQueue extends AbstractCSQueue {
     } else {
       queueUsage.decAMUsed(application.getAMResource());
       user.getResourceUsage().decAMUsed(application.getAMResource());
+      metrics.decAMUsed(application.getUser(), application.getAMResource());
     }
     applicationAttemptMap.remove(application.getApplicationAttemptId());
 

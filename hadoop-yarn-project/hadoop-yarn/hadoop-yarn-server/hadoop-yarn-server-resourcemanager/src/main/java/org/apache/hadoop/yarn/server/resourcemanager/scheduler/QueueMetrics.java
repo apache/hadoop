@@ -83,16 +83,17 @@ public class QueueMetrics implements MetricsSource {
   static final MetricsInfo RECORD_INFO = info("QueueMetrics",
       "Metrics for the resource scheduler");
   protected static final MetricsInfo QUEUE_INFO = info("Queue", "Metrics by queue");
-  static final MetricsInfo USER_INFO = info("User", "Metrics by user");
+  protected static final MetricsInfo USER_INFO =
+      info("User", "Metrics by user");
   static final Splitter Q_SPLITTER =
       Splitter.on('.').omitEmptyStrings().trimResults();
 
-  final MetricsRegistry registry;
-  final String queueName;
-  final QueueMetrics parent;
-  final MetricsSystem metricsSystem;
-  private final Map<String, QueueMetrics> users;
-  private final Configuration conf;
+  protected final MetricsRegistry registry;
+  protected final String queueName;
+  protected final QueueMetrics parent;
+  protected final MetricsSystem metricsSystem;
+  protected final Map<String, QueueMetrics> users;
+  protected final Configuration conf;
 
   protected QueueMetrics(MetricsSystem ms, String queueName, Queue parent, 
 	       boolean enableUserMetrics, Configuration conf) {
