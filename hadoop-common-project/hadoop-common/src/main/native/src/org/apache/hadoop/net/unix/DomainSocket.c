@@ -153,7 +153,7 @@ static jthrowable setup(JNIEnv *env, int *ofd, jobject jpath, int doConnect)
         terror(ret));
     goto done;
   }
-  memset(&addr, 0, sizeof(&addr));
+  memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   cpath = (*env)->GetStringUTFChars(env, jpath, NULL);
   if (!cpath) {
