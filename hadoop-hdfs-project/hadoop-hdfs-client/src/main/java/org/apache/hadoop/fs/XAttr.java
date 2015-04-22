@@ -64,54 +64,54 @@ public class XAttr {
     SYSTEM,
     RAW;
   }
-  
+
   private final NameSpace ns;
   private final String name;
   private final byte[] value;
-  
+
   public static class Builder {
     private NameSpace ns = NameSpace.USER;
     private String name;
     private byte[] value;
-    
+
     public Builder setNameSpace(NameSpace ns) {
       this.ns = ns;
       return this;
     }
-    
+
     public Builder setName(String name) {
       this.name = name;
       return this;
     }
-    
+
     public Builder setValue(byte[] value) {
       this.value = value;
       return this;
     }
-    
+
     public XAttr build() {
       return new XAttr(ns, name, value);
     }
   }
-  
+
   private XAttr(NameSpace ns, String name, byte[] value) {
     this.ns = ns;
     this.name = name;
     this.value = value;
   }
-  
+
   public NameSpace getNameSpace() {
     return ns;
   }
-  
+
   public String getName() {
     return name;
   }
-  
+
   public byte[] getValue() {
     return value;
   }
-  
+
   @Override
   public int hashCode() {
     return new HashCodeBuilder(811, 67)

@@ -123,7 +123,7 @@ public class BlockStoragePolicy {
    * Choose the storage types for storing the remaining replicas, given the
    * replication number, the storage types of the chosen replicas and
    * the unavailable storage types. It uses fallback storage in case that
-   * the desired storage type is unavailable.  
+   * the desired storage type is unavailable.
    *
    * @param replication the replication number.
    * @param chosen the storage types of the chosen replicas.

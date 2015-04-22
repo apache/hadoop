@@ -31,7 +31,7 @@ public class DataEncryptionKey {
   public final byte[] encryptionKey;
   public final long expiryDate;
   public final String encryptionAlgorithm;
-  
+
   public DataEncryptionKey(int keyId, String blockPoolId, byte[] nonce,
       byte[] encryptionKey, long expiryDate, String encryptionAlgorithm) {
     this.keyId = keyId;
@@ -41,7 +41,7 @@ public class DataEncryptionKey {
     this.expiryDate = expiryDate;
     this.encryptionAlgorithm = encryptionAlgorithm;
   }
-  
+
   @Override
   public String toString() {
     return keyId + "/" + blockPoolId + "/" + nonce.length + "/" +
