@@ -560,7 +560,11 @@ public class AuthenticationFilter implements Filter {
       // exception from the filter itself is fatal
       errCode = HttpServletResponse.SC_FORBIDDEN;
       authenticationEx = ex;
-      LOG.warn("Authentication exception: " + ex.getMessage(), ex);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Authentication exception: " + ex.getMessage(), ex);
+      } else {
+        LOG.warn("Authentication exception: " + ex.getMessage());
+      }
     }
     if (unauthorizedResponse) {
       if (!httpResponse.isCommitted()) {
