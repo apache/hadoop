@@ -3143,7 +3143,7 @@ public class PBHelper {
         .setCodecName(schema.getCodecName())
         .setDataUnits(schema.getNumDataUnits())
         .setParityUnits(schema.getNumParityUnits());
-    Set<Entry<String, String>> entrySet = schema.getOptions().entrySet();
+    Set<Entry<String, String>> entrySet = schema.getExtraOptions().entrySet();
     for (Entry<String, String> entry : entrySet) {
       builder.addOptions(ECSchemaOptionEntryProto.newBuilder()
           .setKey(entry.getKey()).setValue(entry.getValue()).build());

@@ -59,14 +59,14 @@ public class TestSchemaLoader {
 
     ECSchema schema1 = schemas.get(0);
     assertEquals("RSk6m3", schema1.getSchemaName());
-    assertEquals(3, schema1.getOptions().size());
+    assertEquals(0, schema1.getExtraOptions().size());
     assertEquals(6, schema1.getNumDataUnits());
     assertEquals(3, schema1.getNumParityUnits());
     assertEquals("RS", schema1.getCodecName());
 
     ECSchema schema2 = schemas.get(1);
     assertEquals("RSk10m4", schema2.getSchemaName());
-    assertEquals(3, schema2.getOptions().size());
+    assertEquals(0, schema2.getExtraOptions().size());
     assertEquals(10, schema2.getNumDataUnits());
     assertEquals(4, schema2.getNumParityUnits());
     assertEquals("RS", schema2.getCodecName());

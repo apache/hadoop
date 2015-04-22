@@ -48,10 +48,7 @@ public class TestECSchemas {
   @Test
   public void testGetECSchemas() throws Exception {
     ECSchema[] ecSchemas = cluster.getFileSystem().getClient().getECSchemas();
-    // TODO update assertion after HDFS-7866
     assertNotNull(ecSchemas);
-    assertEquals("Should have only one ecSchema", 1, ecSchemas.length);
-    assertEquals("Returned schemas should have only default schema",
-        ECSchemaManager.getSystemDefaultSchema(), ecSchemas[0]);
+    assertTrue("Should have at least one schema", ecSchemas.length > 0);
   }
 }

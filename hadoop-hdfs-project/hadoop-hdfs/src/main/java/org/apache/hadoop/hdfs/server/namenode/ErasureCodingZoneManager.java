@@ -23,8 +23,6 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import java.io.IOException;
@@ -80,9 +78,8 @@ public class ErasureCodingZoneManager {
           : inode.getXAttrFeature().getXAttrs();
       for (XAttr xAttr : xAttrs) {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
-          ECSchemaProto ecSchemaProto;
-          ecSchemaProto = ECSchemaProto.parseFrom(xAttr.getValue());
-          ECSchema schema = PBHelper.convertECSchema(ecSchemaProto);
+          String schemaName = new String(xAttr.getValue());
+          ECSchema schema = dir.getFSNamesystem().getECSchema(schemaName);
           return new ECZoneInfo(inode.getFullPathName(), schema);
         }
       }
@@ -109,13 +106,14 @@ public class ErasureCodingZoneManager {
       throw new IOException("Directory " + src + " is already in an " +
           "erasure coding zone.");
     }
-    // TODO HDFS-7859 Need to persist the schema in xattr in efficient way
-    // As of now storing the protobuf format
+
+    // System default schema will be used since no specified.
     if (schema == null) {
       schema = ECSchemaManager.getSystemDefaultSchema();
     }
-    ECSchemaProto schemaProto = PBHelper.convertECSchema(schema);
-    byte[] schemaBytes = schemaProto.toByteArray();
+
+    // Now persist the schema name in xattr
+    byte[] schemaBytes = schema.getSchemaName().getBytes();
     final XAttr ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_ZONE,
         schemaBytes);
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);

@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ECInfo;
+import org.apache.hadoop.hdfs.server.namenode.ECSchemaManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -151,35 +152,49 @@ public class TestErasureCodingZones {
   }
 
   @Test
-  public void testGetErasureCodingInfo() throws Exception {
+  public void testGetErasureCodingInfoWithSystemDefaultSchema() throws Exception {
     String src = "/ec";
     final Path ecDir = new Path(src);
     fs.mkdir(ecDir, FsPermission.getDirDefault());
     // dir ECInfo before creating ec zone
     assertNull(fs.getClient().getErasureCodingInfo(src));
     // dir ECInfo after creating ec zone
-    fs.getClient().createErasureCodingZone(src, null);
-    verifyErasureCodingInfo(src);
+    fs.getClient().createErasureCodingZone(src, null); //Default one will be used.
+    ECSchema sysDefaultSchema = ECSchemaManager.getSystemDefaultSchema();
+    verifyErasureCodingInfo(src, sysDefaultSchema);
     fs.create(new Path(ecDir, "/child1")).close();
     // verify for the files in ec zone
-    verifyErasureCodingInfo(src + "/child1");
+    verifyErasureCodingInfo(src + "/child1", sysDefaultSchema);
   }
 
-  private void verifyErasureCodingInfo(String src) throws IOException {
+  @Test
+  public void testGetErasureCodingInfo() throws Exception {
+    ECSchema[] sysSchemas = ECSchemaManager.getSystemSchemas();
+    assertTrue("System schemas should be of only 1 for now",
+        sysSchemas.length == 1);
+
+    ECSchema usingSchema = sysSchemas[0];
+    String src = "/ec2";
+    final Path ecDir = new Path(src);
+    fs.mkdir(ecDir, FsPermission.getDirDefault());
+    // dir ECInfo before creating ec zone
+    assertNull(fs.getClient().getErasureCodingInfo(src));
+    // dir ECInfo after creating ec zone
+    fs.getClient().createErasureCodingZone(src, usingSchema);
+    verifyErasureCodingInfo(src, usingSchema);
+    fs.create(new Path(ecDir, "/child1")).close();
+    // verify for the files in ec zone
+    verifyErasureCodingInfo(src + "/child1", usingSchema);
+  }
+
+  private void verifyErasureCodingInfo(
+      String src, ECSchema usingSchema) throws IOException {
     ECInfo ecInfo = fs.getClient().getErasureCodingInfo(src);
     assertNotNull("ECInfo should have been non-null", ecInfo);
     assertEquals(src, ecInfo.getSrc());
     ECSchema schema = ecInfo.getSchema();
     assertNotNull(schema);
-    assertEquals("Default schema should be returned", "RS-6-3",
-        schema.getSchemaName());
-    assertEquals("Default codec(rs) should be returned", "rs",
-        schema.getCodecName());
-    assertEquals("Default numDataUnits should be used", 6,
-        schema.getNumDataUnits());
-    assertEquals("Default numParityUnits should be used", 3,
-        schema.getNumParityUnits());
-    assertEquals("Default chunkSize should be used",
-        ECSchema.DEFAULT_CHUNK_SIZE, schema.getChunkSize());
+    assertEquals("Actually used schema should be equal with target schema",
+        usingSchema, schema);
   }
 }
