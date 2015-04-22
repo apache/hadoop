@@ -197,7 +197,7 @@ Usage: `yarn resourcemanager [-format-state-store]`
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
-| -remove-application-from-state-store <appId> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
+| -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
 
 Start the ResourceManager
 
