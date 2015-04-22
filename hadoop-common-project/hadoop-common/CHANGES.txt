@@ -198,6 +198,9 @@ Trunk (Unreleased)
     HADOOP-11781. fix race conditions and add URL support to
     smart-apply-patch.sh (Raymie Stata via aw)
 
+    HADOOP-11850. Typos in hadoop-common java docs. (Surendra Singh Lilhore
+    via jghoman)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

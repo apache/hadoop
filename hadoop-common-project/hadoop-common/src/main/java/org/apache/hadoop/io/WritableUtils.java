@@ -223,7 +223,7 @@ public final class WritableUtils  {
   }
 
   /**
-   * Make a copy of the writable object using serialiation to a buffer
+   * Make a copy of the writable object using serialization to a buffer
    * @param dst the object to copy from
    * @param src the object to copy into, which is destroyed
    * @throws IOException

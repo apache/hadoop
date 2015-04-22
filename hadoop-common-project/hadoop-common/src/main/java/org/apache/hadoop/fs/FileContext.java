@@ -342,7 +342,7 @@ public class FileContext {
    * 
    * @param defFS
    * @param aConf
-   * @return new FileContext with specifed FS as default.
+   * @return new FileContext with specified FS as default.
    */
   public static FileContext getFileContext(final AbstractFileSystem defFS,
                     final Configuration aConf) {
@@ -612,7 +612,7 @@ public class FileContext {
    * @param opts file creation options; see {@link Options.CreateOpts}.
    *          <ul>
    *          <li>Progress - to report progress on the operation - default null
-   *          <li>Permission - umask is applied against permisssion: default is
+   *          <li>Permission - umask is applied against permission: default is
    *          FsPermissions:getDefault()
    * 
    *          <li>CreateParent - create missing parent path; default is to not

@@ -507,7 +507,7 @@ public abstract class ChecksumFs extends FilterFs {
    * @param sums the stream open on the checksum file
    * @param sumsPos the position of the beginning of the bad data in the
    *         checksum file
-   * @return if retry is neccessary
+   * @return if retry is necessary
    */
   public boolean reportChecksumFailure(Path f, FSDataInputStream in,
     long inPos, FSDataInputStream sums, long sumsPos) {

@@ -175,7 +175,7 @@ public class ContentSummary implements Writable{
   /** Return the directory quota */
   public long getQuota() {return quota;}
   
-  /** Retuns storage space consumed */
+  /** Returns storage space consumed */
   public long getSpaceConsumed() {return spaceConsumed;}
 
   /** Returns storage space quota */

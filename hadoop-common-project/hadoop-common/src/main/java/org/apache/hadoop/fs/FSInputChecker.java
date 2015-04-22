@@ -112,7 +112,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * for sequential reading.
    *
    * @param pos chunkPos
-   * @param buf desitination buffer
+   * @param buf destination buffer
    * @param offset offset in buf at which to store data
    * @param len maximum number of bytes to read
    * @param checksum the data buffer into which to write checksums
@@ -123,7 +123,7 @@ abstract public class FSInputChecker extends FSInputStream {
 
   /** Return position of beginning of chunk containing pos. 
    *
-   * @param pos a postion in the file
+   * @param pos a position in the file
    * @return the starting position of the chunk which contains the byte
    */
   abstract protected long getChunkPosition(long pos);
@@ -388,7 +388,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * This produces no exception and an attempt to read from
    * the stream will result in -1 indicating the end of the file.
    *
-   * @param      pos   the postion to seek to.
+   * @param      pos   the position to seek to.
    * @exception  IOException  if an I/O error occurs.
    *             ChecksumException if the chunk to seek to is corrupted
    */
@@ -423,7 +423,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * <code>stm</code>
    * 
    * @param stm    an input stream
-   * @param buf    destiniation buffer
+   * @param buf    destination buffer
    * @param offset offset at which to store data
    * @param len    number of bytes to read
    * @return actual number of bytes read

@@ -119,7 +119,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   protected Statistics statistics;
 
   /**
-   * A cache of files that should be deleted when filsystem is closed
+   * A cache of files that should be deleted when filesystem is closed
    * or the JVM is exited.
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();

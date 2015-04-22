@@ -952,7 +952,7 @@ public class HarFileSystem extends FileSystem {
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
       
-      // NB: currently this method actually never executed becusae
+      // NB: currently this method actually never executed because
       // java.io.DataInputStream.read(byte[]) directly delegates to 
       // method java.io.InputStream.read(byte[], int, int).
       // However, potentially it can be invoked, so leave it intact for now.

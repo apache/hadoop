@@ -193,7 +193,7 @@ public class FileStatus implements Writable, Comparable {
 
   /**
    * Get FsPermission associated with the file.
-   * @return permssion. If a filesystem does not have a notion of permissions
+   * @return permission. If a filesystem does not have a notion of permissions
    *         or if permissions could not be determined, then default 
    *         permissions equivalent of "rwxrwxrwx" is returned.
    */
