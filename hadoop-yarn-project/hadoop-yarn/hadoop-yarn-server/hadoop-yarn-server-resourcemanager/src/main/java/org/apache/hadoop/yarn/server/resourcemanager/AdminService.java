@@ -80,8 +80,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
@@ -675,28 +673,6 @@ public class AdminService extends CompositeService implements
           .logSuccess(user.getShortUserName(), argName, "AdminService");
       return response;
     } catch (IOException ioe) {
-      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
-    }
-  }
-  
-  @Override
-  public UpdateNodeLabelsResponse updateNodeLabels(
-      UpdateNodeLabelsRequest request) throws YarnException, IOException {
-    String argName = "updateNodeLabels";
-    final String msg = "update node labels";
-    UserGroupInformation user = checkAcls(argName);
-
-    checkRMStatus(user.getShortUserName(), argName, msg);
-
-    UpdateNodeLabelsResponse response = UpdateNodeLabelsResponse.newInstance();
-    
-    try {
-      rmContext.getNodeLabelManager().updateNodeLabels(
-          request.getNodeLabels());
-      RMAuditLogger
-      .logSuccess(user.getShortUserName(), argName, "AdminService");
-      return response;
-    } catch (YarnException ioe) {
       throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
   }

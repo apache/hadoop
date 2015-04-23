@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -200,7 +201,7 @@ public class TestClientRMService {
     };
     rm.start();
     RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
-    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    labelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
 
     // Add a healthy node with label = x
     MockNM node = rm.registerNode("host1:1234", 1024);
@@ -1407,7 +1408,7 @@ public class TestClientRMService {
     };
     rm.start();
     RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
-    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    labelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
 
     Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
     map.put(NodeId.newInstance("host1", 0), ImmutableSet.of("x"));
@@ -1427,7 +1428,7 @@ public class TestClientRMService {
     GetClusterNodeLabelsResponse response =
         client.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
     Assert.assertTrue(response.getNodeLabels().containsAll(
-        Arrays.asList("x", "y")));
+        Arrays.asList(NodeLabel.newInstance("x"), NodeLabel.newInstance("y"))));
 
     // Get node labels mapping
     GetNodesToLabelsResponse response1 =
@@ -1457,7 +1458,7 @@ public class TestClientRMService {
     };
     rm.start();
     RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
-    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y", "z"));
+    labelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
 
     Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
     map.put(NodeId.newInstance("host1", 0), ImmutableSet.of("x"));
@@ -1480,7 +1481,8 @@ public class TestClientRMService {
     GetClusterNodeLabelsResponse response =
         client.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
     Assert.assertTrue(response.getNodeLabels().containsAll(
-        Arrays.asList("x", "y", "z")));
+        Arrays.asList(NodeLabel.newInstance("x"), NodeLabel.newInstance("y"),
+            NodeLabel.newInstance("z"))));
 
     // Get labels to nodes mapping
     GetLabelsToNodesResponse response1 =

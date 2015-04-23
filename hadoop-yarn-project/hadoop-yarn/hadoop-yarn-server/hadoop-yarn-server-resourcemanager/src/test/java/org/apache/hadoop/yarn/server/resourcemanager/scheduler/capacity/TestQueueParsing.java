@@ -417,7 +417,7 @@ public class TestQueueParsing {
   
   @Test
   public void testQueueParsingReinitializeWithLabels() throws IOException {
-    nodeLabelManager.addToCluserNodeLabels(ImmutableSet.of("red", "blue"));
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("red", "blue"));
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     setupQueueConfigurationWithoutLabels(csConf);
@@ -505,7 +505,7 @@ public class TestQueueParsing {
   
   @Test
   public void testQueueParsingWithLabels() throws IOException {
-    nodeLabelManager.addToCluserNodeLabels(ImmutableSet.of("red", "blue"));
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("red", "blue"));
     
     YarnConfiguration conf = new YarnConfiguration();
     CapacitySchedulerConfiguration csConf =
@@ -529,7 +529,7 @@ public class TestQueueParsing {
   
   @Test
   public void testQueueParsingWithLabelsInherit() throws IOException {
-    nodeLabelManager.addToCluserNodeLabels(ImmutableSet.of("red", "blue"));
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("red", "blue"));
 
     YarnConfiguration conf = new YarnConfiguration();
     CapacitySchedulerConfiguration csConf =
@@ -668,7 +668,7 @@ public class TestQueueParsing {
     
     // Initialize a cluster with labels, but doesn't use them, reinitialize
     // shouldn't fail
-    nodeLabelManager.addToCluserNodeLabels(labels);
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(labels);
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();

@@ -337,7 +337,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -386,7 +386,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -439,7 +439,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -491,7 +491,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     };
     rm.start();
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -551,7 +551,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
     // adding valid labels
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();
@@ -636,7 +636,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     try {
-      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+      nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
       Assert.fail("Caught Exception while intializing");
       e.printStackTrace();

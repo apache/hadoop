@@ -143,7 +143,7 @@ public class TestNodeLabelContainerAllocation {
     mgr.init(conf);
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
         NodeId.newInstance("h2", 0), toSet("y")));
 
@@ -226,7 +226,7 @@ public class TestNodeLabelContainerAllocation {
      */
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y", "z"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0),
         toSet("x"), NodeId.newInstance("h2", 0), toSet("y"),
         NodeId.newInstance("h3", 0), toSet("y"), NodeId.newInstance("h4", 0),
@@ -310,7 +310,7 @@ public class TestNodeLabelContainerAllocation {
   @Test (timeout = 120000)
   public void testContainerAllocateWithLabels() throws Exception {
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
         NodeId.newInstance("h2", 0), toSet("y")));
 
@@ -386,7 +386,7 @@ public class TestNodeLabelContainerAllocation {
     // instead, it uses default queue label expression
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
         NodeId.newInstance("h2", 0), toSet("y")));
 
@@ -483,9 +483,8 @@ public class TestNodeLabelContainerAllocation {
      */
     
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
-    // Makes y to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("y", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x"), NodeLabel.newInstance("y", false)));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("y")));
 
     // inject node label manager
@@ -561,9 +560,9 @@ public class TestNodeLabelContainerAllocation {
      */
     
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x"), NodeLabel.newInstance("y", false)));
     // Makes y to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("y", false)));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("y")));
 
     // inject node label manager
@@ -612,10 +611,8 @@ public class TestNodeLabelContainerAllocation {
      * non-labeled request should get allocation on non-labeled nodes first.
      */
     
-    // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false), NodeLabel.newInstance("y")));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -734,9 +731,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setCapacityByLabel(C2, "x", 0);
     
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false), NodeLabel.newInstance("y")));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -844,9 +840,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setUserLimitFactor(B, 5);
     
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false), NodeLabel.newInstance("y")));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -909,9 +904,8 @@ public class TestNodeLabelContainerAllocation {
      */
     
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false), NodeLabel.newInstance("y")));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -984,9 +978,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setMaximumCapacityByLabel(B, "x", 50);
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false)));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -1114,9 +1107,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setCapacityByLabel(B, "x", 50);
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false)));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager
@@ -1349,9 +1341,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setCapacity(D, 25);
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
-    // Makes x to be non-exclusive node labels
-    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("x", false)));
+    mgr.addToCluserNodeLabels(ImmutableSet.of(
+        NodeLabel.newInstance("x", false)));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
 
     // inject node label manager

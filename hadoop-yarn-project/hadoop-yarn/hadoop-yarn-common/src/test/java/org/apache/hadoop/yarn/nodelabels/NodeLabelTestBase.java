@@ -88,6 +88,7 @@ public class NodeLabelTestBase {
     Assert.assertTrue(s1.containsAll(s2));
   }
 
+  @SuppressWarnings("unchecked")
   public static <E> Set<E> toSet(E... elements) {
     Set<E> set = Sets.newHashSet(elements);
     return set;

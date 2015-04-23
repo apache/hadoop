@@ -129,7 +129,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     // instead, it uses default queue label expression
 
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
         NodeId.newInstance("h2", 0), toSet("y")));
 
@@ -205,7 +205,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     // Re-start RM
     mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x"),
         NodeId.newInstance("h2", 0), toSet("y")));
     MockRM rm2 =

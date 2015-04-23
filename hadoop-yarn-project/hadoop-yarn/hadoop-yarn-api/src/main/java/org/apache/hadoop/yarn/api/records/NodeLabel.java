@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -25,31 +26,73 @@ import org.apache.hadoop.yarn.util.Records;
 
 @Public
 @Unstable
-public abstract class NodeLabel {
-  @Public
+public abstract class NodeLabel implements Comparable<NodeLabel> {
+  /**
+   * By default, node label is exclusive or not
+   */
+  @Private
   @Unstable
-  public static NodeLabel newInstance(String nodeLabel,
-      boolean isExclusive) {
-    NodeLabel request =
-        Records.newRecord(NodeLabel.class);
-    request.setNodeLabel(nodeLabel);
-    request.setIsExclusive(isExclusive);
+  public static final boolean DEFAULT_NODE_LABEL_EXCLUSIVITY = true;
+
+  @Private
+  @Unstable
+  public static NodeLabel newInstance(String name) {
+    return newInstance(name, DEFAULT_NODE_LABEL_EXCLUSIVITY);
+  }
+
+  @Private
+  @Unstable
+  public static NodeLabel newInstance(String name, boolean isExclusive) {
+    NodeLabel request = Records.newRecord(NodeLabel.class);
+    request.setName(name);
+    request.setExclusivity(isExclusive);
     return request;
   }
-  
+
   @Public
   @Stable
-  public abstract String getNodeLabel();
-  
-  @Public
+  public abstract String getName();
+
+  @Private
   @Unstable
-  public abstract void setNodeLabel(String nodeLabel);
-  
+  public abstract void setName(String name);
+
   @Public
   @Stable
-  public abstract boolean getIsExclusive();
-  
-  @Public
+  public abstract boolean isExclusive();
+
+  @Private
   @Unstable
-  public abstract void setIsExclusive(boolean isExclusive);
+  public abstract void setExclusivity(boolean isExclusive);
+
+  @Override
+  public int compareTo(NodeLabel other) {
+    return getName().compareTo(other.getName());
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof NodeLabel) {
+      NodeLabel nl = (NodeLabel) obj;
+      return nl.getName().equals(getName())
+          && nl.isExclusive() == isExclusive();
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("<");
+    sb.append(getName());
+    sb.append(":exclusivity=");
+    sb.append(isExclusive());
+    sb.append(">");
+    return sb.toString();
+  }
+
+  @Override
+  public int hashCode() {
+    return (getName().hashCode() << 16) + (isExclusive() ? 1 : 0);
+  }
 }
