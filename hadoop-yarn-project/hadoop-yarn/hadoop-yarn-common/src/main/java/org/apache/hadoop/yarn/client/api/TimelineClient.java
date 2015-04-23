@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
@@ -40,6 +41,15 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 @Unstable
 public abstract class TimelineClient extends AbstractService {
 
+  /**
+   * Create a timeline client. The current UGI when the user initialize the
+   * client will be used to do the put and the delegation token operations. The
+   * current user may use {@link UserGroupInformation#doAs} another user to
+   * construct and initialize a timeline client if the following operations are
+   * supposed to be conducted by that user.
+   *
+   * @return a timeline client
+   */
   @Public
   public static TimelineClient createTimelineClient() {
     TimelineClient client = new TimelineClientImpl();
