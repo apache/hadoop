@@ -545,6 +545,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11861. test-patch.sh rewrite addendum patch.
     (Allen Wittenauer via cnauroth)
 
+    HADOOP-11864. JWTRedirectAuthenticationHandler breaks java8 javadocs.
+    (Larry McCay via stevel)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
