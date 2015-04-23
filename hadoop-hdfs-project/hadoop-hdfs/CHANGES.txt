@@ -464,6 +464,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-4448. Allow HA NN to start in secure mode with wildcard address
     configured (atm via asuresh)
 
+    HDFS-8215. Refactor NamenodeFsck#check method.  (Takanobu Asanuma
+    via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
