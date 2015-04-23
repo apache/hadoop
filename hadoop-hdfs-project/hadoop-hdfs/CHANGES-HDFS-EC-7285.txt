@@ -125,3 +125,6 @@
 
     HDFS-8233. Fix DFSStripedOutputStream#getCurrentBlockGroupBytes when the last
     stripe is at the block group boundary. (jing9)
+
+    HDFS-8223. Should calculate checksum for parity blocks in DFSStripedOutputStream.
+    (Yi Liu via jing9)

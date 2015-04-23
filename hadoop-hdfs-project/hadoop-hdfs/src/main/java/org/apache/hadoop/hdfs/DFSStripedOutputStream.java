@@ -62,6 +62,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
    */
   private final ECInfo ecInfo;
   private final int cellSize;
+  // checksum buffer, we only need to calculate checksum for parity blocks
+  private byte[] checksumBuf;
   private ByteBuffer[] cellBuffers;
 
   private final short numAllBlocks;
@@ -99,6 +101,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
     checkConfiguration();
 
+    checksumBuf = new byte[getChecksumSize() * (cellSize / bytesPerChecksum)];
     cellBuffers = new ByteBuffer[numAllBlocks];
     List<BlockingQueue<LocatedBlock>> stripeBlocks = new ArrayList<>();
 
@@ -179,6 +182,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private List<DFSPacket> generatePackets(ByteBuffer byteBuffer)
       throws IOException{
     List<DFSPacket> packets = new ArrayList<>();
+    assert byteBuffer.hasArray();
+    getDataChecksum().calculateChunkedSums(byteBuffer.array(), 0,
+        byteBuffer.remaining(), checksumBuf, 0);
+    int ckOff = 0;
     while (byteBuffer.remaining() > 0) {
       DFSPacket p = createPacket(packetSize, chunksPerPacket,
           streamer.getBytesCurBlock(),
@@ -186,6 +193,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       int maxBytesToPacket = p.getMaxChunks() * bytesPerChecksum;
       int toWrite = byteBuffer.remaining() > maxBytesToPacket ?
           maxBytesToPacket: byteBuffer.remaining();
+      int ckLen = ((toWrite - 1) / bytesPerChecksum + 1) * getChecksumSize();
+      p.writeChecksum(checksumBuf, ckOff, ckLen);
+      ckOff += ckLen;
       p.writeData(byteBuffer, toWrite);
       streamer.incBytesCurBlock(toWrite);
       packets.add(p);
