@@ -59,8 +59,9 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
  * The user identity is then extracted from the token and used to create an
  * AuthenticationToken - as expected by the AuthenticationFilter.
  *
- * <p/>
+ * <p>
  * The supported configuration properties are:
+ * </p>
  * <ul>
  * <li>authentication.provider.url: the full URL to the authentication server.
  * This is the URL that the handler will redirect the browser to in order to
@@ -96,7 +97,7 @@ public class JWTRedirectAuthenticationHandler extends
    * Primarily for testing, this provides a way to set the publicKey for
    * signature verification without needing to get a PEM encoded value.
    *
-   * @param pk
+   * @param pk publicKey for the token signtature verification
    */
   public void setPublicKey(RSAPublicKey pk) {
     publicKey = pk;
@@ -104,9 +105,9 @@ public class JWTRedirectAuthenticationHandler extends
 
   /**
    * Initializes the authentication handler instance.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter#init} method.
-   *
+   * </p>
    * @param config
    *          configuration properties to initialize the handler.
    *
@@ -162,7 +163,7 @@ public class JWTRedirectAuthenticationHandler extends
     HttpServletRequest req = (HttpServletRequest) request;
     serializedJWT = getJWTFromCookie(req);
     if (serializedJWT == null) {
-      String loginURL = constructLoginURL(request, response);
+      String loginURL = constructLoginURL(request);
       LOG.info("sending redirect to: " + loginURL);
       ((HttpServletResponse) response).sendRedirect(loginURL);
     } else {
@@ -186,7 +187,7 @@ public class JWTRedirectAuthenticationHandler extends
         LOG.debug("Issuing AuthenticationToken for user.");
         token = new AuthenticationToken(userName, userName, getType());
       } else {
-        String loginURL = constructLoginURL(request, response);
+        String loginURL = constructLoginURL(request);
         LOG.info("token validation failed - sending redirect to: " + loginURL);
         ((HttpServletResponse) response).sendRedirect(loginURL);
       }
@@ -198,8 +199,7 @@ public class JWTRedirectAuthenticationHandler extends
    * Encapsulate the acquisition of the JWT token from HTTP cookies within the
    * request.
    *
-   * @param serializedJWT
-   * @param req
+   * @param req servlet request to get the JWT token from
    * @return serialized JWT token
    */
   protected String getJWTFromCookie(HttpServletRequest req) {
@@ -223,12 +223,10 @@ public class JWTRedirectAuthenticationHandler extends
    * Create the URL to be used for authentication of the user in the absence of
    * a JWT token within the incoming request.
    *
-   * @param request
-   * @param response
+   * @param request for getting the original request URL
    * @return url to use as login url for redirect
    */
-  protected String constructLoginURL(HttpServletRequest request,
-      HttpServletResponse response) {
+  protected String constructLoginURL(HttpServletRequest request) {
     String delimiter = "?";
     if (authenticationProviderUrl.contains("?")) {
       delimiter = "&";
@@ -245,9 +243,8 @@ public class JWTRedirectAuthenticationHandler extends
    * this implementation through submethods used within but also allows for the
    * override of the entire token validation algorithm.
    *
-   * @param jwtToken
+   * @param jwtToken the token to validate
    * @return true if valid
-   * @throws AuthenticationException
    */
   protected boolean validateToken(SignedJWT jwtToken) {
     boolean sigValid = validateSignature(jwtToken);
@@ -272,8 +269,8 @@ public class JWTRedirectAuthenticationHandler extends
    * provisioned public key. Override this method in subclasses in order to
    * customize the signature verification behavior.
    *
-   * @param jwtToken
-   * @throws AuthenticationException
+   * @param jwtToken the token that contains the signature to be validated
+   * @return valid true if signature verifies successfully; false otherwise
    */
   protected boolean validateSignature(SignedJWT jwtToken) {
     boolean valid = false;
@@ -341,8 +338,8 @@ public class JWTRedirectAuthenticationHandler extends
    * If it has then throw an AuthenticationException. Override this method in
    * subclasses in order to customize the expiration validation behavior.
    *
-   * @param jwtToken
-   * @throws AuthenticationException
+   * @param jwtToken the token that contains the expiration date to validate
+   * @return valid true if the token has not expired; false otherwise
    */
   protected boolean validateExpiration(SignedJWT jwtToken) {
     boolean valid = false;
