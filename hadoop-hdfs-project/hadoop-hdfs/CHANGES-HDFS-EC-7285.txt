@@ -119,3 +119,6 @@
 
     HDFS-8156. Add/implement necessary APIs even we just have the system default 
     schema. (Kai Zheng via Zhe Zhang)
+
+    HDFS-8136. Client gets and uses EC schema when reads and writes a stripping
+    file. (Kai Sasaki via Kai Zheng)

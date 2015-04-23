@@ -21,9 +21,9 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.ECInfo;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.NetUtils;
@@ -125,13 +125,19 @@ public class DFSStripedInputStream extends DFSInputStream {
     return results;
   }
 
-  private int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-  private final short dataBlkNum = HdfsConstants.NUM_DATA_BLOCKS;
-  private final short parityBlkNum = HdfsConstants.NUM_PARITY_BLOCKS;
+  private final int cellSize;
+  private final short dataBlkNum;
+  private final short parityBlkNum;
+  private final ECInfo ecInfo;
 
   DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum)
       throws IOException {
     super(dfsClient, src, verifyChecksum);
+    // ECInfo is restored from NN just before reading striped file.
+    ecInfo = dfsClient.getErasureCodingInfo(src);
+    cellSize = ecInfo.getSchema().getChunkSize();
+    dataBlkNum = (short)ecInfo.getSchema().getNumDataUnits();
+    parityBlkNum = (short)ecInfo.getSchema().getNumParityUnits();
     DFSClient.LOG.debug("Creating an striped input stream for file " + src);
   }
 
@@ -279,9 +285,6 @@ public class DFSStripedInputStream extends DFSInputStream {
     throw new InterruptedException("let's retry");
   }
 
-  public void setCellSize(int cellSize) {
-    this.cellSize = cellSize;
-  }
 
   /**
    * This class represents the portion of I/O associated with each block in the
