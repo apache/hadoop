@@ -15,6 +15,9 @@ Release 2.7.1 - UNRELEASED
     HADOOP-11868. Invalid user logins trigger large backtraces in server log
     (Chang Li via jlowe)
 
+    HADOOP-11872. "hadoop dfs" command prints message about using "yarn jar" on
+    Windows(branch-2 only) (Varun Vasudev via cnauroth)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
