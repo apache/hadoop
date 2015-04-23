@@ -461,6 +461,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8218. Move classes that used by ClientProtocol into hdfs-client.
     (wheat9)
 
+    HDFS-4448. Allow HA NN to start in secure mode with wildcard address
+    configured (atm via asuresh)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

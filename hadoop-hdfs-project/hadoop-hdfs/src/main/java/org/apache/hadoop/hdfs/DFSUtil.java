@@ -1017,17 +1017,10 @@ public class DFSUtil {
    */
   @VisibleForTesting
   static String substituteForWildcardAddress(String configuredAddress,
-    String defaultHost) throws IOException {
+    String defaultHost) {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
-    InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
-        + ":0");
     final InetAddress addr = sockAddr.getAddress();
     if (addr != null && addr.isAnyLocalAddress()) {
-      if (UserGroupInformation.isSecurityEnabled() &&
-          defaultSockAddr.getAddress().isAnyLocalAddress()) {
-        throw new IOException("Cannot use a wildcard address with security. " +
-            "Must explicitly set bind address for Kerberos");
-      }
       return defaultHost + ":" + sockAddr.getPort();
     } else {
       return configuredAddress;
