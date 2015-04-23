@@ -85,7 +85,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
-  
+
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
   protected CapacitySchedulerContext csContext;
@@ -473,55 +473,55 @@ public abstract class AbstractCSQueue implements CSQueue {
         getCurrentLimitResource(nodePartition, clusterResource,
             currentResourceLimits, schedulingMode);
 
-    // if reservation continous looking enabled, check to see if could we
-    // potentially use this node instead of a reserved node if the application
-    // has reserved containers.
-    // TODO, now only consider reservation cases when the node has no label
-    if (this.reservationsContinueLooking
-        && nodePartition.equals(RMNodeLabelsManager.NO_LABEL)
-        && Resources.greaterThan(resourceCalculator, clusterResource,
-            resourceCouldBeUnreserved, Resources.none())) {
-      // resource-without-reserved = used - reserved
-      Resource newTotalWithoutReservedResource =
-          Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
-
-      // when total-used-without-reserved-resource < currentLimit, we still
-      // have chance to allocate on this node by unreserving some containers
-      if (Resources.lessThan(resourceCalculator, clusterResource,
-          newTotalWithoutReservedResource, currentLimitResource)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("try to use reserved: " + getQueueName()
-              + " usedResources: " + queueUsage.getUsed()
-              + ", clusterResources: " + clusterResource
-              + ", reservedResources: " + resourceCouldBeUnreserved
-              + ", capacity-without-reserved: "
-              + newTotalWithoutReservedResource + ", maxLimitCapacity: "
-              + currentLimitResource);
-        }
-        return true;
-      }
-    }
-
-    // Check if we over current-resource-limit computed.
     if (Resources.greaterThan(resourceCalculator, clusterResource,
         newTotalResource, currentLimitResource)) {
-      return false;
-    }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(getQueueName()
-          + "Check assign to queue, nodePartition="
-          + nodePartition
-          + " usedResources: "
-          + queueUsage.getUsed(nodePartition)
-          + " clusterResources: "
-          + clusterResource
-          + " currentUsedCapacity "
-          + Resources.divide(resourceCalculator, clusterResource,
-              queueUsage.getUsed(nodePartition),
-              labelManager.getResourceByLabel(nodePartition, clusterResource))
-          + " max-capacity: "
-          + queueCapacities.getAbsoluteMaximumCapacity(nodePartition) + ")");
+      // if reservation continous looking enabled, check to see if could we
+      // potentially use this node instead of a reserved node if the application
+      // has reserved containers.
+      // TODO, now only consider reservation cases when the node has no label
+      if (this.reservationsContinueLooking
+          && nodePartition.equals(RMNodeLabelsManager.NO_LABEL)
+          && Resources.greaterThan(resourceCalculator, clusterResource,
+              resourceCouldBeUnreserved, Resources.none())) {
+        // resource-without-reserved = used - reserved
+        Resource newTotalWithoutReservedResource =
+            Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
+
+        // when total-used-without-reserved-resource < currentLimit, we still
+        // have chance to allocate on this node by unreserving some containers
+        if (Resources.lessThan(resourceCalculator, clusterResource,
+            newTotalWithoutReservedResource, currentLimitResource)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("try to use reserved: " + getQueueName()
+                + " usedResources: " + queueUsage.getUsed()
+                + ", clusterResources: " + clusterResource
+                + ", reservedResources: " + resourceCouldBeUnreserved
+                + ", capacity-without-reserved: "
+                + newTotalWithoutReservedResource + ", maxLimitCapacity: "
+                + currentLimitResource);
+          }
+          currentResourceLimits.setAmountNeededUnreserve(Resources.subtract(newTotalResource,
+            currentLimitResource));
+          return true;
+        }
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getQueueName()
+            + "Check assign to queue, nodePartition="
+            + nodePartition
+            + " usedResources: "
+            + queueUsage.getUsed(nodePartition)
+            + " clusterResources: "
+            + clusterResource
+            + " currentUsedCapacity "
+            + Resources.divide(resourceCalculator, clusterResource,
+                queueUsage.getUsed(nodePartition),
+                labelManager.getResourceByLabel(nodePartition, clusterResource))
+            + " max-capacity: "
+            + queueCapacities.getAbsoluteMaximumCapacity(nodePartition) + ")");
+      }
+      return false;
     }
     return true;
   }

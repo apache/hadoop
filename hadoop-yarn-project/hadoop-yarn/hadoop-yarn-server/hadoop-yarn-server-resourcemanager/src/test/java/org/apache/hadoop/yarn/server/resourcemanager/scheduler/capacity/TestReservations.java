@@ -748,14 +748,14 @@ public class TestReservations {
 
     // nothing reserved
     boolean res = a.findNodeToUnreserve(csContext.getClusterResource(),
-        node_1, app_0, priorityMap, capability, capability);
+        node_1, app_0, priorityMap, capability);
     assertFalse(res);
 
     // reserved but scheduler doesn't know about that node.
     app_0.reserve(node_1, priorityMap, rmContainer, container);
     node_1.reserveResource(app_0, priorityMap, rmContainer);
     res = a.findNodeToUnreserve(csContext.getClusterResource(), node_1, app_0,
-        priorityMap, capability, capability);
+        priorityMap, capability);
     assertFalse(res);
   }
 
@@ -858,12 +858,13 @@ public class TestReservations {
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
     Resource capability = Resources.createResource(32 * GB, 0);
+    ResourceLimits limits = new ResourceLimits(clusterResource);
     boolean res =
         a.canAssignToThisQueue(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, new ResourceLimits(
-                clusterResource), capability, Resources.none(),
+            RMNodeLabelsManager.NO_LABEL, limits, capability, Resources.none(),
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertFalse(res);
+    assertEquals(limits.getAmountNeededUnreserve(), Resources.none());
 
     // now add in reservations and make sure it continues if config set
     // allocate to queue so that the potential new capacity is greater then
@@ -880,38 +881,43 @@ public class TestReservations {
     assertEquals(3 * GB, node_1.getUsedResource().getMemory());
 
     capability = Resources.createResource(5 * GB, 0);
+    limits = new ResourceLimits(clusterResource);
     res =
         a.canAssignToThisQueue(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, new ResourceLimits(
-                clusterResource), capability, Resources.createResource(5 * GB),
+            RMNodeLabelsManager.NO_LABEL, limits, capability, Resources.createResource(5 * GB),
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertTrue(res);
+    // 16GB total, 13GB consumed (8 allocated, 5 reserved). asking for 5GB so we would have to
+    // unreserve 2GB to get the total 5GB needed.
+    // also note vcore checks not enabled
+    assertEquals(Resources.createResource(2 * GB, 3), limits.getAmountNeededUnreserve());
 
     // tell to not check reservations
+    limits = new ResourceLimits(clusterResource);
     res =
         a.canAssignToThisQueue(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, new ResourceLimits(
-                clusterResource), capability, Resources.none(),
+            RMNodeLabelsManager.NO_LABEL,limits, capability, Resources.none(),
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertFalse(res);
+    assertEquals(Resources.none(), limits.getAmountNeededUnreserve());
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
 
-    // should return false no matter what checkReservations is passed
-    // in since feature is off
+    // should return false since reservations continue look is off.
+    limits = new ResourceLimits(clusterResource);
     res =
         a.canAssignToThisQueue(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, new ResourceLimits(
-                clusterResource), capability, Resources.none(),
+            RMNodeLabelsManager.NO_LABEL, limits, capability, Resources.none(),
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertFalse(res);
-
+    assertEquals(limits.getAmountNeededUnreserve(), Resources.none());
+    limits = new ResourceLimits(clusterResource);
     res =
         a.canAssignToThisQueue(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, new ResourceLimits(
-                clusterResource), capability, Resources.createResource(5 * GB),
+            RMNodeLabelsManager.NO_LABEL, limits, capability, Resources.createResource(5 * GB),
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertFalse(res);
+    assertEquals(Resources.none(), limits.getAmountNeededUnreserve());
   }
 
   public void refreshQueuesTurnOffReservationsContLook(LeafQueue a,
@@ -1059,22 +1065,33 @@ public class TestReservations {
     assertEquals(5 * GB, node_0.getUsedResource().getMemory());
     assertEquals(3 * GB, node_1.getUsedResource().getMemory());
 
-    // set limit so subtrace reservations it can continue
-    Resource limit = Resources.createResource(12 * GB, 0);
-    boolean res = a.canAssignToUser(clusterResource, user_0, limit, app_0,
-        true, "");
+    // not over the limit
+    Resource limit = Resources.createResource(14 * GB, 0);
+    ResourceLimits userResourceLimits = new ResourceLimits(clusterResource);
+    boolean res = a.canAssignToUser(clusterResource, user_0, limit, app_0, "", userResourceLimits);
     assertTrue(res);
+    assertEquals(Resources.none(), userResourceLimits.getAmountNeededUnreserve());
 
-    // tell it not to check for reservations and should fail as already over
-    // limit
-    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, false, "");
-    assertFalse(res);
+
+    // set limit so it subtracts reservations and it can continue
+    limit = Resources.createResource(12 * GB, 0);
+    userResourceLimits = new ResourceLimits(clusterResource);
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0,
+             "", userResourceLimits);
+    assertTrue(res);
+    // limit set to 12GB, we are using 13GB (8 allocated,  5 reserved), to get under limit
+    // we need to unreserve 1GB
+    // also note vcore checks not enabled
+    assertEquals(Resources.createResource(1 * GB, 4),
+        userResourceLimits.getAmountNeededUnreserve());
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
+    userResourceLimits = new ResourceLimits(clusterResource);
 
     // should now return false since feature off
-    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, true, "");
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, "", userResourceLimits);
     assertFalse(res);
+    assertEquals(Resources.none(), userResourceLimits.getAmountNeededUnreserve());
   }
 
   @Test
