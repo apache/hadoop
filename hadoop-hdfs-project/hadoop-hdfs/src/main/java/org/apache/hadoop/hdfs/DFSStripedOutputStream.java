@@ -32,8 +32,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.hdfs.protocol.ECInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
@@ -61,11 +61,13 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   /**
    * Size of each striping cell, must be a multiple of bytesPerChecksum
    */
-  private int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final ECInfo ecInfo;
+  private final int cellSize;
   private ByteBuffer[] cellBuffers;
-  private final short numAllBlocks = HdfsConstants.NUM_DATA_BLOCKS
-      + HdfsConstants.NUM_PARITY_BLOCKS;
-  private final short numDataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
+
+  private final short numAllBlocks;
+  private final short numDataBlocks;
+
   private int curIdx = 0;
   /* bytes written in current block group */
   //private long currentBlockGroupBytes = 0;
@@ -77,6 +79,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     return streamers.get(0);
   }
 
+  private long getBlockGroupSize() {
+    return blockSize * numDataBlocks;
+  }
+
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
                          EnumSet<CreateFlag> flag, Progressable progress,
@@ -84,6 +90,14 @@ public class DFSStripedOutputStream extends DFSOutputStream {
                          throws IOException {
     super(dfsClient, src, stat, flag, progress, checksum, favoredNodes);
     DFSClient.LOG.info("Creating striped output stream");
+
+    // ECInfo is restored from NN just before writing striped files.
+    ecInfo = dfsClient.getErasureCodingInfo(src);
+    cellSize = ecInfo.getSchema().getChunkSize();
+    numAllBlocks = (short)(ecInfo.getSchema().getNumDataUnits()
+        + ecInfo.getSchema().getNumParityUnits());
+    numDataBlocks = (short)ecInfo.getSchema().getNumDataUnits();
+
     checkConfiguration();
 
     cellBuffers = new ByteBuffer[numAllBlocks];

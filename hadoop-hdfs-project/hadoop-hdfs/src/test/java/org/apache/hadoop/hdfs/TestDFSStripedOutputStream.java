@@ -159,7 +159,7 @@ public class TestDFSStripedOutputStream {
     // check file length
     FileStatus status = fs.getFileStatus(testPath);
     Assert.assertEquals(writeBytes, status.getLen());
-    
+
     checkData(src, writeBytes);
   }
 
@@ -236,7 +236,7 @@ public class TestDFSStripedOutputStream {
           cellSize, dataBlockBytes, parityBlockBytes);
     }
   }
-    
+
   static void verifyParity(final long size, final int cellSize,
       byte[][] dataBytes, byte[][] parityBytes) {
     // verify the parity blocks

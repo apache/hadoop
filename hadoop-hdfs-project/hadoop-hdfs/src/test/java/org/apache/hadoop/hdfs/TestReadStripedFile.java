@@ -121,7 +121,6 @@ public class TestReadStripedFile {
     }
     DFSStripedInputStream in =
         new DFSStripedInputStream(fs.getClient(), filePath.toString(), false);
-    in.setCellSize(CELLSIZE);
     int readSize = BLOCKSIZE;
     byte[] readBuffer = new byte[readSize];
     int ret = in.read(0, readBuffer, 0, readSize);
