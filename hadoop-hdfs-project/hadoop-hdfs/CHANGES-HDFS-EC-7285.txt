@@ -122,3 +122,6 @@
 
     HDFS-8136. Client gets and uses EC schema when reads and writes a stripping
     file. (Kai Sasaki via Kai Zheng)
+
+    HDFS-8233. Fix DFSStripedOutputStream#getCurrentBlockGroupBytes when the last
+    stripe is at the block group boundary. (jing9)
