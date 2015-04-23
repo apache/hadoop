@@ -581,6 +581,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8163. Using monotonicNow for block report scheduling causes
     test failures on recently restarted systems. (Arpit Agarwal)
 
+    HDFS-8147. StorageGroup in Dispatcher should override equals nad hashCode.
+    (surendra singh lilhore via szetszwo)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

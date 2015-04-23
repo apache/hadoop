@@ -277,4 +277,51 @@ public class TestMover {
        cluster.shutdown();
     }
   }
+
+  @Test(timeout = 300000)
+  public void testTwoReplicaSameStorageTypeShouldNotSelect() throws Exception {
+    // HDFS-8147
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[][] { { StorageType.DISK, StorageType.ARCHIVE },
+                { StorageType.DISK, StorageType.DISK },
+                { StorageType.DISK, StorageType.ARCHIVE } }).build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testForTwoReplicaSameStorageTypeShouldNotSelect";
+      // write to DISK
+      final FSDataOutputStream out = dfs.create(new Path(file), (short) 2);
+      out.writeChars("testForTwoReplicaSameStorageTypeShouldNotSelect");
+      out.close();
+
+      // verify before movement
+      LocatedBlock lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      StorageType[] storageTypes = lb.getStorageTypes();
+      for (StorageType storageType : storageTypes) {
+        Assert.assertTrue(StorageType.DISK == storageType);
+      }
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] { "-p", file.toString() });
+      Assert.assertEquals("Movement to ARCHIVE should be successfull", 0, rc);
+
+      // Wait till namenode notified
+      Thread.sleep(3000);
+      lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      storageTypes = lb.getStorageTypes();
+      int archiveCount = 0;
+      for (StorageType storageType : storageTypes) {
+        if (StorageType.ARCHIVE == storageType) {
+          archiveCount++;
+        }
+      }
+      Assert.assertEquals(archiveCount, 2);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
