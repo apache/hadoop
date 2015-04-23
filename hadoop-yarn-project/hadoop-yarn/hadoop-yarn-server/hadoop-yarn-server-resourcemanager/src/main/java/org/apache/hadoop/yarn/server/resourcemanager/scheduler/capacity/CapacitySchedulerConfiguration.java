@@ -122,7 +122,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   public static final String ORDERING_POLICY = "ordering-policy";
   
-  public static final String DEFAULT_ORDERING_POLICY = "fifo";
+  public static final String FIFO_ORDERING_POLICY = "fifo";
+
+  public static final String FAIR_ORDERING_POLICY = "fair";
+
+  public static final String DEFAULT_ORDERING_POLICY = FIFO_ORDERING_POLICY;
   
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -395,8 +399,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     
     OrderingPolicy<S> orderingPolicy;
     
-    if (policyType.trim().equals("fifo")) {
+    if (policyType.trim().equals(FIFO_ORDERING_POLICY)) {
        policyType = FifoOrderingPolicy.class.getName();
+    }
+    if (policyType.trim().equals(FAIR_ORDERING_POLICY)) {
+       policyType = FairOrderingPolicy.class.getName();
     }
     try {
       orderingPolicy = (OrderingPolicy<S>)
@@ -405,6 +412,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String message = "Unable to construct ordering policy for: " + policyType + ", " + e.getMessage();
       throw new RuntimeException(message, e);
     }
+
+    Map<String, String> config = new HashMap<String, String>();
+    String confPrefix = getQueuePrefix(queue) + ORDERING_POLICY + ".";
+    for (Map.Entry<String, String> kv : this) {
+      if (kv.getKey().startsWith(confPrefix)) {
+         config.put(kv.getKey().substring(confPrefix.length()), kv.getValue());
+      }
+    }
+    orderingPolicy.configure(config);
     return orderingPolicy;
   }
 

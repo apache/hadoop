@@ -100,6 +100,8 @@ Release 2.8.0 - UNRELEASED
     network bandwidth traffic originating from YARN containers (Sidharta Seethana
     via vinodkv)
 
+    YARN-3319. Implement a FairOrderingPolicy. (Craig Welch via wangda)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
