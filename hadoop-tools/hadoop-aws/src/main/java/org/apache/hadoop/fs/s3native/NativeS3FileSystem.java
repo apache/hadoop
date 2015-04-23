@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3.S3Exception;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -124,7 +125,7 @@ public class NativeS3FileSystem extends FileSystem {
             key);
         LOG.debug("{}", e, e);
         try {
-          seek(pos);
+          reopen(pos);
           result = in.read();
         } catch (EOFException eof) {
           LOG.debug("EOF on input stream read: {}", eof, eof);
@@ -153,7 +154,7 @@ public class NativeS3FileSystem extends FileSystem {
       } catch (IOException e) {
         LOG.info( "Received IOException while reading '{}'," +
                   " attempting to reopen.", key);
-        seek(pos);
+        reopen(pos);
         result = in.read(b, off, len);
       }
       if (result > 0) {
@@ -173,16 +174,21 @@ public class NativeS3FileSystem extends FileSystem {
     /**
      * Close the inner stream if not null. Even if an exception
      * is raised during the close, the field is set to null
-     * @throws IOException if raised by the close() operation.
      */
-    private void closeInnerStream() throws IOException {
-      if (in != null) {
-        try {
-          in.close();
-        } finally {
-          in = null;
-        }
-      }
+    private void closeInnerStream() {
+      IOUtils.closeStream(in);
+      in = null;
+    }
+
+    /**
+     * Reopen a new input stream with the specified position
+     * @param pos the position to reopen a new stream
+     * @throws IOException
+     */
+    private synchronized void reopen(long pos) throws IOException {
+        LOG.debug("Reopening key '{}' for reading at position '{}", key, pos);
+        InputStream newStream = store.retrieve(key, pos);
+        updateInnerStream(newStream, pos);
     }
 
     /**
@@ -207,9 +213,7 @@ public class NativeS3FileSystem extends FileSystem {
       }
       if (pos != newpos) {
         // the seek is attempting to move the current position
-        LOG.debug("Opening key '{}' for reading at position '{}", key, newpos);
-        InputStream newStream = store.retrieve(key, newpos);
-        updateInnerStream(newStream, newpos);
+        reopen(newpos);
       }
     }
 
