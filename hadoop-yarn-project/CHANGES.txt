@@ -277,6 +277,9 @@ Release 2.7.1 - UNRELEASED
     YARN-2605. [RM HA] Rest api endpoints doing redirect incorrectly.
     (Xuan Gong via stevel)
 
+    YARN-3522. Fixed DistributedShell to instantiate TimeLineClient as the
+    correct user. (Zhijie Shen via jianhe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
