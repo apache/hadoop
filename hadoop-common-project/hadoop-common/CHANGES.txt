@@ -542,6 +542,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11848. Incorrect arguments to sizeof in DomainSocket.c (Malcolm
     Kavalsky via Colin P. McCabe)
 
+    HADOOP-11861. test-patch.sh rewrite addendum patch.
+    (Allen Wittenauer via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
