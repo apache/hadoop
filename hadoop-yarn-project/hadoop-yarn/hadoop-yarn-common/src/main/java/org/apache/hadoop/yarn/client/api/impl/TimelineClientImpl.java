@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
@@ -177,11 +178,13 @@ public class TimelineClientImpl extends TimelineClient {
       retried = false;
 
       // keep trying
+      Exception lastException;
       while (true) {
         try {
           // try perform the op, if fail, keep retrying
           return op.run();
         } catch (IOException | RuntimeException e) {
+          lastException = e;
           // break if there's no retries left
           if (leftRetries == 0) {
             break;
@@ -201,23 +204,35 @@ public class TimelineClientImpl extends TimelineClient {
           Thread.sleep(retryInterval);
         } catch (InterruptedException ie) {
           LOG.warn("Client retry sleep interrupted! ");
+          throw (InterruptedIOException)
+              (new InterruptedIOException(ie.toString()).initCause(ie));
         }
       }
-      throw new RuntimeException("Failed to connect to timeline server. "
-          + "Connection retries limit exceeded. "
-          + "The posted timeline event may be missing");
-    };
+      // reached only if the retry count has been exceeded.
+      // therefore, lastException no-null
+      LOG.warn("Failed to connect to timeline server. "
+          + "Connection retries limit (" + maxRetries + ") exceeded. "
+          + "The posted timeline event may be missing", lastException);
+
+      if (lastException instanceof IOException) {
+        throw (IOException) lastException;
+      } else {
+        throw (RuntimeException) lastException;
+      }
+    }
 
     private void logException(Exception e, int leftRetries) {
       if (leftRetries > 0) {
         LOG.info("Exception caught by TimelineClientConnectionRetry,"
               + " will try " + leftRetries + " more time(s).\nMessage: "
               + e.getMessage());
+        LOG.debug("Failure", e);
       } else {
         // note that maxRetries may be -1 at the very beginning
         LOG.info("ConnectionException caught by TimelineClientConnectionRetry,"
             + " will keep retrying.\nMessage: "
             + e.getMessage());
+        LOG.debug("Failure", e);
       }
     }
   }
@@ -244,8 +259,8 @@ public class TimelineClientImpl extends TimelineClient {
       try {
         return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
       } catch (IOException e) {
-        throw new ClientHandlerException("Jersey retry failed!\nMessage: "
-              + e.getMessage());
+        throw new ClientHandlerException("Jersey retry failed against " + resURI
+            + "\nException: " + e, e);
       }
     }
   }
@@ -324,20 +339,30 @@ public class TimelineClientImpl extends TimelineClient {
         }
       });
     } catch (UndeclaredThrowableException e) {
-        throw new IOException(e.getCause());
+      Throwable cause = e.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else {
+        throw new IOException(cause);
+      }
     } catch (InterruptedException ie) {
-      throw new IOException(ie);
+      throw (InterruptedIOException)
+          (new InterruptedIOException(ie.toString()).initCause(ie));
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
       String msg =
-          "Failed to get the response from the timeline server.";
-      LOG.error(msg);
-      if (LOG.isDebugEnabled() && resp != null) {
-        String output = resp.getEntity(String.class);
-        LOG.debug("HTTP error code: " + resp.getStatus()
-            + " Server response : \n" + output);
+          "Failed to get the response from the timeline server " + resURI;
+      if (resp != null) {
+        int status = resp.getStatus();
+        msg += " -status code=" + status;
+        if (LOG.isDebugEnabled()) {
+          String output = resp.getEntity(String.class);
+          LOG.debug("HTTP error code: " + status
+              + " Server response : \n" + output);
+        }
       }
+      LOG.error(msg);
       throw new YarnException(msg);
     }
     return resp;
@@ -452,7 +477,8 @@ public class TimelineClientImpl extends TimelineClient {
         } catch (UndeclaredThrowableException e) {
           throw new IOException(e.getCause());
         } catch (InterruptedException e) {
-          throw new IOException(e);
+          throw (InterruptedIOException)
+              (new InterruptedIOException(e.toString()).initCause(e));
         }
       }
 
