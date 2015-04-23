@@ -471,6 +471,25 @@ public class Dispatcher {
       public String toString() {
         return getDisplayName();
       }
+
+      @Override
+      public int hashCode() {
+        return getStorageType().hashCode() ^ getDatanodeInfo().hashCode();
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (this == obj) {
+          return true;
+        } else if (obj == null || !(obj instanceof StorageGroup)) {
+          return false;
+        } else {
+          final StorageGroup that = (StorageGroup) obj;
+          return this.getStorageType() == that.getStorageType()
+              && this.getDatanodeInfo().equals(that.getDatanodeInfo());
+        }
+      }
+
     }
 
     final DatanodeInfo datanode;
@@ -754,6 +773,16 @@ public class Dispatcher {
         } catch (InterruptedException ignored) {
         }
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return super.equals(obj);
     }
   }
 
