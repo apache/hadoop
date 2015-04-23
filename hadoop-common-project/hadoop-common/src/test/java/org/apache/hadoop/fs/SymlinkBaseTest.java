@@ -36,6 +36,10 @@ import org.junit.After;
  * Base test for symbolic links
  */
 public abstract class SymlinkBaseTest {
+  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
+  static {
+    FileSystem.enableSymlinks();
+  }
   static final long seed = 0xDEADBEEFL;
   static final int  blockSize =  8192;
   static final int  fileSize  = 16384;
