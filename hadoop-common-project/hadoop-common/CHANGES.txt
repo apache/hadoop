@@ -9,6 +9,9 @@ Release 2.7.4 - UNRELEASED
   IMPROVEMENTS
     HADOOP-12259. Utility to Dynamic port allocation (brahmareddy via rkanter)
 
+    HADOOP-10597. RPC Server signals backoff to clients when all request
+    queues are full. (Ming Ma via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

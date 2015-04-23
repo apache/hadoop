@@ -499,6 +499,17 @@ public abstract class Server {
     callQueue.swapQueue(getQueueClass(prefix, conf), maxQueueSize, prefix, conf);
   }
 
+  /**
+   * Get from config if client backoff is enabled on that port.
+   */
+  static boolean getClientBackoffEnable(
+      String prefix, Configuration conf) {
+    String name = prefix + "." +
+        CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
+    return conf.getBoolean(name,
+        CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT);
+  }
+
   /** A call queued for handling. */
   public static class Call implements Schedulable {
     private final int callId;             // the client's call id
@@ -1889,10 +1900,31 @@ public abstract class Server {
           rpcRequest, this, ProtoUtil.convert(header.getRpcKind()),
           header.getClientId().toByteArray(), traceSpan);
 
-      callQueue.put(call);              // queue the call; maybe blocked here
+      if (callQueue.isClientBackoffEnabled()) {
+        // if RPC queue is full, we will ask the RPC client to back off by
+        // throwing RetriableException. Whether RPC client will honor
+        // RetriableException and retry depends on client ipc retry policy.
+        // For example, FailoverOnNetworkExceptionRetry handles
+        // RetriableException.
+        queueRequestOrAskClientToBackOff(call);
+      } else {
+        callQueue.put(call);              // queue the call; maybe blocked here
+      }
       incRpcCount();  // Increment the rpc count
     }
 
+    private void queueRequestOrAskClientToBackOff(Call call)
+        throws WrappedRpcServerException, InterruptedException {
+      // If rpc queue is full, we will ask the client to back off.
+      boolean isCallQueued = callQueue.offer(call);
+      if (!isCallQueued) {
+        rpcMetrics.incrClientBackoff();
+        RetriableException retriableException =
+            new RetriableException("Server is too busy.");
+        throw new WrappedRpcServerException(
+            RpcErrorCodeProto.ERROR_RPC_SERVER, retriableException);
+      }
+    }
 
     /**
      * Establish RPC connection setup by negotiating SASL if required, then
@@ -2219,7 +2251,7 @@ public abstract class Server {
     // Setup appropriate callqueue
     final String prefix = getQueueClassPrefix();
     this.callQueue = new CallQueueManager<Call>(getQueueClass(prefix, conf),
-        maxQueueSize, prefix, conf);
+        getClientBackoffEnable(prefix, conf), maxQueueSize, prefix, conf);
 
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 

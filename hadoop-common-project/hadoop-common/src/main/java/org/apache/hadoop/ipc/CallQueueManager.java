@@ -39,16 +39,19 @@ public class CallQueueManager<E> {
       Class<?> queneClass, Class<E> elementClass) {
     return (Class<? extends BlockingQueue<E>>)queneClass;
   }
-  
+  private final boolean clientBackOffEnabled;
+
   // Atomic refs point to active callQueue
   // We have two so we can better control swapping
   private final AtomicReference<BlockingQueue<E>> putRef;
   private final AtomicReference<BlockingQueue<E>> takeRef;
 
   public CallQueueManager(Class<? extends BlockingQueue<E>> backingClass,
-      int maxQueueSize, String namespace, Configuration conf) {
+      boolean clientBackOffEnabled, int maxQueueSize, String namespace,
+      Configuration conf) {
     BlockingQueue<E> bq = createCallQueueInstance(backingClass,
       maxQueueSize, namespace, conf);
+    this.clientBackOffEnabled = clientBackOffEnabled;
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
     LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
@@ -100,6 +103,10 @@ public class CallQueueManager<E> {
       " could not be constructed.");
   }
 
+  boolean isClientBackoffEnabled() {
+    return clientBackOffEnabled;
+  }
+
   /**
    * Insert e into the backing queue or block until we can.
    * If we block and the queue changes on us, we will insert while the
@@ -107,6 +114,15 @@ public class CallQueueManager<E> {
    */
   public void put(E e) throws InterruptedException {
     putRef.get().put(e);
+  }
+
+  /**
+   * Insert e into the backing queue.
+   * Return true if e is queued.
+   * Return false if the queue is full.
+   */
+  public boolean offer(E e) throws InterruptedException {
+    return putRef.get().offer(e);
   }
 
   /**

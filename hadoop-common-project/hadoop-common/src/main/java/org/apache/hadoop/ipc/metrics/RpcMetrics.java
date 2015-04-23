@@ -95,6 +95,8 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationFailures;
   @Metric("Number of authorization sucesses")
   MutableCounterLong rpcAuthorizationSuccesses;
+  @Metric("Number of client backoff requests")
+  MutableCounterLong rpcClientBackoff;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
@@ -191,5 +193,13 @@ public class RpcMetrics {
         q.add(processingTime);
       }
     }
+  }
+
+  /**
+   * One client backoff event
+   */
+  //@Override
+  public void incrClientBackoff() {
+    rpcClientBackoff.incr();
   }
 }

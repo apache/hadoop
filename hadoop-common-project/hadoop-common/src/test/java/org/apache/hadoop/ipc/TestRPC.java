@@ -1082,6 +1082,64 @@ public class TestRPC {
   }
 
   /**
+   *  Test RPC backoff.
+   */
+  @Test (timeout=30000)
+  public void testClientBackOff() throws Exception {
+    boolean succeeded = false;
+    final int numClients = 2;
+    final List<Future<Void>> res = new ArrayList<Future<Void>>();
+    final ExecutorService executorService =
+        Executors.newFixedThreadPool(numClients);
+    final Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    conf.setBoolean(CommonConfigurationKeys.IPC_CALLQUEUE_NAMESPACE +
+        ".0." + CommonConfigurationKeys.IPC_BACKOFF_ENABLE, true);
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestProtocol.class).setInstance(new TestImpl())
+        .setBindAddress(ADDRESS).setPort(0)
+        .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true)
+        .build();
+    server.start();
+
+    final TestProtocol proxy =
+        RPC.getProxy(TestProtocol.class, TestProtocol.versionID,
+            NetUtils.getConnectAddress(server), conf);
+    try {
+      // start a sleep RPC call to consume the only handler thread.
+      // Start another sleep RPC call to make callQueue full.
+      // Start another sleep RPC call to make reader thread block on CallQueue.
+      for (int i = 0; i < numClients; i++) {
+        res.add(executorService.submit(
+            new Callable<Void>() {
+              @Override
+              public Void call() throws IOException, InterruptedException {
+                proxy.sleep(100000);
+                return null;
+              }
+            }));
+      }
+      while (server.getCallQueueLen() != 1
+          && countThreads(CallQueueManager.class.getName()) != 1) {
+        Thread.sleep(100);
+      }
+      try {
+        proxy.sleep(100);
+      } catch (RemoteException e) {
+        IOException unwrapExeption = e.unwrapRemoteException();
+        if (unwrapExeption instanceof RetriableException) {
+          succeeded = true;
+        }
+      }
+    } finally {
+      server.stop();
+      RPC.stopProxy(proxy);
+      executorService.shutdown();
+    }
+    assertTrue("RetriableException not received", succeeded);
+  }
+
+  /**
    *  Test RPC timeout.
    */
   @Test(timeout=30000)

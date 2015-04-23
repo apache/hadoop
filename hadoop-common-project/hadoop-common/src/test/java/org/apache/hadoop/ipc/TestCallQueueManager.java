@@ -145,21 +145,21 @@ public class TestCallQueueManager {
 
   @Test
   public void testCallQueueCapacity() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
 
     assertCanPut(manager, 10, 20); // Will stop at 10 due to capacity
   }
 
   @Test
   public void testEmptyConsume() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 10, "", null);
 
     assertCanTake(manager, 0, 1); // Fails since it's empty
   }
 
   @Test(timeout=60000)
   public void testSwapUnderContention() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(queueClass, 5000, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, false, 5000, "", null);
 
     ArrayList<Putter> producers = new ArrayList<Putter>();
     ArrayList<Taker> consumers = new ArrayList<Taker>();
@@ -235,7 +235,8 @@ public class TestCallQueueManager {
   @Test
   public void testInvocationException() throws InterruptedException {
     try {
-      new CallQueueManager<ExceptionFakeCall>(exceptionQueueClass, 10, "", null);
+      new CallQueueManager<ExceptionFakeCall>(
+          exceptionQueueClass, false, 10, "", null);
       fail();
     } catch (RuntimeException re) {
       assertTrue(re.getCause() instanceof IllegalArgumentException);
