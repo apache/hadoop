@@ -40,6 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 @Private
 @Unstable
@@ -80,6 +82,9 @@ public class RMAdminCLI extends HAAdmin {
       "No node-to-labels mappings are specified";
   private static final String INVALID_TIMEOUT_ERR_MSG =
       "Invalid timeout specified : ";
+  private static final String ADD_LABEL_FORMAT_ERR_MSG =
+      "Input format for adding node-labels is not correct, it should be "
+          + "labelName1[(exclusive=true/false)],LabelName2[] ..";
 
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder()
@@ -104,7 +109,8 @@ public class RMAdminCLI extends HAAdmin {
           .put("-getGroups", new UsageInfo("[username]",
               "Get the groups which given user belongs to."))
           .put("-addToClusterNodeLabels",
-              new UsageInfo("[label1,label2,label3] (label splitted by \",\")",
+              new UsageInfo("[label1(exclusive=true),"
+                  + "label2(exclusive=false),label3]",
                   "add to cluster node labels "))
           .put("-removeFromClusterNodeLabels",
               new UsageInfo("[label1,label2,label3] (label splitted by \",\")",
@@ -407,7 +413,66 @@ public class RMAdminCLI extends HAAdmin {
     return localNodeLabelsManager;
   }
   
-  private Set<String> buildNodeLabelsSetFromStr(String args) {
+  private List<NodeLabel> buildNodeLabelsFromStr(String args) {
+    List<NodeLabel> nodeLabels = new ArrayList<>();
+    for (String p : args.split(",")) {
+      if (!p.trim().isEmpty()) {
+        String labelName = p;
+
+        // Try to parse exclusive
+        boolean exclusive = NodeLabel.DEFAULT_NODE_LABEL_EXCLUSIVITY;
+        int leftParenthesisIdx = p.indexOf("(");
+        int rightParenthesisIdx = p.indexOf(")");
+
+        if ((leftParenthesisIdx == -1 && rightParenthesisIdx != -1)
+            || (leftParenthesisIdx != -1 && rightParenthesisIdx == -1)) {
+          // Parenthese not match
+          throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+        }
+
+        if (leftParenthesisIdx > 0 && rightParenthesisIdx > 0) {
+          if (leftParenthesisIdx > rightParenthesisIdx) {
+            // Parentese not match
+            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+          }
+
+          String property = p.substring(p.indexOf("(") + 1, p.indexOf(")"));
+          if (property.contains("=")) {
+            String key = property.substring(0, property.indexOf("=")).trim();
+            String value =
+                property
+                    .substring(property.indexOf("=") + 1, property.length())
+                    .trim();
+
+            // Now we only support one property, which is exclusive, so check if
+            // key = exclusive and value = {true/false}
+            if (key.equals("exclusive")
+                && ImmutableSet.of("true", "false").contains(value)) {
+              exclusive = Boolean.parseBoolean(value);
+            } else {
+              throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+            }
+          } else if (!property.trim().isEmpty()) {
+            throw new IllegalArgumentException(ADD_LABEL_FORMAT_ERR_MSG);
+          }
+        }
+
+        // Try to get labelName if there's "(..)"
+        if (labelName.contains("(")) {
+          labelName = labelName.substring(0, labelName.indexOf("(")).trim();
+        }
+
+        nodeLabels.add(NodeLabel.newInstance(labelName, exclusive));
+      }
+    }
+
+    if (nodeLabels.isEmpty()) {
+      throw new IllegalArgumentException(NO_LABEL_ERR_MSG);
+    }
+    return nodeLabels;
+  }
+
+  private Set<String> buildNodeLabelNamesFromStr(String args) {
     Set<String> labels = new HashSet<String>();
     for (String p : args.split(",")) {
       if (!p.trim().isEmpty()) {
@@ -423,7 +488,7 @@ public class RMAdminCLI extends HAAdmin {
 
   private int addToClusterNodeLabels(String args) throws IOException,
       YarnException {
-    Set<String> labels = buildNodeLabelsSetFromStr(args);
+    List<NodeLabel> labels = buildNodeLabelsFromStr(args);
 
     if (directlyAccessNodeLabelStore) {
       getNodeLabelManagerInstance(getConf()).addToCluserNodeLabels(labels);
@@ -439,7 +504,7 @@ public class RMAdminCLI extends HAAdmin {
 
   private int removeFromClusterNodeLabels(String args) throws IOException,
       YarnException {
-    Set<String> labels = buildNodeLabelsSetFromStr(args);
+    Set<String> labels = buildNodeLabelNamesFromStr(args);
 
     if (directlyAccessNodeLabelStore) {
       getNodeLabelManagerInstance(getConf()).removeFromClusterNodeLabels(

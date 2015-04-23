@@ -262,7 +262,7 @@ message LabelsToNodeIdsProto {
 }
 
 message NodeLabelProto {
-  optional string nodeLabel = 1;
+  optional string name = 1;
   optional bool isExclusive = 2 [default = true]; 
 }
 

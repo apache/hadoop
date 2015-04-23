@@ -77,7 +77,7 @@ message UpdateNodeResourceResponseProto {
 }
 
 message AddToClusterNodeLabelsRequestProto {
-  repeated string nodeLabels = 1;
+  repeated NodeLabelProto nodeLabels = 1;
 }
 
 message AddToClusterNodeLabelsResponseProto {
@@ -97,11 +97,6 @@ message ReplaceLabelsOnNodeRequestProto {
 message ReplaceLabelsOnNodeResponseProto {
   
 }
-
-message UpdateNodeLabelsRequestProto {
-  repeated NodeLabelProto nodeLabels = 1;
-}
-
 
 message UpdateNodeLabelsResponseProto {
 }

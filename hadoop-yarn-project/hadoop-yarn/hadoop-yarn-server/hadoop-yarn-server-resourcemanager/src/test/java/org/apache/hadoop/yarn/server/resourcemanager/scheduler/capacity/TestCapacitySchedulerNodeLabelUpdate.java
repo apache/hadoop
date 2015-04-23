@@ -98,7 +98,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
   @Test (timeout = 30000)
   public void testNodeUpdate() throws Exception {
     // set node -> label
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y", "z"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
     
     // set mapping:
     // h1 -> x

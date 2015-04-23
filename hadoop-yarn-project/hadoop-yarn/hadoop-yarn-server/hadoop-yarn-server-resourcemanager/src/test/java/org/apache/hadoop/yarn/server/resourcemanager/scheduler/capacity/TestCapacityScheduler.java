@@ -2578,7 +2578,7 @@ public class TestCapacityScheduler {
     
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
-    mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
     
     MemoryRMStateStore memStore = new MemoryRMStateStore();

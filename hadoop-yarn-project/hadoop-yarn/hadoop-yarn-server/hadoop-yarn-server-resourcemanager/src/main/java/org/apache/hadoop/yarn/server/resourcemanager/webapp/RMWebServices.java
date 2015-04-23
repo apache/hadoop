@@ -857,7 +857,7 @@ public class RMWebServices {
 
     NodeLabelsInfo ret = 
       new NodeLabelsInfo(rm.getRMContext().getNodeLabelManager()
-        .getClusterNodeLabels());
+        .getClusterNodeLabelNames());
 
     return ret;
   }
@@ -883,7 +883,7 @@ public class RMWebServices {
     }
     
     rm.getRMContext().getNodeLabelManager()
-        .addToCluserNodeLabels(new HashSet<String>(
+        .addToCluserNodeLabelsWithDefaultExclusivity(new HashSet<String>(
           newNodeLabels.getNodeLabels()));
             
     return Response.status(Status.OK).build();

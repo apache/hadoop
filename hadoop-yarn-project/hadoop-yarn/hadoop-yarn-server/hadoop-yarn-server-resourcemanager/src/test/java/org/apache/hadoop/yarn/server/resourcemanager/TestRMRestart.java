@@ -2104,7 +2104,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     clusterNodeLabels.add("y");
     clusterNodeLabels.add("z");
     // Add node label x,y,z
-    nodeLabelManager.addToCluserNodeLabels(clusterNodeLabels);
+    nodeLabelManager.addToCluserNodeLabelsWithDefaultExclusivity(clusterNodeLabels);
 
     // Add node Label to Node h1->x
     NodeId n1 = NodeId.newInstance("h1", 0);
@@ -2129,7 +2129,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     }
 
     Assert.assertEquals(clusterNodeLabels.size(), nodeLabelManager
-        .getClusterNodeLabels().size());
+        .getClusterNodeLabelNames().size());
 
     Map<NodeId, Set<String>> nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
@@ -2148,7 +2148,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     nodeLabelManager = rm2.getRMContext().getNodeLabelManager();
     Assert.assertEquals(clusterNodeLabels.size(), nodeLabelManager
-        .getClusterNodeLabels().size());
+        .getClusterNodeLabelNames().size());
 
     nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());

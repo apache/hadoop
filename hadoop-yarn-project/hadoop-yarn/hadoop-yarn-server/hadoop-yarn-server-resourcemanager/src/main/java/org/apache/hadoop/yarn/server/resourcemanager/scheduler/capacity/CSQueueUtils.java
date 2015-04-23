@@ -135,7 +135,7 @@ class CSQueueUtils {
       accessibleLabels.addAll(labels);
     }
     if (accessibleLabels.contains(CommonNodeLabelsManager.ANY)) {
-      accessibleLabels.addAll(mgr.getClusterNodeLabels());
+      accessibleLabels.addAll(mgr.getClusterNodeLabelNames());
     }
     accessibleLabels.add(CommonNodeLabelsManager.NO_LABEL);
     

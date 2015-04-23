@@ -54,7 +54,7 @@ public class TestDistributedShellWithNodeLabels {
     RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
     Set<String> labels = new HashSet<String>();
     labels.add("x");
-    labelsMgr.addToCluserNodeLabels(labels);
+    labelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(labels);
 
     // Setup queue access to node labels
     distShellTest.conf.set("yarn.scheduler.capacity.root.accessible-node-labels", "x");

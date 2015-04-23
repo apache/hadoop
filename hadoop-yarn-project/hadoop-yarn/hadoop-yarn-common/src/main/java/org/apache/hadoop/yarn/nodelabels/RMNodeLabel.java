@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.nodelabels;
 
 import java.util.HashSet;
 import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class RMNodeLabel implements Comparable<RMNodeLabel> {
@@ -30,17 +33,25 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
   private int numActiveNMs;
   private String labelName;
   private Set<NodeId> nodeIds;
-  private boolean exclusive = true;
+  private boolean exclusive;
+
+  public RMNodeLabel(NodeLabel nodeLabel) {
+    this(nodeLabel.getName(), Resource.newInstance(0, 0), 0,
+        nodeLabel.isExclusive());
+  }
 
   public RMNodeLabel(String labelName) {
-    this(labelName, Resource.newInstance(0, 0), 0);
+    this(labelName, Resource.newInstance(0, 0), 0,
+        NodeLabel.DEFAULT_NODE_LABEL_EXCLUSIVITY);
   }
   
-  protected RMNodeLabel(String labelName, Resource res, int activeNMs) {
+  protected RMNodeLabel(String labelName, Resource res, int activeNMs,
+      boolean exclusive) {
     this.labelName = labelName;
     this.resource = res;
     this.numActiveNMs = activeNMs;
     this.nodeIds = new HashSet<NodeId>();
+    this.exclusive = exclusive;
   }
 
   public void addNodeId(NodeId node) {
@@ -86,7 +97,7 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
   }
   
   public RMNodeLabel getCopy() {
-    return new RMNodeLabel(labelName, resource, numActiveNMs);
+    return new RMNodeLabel(labelName, resource, numActiveNMs, exclusive);
   }
   
   @Override

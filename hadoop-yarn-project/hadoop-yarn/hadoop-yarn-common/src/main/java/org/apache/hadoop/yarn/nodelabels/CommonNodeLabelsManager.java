@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.nodelabels;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -47,13 +48,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEvent;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEventType;
 import org.apache.hadoop.yarn.nodelabels.event.RemoveClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.StoreNewClusterNodeLabels;
-import org.apache.hadoop.yarn.nodelabels.event.StoreUpdateNodeLabelsEvent;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -185,13 +184,6 @@ public class CommonNodeLabelsManager extends AbstractService {
         store.updateNodeToLabelsMappings(updateNodeToLabelsMappingsEvent
             .getNodeToLabels());
         break;
-      case UPDATE_NODE_LABELS:
-        StoreUpdateNodeLabelsEvent
-          storeSetNodeLabelsEventEvent =
-            (StoreUpdateNodeLabelsEvent) event;
-        store.updateNodeLabels(storeSetNodeLabelsEventEvent
-            .getUpdatedNodeLabels());
-        break;
       }
     } catch (IOException e) {
       LOG.error("Failed to store label modification to storage");
@@ -274,14 +266,9 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
 
-  /**
-   * Add multiple node labels to repository
-   * 
-   * @param labels
-   *          new node labels added
-   */
   @SuppressWarnings("unchecked")
-  public void addToCluserNodeLabels(Set<String> labels) throws IOException {
+  public void addToCluserNodeLabels(Collection<NodeLabel> labels)
+      throws IOException {
     if (!nodeLabelsEnabled) {
       LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
       throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
@@ -289,19 +276,19 @@ public class CommonNodeLabelsManager extends AbstractService {
     if (null == labels || labels.isEmpty()) {
       return;
     }
-    Set<String> newLabels = new HashSet<String>();
-    labels = normalizeLabels(labels);
+    List<NodeLabel> newLabels = new ArrayList<NodeLabel>();
+    normalizeNodeLabels(labels);
 
     // do a check before actual adding them, will throw exception if any of them
     // doesn't meet label name requirement
-    for (String label : labels) {
-      checkAndThrowLabelName(label);
+    for (NodeLabel label : labels) {
+      checkAndThrowLabelName(label.getName());
     }
 
-    for (String label : labels) {
+    for (NodeLabel label : labels) {
       // shouldn't overwrite it to avoid changing the Label.resource
-      if (this.labelCollections.get(label) == null) {
-        this.labelCollections.put(label, new RMNodeLabel(label));
+      if (this.labelCollections.get(label.getName()) == null) {
+        this.labelCollections.put(label.getName(), new RMNodeLabel(label));
         newLabels.add(label);
       }
     }
@@ -311,6 +298,22 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
 
     LOG.info("Add labels: [" + StringUtils.join(labels.iterator(), ",") + "]");
+  }
+
+  /**
+   * Add multiple node labels to repository
+   *
+   * @param labels
+   *          new node labels added
+   */
+  @VisibleForTesting
+  public void addToCluserNodeLabelsWithDefaultExclusivity(Set<String> labels)
+      throws IOException {
+    Set<NodeLabel> nodeLabels = new HashSet<NodeLabel>();
+    for (String label : labels) {
+      nodeLabels.add(NodeLabel.newInstance(label));
+    }
+    addToCluserNodeLabels(nodeLabels);
   }
   
   protected void checkAddLabelsToNode(
@@ -780,7 +783,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    * 
    * @return existing valid labels in repository
    */
-  public Set<String> getClusterNodeLabels() {
+  public Set<String> getClusterNodeLabelNames() {
     try {
       readLock.lock();
       Set<String> labels = new HashSet<String>(labelCollections.keySet());
@@ -791,39 +794,17 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
   
-  private void checkUpdateNodeLabels(
-      List<NodeLabel> updatedNodeLabels) throws YarnException {
-    // pre-check
-    for (NodeLabel label : updatedNodeLabels) {
-      if (!labelCollections.containsKey(label.getNodeLabel())) {
-        String message =
-          String.format(
-            "Trying to update a non-existing node-label=%s",
-            label.getNodeLabel());
-        LOG.error(message);
-        throw new YarnException(message);
-      }
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  public void updateNodeLabels(
-      List<NodeLabel> updatedNodeLabels) throws YarnException {
+  public List<NodeLabel> getClusterNodeLabels() {
     try {
-      writeLock.lock();
-      checkUpdateNodeLabels(updatedNodeLabels);
-
-      for (NodeLabel label : updatedNodeLabels) {
-        RMNodeLabel rmLabel = labelCollections.get(label.getNodeLabel());
-        rmLabel.setIsExclusive(label.getIsExclusive());
+      readLock.lock();
+      List<NodeLabel> nodeLabels = new ArrayList<>();
+      for (RMNodeLabel label : labelCollections.values()) {
+        nodeLabels.add(NodeLabel.newInstance(label.getLabelName(),
+            label.getIsExclusive()));
       }
-
-      if (null != dispatcher && !updatedNodeLabels.isEmpty()) {
-        dispatcher.getEventHandler().handle(
-          new StoreUpdateNodeLabelsEvent(updatedNodeLabels));
-      }
+      return nodeLabels;
     } finally {
-      writeLock.unlock();
+      readLock.unlock();
     }
   }
 
@@ -876,6 +857,12 @@ public class CommonNodeLabelsManager extends AbstractService {
     return newLabels;
   }
   
+  private void normalizeNodeLabels(Collection<NodeLabel> labels) {
+    for (NodeLabel label : labels) {
+      label.setName(normalizeLabel(label.getName()));
+    }
+  }
+
   protected Node getNMInNodeSet(NodeId nodeId) {
     return getNMInNodeSet(nodeId, nodeCollections);
   }

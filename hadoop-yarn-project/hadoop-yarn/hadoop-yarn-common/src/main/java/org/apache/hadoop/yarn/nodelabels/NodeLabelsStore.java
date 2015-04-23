@@ -46,7 +46,7 @@ public abstract class NodeLabelsStore implements Closeable {
   /**
    * Store new labels
    */
-  public abstract void storeNewClusterNodeLabels(Set<String> label)
+  public abstract void storeNewClusterNodeLabels(List<NodeLabel> label)
       throws IOException;
 
   /**
@@ -54,13 +54,7 @@ public abstract class NodeLabelsStore implements Closeable {
    */
   public abstract void removeClusterNodeLabels(Collection<String> labels)
       throws IOException;
-  
-  /**
-   * Update node labels
-   */
-  public abstract void updateNodeLabels(
-      List<NodeLabel> updatedNodeLabels) throws IOException;
-  
+
   /**
    * Recover labels and node to labels mappings from store
    */
