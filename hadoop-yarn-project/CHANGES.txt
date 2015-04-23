@@ -257,6 +257,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3434. Interaction between reservations and userlimit can result in 
     significant ULF violation (tgraves)
 
+    YARN-3516. killing ContainerLocalizer action doesn't take effect when
+    private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
