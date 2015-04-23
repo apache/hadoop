@@ -283,5 +283,6 @@ The following table lists additional changes to some configuration properties:
 |:---- |:---- |
 | mapred.create.symlink | NONE - symlinking is always on |
 | mapreduce.job.cache.symlink.create | NONE - symlinking is always on |
+| io.native.lib.available | NONE - Always use native libraries if available. |
 
 

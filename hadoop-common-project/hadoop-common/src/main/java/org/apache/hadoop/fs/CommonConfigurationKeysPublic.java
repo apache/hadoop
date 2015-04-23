@@ -38,11 +38,6 @@ public class CommonConfigurationKeysPublic {
   
   // The Keys
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
-  public static final String  IO_NATIVE_LIB_AVAILABLE_KEY =
-    "io.native.lib.available";
-  /** Default value for IO_NATIVE_LIB_AVAILABLE_KEY */
-  public static final boolean IO_NATIVE_LIB_AVAILABLE_DEFAULT = true;
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY =
     "net.topology.script.number.args";
   /** Default value for NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY */

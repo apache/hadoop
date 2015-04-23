@@ -21,15 +21,9 @@ package org.apache.hadoop.io.compress.bzip2;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.util.NativeCodeLoader;
-
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.bzip2.Bzip2Compressor;
-import org.apache.hadoop.io.compress.bzip2.Bzip2Decompressor;
-import org.apache.hadoop.io.compress.bzip2.BZip2DummyCompressor;
-import org.apache.hadoop.io.compress.bzip2.BZip2DummyDecompressor;
+import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
  * A collection of factories to create the right 
@@ -58,10 +52,7 @@ public class Bzip2Factory {
       bzip2LibraryName = libname;
       if (libname.equals("java-builtin")) {
         LOG.info("Using pure-Java version of bzip2 library");
-      } else if (conf.getBoolean(
-                CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, 
-                CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_DEFAULT) &&
-          NativeCodeLoader.isNativeCodeLoaded()) {
+      } else if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
           // Initialize the native library.
           Bzip2Compressor.initSymbols(libname);

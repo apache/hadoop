@@ -23,6 +23,9 @@ Trunk (Unreleased)
 
     HADOOP-11731. Rework the changelog and releasenotes (aw)
 
+    HADOOP-11627. Remove io.native.lib.available.
+    (Brahma Reddy Battula via aajisaka)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via
