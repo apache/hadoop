@@ -43,7 +43,13 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -60,6 +66,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
   private boolean containerLimitUsers;
+  private ResourceHandler resourceHandlerChain;
 
   @Override
   public void setConf(Configuration conf) {
@@ -191,7 +198,20 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       throw new IOException("Linux container executor not configured properly"
           + " (error=" + exitCode + ")", e);
     }
-   
+
+    try {
+      Configuration conf = super.getConf();
+
+      resourceHandlerChain = ResourceHandlerModule
+          .getConfiguredResourceHandlerChain(conf);
+      if (resourceHandlerChain != null) {
+        resourceHandlerChain.bootstrap(conf);
+      }
+    } catch (ResourceHandlerException e) {
+      LOG.error("Failed to bootstrap configured resource subsystems! ", e);
+      throw new IOException("Failed to bootstrap configured resource subsystems!");
+    }
+
     resourcesHandler.init(this);
   }
   
@@ -270,6 +290,51 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             container.getResource());
     String resourcesOptions = resourcesHandler.getResourcesOption(
             containerId);
+    String tcCommandFile = null;
+
+    try {
+      if (resourceHandlerChain != null) {
+        List<PrivilegedOperation> ops = resourceHandlerChain
+            .preStart(container);
+
+        if (ops != null) {
+          List<PrivilegedOperation> resourceOps = new ArrayList<>();
+
+          resourceOps.add(new PrivilegedOperation
+              (PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+                  resourcesOptions));
+
+          for (PrivilegedOperation op : ops) {
+            switch (op.getOperationType()) {
+              case ADD_PID_TO_CGROUP:
+                resourceOps.add(op);
+                break;
+              case TC_MODIFY_STATE:
+                tcCommandFile = op.getArguments().get(0);
+                break;
+              default:
+                LOG.warn("PrivilegedOperation type unsupported in launch: "
+                    + op.getOperationType());
+            }
+          }
+
+          if (resourceOps.size() > 1) {
+            //squash resource operations
+            try {
+              PrivilegedOperation operation = PrivilegedOperationExecutor
+                  .squashCGroupOperations(resourceOps);
+              resourcesOptions = operation.getArguments().get(0);
+            } catch (PrivilegedOperationException e) {
+              LOG.error("Failed to squash cgroup operations!", e);
+              throw new ResourceHandlerException("Failed to squash cgroup operations!");
+            }
+          }
+        }
+      }
+    } catch (ResourceHandlerException e) {
+      LOG.error("ResourceHandlerChain.preStart() failed!", e);
+      throw new IOException("ResourceHandlerChain.preStart() failed!");
+    }
 
     ShellCommandExecutor shExec = null;
 
@@ -288,6 +353,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             StringUtils.join(",", localDirs),
             StringUtils.join(",", logDirs),
             resourcesOptions));
+
+        if (tcCommandFile != null) {
+            command.add(tcCommandFile);
+        }
+
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
@@ -336,6 +406,15 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       return exitCode;
     } finally {
       resourcesHandler.postExecute(containerId);
+
+      try {
+        if (resourceHandlerChain != null) {
+          resourceHandlerChain.postComplete(containerId);
+        }
+      } catch (ResourceHandlerException e) {
+        LOG.warn("ResourceHandlerChain.postComplete failed for " +
+            "containerId: " + containerId + ". Exception: " + e);
+      }
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");
@@ -348,9 +427,28 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public int reacquireContainer(String user, ContainerId containerId)
       throws IOException, InterruptedException {
     try {
+      //Resource handler chain needs to reacquire container state
+      //as well
+      if (resourceHandlerChain != null) {
+        try {
+          resourceHandlerChain.reacquireContainer(containerId);
+        } catch (ResourceHandlerException e) {
+          LOG.warn("ResourceHandlerChain.reacquireContainer failed for " +
+              "containerId: " + containerId + " Exception: " + e);
+        }
+      }
+
       return super.reacquireContainer(user, containerId);
     } finally {
       resourcesHandler.postExecute(containerId);
+      if (resourceHandlerChain != null) {
+        try {
+          resourceHandlerChain.postComplete(containerId);
+        } catch (ResourceHandlerException e) {
+          LOG.warn("ResourceHandlerChain.postComplete failed for " +
+              "containerId: " + containerId + " Exception: " + e);
+        }
+      }
     }
   }
 
