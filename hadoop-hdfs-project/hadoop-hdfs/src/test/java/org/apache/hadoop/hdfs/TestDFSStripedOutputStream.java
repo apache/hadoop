@@ -115,6 +115,12 @@ public class TestDFSStripedOutputStream {
   }
 
   @Test
+  public void testFileLessThanFullBlockGroup() throws IOException {
+    testOneFile("/LessThanFullBlockGroup",
+        cellSize * dataBlocks * (stripesPerBlock - 1) + cellSize);
+  }
+
+  @Test
   public void testFileFullBlockGroup() throws IOException {
     testOneFile("/FullBlockGroup", blockSize * dataBlocks);
   }
