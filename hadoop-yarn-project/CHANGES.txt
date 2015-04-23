@@ -38,6 +38,10 @@ Release 2.7.1 - UNRELEASED
     YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
     (Zhihai Xu via kasha)
 
+    YARN-3516. killing ContainerLocalizer action doesn't take effect when
+    private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
+
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
