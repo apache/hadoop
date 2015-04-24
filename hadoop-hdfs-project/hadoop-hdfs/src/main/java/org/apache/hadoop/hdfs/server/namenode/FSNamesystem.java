@@ -4225,6 +4225,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String src = "";
     waitForLoadingFSImage();
     writeLock();
+    boolean copyTruncate = false;
+    BlockInfoContiguousUnderConstruction truncatedBlock = null;
     try {
       checkOperation(OperationCategory.WRITE);
       // If a DN tries to commit to the standby, the recovery will
@@ -4281,11 +4283,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         return;
       }
 
-      BlockInfoContiguousUnderConstruction truncatedBlock =
-          (BlockInfoContiguousUnderConstruction) iFile.getLastBlock();
+      truncatedBlock = (BlockInfoContiguousUnderConstruction) iFile
+          .getLastBlock();
       long recoveryId = truncatedBlock.getBlockRecoveryId();
-      boolean copyTruncate =
-          truncatedBlock.getBlockId() != storedBlock.getBlockId();
+      copyTruncate = truncatedBlock.getBlockId() != storedBlock.getBlockId();
       if(recoveryId != newgenerationstamp) {
         throw new IOException("The recovery id " + newgenerationstamp
                               + " does not match current recovery id "
@@ -4378,7 +4379,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (closeFile) {
       LOG.info("commitBlockSynchronization(oldBlock=" + oldBlock
           + ", file=" + src
-          + ", newgenerationstamp=" + newgenerationstamp
+          + (copyTruncate ? ", newBlock=" + truncatedBlock
+              : ", newgenerationstamp=" + newgenerationstamp)
           + ", newlength=" + newlength
           + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
     } else {
