@@ -33,7 +33,7 @@ public class NavBlock extends HtmlBlock {
 
   @Override public void render(Block html) {
     boolean addErrorsAndWarningsLink = false;
-    Log log = LogFactory.getLog(RMErrorsAndWarningsPage.class);
+    Log log = LogFactory.getLog(NavBlock.class);
     if (log instanceof Log4JLogger) {
       Log4jWarningErrorMetricsAppender appender =
           Log4jWarningErrorMetricsAppender.findAppender();
