@@ -589,6 +589,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8147. StorageGroup in Dispatcher should override equals nad hashCode.
     (surendra singh lilhore via szetszwo)
 
+    HDFS-8070. Pre-HDFS-7915 DFSClient cannot use short circuit on
+    post-HDFS-7915 DataNode (cmccabe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
