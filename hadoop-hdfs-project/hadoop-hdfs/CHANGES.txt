@@ -548,6 +548,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8217. During block recovery for truncate Log new Block Id in case of
     copy-on-truncate is true. (vinayakumarb)
 
+    HDFS-8231. StackTrace displayed at client while QuotaByStorageType exceeds
+    (J.Andreina and Xiaoyu Yao via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
