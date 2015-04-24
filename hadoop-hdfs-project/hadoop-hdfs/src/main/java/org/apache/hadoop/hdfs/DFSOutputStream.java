@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -245,6 +246,7 @@ public class DFSOutputStream extends FSOutputSummer
           IOException e = re.unwrapRemoteException(
               AccessControlException.class,
               DSQuotaExceededException.class,
+              QuotaByStorageTypeExceededException.class,
               FileAlreadyExistsException.class,
               FileNotFoundException.class,
               ParentNotDirectoryException.class,
