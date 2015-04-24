@@ -560,6 +560,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8191. Fix byte to integer casting in SimulatedFSDataset#simulatedByte.
     (Zhe Zhang via wang)
 
+    HDFS-8211. DataNode UUID is always null in the JMX counter. (Anu Engineer
+    via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
