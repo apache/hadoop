@@ -343,6 +343,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6330. Fix typo in Task Attempt API's URL in documentations.
     (Ryu Kobayashi via ozawa)
 
+    MAPREDUCE-6333. TestEvents,TestAMWebServicesTasks,TestAppController are
+    broken due to MAPREDUCE-6297. (Siqi Li via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

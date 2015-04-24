@@ -39,6 +39,7 @@ import org.junit.Test;
 
 public class TestEvents {
 
+  private static final String taskId = "task_1_2_r_3";
   /**
    * test a getters of TaskAttemptFinishedEvent and TaskAttemptFinished
    * 
@@ -131,7 +132,7 @@ public class TestEvents {
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
@@ -141,42 +142,42 @@ public class TestEvents {
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptStarted) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptFinished) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_STARTED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptStarted) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_FINISHED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptFinished) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     e = reader.getNextEvent();
     assertTrue(e.getEventType().equals(EventType.REDUCE_ATTEMPT_KILLED));
-    assertEquals("task_1_2_r03_4",
+    assertEquals(taskId,
         ((TaskAttemptUnsuccessfulCompletion) e.getDatum()).taskid.toString());
 
     reader.close();
@@ -234,7 +235,7 @@ public class TestEvents {
     datum.hostname = "hostname";
     datum.rackname = "rackname";
     datum.physMemKbytes = Arrays.asList(1000, 2000, 3000);
-    datum.taskid = "task_1_2_r03_4";
+    datum.taskid = taskId;
     datum.port = 1000;
     datum.taskType = "REDUCE";
     datum.status = "STATUS";
@@ -260,7 +261,7 @@ public class TestEvents {
     datum.hostname = "hostname";
     datum.rackname = "rackName";
     datum.state = "state";
-    datum.taskid = "task_1_2_r03_4";
+    datum.taskid = taskId;
     datum.taskStatus = "taskStatus";
     datum.taskType = "REDUCE";
     result.setDatum(datum);
@@ -278,7 +279,7 @@ public class TestEvents {
     datum.locality = "locality";
     datum.shufflePort = 10001;
     datum.startTime = 1;
-    datum.taskid = "task_1_2_r03_4";
+    datum.taskid = taskId;
     datum.taskType = "taskType";
     datum.trackerName = "trackerName";
     result.setDatum(datum);
@@ -308,7 +309,7 @@ public class TestEvents {
     datum.hostname = "hostname";
     datum.rackname = "rackname";
     datum.state = "state";
-    datum.taskid = "task_1_2_r03_4";
+    datum.taskid = taskId;
     datum.taskStatus = "taskStatus";
     datum.taskType = "REDUCE";
     result.setDatum(datum);
@@ -325,7 +326,7 @@ public class TestEvents {
     datum.locality = "locality";
     datum.shufflePort = 10001;
     datum.startTime = 1;
-    datum.taskid = "task_1_2_r03_4";
+    datum.taskid = taskId;
     datum.taskType = "taskType";
     datum.trackerName = "trackerName";
     result.setDatum(datum);
