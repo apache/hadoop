@@ -561,6 +561,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11864. JWTRedirectAuthenticationHandler breaks java8 javadocs.
     (Larry McCay via stevel)
 
+    HADOOP-11876. Refactor code to make it more readable, minor
+    maybePrintStats bug (Zoran Dimitrijevic via raviprak)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
