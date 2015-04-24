@@ -190,14 +190,12 @@
     only if both the namenode layout version and the datenode layout version
     are not changed between these two releases.
   </p>
-
-  <subsection name="Downgrade without Downtime" id="DowngradeWithoutDowntime">
   <p>
     In a HA cluster,
     when a rolling upgrade from an old software release to a new software release is in progress,
     it is possible to downgrade, in a rolling fashion, the upgraded machines back to the old software release.
     Same as before, suppose <em>NN1</em> and <em>NN2</em> are respectively in active and standby states.
-    Below are the steps for rolling downgrade:
+    Below are the steps for rolling downgrade without downtime:
   </p>
   <ol>
     <li>Downgrade <em>DNs</em><ol>
@@ -214,16 +212,12 @@
     </ol></li>
     <li>Downgrade Active and Standby <em>NNs</em><ol>
       <li>Shutdown and downgrade <em>NN2</em>.</li>
-      <li>Start <em>NN2</em> as standby normally. (Note that it is incorrect to use the
-        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>"
-        option here.)
+      <li>Start <em>NN2</em> as standby normally.
       </li>
       <li>Failover from <em>NN1</em> to <em>NN2</em>
         so that <em>NN2</em> becomes active and <em>NN1</em> becomes standby.</li>
       <li>Shutdown and upgrade <em>NN1</em>.</li>
-      <li>Start <em>NN1</em> as standby normally. (Note that it is incorrect to use the
-        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>"
-        option here.)
+      <li>Start <em>NN1</em> as standby normally.
       </li>
     </ol></li>
     <li>Finalize Rolling Downgrade<ul>
@@ -236,20 +230,6 @@
     since protocols may be changed in a backward compatible manner but not forward compatible,
     i.e. old datanodes can talk to the new namenodes but not vice versa.
   </p>
-  </subsection>
-  <subsection name="Downgrade with Downtime" id="DowngradeWithDowntime">
-  <p>
-    Administrator may choose to first shutdown the cluster and then downgrade it.
-    The following are the steps:
-  </p>
-  <ol>
-      <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
-      <li>Restore the pre-upgrade release in all machines.</li>
-      <li>Start <em>NNs</em> with the 
-        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>" option.</li>
-      <li>Start <em>DNs</em> normally.</li>
-  </ol>
-  </subsection>
   </section>
 
   <section name="Rollback" id="Rollback">

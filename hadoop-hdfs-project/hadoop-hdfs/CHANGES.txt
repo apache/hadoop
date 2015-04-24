@@ -315,6 +315,9 @@ Trunk (Unreleased)
     HDFS-4681. TestBlocksWithNotEnoughRacks#testCorruptBlockRereplicatedAcrossRacks 
     fails using IBM java (Ayappan via aw)
 
+    HDFS-8110. Remove unsupported 'hdfs namenode -rollingUpgrade downgrade'
+    from document. (J.Andreina via aajisaka)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
