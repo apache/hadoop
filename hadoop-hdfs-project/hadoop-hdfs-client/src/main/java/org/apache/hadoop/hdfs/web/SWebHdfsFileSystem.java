@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.Text;
 
 public class SWebHdfsFileSystem extends WebHdfsFileSystem {
@@ -39,6 +39,6 @@ public class SWebHdfsFileSystem extends WebHdfsFileSystem {
 
   @Override
   protected int getDefaultPort() {
-    return DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+    return HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
   }
 }

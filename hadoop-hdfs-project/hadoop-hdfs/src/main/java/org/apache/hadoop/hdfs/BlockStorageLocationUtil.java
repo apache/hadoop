@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.Token;
-import org.apache.htrace.Sampler;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -296,7 +295,7 @@ class BlockStorageLocationUtil {
       List<LocatedBlock> blocks, 
       Map<LocatedBlock, List<VolumeId>> blockVolumeIds) throws IOException {
     // Construct the final return value of VolumeBlockLocation[]
-    BlockLocation[] locations = DFSUtil.locatedBlocks2Locations(blocks);
+    BlockLocation[] locations = DFSUtilClient.locatedBlocks2Locations(blocks);
     List<BlockStorageLocation> volumeBlockLocs = 
         new ArrayList<BlockStorageLocation>(locations.length);
     for (int i = 0; i < locations.length; i++) {

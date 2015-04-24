@@ -19,10 +19,17 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +38,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
@@ -39,6 +47,13 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICE
 public class DFSUtilClient {
   private static final Logger LOG = LoggerFactory.getLogger(
       DFSUtilClient.class);
+  /**
+   * Converts a string to a byte array using UTF8 encoding.
+   */
+  public static byte[] string2Bytes(String str) {
+    return str.getBytes(Charsets.UTF_8);
+  }
+
   /**
    * Converts a byte array to a string using UTF8 encoding.
    */
@@ -111,6 +126,62 @@ public class DFSUtilClient {
     } else {
       throw new IllegalArgumentException("Unsupported scheme: " + scheme);
     }
+  }
+
+  /**
+   * Convert a LocatedBlocks to BlockLocations[]
+   * @param blocks a LocatedBlocks
+   * @return an array of BlockLocations
+   */
+  public static BlockLocation[] locatedBlocks2Locations(LocatedBlocks blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    return locatedBlocks2Locations(blocks.getLocatedBlocks());
+  }
+
+  /**
+   * Convert a List<LocatedBlock> to BlockLocation[]
+   * @param blocks A List<LocatedBlock> to be converted
+   * @return converted array of BlockLocation
+   */
+  public static BlockLocation[] locatedBlocks2Locations(
+      List<LocatedBlock> blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    int nrBlocks = blocks.size();
+    BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
+    if (nrBlocks == 0) {
+      return blkLocations;
+    }
+    int idx = 0;
+    for (LocatedBlock blk : blocks) {
+      assert idx < nrBlocks : "Incorrect index";
+      DatanodeInfo[] locations = blk.getLocations();
+      String[] hosts = new String[locations.length];
+      String[] xferAddrs = new String[locations.length];
+      String[] racks = new String[locations.length];
+      for (int hCnt = 0; hCnt < locations.length; hCnt++) {
+        hosts[hCnt] = locations[hCnt].getHostName();
+        xferAddrs[hCnt] = locations[hCnt].getXferAddr();
+        NodeBase node = new NodeBase(xferAddrs[hCnt],
+                                     locations[hCnt].getNetworkLocation());
+        racks[hCnt] = node.toString();
+      }
+      DatanodeInfo[] cachedLocations = blk.getCachedLocations();
+      String[] cachedHosts = new String[cachedLocations.length];
+      for (int i=0; i<cachedLocations.length; i++) {
+        cachedHosts[i] = cachedLocations[i].getHostName();
+      }
+      blkLocations[idx] = new BlockLocation(xferAddrs, hosts, cachedHosts,
+                                            racks,
+                                            blk.getStartOffset(),
+                                            blk.getBlockSize(),
+                                            blk.isCorrupt());
+      idx++;
+    }
+    return blkLocations;
   }
 
   /**
@@ -233,5 +304,43 @@ public class DFSUtilClient {
       value = defaultValue;
     }
     return value;
+  }
+
+  /**
+   * Whether the pathname is valid.  Currently prohibits relative paths,
+   * names which contain a ":" or "//", or other non-canonical paths.
+   */
+  public static boolean isValidName(String src) {
+    // Path must be absolute.
+    if (!src.startsWith(Path.SEPARATOR)) {
+      return false;
+    }
+
+    // Check for ".." "." ":" "/"
+    String[] components = StringUtils.split(src, '/');
+    for (int i = 0; i < components.length; i++) {
+      String element = components[i];
+      if (element.equals(".")  ||
+          (element.contains(":"))  ||
+          (element.contains("/"))) {
+        return false;
+      }
+      // ".." is allowed in path starting with /.reserved/.inodes
+      if (element.equals("..")) {
+        if (components.length > 4
+            && components[1].equals(".reserved")
+            && components[2].equals(".inodes")) {
+          continue;
+        }
+        return false;
+      }
+      // The string may start or end with a /, but not have
+      // "//" in the middle.
+      if (element.isEmpty() && i != components.length - 1 &&
+          i != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /** 
  * Interface that represents the over the wire information
@@ -78,6 +78,6 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
         isSymlink() ? new Path(getSymlink()) : null,
         (getFullPath(path)).makeQualified(
             defaultUri, null), // fully-qualify path
-        DFSUtil.locatedBlocks2Locations(getBlockLocations()));
+        DFSUtilClient.locatedBlocks2Locations(getBlockLocations()));
   }
 }

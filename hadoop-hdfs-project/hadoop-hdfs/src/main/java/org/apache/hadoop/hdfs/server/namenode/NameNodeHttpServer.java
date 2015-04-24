@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -69,8 +70,8 @@ public class NameNodeHttpServer {
   private void initWebHdfs(Configuration conf) throws IOException {
     // set user pattern based on configuration file
     UserParam.setUserPattern(conf.get(
-        DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
-        DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+        HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+        HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
 
     // add authentication filter for webhdfs
     final String className = conf.get(
