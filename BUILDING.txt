@@ -16,6 +16,43 @@ Requirements:
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
+The easiest way to get an environment with all the appropriate tools is by means
+of the provided Docker config.
+This requires a recent version of docker ( 1.4.1 and higher are known to work ).
+
+On Linux:
+    Install Docker and run this command:
+
+    $ ./start-build-env.sh
+
+On Mac:
+    First make sure Homebrew has been installed ( http://brew.sh/ )
+    $ brew install docker boot2docker
+    $ boot2docker init -m 4096
+    $ boot2docker start
+    $ $(boot2docker shellinit)
+    $ ./start-build-env.sh
+
+The prompt which is then presented is located at a mounted version of the source tree
+and all required tools for testing and building have been installed and configured.
+
+Note that from within this docker environment you ONLY have access to the Hadoop source
+tree from where you started. So if you need to run
+    dev-support/test-patch.sh /path/to/my.patch
+then the patch must be placed inside the hadoop source tree.
+
+Known issues:
+- On Mac with Boot2Docker the performance on the mounted directory is currently extremely slow.
+  This is a known problem related to boot2docker on the Mac.
+  See:
+    https://github.com/boot2docker/boot2docker/issues/593
+  This issue has been resolved as a duplicate, and they point to a new feature for utilizing NFS mounts
+  as the proposed solution:
+    https://github.com/boot2docker/boot2docker/issues/64
+  An alternative solution to this problem is when you install Linux native inside a virtual machine
+  and run your IDE and Docker etc in side that VM.
+
+----------------------------------------------------------------------------------
 Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 
 * Oracle JDK 1.7 (preferred)
@@ -29,7 +66,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev
 * ProtocolBuffer 2.5.0 (required)
-  $ sudo apt-get -y install libprotobuf-dev protobuf-compiler
+  $ sudo apt-get -y install protobuf-compiler
 
 Optional packages:
 
