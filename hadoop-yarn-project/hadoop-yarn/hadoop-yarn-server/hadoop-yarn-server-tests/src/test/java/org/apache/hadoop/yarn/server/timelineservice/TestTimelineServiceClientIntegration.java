@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
-import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
+import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineCollectorManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,13 +42,13 @@ import org.junit.Test;
 import java.io.IOException;
 
 public class TestTimelineServiceClientIntegration {
-  private static TimelineCollectorManager collectorManager;
+  private static NodeTimelineCollectorManager collectorManager;
   private static PerNodeTimelineCollectorsAuxService auxService;
 
   @BeforeClass
   public static void setupClass() throws Exception {
     try {
-      collectorManager = new MyTimelineCollectorManager();
+      collectorManager = new MockNodeTimelineCollectorManager();
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager);
@@ -85,9 +85,9 @@ public class TestTimelineServiceClientIntegration {
     }
   }
 
-  private static class MyTimelineCollectorManager extends
-      TimelineCollectorManager {
-    public MyTimelineCollectorManager() {
+  private static class MockNodeTimelineCollectorManager extends
+      NodeTimelineCollectorManager {
+    public MockNodeTimelineCollectorManager() {
       super();
     }
 

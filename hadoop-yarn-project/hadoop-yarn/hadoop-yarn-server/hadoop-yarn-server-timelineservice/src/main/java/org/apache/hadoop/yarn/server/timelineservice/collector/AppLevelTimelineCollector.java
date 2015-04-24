@@ -75,7 +75,7 @@ public class AppLevelTimelineCollector extends TimelineCollector {
   }
 
   @Override
-  protected TimelineCollectorContext getTimelineEntityContext() {
+  public TimelineCollectorContext getTimelineEntityContext() {
     return context;
   }
 
