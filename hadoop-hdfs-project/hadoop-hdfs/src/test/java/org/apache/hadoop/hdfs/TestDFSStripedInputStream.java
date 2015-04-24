@@ -22,10 +22,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -40,18 +38,15 @@ public class TestDFSStripedInputStream {
   private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   private final static int stripesPerBlock = 4;
   static int blockSize = cellSize * stripesPerBlock;
-  private int mod = 29;
   static int numDNs = dataBlocks + parityBlocks + 2;
 
   private static MiniDFSCluster cluster;
-  private static Configuration conf;
 
   @BeforeClass
   public static void setup() throws IOException {
-    conf = new Configuration();
+    Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    cluster
-        = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();;
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
     fs = cluster.getFileSystem();
   }
@@ -85,43 +80,56 @@ public class TestDFSStripedInputStream {
 
   @Test
   public void testFileSmallerThanOneStripe1() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe", cellSize * dataBlocks - 1);
+    testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe",
+        cellSize * dataBlocks - 1);
   }
 
   @Test
   public void testFileSmallerThanOneStripe2() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe", cellSize + 123);
+    testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe",
+        cellSize + 123);
   }
 
   @Test
   public void testFileEqualsWithOneStripe() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/EqualsWithOneStripe", cellSize * dataBlocks);
+    testOneFileUsingDFSStripedInputStream("/EqualsWithOneStripe",
+        cellSize * dataBlocks);
   }
 
   @Test
   public void testFileMoreThanOneStripe1() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe1", cellSize * dataBlocks + 123);
+    testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe1",
+        cellSize * dataBlocks + 123);
   }
 
   @Test
   public void testFileMoreThanOneStripe2() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe2", cellSize * dataBlocks
-        + cellSize * dataBlocks + 123);
+    testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe2",
+        cellSize * dataBlocks + cellSize * dataBlocks + 123);
+  }
+
+  @Test
+  public void testLessThanFullBlockGroup() throws IOException {
+    testOneFileUsingDFSStripedInputStream("/LessThanFullBlockGroup",
+        cellSize * dataBlocks * (stripesPerBlock - 1) + cellSize);
   }
 
   @Test
   public void testFileFullBlockGroup() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/FullBlockGroup", blockSize * dataBlocks);
+    testOneFileUsingDFSStripedInputStream("/FullBlockGroup",
+        blockSize * dataBlocks);
   }
 
   @Test
   public void testFileMoreThanABlockGroup1() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup1", blockSize * dataBlocks + 123);
+    testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup1",
+        blockSize * dataBlocks + 123);
   }
 
   @Test
   public void testFileMoreThanABlockGroup2() throws IOException {
-    testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup2", blockSize * dataBlocks + cellSize+ 123);
+    testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup2",
+        blockSize * dataBlocks + cellSize+ 123);
   }
 
 
@@ -141,35 +149,32 @@ public class TestDFSStripedInputStream {
   }
 
   private byte getByte(long pos) {
+    final int mod = 29;
     return (byte) (pos % mod + 1);
   }
 
   private void testOneFileUsingDFSStripedInputStream(String src, int writeBytes)
       throws IOException {
-    Path TestPath = new Path(src);
+    Path testPath = new Path(src);
     byte[] bytes = generateBytes(writeBytes);
-    DFSTestUtil.writeFile(fs, TestPath, new String(bytes));
+    DFSTestUtil.writeFile(fs, testPath, new String(bytes));
 
     //check file length
-    FileStatus status = fs.getFileStatus(TestPath);
+    FileStatus status = fs.getFileStatus(testPath);
     long fileLength = status.getLen();
     Assert.assertEquals("File length should be the same",
         writeBytes, fileLength);
 
-    DFSStripedInputStream dis = new DFSStripedInputStream(
-        fs.getClient(), src, true);
-    try {
+    try (DFSStripedInputStream dis =
+             new DFSStripedInputStream(fs.getClient(), src, true)) {
       byte[] buf = new byte[writeBytes + 100];
       int readLen = dis.read(0, buf, 0, buf.length);
       readLen = readLen >= 0 ? readLen : 0;
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
-        Assert.assertEquals("Byte at i should be the same",
-            getByte(i), buf[i]);
+        Assert.assertEquals("Byte at i should be the same", getByte(i), buf[i]);
       }
-    } finally {
-      dis.close();
     }
   }
 }

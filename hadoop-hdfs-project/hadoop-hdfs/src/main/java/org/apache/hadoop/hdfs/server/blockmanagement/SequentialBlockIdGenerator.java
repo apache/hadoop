@@ -54,7 +54,7 @@ public class SequentialBlockIdGenerator extends SequentialNumber {
       b.setBlockId(super.nextValue());
     }
     if (b.getBlockId() < 0) {
-      BlockManager.LOG.warn("All positive block IDs are used, " +
+      throw new IllegalStateException("All positive block IDs are used, " +
           "wrapping to negative IDs, " +
           "which might conflict with erasure coded block groups.");
     }
