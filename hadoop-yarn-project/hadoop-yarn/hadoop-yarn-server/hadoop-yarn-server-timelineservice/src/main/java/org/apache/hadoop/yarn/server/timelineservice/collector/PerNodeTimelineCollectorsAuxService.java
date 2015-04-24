@@ -53,15 +53,15 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
       LogFactory.getLog(PerNodeTimelineCollectorsAuxService.class);
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private final TimelineCollectorManager collectorManager;
+  private final NodeTimelineCollectorManager collectorManager;
 
   public PerNodeTimelineCollectorsAuxService() {
     // use the same singleton
-    this(TimelineCollectorManager.getInstance());
+    this(NodeTimelineCollectorManager.getInstance());
   }
 
   @VisibleForTesting PerNodeTimelineCollectorsAuxService(
-      TimelineCollectorManager collectorsManager) {
+      NodeTimelineCollectorManager collectorsManager) {
     super("timeline_collector");
     this.collectorManager = collectorsManager;
   }
@@ -108,8 +108,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    * @return whether it was removed successfully
    */
   public boolean removeApplication(ApplicationId appId) {
-    String appIdString = appId.toString();
-    return collectorManager.remove(appIdString);
+    return collectorManager.remove(appId);
   }
 
   /**
@@ -153,8 +152,8 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   }
 
   @VisibleForTesting
-  boolean hasApplication(String appId) {
-    return collectorManager.containsKey(appId);
+  boolean hasApplication(ApplicationId appId) {
+    return collectorManager.containsTimelineCollector(appId);
   }
 
   @Override
@@ -174,7 +173,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
 
   @VisibleForTesting
   public static PerNodeTimelineCollectorsAuxService
-      launchServer(String[] args, TimelineCollectorManager collectorManager) {
+      launchServer(String[] args, NodeTimelineCollectorManager collectorManager) {
     Thread
       .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(

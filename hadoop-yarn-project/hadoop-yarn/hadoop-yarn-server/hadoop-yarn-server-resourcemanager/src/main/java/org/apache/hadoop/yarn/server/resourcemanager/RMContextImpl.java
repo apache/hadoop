@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollector;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -371,14 +371,14 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public void setRMTimelineCollector(
-      RMTimelineCollector timelineCollector) {
-    activeServiceContext.setRMTimelineCollector(timelineCollector);
+  public void setRMTimelineCollectorManager(
+      RMTimelineCollectorManager timelineCollectorManager) {
+    activeServiceContext.setRMTimelineCollectorManager(timelineCollectorManager);
   }
 
   @Override
-  public RMTimelineCollector getRMTimelineCollector() {
-    return activeServiceContext.getRMTimelineCollector();
+  public RMTimelineCollectorManager getRMTimelineCollectorManager() {
+    return activeServiceContext.getRMTimelineCollectorManager();
   }
   
   @Override

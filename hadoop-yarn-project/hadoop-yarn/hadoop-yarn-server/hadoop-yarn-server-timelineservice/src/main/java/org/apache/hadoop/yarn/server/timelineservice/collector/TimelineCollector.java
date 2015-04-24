@@ -124,6 +124,6 @@ public abstract class TimelineCollector extends CompositeService {
     }
   }
 
-  protected abstract TimelineCollectorContext getTimelineEntityContext();
+  public abstract TimelineCollectorContext getTimelineEntityContext();
 
 }
