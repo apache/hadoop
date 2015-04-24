@@ -262,6 +262,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3516. killing ContainerLocalizer action doesn't take effect when
     private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
 
+    YARN-3387. Previous AM's container completed status couldn't pass to current
+    AM if AM and RM restarted during the same time. (sandflee via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

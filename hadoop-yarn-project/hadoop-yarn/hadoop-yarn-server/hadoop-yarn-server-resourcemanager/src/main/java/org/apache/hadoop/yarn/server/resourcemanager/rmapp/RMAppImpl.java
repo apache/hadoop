@@ -1273,7 +1273,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         // finished containers so that they can be acked to NM,
         // but when pulling finished container we will check this flag again.
         ((RMAppAttemptImpl) app.currentAttempt)
-          .transferStateFromPreviousAttempt(oldAttempt);
+          .transferStateFromAttempt(oldAttempt);
         return initialState;
       } else {
         if (numberOfFailure >= app.maxAppAttempts) {
