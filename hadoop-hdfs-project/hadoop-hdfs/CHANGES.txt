@@ -545,6 +545,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7993. Provide each Replica details in fsck (J.Andreina via vinayakumarb)
 
+    HDFS-8217. During block recovery for truncate Log new Block Id in case of
+    copy-on-truncate is true. (vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

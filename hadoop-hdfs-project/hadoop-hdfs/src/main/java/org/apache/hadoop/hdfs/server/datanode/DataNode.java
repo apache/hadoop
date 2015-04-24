@@ -2840,7 +2840,9 @@ public class DataNode extends ReconfigurableBase
     
     LOG.info(who + " calls recoverBlock(" + block
         + ", targets=[" + Joiner.on(", ").join(targets) + "]"
-        + ", newGenerationStamp=" + rb.getNewGenerationStamp() + ")");
+        + ((rb.getNewBlock() == null) ? ", newGenerationStamp="
+            + rb.getNewGenerationStamp() : ", newBlock=" + rb.getNewBlock())
+        + ")");
   }
 
   @Override // ClientDataNodeProtocol
