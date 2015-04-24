@@ -168,6 +168,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3511. Add errors and warnings page to ATS. (Varun Vasudev via xgong)
 
+    YARN-3406. Display count of running containers in the RM's Web UI.
+    (Ryu Kobayashi via ozawa)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

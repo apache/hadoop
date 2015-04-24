@@ -42,6 +42,7 @@ public class AppInfo {
   protected String host;
   protected int rpcPort;
   protected YarnApplicationState appState;
+  protected int runningContainers;
   protected float progress;
   protected String diagnosticsInfo;
   protected String originalTrackingUrl;
@@ -77,6 +78,10 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
+    if (app.getApplicationResourceUsageReport() != null) {
+      runningContainers =
+          app.getApplicationResourceUsageReport().getNumUsedContainers();
+    }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
@@ -117,6 +122,10 @@ public class AppInfo {
 
   public YarnApplicationState getAppState() {
     return appState;
+  }
+
+  public int getRunningContainers() {
+    return runningContainers;
   }
 
   public float getProgress() {
