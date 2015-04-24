@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,10 +51,9 @@ public class TestBlockInfo {
   @Test
   public void testIsDeleted() {
     BlockInfoContiguous blockInfo = new BlockInfoContiguous((short) 3);
-    BlockCollection bc = Mockito.mock(BlockCollection.class);
-    blockInfo.setBlockCollection(bc);
+    blockInfo.setBlockCollectionId(1000);
     Assert.assertFalse(blockInfo.isDeleted());
-    blockInfo.setBlockCollection(null);
+    blockInfo.setBlockCollectionId(INodeId.INVALID_INODE_ID);
     Assert.assertTrue(blockInfo.isDeleted());
   }
 
@@ -74,7 +74,7 @@ public class TestBlockInfo {
     BlockInfoContiguous old = new BlockInfoContiguous((short) 3);
     try {
       BlockInfoContiguous copy = new BlockInfoContiguous(old);
-      assertEquals(old.getBlockCollection(), copy.getBlockCollection());
+      assertEquals(old.getBlockCollectionId(), copy.getBlockCollectionId());
       assertEquals(old.getCapacity(), copy.getCapacity());
     } catch (Exception e) {
       Assert.fail("Copy constructor throws exception: " + e);

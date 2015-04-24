@@ -24,6 +24,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.util.LightWeightGSet;
 
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
+
 /**
  * BlockInfo class maintains for a given block
  * the {@link BlockCollection} it is part of and datanodes where the replicas of 
@@ -34,7 +36,7 @@ public class BlockInfoContiguous extends Block
     implements LightWeightGSet.LinkedElement {
   public static final BlockInfoContiguous[] EMPTY_ARRAY = {};
 
-  private BlockCollection bc;
+  private long bcId;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -61,14 +63,14 @@ public class BlockInfoContiguous extends Block
    */
   public BlockInfoContiguous(short replication) {
     this.triplets = new Object[3*replication];
-    this.bc = null;
+    this.bcId = INVALID_INODE_ID;
     this.replication = replication;
   }
   
   public BlockInfoContiguous(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
-    this.bc = null;
+    this.bcId = INVALID_INODE_ID;
     this.replication = replication;
   }
 
@@ -79,7 +81,7 @@ public class BlockInfoContiguous extends Block
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
     this(from, from.getReplication());
-    this.bc = from.bc;
+    this.bcId = from.bcId;
   }
 
   public void setReplication(short replication) {
@@ -90,16 +92,16 @@ public class BlockInfoContiguous extends Block
     return replication;
   }
 
-  public BlockCollection getBlockCollection() {
-    return bc;
+  public long getBlockCollectionId() {
+    return bcId;
   }
 
-  public void setBlockCollection(BlockCollection bc) {
-    this.bc = bc;
+  public void setBlockCollectionId(long bcId) {
+    this.bcId = bcId;
   }
 
   public boolean isDeleted() {
-    return (bc == null);
+    return bcId == INVALID_INODE_ID;
   }
 
   public DatanodeDescriptor getDatanode(int index) {
@@ -374,7 +376,7 @@ public class BlockInfoContiguous extends Block
       BlockInfoContiguousUnderConstruction ucBlock =
           new BlockInfoContiguousUnderConstruction(this,
           getReplication(), s, targets);
-      ucBlock.setBlockCollection(getBlockCollection());
+      ucBlock.setBlockCollectionId(getBlockCollectionId());
       return ucBlock;
     }
     // the block is already under construction
@@ -382,7 +384,7 @@ public class BlockInfoContiguous extends Block
         (BlockInfoContiguousUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
-    ucBlock.setBlockCollection(getBlockCollection());
+    ucBlock.setBlockCollectionId(getBlockCollectionId());
     return ucBlock;
   }
 

@@ -428,7 +428,7 @@ public class INodeFile extends INodeWithAdditionalFields
   void updateBlockCollection() {
     if (blocks != null) {
       for(BlockInfoContiguous b : blocks) {
-        b.setBlockCollection(this);
+        b.setBlockCollectionId(getId());
       }
     }
   }
@@ -526,7 +526,7 @@ public class INodeFile extends INodeWithAdditionalFields
     if (blocks != null && reclaimContext.collectedBlocks != null) {
       for (BlockInfoContiguous blk : blocks) {
         reclaimContext.collectedBlocks.addDeleteBlock(blk);
-        blk.setBlockCollection(null);
+        blk.setBlockCollectionId(INodeId.INVALID_INODE_ID);
       }
     }
     setBlocks(null);

@@ -249,8 +249,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         LOG.warn("Block "+ blockId + " " + NONEXISTENT_STATUS);
         return;
       }
-      BlockCollection bc = bm.getBlockCollection(blockInfo);
-      INode iNode = (INode) bc;
+      INode iNode = (INode) namenode.getNamesystem().getBlockCollection(
+          blockInfo.getBlockCollectionId());
       NumberReplicas numberReplicas= bm.countNodes(block);
       out.println("Block Id: " + blockId);
       out.println("Block belongs to: "+iNode.getFullPathName());

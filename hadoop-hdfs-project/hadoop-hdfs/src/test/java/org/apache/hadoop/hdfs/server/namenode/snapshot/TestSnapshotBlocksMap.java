@@ -21,7 +21,6 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -117,8 +117,7 @@ public class TestSnapshotBlocksMap {
   static void assertBlockCollection(final BlockManager blkManager,
       final INodeFile file, final BlockInfoContiguous b) {
     Assert.assertSame(b, blkManager.getStoredBlock(b));
-    Assert.assertSame(file, blkManager.getBlockCollection(b));
-    Assert.assertSame(file, b.getBlockCollection());
+    Assert.assertEquals(file.getId(), b.getBlockCollectionId());
   }
 
   /**
@@ -150,7 +149,8 @@ public class TestSnapshotBlocksMap {
       hdfs.delete(sub2, true);
       // The INode should have been removed from the blocksMap
       for(BlockInfoContiguous b : blocks) {
-        assertNull(blockmanager.getBlockCollection(b));
+        assertEquals(INodeId.INVALID_INODE_ID,
+                     blockmanager.getBlockCollectionId(b));
       }
     }
     
@@ -188,7 +188,7 @@ public class TestSnapshotBlocksMap {
     hdfs.delete(file0, true);
     // Make sure the blocks of file0 is still in blocksMap
     for(BlockInfoContiguous b : blocks0) {
-      assertNotNull(blockmanager.getBlockCollection(b));
+      assertTrue(INodeId.INVALID_INODE_ID != b.getBlockCollectionId());
     }
     assertBlockCollection(snapshotFile0.toString(), 4, fsdir, blockmanager);
     
@@ -202,7 +202,7 @@ public class TestSnapshotBlocksMap {
 
     // Make sure the first block of file0 is still in blocksMap
     for(BlockInfoContiguous b : blocks0) {
-      assertNotNull(blockmanager.getBlockCollection(b));
+      assertTrue(INodeId.INVALID_INODE_ID != b.getBlockCollectionId());
     }
     assertBlockCollection(snapshotFile0.toString(), 4, fsdir, blockmanager);
 
