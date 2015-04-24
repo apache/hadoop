@@ -695,7 +695,7 @@ public class TestShortCircuitCache {
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
     Configuration conf = createShortCircuitConf(
         "testDataXceiverHandlesRequestShortCircuitShmFailure", sockDir);
-    conf.setLong(HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_KEY,
+    conf.setLong(DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY,
         1000000000L);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
