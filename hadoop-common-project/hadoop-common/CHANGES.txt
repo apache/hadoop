@@ -57,6 +57,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11730. Regression: s3n read failure recovery broken.
     (Takenori Sato via stevel)
 
+    HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
+    is an I/O error during requestShortCircuitShm (cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

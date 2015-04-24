@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Used for injecting faults in DFSClient and DFSOutputStream tests.
@@ -35,4 +37,6 @@ public class DataNodeFaultInjector {
   }
 
   public void getHdfsBlocksMetadata() {}
+
+  public void sendShortCircuitShmResponse() throws IOException {}
 }
