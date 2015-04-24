@@ -75,6 +75,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     public void injectRequestFileDescriptorsFailure() throws IOException {
       // do nothing
     }
+    public boolean getSupportsReceiptVerification() {
+      return true;
+    }
   }
 
   @VisibleForTesting
@@ -532,7 +535,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream()));
     SlotId slotId = slot == null ? null : slot.getSlotId();
-    new Sender(out).requestShortCircuitFds(block, token, slotId, 1, true);
+    new Sender(out).requestShortCircuitFds(block, token, slotId, 1,
+        failureInjector.getSupportsReceiptVerification());
     DataInputStream in = new DataInputStream(peer.getInputStream());
     BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
         PBHelper.vintPrefixed(in));
