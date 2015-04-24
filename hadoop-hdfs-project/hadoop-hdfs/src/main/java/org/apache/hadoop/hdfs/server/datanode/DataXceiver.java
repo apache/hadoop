@@ -421,6 +421,7 @@ class DataXceiver extends Receiver implements Runnable {
 
   private void sendShmSuccessResponse(DomainSocket sock, NewShmInfo shmInfo)
       throws IOException {
+    DataNodeFaultInjector.get().sendShortCircuitShmResponse();
     ShortCircuitShmResponseProto.newBuilder().setStatus(SUCCESS).
         setId(PBHelper.convert(shmInfo.shmId)).build().
         writeDelimitedTo(socketOut);
@@ -479,10 +480,19 @@ class DataXceiver extends Receiver implements Runnable {
         }
       }
       if ((!success) && (peer == null)) {
-        // If we failed to pass the shared memory segment to the client,
-        // close the UNIX domain socket now.  This will trigger the 
-        // DomainSocketWatcher callback, cleaning up the segment.
-        IOUtils.cleanup(null, sock);
+        // The socket is now managed by the DomainSocketWatcher.  However,
+        // we failed to pass it to the client.  We call shutdown() on the
+        // UNIX domain socket now.  This will trigger the DomainSocketWatcher
+        // callback.  The callback will close the domain socket.
+        // We don't want to close the socket here, since that might lead to
+        // bad behavior inside the poll() call.  See HADOOP-11802 for details.
+        try {
+          LOG.warn("Failed to send success response back to the client.  " +
+              "Shutting down socket for " + shmInfo.shmId + ".");
+          sock.shutdown();
+        } catch (IOException e) {
+          LOG.warn("Failed to shut down socket in error handler", e);
+        }
       }
       IOUtils.cleanup(null, shmInfo);
     }

@@ -512,8 +512,8 @@ public final class DomainSocketWatcher implements Closeable {
         }
       } catch (InterruptedException e) {
         LOG.info(toString() + " terminating on InterruptedException");
-      } catch (IOException e) {
-        LOG.error(toString() + " terminating on IOException", e);
+      } catch (Throwable e) {
+        LOG.error(toString() + " terminating on exception", e);
       } finally {
         lock.lock();
         try {
