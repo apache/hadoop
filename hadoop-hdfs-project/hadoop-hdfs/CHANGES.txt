@@ -126,6 +126,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7915. The DataNode can sometimes allocate a ShortCircuitShm slot and
     fail to tell the DFSClient about it because of a network error (cmccabe)
 
+    HDFS-8070. Pre-HDFS-7915 DFSClient cannot use short circuit on
+    post-HDFS-7915 DataNode (cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
