@@ -174,7 +174,7 @@ public class URLConnectionFactory {
 
   /**
    * Sets timeout parameters on the given URLConnection.
-   * 
+   *
    * @param connection
    *          URLConnection to set
    * @param socketTimeout

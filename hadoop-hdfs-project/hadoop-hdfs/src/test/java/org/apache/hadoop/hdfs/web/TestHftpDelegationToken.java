@@ -61,7 +61,7 @@ public class TestHftpDelegationToken {
         DelegationTokenIdentifier.HDFS_DELEGATION_KIND, new Text(
             "127.0.0.1:8020"));
     Credentials cred = new Credentials();
-    cred.addToken(HftpFileSystem.TOKEN_KIND, token);
+    cred.addToken(WebHdfsConstants.HFTP_TOKEN_KIND, token);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     cred.write(new DataOutputStream(os));
 
@@ -82,12 +82,12 @@ public class TestHftpDelegationToken {
         new String[] { "bar" });
 
     TokenAspect<HftpFileSystem> tokenAspect = new TokenAspect<HftpFileSystem>(
-        fs, SecurityUtil.buildTokenService(uri), HftpFileSystem.TOKEN_KIND);
+        fs, SecurityUtil.buildTokenService(uri), WebHdfsConstants.HFTP_TOKEN_KIND);
 
     tokenAspect.initDelegationToken(ugi);
     tokenAspect.ensureTokenInitialized();
 
-    Assert.assertSame(HftpFileSystem.TOKEN_KIND, fs.getRenewToken().getKind());
+    Assert.assertSame(WebHdfsConstants.HFTP_TOKEN_KIND, fs.getRenewToken().getKind());
 
     Token<?> tok = (Token<?>) Whitebox.getInternalState(fs, "delegationToken");
     Assert.assertNotSame("Not making a copy of the remote token", token, tok);

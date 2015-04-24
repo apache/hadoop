@@ -22,9 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,8 +34,8 @@ public class TestHttpFSPorts {
 
   @Before
   public void setupConfig() {
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
   }
 
   @Test

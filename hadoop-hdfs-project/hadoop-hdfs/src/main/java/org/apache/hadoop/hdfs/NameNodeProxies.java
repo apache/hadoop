@@ -404,7 +404,7 @@ public class NameNodeProxies {
             HdfsClientConfigKeys.Retry.POLICY_ENABLED_DEFAULT, 
             HdfsClientConfigKeys.Retry.POLICY_SPEC_KEY,
             HdfsClientConfigKeys.Retry.POLICY_SPEC_DEFAULT,
-            SafeModeException.class);
+            SafeModeException.class.getName());
     
     final long version = RPC.getProtocolVersion(ClientNamenodeProtocolPB.class);
     ClientNamenodeProtocolPB proxy = RPC.getProtocolProxy(

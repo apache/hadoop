@@ -55,8 +55,8 @@ final class TokenAspect<T extends FileSystem & Renewable> {
 
     @Override
     public boolean handleKind(Text kind) {
-      return kind.equals(HftpFileSystem.TOKEN_KIND)
-          || kind.equals(HsftpFileSystem.TOKEN_KIND)
+      return kind.equals(WebHdfsConstants.HFTP_TOKEN_KIND)
+          || kind.equals(WebHdfsConstants.HSFTP_TOKEN_KIND)
           || kind.equals(WebHdfsConstants.WEBHDFS_TOKEN_KIND)
           || kind.equals(WebHdfsConstants.SWEBHDFS_TOKEN_KIND);
     }
@@ -87,10 +87,10 @@ final class TokenAspect<T extends FileSystem & Renewable> {
     }
 
     private static String getSchemeByKind(Text kind) {
-      if (kind.equals(HftpFileSystem.TOKEN_KIND)) {
-        return HftpFileSystem.SCHEME;
-      } else if (kind.equals(HsftpFileSystem.TOKEN_KIND)) {
-        return HsftpFileSystem.SCHEME;
+      if (kind.equals(WebHdfsConstants.HFTP_TOKEN_KIND)) {
+        return WebHdfsConstants.HFTP_SCHEME;
+      } else if (kind.equals(WebHdfsConstants.HSFTP_TOKEN_KIND)) {
+        return WebHdfsConstants.HSFTP_SCHEME;
       } else if (kind.equals(WebHdfsConstants.WEBHDFS_TOKEN_KIND)) {
         return WebHdfsConstants.WEBHDFS_SCHEME;
       } else if (kind.equals(WebHdfsConstants.SWEBHDFS_TOKEN_KIND)) {

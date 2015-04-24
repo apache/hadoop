@@ -38,4 +38,8 @@ public interface HdfsConstantsClient {
    * URI.
    */
   String HA_DT_SERVICE_PREFIX = "ha-";
+  // The name of the SafeModeException. FileSystem should retry if it sees
+  // the below exception in RPC
+  String SAFEMODE_EXCEPTION_CLASS_NAME = "org.apache.hadoop.hdfs.server" +
+      ".namenode.SafeModeException";
 }

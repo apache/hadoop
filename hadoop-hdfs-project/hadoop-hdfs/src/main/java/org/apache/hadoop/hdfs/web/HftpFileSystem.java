@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
@@ -79,15 +80,12 @@ import org.xml.sax.helpers.XMLReaderFactory;
 @InterfaceStability.Evolving
 public class HftpFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable, TokenAspect.TokenManagementDelegator {
-  public static final String SCHEME = "hftp";
 
   static {
     HttpURLConnection.setFollowRedirects(true);
   }
 
   URLConnectionFactory connectionFactory;
-
-  public static final Text TOKEN_KIND = new Text("HFTP delegation");
 
   protected UserGroupInformation ugi;
   private URI hftpURI;
@@ -123,7 +121,7 @@ public class HftpFileSystem extends FileSystem
 
   @Override
   protected int getDefaultPort() {
-    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
+    return getConf().getInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
         DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
   }
 
@@ -168,7 +166,7 @@ public class HftpFileSystem extends FileSystem
    */
   @Override
   public String getScheme() {
-    return SCHEME;
+    return WebHdfsConstants.HFTP_SCHEME;
   }
 
   /**
@@ -176,7 +174,7 @@ public class HftpFileSystem extends FileSystem
    * be overridden by HsFtpFileSystem.
    */
   protected void initTokenAspect() {
-    tokenAspect = new TokenAspect<HftpFileSystem>(this, tokenServiceName, TOKEN_KIND);
+    tokenAspect = new TokenAspect<HftpFileSystem>(this, tokenServiceName, WebHdfsConstants.HFTP_TOKEN_KIND);
   }
 
   @Override

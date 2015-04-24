@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.web;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 /**
  * An implementation of a protocol for accessing filesystems over HTTPS. The
@@ -34,8 +34,6 @@ import org.apache.hadoop.io.Text;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HsftpFileSystem extends HftpFileSystem {
-  public static final Text TOKEN_KIND = new Text("HSFTP delegation");
-  public static final String SCHEME = "hsftp";
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -45,7 +43,7 @@ public class HsftpFileSystem extends HftpFileSystem {
    */
   @Override
   public String getScheme() {
-    return SCHEME;
+    return WebHdfsConstants.HSFTP_SCHEME;
   }
 
   /**
@@ -59,12 +57,12 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   protected void initTokenAspect() {
     tokenAspect = new TokenAspect<HsftpFileSystem>(this, tokenServiceName,
-        TOKEN_KIND);
+        WebHdfsConstants.HSFTP_TOKEN_KIND);
   }
 
   @Override
   protected int getDefaultPort() {
-    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+    return getConf().getInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
                             DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 }

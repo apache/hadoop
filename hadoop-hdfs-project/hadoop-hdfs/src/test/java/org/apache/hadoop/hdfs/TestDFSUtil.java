@@ -112,7 +112,7 @@ public class TestDFSUtil {
     List<LocatedBlock> ls = Arrays.asList(l1, l2);
     LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null);
 
-    BlockLocation[] bs = DFSUtil.locatedBlocks2Locations(lbs);
+    BlockLocation[] bs = DFSUtilClient.locatedBlocks2Locations(lbs);
 
     assertTrue("expected 2 blocks but got " + bs.length,
                bs.length == 2);
@@ -128,7 +128,7 @@ public class TestDFSUtil {
         corruptCount == 1);
 
     // test an empty location
-    bs = DFSUtil.locatedBlocks2Locations(new LocatedBlocks());
+    bs = DFSUtilClient.locatedBlocks2Locations(new LocatedBlocks());
     assertEquals(0, bs.length);
   }
 

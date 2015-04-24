@@ -46,8 +46,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
-import org.apache.hadoop.hdfs.web.HsftpFileSystem;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -243,7 +241,7 @@ public class DelegationTokenFetcher {
       dis = new DataInputStream(in);
       ts.readFields(dis);
       for (Token<?> token : ts.getAllTokens()) {
-        token.setKind(isHttps ? HsftpFileSystem.TOKEN_KIND : HftpFileSystem.TOKEN_KIND);
+        token.setKind(isHttps ? WebHdfsConstants.HSFTP_TOKEN_KIND : WebHdfsConstants.HFTP_TOKEN_KIND);
         SecurityUtil.setTokenService(token, serviceAddr);
       }
       return ts;

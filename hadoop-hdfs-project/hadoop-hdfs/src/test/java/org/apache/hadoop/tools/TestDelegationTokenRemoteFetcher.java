@@ -38,8 +38,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -219,7 +219,7 @@ public class TestDelegationTokenRemoteFetcher {
         "renewer"), new Text("realuser")).getBytes();
     Text service = new Text(serviceUri.toString());
     return new Token<DelegationTokenIdentifier>(ident, pw,
-        HftpFileSystem.TOKEN_KIND, service);
+        WebHdfsConstants.HFTP_TOKEN_KIND, service);
   }
 
   private interface Handler {

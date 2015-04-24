@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -313,7 +314,7 @@ public class TestHftpFileSystem {
   @Test
   public void testHftpCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
 
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
@@ -343,7 +344,7 @@ public class TestHftpFileSystem {
   @Test
   public void testHftpCustomUriPortWithCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
 
     URI uri = URI.create("hftp://localhost:789");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
@@ -386,8 +387,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHsftpCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hsftp://localhost");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
@@ -414,8 +415,8 @@ public class TestHftpFileSystem {
   @Test
   public void testHsftpCustomUriPortWithCustomDefaultPorts() throws IOException {
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, 123);
+    conf.setInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 456);
 
     URI uri = URI.create("hsftp://localhost:789");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
