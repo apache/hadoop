@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.SequentialBlockIdGenerator;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
@@ -48,6 +49,7 @@ public class TestSimulatedFSDataset {
   static final String bpid = "BP-TEST";
   static final int NUMBLOCKS = 20;
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
+  static final long FIRST_BLK_ID = 1;
 
   @Before
   public void setUp() throws Exception {
@@ -55,15 +57,25 @@ public class TestSimulatedFSDataset {
     SimulatedFSDataset.setFactory(conf);
   }
   
-  long blockIdToLen(long blkid) {
-    return blkid*BLOCK_LENGTH_MULTIPLIER;
+  static long blockIdToLen(long blkid) {
+    return blkid * BLOCK_LENGTH_MULTIPLIER;
   }
-  
-  int addSomeBlocks(SimulatedFSDataset fsdataset, int startingBlockId)
-      throws IOException {
+
+  static int addSomeBlocks(SimulatedFSDataset fsdataset) throws IOException {
+    return addSomeBlocks(fsdataset, false);
+  }
+
+  static int addSomeBlocks(SimulatedFSDataset fsdataset,
+      boolean negativeBlkID) throws IOException {
+    return addSomeBlocks(fsdataset, FIRST_BLK_ID, negativeBlkID);
+  }
+
+  static int addSomeBlocks(SimulatedFSDataset fsdataset, long startingBlockId,
+      boolean negativeBlkID) throws IOException {
     int bytesAdded = 0;
-    for (int i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
-      ExtendedBlock b = new ExtendedBlock(bpid, i, 0, 0); 
+    for (long i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
+      long blkID = negativeBlkID ? i * -1 : i;
+      ExtendedBlock b = new ExtendedBlock(bpid, blkID, 0, 0);
       // we pass expected len as zero, - fsdataset should use the sizeof actual
       // data written
       ReplicaInPipelineInterface bInfo = fsdataset.createRbw(
@@ -85,10 +97,18 @@ public class TestSimulatedFSDataset {
       fsdataset.finalizeBlock(b);
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
     }
-    return bytesAdded;  
+    return bytesAdded;
   }
-  int addSomeBlocks(SimulatedFSDataset fsdataset ) throws IOException {
-    return addSomeBlocks(fsdataset, 1);
+
+  static void readSomeBlocks(SimulatedFSDataset fsdataset,
+      boolean negativeBlkID) throws IOException {
+    for (long i = FIRST_BLK_ID; i <= NUMBLOCKS; ++i) {
+      long blkID = negativeBlkID ? i * -1 : i;
+      ExtendedBlock b = new ExtendedBlock(bpid, blkID, 0, 0);
+      assertTrue(fsdataset.isValidBlock(b));
+      assertEquals(blockIdToLen(i), fsdataset.getLength(b));
+      checkBlockDataAndSize(fsdataset, b, blockIdToLen(i));
+    }
   }
   
   @Test
@@ -107,7 +127,7 @@ public class TestSimulatedFSDataset {
   @Test
   public void testGetMetaData() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
-    ExtendedBlock b = new ExtendedBlock(bpid, 1, 5, 0);
+    ExtendedBlock b = new ExtendedBlock(bpid, FIRST_BLK_ID, 5, 0);
     try {
       assertTrue(fsdataset.getMetaDataInputStream(b) == null);
       assertTrue("Expected an IO exception", false);
@@ -115,7 +135,7 @@ public class TestSimulatedFSDataset {
       // ok - as expected
     }
     addSomeBlocks(fsdataset); // Only need to add one but ....
-    b = new ExtendedBlock(bpid, 1, 0, 0);
+    b = new ExtendedBlock(bpid, FIRST_BLK_ID, 0, 0);
     InputStream metaInput = fsdataset.getMetaDataInputStream(b);
     DataInputStream metaDataInput = new DataInputStream(metaInput);
     short version = metaDataInput.readShort();
@@ -138,29 +158,29 @@ public class TestSimulatedFSDataset {
 
 
 
-  void checkBlockDataAndSize(SimulatedFSDataset fsdataset, ExtendedBlock b,
-      long expectedLen) throws IOException { 
+  static void checkBlockDataAndSize(SimulatedFSDataset fsdataset,
+      ExtendedBlock b, long expectedLen) throws IOException {
     InputStream input = fsdataset.getBlockInputStream(b);
     long lengthRead = 0;
     int data;
     while ((data = input.read()) != -1) {
       assertEquals(SimulatedFSDataset.simulatedByte(b.getLocalBlock(),
-          lengthRead), data);
+          lengthRead), (byte) (data & SimulatedFSDataset.BYTE_MASK));
       lengthRead++;
     }
     assertEquals(expectedLen, lengthRead);
   }
-  
+
   @Test
   public void testWriteRead() throws IOException {
+    testWriteRead(false);
+    testWriteRead(true);
+  }
+
+  private void testWriteRead(boolean negativeBlkID) throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
-    addSomeBlocks(fsdataset);
-    for (int i=1; i <= NUMBLOCKS; ++i) {
-      ExtendedBlock b = new ExtendedBlock(bpid, i, 0, 0);
-      assertTrue(fsdataset.isValidBlock(b));
-      assertEquals(blockIdToLen(i), fsdataset.getLength(b));
-      checkBlockDataAndSize(fsdataset, b, blockIdToLen(i));
-    }
+    addSomeBlocks(fsdataset, negativeBlkID);
+    readSomeBlocks(fsdataset, negativeBlkID);
   }
 
   @Test
@@ -225,7 +245,7 @@ public class TestSimulatedFSDataset {
     SimulatedFSDataset sfsdataset = getSimulatedFSDataset();
     // Add come blocks whose block ids do not conflict with
     // the ones we are going to inject.
-    bytesAdded += addSomeBlocks(sfsdataset, NUMBLOCKS+1);
+    bytesAdded += addSomeBlocks(sfsdataset, NUMBLOCKS+1, false);
     sfsdataset.getBlockReport(bpid);
     assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     sfsdataset.getBlockReport(bpid);
@@ -283,7 +303,7 @@ public class TestSimulatedFSDataset {
   @Test
   public void testInValidBlocks() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
-    ExtendedBlock b = new ExtendedBlock(bpid, 1, 5, 0);
+    ExtendedBlock b = new ExtendedBlock(bpid, FIRST_BLK_ID, 5, 0);
     checkInvalidBlock(b);
     
     // Now check invlaid after adding some blocks

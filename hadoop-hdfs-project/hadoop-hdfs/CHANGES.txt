@@ -557,6 +557,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8231. StackTrace displayed at client while QuotaByStorageType exceeds
     (J.Andreina and Xiaoyu Yao via vinayakumarb)
 
+    HDFS-8191. Fix byte to integer casting in SimulatedFSDataset#simulatedByte.
+    (Zhe Zhang via wang)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

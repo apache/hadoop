@@ -80,6 +80,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * Note the synchronization is coarse grained - it is at each method. 
  */
 public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
+  public final static int BYTE_MASK = 0xff;
   static class Factory extends FsDatasetSpi.Factory<SimulatedFSDataset> {
     @Override
     public SimulatedFSDataset newInstance(DataNode datanode,
@@ -99,8 +100,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   public static byte simulatedByte(Block b, long offsetInBlk) {
-    byte firstByte = (byte) (b.getBlockId() % Byte.MAX_VALUE);
-    return (byte) ((firstByte + offsetInBlk) % Byte.MAX_VALUE);
+    byte firstByte = (byte) (b.getBlockId() & BYTE_MASK);
+    return (byte) ((firstByte + offsetInBlk) & BYTE_MASK);
   }
   
   public static final String CONFIG_PROPERTY_CAPACITY =
@@ -1028,12 +1029,13 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public int read() throws IOException {
-      if (currentPos >= length)
+      if (currentPos >= length) {
         return -1;
+      }
       if (data !=null) {
         return data[currentPos++];
       } else {
-        return simulatedByte(theBlock, currentPos++);
+        return simulatedByte(theBlock, currentPos++) & BYTE_MASK;
       }
     }
     
