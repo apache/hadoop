@@ -57,7 +57,9 @@ public class RMAppsBlock extends AppsBlock {
           .th(".name", "Name").th(".type", "Application Type")
           .th(".queue", "Queue").th(".starttime", "StartTime")
           .th(".finishtime", "FinishTime").th(".state", "State")
-          .th(".finalstatus", "FinalStatus").th(".progress", "Progress")
+          .th(".finalstatus", "FinalStatus")
+          .th(".runningcontainer", "Running Containers")
+          .th(".progress", "Progress")
           .th(".ui", "Tracking UI").th(".blacklisted", "Blacklisted Nodes")._()
           ._().tbody();
 
@@ -107,6 +109,8 @@ public class RMAppsBlock extends AppsBlock {
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())
         .append("\",\"")
         .append(app.getFinalAppStatus())
+        .append("\",\"")
+        .append(String.valueOf(app.getRunningContainers()))
         .append("\",\"")
         // Progress bar
         .append("<br title='").append(percent).append("'> <div class='")

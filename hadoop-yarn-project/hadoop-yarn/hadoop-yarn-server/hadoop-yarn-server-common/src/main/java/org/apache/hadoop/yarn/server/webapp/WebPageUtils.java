@@ -24,10 +24,11 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 public class WebPageUtils {
 
   public static String appsTableInit() {
-    return appsTableInit(false);
+    return appsTableInit(false, true);
   }
 
-  public static String appsTableInit(boolean isFairSchedulerPage) {
+  public static String appsTableInit(
+      boolean isFairSchedulerPage, boolean isResourceManager) {
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
     // FairSchedulerPage's table is a bit different
     return tableInit()
@@ -35,22 +36,30 @@ public class WebPageUtils {
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
       .append("\n, aoColumnDefs: ")
-      .append(getAppsTableColumnDefs(isFairSchedulerPage))
+      .append(getAppsTableColumnDefs(isFairSchedulerPage, isResourceManager))
       // Sort by id upon page load
       .append(", aaSorting: [[0, 'desc']]}").toString();
   }
 
-  private static String getAppsTableColumnDefs(boolean isFairSchedulerPage) {
+  private static String getAppsTableColumnDefs(
+      boolean isFairSchedulerPage, boolean isResourceManager) {
     StringBuilder sb = new StringBuilder();
-    return sb
-      .append("[\n")
+    sb.append("[\n")
       .append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
       .append("\n, {'sType':'numeric', 'aTargets': " +
           (isFairSchedulerPage ? "[6, 7]": "[5, 6]"))
       .append(", 'mRender': renderHadoopDate }")
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")
-      .append(", 'mRender': parseHadoopProgress }]").toString();
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
+    if (isFairSchedulerPage) {
+      sb.append("[11]");
+    } else if (isResourceManager) {
+      sb.append("[10]");
+    } else {
+      sb.append("[9]");
+    }
+    sb.append(", 'mRender': parseHadoopProgress }]");
+    return sb.toString();
   }
 
   public static String attemptsTableInit() {
