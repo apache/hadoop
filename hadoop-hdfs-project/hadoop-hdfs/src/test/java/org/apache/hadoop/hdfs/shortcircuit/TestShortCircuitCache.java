@@ -743,4 +743,48 @@ public class TestShortCircuitCache {
     cluster.shutdown();
     sockDir.close();
   }
+
+  public static class TestPreReceiptVerificationFailureInjector
+      extends BlockReaderFactory.FailureInjector {
+    @Override
+    public boolean getSupportsReceiptVerification() {
+      return false;
+    }
+  }
+
+  // Regression test for HDFS-8070
+  @Test(timeout=60000)
+  public void testPreReceiptVerificationDfsClientCanDoScr() throws Exception {
+    BlockReaderTestUtil.enableShortCircuitShmTracing();
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf(
+        "testPreReceiptVerificationDfsClientCanDoScr", sockDir);
+    conf.setLong(
+        HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_KEY,
+        1000000000L);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.getClient().getConf().getShortCircuitConf().brfFailureInjector =
+        new TestPreReceiptVerificationFailureInjector();
+    final Path TEST_PATH1 = new Path("/test_file1");
+    DFSTestUtil.createFile(fs, TEST_PATH1, 4096, (short)1, 0xFADE2);
+    final Path TEST_PATH2 = new Path("/test_file2");
+    DFSTestUtil.createFile(fs, TEST_PATH2, 4096, (short)1, 0xFADE2);
+    DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
+    DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
+    ShortCircuitRegistry registry =
+        cluster.getDataNodes().get(0).getShortCircuitRegistry();
+    registry.visit(new ShortCircuitRegistry.Visitor() {
+      @Override
+      public void accept(HashMap<ShmId, RegisteredShm> segments,
+                         HashMultimap<ExtendedBlockId, Slot> slots) {
+        Assert.assertEquals(1, segments.size());
+        Assert.assertEquals(2, slots.size());
+      }
+    });
+    cluster.shutdown();
+    sockDir.close();
+  }
 }
