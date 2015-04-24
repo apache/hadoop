@@ -7406,8 +7406,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       readUnlock();
     }
-
-    logAuditEvent(diffs != null, "computeSnapshotDiff", null, null, null);
+    String fromSnapshotRoot = (fromSnapshot == null || fromSnapshot.isEmpty()) ?
+        path : Snapshot.getSnapshotPath(path, fromSnapshot);
+    String toSnapshotRoot = (toSnapshot == null || toSnapshot.isEmpty()) ?
+        path : Snapshot.getSnapshotPath(path, toSnapshot);
+    logAuditEvent(diffs != null, "computeSnapshotDiff", fromSnapshotRoot,
+        toSnapshotRoot, null);
     return diffs;
   }
   
