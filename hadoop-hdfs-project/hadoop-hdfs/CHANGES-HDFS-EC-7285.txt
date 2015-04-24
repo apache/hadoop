@@ -128,3 +128,6 @@
 
     HDFS-8223. Should calculate checksum for parity blocks in DFSStripedOutputStream.
     (Yi Liu via jing9)
+
+    HDFS-8228. Erasure Coding: SequentialBlockGroupIdGenerator#nextValue may cause 
+    block id conflicts (Jing Zhao via Zhe Zhang)

@@ -82,6 +82,27 @@ public class TestAddStripedBlocks {
     }
   }
 
+  /**
+   * Make sure the IDs of striped blocks do not conflict
+   */
+  @Test
+  public void testAllocateBlockId() throws Exception {
+    Path testPath = new Path("/testfile");
+    // create a file while allocates a new block
+    DFSTestUtil.writeFile(dfs, testPath, "hello, world!");
+    LocatedBlocks lb = dfs.getClient().getLocatedBlocks(testPath.toString(), 0);
+    final long firstId = lb.get(0).getBlock().getBlockId();
+    // delete the file
+    dfs.delete(testPath, true);
+
+    // allocate a new block, and make sure the new block's id does not conflict
+    // with the previous one
+    DFSTestUtil.writeFile(dfs, testPath, "hello again");
+    lb = dfs.getClient().getLocatedBlocks(testPath.toString(), 0);
+    final long secondId = lb.get(0).getBlock().getBlockId();
+    Assert.assertEquals(firstId + HdfsConstants.MAX_BLOCKS_IN_GROUP, secondId);
+  }
+
   @Test
   public void testAddStripedBlock() throws Exception {
     final Path file = new Path("/file1");

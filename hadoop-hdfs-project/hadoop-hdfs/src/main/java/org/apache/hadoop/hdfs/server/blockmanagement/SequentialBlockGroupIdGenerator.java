@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.SequentialNumber;
+
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_GROUP_INDEX_MASK;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_BLOCKS_IN_GROUP;
 
 /**
  * Generate the next valid block group ID by incrementing the maximum block
@@ -34,6 +36,9 @@ import org.apache.hadoop.util.SequentialNumber;
  * bits (n+2) to (64-m) represent the ID of its block group, while the last m
  * bits represent its index of the group. The value m is determined by the
  * maximum number of blocks in a group (MAX_BLOCKS_IN_GROUP).
+ *
+ * Note that the {@link #nextValue()} methods requires external lock to
+ * guarantee IDs have no conflicts.
  */
 @InterfaceAudience.Private
 public class SequentialBlockGroupIdGenerator extends SequentialNumber {
@@ -47,32 +52,30 @@ public class SequentialBlockGroupIdGenerator extends SequentialNumber {
 
   @Override // NumberGenerator
   public long nextValue() {
-    // Skip to next legitimate block group ID based on the naming protocol
-    while (super.getCurrentValue() % HdfsConstants.MAX_BLOCKS_IN_GROUP > 0) {
-      super.nextValue();
-    }
+    skipTo((getCurrentValue() & ~BLOCK_GROUP_INDEX_MASK) + MAX_BLOCKS_IN_GROUP);
     // Make sure there's no conflict with existing random block IDs
-    while (hasValidBlockInRange(super.getCurrentValue())) {
-      super.skipTo(super.getCurrentValue() +
-          HdfsConstants.MAX_BLOCKS_IN_GROUP);
+    final Block b = new Block(getCurrentValue());
+    while (hasValidBlockInRange(b)) {
+      skipTo(getCurrentValue() + MAX_BLOCKS_IN_GROUP);
+      b.setBlockId(getCurrentValue());
     }
-    if (super.getCurrentValue() >= 0) {
-      BlockManager.LOG.warn("All negative block group IDs are used, " +
-          "growing into positive IDs, " +
-          "which might conflict with non-erasure coded blocks.");
+    if (b.getBlockId() >= 0) {
+      throw new IllegalStateException("All negative block group IDs are used, "
+          + "growing into positive IDs, "
+          + "which might conflict with non-erasure coded blocks.");
     }
-    return super.getCurrentValue();
+    return getCurrentValue();
   }
 
   /**
-   *
-   * @param id The starting ID of the range
+   * @param b A block object whose id is set to the starting point for check
    * @return true if any ID in the range
    *      {id, id+HdfsConstants.MAX_BLOCKS_IN_GROUP} is pointed-to by a file
    */
-  private boolean hasValidBlockInRange(long id) {
-    for (int i = 0; i < HdfsConstants.MAX_BLOCKS_IN_GROUP; i++) {
-      Block b = new Block(id + i);
+  private boolean hasValidBlockInRange(Block b) {
+    final long id = b.getBlockId();
+    for (int i = 0; i < MAX_BLOCKS_IN_GROUP; i++) {
+      b.setBlockId(id + i);
       if (blockManager.getBlockCollection(b) != null) {
         return true;
       }
