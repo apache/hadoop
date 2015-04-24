@@ -577,10 +577,10 @@ public class ApplicationMaster {
     // Dump out information about cluster capability as seen by the
     // resource manager
     int maxMem = response.getMaximumResourceCapability().getMemory();
-    LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    LOG.info("Max mem capability of resources in this cluster " + maxMem);
     
     int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
-    LOG.info("Max vcores capabililty of resources in this cluster " + maxVCores);
+    LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
 
     // A resource ask cannot exceed the max.
     if (containerMemory > maxMem) {
