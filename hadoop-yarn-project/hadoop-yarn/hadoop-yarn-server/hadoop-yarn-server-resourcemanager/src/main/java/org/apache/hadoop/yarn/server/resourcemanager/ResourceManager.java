@@ -104,11 +104,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -460,8 +460,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMApplicationHistoryWriter();
   }
 
-  private RMTimelineCollector createRMTimelineCollector() {
-    return new RMTimelineCollector();
+  private RMTimelineCollectorManager createRMTimelineCollectorManager() {
+    return new RMTimelineCollectorManager(rmContext);
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
@@ -589,10 +589,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(systemMetricsPublisher);
       rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
-      RMTimelineCollector timelineCollector =
-          createRMTimelineCollector();
-      addService(timelineCollector);
-      rmContext.setRMTimelineCollector(timelineCollector);
+      RMTimelineCollectorManager timelineCollectorManager =
+          createRMTimelineCollectorManager();
+      addService(timelineCollectorManager);
+      rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);
