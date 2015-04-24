@@ -265,6 +265,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3387. Previous AM's container completed status couldn't pass to current
     AM if AM and RM restarted during the same time. (sandflee via jianhe)
 
+    YARN-3444. Fix typo capabililty. (Gabor Liptak via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
