@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -129,11 +130,14 @@ public class TimelineCollectorWebService {
     boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
 
     try {
-      appId = parseApplicationId(appId);
-      if (appId == null) {
+      ApplicationId appID = parseApplicationId(appId);
+      if (appID == null) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
-      TimelineCollector collector = getCollector(req, appId);
+      NodeTimelineCollectorManager collectorManager =
+          (NodeTimelineCollectorManager) context.getAttribute(
+              NodeTimelineCollectorManager.COLLECTOR_MANAGER_ATTR_KEY);
+      TimelineCollector collector = collectorManager.get(appID);
       if (collector == null) {
         LOG.error("Application: "+ appId + " is not found");
         throw new NotFoundException(); // different exception?
@@ -147,25 +151,16 @@ public class TimelineCollectorWebService {
     }
   }
 
-  private String parseApplicationId(String appId) {
+  private ApplicationId parseApplicationId(String appId) {
     try {
       if (appId != null) {
-        return ConverterUtils.toApplicationId(appId.trim()).toString();
+        return ConverterUtils.toApplicationId(appId.trim());
       } else {
         return null;
       }
     } catch (Exception e) {
       return null;
     }
-  }
-
-  private TimelineCollector
-      getCollector(HttpServletRequest req, String appIdToParse) {
-    String appIdString = parseApplicationId(appIdToParse);
-    final TimelineCollectorManager collectorManager =
-        (TimelineCollectorManager) context.getAttribute(
-            TimelineCollectorManager.COLLECTOR_MANAGER_ATTR_KEY);
-    return collectorManager.get(appIdString);
   }
 
   private void init(HttpServletResponse response) {

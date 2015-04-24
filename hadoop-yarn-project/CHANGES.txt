@@ -53,6 +53,8 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3391. Clearly define flow ID/ flow run / flow version in API and storage.
     (Zhijie Shen via junping_du)
 
+    YARN-3390. Reuse TimelineCollectorManager for RM (Zhijie Shen via sjlee)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

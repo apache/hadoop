@@ -67,8 +67,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   public void testAddApplication() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
-    assertTrue(auxService.hasApplication(
-        appAttemptId.getApplicationId().toString()));
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
     auxService.close();
   }
 
@@ -82,16 +81,14 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerId()).thenReturn(containerId);
     auxService.initializeContainer(context);
     // auxService should not have that app
-    assertFalse(auxService.hasApplication(
-        appAttemptId.getApplicationId().toString()));
+    assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()));
   }
 
   @Test
   public void testRemoveApplication() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
-    String appIdStr = appAttemptId.getApplicationId().toString();
-    assertTrue(auxService.hasApplication(appIdStr));
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
 
     ContainerId containerId = getAMContainerId();
     ContainerTerminationContext context =
@@ -99,7 +96,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerId()).thenReturn(containerId);
     auxService.stopContainer(context);
     // auxService should not have that app
-    assertFalse(auxService.hasApplication(appIdStr));
+    assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()));
     auxService.close();
   }
 
@@ -107,8 +104,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   public void testRemoveApplicationNonAMContainer() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
-    String appIdStr = appAttemptId.getApplicationId().toString();
-    assertTrue(auxService.hasApplication(appIdStr));
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
 
     ContainerId containerId = getContainerId(2L); // not an AM
     ContainerTerminationContext context =
@@ -116,7 +112,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerId()).thenReturn(containerId);
     auxService.stopContainer(context);
     // auxService should still have that app
-    assertTrue(auxService.hasApplication(appIdStr));
+    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
     auxService.close();
   }
 
@@ -147,7 +143,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   }
 
   private PerNodeTimelineCollectorsAuxService createCollector() {
-    TimelineCollectorManager collectorManager = createCollectorManager();
+    NodeTimelineCollectorManager collectorManager = createCollectorManager();
     PerNodeTimelineCollectorsAuxService auxService =
         spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
     auxService.init(new YarnConfiguration());
@@ -155,9 +151,9 @@ public class TestPerNodeTimelineCollectorsAuxService {
     return auxService;
   }
 
-  private TimelineCollectorManager createCollectorManager() {
-    TimelineCollectorManager collectorManager =
-        spy(new TimelineCollectorManager());
+  private NodeTimelineCollectorManager createCollectorManager() {
+    NodeTimelineCollectorManager collectorManager =
+        spy(new NodeTimelineCollectorManager());
     doReturn(new Configuration()).when(collectorManager).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);

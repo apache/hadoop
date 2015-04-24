@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollector;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 
 /**
  * Context of the ResourceManager.
@@ -110,9 +110,10 @@ public interface RMContext {
 
   SystemMetricsPublisher getSystemMetricsPublisher();
   
-  void setRMTimelineCollector(RMTimelineCollector timelineCollector);
+  void setRMTimelineCollectorManager(
+      RMTimelineCollectorManager timelineCollectorManager);
   
-  RMTimelineCollector getRMTimelineCollector();
+  RMTimelineCollectorManager getRMTimelineCollectorManager();
 
   ConfigurationProvider getConfigurationProvider();
 

@@ -49,8 +49,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestTimelineCollectorManager {
-  private TimelineCollectorManager collectorManager;
+public class TestNMTimelineCollectorManager {
+  private NodeTimelineCollectorManager collectorManager;
 
   @Before
   public void setup() throws Exception {
@@ -103,7 +103,7 @@ public class TestTimelineCollectorManager {
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
-      assertTrue(collectorManager.containsKey(appId.toString()));
+      assertTrue(collectorManager.containsTimelineCollector(appId));
     }
   }
 
@@ -119,7 +119,7 @@ public class TestTimelineCollectorManager {
               new AppLevelTimelineCollector(appId);
           boolean successPut =
               (collectorManager.putIfAbsent(appId, collector) == collector);
-          return successPut && collectorManager.remove(appId.toString());
+          return successPut && collectorManager.remove(appId);
         }
       };
       tasks.add(task);
@@ -136,13 +136,13 @@ public class TestTimelineCollectorManager {
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
-      assertFalse(collectorManager.containsKey(appId.toString()));
+      assertFalse(collectorManager.containsTimelineCollector(appId));
     }
   }
 
-  private TimelineCollectorManager createCollectorManager() {
-    final TimelineCollectorManager collectorManager =
-        spy(new TimelineCollectorManager());
+  private NodeTimelineCollectorManager createCollectorManager() {
+    final NodeTimelineCollectorManager collectorManager =
+        spy(new NodeTimelineCollectorManager());
     doReturn(new Configuration()).when(collectorManager).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
