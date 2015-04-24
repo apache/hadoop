@@ -22,7 +22,10 @@ import com.google.inject.Inject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -36,9 +39,10 @@ import java.util.Map;
 public class ErrorsAndWarningsBlock extends HtmlBlock {
 
   long cutoffPeriodSeconds;
+  final private AdminACLsManager adminAclsManager;
 
   @Inject
-  ErrorsAndWarningsBlock(ViewContext ctx) {
+  ErrorsAndWarningsBlock(ViewContext ctx, Configuration conf) {
     super(ctx);
     // default is to show all errors and warnings
     cutoffPeriodSeconds = Time.now() / 1000;
@@ -51,11 +55,28 @@ public class ErrorsAndWarningsBlock extends HtmlBlock {
     } catch (NumberFormatException ne) {
       cutoffPeriodSeconds = Time.now() / 1000;
     }
+    adminAclsManager = new AdminACLsManager(conf);
   }
 
   @Override
   protected void render(Block html) {
     Log log = LogFactory.getLog(ErrorsAndWarningsBlock.class);
+
+    boolean isAdmin = false;
+    UserGroupInformation callerUGI = this.getCallerUGI();
+
+    if (adminAclsManager.areACLsEnabled()) {
+      if (callerUGI != null && adminAclsManager.isAdmin(callerUGI)) {
+        isAdmin = true;
+      }
+    } else {
+      isAdmin = true;
+    }
+
+    if (!isAdmin) {
+      html.div().p()._("This page is for admins only.")._()._();
+      return;
+    }
 
     if (log instanceof Log4JLogger) {
       html._(ErrorMetrics.class);

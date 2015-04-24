@@ -166,6 +166,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3503. Expose disk utilization percentage and bad local and log dir 
     counts in NM metrics. (Varun Vasudev via jianhe)
 
+    YARN-3511. Add errors and warnings page to ATS. (Varun Vasudev via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
