@@ -111,7 +111,7 @@ JNIEnv *env, jobject obj, jint fd)
   pollfd = &sd->pollfd[sd->used_size];
   sd->used_size++;
   pollfd->fd = fd;
-  pollfd->events = POLLIN;
+  pollfd->events = POLLIN | POLLHUP;
   pollfd->revents = 0;
 }
 
@@ -162,7 +162,10 @@ JNIEnv *env, jobject obj)
       GetLongField(env, obj, fd_set_data_fid);
   used_size = sd->used_size;
   for (i = 0; i < used_size; i++) {
-    if (sd->pollfd[i].revents & POLLIN) {
+    // We check for both POLLIN and POLLHUP, because on some OSes, when a socket
+    // is shutdown(), it sends POLLHUP rather than POLLIN.
+    if ((sd->pollfd[i].revents & POLLIN) ||
+        (sd->pollfd[i].revents & POLLHUP)) {
       num_readable++;
     } else {
       sd->pollfd[i].revents = 0;
@@ -177,7 +180,8 @@ JNIEnv *env, jobject obj)
     }
     j = 0;
     for (i = 0; ((i < used_size) && (j < num_readable)); i++) {
-      if (sd->pollfd[i].revents & POLLIN) {
+      if ((sd->pollfd[i].revents & POLLIN) ||
+          (sd->pollfd[i].revents & POLLHUP)) {
         carr[j] = sd->pollfd[i].fd;
         j++;
         sd->pollfd[i].revents = 0;
