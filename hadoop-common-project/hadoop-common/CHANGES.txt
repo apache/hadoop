@@ -522,6 +522,8 @@ Release 2.8.0 - UNRELEASED
     split calculation (gera)
 
   BUG FIXES
+    HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
+    is an I/O error during requestShortCircuitShm (cmccabe)
 
     HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
     jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
@@ -573,6 +575,9 @@ Release 2.7.1 - UNRELEASED
 
     HADOOP-11730. Regression: s3n read failure recovery broken.
     (Takenori Sato via stevel)
+
+    HADOOP-11802. DomainSocketWatcher thread terminates sometimes after there
+    is an I/O error during requestShortCircuitShm (cmccabe)
 
 Release 2.7.0 - 2015-04-20
 
