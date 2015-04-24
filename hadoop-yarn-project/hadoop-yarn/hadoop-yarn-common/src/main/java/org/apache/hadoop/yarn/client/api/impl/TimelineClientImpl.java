@@ -91,6 +91,9 @@ public class TimelineClientImpl extends TimelineClient {
   private static final String RESOURCE_URI_STR = "/ws/v1/timeline/";
   private static final Joiner JOINER = Joiner.on("");
   public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
+  public static final String ERROR_NO_ATS_RESPONSE
+      = "Failed to get the response from the timeline server";
+  public static final String ERROR_RETRIES_EXCEEDED = "Failed to connect to timeline server";
 
   private static Options opts;
   private static final String ENTITY_DATA_TYPE = "entity";
@@ -210,28 +213,25 @@ public class TimelineClientImpl extends TimelineClient {
       }
       // reached only if the retry count has been exceeded.
       // therefore, lastException no-null
-      LOG.warn("Failed to connect to timeline server. "
+      String message = ERROR_RETRIES_EXCEEDED
           + "Connection retries limit (" + maxRetries + ") exceeded. "
-          + "The posted timeline event may be missing", lastException);
+          + "The posted timeline event may be missing : " + lastException;
+      LOG.warn(message, lastException);
 
-      if (lastException instanceof IOException) {
-        throw (IOException) lastException;
-      } else {
-        throw (RuntimeException) lastException;
-      }
+      throw new RuntimeException(message, lastException);
     }
 
     private void logException(Exception e, int leftRetries) {
       if (leftRetries > 0) {
         LOG.info("Exception caught by TimelineClientConnectionRetry,"
               + " will try " + leftRetries + " more time(s).\nMessage: "
-              + e.getMessage());
+              + e);
         LOG.debug("Failure", e);
       } else {
         // note that maxRetries may be -1 at the very beginning
         LOG.info("ConnectionException caught by TimelineClientConnectionRetry,"
             + " will keep retrying.\nMessage: "
-            + e.getMessage());
+            + e);
         LOG.debug("Failure", e);
       }
     }
@@ -351,8 +351,7 @@ public class TimelineClientImpl extends TimelineClient {
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
-      String msg =
-          "Failed to get the response from the timeline server " + resURI;
+      String msg = ERROR_NO_ATS_RESPONSE +" at " + resURI;
       if (resp != null) {
         int status = resp.getStatus();
         msg += " -status code=" + status;

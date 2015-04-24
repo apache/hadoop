@@ -18,20 +18,14 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.net.ConnectException;
-
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
@@ -46,8 +40,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
+import java.net.ConnectException;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestTimelineClient {
 
@@ -70,29 +70,21 @@ public class TestTimelineClient {
   @Test
   public void testPostEntities() throws Exception {
     mockEntityClientResponse(client, ClientResponse.Status.OK, false, false);
-    try {
-      TimelinePutResponse response = client.putEntities(generateEntity());
-      Assert.assertEquals(0, response.getErrors().size());
-    } catch (YarnException e) {
-      Assert.fail("Exception is not expected");
-    }
+    TimelinePutResponse response = client.putEntities(generateEntity());
+    Assert.assertEquals(0, response.getErrors().size());
   }
 
   @Test
   public void testPostEntitiesWithError() throws Exception {
     mockEntityClientResponse(client, ClientResponse.Status.OK, true, false);
-    try {
-      TimelinePutResponse response = client.putEntities(generateEntity());
-      Assert.assertEquals(1, response.getErrors().size());
-      Assert.assertEquals("test entity id", response.getErrors().get(0)
-          .getEntityId());
-      Assert.assertEquals("test entity type", response.getErrors().get(0)
-          .getEntityType());
-      Assert.assertEquals(TimelinePutResponse.TimelinePutError.IO_EXCEPTION,
-          response.getErrors().get(0).getErrorCode());
-    } catch (YarnException e) {
-      Assert.fail("Exception is not expected");
-    }
+    TimelinePutResponse response = client.putEntities(generateEntity());
+    Assert.assertEquals(1, response.getErrors().size());
+    Assert.assertEquals("test entity id", response.getErrors().get(0)
+        .getEntityId());
+    Assert.assertEquals("test entity type", response.getErrors().get(0)
+        .getEntityType());
+    Assert.assertEquals(TimelinePutResponse.TimelinePutError.IO_EXCEPTION,
+        response.getErrors().get(0).getErrorCode());
   }
 
   @Test
@@ -103,8 +95,7 @@ public class TestTimelineClient {
       client.putEntities(generateEntity());
       Assert.fail("Exception is expected");
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().contains(
-          "Failed to get the response from the timeline server."));
+      assertExceptionTextContains(e, TimelineClientImpl.ERROR_NO_ATS_RESPONSE);
     }
   }
 
@@ -113,7 +104,7 @@ public class TestTimelineClient {
     mockEntityClientResponse(client, null, false, true);
     try {
       client.putEntities(generateEntity());
-      Assert.fail("RuntimeException is expected");
+      Assert.fail("Exception is expected");
     } catch (RuntimeException re) {
       Assert.assertTrue(re instanceof ClientHandlerException);
     }
@@ -122,11 +113,7 @@ public class TestTimelineClient {
   @Test
   public void testPutDomain() throws Exception {
     mockDomainClientResponse(client, ClientResponse.Status.OK, false);
-    try {
-      client.putDomain(generateDomain());
-    } catch (YarnException e) {
-      Assert.fail("Exception is not expected");
-    }
+    client.putDomain(generateDomain());
   }
 
   @Test
@@ -136,8 +123,13 @@ public class TestTimelineClient {
       client.putDomain(generateDomain());
       Assert.fail("Exception is expected");
     } catch (YarnException e) {
-      Assert.assertTrue(e.getMessage().contains(
-          "Failed to get the response from the timeline server."));
+      assertExceptionTextContains(e, TimelineClientImpl.ERROR_NO_ATS_RESPONSE);
+    }
+  }
+
+  private void assertExceptionTextContains(Exception e, String text) {
+    if (!e.toString().contains(text)) {
+      throw new AssertionError("Did not find \"" + text + "\" in " + e, e);
     }
   }
 
@@ -146,9 +138,9 @@ public class TestTimelineClient {
     mockDomainClientResponse(client, null, true);
     try {
       client.putDomain(generateDomain());
-      Assert.fail("RuntimeException is expected");
-    } catch (RuntimeException re) {
-      Assert.assertTrue(re instanceof ClientHandlerException);
+      Assert.fail("Exception is expected");
+    } catch (ClientHandlerException re) {
+      // expected
     }
   }
 
@@ -160,44 +152,40 @@ public class TestTimelineClient {
       conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
         -2);
       createTimelineClient(conf);
-      Assert.fail();
+      Assert.fail("IllegalArgumentException is expected");
     } catch(IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage().contains(
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES));
+      assertExceptionTextContains(e,
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
     }
 
     try {
       YarnConfiguration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-        0);
+          0);
       createTimelineClient(conf);
-      Assert.fail();
+      Assert.fail("Exception is expected");
     } catch(IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage().contains(
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS));
+      assertExceptionTextContains(e,
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
     }
     int newMaxRetries = 5;
     long newIntervalMs = 500;
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-      newMaxRetries);
+        newMaxRetries);
     conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-      newIntervalMs);
+        newIntervalMs);
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
-    TimelineClientImpl client = createTimelineClient(conf);
+    ServiceOperations.stop(client);
+    client = createTimelineClient(conf);
     try {
       // This call should fail because there is no timeline server
       client.putEntities(generateEntity());
       Assert.fail("Exception expected! "
           + "Timeline server should be off to run this test. ");
     } catch (RuntimeException ce) {
-      Assert.assertTrue(
-        "Handler exception for reason other than retry: " + ce.getMessage(),
-        ce.getMessage().contains("Connection retries limit exceeded"));
-      // we would expect this exception here, check if the client has retried
-      Assert.assertTrue("Retry filter didn't perform any retries! ", client
-        .connectionRetry.getRetired());
+      assertRetryException(client, ce);
     }
   }
 
@@ -207,18 +195,18 @@ public class TestTimelineClient {
     long newIntervalMs = 500;
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-      newMaxRetries);
+        newMaxRetries);
     conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-      newIntervalMs);
+        newIntervalMs);
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     // use kerberos to bypass the issue in HADOOP-11215
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
-
-    TimelineClientImpl client = createTimelineClient(conf);
-    TestTimlineDelegationTokenSecretManager dtManager =
-        new TestTimlineDelegationTokenSecretManager();
+    ServiceOperations.stop(client);
+    client = createTimelineClient(conf);
+    TestTimelineDelegationTokenSecretManager dtManager =
+        new TestTimelineDelegationTokenSecretManager();
     try {
       dtManager.startThreads();
       Thread.sleep(3000);
@@ -229,7 +217,7 @@ public class TestTimelineClient {
           UserGroupInformation.getCurrentUser().getShortUserName());
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertRetryException(client, ce);
       }
 
       try {
@@ -244,7 +232,7 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertRetryException(client, ce);
       }
 
       try {
@@ -259,10 +247,9 @@ public class TestTimelineClient {
                 new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
-        assertException(client, ce);
+        assertRetryException(client, ce);
       }
     } finally {
-      client.stop();
       dtManager.stopThreads();
     }
   }
@@ -272,13 +259,11 @@ public class TestTimelineClient {
         + "Timeline server should be off to run this test.");
   }
 
-  private void assertException(TimelineClientImpl client, RuntimeException ce) {
-    Assert.assertTrue(
-        "Handler exception for reason other than retry: " + ce.toString(), ce
-            .getMessage().contains("Connection retries limit exceeded"));
+  private void assertRetryException(TimelineClientImpl timelineClient, Exception ce) {
+    assertExceptionTextContains(ce, TimelineClientImpl.ERROR_RETRIES_EXCEEDED);
     // we would expect this exception here, check if the client has retried
     Assert.assertTrue("Retry filter didn't perform any retries! ",
-        client.connectionRetry.getRetired());
+        timelineClient.connectionRetry.getRetired());
   }
 
   private static ClientResponse mockEntityClientResponse(
@@ -365,10 +350,10 @@ public class TestTimelineClient {
     return client;
   }
 
-  private static class TestTimlineDelegationTokenSecretManager extends
+  private static class TestTimelineDelegationTokenSecretManager extends
       AbstractDelegationTokenSecretManager<TimelineDelegationTokenIdentifier> {
 
-    public TestTimlineDelegationTokenSecretManager() {
+    public TestTimelineDelegationTokenSecretManager() {
       super(100000, 100000, 100000, 100000);
     }
 
