@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -116,5 +117,25 @@ public class AssignmentInformation {
 
   public List<AssignmentDetails> getReservationDetails() {
     return operationDetails.get(Operation.RESERVATION);
+  }
+
+  private ContainerId getFirstContainerIdFromOperation(Operation op) {
+    if (null != operationDetails.get(Operation.ALLOCATION)) {
+      List<AssignmentDetails> assignDetails =
+          operationDetails.get(Operation.ALLOCATION);
+      if (!assignDetails.isEmpty()) {
+        return assignDetails.get(0).containerId;
+      }
+    }
+    return null;
+  }
+
+  public ContainerId getFirstAllocatedOrReservedContainerId() {
+    ContainerId containerId = null;
+    containerId = getFirstContainerIdFromOperation(Operation.ALLOCATION);
+    if (null != containerId) {
+      return containerId;
+    }
+    return getFirstContainerIdFromOperation(Operation.RESERVATION);
   }
 }
