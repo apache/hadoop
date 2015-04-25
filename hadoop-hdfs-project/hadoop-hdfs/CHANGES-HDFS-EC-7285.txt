@@ -131,3 +131,6 @@
 
     HDFS-8228. Erasure Coding: SequentialBlockGroupIdGenerator#nextValue may cause 
     block id conflicts (Jing Zhao via Zhe Zhang)
+
+    HDFS-8033. Erasure coding: stateful (non-positional) read from files in 
+    striped layout (Zhe Zhang)
