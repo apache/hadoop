@@ -145,8 +145,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3205 FileSystemRMStateStore should disable FileSystem Cache to avoid
     get a Filesystem with an old configuration. (Zhihai Xu via ozawa)
 
-    YARN-3351. AppMaster tracking URL is broken in HA. (Anubhav Dhoot via kasha)
-
     YARN-3269. Yarn.nodemanager.remote-app-log-dir could not be configured to 
     fully qualified path. (Xuan Gong via junping_du)
 
@@ -189,12 +187,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
     (Zhihai Xu via kasha)
-
-    YARN-3382. Some of UserMetricsInfo metrics are incorrectly set to root
-    queue metrics. (Rohit Agarwal via jianhe)
-
-    YARN-3472. Fixed possible leak in DelegationTokenRenewer#allTokens.
-    (Rohith Sharmaks via jianhe)
 
     YARN-3266. RMContext#inactiveNodes should have NodeId as map key.
     (Chengbing Liu via jianhe)
@@ -239,6 +231,7 @@ Release 2.7.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
     calling getQueue (Jason Lowe via wangda)
 
@@ -253,6 +246,14 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3522. Fixed DistributedShell to instantiate TimeLineClient as the
     correct user. (Zhijie Shen via jianhe)
+
+    YARN-3351. AppMaster tracking URL is broken in HA. (Anubhav Dhoot via kasha)
+
+    YARN-3382. Some of UserMetricsInfo metrics are incorrectly set to root
+    queue metrics. (Rohit Agarwal via jianhe)
+
+    YARN-3472. Fixed possible leak in DelegationTokenRenewer#allTokens.
+    (Rohith Sharmaks via jianhe)
 
 Release 2.7.0 - 2015-04-20
 
