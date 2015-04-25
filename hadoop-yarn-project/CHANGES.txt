@@ -54,6 +54,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3319. Implement a FairOrderingPolicy. (Craig Welch via wangda)
 
+    YARN-2498. Respect labels in preemption policy of capacity scheduler for
+    inter-queue preemption. (Wangda Tan via jianhe)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
