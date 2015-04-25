@@ -4,6 +4,8 @@ Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-11746. rewrite test-patch.sh (aw)
+
   NEW FEATURES
 
     HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
@@ -11,8 +13,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
     (Dapeng Sun via Yongjun Zhang)
-
-    HADOOP-11746. rewrite test-patch.sh (aw)
 
     HADOOP-11843. Make setting up the build environment easier.
     (Niels Basjes via cnauroth)
