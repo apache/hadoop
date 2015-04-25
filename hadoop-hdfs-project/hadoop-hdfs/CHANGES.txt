@@ -318,6 +318,9 @@ Trunk (Unreleased)
     HDFS-8110. Remove unsupported 'hdfs namenode -rollingUpgrade downgrade'
     from document. (J.Andreina via aajisaka)
 
+    HDFS-7673. synthetic load generator docs give incorrect/incomplete commands
+    (Brahma Reddy Battula via aw)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

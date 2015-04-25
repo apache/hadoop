@@ -32,7 +32,7 @@ Synopsis
 
 The synopsis of the command is:
 
-        java LoadGenerator [options]
+        yarn jar <HADOOP_HOME>/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-<hadoop-version>.jar NNloadGenerator [options]
 
 Options include:
 
@@ -102,7 +102,7 @@ The generated namespace structure is described by two files in the output direct
 
 The synopsis of the command is:
 
-        java StructureGenerator [options]
+        yarn jar <HADOOP_HOME>/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-<hadoop-version>.jar NNstructureGenerator [options]
 
 Options include:
 
@@ -140,7 +140,7 @@ This tool reads the directory structure and file structure from the input direct
 
 The synopsis of the command is:
 
-        java DataGenerator [options]
+        yarn jar <HADOOP_HOME>/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-<hadoop-version>.jar NNdataGenerator [options]
 
 Options include:
 
