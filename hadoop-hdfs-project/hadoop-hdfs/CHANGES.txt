@@ -566,6 +566,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8211. DataNode UUID is always null in the JMX counter. (Anu Engineer
     via Arpit Agarwal)
 
+    HDFS-8247. TestDiskspaceQuotaUpdate#testAppendOverTypeQuota is failing.
+    (Xiaoyu Yao via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Assert;
@@ -250,8 +251,8 @@ public class TestDiskspaceQuotaUpdate {
     try {
       DFSTestUtil.appendFile(dfs, file, BLOCKSIZE);
       Assert.fail("append didn't fail");
-    } catch (RemoteException e) {
-      assertTrue(e.getClassName().contains("QuotaByStorageTypeExceededException"));
+    } catch (QuotaByStorageTypeExceededException e) {
+      //ignore
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
