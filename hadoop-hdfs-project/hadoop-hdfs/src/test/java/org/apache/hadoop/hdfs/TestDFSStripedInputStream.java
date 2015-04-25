@@ -28,6 +28,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class TestDFSStripedInputStream {
   private static int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
@@ -165,6 +166,7 @@ public class TestDFSStripedInputStream {
     Assert.assertEquals("File length should be the same",
         writeBytes, fileLength);
 
+    // pread
     try (DFSStripedInputStream dis =
              new DFSStripedInputStream(fs.getClient(), src, true)) {
       byte[] buf = new byte[writeBytes + 100];
@@ -174,6 +176,47 @@ public class TestDFSStripedInputStream {
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
         Assert.assertEquals("Byte at i should be the same", getByte(i), buf[i]);
+      }
+    }
+
+    // stateful read with byte array
+    try (DFSStripedInputStream dis =
+             new DFSStripedInputStream(fs.getClient(), src, true)) {
+      byte[] buf = new byte[writeBytes + 100];
+      int readLen = 0;
+      int ret;
+      do {
+        ret = dis.read(buf, readLen, buf.length - readLen);
+        if (ret > 0) {
+          readLen += ret;
+        }
+      } while (ret >= 0);
+
+      readLen = readLen >= 0 ? readLen : 0;
+      Assert.assertEquals("The length of file should be the same to write size",
+          writeBytes, readLen);
+      for (int i = 0; i < writeBytes; i++) {
+        Assert.assertEquals("Byte at i should be the same", getByte(i), buf[i]);
+      }
+    }
+
+    // stateful read with ByteBuffer
+    try (DFSStripedInputStream dis =
+             new DFSStripedInputStream(fs.getClient(), src, true)) {
+      ByteBuffer buf = ByteBuffer.allocate(writeBytes + 100);
+      int readLen = 0;
+      int ret;
+      do {
+        ret = dis.read(buf);
+        if (ret > 0) {
+          readLen += ret;
+        }
+      } while (ret >= 0);
+      readLen = readLen >= 0 ? readLen : 0;
+      Assert.assertEquals("The length of file should be the same to write size",
+          writeBytes, readLen);
+      for (int i = 0; i < writeBytes; i++) {
+        Assert.assertEquals("Byte at i should be the same", getByte(i), buf.array()[i]);
       }
     }
   }
