@@ -234,6 +234,21 @@ function add_jira_table
   fi
 }
 
+## @description  Put the final environment information at the bottom
+## @description  of the footer table
+## @stability     stable
+## @audience     private
+## @replaceable  yes
+function close_jira_footer
+{
+  # shellcheck disable=SC2016
+  local -r javaversion=$("${JAVA_HOME}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \")
+  local -r unamea=$(uname -a)
+
+  add_jira_footer "Java" "${javaversion}"
+  add_jira_footer "uname" "${unamea}"
+}
+
 ## @description  Put the final elapsed time at the bottom of the table.
 ## @audience     private
 ## @stability    stable
@@ -2388,6 +2403,8 @@ check_mvn_install
 postinstall
 
 runtests
+
+close_jira_footer
 
 close_jira_table
 
