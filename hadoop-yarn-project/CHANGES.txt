@@ -132,6 +132,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3024. LocalizerRunner should give DIE action when all resources are
     localized. (Chengbing Liu via xgong)
 
+    YARN-3464. Race condition in LocalizerRunner kills localizer before 
+    localizing all resources. (Zhihai Xu via kasha)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
