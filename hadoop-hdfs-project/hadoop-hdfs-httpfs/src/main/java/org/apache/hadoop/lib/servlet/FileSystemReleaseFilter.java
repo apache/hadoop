@@ -64,8 +64,8 @@ public abstract class FileSystemReleaseFilter implements Filter {
    * @param servletResponse servlet response.
    * @param filterChain filter chain.
    *
-   * @throws IOException thrown if an IO error occurrs.
-   * @throws ServletException thrown if a servet error occurrs.
+   * @throws IOException thrown if an IO error occurs.
+   * @throws ServletException thrown if a servlet error occurs.
    */
   @Override
   public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
