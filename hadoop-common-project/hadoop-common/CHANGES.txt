@@ -519,6 +519,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10597. RPC Server signals backoff to clients when all request
     queues are full. (Ming Ma via Arpit Agarwal)
 
+    HADOOP-11357. Print information of the build enviornment in test-patch.sh
+    (aw)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
