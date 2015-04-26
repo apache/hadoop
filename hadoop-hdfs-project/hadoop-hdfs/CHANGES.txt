@@ -321,6 +321,8 @@ Trunk (Unreleased)
     HDFS-7673. synthetic load generator docs give incorrect/incomplete commands
     (Brahma Reddy Battula via aw)
 
+    HDFS-8206. Fix the typos in hadoop-hdfs-httpfs. (Brahma Reddy Battula via xyao)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

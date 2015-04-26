@@ -238,7 +238,7 @@ public class HttpFSFileSystem extends FileSystem
    * @return a <code>HttpURLConnection</code> for the HttpFSServer server,
    *         authenticated and ready to use for the specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(final String method,
       Map<String, String> params, Path path, boolean makeQualified)
@@ -263,7 +263,7 @@ public class HttpFSFileSystem extends FileSystem
    *         HttpFSServer server, authenticated and ready to use for the
    *         specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(final String method,
       Map<String, String> params, Map<String, List<String>> multiValuedParams,
@@ -301,7 +301,7 @@ public class HttpFSFileSystem extends FileSystem
    * @return a <code>HttpURLConnection</code> for the HttpFSServer server, authenticated and ready to use for
    *         the specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(URL url, String method) throws IOException {
     try {

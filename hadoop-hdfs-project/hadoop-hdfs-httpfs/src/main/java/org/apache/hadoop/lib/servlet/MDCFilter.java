@@ -66,8 +66,8 @@ public class MDCFilter implements Filter {
    * @param response servlet response.
    * @param chain filter chain.
    *
-   * @throws IOException thrown if an IO error occurrs.
-   * @throws ServletException thrown if a servet error occurrs.
+   * @throws IOException thrown if an IO error occurs.
+   * @throws ServletException thrown if a servlet error occurs.
    */
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
