@@ -445,6 +445,9 @@ Trunk (Unreleased)
 
     HADOOP-11797. releasedocmaker.py needs to put ASF headers on output (aw)
 
+    HADOOP-11865. Incorrect path mentioned in document for accessing script
+    files (J.Andreina via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

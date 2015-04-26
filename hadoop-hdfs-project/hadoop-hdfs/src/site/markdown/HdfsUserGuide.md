@@ -307,7 +307,7 @@ When Hadoop is upgraded on an existing cluster, as with any software upgrade, it
 
 *   Stop the cluster and distribute new version of Hadoop.
 
-*   Run the new version with `-upgrade` option (`bin/start-dfs.sh -upgrade`).
+*   Run the new version with `-upgrade` option (`sbin/start-dfs.sh -upgrade`).
 
 *   Most of the time, cluster works just fine. Once the new HDFS is
     considered working well (may be after a few days of operation),
@@ -319,7 +319,7 @@ When Hadoop is upgraded on an existing cluster, as with any software upgrade, it
 
     * stop the cluster and distribute earlier version of Hadoop.
 
-    * start the cluster with rollback option. (`bin/start-dfs.sh -rollback`).
+    * start the cluster with rollback option. (`sbin/start-dfs.sh -rollback`).
 
 When upgrading to a new version of HDFS, it is necessary to rename or delete any paths that are reserved in the new version of HDFS. If the NameNode encounters a reserved path during upgrade, it will print an error like the following:
 
