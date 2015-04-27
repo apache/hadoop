@@ -222,9 +222,9 @@ public class DFSAdmin extends FsShell {
     ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
       CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
+      c.addOptionWithValue("storageType");
       List<String> parameters = c.parse(args, pos);
-      String storageTypeString =
-          StringUtils.popOptionWithArgument("-storageType", parameters);
+      String storageTypeString = c.getOptValue("storageType");
       if (storageTypeString != null) {
         this.type = StorageType.parseStorageType(storageTypeString);
       }
