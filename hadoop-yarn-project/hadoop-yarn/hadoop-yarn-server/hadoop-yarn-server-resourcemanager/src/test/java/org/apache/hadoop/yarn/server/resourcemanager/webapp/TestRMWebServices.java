@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -623,6 +624,7 @@ public class TestRMWebServices extends JerseyTestBase {
         null, null, null, null, null);
     when(mockRM.getRMContext()).thenReturn(rmContext);
     when(mockRM.getClientRMService()).thenReturn(mockClientSvc);
+    rmContext.setNodeLabelManager(mock(RMNodeLabelsManager.class));
 
     RMWebServices webSvc = new RMWebServices(mockRM, new Configuration(),
         mock(HttpServletResponse.class));

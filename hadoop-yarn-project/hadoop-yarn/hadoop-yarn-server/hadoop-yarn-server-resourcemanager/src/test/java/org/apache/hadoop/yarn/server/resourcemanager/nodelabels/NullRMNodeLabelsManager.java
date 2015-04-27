@@ -40,7 +40,8 @@ public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
     this.store = new NodeLabelsStore(this) {
 
       @Override
-      public void recover() throws IOException {
+      public void recover(boolean ignoreNodeToLabelsMappings)
+          throws IOException {
         // do nothing
       }
 

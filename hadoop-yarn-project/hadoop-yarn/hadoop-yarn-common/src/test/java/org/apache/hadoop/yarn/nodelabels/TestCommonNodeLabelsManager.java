@@ -554,4 +554,29 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
       Assert.assertTrue(expectedAddedLabelNames.contains(label.getName()));
     }
   }
+
+  @Test(timeout = 5000)
+  public void testReplaceLabelsOnNodeInDistributedMode() throws Exception {
+    //create new DummyCommonNodeLabelsManager than the one got from @before
+    mgr.stop();
+    mgr = new DummyCommonNodeLabelsManager();
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    mgr.init(conf);
+    mgr.start();
+
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
+    Set<String> labelsByNode = mgr.getLabelsByNode(toNodeId("n1"));
+
+    Assert.assertNull(
+        "Labels are not expected to be written to the NodeLabelStore",
+        mgr.lastNodeToLabels);
+    Assert.assertNotNull("Updated labels should be available from the Mgr",
+        labelsByNode);
+    Assert.assertTrue(labelsByNode.contains("p1"));
+  }
 }

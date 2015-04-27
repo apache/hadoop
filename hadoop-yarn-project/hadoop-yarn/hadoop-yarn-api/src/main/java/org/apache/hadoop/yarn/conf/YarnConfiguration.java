@@ -1779,6 +1779,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
       CENTALIZED_NODELABEL_CONFIGURATION_TYPE;
 
+  @Private
+  public static boolean isDistributedNodeLabelConfiguration(Configuration conf) {
+    return DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
+        NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
+  }
+
   public YarnConfiguration() {
     super();
   }

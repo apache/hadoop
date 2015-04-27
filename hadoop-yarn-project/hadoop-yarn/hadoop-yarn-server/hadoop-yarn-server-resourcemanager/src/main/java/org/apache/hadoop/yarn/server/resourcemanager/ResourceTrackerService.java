@@ -104,7 +104,7 @@ public class ResourceTrackerService extends AbstractService implements
   private int minAllocMb;
   private int minAllocVcores;
 
-  private boolean isDistributesNodeLabelsConf;
+  private boolean isDistributedNodeLabelsConf;
 
   static {
     resync.setNodeAction(NodeAction.RESYNC);
@@ -155,13 +155,8 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
 
-    String nodeLabelConfigurationType =
-        conf.get(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
-            YarnConfiguration.DEFAULT_NODELABEL_CONFIGURATION_TYPE);
-
-    isDistributesNodeLabelsConf =
-        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE
-            .equals(nodeLabelConfigurationType);
+    isDistributedNodeLabelsConf =
+        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
 
     super.serviceInit(conf);
   }
@@ -352,7 +347,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     // Update node's labels to RM's NodeLabelManager.
     Set<String> nodeLabels = request.getNodeLabels();
-    if (isDistributesNodeLabelsConf && nodeLabels != null) {
+    if (isDistributedNodeLabelsConf && nodeLabels != null) {
       try {
         updateNodeLabelsFromNMReport(nodeLabels, nodeId);
         response.setAreNodeLabelsAcceptedByRM(true);
@@ -470,7 +465,7 @@ public class ResourceTrackerService extends AbstractService implements
     this.rmContext.getDispatcher().getEventHandler().handle(nodeStatusEvent);
 
     // 5. Update node's labels to RM's NodeLabelManager.
-    if (isDistributesNodeLabelsConf && request.getNodeLabels() != null) {
+    if (isDistributedNodeLabelsConf && request.getNodeLabels() != null) {
       try {
         updateNodeLabelsFromNMReport(request.getNodeLabels(), nodeId);
         nodeHeartBeatResponse.setAreNodeLabelsAcceptedByRM(true);

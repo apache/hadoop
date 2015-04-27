@@ -265,6 +265,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3530. ATS throws exception on trying to filter results without otherinfo.
     (zhijie shen via xgong)
 
+    YARN-2740. Fix NodeLabelsManager to properly handle node label modifications 
+    when distributed node label configuration enabled. (Naganarasimha G R via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

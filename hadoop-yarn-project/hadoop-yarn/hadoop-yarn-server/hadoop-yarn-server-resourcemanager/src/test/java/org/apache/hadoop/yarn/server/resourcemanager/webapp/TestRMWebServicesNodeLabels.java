@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.StringWriter;
 
 import javax.ws.rs.core.MediaType;
@@ -51,7 +51,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
@@ -66,13 +65,13 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   private String userName;
   private String notUserName;
+  private RMWebServices rmWebService;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
+
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
       try {
         userName = UserGroupInformation.getCurrentUser().getShortUserName();
       } catch (IOException ioe) {
@@ -83,6 +82,9 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       conf = new YarnConfiguration();
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
       rm = new MockRM(conf);
+      rmWebService = new RMWebServices(rm,conf);
+      bind(RMWebServices.class).toInstance(rmWebService);
+      bind(GenericExceptionHandler.class);
       bind(ResourceManager.class).toInstance(rm);
       filter("/*").through(
           TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
@@ -113,7 +115,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ClientResponse response;
     JSONObject json;
     JSONArray jarr;
-    String responseString;
 
     // Add a label
     response =
@@ -386,6 +387,93 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     String res = response.getEntity(String.class);
     assertTrue(res.equals("null"));
+
+    // Following test cases are to test replace when distributed node label
+    // configuration is on
+    // Reset for testing : add cluster labels
+    response =
+        r.path("ws")
+            .path("v1")
+            .path("cluster")
+            .path("add-node-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\":[\"x\",\"y\"]}",
+                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    // Reset for testing : Add labels to a node
+    response =
+        r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
+            .path("replace-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\": [\"y\"]}", MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    LOG.info("posted node nodelabel");
+
+    //setting rmWebService for Distributed NodeLabel Configuration
+    rmWebService.isDistributedNodeLabelConfiguration = true;
+
+    // Case1 : Replace labels using node-to-labels
+    ntli = new NodeToLabelsInfo();
+    nli = new NodeLabelsInfo();
+    nli.getNodeLabels().add("x");
+    ntli.getNodeToLabels().put("nid:0", nli);
+    response =
+        r.path("ws")
+            .path("v1")
+            .path("cluster")
+            .path("replace-node-to-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(ntli, NodeToLabelsInfo.class),
+                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+
+    // Verify, using node-to-labels that previous operation has failed
+    response =
+        r.path("ws").path("v1").path("cluster").path("get-node-to-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    ntli = response.getEntity(NodeToLabelsInfo.class);
+    nli = ntli.getNodeToLabels().get("nid:0");
+    assertEquals(1, nli.getNodeLabels().size());
+    assertFalse(nli.getNodeLabels().contains("x"));
+
+    // Case2 : failure to Replace labels using replace-labels
+    response =
+        r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
+            .path("replace-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\": [\"x\"]}", MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    LOG.info("posted node nodelabel");
+
+    // Verify, using node-to-labels that previous operation has failed
+    response =
+        r.path("ws").path("v1").path("cluster").path("get-node-to-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    ntli = response.getEntity(NodeToLabelsInfo.class);
+    nli = ntli.getNodeToLabels().get("nid:0");
+    assertEquals(1, nli.getNodeLabels().size());
+    assertFalse(nli.getNodeLabels().contains("x"));
+
+    //  Case3 : Remove cluster label should be successfull
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("remove-node-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\":\"x\"}", MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    // Verify
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("get-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    json = response.getEntity(JSONObject.class);
+    assertEquals("y", json.getString("nodeLabels"));
   }
 
   @SuppressWarnings("rawtypes")
@@ -396,13 +484,4 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     jm.marshallToJSON(nsli, sw);
     return sw.toString();
   }
-
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  private Object fromJson(String json, Class klass) throws Exception {
-    StringReader sr = new StringReader(json);
-    JSONJAXBContext ctx = new JSONJAXBContext(klass);
-    JSONUnmarshaller jm = ctx.createJSONUnmarshaller();
-    return jm.unmarshalFromJSON(sr, klass);
-  }
-
 }
