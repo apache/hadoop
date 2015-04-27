@@ -58,13 +58,6 @@
 </property>
 
 <property>
-  <name>mapreduce.local.clientfactory.class.name</name>
-  <value>org.apache.hadoop.mapred.LocalClientFactory</value>
-  <description>This the client factory that is responsible for 
-  creating local job runner client</description>
-</property>
-
-<property>
   <name>mapreduce.job.maps</name>
   <value>2</value>
   <description>The default number of map tasks per job.
@@ -880,30 +873,6 @@
     next, to the MR ApplicationMaster. So that on failures, the MR AM
     knows which ones are possibly the bad records. On further executions,
     those are skipped.
-    </description>
-  </property>
-  
-  <property>
-    <name>mapreduce.map.skip.proc.count.autoincr</name>
-    <value>true</value>
-    <description> The flag which if set to true, 
-    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
-    by MapRunner after invoking the map function. This value must be set to 
-    false for applications which process the records asynchronously 
-    or buffer the input records. For example streaming. 
-    In such cases applications should increment this counter on their own.
-    </description>
-  </property>
-  
-  <property>
-    <name>mapreduce.reduce.skip.proc.count.autoincr</name>
-    <value>true</value>
-    <description> The flag which if set to true, 
-    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
-    by framework after invoking the reduce function. This value must be set to 
-    false for applications which process the records asynchronously 
-    or buffer the input records. For example streaming. 
-    In such cases applications should increment this counter on their own.
     </description>
   </property>
   

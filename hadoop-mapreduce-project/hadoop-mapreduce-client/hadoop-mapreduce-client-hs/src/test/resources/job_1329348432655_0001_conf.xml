@@ -93,7 +93,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.input.buffer.percent</name><value>0.0</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.output.compress.codec</name><value>org.apache.hadoop.io.compress.DefaultCodec</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.delegation-token.keepalive-time-ms</name><value>300000</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.map.skip.proc.count.autoincr</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.directoryscan.threads</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.address</name><value>local</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.cluster.local.dir</name><value>${hadoop.tmp.dir}/mapred/local</value></property>
@@ -197,7 +196,6 @@
 <property><!--Loaded from job.xml--><name>dfs.block.access.key.update.interval</name><value>600</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobhistory.move.interval-ms</name><value>30000</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.dns.interface</name><value>default</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.reduce.skip.proc.count.autoincr</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.backup.http-address</name><value>0.0.0.0:50105</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.container-monitor.interval-ms</name><value>3000</value></property>
 <property><!--Loaded from job.xml--><name>mapred.reducer.new-api</name><value>true</value></property>
@@ -290,7 +288,6 @@
 <property><!--Loaded from job.xml--><name>yarn.app.mapreduce.am.command-opts</name><value>-Xmx500m</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.admin.user.env</name><value>LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.checkpoint.edits.dir</name><value>${dfs.namenode.checkpoint.dir}</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.local.clientfactory.class.name</name><value>org.apache.hadoop.mapred.LocalClientFactory</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.common.configuration.version</name><value>0.23.0</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.dns.interface</name><value>default</value></property>
 <property><!--Loaded from job.xml--><name>io.serializations</name><value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value></property>
@@ -380,7 +377,6 @@
 <property><!--Loaded from job.xml--><name>fs.AbstractFileSystem.viewfs.impl</name><value>org.apache.hadoop.fs.viewfs.ViewFs</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.resource-tracker.client.thread-count</name><value>50</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.dns.nameserver</name><value>default</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.clientfactory.class.name</name><value>org.apache.hadoop.mapred.YarnClientFactory</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.output.compress</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.counters.limit</name><value>120</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.ipc.address</name><value>0.0.0.0:50020</value></property>

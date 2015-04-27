@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.util.Apps;
 @InterfaceStability.Evolving
 public interface MRJobConfig {
 
+  // Used by MapTask
+  public static final String MAP_SORT_CLASS = "map.sort.class";
+
   // Put all of the attribute names in here so that Job and JobContext are
   // consistent.
   public static final String INPUT_FORMAT_CLASS_ATTR = "mapreduce.job.inputformat.class";
