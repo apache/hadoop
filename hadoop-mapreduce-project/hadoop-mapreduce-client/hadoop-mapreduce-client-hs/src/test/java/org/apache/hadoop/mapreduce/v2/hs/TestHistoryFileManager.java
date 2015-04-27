@@ -21,13 +21,17 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.util.UUID;
+import java.util.List;
 
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -44,6 +48,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import static org.mockito.Mockito.*;
 
 public class TestHistoryFileManager {
   private static MiniDFSCluster dfsCluster = null;
@@ -197,6 +203,22 @@ public class TestHistoryFileManager {
       }
     }.start();
     testCreateHistoryDirs(dfsCluster.getConfiguration(0), clock);
+  }
+
+  @Test
+  public void testScanDirectory() throws Exception {
+
+    Path p = new Path("any");
+    FileContext fc = mock(FileContext.class);
+    when(fc.makeQualified(p)).thenReturn(p);
+    when(fc.listStatus(p)).thenThrow(new FileNotFoundException());
+
+    List<FileStatus> lfs = HistoryFileManager.scanDirectory(p, fc, null);
+
+    //primarily, succcess is that an exception was not thrown.  Also nice to
+    //check this
+    Assert.assertNotNull(lfs);
+
   }
 
 }
