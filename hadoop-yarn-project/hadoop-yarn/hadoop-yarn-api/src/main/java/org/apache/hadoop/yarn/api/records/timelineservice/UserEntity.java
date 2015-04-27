@@ -20,16 +20,17 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-
-@XmlRootElement(name = "user")
-@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class TimelineUser extends TimelineEntity {
-  public TimelineUser() {
+public class UserEntity extends TimelineEntity {
+  public UserEntity() {
     super(TimelineEntityType.YARN_USER.toString());
+  }
+
+  public UserEntity(TimelineEntity entity) {
+    super(entity);
+    if (!entity.getType().equals(TimelineEntityType.YARN_USER.toString())) {
+      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+    }
   }
 }
