@@ -210,7 +210,9 @@ Assuming that:
 
 Sample text-files as input:
 
-    $ bin/hadoop fs -ls /user/joe/wordcount/input/ /user/joe/wordcount/input/file01 /user/joe/wordcount/input/file02
+    $ bin/hadoop fs -ls /user/joe/wordcount/input/
+    /user/joe/wordcount/input/file01
+    /user/joe/wordcount/input/file02
     
     $ bin/hadoop fs -cat /user/joe/wordcount/input/file01
     Hello World Bye World
@@ -224,12 +226,12 @@ Run the application:
 
 Output:
 
-    $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000`
+    $ bin/hadoop fs -cat /user/joe/wordcount/output/part-r-00000
     Bye 1
     Goodbye 1
     Hadoop 2
     Hello 2
-    World 2`
+    World 2
 
 Applications can specify a comma separated list of paths which would be present in the current working directory of the task using the option `-files`. The `-libjars` option allows applications to add jars to the classpaths of the maps and reduces. The option `-archives` allows them to pass comma separated list of archives as arguments. These archives are unarchived and a link with name of the archive is created in the current working directory of tasks. More details about the command line options are available at [Commands Guide](../../hadoop-project-dist/hadoop-common/CommandsManual.html).
 
@@ -288,13 +290,13 @@ The output of the first map:
 
     < Bye, 1>
     < Hello, 1>
-    < World, 2>`
+    < World, 2>
 
 The output of the second map:
 
     < Goodbye, 1>
     < Hadoop, 2>
-    < Hello, 1>`
+    < Hello, 1>
 
 ```java
 public void reduce(Text key, Iterable<IntWritable> values,

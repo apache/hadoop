@@ -352,6 +352,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6252. JobHistoryServer should not fail when encountering a 
     missing directory. (Craig Welch via devaraj)
 
+    MAPREDUCE-6341. Fix typo in mapreduce tutorial. (John Michael Luy
+    via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
