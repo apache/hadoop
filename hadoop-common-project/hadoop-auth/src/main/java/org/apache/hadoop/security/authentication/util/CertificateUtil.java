@@ -36,7 +36,8 @@ public class CertificateUtil {
    *
    * @param pem
    *          - the pem encoding from config without the header and footer
-   * @return RSAPublicKey
+   * @return RSAPublicKey the RSA public key
+   * @throws ServletException thrown if a processing error occurred
    */
   public static RSAPublicKey parseRSAPublicKey(String pem) throws ServletException {
     String fullPem = PEM_HEADER + pem + PEM_FOOTER;

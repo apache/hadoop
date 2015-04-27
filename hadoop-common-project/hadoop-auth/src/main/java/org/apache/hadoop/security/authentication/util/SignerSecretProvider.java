@@ -34,7 +34,7 @@ public abstract class SignerSecretProvider {
    * @param config configuration properties
    * @param servletContext servlet context
    * @param tokenValidity The amount of time a token is valid for
-   * @throws Exception
+   * @throws Exception thrown if an error occurred
    */
   public abstract void init(Properties config, ServletContext servletContext,
           long tokenValidity) throws Exception;
