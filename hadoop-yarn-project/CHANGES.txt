@@ -233,9 +233,6 @@ Release 2.8.0 - UNRELEASED
     YARN-2890. MiniYarnCluster should turn on timeline service if
     configured to do so. (Mit Desai via hitesh)
 
-    YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
-    (Zhihai Xu via kasha)
-
     YARN-3266. RMContext#inactiveNodes should have NodeId as map key.
     (Chengbing Liu via jianhe)
 
@@ -257,9 +254,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3434. Interaction between reservations and userlimit can result in 
     significant ULF violation (tgraves)
 
-    YARN-3516. killing ContainerLocalizer action doesn't take effect when
-    private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
-
     YARN-3387. Previous AM's container completed status couldn't pass to current
     AM if AM and RM restarted during the same time. (sandflee via jianhe)
 
@@ -267,9 +261,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3537. NPE when NodeManager.serviceInit fails and stopRecoveryStore
     invoked (Brahma Reddy Battula via jlowe)
-
-    YARN-3464. Race condition in LocalizerRunner kills localizer before 
-    localizing all resources. (Zhihai Xu via kasha)
 
     YARN-3530. ATS throws exception on trying to filter results without otherinfo.
     (zhijie shen via xgong)
@@ -305,6 +296,15 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3472. Fixed possible leak in DelegationTokenRenewer#allTokens.
     (Rohith Sharmaks via jianhe)
+
+    YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
+    (Zhihai Xu via kasha)
+
+    YARN-3516. killing ContainerLocalizer action doesn't take effect when
+    private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
+
+    YARN-3464. Race condition in LocalizerRunner kills localizer before 
+    localizing all resources. (Zhihai Xu via kasha)
 
 Release 2.7.0 - 2015-04-20
 
