@@ -589,6 +589,13 @@ public class AuthenticationFilter implements Filter {
   /**
    * Delegates call to the servlet filter chain. Sub-classes my override this
    * method to perform pre and post tasks.
+   *
+   * @param filterChain the filter chain object.
+   * @param request the request object.
+   * @param response the response object.
+   *
+   * @throws IOException thrown if an IO error occurred.
+   * @throws ServletException thrown if a processing error occurred.
    */
   protected void doFilter(FilterChain filterChain, HttpServletRequest request,
       HttpServletResponse response) throws IOException, ServletException {
@@ -598,9 +605,15 @@ public class AuthenticationFilter implements Filter {
   /**
    * Creates the Hadoop authentication HTTP cookie.
    *
+   * @param resp the response object.
    * @param token authentication token for the cookie.
+   * @param domain the cookie domain.
+   * @param path the cokie path.
    * @param expires UNIX timestamp that indicates the expire date of the
    *                cookie. It has no effect if its value &lt; 0.
+   * @param isSecure is the cookie secure?
+   * @param token the token.
+   * @param expires the cookie expiration time.
    *
    * XXX the following code duplicate some logic in Jetty / Servlet API,
    * because of the fact that Hadoop is stuck at servlet 2.5 and jetty 6
