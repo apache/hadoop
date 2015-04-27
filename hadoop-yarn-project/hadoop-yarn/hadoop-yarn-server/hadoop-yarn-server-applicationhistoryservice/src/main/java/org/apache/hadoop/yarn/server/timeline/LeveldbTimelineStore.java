@@ -357,6 +357,9 @@ public class LeveldbTimelineStore extends AbstractService
       iterator = new LeveldbIterator(db);
       iterator.seek(prefix);
 
+      if (fields == null) {
+        fields = EnumSet.allOf(Field.class);
+      }
       return getEntity(entityId, entityType, revStartTime, fields, iterator,
           prefix, prefix.length);
     } catch(DBException e) {
@@ -373,10 +376,6 @@ public class LeveldbTimelineStore extends AbstractService
   private static TimelineEntity getEntity(String entityId, String entityType,
       Long startTime, EnumSet<Field> fields, LeveldbIterator iterator,
       byte[] prefix, int prefixlen) throws IOException {
-    if (fields == null) {
-      fields = EnumSet.allOf(Field.class);
-    }
-
     TimelineEntity entity = new TimelineEntity();
     boolean events = false;
     boolean lastEvent = false;
@@ -590,6 +589,25 @@ public class LeveldbTimelineStore extends AbstractService
       String entityType, Long limit, Long starttime, Long endtime,
       String fromId, Long fromTs, Collection<NameValuePair> secondaryFilters,
       EnumSet<Field> fields, CheckAcl checkAcl) throws IOException {
+    // Even if other info and primary filter fields are not included, we
+    // still need to load them to match secondary filters when they are
+    // non-empty
+    if (fields == null) {
+      fields = EnumSet.allOf(Field.class);
+    }
+    boolean addPrimaryFilters = false;
+    boolean addOtherInfo = false;
+    if (secondaryFilters != null && secondaryFilters.size() > 0) {
+      if (!fields.contains(Field.PRIMARY_FILTERS)) {
+        fields.add(Field.PRIMARY_FILTERS);
+        addPrimaryFilters = true;
+      }
+      if (!fields.contains(Field.OTHER_INFO)) {
+        fields.add(Field.OTHER_INFO);
+        addOtherInfo = true;
+      }
+    }
+
     LeveldbIterator iterator = null;
     try {
       KeyBuilder kb = KeyBuilder.newInstance().add(base).add(entityType);
@@ -690,6 +708,14 @@ public class LeveldbTimelineStore extends AbstractService
             entity.setDomainId(DEFAULT_DOMAIN_ID);
           }
           if (checkAcl == null || checkAcl.check(entity)) {
+            // Remove primary filter and other info if they are added for
+            // matching secondary filters
+            if (addPrimaryFilters) {
+              entity.setPrimaryFilters(null);
+            }
+            if (addOtherInfo) {
+              entity.setOtherInfo(null);
+            }
             entities.addEntity(entity);
           }
         }

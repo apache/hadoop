@@ -271,6 +271,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3464. Race condition in LocalizerRunner kills localizer before 
     localizing all resources. (Zhihai Xu via kasha)
 
+    YARN-3530. ATS throws exception on trying to filter results without otherinfo.
+    (zhijie shen via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
