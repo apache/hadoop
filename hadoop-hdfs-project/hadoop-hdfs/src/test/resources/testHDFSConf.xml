@@ -7722,6 +7722,44 @@
     </test>
 
     <test> <!-- TESTED -->
+      <description>setSpaceQuota -storageType: directory with quota by storage type</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ttt</command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m -storageType DISK /ttt </dfs-admin-command>
+        <command>-fs NAMENODE -count -q -t DISK /ttt</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /ttt</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*1048576( |\t)*1048576 /ttt</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>clrSpaceQuota -storageType: directory quota by storage type</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ttt</command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m -storageType DISK /ttt </dfs-admin-command>
+        <command>-fs NAMENODE -count -q -t DISK /ttt</command>
+        <dfs-admin-command>-fs NAMENODE -clrSpaceQuota -storageType DISK /ttt </dfs-admin-command>
+        <command>-fs NAMENODE -count -q -t DISK /ttt</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /ttt</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*none( |\t)*inf /ttt</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>count: directory using relative path with -q option</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir -p dir1</command>

@@ -114,7 +114,8 @@ public class CommandFormat {
         options.put(opt, Boolean.TRUE);
       } else if (optionsWithValue.containsKey(opt)) {
         args.remove(pos);
-        if (pos < args.size() && (args.size() > minPar)) {
+        if (pos < args.size() && (args.size() > minPar)
+                && !args.get(pos).startsWith("-")) {
           arg = args.get(pos);
           args.remove(pos);
         } else {

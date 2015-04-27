@@ -316,6 +316,34 @@ public class TestCount {
   }
 
   @Test
+  public void processPathWithQuotasByQTVH() throws Exception {
+    Path path = new Path("mockfs:/test");
+
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-q");
+    options.add("-t");
+    options.add("-v");
+    options.add("-h");
+    options.add("dummy");
+    count.processOptions(options);
+    String withStorageTypeHeader =
+        // <----13---> <-------17------>
+        "   DISK_QUOTA    REM_DISK_QUOTA " +
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
+        "PATHNAME";
+    verify(out).println(withStorageTypeHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
   public void processPathWithQuotasByMultipleStorageTypesContent() throws Exception {
     Path path = new Path("mockfs:/test");
 
