@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetricHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
@@ -104,6 +105,9 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -316,6 +320,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     lazyWriter = new Daemon(new LazyWriter(conf));
     lazyWriter.start();
     registerMBean(datanode.getDatanodeUuid());
+
+    // Add a Metrics2 Source Interface. This is same
+    // data as MXBean. We can remove the registerMbean call
+    // in a release where we can break backward compatibility
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    ms.register("FSDatasetState", "FSDatasetState", this);
+
     localFS = FileSystem.getLocal(conf);
     blockPinningEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED,
@@ -634,6 +645,22 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FSDatasetMBean
   public long getNumBlocksFailedToUncache() {
     return cacheManager.getNumBlocksFailedToUncache();
+  }
+
+  /**
+   * Get metrics from the metrics source
+   *
+   * @param collector to contain the resulting metrics snapshot
+   * @param all if true, return all metrics even if unchanged.
+   */
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    try {
+      DataNodeMetricHelper.getMetrics(collector, this, "FSDatasetState");
+    } catch (Exception e) {
+        LOG.warn("Exception thrown while metric collection. Exception : "
+          + e.getMessage());
+    }
   }
 
   @Override // FSDatasetMBean

@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ClosedChannelException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -52,6 +50,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetricHelper;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -60,9 +59,9 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
  * This class implements a simulated FSDataset.
@@ -688,6 +687,21 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public long getNumBlocksFailedToUncache() {
     return 0l;
+  }
+
+  /**
+   * Get metrics from the metrics source
+   *
+   * @param collector to contain the resulting metrics snapshot
+   * @param all if true, return all metrics even if unchanged.
+   */
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    try {
+      DataNodeMetricHelper.getMetrics(collector, this, "SimulatedFSDataset");
+    } catch (Exception e){
+        //ignore Exceptions
+    }
   }
 
   @Override // FsDatasetSpi
