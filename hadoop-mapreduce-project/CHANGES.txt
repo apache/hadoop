@@ -3,6 +3,7 @@ Hadoop MapReduce Change Log
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
+
     MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically.
     (Gera Shegalov and Karthik Kambatla via gera)
 
@@ -371,6 +372,9 @@ Release 2.7.1 - UNRELEASED
 
     MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
     which is a regression from MR1 (zxu via rkanter)
+
+    MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
+    tokens when they roll-over. (Jason Lowe via vinodkv)
 
 Release 2.7.0 - 2015-04-20
 
