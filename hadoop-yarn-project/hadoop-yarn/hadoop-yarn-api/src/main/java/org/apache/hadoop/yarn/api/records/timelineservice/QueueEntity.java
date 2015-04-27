@@ -20,16 +20,17 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-
-@XmlRootElement(name = "queue")
-@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class TimelineQueue extends HierarchicalTimelineEntity {
-  public TimelineQueue() {
+public class QueueEntity extends HierarchicalTimelineEntity {
+  public QueueEntity() {
     super(TimelineEntityType.YARN_QUEUE.toString());
+  }
+
+  public QueueEntity(TimelineEntity entity) {
+    super(entity);
+    if (!entity.getType().equals(TimelineEntityType.YARN_QUEUE.toString())) {
+      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+    }
   }
 }

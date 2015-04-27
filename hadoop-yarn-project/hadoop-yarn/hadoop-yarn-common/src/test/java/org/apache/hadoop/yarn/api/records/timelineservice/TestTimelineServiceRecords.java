@@ -23,8 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Test;
+import org.junit.Assert;
+
+import java.util.Collections;
 
 
 public class TestTimelineServiceRecords {
@@ -87,10 +91,10 @@ public class TestTimelineServiceRecords {
 
   @Test
   public void testFirstClassCitizenEntities() throws Exception {
-    TimelineUser user = new TimelineUser();
+    UserEntity user = new UserEntity();
     user.setId("test user id");
 
-    TimelineQueue queue = new TimelineQueue();
+    QueueEntity queue = new QueueEntity();
     queue.setId("test queue id");
 
 
@@ -98,20 +102,26 @@ public class TestTimelineServiceRecords {
     cluster.setId("test cluster id");
 
     FlowEntity flow1 = new FlowEntity();
-    flow1.setId("test flow id");
+    //flow1.setId("test flow id 1");
     flow1.setUser(user.getId());
-    flow1.setVersion("test flow version");
-    flow1.setRun("test run 1");
+    flow1.setName("test flow name 1");
+    flow1.setVersion("test flow version 1");
+    flow1.setRunId(1L);
 
     FlowEntity flow2 = new FlowEntity();
-    flow2.setId("test flow run id2");
+    //flow2.setId("test flow run id 2");
     flow2.setUser(user.getId());
-    flow1.setVersion("test flow version2");
-    flow2.setRun("test run 2");
+    flow2.setName("test flow name 2");
+    flow2.setVersion("test flow version 2");
+    flow2.setRunId(2L);
 
-    ApplicationEntity app = new ApplicationEntity();
-    app.setId(ApplicationId.newInstance(0, 1).toString());
-    app.setQueue(queue.getId());
+    ApplicationEntity app1 = new ApplicationEntity();
+    app1.setId(ApplicationId.newInstance(0, 1).toString());
+    app1.setQueue(queue.getId());
+
+    ApplicationEntity app2 = new ApplicationEntity();
+    app2.setId(ApplicationId.newInstance(0, 2).toString());
+    app2.setQueue(queue.getId());
 
     ApplicationAttemptEntity appAttempt = new ApplicationAttemptEntity();
     appAttempt.setId(ApplicationAttemptId.newInstance(
@@ -127,12 +137,14 @@ public class TestTimelineServiceRecords {
         .setParent(TimelineEntityType.YARN_CLUSTER.toString(), cluster.getId());
     flow1.addChild(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
     flow2.setParent(TimelineEntityType.YARN_FLOW.toString(), flow1.getId());
-    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app.getId());
-    app.setParent(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
-    app.addChild(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
+    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
+    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app2.getId());
+    app1.setParent(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
+    app1.addChild(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
         appAttempt.getId());
     appAttempt
-        .setParent(TimelineEntityType.YARN_APPLICATION.toString(), app.getId());
+        .setParent(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
+    app2.setParent(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
     appAttempt.addChild(TimelineEntityType.YARN_CONTAINER.toString(),
         container.getId());
     container.setParent(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
@@ -141,14 +153,57 @@ public class TestTimelineServiceRecords {
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(cluster, true));
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(flow1, true));
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(flow2, true));
-    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(app, true));
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(app1, true));
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(app2, true));
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(appAttempt, true));
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(container, true));
+
+
+    // Check parent/children APIs
+    Assert.assertNotNull(app1.getParent());
+    Assert.assertEquals(flow2.getType(), app1.getParent().getType());
+    Assert.assertEquals(flow2.getId(), app1.getParent().getId());
+    app1.addInfo(ApplicationEntity.PARENT_INFO_KEY, "invalid parent object");
+    try {
+      app1.getParent();
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof YarnRuntimeException);
+      Assert.assertTrue(e.getMessage().contains(
+          "Parent info is invalid identifier object"));
+    }
+
+    Assert.assertNotNull(app1.getChildren());
+    Assert.assertEquals(1, app1.getChildren().size());
+    Assert.assertEquals(
+        appAttempt.getType(), app1.getChildren().iterator().next().getType());
+    Assert.assertEquals(
+        appAttempt.getId(), app1.getChildren().iterator().next().getId());
+    app1.addInfo(ApplicationEntity.CHILDREN_INFO_KEY,
+        Collections.singletonList("invalid children set"));
+    try {
+      app1.getChildren();
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof YarnRuntimeException);
+      Assert.assertTrue(e.getMessage().contains(
+          "Children info is invalid identifier set"));
+    }
+    app1.addInfo(ApplicationEntity.CHILDREN_INFO_KEY,
+        Collections.singleton("invalid child object"));
+    try {
+      app1.getChildren();
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof YarnRuntimeException);
+      Assert.assertTrue(e.getMessage().contains(
+          "Children info contains invalid identifier object"));
+    }
   }
 
   @Test
   public void testUser() throws Exception {
-    TimelineUser user = new TimelineUser();
+    UserEntity user = new UserEntity();
     user.setId("test user id");
     user.addInfo("test info key 1", "test info value 1");
     user.addInfo("test info key 2", "test info value 2");
@@ -157,7 +212,7 @@ public class TestTimelineServiceRecords {
 
   @Test
   public void testQueue() throws Exception {
-    TimelineQueue queue = new TimelineQueue();
+    QueueEntity queue = new QueueEntity();
     queue.setId("test queue id");
     queue.addInfo("test info key 1", "test info value 1");
     queue.addInfo("test info key 2", "test info value 2");

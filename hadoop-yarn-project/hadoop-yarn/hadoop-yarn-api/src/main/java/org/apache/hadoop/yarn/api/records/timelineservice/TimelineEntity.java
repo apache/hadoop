@@ -34,12 +34,18 @@ import java.util.Set;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class TimelineEntity {
+  protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
 
   @XmlRootElement(name = "identifier")
   @XmlAccessorType(XmlAccessType.NONE)
   public static class Identifier {
     private String type;
     private String id;
+
+    public Identifier(String type, String id) {
+      this.type = type;
+      this.id = id;
+    }
 
     public Identifier() {
 
@@ -62,8 +68,16 @@ public class TimelineEntity {
     public void setId(String id) {
       this.id = id;
     }
+
+    @Override
+    public String toString() {
+      return "TimelineEntity[" +
+          "type='" + type + '\'' +
+          ", id='" + id + '\'' + "]";
+    }
   }
 
+  private TimelineEntity real;
   private Identifier identifier;
   private HashMap<String, Object> info = new HashMap<>();
   private HashMap<String, Object> configs = new HashMap<>();
@@ -78,6 +92,22 @@ public class TimelineEntity {
     identifier = new Identifier();
   }
 
+  /**
+   * <p>
+   * The constuctor is used to construct a proxy {@link TimelineEntity} or its
+   * subclass object from the real entity object that carries information.
+   * </p>
+   *
+   * <p>
+   * It is usually used in the case where we want to recover class polymorphism
+   * after deserializing the entity from its JSON form.
+   * </p>
+   * @param entity the real entity that carries information
+   */
+  public TimelineEntity(TimelineEntity entity) {
+    real = entity.getReal();
+  }
+
   protected TimelineEntity(String type) {
     this();
     identifier.type = type;
@@ -85,216 +115,378 @@ public class TimelineEntity {
 
   @XmlElement(name = "type")
   public String getType() {
-    return identifier.type;
+    if (real == null) {
+      return identifier.type;
+    } else {
+      return real.getType();
+    }
   }
 
   public void setType(String type) {
-    identifier.type = type;
+    if (real == null) {
+      identifier.type = type;
+    } else {
+      real.setType(type);
+    }
   }
 
   @XmlElement(name = "id")
   public String getId() {
-    return identifier.id;
+    if (real == null) {
+      return identifier.id;
+    } else {
+      return real.getId();
+    }
   }
 
   public void setId(String id) {
-    identifier.id = id;
+    if (real == null) {
+      identifier.id = id;
+    } else {
+      real.setId(id);
+    }
   }
 
   public Identifier getIdentifier() {
-    return identifier;
+    if (real == null) {
+      return identifier;
+    } else {
+      return real.getIdentifier();
+    }
   }
 
   public void setIdentifier(Identifier identifier) {
-    this.identifier = identifier;
+    if (real == null) {
+      this.identifier = identifier;
+    } else {
+      real.setIdentifier(identifier);
+    }
   }
 
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "info")
   public HashMap<String, Object> getInfoJAXB() {
-    return info;
+    if (real == null) {
+      return info;
+    } else {
+      return real.getInfoJAXB();
+    }
   }
 
   public Map<String, Object> getInfo() {
-    return info;
+    if (real == null) {
+      return info;
+    } else {
+      return real.getInfo();
+    }
   }
 
   public void setInfo(Map<String, Object> info) {
-    if (info != null && !(info instanceof HashMap)) {
-      this.info = new HashMap<String, Object>(info);
+    if (real == null) {
+      if (info != null && !(info instanceof HashMap)) {
+        this.info = new HashMap<String, Object>(info);
+      } else {
+        this.info = (HashMap<String, Object>) info;
+      }
     } else {
-      this.info = (HashMap<String, Object>) info;
+      real.setInfo(info);
     }
   }
 
   public void addInfo(Map<String, Object> info) {
-    this.info.putAll(info);
+    if (real == null) {
+      this.info.putAll(info);
+    } else {
+      real.addInfo(info);
+    }
   }
 
   public void addInfo(String key, Object value) {
-    info.put(key, value);
+    if (real == null) {
+      info.put(key, value);
+    } else {
+      real.addInfo(key, value);
+    }
   }
 
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "configs")
   public HashMap<String, Object> getConfigsJAXB() {
-    return configs;
+    if (real == null) {
+      return configs;
+    } else {
+      return real.getConfigsJAXB();
+    }
   }
 
   public Map<String, Object> getConfigs() {
-    return configs;
+    if (real == null) {
+      return configs;
+    } else {
+      return real.getConfigs();
+    }
   }
 
   public void setConfigs(Map<String, Object> configs) {
-    if (configs != null && !(configs instanceof HashMap)) {
-      this.configs = new HashMap<String, Object>(configs);
+    if (real == null) {
+      if (configs != null && !(configs instanceof HashMap)) {
+        this.configs = new HashMap<String, Object>(configs);
+      } else {
+        this.configs = (HashMap<String, Object>) configs;
+      }
     } else {
-      this.configs = (HashMap<String, Object>) configs;
+      real.setConfigs(configs);
     }
   }
 
   public void addConfigs(Map<String, Object> configs) {
-    this.configs.putAll(configs);
+    if (real == null) {
+      this.configs.putAll(configs);
+    } else {
+      real.addConfigs(configs);
+    }
   }
 
   public void addConfig(String key, Object value) {
-    configs.put(key, value);
+    if (real == null) {
+      configs.put(key, value);
+    } else {
+      real.addConfig(key, value);
+    }
   }
 
   @XmlElement(name = "metrics")
   public Set<TimelineMetric> getMetrics() {
-    return metrics;
+    if (real == null) {
+      return metrics;
+    } else {
+      return real.getMetrics();
+    }
   }
 
   public void setMetrics(Set<TimelineMetric> metrics) {
-    this.metrics = metrics;
+    if (real == null) {
+      this.metrics = metrics;
+    } else {
+      real.setMetrics(metrics);
+    }
   }
 
   public void addMetrics(Set<TimelineMetric> metrics) {
-    this.metrics.addAll(metrics);
+    if (real == null) {
+      this.metrics.addAll(metrics);
+    } else {
+      real.addMetrics(metrics);
+    }
   }
 
   public void addMetric(TimelineMetric metric) {
-    metrics.add(metric);
+    if (real == null) {
+      metrics.add(metric);
+    } else {
+      real.addMetric(metric);
+    }
   }
 
   @XmlElement(name = "events")
   public Set<TimelineEvent> getEvents() {
-    return events;
+    if (real == null) {
+      return events;
+    } else {
+      return real.getEvents();
+    }
   }
 
   public void setEvents(Set<TimelineEvent> events) {
-    this.events = events;
+    if (real == null) {
+      this.events = events;
+    } else {
+      real.setEvents(events);
+    }
   }
 
   public void addEvents(Set<TimelineEvent> events) {
-    this.events.addAll(events);
+    if (real == null) {
+      this.events.addAll(events);
+    } else {
+      real.addEvents(events);
+    }
   }
 
   public void addEvent(TimelineEvent event) {
-    events.add(event);
+    if (real == null) {
+      events.add(event);
+    } else {
+      real.addEvent(event);
+    }
   }
 
   public Map<String, Set<String>> getIsRelatedToEntities() {
-    return isRelatedToEntities;
+    if (real == null) {
+      return isRelatedToEntities;
+    } else {
+      return real.getIsRelatedToEntities();
+    }
   }
 
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "isrelatedto")
   public HashMap<String, Set<String>> getIsRelatedToEntitiesJAXB() {
-    return isRelatedToEntities;
+    if (real == null) {
+      return isRelatedToEntities;
+    } else {
+      return real.getIsRelatedToEntitiesJAXB();
+    }
   }
 
   public void setIsRelatedToEntities(
       Map<String, Set<String>> isRelatedToEntities) {
-    if (isRelatedToEntities != null && !(isRelatedToEntities instanceof HashMap)) {
-      this.isRelatedToEntities = new HashMap<String, Set<String>>(isRelatedToEntities);
+    if (real == null) {
+      if (isRelatedToEntities != null &&
+          !(isRelatedToEntities instanceof HashMap)) {
+        this.isRelatedToEntities =
+            new HashMap<String, Set<String>>(isRelatedToEntities);
+      } else {
+        this.isRelatedToEntities =
+            (HashMap<String, Set<String>>) isRelatedToEntities;
+      }
     } else {
-      this.isRelatedToEntities = (HashMap<String, Set<String>>) isRelatedToEntities;
+      real.setIsRelatedToEntities(isRelatedToEntities);
     }
   }
 
   public void addIsRelatedToEntities(
       Map<String, Set<String>> isRelatedToEntities) {
-    for (Map.Entry<String, Set<String>> entry : isRelatedToEntities
-        .entrySet()) {
-      Set<String> ids = this.isRelatedToEntities.get(entry.getKey());
-      if (ids == null) {
-        ids = new HashSet<>();
-        this.isRelatedToEntities.put(entry.getKey(), ids);
+    if (real == null) {
+      for (Map.Entry<String, Set<String>> entry : isRelatedToEntities
+          .entrySet()) {
+        Set<String> ids = this.isRelatedToEntities.get(entry.getKey());
+        if (ids == null) {
+          ids = new HashSet<>();
+          this.isRelatedToEntities.put(entry.getKey(), ids);
+        }
+        ids.addAll(entry.getValue());
       }
-      ids.addAll(entry.getValue());
+    } else {
+      real.addIsRelatedToEntities(isRelatedToEntities);
     }
   }
 
   public void addIsRelatedToEntity(String type, String id) {
-    Set<String> ids = isRelatedToEntities.get(type);
-    if (ids == null) {
-      ids = new HashSet<>();
-      isRelatedToEntities.put(type, ids);
+    if (real == null) {
+      Set<String> ids = isRelatedToEntities.get(type);
+      if (ids == null) {
+        ids = new HashSet<>();
+        isRelatedToEntities.put(type, ids);
+      }
+      ids.add(id);
+    } else {
+      real.addIsRelatedToEntity(type, id);
     }
-    ids.add(id);
   }
 
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "relatesto")
   public HashMap<String, Set<String>> getRelatesToEntitiesJAXB() {
-    return relatesToEntities;
+    if (real == null) {
+      return relatesToEntities;
+    } else {
+      return real.getRelatesToEntitiesJAXB();
+    }
   }
 
   public Map<String, Set<String>> getRelatesToEntities() {
-    return relatesToEntities;
+    if (real == null) {
+      return relatesToEntities;
+    } else {
+      return real.getRelatesToEntities();
+    }
   }
 
   public void addRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
-    for (Map.Entry<String, Set<String>> entry : relatesToEntities.entrySet()) {
-      Set<String> ids = this.relatesToEntities.get(entry.getKey());
-      if (ids == null) {
-        ids = new HashSet<>();
-        this.relatesToEntities.put(entry.getKey(), ids);
+    if (real == null) {
+      for (Map.Entry<String, Set<String>> entry : relatesToEntities
+          .entrySet()) {
+        Set<String> ids = this.relatesToEntities.get(entry.getKey());
+        if (ids == null) {
+          ids = new HashSet<>();
+          this.relatesToEntities.put(entry.getKey(), ids);
+        }
+        ids.addAll(entry.getValue());
       }
-      ids.addAll(entry.getValue());
+    } else {
+      real.addRelatesToEntities(relatesToEntities);
     }
   }
 
   public void addRelatesToEntity(String type, String id) {
-    Set<String> ids = relatesToEntities.get(type);
-    if (ids == null) {
-      ids = new HashSet<>();
-      relatesToEntities.put(type, ids);
+    if (real == null) {
+      Set<String> ids = relatesToEntities.get(type);
+      if (ids == null) {
+        ids = new HashSet<>();
+        relatesToEntities.put(type, ids);
+      }
+      ids.add(id);
+    } else {
+      real.addRelatesToEntity(type, id);
     }
-    ids.add(id);
   }
 
   public void setRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
-    if (relatesToEntities != null && !(relatesToEntities instanceof HashMap)) {
-      this.relatesToEntities = new HashMap<String, Set<String>>(relatesToEntities);
+    if (real == null) {
+      if (relatesToEntities != null &&
+          !(relatesToEntities instanceof HashMap)) {
+        this.relatesToEntities =
+            new HashMap<String, Set<String>>(relatesToEntities);
+      } else {
+        this.relatesToEntities =
+            (HashMap<String, Set<String>>) relatesToEntities;
+      }
     } else {
-      this.relatesToEntities = (HashMap<String, Set<String>>) relatesToEntities;
+      real.setRelatesToEntities(relatesToEntities);
     }
   }
 
   @XmlElement(name = "createdtime")
   public long getCreatedTime() {
-    return createdTime;
+    if (real == null) {
+      return createdTime;
+    } else {
+      return real.getCreatedTime();
+    }
   }
 
   public void setCreatedTime(long createdTime) {
-    this.createdTime = createdTime;
+    if (real == null) {
+      this.createdTime = createdTime;
+    } else {
+      real.setCreatedTime(createdTime);
+    }
   }
 
   @XmlElement(name = "modifiedtime")
   public long getModifiedTime() {
-    return modifiedTime;
+    if (real == null) {
+      return modifiedTime;
+    } else {
+      return real.getModifiedTime();
+    }
   }
 
   public void setModifiedTime(long modifiedTime) {
-    this.modifiedTime = modifiedTime;
+    if (real == null) {
+      this.modifiedTime = modifiedTime;
+    } else {
+      real.setModifiedTime(modifiedTime);
+    }
   }
 
+  protected TimelineEntity getReal() {
+    return real == null ? this : real;
+  }
 
 }

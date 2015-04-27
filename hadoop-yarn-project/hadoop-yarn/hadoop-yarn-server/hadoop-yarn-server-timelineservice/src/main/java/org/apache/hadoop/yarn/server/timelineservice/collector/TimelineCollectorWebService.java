@@ -43,7 +43,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationAttemptEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.ClusterEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.QueueEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.api.records.timelineservice.UserEntity;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -142,7 +151,8 @@ public class TimelineCollectorWebService {
         LOG.error("Application: "+ appId + " is not found");
         throw new NotFoundException(); // different exception?
       }
-      collector.putEntities(entities, callerUgi);
+
+      collector.putEntities(processTimelineEntities(entities), callerUgi);
       return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
@@ -151,7 +161,7 @@ public class TimelineCollectorWebService {
     }
   }
 
-  private ApplicationId parseApplicationId(String appId) {
+  private static ApplicationId parseApplicationId(String appId) {
     try {
       if (appId != null) {
         return ConverterUtils.toApplicationId(appId.trim());
@@ -159,20 +169,67 @@ public class TimelineCollectorWebService {
         return null;
       }
     } catch (Exception e) {
+      LOG.error("Invalid application ID: " + appId);
       return null;
     }
   }
 
-  private void init(HttpServletResponse response) {
+  private static void init(HttpServletResponse response) {
     response.setContentType(null);
   }
 
-  private UserGroupInformation getUser(HttpServletRequest req) {
+  private static UserGroupInformation getUser(HttpServletRequest req) {
     String remoteUser = req.getRemoteUser();
     UserGroupInformation callerUgi = null;
     if (remoteUser != null) {
       callerUgi = UserGroupInformation.createRemoteUser(remoteUser);
     }
     return callerUgi;
+  }
+
+  // The process may not be necessary according to the way we write the backend,
+  // but let's keep it for now in case we need to use sub-classes APIs in the
+  // future (e.g., aggregation).
+  private static TimelineEntities processTimelineEntities(
+      TimelineEntities entities) {
+    TimelineEntities entitiesToReturn = new TimelineEntities();
+    for (TimelineEntity entity : entities.getEntities()) {
+      TimelineEntityType type = null;
+      try {
+        type = TimelineEntityType.valueOf(entity.getType());
+      } catch (IllegalArgumentException e) {
+        type = null;
+      }
+      if (type != null) {
+        switch (type) {
+          case YARN_CLUSTER:
+            entitiesToReturn.addEntity(new ClusterEntity(entity));
+            break;
+          case YARN_FLOW:
+            entitiesToReturn.addEntity(new FlowEntity(entity));
+            break;
+          case YARN_APPLICATION:
+            entitiesToReturn.addEntity(new ApplicationEntity(entity));
+            break;
+          case YARN_APPLICATION_ATTEMPT:
+            entitiesToReturn.addEntity(new ApplicationAttemptEntity(entity));
+            break;
+          case YARN_CONTAINER:
+            entitiesToReturn.addEntity(new ContainerEntity(entity));
+            break;
+          case YARN_QUEUE:
+            entitiesToReturn.addEntity(new QueueEntity(entity));
+            break;
+          case YARN_USER:
+            entitiesToReturn.addEntity(new UserEntity(entity));
+            break;
+          default:
+            break;
+        }
+      } else {
+        entitiesToReturn.addEntity(entity);
+      }
+    }
+    return entitiesToReturn;
   }
 }

@@ -20,62 +20,84 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "flow")
-@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class FlowEntity extends HierarchicalTimelineEntity {
-  private String user;
-  private String version;
-  private String run;
+  public static final String USER_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "USER";
+  public static final String FLOW_NAME_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "FLOW_NAME";
+  public static final String FLOW_VERSION_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX +  "FLOW_VERSION";
+  public static final String FLOW_RUN_ID_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX +  "FLOW_RUN_ID";
 
   public FlowEntity() {
     super(TimelineEntityType.YARN_FLOW.toString());
   }
 
-  @Override
-  public String getId() {
-    //Flow id schema: user@flow_name(or id)/version/run
-    StringBuilder sb = new StringBuilder();
-    sb.append(user);
-    sb.append('@');
-    sb.append(super.getId());
-    sb.append('/');
-    sb.append(version);
-    sb.append('/');
-    sb.append(run);
-    return sb.toString();
+  public FlowEntity(TimelineEntity entity) {
+    super(entity);
+    if (!entity.getType().equals(TimelineEntityType.YARN_FLOW.toString())) {
+      throw new IllegalArgumentException("Incompatible entity type: " + getId());
+    }
   }
 
-  @XmlElement(name = "user")
+  @XmlElement(name = "id")
+  @Override
+  public String getId() {
+    //Flow id schema: user@flow_name(or id)/version/run_id
+    String id = super.getId();
+    if (id == null) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(getInfo().get(USER_INFO_KEY).toString());
+      sb.append('@');
+      sb.append(getInfo().get(FLOW_NAME_INFO_KEY).toString());
+      sb.append('/');
+      sb.append(getInfo().get(FLOW_VERSION_INFO_KEY).toString());
+      sb.append('/');
+      sb.append(getInfo().get(FLOW_RUN_ID_INFO_KEY).toString());
+      id = sb.toString();
+      setId(id);
+    }
+    return id;
+  }
+
   public String getUser() {
-    return user;
+    Object user = getInfo().get(USER_INFO_KEY);
+    return user == null ? null : user.toString();
   }
 
   public void setUser(String user) {
-    this.user = user;
+    addInfo(USER_INFO_KEY, user);
   }
 
-  @XmlElement(name = "version")
+  public String getName() {
+    Object name = getInfo().get(FLOW_NAME_INFO_KEY);
+    return name == null ? null : name.toString();
+  }
+
+  public void setName(String name) {
+    addInfo(FLOW_NAME_INFO_KEY, name);
+  }
+
   public String getVersion() {
-    return version;
+    Object version = getInfo().get(FLOW_VERSION_INFO_KEY);
+    return version == null ? null : version.toString();
   }
 
   public void setVersion(String version) {
-    this.version = version;
+    addInfo(FLOW_VERSION_INFO_KEY, version);
   }
 
-  @XmlElement(name = "run")
-  public String getRun() {
-    return run;
+  public long getRunId() {
+    Object runId = getInfo().get(FLOW_RUN_ID_INFO_KEY);
+    return runId == null ? 0L : (Long) runId;
   }
 
-  public void setRun(String run) {
-    this.run = run;
+  public void setRunId(long runId) {
+    addInfo(FLOW_RUN_ID_INFO_KEY, runId);
   }
 }

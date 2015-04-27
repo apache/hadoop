@@ -17,93 +17,98 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
+import com.google.common.base.Joiner;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
-@XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class HierarchicalTimelineEntity extends TimelineEntity {
-  private Identifier parent;
-  private HashMap<String, Set<String>> children = new HashMap<>();
+  public static final String PARENT_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "PARENT_ENTITY";
+  public static final String CHILDREN_INFO_KEY =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "CHILDREN_ENTITY";
+
+  HierarchicalTimelineEntity(TimelineEntity entity) {
+    super(entity);
+  }
 
   HierarchicalTimelineEntity(String type) {
     super(type);
   }
 
-  @XmlElement(name = "parent")
   public Identifier getParent() {
-    return parent;
+    Object obj = getInfo().get(PARENT_INFO_KEY);
+    if (obj != null) {
+      if (obj instanceof Identifier) {
+        return (Identifier) obj;
+      } else {
+        throw new YarnRuntimeException(
+            "Parent info is invalid identifier object");
+      }
+    }
+    return null;
   }
 
   public void setParent(Identifier parent) {
     validateParent(parent.getType());
-    this.parent = parent;
+    addInfo(PARENT_INFO_KEY, parent);
   }
 
   public void setParent(String type, String id) {
-    validateParent(type);
-    parent = new Identifier();
-    parent.setType(type);
-    parent.setId(id);
+    setParent(new Identifier(type, id));
   }
 
-  // required by JAXB
-  @InterfaceAudience.Private
-  // comment out XmlElement here because it cause UnrecognizedPropertyException
-  // TODO we need a better fix
-  //@XmlElement(name = "children")
-  public HashMap<String, Set<String>> getChildrenJAXB() {
-    return children;
-  }
-
-  public Map<String, Set<String>> getChildren() {
-    return children;
-  }
-
-  public void setChildren(Map<String, Set<String>> children) {
-    validateChildren(children);
-    if (children != null && !(children instanceof HashMap)) {
-      this.children = new HashMap<String, Set<String>>(children);
-    } else {
-      this.children = (HashMap) children;
+  public Set<Identifier> getChildren() {
+    Object identifiers = getInfo().get(CHILDREN_INFO_KEY);
+    if (identifiers == null) {
+      return new HashSet<>();
     }
-  }
-
-  public void addChildren(Map<String, Set<String>> children) {
-    validateChildren(children);
-    for (Map.Entry<String, Set<String>> entry : children.entrySet()) {
-      Set<String> ids = this.children.get(entry.getKey());
-      if (ids == null) {
-        ids = new HashSet<>();
-        this.children.put(entry.getKey(), ids);
+    TimelineEntityType thisType = TimelineEntityType.valueOf(getType());
+    if (identifiers instanceof Set<?>) {
+      for (Object identifier : (Set<?>) identifiers) {
+        if (!(identifier instanceof Identifier)) {
+          throw new YarnRuntimeException(
+              "Children info contains invalid identifier object");
+        } else {
+          validateChild((Identifier) identifier, thisType);
+        }
       }
-      ids.addAll(entry.getValue());
+    } else {
+      throw new YarnRuntimeException(
+          "Children info is invalid identifier set");
     }
+    Set<Identifier> children = (Set<Identifier>) identifiers;
+    return children;
+  }
+
+  public void setChildren(Set<Identifier> children) {
+    addInfo(CHILDREN_INFO_KEY, children);
+  }
+
+  public void addChildren(Set<Identifier> children) {
+    TimelineEntityType thisType = TimelineEntityType.valueOf(getType());
+    for (Identifier child : children) {
+      validateChild(child, thisType);
+    }
+    Set<Identifier> existingChildren = getChildren();
+    existingChildren.addAll(children);
+    setChildren(existingChildren);
+  }
+
+  public void addChild(Identifier child) {
+    addChildren(Collections.singleton(child));
   }
 
   public void addChild(String type, String id) {
-    TimelineEntityType thisType = TimelineEntityType.valueOf(getType());
-    TimelineEntityType childType = TimelineEntityType.valueOf(type);
-    if (thisType.isChild(childType)) {
-      Set<String> ids = children.get(type);
-      if (ids == null) {
-        ids = new HashSet<>();
-        children.put(type, ids);
-      }
-      ids.add(id);
-    } else {
-      throw new IllegalArgumentException(
-          type + " is not the acceptable child of " + this.getType());
-    }
+    addChild(new Identifier(type, id));
   }
 
   private void validateParent(String type) {
@@ -115,15 +120,12 @@ public abstract class HierarchicalTimelineEntity extends TimelineEntity {
     }
   }
 
-  private void validateChildren(Map<String, Set<String>> children) {
-    TimelineEntityType thisType = TimelineEntityType.valueOf(getType());
-    for (Map.Entry<String, Set<String>> entry : children.entrySet()) {
-      TimelineEntityType childType = TimelineEntityType.valueOf(entry.getKey());
-      if (!thisType.isChild(childType)) {
-        throw new IllegalArgumentException(
-            entry.getKey() + " is not the acceptable child of " +
-                this.getType());
-      }
+  private void validateChild(Identifier child, TimelineEntityType thisType) {
+    TimelineEntityType childType = TimelineEntityType.valueOf(child.getType());
+    if (!thisType.isChild(childType)) {
+      throw new IllegalArgumentException(
+          child.getType() + " is not the acceptable child of " +
+              this.getType());
     }
   }
 }
