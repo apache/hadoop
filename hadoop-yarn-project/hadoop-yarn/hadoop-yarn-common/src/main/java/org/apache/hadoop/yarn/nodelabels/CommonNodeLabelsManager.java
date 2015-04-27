@@ -97,6 +97,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected NodeLabelsStore store;
   private boolean nodeLabelsEnabled = false;
 
+  private boolean isDistributedNodeLabelConfiguration = false;
+
   /**
    * A <code>Host</code> can have multiple <code>Node</code>s 
    */
@@ -213,6 +215,10 @@ public class CommonNodeLabelsManager extends AbstractService {
     nodeLabelsEnabled =
         conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
             YarnConfiguration.DEFAULT_NODE_LABELS_ENABLED);
+
+    isDistributedNodeLabelConfiguration  =
+        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+
     if (nodeLabelsEnabled) {
       initNodeLabelStore(conf);
     }
@@ -223,7 +229,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected void initNodeLabelStore(Configuration conf) throws Exception {
     this.store = new FileSystemNodeLabelsStore(this);
     this.store.init(conf);
-    this.store.recover();
+    this.store.recover(isDistributedNodeLabelConfiguration);
   }
 
   // for UT purpose
@@ -613,7 +619,10 @@ public class CommonNodeLabelsManager extends AbstractService {
       }
     }
     
-    if (null != dispatcher) {
+    if (null != dispatcher && !isDistributedNodeLabelConfiguration) {
+      // In case of DistributedNodeLabelConfiguration, no need to save the the
+      // NodeLabels Mapping to the back-end store, as on RM restart/failover
+      // NodeLabels are collected from NM through Register/Heartbeat again
       dispatcher.getEventHandler().handle(
           new UpdateNodeToLabelsMappingsEvent(newNMToLabels));
     }
@@ -799,8 +808,10 @@ public class CommonNodeLabelsManager extends AbstractService {
       readLock.lock();
       List<NodeLabel> nodeLabels = new ArrayList<>();
       for (RMNodeLabel label : labelCollections.values()) {
-        nodeLabels.add(NodeLabel.newInstance(label.getLabelName(),
-            label.getIsExclusive()));
+        if (!label.getLabelName().equals(NO_LABEL)) {
+          nodeLabels.add(NodeLabel.newInstance(label.getLabelName(),
+              label.getIsExclusive()));
+        }
       }
       return nodeLabels;
     } finally {
@@ -824,7 +835,6 @@ public class CommonNodeLabelsManager extends AbstractService {
       readLock.unlock();
     }
   }
-  
 
   private void checkAndThrowLabelName(String label) throws IOException {
     if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {

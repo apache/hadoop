@@ -154,8 +154,12 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
     ensureCloseEditlogFile();
   }
 
+  /* (non-Javadoc)
+   * @see org.apache.hadoop.yarn.nodelabels.NodeLabelsStore#recover(boolean)
+   */
   @Override
-  public void recover() throws YarnException, IOException {
+  public void recover(boolean ignoreNodeToLabelsMappings) throws YarnException,
+      IOException {
     /*
      * Steps of recover
      * 1) Read from last mirror (from mirror or mirror.old)
@@ -222,7 +226,15 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
                 new ReplaceLabelsOnNodeRequestPBImpl(
                     ReplaceLabelsOnNodeRequestProto.parseDelimitedFrom(is))
                     .getNodeToLabels();
-            mgr.replaceLabelsOnNode(map);
+            if (!ignoreNodeToLabelsMappings) {
+              /*
+               * In case of Distributed NodeLabels setup,
+               * ignoreNodeToLabelsMappings will be set to true and recover will
+               * be invoked. As RM will collect the node labels from NM through
+               * registration/HB
+               */
+              mgr.replaceLabelsOnNode(map);
+            }
             break;
           }
           }

@@ -149,6 +149,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -165,6 +166,9 @@ public class RMWebServices {
   private final Configuration conf;
   private @Context HttpServletResponse response;
 
+  @VisibleForTesting
+  boolean isDistributedNodeLabelConfiguration = false;
+
   public final static String DELEGATION_TOKEN_HEADER =
       "Hadoop-YARN-RM-Delegation-Token";
 
@@ -172,6 +176,19 @@ public class RMWebServices {
   public RMWebServices(final ResourceManager rm, Configuration conf) {
     this.rm = rm;
     this.conf = conf;
+    isDistributedNodeLabelConfiguration =
+        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+  }
+
+  private void checkAndThrowIfDistributedNodeLabelConfEnabled(String operation)
+      throws IOException {
+    if (isDistributedNodeLabelConfiguration) {
+      String msg =
+          String.format("Error when invoke method=%s because of "
+              + "distributed node label configuration enabled.", operation);
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
   }
 
   RMWebServices(ResourceManager rm, Configuration conf,
@@ -816,38 +833,64 @@ public class RMWebServices {
   @POST
   @Path("/replace-node-to-labels")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public Response replaceLabelsOnNodes(
-    final NodeToLabelsInfo newNodeToLabels,
-    @Context HttpServletRequest hsr) 
-    throws IOException {
+  public Response replaceLabelsOnNodes(final NodeToLabelsInfo newNodeToLabels,
+      @Context HttpServletRequest hsr) throws IOException {
+    Map<NodeId, Set<String>> nodeIdToLabels =
+        new HashMap<NodeId, Set<String>>();
+
+    for (Map.Entry<String, NodeLabelsInfo> nitle : newNodeToLabels
+        .getNodeToLabels().entrySet()) {
+      nodeIdToLabels.put(
+          ConverterUtils.toNodeIdWithDefaultPort(nitle.getKey()),
+          new HashSet<String>(nitle.getValue().getNodeLabels()));
+    }
+
+    return replaceLabelsOnNode(nodeIdToLabels, hsr, "/replace-node-to-labels");
+  }
+
+  @POST
+  @Path("/nodes/{nodeId}/replace-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response replaceLabelsOnNode(NodeLabelsInfo newNodeLabelsInfo,
+      @Context HttpServletRequest hsr, @PathParam("nodeId") String nodeId)
+      throws Exception {
+    NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
+    Map<NodeId, Set<String>> newLabelsForNode =
+        new HashMap<NodeId, Set<String>>();
+    newLabelsForNode.put(nid,
+        new HashSet<String>(newNodeLabelsInfo.getNodeLabels()));
+
+    return replaceLabelsOnNode(newLabelsForNode, hsr, "/nodes/nodeid/replace-labels");
+  }
+
+  private Response replaceLabelsOnNode(
+      Map<NodeId, Set<String>> newLabelsForNode, HttpServletRequest hsr,
+      String operation) throws IOException {
     init();
-    
+
+    checkAndThrowIfDistributedNodeLabelConfEnabled("replaceLabelsOnNode");
+
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated for"
-        + " post to .../replace-node-to-labels";
+      String msg =
+          "Unable to obtain user name, user not authenticated for"
+              + " post to ..." + operation;
       throw new AuthorizationException(msg);
     }
-    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
-      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
-        + " for post to .../replace-node-to-labels ";
-      throw new AuthorizationException(msg);
-    }
-    
-    Map<NodeId, Set<String>> nodeIdToLabels = 
-      new HashMap<NodeId, Set<String>>();
 
-    for (Map.Entry<String, NodeLabelsInfo> nitle : 
-      newNodeToLabels.getNodeToLabels().entrySet()) {
-     nodeIdToLabels.put(ConverterUtils.toNodeIdWithDefaultPort(nitle.getKey()),
-       new HashSet<String>(nitle.getValue().getNodeLabels()));
+    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
+      String msg =
+          "User " + callerUGI.getShortUserName() + " not authorized"
+              + " for post to ..." + operation;
+      throw new AuthorizationException(msg);
     }
-    
-    rm.getRMContext().getNodeLabelManager().replaceLabelsOnNode(nodeIdToLabels);
+
+    rm.getRMContext().getNodeLabelManager()
+        .replaceLabelsOnNode(newLabelsForNode);
 
     return Response.status(Status.OK).build();
   }
-  
+
   @GET
   @Path("/get-node-labels")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
@@ -897,7 +940,7 @@ public class RMWebServices {
       @Context HttpServletRequest hsr)
       throws Exception {
     init();
-    
+
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
     if (callerUGI == null) {
       String msg = "Unable to obtain user name, user not authenticated for"
@@ -929,40 +972,6 @@ public class RMWebServices {
     NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
     return new NodeLabelsInfo(
       rm.getRMContext().getNodeLabelManager().getLabelsOnNode(nid));
-
-  }
-  
-  @POST
-  @Path("/nodes/{nodeId}/replace-labels")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public Response replaceLabelsOnNode(NodeLabelsInfo newNodeLabelsInfo,
-      @Context HttpServletRequest hsr, @PathParam("nodeId") String nodeId)
-      throws Exception {
-    init();
-    
-    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
-    if (callerUGI == null) {
-      String msg = "Unable to obtain user name, user not authenticated for"
-        + " post to .../nodes/nodeid/replace-labels";
-      throw new AuthorizationException(msg);
-    }
-
-    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
-      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
-        + " for post to .../nodes/nodeid/replace-labels";
-      throw new AuthorizationException(msg);
-    }
-    
-    NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
-    
-    Map<NodeId, Set<String>> newLabelsForNode = new HashMap<NodeId,
-      Set<String>>();
-    
-    newLabelsForNode.put(nid, new HashSet<String>(newNodeLabelsInfo.getNodeLabels()));
-    
-    rm.getRMContext().getNodeLabelManager().replaceLabelsOnNode(newLabelsForNode);
-    
-    return Response.status(Status.OK).build();
 
   }
 

@@ -146,6 +146,40 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test(timeout = 10000)
+  public void testRecoverWithDistributedNodeLabels() throws Exception {
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p4"));
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p5", "p6"));
+    mgr.replaceLabelsOnNode((Map) ImmutableMap.of(toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2")));
+    mgr.replaceLabelsOnNode((Map) ImmutableMap.of(toNodeId("n3"), toSet("p3"),
+        toNodeId("n4"), toSet("p4"), toNodeId("n5"), toSet("p5"),
+        toNodeId("n6"), toSet("p6"), toNodeId("n7"), toSet("p6")));
+
+    mgr.removeFromClusterNodeLabels(toSet("p1"));
+    mgr.removeFromClusterNodeLabels(Arrays.asList("p3", "p5"));
+    mgr.stop();
+
+    mgr = new MockNodeLabelManager();
+    Configuration cf = new Configuration(conf);
+    cf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+    mgr.init(cf);
+
+    // check variables
+    Assert.assertEquals(3, mgr.getClusterNodeLabels().size());
+    Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
+        Arrays.asList("p2", "p4", "p6")));
+
+    Assert.assertTrue("During recovery in distributed node-labels setup, "
+        + "node to labels mapping should not be recovered ", mgr
+        .getNodeLabels().size() == 0);
+
+    mgr.stop();
+  }
+
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  @Test(timeout = 10000)
   public void testEditlogRecover() throws Exception {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p2", "p3"));
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p4"));

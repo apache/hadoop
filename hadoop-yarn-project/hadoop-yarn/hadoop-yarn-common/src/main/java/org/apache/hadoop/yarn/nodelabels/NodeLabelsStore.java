@@ -56,9 +56,18 @@ public abstract class NodeLabelsStore implements Closeable {
       throws IOException;
 
   /**
-   * Recover labels and node to labels mappings from store
+   * Recover labels and node to labels mappings from store, but if
+   * ignoreNodeToLabelsMappings is true then node to labels mappings should not
+   * be recovered. In case of Distributed NodeLabels setup
+   * ignoreNodeToLabelsMappings will be set to true and recover will be invoked
+   * as RM will collect the node labels from NM through registration/HB
+   *
+   * @param ignoreNodeToLabelsMappings
+   * @throws IOException
+   * @throws YarnException
    */
-  public abstract void recover() throws IOException, YarnException;
+  public abstract void recover(boolean ignoreNodeToLabelsMappings)
+      throws IOException, YarnException;
   
   public void init(Configuration conf) throws Exception {}
   

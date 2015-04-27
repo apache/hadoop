@@ -112,6 +112,9 @@ public class AdminService extends CompositeService implements
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
+  @VisibleForTesting
+  boolean isDistributedNodeLabelConfiguration = false;
+
   public AdminService(ResourceManager rm, RMContext rmContext) {
     super(AdminService.class.getName());
     this.rm = rm;
@@ -141,6 +144,10 @@ public class AdminService extends CompositeService implements
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)), UserGroupInformation
         .getCurrentUser());
     rmId = conf.get(YarnConfiguration.RM_HA_ID);
+
+    isDistributedNodeLabelConfiguration =
+        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+
     super.serviceInit(conf);
   }
 
@@ -637,32 +644,35 @@ public class AdminService extends CompositeService implements
   @Override
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request) throws YarnException, IOException {
-    String argName = "removeFromClusterNodeLabels";
+    String operation = "removeFromClusterNodeLabels";
     final String msg = "remove labels.";
-    UserGroupInformation user = checkAcls(argName);
 
-    checkRMStatus(user.getShortUserName(), argName, msg);
+    UserGroupInformation user = checkAcls(operation);
+
+    checkRMStatus(user.getShortUserName(), operation, msg);
 
     RemoveFromClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(RemoveFromClusterNodeLabelsResponse.class);
     try {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(request.getNodeLabels());
       RMAuditLogger
-          .logSuccess(user.getShortUserName(), argName, "AdminService");
+          .logSuccess(user.getShortUserName(), operation, "AdminService");
       return response;
     } catch (IOException ioe) {
-      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
+      throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);
     }
   }
 
   @Override
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
       ReplaceLabelsOnNodeRequest request) throws YarnException, IOException {
-    String argName = "replaceLabelsOnNode";
+    String operation = "replaceLabelsOnNode";
     final String msg = "set node to labels.";
-    UserGroupInformation user = checkAcls(argName);
 
-    checkRMStatus(user.getShortUserName(), argName, msg);
+    checkAndThrowIfDistributedNodeLabelConfEnabled(operation);
+    UserGroupInformation user = checkAcls(operation);
+
+    checkRMStatus(user.getShortUserName(), operation, msg);
 
     ReplaceLabelsOnNodeResponse response =
         recordFactory.newRecordInstance(ReplaceLabelsOnNodeResponse.class);
@@ -670,28 +680,39 @@ public class AdminService extends CompositeService implements
       rmContext.getNodeLabelManager().replaceLabelsOnNode(
           request.getNodeToLabels());
       RMAuditLogger
-          .logSuccess(user.getShortUserName(), argName, "AdminService");
+          .logSuccess(user.getShortUserName(), operation, "AdminService");
       return response;
     } catch (IOException ioe) {
-      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
+      throw logAndWrapException(ioe, user.getShortUserName(), operation, msg);
     }
   }
 
-  private void checkRMStatus(String user, String argName, String msg)
+  private void checkRMStatus(String user, String operation, String msg)
       throws StandbyException {
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user, argName, "", 
+      RMAuditLogger.logFailure(user, operation, "",
           "AdminService", "ResourceManager is not active. Can not " + msg);
       throwStandbyException();
     }
   }
 
   private YarnException logAndWrapException(Exception exception, String user,
-      String argName, String msg) throws YarnException {
+      String operation, String msg) throws YarnException {
     LOG.warn("Exception " + msg, exception);
-    RMAuditLogger.logFailure(user, argName, "", 
+    RMAuditLogger.logFailure(user, operation, "",
         "AdminService", "Exception " + msg);
     return RPCUtil.getRemoteException(exception);
+  }
+
+  private void checkAndThrowIfDistributedNodeLabelConfEnabled(String operation)
+      throws YarnException {
+    if (isDistributedNodeLabelConfiguration) {
+      String msg =
+          String.format("Error when invoke method=%s because of "
+              + "distributed node label configuration enabled.", operation);
+      LOG.error(msg);
+      throw RPCUtil.getRemoteException(new IOException(msg));
+    }
   }
 
   @Override
