@@ -32,6 +32,9 @@ Release 2.6.1 - UNRELEASED
     MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
     which is a regression from MR1 (zxu via rkanter)
 
+    MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
+    tokens when they roll-over. (Jason Lowe via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
