@@ -204,7 +204,10 @@ Trunk (Unreleased)
     HADOOP-11850. Typos in hadoop-common java docs. (Surendra Singh Lilhore
     via jghoman)
 
-    HADOOP-11852. Disable symlinks in trunk.
+    HADOOP-11852. Disable symlinks in trunk. (Andrew Wang)
+
+    HADOOP-11857. Fix CommandFormat#commandFormat java doc annotation.
+    (J.Andreina via jghoman)
 
   BUG FIXES
 
