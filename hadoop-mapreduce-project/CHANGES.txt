@@ -349,6 +349,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6333. TestEvents,TestAMWebServicesTasks,TestAppController are
     broken due to MAPREDUCE-6297. (Siqi Li via gera)
 
+    MAPREDUCE-6252. JobHistoryServer should not fail when encountering a 
+    missing directory. (Craig Welch via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
