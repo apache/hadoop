@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -487,6 +488,13 @@ public class TimelineStoreTestUtils {
         primaryFilter, secondaryFilters, null, null).getEntities();
   }
 
+  protected List<TimelineEntity> getEntitiesWithFilters(String entityType,
+      NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
+      EnumSet<Field> fields) throws IOException {
+    return store.getEntities(entityType, null, null, null, null, null,
+        primaryFilter, secondaryFilters, fields, null).getEntities();
+  }
+
   protected List<TimelineEntity> getEntities(String entityType, Long limit,
       Long windowStart, Long windowEnd, NameValuePair primaryFilter,
       EnumSet<Field> fields) throws IOException {
@@ -751,38 +759,73 @@ public class TimelineStoreTestUtils {
   }
 
   public void testGetEntitiesWithSecondaryFilters() throws IOException {
-    // test using secondary filter
-    List<TimelineEntity> entities = getEntitiesWithFilters("type_1", null,
-        goodTestingFilters);
-    assertEquals(3, entities.size());
-    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId1);
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(2), domainId2);
+    for (int i = 0; i < 4; ++i) {
+      // Verify the secondary filter works both other info is included or not.
+      EnumSet<Field> fields = null;
+      if (i == 1) {
+        fields = EnumSet.noneOf(Field.class);
+      } else if (i == 2) {
+        fields = EnumSet.of(Field.PRIMARY_FILTERS);
+      } else if (i == 3) {
+        fields = EnumSet.of(Field.OTHER_INFO);
+      }
+      // test using secondary filter
+      List<TimelineEntity> entities = getEntitiesWithFilters("type_1", null,
+          goodTestingFilters, fields);
+      assertEquals(3, entities.size());
+      verifyEntityInfo(entityId1, entityType1,
+          (i == 0 ? events1 : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(0), domainId1);
+      verifyEntityInfo(entityId1b, entityType1,
+          (i == 0 ? events1 : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(1), domainId1);
+      verifyEntityInfo(entityId6, entityType1,
+          (i == 0 ? EMPTY_EVENTS : null),
+          (i == 0 ? EMPTY_REL_ENTITIES : null),
+          (i == 0 || i == 2 ? primaryFilters : null),
+          (i == 0 || i == 3 ? otherInfo : null), entities.get(2), domainId2);
 
-    entities = getEntitiesWithFilters("type_1", userFilter, goodTestingFilters);
-    assertEquals(3, entities.size());
-    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId1);
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(2), domainId2);
+      entities =
+          getEntitiesWithFilters("type_1", userFilter, goodTestingFilters, fields);
+      assertEquals(3, entities.size());
+      if (i == 0) {
+        verifyEntityInfo(entityId1, entityType1,
+            (i == 0 ? events1 : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(0), domainId1);
+        verifyEntityInfo(entityId1b, entityType1,
+            (i == 0 ? events1 : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(1), domainId1);
+        verifyEntityInfo(entityId6, entityType1,
+            (i == 0 ? EMPTY_EVENTS : null),
+            (i == 0 ? EMPTY_REL_ENTITIES : null),
+            (i == 0 || i == 2 ? primaryFilters : null),
+            (i == 0 || i == 3 ? otherInfo : null), entities.get(2), domainId2);
+      }
 
-    entities = getEntitiesWithFilters("type_1", null,
-        Collections.singleton(new NameValuePair("user", "none")));
-    assertEquals(0, entities.size());
+      entities = getEntitiesWithFilters("type_1", null,
+          Collections.singleton(new NameValuePair("user", "none")), fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_1", null, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_1", null, badTestingFilters, fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_1", userFilter, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_1", userFilter, badTestingFilters, fields);
+      assertEquals(0, entities.size());
 
-    entities = getEntitiesWithFilters("type_5", null, badTestingFilters);
-    assertEquals(0, entities.size());
+      entities =
+          getEntitiesWithFilters("type_5", null, badTestingFilters, fields);
+      assertEquals(0, entities.size());
+    }
   }
 
   public void testGetEvents() throws IOException {
