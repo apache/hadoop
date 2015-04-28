@@ -350,9 +350,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6333. TestEvents,TestAMWebServicesTasks,TestAppController are
     broken due to MAPREDUCE-6297. (Siqi Li via gera)
 
-    MAPREDUCE-6252. JobHistoryServer should not fail when encountering a 
-    missing directory. (Craig Welch via devaraj)
-
     MAPREDUCE-6341. Fix typo in mapreduce tutorial. (John Michael Luy
     via ozawa)
 
@@ -375,6 +372,9 @@ Release 2.7.1 - UNRELEASED
 
     MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
     tokens when they roll-over. (Jason Lowe via vinodkv)
+
+    MAPREDUCE-6252. JobHistoryServer should not fail when encountering a 
+    missing directory. (Craig Welch via devaraj)
 
 Release 2.7.0 - 2015-04-20
 
