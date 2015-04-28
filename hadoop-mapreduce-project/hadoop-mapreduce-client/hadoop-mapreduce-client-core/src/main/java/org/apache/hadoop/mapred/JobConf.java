@@ -2080,28 +2080,28 @@ public class JobConf extends Configuration {
     // Find the last matching -Xmx following word boundaries
     Matcher m = JAVA_OPTS_XMX_PATTERN.matcher(javaOpts);
     if (m.matches()) {
-      int size = Integer.parseInt(m.group(1));
+      long size = Long.parseLong(m.group(1));
       if (size <= 0) {
         return -1;
       }
       if (m.group(2).isEmpty()) {
         // -Xmx specified in bytes
-        return size / (1024 * 1024);
+        return (int) (size / (1024 * 1024));
       }
       char unit = m.group(2).charAt(0);
       switch (unit) {
         case 'g':
         case 'G':
           // -Xmx specified in GB
-          return size * 1024;
+          return (int) (size * 1024);
         case 'm':
         case 'M':
           // -Xmx specified in MB
-          return size;
+          return (int) size;
         case 'k':
         case 'K':
           // -Xmx specified in KB
-          return size / 1024;
+          return (int) (size / 1024);
       }
     }
     // -Xmx not specified
