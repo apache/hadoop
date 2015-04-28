@@ -973,6 +973,9 @@ public class Dispatcher {
    */
   private boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
+    if (source.equals(target)) {
+      return false;
+    }
     if (target.storageType != targetStorageType) {
       return false;
     }
@@ -980,9 +983,19 @@ public class Dispatcher {
     if (movedBlocks.contains(block.getBlock())) {
       return false;
     }
-    if (block.isLocatedOn(target)) {
-      return false;
+    final DatanodeInfo targetDatanode = target.getDatanodeInfo();
+    if (source.getDatanodeInfo().equals(targetDatanode)) {
+      // the block is moved inside same DN
+      return true;
     }
+
+    // check if block has replica in target node
+    for (StorageGroup blockLocation : block.getLocations()) {
+      if (blockLocation.getDatanodeInfo().equals(targetDatanode)) {
+        return false;
+      }
+    }
+
     if (cluster.isNodeGroupAware()
         && isOnSameNodeGroupWithReplicas(source, target, block)) {
       return false;
