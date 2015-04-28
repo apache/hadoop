@@ -576,6 +576,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11870. [JDK8] AuthenticationFilter, CertificateUtil,
     SignerSecretProviders, KeyAuthorizationKeyProvider Javadoc issues (rkanter)
 
+    HADOOP-11881. test-patch.sh javac result is wildly wrong (Kengo Seki via
+    aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
