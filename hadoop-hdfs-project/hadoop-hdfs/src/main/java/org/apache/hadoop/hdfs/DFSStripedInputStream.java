@@ -134,11 +134,12 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final short parityBlkNum;
   private final ECInfo ecInfo;
 
-  DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum)
+  DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum, ECInfo info)
       throws IOException {
     super(dfsClient, src, verifyChecksum);
     // ECInfo is restored from NN just before reading striped file.
-    ecInfo = dfsClient.getErasureCodingInfo(src);
+    assert info != null;
+    ecInfo = info;
     cellSize = ecInfo.getSchema().getChunkSize();
     dataBlkNum = (short)ecInfo.getSchema().getNumDataUnits();
     parityBlkNum = (short)ecInfo.getSchema().getNumParityUnits();

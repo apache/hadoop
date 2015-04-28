@@ -140,3 +140,6 @@
 
     HDFS-8189. ClientProtocol#createErasureCodingZone API was wrongly annotated
     as Idempotent (vinayakumarb)
+
+    HDFS-8235. Erasure Coding: Create DFSStripedInputStream in DFSClient#open.
+    (Kai Sasaki via jing9)
