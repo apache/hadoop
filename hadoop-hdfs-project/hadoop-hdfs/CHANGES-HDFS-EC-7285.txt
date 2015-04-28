@@ -134,3 +134,6 @@
 
     HDFS-8033. Erasure coding: stateful (non-positional) read from files in 
     striped layout (Zhe Zhang)
+
+    HDFS-8230. Erasure Coding: Ignore DatanodeProtocol#DNA_ERASURE_CODING_RECOVERY 
+    commands from standbynode if any (vinayakumarb)
