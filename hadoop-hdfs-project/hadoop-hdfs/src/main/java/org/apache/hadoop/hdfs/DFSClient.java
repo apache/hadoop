@@ -1193,7 +1193,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     //    Get block info from namenode
     TraceScope scope = getPathTraceScope("newDFSInputStream", src);
     try {
-      return new DFSInputStream(this, src, verifyChecksum);
+      ECInfo info = getErasureCodingInfo(src);
+      if (info != null) {
+        return new DFSStripedInputStream(this, src, verifyChecksum, info);
+      } else {
+        return new DFSInputStream(this, src, verifyChecksum);
+      }
     } finally {
       scope.close();
     }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -167,10 +168,9 @@ public class TestDFSStripedInputStream {
         writeBytes, fileLength);
 
     // pread
-    try (DFSStripedInputStream dis =
-             new DFSStripedInputStream(fs.getClient(), src, true)) {
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
       byte[] buf = new byte[writeBytes + 100];
-      int readLen = dis.read(0, buf, 0, buf.length);
+      int readLen = fsdis.read(0, buf, 0, buf.length);
       readLen = readLen >= 0 ? readLen : 0;
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
@@ -180,13 +180,12 @@ public class TestDFSStripedInputStream {
     }
 
     // stateful read with byte array
-    try (DFSStripedInputStream dis =
-             new DFSStripedInputStream(fs.getClient(), src, true)) {
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
       byte[] buf = new byte[writeBytes + 100];
       int readLen = 0;
       int ret;
       do {
-        ret = dis.read(buf, readLen, buf.length - readLen);
+        ret = fsdis.read(buf, readLen, buf.length - readLen);
         if (ret > 0) {
           readLen += ret;
         }
@@ -201,13 +200,12 @@ public class TestDFSStripedInputStream {
     }
 
     // stateful read with ByteBuffer
-    try (DFSStripedInputStream dis =
-             new DFSStripedInputStream(fs.getClient(), src, true)) {
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
       ByteBuffer buf = ByteBuffer.allocate(writeBytes + 100);
       int readLen = 0;
       int ret;
       do {
-        ret = dis.read(buf);
+        ret = fsdis.read(buf);
         if (ret > 0) {
           readLen += ret;
         }
