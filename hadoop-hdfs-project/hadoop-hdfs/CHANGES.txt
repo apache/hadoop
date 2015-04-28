@@ -590,6 +590,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7931. DistributedFileSystem should not look for keyProvider in
     cache if Encryption is disabled (asuresh)
 
+    HDFS-8204. Mover/Balancer should not schedule two replicas to the same
+    datanode.  (Walter Su via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
