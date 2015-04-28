@@ -1364,14 +1364,6 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
-   * Create an erasure coding zone with specified schema, if any, otherwise
-   * default
-   */
-  @Idempotent
-  public void createErasureCodingZone(String src, ECSchema schema)
-      throws IOException;
-
-  /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
@@ -1465,6 +1457,14 @@ public interface ClientProtocol {
    */
   @Idempotent
   public EventBatchList getEditsFromTxid(long txid) throws IOException;
+
+  /**
+   * Create an erasure coding zone with specified schema, if any, otherwise
+   * default
+   */
+  @AtMostOnce
+  public void createErasureCodingZone(String src, ECSchema schema)
+      throws IOException;
 
   /**
    * Gets the ECInfo for the specified file/directory

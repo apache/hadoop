@@ -137,3 +137,6 @@
 
     HDFS-8230. Erasure Coding: Ignore DatanodeProtocol#DNA_ERASURE_CODING_RECOVERY 
     commands from standbynode if any (vinayakumarb)
+
+    HDFS-8189. ClientProtocol#createErasureCodingZone API was wrongly annotated
+    as Idempotent (vinayakumarb)
