@@ -757,6 +757,7 @@ class BPOfferService {
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
     case DatanodeProtocol.DNA_CACHE:
     case DatanodeProtocol.DNA_UNCACHE:
+    case DatanodeProtocol.DNA_ERASURE_CODING_RECOVERY:
       LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
       break;
     default:
