@@ -3690,6 +3690,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       writeUnlock();
     }
+    getEditLog().logSync();
     if (toRemovedBlocks != null) {
       removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
     }
@@ -4695,22 +4696,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      * blocks and unlink them from the namespace.
      */
     private void clearCorruptLazyPersistFiles()
-        throws SafeModeException, AccessControlException,
-        UnresolvedLinkException, IOException {
+        throws IOException {
 
       BlockStoragePolicy lpPolicy = blockManager.getStoragePolicy("LAZY_PERSIST");
 
-      List<BlockCollection> filesToDelete = new ArrayList<BlockCollection>();
-
+      List<BlockCollection> filesToDelete = new ArrayList<>();
+      boolean changed = false;
       writeLock();
-
       try {
         final Iterator<Block> it = blockManager.getCorruptReplicaBlockIterator();
 
         while (it.hasNext()) {
           Block b = it.next();
           BlockInfoContiguous blockInfo = blockManager.getStoredBlock(b);
-          if (blockInfo.getBlockCollection().getStoragePolicyID() == lpPolicy.getId()) {
+          if (blockInfo.getBlockCollection().getStoragePolicyID()
+              == lpPolicy.getId()) {
             filesToDelete.add(blockInfo.getBlockCollection());
           }
         }
@@ -4718,15 +4718,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         for (BlockCollection bc : filesToDelete) {
           LOG.warn("Removing lazyPersist file " + bc.getName() + " with no replicas.");
           BlocksMapUpdateInfo toRemoveBlocks =
-          FSDirDeleteOp.deleteInternal(
-              FSNamesystem.this, bc.getName(),
-              INodesInPath.fromINode((INodeFile) bc), false);
+              FSDirDeleteOp.deleteInternal(
+                  FSNamesystem.this, bc.getName(),
+                  INodesInPath.fromINode((INodeFile) bc), false);
+          changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
             removeBlocks(toRemoveBlocks); // Incremental deletion of blocks
           }
         }
       } finally {
         writeUnlock();
+      }
+      if (changed) {
+        getEditLog().logSync();
       }
     }
 

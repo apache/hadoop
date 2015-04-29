@@ -627,6 +627,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8070. Pre-HDFS-7915 DFSClient cannot use short circuit on
     post-HDFS-7915 DataNode (cmccabe)
 
+    HDFS-8273. FSNamesystem#Delete() should not call logSync() when holding the
+    lock. (wheat9)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
