@@ -308,6 +308,9 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3464. Race condition in LocalizerRunner kills localizer before 
     localizing all resources. (Zhihai Xu via kasha)
+    
+    YARN-3485. FairScheduler headroom calculation doesn't consider 
+    maxResources for Fifo and FairShare policies. (kasha)
 
 Release 2.7.0 - 2015-04-20
 
