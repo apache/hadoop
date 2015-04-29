@@ -9,6 +9,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     MAPREDUCE-6327. Made MR AM use timeline service v2 API to write history
     events and counters. (Junping Du via zjshen)
 
+    MAPREDUCE-6335. Created MR job based performance test driver for the
+    timeline service v2. (Sangjin Lee via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

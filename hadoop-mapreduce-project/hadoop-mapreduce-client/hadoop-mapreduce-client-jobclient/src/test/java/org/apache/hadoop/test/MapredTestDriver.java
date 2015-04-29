@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.ThreadedMapBenchmark;
+import org.apache.hadoop.mapred.TimelineServicePerformanceV2;
 import org.apache.hadoop.mapreduce.FailJob;
 import org.apache.hadoop.mapreduce.LargeSorter;
 import org.apache.hadoop.mapreduce.MiniHadoopClusterManager;
@@ -90,6 +91,8 @@ public class MapredTestDriver {
       pgd.addClass("fail", FailJob.class, "a job that always fails");
       pgd.addClass("sleep", SleepJob.class, 
                    "A job that sleeps at each map and reduce task.");
+      pgd.addClass("timelineperformance", TimelineServicePerformanceV2.class,
+          "A job that launch mappers to test timline service performance.");
       pgd.addClass("nnbench", NNBench.class, 
           "A benchmark that stresses the namenode w/ MR.");
       pgd.addClass("nnbenchWithoutMR", NNBenchWithoutMR.class,
