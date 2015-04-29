@@ -185,10 +185,10 @@ public abstract class SchedulingPolicy {
    *
    * @param queueFairShare fairshare in the queue
    * @param queueUsage resources used in the queue
-   * @param clusterAvailable available resource in cluster
+   * @param maxAvailable available resource in cluster for this queue
    * @return calculated headroom
    */
   public abstract Resource getHeadroom(Resource queueFairShare,
-      Resource queueUsage, Resource clusterAvailable);
+      Resource queueUsage, Resource maxAvailable);
 
 }

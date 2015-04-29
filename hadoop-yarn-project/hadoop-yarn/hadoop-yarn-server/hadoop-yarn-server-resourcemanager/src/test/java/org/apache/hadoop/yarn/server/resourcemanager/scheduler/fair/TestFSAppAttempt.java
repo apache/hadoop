@@ -198,18 +198,24 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockScheduler.getClock()).thenReturn(scheduler.getClock());
 
     final FSLeafQueue mockQueue = Mockito.mock(FSLeafQueue.class);
-    final Resource queueFairShare = Resources.createResource(4096, 4);
-    final Resource queueUsage = Resource.newInstance(1024, 1);
+
+    final Resource queueMaxResources = Resource.newInstance(5 * 1024, 3);
+    final Resource queueFairShare = Resources.createResource(4096, 2);
+    final Resource queueUsage = Resource.newInstance(2048, 2);
+
+    final Resource queueStarvation =
+        Resources.subtract(queueFairShare, queueUsage);
+    final Resource queueMaxResourcesAvailable =
+        Resources.subtract(queueMaxResources, queueUsage);
+
     final Resource clusterResource = Resources.createResource(8192, 8);
-    final Resource clusterUsage = Resources.createResource(6144, 2);
+    final Resource clusterUsage = Resources.createResource(2048, 2);
+    final Resource clusterAvailable =
+        Resources.subtract(clusterResource, clusterUsage);
+
     final QueueMetrics fakeRootQueueMetrics = Mockito.mock(QueueMetrics.class);
 
-    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
-    RMContext rmContext = resourceManager.getRMContext();
-    FSAppAttempt schedulerApp =
-        new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
-            null, rmContext);
-
+    Mockito.when(mockQueue.getMaxShare()).thenReturn(queueMaxResources);
     Mockito.when(mockQueue.getFairShare()).thenReturn(queueFairShare);
     Mockito.when(mockQueue.getResourceUsage()).thenReturn(queueUsage);
     Mockito.when(mockScheduler.getClusterResource()).thenReturn
@@ -219,27 +225,51 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockScheduler.getRootQueueMetrics()).thenReturn
         (fakeRootQueueMetrics);
 
-    int minClusterAvailableMemory = 2048;
-    int minClusterAvailableCPU = 6;
-    int minQueueAvailableCPU = 3;
+    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
+    RMContext rmContext = resourceManager.getRMContext();
+    FSAppAttempt schedulerApp =
+        new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
+            null, rmContext);
 
     // Min of Memory and CPU across cluster and queue is used in
     // DominantResourceFairnessPolicy
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minQueueAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        min(queueStarvation.getVirtualCores(),
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
 
     // Fair and Fifo ignore CPU of queue, so use cluster available CPU
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minClusterAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        Math.min(
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
 
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
-    verifyHeadroom(schedulerApp, minClusterAvailableMemory,
-        minClusterAvailableCPU);
+    verifyHeadroom(schedulerApp,
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
+        Math.min(
+            clusterAvailable.getVirtualCores(),
+            queueMaxResourcesAvailable.getVirtualCores())
+    );
+  }
+
+  private static int min(int value1, int value2, int value3) {
+    return Math.min(Math.min(value1, value2), value3);
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,
