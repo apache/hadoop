@@ -271,6 +271,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3517. RM web ui for dumping scheduler logs should be for admins only
     (Varun Vasudev via tgraves)
 
+    YARN-3533. Test: Fix launchAM in MockRM to wait for attempt to be scheduled.
+    (Anubhav Dhoot via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
