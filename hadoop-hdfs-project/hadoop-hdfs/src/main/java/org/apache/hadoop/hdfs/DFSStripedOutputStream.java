@@ -124,10 +124,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     for (short i = 0; i < numAllBlocks; i++) {
       StripedDataStreamer streamer = new StripedDataStreamer(stat, null,
           dfsClient, src, progress, checksum, cachingStrategy, byteArrayManager,
-          i, stripeBlocks);
-      if (favoredNodes != null && favoredNodes.length != 0) {
-        streamer.setFavoredNodes(favoredNodes);
-      }
+          i, stripeBlocks, favoredNodes);
       s.add(streamer);
     }
     streamers = Collections.unmodifiableList(s);
@@ -316,7 +313,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       return;
     }
     for (StripedDataStreamer streamer : streamers) {
-      streamer.setLastException(new IOException("Lease timeout of "
+      streamer.getLastException().set(new IOException("Lease timeout of "
           + (dfsClient.getConf().getHdfsTimeout()/1000) +
           " seconds expired."));
     }
@@ -414,12 +411,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   @Override
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      IOException e = getLeadingStreamer().getLastException().getAndSet(null);
-      if (e != null) {
-        throw e;
-      } else {
-        return;
-      }
+      getLeadingStreamer().getLastException().check();
+      return;
     }
 
     try {
