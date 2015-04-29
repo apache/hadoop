@@ -1697,13 +1697,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   static class GetBlockLocationsResult {
-    final INodesInPath iip;
+    final boolean updateAccessTime;
     final LocatedBlocks blocks;
     boolean updateAccessTime() {
-      return iip != null;
+      return updateAccessTime;
     }
-    private GetBlockLocationsResult(INodesInPath iip, LocatedBlocks blocks) {
-      this.iip = iip;
+    private GetBlockLocationsResult(
+        boolean updateAccessTime, LocatedBlocks blocks) {
+      this.updateAccessTime = updateAccessTime;
       this.blocks = blocks;
     }
   }
@@ -1712,34 +1713,58 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get block locations within the specified range.
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
-  LocatedBlocks getBlockLocations(String clientMachine, String src,
+  LocatedBlocks getBlockLocations(String clientMachine, String srcArg,
       long offset, long length) throws IOException {
     checkOperation(OperationCategory.READ);
     GetBlockLocationsResult res = null;
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      res = getBlockLocations(src, offset, length, true, true);
+      res = getBlockLocations(pc, srcArg, offset, length, true, true);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "open", src);
+      logAuditEvent(false, "open", srcArg);
       throw e;
     } finally {
       readUnlock();
     }
 
-    logAuditEvent(true, "open", src);
+    logAuditEvent(true, "open", srcArg);
 
     if (res.updateAccessTime()) {
+      byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
+          srcArg);
+      String src = srcArg;
       writeLock();
       final long now = now();
       try {
         checkOperation(OperationCategory.WRITE);
-        INode inode = res.iip.getLastINode();
-        boolean updateAccessTime = now > inode.getAccessTime() +
-            getAccessTimePrecision();
+        /**
+         * Resolve the path again and update the atime only when the file
+         * exists.
+         *
+         * XXX: Races can still occur even after resolving the path again.
+         * For example:
+         *
+         * <ul>
+         *   <li>Get the block location for "/a/b"</li>
+         *   <li>Rename "/a/b" to "/c/b"</li>
+         *   <li>The second resolution still points to "/a/b", which is
+         *   wrong.</li>
+         * </ul>
+         *
+         * The behavior is incorrect but consistent with the one before
+         * HDFS-7463. A better fix is to change the edit log of SetTime to
+         * use inode id instead of a path.
+         */
+        src = dir.resolvePath(pc, srcArg, pathComponents);
+        final INodesInPath iip = dir.getINodesInPath(src, true);
+        INode inode = iip.getLastINode();
+        boolean updateAccessTime = inode != null &&
+            now > inode.getAccessTime() + getAccessTimePrecision();
         if (!isInSafeMode() && updateAccessTime) {
           boolean changed = FSDirAttrOp.setTimes(dir,
-              inode, -1, now, false, res.iip.getLatestSnapshotId());
+              inode, -1, now, false, iip.getLatestSnapshotId());
           if (changed) {
             getEditLog().logTimes(src, -1, now);
           }
@@ -1773,8 +1798,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws IOException
    */
   GetBlockLocationsResult getBlockLocations(
-      String src, long offset, long length, boolean needBlockToken,
-      boolean checkSafeMode) throws IOException {
+      FSPermissionChecker pc, String src, long offset, long length,
+      boolean needBlockToken, boolean checkSafeMode) throws IOException {
     if (offset < 0) {
       throw new HadoopIllegalArgumentException(
           "Negative offset is not supported. File: " + src);
@@ -1784,7 +1809,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           "Negative length is not supported. File: " + src);
     }
     final GetBlockLocationsResult ret = getBlockLocationsInt(
-        src, offset, length, needBlockToken);
+        pc, src, offset, length, needBlockToken);
 
     if (checkSafeMode && isInSafeMode()) {
       for (LocatedBlock b : ret.blocks.getLocatedBlocks()) {
@@ -1805,12 +1830,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private GetBlockLocationsResult getBlockLocationsInt(
-      final String srcArg, long offset, long length, boolean needBlockToken)
+      FSPermissionChecker pc, final String srcArg, long offset, long length,
+      boolean needBlockToken)
       throws IOException {
     String src = srcArg;
-    FSPermissionChecker pc = getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = dir.resolvePath(pc, src, pathComponents);
+    src = dir.resolvePath(pc, srcArg, pathComponents);
     final INodesInPath iip = dir.getINodesInPath(src, true);
     final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
     if (isPermissionEnabled) {
@@ -1846,7 +1871,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean updateAccessTime = isAccessTimeSupported() && !isInSafeMode()
         && !iip.isSnapshot()
         && now > inode.getAccessTime() + getAccessTimePrecision();
-    return new GetBlockLocationsResult(updateAccessTime ? iip : null, blocks);
+    return new GetBlockLocationsResult(updateAccessTime, blocks);
   }
 
   /**
