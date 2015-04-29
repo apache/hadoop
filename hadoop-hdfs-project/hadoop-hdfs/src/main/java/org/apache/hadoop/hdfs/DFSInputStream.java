@@ -1119,7 +1119,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   /**
    * Read data from one DataNode.
    * @param datanode the datanode from which to read data
-   * @param block the block to read
+   * @param blockStartOffset starting offset in the file
    * @param startInBlk the startInBlk offset of the block
    * @param endInBlk the endInBlk offset of the block
    * @param buf the given byte array into which the data is read
@@ -1149,7 +1149,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       BlockReader reader = null;
       try {
         DFSClientFaultInjector.get().fetchFromDatanodeException();
-        reader = getBlockReader(block, start, len, datanode.addr,
+        reader = getBlockReader(block, startInBlk, len, datanode.addr,
             datanode.storageType, datanode.info);
         for (int i = 0; i < offsets.length; i++) {
           int nread = reader.readAll(buf, offsets[i], lengths[i]);
@@ -1206,8 +1206,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * with each other.
    */
   private void checkReadPortions(int[] offsets, int[] lengths, int totalLen) {
-    Preconditions.checkArgument(offsets.length == lengths.length &&
-        offsets.length > 0);
+    Preconditions.checkArgument(offsets.length == lengths.length && offsets.length > 0);
     int sum = 0;
     for (int i = 0; i < lengths.length; i++) {
       if (i > 0) {

@@ -58,9 +58,10 @@ public class StripedDataStreamer extends DataStreamer {
                       Progressable progress, DataChecksum checksum,
                       AtomicReference<CachingStrategy> cachingStrategy,
                       ByteArrayManager byteArrayManage, short index,
-                      List<BlockingQueue<LocatedBlock>> stripedBlocks) {
-    super(stat,block, dfsClient, src, progress, checksum, cachingStrategy,
-        byteArrayManage);
+                      List<BlockingQueue<LocatedBlock>> stripedBlocks,
+                      String[] favoredNodes) {
+    super(stat, block, dfsClient, src, progress, checksum, cachingStrategy,
+        byteArrayManage, favoredNodes);
     this.index = index;
     this.stripedBlocks = stripedBlocks;
   }
