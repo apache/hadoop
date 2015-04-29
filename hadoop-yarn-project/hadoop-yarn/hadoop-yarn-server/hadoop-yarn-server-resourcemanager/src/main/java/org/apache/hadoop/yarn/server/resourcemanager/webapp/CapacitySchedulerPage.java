@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
@@ -33,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -190,28 +192,46 @@ class CapacitySchedulerPage extends RmView {
   static class QueuesBlock extends HtmlBlock {
     final CapacityScheduler cs;
     final CSQInfo csqinfo;
+    private final ResourceManager rm;
 
     @Inject QueuesBlock(ResourceManager rm, CSQInfo info) {
       cs = (CapacityScheduler) rm.getResourceScheduler();
       csqinfo = info;
+      this.rm = rm;
     }
 
     @Override
     public void render(Block html) {
       html._(MetricsOverviewTable.class);
-      // Dump CapacityScheduler debug logs
-      html.div()
+
+      UserGroupInformation callerUGI = this.getCallerUGI();
+      boolean isAdmin = false;
+      ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+      if (aclsManager.areACLsEnabled()) {
+        if (callerUGI != null && aclsManager.isAdmin(callerUGI)) {
+          isAdmin = true;
+        }
+      } else {
+        isAdmin = true;
+      }
+
+      // only show button to dump CapacityScheduler debug logs to admins
+      if (isAdmin) {
+        html.div()
           .button()
-          .$onclick("confirmAction()").b("Dump scheduler logs")._()
-          .select().$id("time")
-            .option().$value("60")._("1 min")._()
-            .option().$value("300")._("5 min")._()
-            .option().$value("600")._("10 min")._()
+          .$style(
+              "border-style: solid; border-color: #000000; border-width: 1px;"
+                  + " cursor: hand; cursor: pointer; border-radius: 4px")
+          .$onclick("confirmAction()").b("Dump scheduler logs")._().select()
+          .$id("time").option().$value("60")._("1 min")._().option()
+          .$value("300")._("5 min")._().option().$value("600")._("10 min")._()
           ._()._();
 
-      StringBuilder script = new StringBuilder();
-      script.append("function confirmAction() {")
-          .append(" b = confirm(\"Are you sure you wish to generate scheduler logs?\");")
+        StringBuilder script = new StringBuilder();
+        script
+          .append("function confirmAction() {")
+          .append(" b = confirm(\"Are you sure you wish to generate"
+              + " scheduler logs?\");")
           .append(" if (b == true) {")
           .append(" var timePeriod = $(\"#time\").val();")
           .append(" $.ajax({")
@@ -225,13 +245,14 @@ class CapacitySchedulerPage extends RmView {
           .append(" alert(\"Scheduler log is being generated.\");")
           .append(" }, 1000);")
           .append(" }).fail(function(data){")
-          .append(" alert(\"Scheduler log generation failed. Please check the ResourceManager log for more informtion.\");")
-          .append(" console.log(data);")
-          .append(" });")
-          .append(" }")
+          .append(
+              " alert(\"Scheduler log generation failed. Please check the"
+                  + " ResourceManager log for more informtion.\");")
+          .append(" console.log(data);").append(" });").append(" }")
           .append("}");
 
-      html.script().$type("text/javascript")._(script.toString())._();
+        html.script().$type("text/javascript")._(script.toString())._();
+      }
 
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").

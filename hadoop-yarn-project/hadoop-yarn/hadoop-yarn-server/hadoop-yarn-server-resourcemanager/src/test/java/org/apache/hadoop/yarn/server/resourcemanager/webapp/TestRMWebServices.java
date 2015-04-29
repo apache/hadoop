@@ -26,7 +26,9 @@ import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.StringReader;
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -37,6 +39,7 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
@@ -54,9 +57,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -642,5 +649,75 @@ public class TestRMWebServices extends JerseyTestBase {
     appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
         null, null, null, null, null, null, null, emptySet, emptySet);
     assertTrue(appsInfo.getApps().isEmpty());
+  }
+
+  @Test
+  public void testDumpingSchedulerLogs() throws Exception {
+
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
+    when(mockRM.getApplicationACLsManager()).thenReturn(aclsManager);
+    RMWebServices webSvc =
+        new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+
+    // nothing should happen
+    webSvc.dumpSchedulerLogs("1", mockHsr);
+    Thread.sleep(1000);
+    checkSchedulerLogFileAndCleanup();
+
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    aclsManager = new ApplicationACLsManager(conf);
+    when(mockRM.getApplicationACLsManager()).thenReturn(aclsManager);
+    webSvc = new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    boolean exceptionThrown = false;
+    try {
+      webSvc.dumpSchedulerLogs("1", mockHsr);
+      fail("Dumping logs should fail");
+    } catch (ForbiddenException ae) {
+      exceptionThrown = true;
+    }
+    assertTrue("ForbiddenException expected", exceptionThrown);
+    exceptionThrown = false;
+    when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
+      @Override
+      public String getName() {
+        return "testuser";
+      }
+    });
+    try {
+      webSvc.dumpSchedulerLogs("1", mockHsr);
+      fail("Dumping logs should fail");
+    } catch (ForbiddenException ae) {
+      exceptionThrown = true;
+    }
+    assertTrue("ForbiddenException expected", exceptionThrown);
+
+    when(mockHsr.getUserPrincipal()).thenReturn(new Principal() {
+      @Override
+      public String getName() {
+        return "admin";
+      }
+    });
+    webSvc.dumpSchedulerLogs("1", mockHsr);
+    Thread.sleep(1000);
+    checkSchedulerLogFileAndCleanup();
+  }
+
+  private void checkSchedulerLogFileAndCleanup() {
+    String targetFile;
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof FairScheduler) {
+      targetFile = "yarn-fair-scheduler-debug.log";
+    } else if (scheduler instanceof CapacityScheduler) {
+      targetFile = "yarn-capacity-scheduler-debug.log";
+    } else {
+      targetFile = "yarn-scheduler-debug.log";
+    }
+    File logFile = new File(System.getProperty("yarn.log.dir"), targetFile);
+    assertTrue("scheduler log file doesn't exist", logFile.exists());
+    FileUtils.deleteQuietly(logFile);
   }
 }
