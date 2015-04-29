@@ -143,3 +143,6 @@
 
     HDFS-8235. Erasure Coding: Create DFSStripedInputStream in DFSClient#open.
     (Kai Sasaki via jing9)
+
+    HDFS-8272. Erasure Coding: simplify the retry logic in DFSStripedInputStream 
+    (stateful read). (Jing Zhao via Zhe Zhang)
