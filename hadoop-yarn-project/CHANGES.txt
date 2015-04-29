@@ -268,6 +268,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2740. Fix NodeLabelsManager to properly handle node label modifications 
     when distributed node label configuration enabled. (Naganarasimha G R via wangda)
 
+    YARN-3517. RM web ui for dumping scheduler logs should be for admins only
+    (Varun Vasudev via tgraves)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
