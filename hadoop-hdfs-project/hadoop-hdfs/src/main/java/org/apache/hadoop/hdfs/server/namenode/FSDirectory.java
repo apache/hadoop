@@ -474,6 +474,12 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  static boolean isNonEmptyDirectory(
+      Transaction tx, FlatINodesInPath iip) {
+    FlatINode inode = iip.getLastINode();
+    return inode.isDirectory() && !tx.childrenView(inode.id()).isEmpty();
+  }
+
   /**
    * Check whether the filepath could be created
    * @throws SnapshotAccessControlException if path is in RO snapshot
@@ -573,8 +579,9 @@ public class FSDirectory implements Closeable {
   /**
    * Update usage count with replication factor change due to setReplication
    */
-  void updateCount(INodesInPath iip, long nsDelta, long ssDelta, short oldRep,
-      short newRep, boolean checkQuota) throws QuotaExceededException {
+  void updateCount(
+      INodesInPath iip, long nsDelta, long ssDelta, short oldRep, short newRep,
+      boolean checkQuota) throws QuotaExceededException {
     final INodeFile fileINode = iip.getLastINode().asFile();
     EnumCounters<StorageType> typeSpaceDeltas =
         getStorageTypeDeltas(fileINode.getStoragePolicyID(), ssDelta, oldRep, newRep);
@@ -1011,7 +1018,7 @@ public class FSDirectory implements Closeable {
    * @return true if on the block boundary or false if recovery is need
    */
   boolean unprotectedTruncate(INodesInPath iip, long newLength,
-                              BlocksMapUpdateInfo collectedBlocks,
+      BlocksMapUpdateInfo collectedBlocks,
                               long mtime, QuotaCounts delta) throws IOException {
     assert hasWriteLock();
     INodeFile file = iip.getLastINode().asFile();
@@ -1090,7 +1097,14 @@ public class FSDirectory implements Closeable {
       }
     }
   }
-  
+
+  public final void removeFromInodeMap(RWTransaction tx, List<Long> inodes) {
+    for (long inode : inodes) {
+      tx.deleteINode(inode);
+      ezManager.removeEncryptionZone(inode);
+    }
+  }
+
   /**
    * Get the inode from inodeMap based on its inode id.
    * @param id The given id
@@ -1630,6 +1644,13 @@ public class FSDirectory implements Closeable {
 //        }
 //      }
 //    }
+  }
+
+  void checkPermission(FSPermissionChecker pc, FlatINodesInPath iip,
+      boolean doCheckOwner, FsAction ancestorAccess, FsAction parentAccess,
+      FsAction access, FsAction subAccess, boolean ignoreEmptyDir)
+      throws AccessControlException {
+    // TODO
   }
 
   HdfsFileStatus getAuditFileInfo(INodesInPath iip)

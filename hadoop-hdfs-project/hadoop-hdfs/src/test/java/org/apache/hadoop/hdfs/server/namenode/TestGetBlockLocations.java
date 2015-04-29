@@ -60,7 +60,7 @@ public class TestGetBlockLocations {
 
   @Test(timeout = 30000)
   public void testGetBlockLocationsRacingWithDelete() throws IOException {
-    FSNamesystem fsn = spy(setupFileSystem());
+    final FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();
     FSEditLog editlog = fsn.getEditLog();
 
@@ -68,10 +68,7 @@ public class TestGetBlockLocations {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        INodesInPath iip = fsd.getINodesInPath(FILE_PATH, true);
-        FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
-                             new ArrayList<INode>(), new ArrayList<Long>(),
-                             now());
+        FSDirDeleteOp.delete(fsn, FILE_PATH, true, false);
         invocation.callRealMethod();
         return null;
       }

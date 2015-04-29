@@ -105,7 +105,7 @@ class FSDirStatAndListingOp {
 //      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
 //          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
 
-      byte policyId = HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+      byte policyId = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
       return createFileStatus(tx, fsd, paths.inodesInPath().getLastINode(),
                               HdfsFileStatus.EMPTY_NAME,
                               policyId);
@@ -261,7 +261,7 @@ class FSDirStatAndListingOp {
 //      byte curPolicy = isSuperUser && !cur.isSymlink()?
 //          cur.getLocalStoragePolicyID():
 //          HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      byte curPolicy = HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+      byte curPolicy = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
       ByteBuffer b =e.getKey().duplicate();
       byte[] localName = new byte[b.remaining()];
       b.get(localName);

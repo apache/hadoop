@@ -3042,7 +3042,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Remove the indicated file from namespace.
    * 
-   * @see ClientProtocol#delete(String, boolean) for detailed description and 
+   * @see ClientProtocol#delete(String, boolean) for detailed description and
    * description of exceptions
    */
   boolean delete(String src, boolean recursive, boolean logRetryCache)
@@ -3127,6 +3127,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       removedINodes.clear();
     }
+  }
+
+  void removeLeases(List<Long> removedUCFiles) {
+    assert hasWriteLock();
+    leaseManager.removeLeases(removedUCFiles);
+    // remove inodes from inodesMap
   }
 
   /**
@@ -4072,21 +4078,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             filesToDelete.add(blockInfo.getBlockCollection());
           }
         }
+      } finally {
+        writeUnlock();
+      }
 
+      try (RWTransaction tx = getFSDirectory().newRWTransaction().begin()) {
         for (BlockCollection bc : filesToDelete) {
           LOG.warn("Removing lazyPersist file " + bc.getName() + " with no replicas.");
+          Resolver.Result paths = Resolver.resolve(tx, bc.getName());
           BlocksMapUpdateInfo toRemoveBlocks =
-              FSDirDeleteOp.deleteInternal(
-                  FSNamesystem.this, bc.getName(),
-                  INodesInPath.fromINode((INodeFile) bc), false);
+              FSDirDeleteOp.deleteInternal(tx, FSNamesystem.this,
+                                           paths, false);
           changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
             removeBlocks(toRemoveBlocks); // Incremental deletion of blocks
           }
         }
-      } finally {
-        writeUnlock();
       }
+
       if (changed) {
         getEditLog().logSync();
       }
