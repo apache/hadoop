@@ -158,7 +158,6 @@ class FSDirDeleteOp {
     incrDeletedFileCount(filesRemoved);
 
     fsn.removeLeasesAndINodes(src, removedINodes, true);
-    fsd.getEditLog().logSync();
 
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
