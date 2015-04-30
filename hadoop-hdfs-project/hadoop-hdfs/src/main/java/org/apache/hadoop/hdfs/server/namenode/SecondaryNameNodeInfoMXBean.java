@@ -42,6 +42,12 @@ public interface SecondaryNameNodeInfoMXBean extends VersionInfoMXBean {
   public long getLastCheckpointTime();
 
   /**
+   * @return the number of msec since the last checkpoint, or -1 if no
+   * checkpoint has been done yet.
+   */
+  public long getLastCheckpointDeltaMs();
+
+  /**
    * @return the directories that store the checkpoint images
    */
   public String[] getCheckpointDirectories();

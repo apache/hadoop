@@ -582,6 +582,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8232. Missing datanode counters when using Metrics2 sink interface.
     (Anu Engineer via cnauroth)
 
+    HDFS-8214. Secondary NN Web UI shows wrong date for Last Checkpoint. (clamb via wang)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

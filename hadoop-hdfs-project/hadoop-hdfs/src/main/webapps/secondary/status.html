@@ -65,7 +65,7 @@
   <tr><th>Compiled</th><td>{CompileInfo}</td></tr>
   <tr><th>NameNode Address</th><td>{HostAndPort}</td></tr>
   <tr><th>Started</th><td>{StartTime|date_tostring}</td></tr>
-  <tr><th>Last Checkpoint</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
+  <tr><th>Last Checkpoint</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring} ({LastCheckpointDeltaMs|fmt_time} ago){/if}</td></tr>
   <tr><th>Checkpoint Period</th><td>{CheckpointPeriod} seconds</td></tr>
   <tr><th>Checkpoint Transactions</th><td>{TxnCount}</td></tr>
 </table>
