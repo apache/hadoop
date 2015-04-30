@@ -331,17 +331,25 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   // interrupt datastreamer if force is true
   @Override
   protected void closeThreads(boolean force) throws IOException {
+    int index = 0;
+    boolean exceptionOccurred = false;
     for (StripedDataStreamer streamer : streamers) {
       try {
         streamer.close(force);
         streamer.join();
         streamer.closeSocket();
-      } catch (InterruptedException e) {
-        throw new IOException("Failed to shutdown streamer");
+      } catch (InterruptedException | IOException e) {
+        DFSClient.LOG.error("Failed to shutdown streamer: name="
+            + streamer.getName() + ", index=" + index + ", file=" + src, e);
+        exceptionOccurred = true;
       } finally {
         streamer.setSocketToNull();
         setClosed();
+        index++;
       }
+    }
+    if (exceptionOccurred) {
+      throw new IOException("Failed to shutdown streamer");
     }
   }
 

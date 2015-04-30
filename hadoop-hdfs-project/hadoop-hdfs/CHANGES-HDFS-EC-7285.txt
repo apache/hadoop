@@ -149,3 +149,6 @@
 
     HDFS-8282. Erasure coding: move striped reading logic to StripedBlockUtil.
     (Zhe Zhang)
+
+    HDFS-8183. Erasure Coding: Improve DFSStripedOutputStream closing of 
+    datastreamer threads. (Rakesh R via Zhe Zhang)
