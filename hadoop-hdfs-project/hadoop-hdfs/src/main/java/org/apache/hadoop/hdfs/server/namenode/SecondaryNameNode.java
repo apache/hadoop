@@ -108,6 +108,7 @@ public class SecondaryNameNode implements Runnable,
 
   private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
+  private volatile long lastCheckpointWallclockTime = 0;
 
   private URL fsName;
   private CheckpointStorage checkpointImage;
@@ -134,8 +135,9 @@ public class SecondaryNameNode implements Runnable,
       + "\nName Node Address      : " + nameNodeAddr
       + "\nStart Time             : " + new Date(starttime)
       + "\nLast Checkpoint        : " + (lastCheckpointTime == 0? "--":
-				       ((Time.monotonicNow() - lastCheckpointTime) / 1000))
-	                            + " seconds ago"
+        new Date(lastCheckpointWallclockTime))
+      + " (" + ((Time.monotonicNow() - lastCheckpointTime) / 1000)
+      + " seconds ago)"
       + "\nCheckpoint Period      : " + checkpointConf.getPeriod() + " seconds"
       + "\nCheckpoint Transactions: " + checkpointConf.getTxnCount()
       + "\nCheckpoint Dirs        : " + checkpointDirs
@@ -388,12 +390,14 @@ public class SecondaryNameNode implements Runnable,
         if(UserGroupInformation.isSecurityEnabled())
           UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
         
-        final long now = Time.monotonicNow();
+        final long monotonicNow = Time.monotonicNow();
+        final long now = Time.now();
 
         if (shouldCheckpointBasedOnCount() ||
-            now >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
+            monotonicNow >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
           doCheckpoint();
-          lastCheckpointTime = now;
+          lastCheckpointTime = monotonicNow;
+          lastCheckpointWallclockTime = now;
         }
       } catch (IOException e) {
         LOG.error("Exception in doCheckpoint", e);
@@ -695,22 +699,31 @@ public class SecondaryNameNode implements Runnable,
     checkpointThread.start();
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public String getHostAndPort() {
     return NetUtils.getHostPortString(nameNodeAddr);
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public long getStartTime() {
     return starttime;
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public long getLastCheckpointTime() {
-    return lastCheckpointTime;
+    return lastCheckpointWallclockTime;
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
+  public long getLastCheckpointDeltaMs() {
+    if (lastCheckpointTime == 0) {
+      return -1;
+    } else {
+      return (Time.monotonicNow() - lastCheckpointTime);
+    }
+  }
+
+  @Override // SecondaryNameNodeInfoMXBean
   public String[] getCheckpointDirectories() {
     ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointDirs.size());
     for (URI d : checkpointDirs) {
@@ -719,7 +732,7 @@ public class SecondaryNameNode implements Runnable,
     return r.toArray(new String[r.size()]);
   }
 
-  @Override // SecondaryNameNodeInfoMXXBean
+  @Override // SecondaryNameNodeInfoMXBean
   public String[] getCheckpointEditlogDirectories() {
     ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointEditsDirs.size());
     for (URI d : checkpointEditsDirs) {
