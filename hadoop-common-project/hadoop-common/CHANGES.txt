@@ -603,6 +603,8 @@ Release 2.7.1 - UNRELEASED
     HADOOP-11802. DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
 
+    HADOOP-11891. OsSecureRandom should lazily fill its reservoir (asuresh)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
