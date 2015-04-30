@@ -223,10 +223,12 @@ public class TestJobHistoryEventHandler {
       }
 
       handleNextNEvents(jheh, 9);
+      Assert.assertTrue(jheh.getFlushTimerStatus());
       verify(mockWriter, times(0)).flush();
 
       Thread.sleep(2 * 4 * 1000l); // 4 seconds should be enough. Just be safe.
       verify(mockWriter).flush();
+      Assert.assertFalse(jheh.getFlushTimerStatus());
     } finally {
       jheh.stop();
       verify(mockWriter).close();
