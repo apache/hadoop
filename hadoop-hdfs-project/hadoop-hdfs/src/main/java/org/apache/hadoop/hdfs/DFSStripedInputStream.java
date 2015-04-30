@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.ReadPortion;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.planReadPortions;
+
 import org.apache.hadoop.net.NetUtils;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
@@ -31,8 +33,6 @@ import org.apache.htrace.TraceScope;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
@@ -69,59 +69,6 @@ import java.util.concurrent.Future;
  *   3. pread with decode support: TODO: will be supported after HDFS-7678
  *****************************************************************************/
 public class DFSStripedInputStream extends DFSInputStream {
-  /**
-   * This method plans the read portion from each block in the stripe
-   * @param dataBlkNum The number of data blocks in the striping group
-   * @param cellSize The size of each striping cell
-   * @param startInBlk Starting offset in the striped block
-   * @param len Length of the read request
-   * @param bufOffset  Initial offset in the result buffer
-   * @return array of {@link ReadPortion}, each representing the portion of I/O
-   *         for an individual block in the group
-   */
-  @VisibleForTesting
-  static ReadPortion[] planReadPortions(final int dataBlkNum,
-      final int cellSize, final long startInBlk, final int len, int bufOffset) {
-    ReadPortion[] results = new ReadPortion[dataBlkNum];
-    for (int i = 0; i < dataBlkNum; i++) {
-      results[i] = new ReadPortion();
-    }
-
-    // cellIdxInBlk is the index of the cell in the block
-    // E.g., cell_3 is the 2nd cell in blk_0
-    int cellIdxInBlk = (int) (startInBlk / (cellSize * dataBlkNum));
-
-    // blkIdxInGroup is the index of the block in the striped block group
-    // E.g., blk_2 is the 3rd block in the group
-    final int blkIdxInGroup = (int) (startInBlk / cellSize % dataBlkNum);
-    results[blkIdxInGroup].startOffsetInBlock = cellSize * cellIdxInBlk +
-        startInBlk % cellSize;
-    boolean crossStripe = false;
-    for (int i = 1; i < dataBlkNum; i++) {
-      if (blkIdxInGroup + i >= dataBlkNum && !crossStripe) {
-        cellIdxInBlk++;
-        crossStripe = true;
-      }
-      results[(blkIdxInGroup + i) % dataBlkNum].startOffsetInBlock =
-          cellSize * cellIdxInBlk;
-    }
-
-    int firstCellLen = Math.min(cellSize - (int) (startInBlk % cellSize), len);
-    results[blkIdxInGroup].offsetsInBuf.add(bufOffset);
-    results[blkIdxInGroup].lengths.add(firstCellLen);
-    results[blkIdxInGroup].readLength += firstCellLen;
-
-    int i = (blkIdxInGroup + 1) % dataBlkNum;
-    for (int done = firstCellLen; done < len; done += cellSize) {
-      ReadPortion rp = results[i];
-      rp.offsetsInBuf.add(done + bufOffset);
-      final int readLen = Math.min(len - done, cellSize);
-      rp.lengths.add(readLen);
-      rp.readLength += readLen;
-      i = (i + 1) % dataBlkNum;
-    }
-    return results;
-  }
 
   private static class ReaderRetryPolicy {
     private int fetchEncryptionKeyTimes = 1;
@@ -519,57 +466,5 @@ public class DFSStripedInputStream extends DFSInputStream {
       futures.remove(future);
     }
     throw new InterruptedException("let's retry");
-  }
-
-
-  /**
-   * This class represents the portion of I/O associated with each block in the
-   * striped block group.
-   */
-  static class ReadPortion {
-    /**
-     * startOffsetInBlock
-     *     |
-     *     v
-     *     |<-lengths[0]->|<-  lengths[1]  ->|<-lengths[2]->|
-     * +------------------+------------------+----------------+
-     * |      cell_0      |      cell_3      |     cell_6     |  <- blk_0
-     * +------------------+------------------+----------------+
-     *   _/                \_______________________
-     *  |                                          |
-     *  v offsetsInBuf[0]                          v offsetsInBuf[1]
-     * +------------------------------------------------------+
-     * |  cell_0     |      cell_1 and cell_2      |cell_3 ...|   <- buf
-     * |  (partial)  |    (from blk_1 and blk_2)   |          |
-     * +------------------------------------------------------+
-     */
-    private long startOffsetInBlock = 0;
-    private int readLength = 0;
-    private final List<Integer> offsetsInBuf = new ArrayList<>();
-    private final List<Integer> lengths = new ArrayList<>();
-
-    int[] getOffsets() {
-      int[] offsets = new int[offsetsInBuf.size()];
-      for (int i = 0; i < offsets.length; i++) {
-        offsets[i] = offsetsInBuf.get(i);
-      }
-      return offsets;
-    }
-
-    int[] getLengths() {
-      int[] lens = new int[this.lengths.size()];
-      for (int i = 0; i < lens.length; i++) {
-        lens[i] = this.lengths.get(i);
-      }
-      return lens;
-    }
-
-    int getReadLength() {
-      return readLength;
-    }
-
-    long getStartOffsetInBlock() {
-      return startOffsetInBlock;
-    }
   }
 }
