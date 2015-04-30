@@ -321,6 +321,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3485. FairScheduler headroom calculation doesn't consider 
     maxResources for Fifo and FairShare policies. (kasha)
 
+    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
+    (Xuan Gong via zjshen)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
