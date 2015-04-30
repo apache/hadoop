@@ -603,6 +603,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8204. Mover/Balancer should not schedule two replicas to the same
     datanode.  (Walter Su via szetszwo)
 
+    HDFS-7770. Need document for storage type label of data node storage
+    locations under dfs.data.dir. (Xiaoyu Yao via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
