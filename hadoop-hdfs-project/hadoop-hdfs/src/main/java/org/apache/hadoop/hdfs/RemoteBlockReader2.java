@@ -122,12 +122,7 @@ public class RemoteBlockReader2  implements BlockReader {
   private final boolean verifyChecksum;
 
   private boolean sentStatusCode = false;
-  
-  byte[] skipBuf = null;
-  ByteBuffer checksumBytes = null;
-  /** Amount of unread data in the current received packet */
-  int dataLeft = 0;
-  
+
   @VisibleForTesting
   public Peer getPeer() {
     return peer;
@@ -172,7 +167,7 @@ public class RemoteBlockReader2  implements BlockReader {
 
 
   @Override
-  public int read(ByteBuffer buf) throws IOException {
+  public synchronized int read(ByteBuffer buf) throws IOException {
     if (curDataSlice == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
       TraceScope scope = Trace.startSpan(
           "RemoteBlockReader2#readNextPacket(" + blockId + ")", Sampler.NEVER);
@@ -257,21 +252,23 @@ public class RemoteBlockReader2  implements BlockReader {
   @Override
   public synchronized long skip(long n) throws IOException {
     /* How can we make sure we don't throw a ChecksumException, at least
-     * in majority of the cases?. This one throws. */  
-    if ( skipBuf == null ) {
-      skipBuf = new byte[bytesPerChecksum]; 
-    }
-
-    long nSkipped = 0;
-    while ( nSkipped < n ) {
-      int toSkip = (int)Math.min(n-nSkipped, skipBuf.length);
-      int ret = read(skipBuf, 0, toSkip);
-      if ( ret <= 0 ) {
-        return nSkipped;
+     * in majority of the cases?. This one throws. */
+    long skipped = 0;
+    while (skipped < n) {
+      long needToSkip = n - skipped;
+      if (curDataSlice == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
+        readNextPacket();
       }
-      nSkipped += ret;
+      if (curDataSlice.remaining() == 0) {
+        // we're at EOF now
+        break;
+      }
+
+      int skip = (int)Math.min(curDataSlice.remaining(), needToSkip);
+      curDataSlice.position(curDataSlice.position() + skip);
+      skipped += skip;
     }
-    return nSkipped;
+    return skipped;
   }
 
   private void readTrailingEmptyPacket() throws IOException {
