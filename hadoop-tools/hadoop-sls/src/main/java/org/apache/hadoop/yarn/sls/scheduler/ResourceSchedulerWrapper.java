@@ -19,8 +19,9 @@ package org.apache.hadoop.yarn.sls.scheduler;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -487,8 +488,9 @@ final public class ResourceSchedulerWrapper
             TimeUnit.MILLISECONDS);
 
     // application running information
-    jobRuntimeLogBW = new BufferedWriter(
-            new FileWriter(metricsOutputDir + "/jobruntime.csv"));
+    jobRuntimeLogBW =
+        new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
+            metricsOutputDir + "/jobruntime.csv"), "UTF-8"));
     jobRuntimeLogBW.write("JobID,real_start_time,real_end_time," +
             "simulate_start_time,simulate_end_time" + EOL);
     jobRuntimeLogBW.flush();
@@ -692,8 +694,9 @@ final public class ResourceSchedulerWrapper
     private boolean firstLine = true;
     public MetricsLogRunnable() {
       try {
-        metricsLogBW = new BufferedWriter(
-                new FileWriter(metricsOutputDir + "/realtimetrack.json"));
+        metricsLogBW =
+            new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
+                metricsOutputDir + "/realtimetrack.json"), "UTF-8"));
         metricsLogBW.write("[");
       } catch (IOException e) {
         e.printStackTrace();
