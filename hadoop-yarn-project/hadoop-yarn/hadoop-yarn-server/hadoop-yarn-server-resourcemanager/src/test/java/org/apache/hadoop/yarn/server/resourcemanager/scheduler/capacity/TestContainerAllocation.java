@@ -325,7 +325,6 @@ public class TestContainerAllocation {
     }
 
     SecurityUtilTestHelper.setTokenServiceUseIp(false);
-    rm1.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.ALLOCATED);
     MockRM.launchAndRegisterAM(app1, rm1, nm1);
   }
 }
