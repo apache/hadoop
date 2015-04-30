@@ -97,7 +97,6 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   private boolean eos = false;
   private boolean sentStatusCode = false;
   
-  byte[] skipBuf = null;
   ByteBuffer checksumBytes = null;
   /** Amount of unread data in the current received packet */
   int dataLeft = 0;
@@ -126,10 +125,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     if (lastChunkLen < 0 && startOffset > firstChunkOffset && len > 0) {
       // Skip these bytes. But don't call this.skip()!
       int toSkip = (int)(startOffset - firstChunkOffset);
-      if ( skipBuf == null ) {
-        skipBuf = new byte[bytesPerChecksum];
-      }
-      if ( super.read(skipBuf, 0, toSkip) != toSkip ) {
+      if ( super.readAndDiscard(toSkip) != toSkip ) {
         // should never happen
         throw new IOException("Could not skip required number of bytes");
       }
@@ -152,15 +148,11 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public synchronized long skip(long n) throws IOException {
     /* How can we make sure we don't throw a ChecksumException, at least
      * in majority of the cases?. This one throws. */  
-    if ( skipBuf == null ) {
-      skipBuf = new byte[bytesPerChecksum]; 
-    }
-
     long nSkipped = 0;
-    while ( nSkipped < n ) {
-      int toSkip = (int)Math.min(n-nSkipped, skipBuf.length);
-      int ret = read(skipBuf, 0, toSkip);
-      if ( ret <= 0 ) {
+    while (nSkipped < n) {
+      int toSkip = (int)Math.min(n-nSkipped, Integer.MAX_VALUE);
+      int ret = readAndDiscard(toSkip);
+      if (ret <= 0) {
         return nSkipped;
       }
       nSkipped += ret;

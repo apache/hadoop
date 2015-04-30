@@ -214,7 +214,30 @@ abstract public class FSInputChecker extends FSInputStream {
     count = readChecksumChunk(buf, 0, maxChunkSize);
     if (count < 0) count = 0;
   }
-  
+
+  /**
+   * Like read(byte[], int, int), but does not provide a dest buffer,
+   * so the read data is discarded.
+   * @param      len maximum number of bytes to read.
+   * @return     the number of bytes read.
+   * @throws     IOException  if an I/O error occurs.
+   */
+  final protected synchronized int readAndDiscard(int len) throws IOException {
+    int total = 0;
+    while (total < len) {
+      if (pos >= count) {
+        count = readChecksumChunk(buf, 0, maxChunkSize);
+        if (count <= 0) {
+          break;
+        }
+      }
+      int rd = Math.min(count - pos, len - total);
+      pos += rd;
+      total += rd;
+    }
+    return total;
+  }
+
   /*
    * Read characters into a portion of an array, reading from the underlying
    * stream at most once if necessary.
