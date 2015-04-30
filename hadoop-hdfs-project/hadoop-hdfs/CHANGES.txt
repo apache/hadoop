@@ -486,6 +486,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-5574. Remove buffer copy in BlockReader.skip.
     (Binglin Chang via aajisaka)
 
+    HDFS-8200. Refactor FSDirStatAndListingOp. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
