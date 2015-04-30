@@ -274,6 +274,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3533. Test: Fix launchAM in MockRM to wait for attempt to be scheduled.
     (Anubhav Dhoot via jianhe)
 
+    YARN-3564. Fix TestContainerAllocation.testAMContainerAllocationWhenDNSUnavailable 
+    fails randomly. (Jian He via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
