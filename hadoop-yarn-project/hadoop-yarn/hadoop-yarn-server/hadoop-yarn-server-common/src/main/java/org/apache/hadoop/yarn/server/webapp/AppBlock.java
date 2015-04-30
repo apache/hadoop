@@ -62,6 +62,7 @@ public class AppBlock extends HtmlBlock {
   protected ApplicationBaseProtocol appBaseProt;
   protected Configuration conf;
   protected ApplicationId appID = null;
+  protected UserGroupInformation callerUGI;
 
   @Inject
   protected AppBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx,
@@ -87,7 +88,7 @@ public class AppBlock extends HtmlBlock {
       return;
     }
 
-    UserGroupInformation callerUGI = getCallerUGI();
+    callerUGI = getCallerUGI();
     ApplicationReport appReport = null;
     try {
       final GetApplicationReportRequest request =
@@ -211,6 +212,11 @@ public class AppBlock extends HtmlBlock {
     html._(InfoBlock.class);
 
     // Application Attempt Table
+    createApplicationAttemptTable(html, attempts);
+  }
+
+  protected void createApplicationAttemptTable(Block html,
+      Collection<ApplicationAttemptReport> attempts) {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#attempts").thead().tr().th(".id", "Attempt ID")
           .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
