@@ -220,6 +220,9 @@ Release 2.6.1 - 2015-09-09
     YARN-3248. Display count of nodes blacklisted by apps in the web UI.
     (Varun Vasudev via xgong)
 
+    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
+    (Xuan Gong via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
