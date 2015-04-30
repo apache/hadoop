@@ -58,6 +58,9 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
   private void fillReservoir(int min) {
     if (pos >= reservoir.length - min) {
       try {
+        if (stream == null) {
+          stream = new FileInputStream(new File(randomDevPath));
+        }
         IOUtils.readFully(stream, reservoir, 0, reservoir.length);
       } catch (IOException e) {
         throw new RuntimeException("failed to fill reservoir", e);
@@ -75,21 +78,7 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
     this.randomDevPath = conf.get(
         HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY,
         HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT);
-    File randomDevFile = new File(randomDevPath);
-
-    try {
-      close();
-      this.stream = new FileInputStream(randomDevFile);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    try {
-      fillReservoir(0);
-    } catch (RuntimeException e) {
-      close();
-      throw e;
-    }
+    close();
   }
 
   @Override
