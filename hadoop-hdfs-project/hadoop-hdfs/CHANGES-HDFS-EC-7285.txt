@@ -146,3 +146,6 @@
 
     HDFS-8272. Erasure Coding: simplify the retry logic in DFSStripedInputStream 
     (stateful read). (Jing Zhao via Zhe Zhang)
+
+    HDFS-8282. Erasure coding: move striped reading logic to StripedBlockUtil.
+    (Zhe Zhang)

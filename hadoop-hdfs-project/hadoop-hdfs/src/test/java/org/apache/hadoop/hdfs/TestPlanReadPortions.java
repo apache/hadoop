@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import org.junit.Test;
 
-import static org.apache.hadoop.hdfs.DFSStripedInputStream.ReadPortion;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.ReadPortion;
 import static org.junit.Assert.*;
 
 public class TestPlanReadPortions {
@@ -32,13 +33,13 @@ public class TestPlanReadPortions {
   private void testPlanReadPortions(int startInBlk, int length,
       int bufferOffset, int[] readLengths, int[] offsetsInBlock,
       int[][] bufferOffsets, int[][] bufferLengths) {
-    ReadPortion[] results = DFSStripedInputStream.planReadPortions(GROUP_SIZE,
+    ReadPortion[] results = StripedBlockUtil.planReadPortions(GROUP_SIZE,
         CELLSIZE, startInBlk, length, bufferOffset);
     assertEquals(GROUP_SIZE, results.length);
 
     for (int i = 0; i < GROUP_SIZE; i++) {
-      assertEquals(readLengths[i], results[i].getReadLength());
-      assertEquals(offsetsInBlock[i], results[i].getStartOffsetInBlock());
+      assertEquals(readLengths[i], results[i].readLength);
+      assertEquals(offsetsInBlock[i], results[i].startOffsetInBlock);
       final int[] bOffsets = results[i].getOffsets();
       assertArrayEquals(bufferOffsets[i], bOffsets);
       final int[] bLengths = results[i].getLengths();
@@ -47,7 +48,7 @@ public class TestPlanReadPortions {
   }
 
   /**
-   * Test {@link DFSStripedInputStream#planReadPortions}
+   * Test {@link StripedBlockUtil#planReadPortions}
    */
   @Test
   public void testPlanReadPortions() {
