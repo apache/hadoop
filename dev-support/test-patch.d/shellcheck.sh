@@ -87,6 +87,45 @@ function shellcheck_preapply
   return 0
 }
 
+function shellcheck_calcdiffs
+{
+  local orig=$1
+  local new=$2
+  local diffout=$3
+  local tmp=${PATCH_DIR}/sc.$$.${RANDOM}
+  local count=0
+  local j
+
+  # first, pull out just the errors
+  # shellcheck disable=SC2016
+  ${AWK} -F: '{print $NF}' "${orig}" >> "${tmp}.branch"
+
+  # shellcheck disable=SC2016
+  ${AWK} -F: '{print $NF}' "${new}" >> "${tmp}.patch"
+
+  # compare the errors, generating a string of line
+  # numbers.  Sorry portability: GNU diff makes this too easy
+  ${DIFF} --unchanged-line-format="" \
+     --old-line-format="" \
+     --new-line-format="%dn " \
+     "${tmp}.branch" \
+     "${tmp}.patch" > "${tmp}.lined"
+
+  # now, pull out those lines of the raw output
+  # shellcheck disable=SC2013
+  for j in $(cat "${tmp}.lined"); do
+    # shellcheck disable=SC2086
+    head -${j} "${new}" | tail -1 >> "${diffout}"
+  done
+
+  if [[ -f "${diffout}" ]]; then
+    # shellcheck disable=SC2016
+    count=$(wc -l "${diffout}" | ${AWK} '{print $1}' )
+  fi
+  rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
+  echo "${count}"
+}
+
 function shellcheck_postapply
 {
   local i
@@ -121,16 +160,13 @@ function shellcheck_postapply
   # shellcheck disable=SC2016
   numPostpatch=$(wc -l "${PATCH_DIR}/patchshellcheck-result.txt" | ${AWK} '{print $1}')
 
-  ${DIFF} -u "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt" \
+  diffPostpatch=$(shellcheck_calcdiffs \
+    "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt" \
     "${PATCH_DIR}/patchshellcheck-result.txt" \
-      | ${GREP} '^+\.' \
-      > "${PATCH_DIR}/diffpatchshellcheck.txt"
+      "${PATCH_DIR}/diffpatchshellcheck.txt"
+    )
 
-  # shellcheck disable=SC2016
-  diffPostpatch=$(wc -l "${PATCH_DIR}/diffpatchshellcheck.txt" | ${AWK} '{print $1}')
-
-  if [[ ${diffPostpatch} -gt 0
-    && ${numPostpatch} -gt ${numPrepatch} ]] ; then
+  if [[ ${diffPostpatch} -gt 0 ]] ; then
     add_jira_table -1 shellcheck "The applied patch generated "\
       "${diffPostpatch} new shellcheck (v${SHELLCHECK_VERSION}) issues (total was ${numPrepatch}, now ${numPostpatch})."
     add_jira_footer shellcheck "@@BASE@@/diffpatchshellcheck.txt"

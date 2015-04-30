@@ -67,7 +67,7 @@ function setup_defaults
       EGREP=${EGREP:-/usr/xpg4/bin/egrep}
       GREP=${GREP:-/usr/xpg4/bin/grep}
       PATCH=${PATCH:-patch}
-      DIFF=${DIFF:-diff}
+      DIFF=${DIFF:-/usr/gnu/bin/diff}
       JIRACLI=${JIRA:-jira}
     ;;
     *)
@@ -449,7 +449,7 @@ function verify_patchdir_still_exists
   if [[ ! -d ${PATCH_DIR} ]]; then
       rm "${commentfile}" 2>/dev/null
 
-      echo "(!) The patch artifact directory on has been removed! " > "${commentfile}"
+      echo "(!) The patch artifact directory has been removed! " > "${commentfile}"
       echo "This is a fatal error for test-patch.sh.  Aborting. " >> "${commentfile}"
       echo
       cat ${commentfile}
@@ -468,6 +468,49 @@ function verify_patchdir_still_exists
     fi
 }
 
+## @description generate a list of all files and line numbers that
+## @description that were added/changed in the source repo
+## @audience    private
+## @stability   stable
+## @params      filename
+## @replaceable no
+function compute_gitdiff
+{
+  local outfile=$1
+  local file
+  local line
+  local startline
+  local counter
+  local numlines
+  local actual
+
+  pushd "${BASEDIR}" >/dev/null
+  while read line; do
+    if [[ ${line} =~ ^\+\+\+ ]]; then
+      file="./"$(echo "${line}" | cut -f2- -d/)
+      continue
+    elif [[ ${line} =~ ^@@ ]]; then
+      startline=$(echo "${line}" | cut -f3 -d' ' | cut -f1 -d, | tr -d + )
+      numlines=$(echo "${line}" | cut -f3 -d' ' | cut -s -f2 -d, )
+      # if this is empty, then just this line
+      # if it is 0, then no lines were added and this part of the patch
+      # is strictly a delete
+      if [[ ${numlines} == 0 ]]; then
+        continue
+      elif [[ -z ${numlines} ]]; then
+        numlines=1
+      fi
+      counter=0
+      until [[ ${counter} -gt ${numlines} ]]; do
+          ((actual=counter+startline))
+          echo "${file}:${actual}:" >> "${outfile}"
+          ((counter=counter+1))
+      done
+    fi
+  done < <("${GIT}" diff --unified=0 --no-color)
+  popd >/dev/null
+}
+
 ## @description  Print the command to be executing to the screen. Then
 ## @description  run the command, sending stdout and stderr to the given filename
 ## @description  This will also ensure that any directories in ${BASEDIR} have
@@ -481,7 +524,7 @@ function verify_patchdir_still_exists
 ## @returns      $?
 function echo_and_redirect
 {
-  logfile=$1
+  local logfile=$1
   shift
 
   verify_patchdir_still_exists
@@ -522,7 +565,7 @@ function hadoop_usage
 
   echo "Shell binary overrides:"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
-  echo "--diff-cmd=<cmd>       The 'diff' command to use (default 'diff')"
+  echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
@@ -584,6 +627,10 @@ function parse_args
       ;;
       --grep-cmd=*)
         GREP=${i#*=}
+      ;;
+      --help|-help|-h|help|--h|--\?|-\?|\?)
+        hadoop_usage
+        exit 0
       ;;
       --java-home)
         JAVA_HOME=${i#*=}
@@ -680,6 +727,8 @@ function parse_args
       cleanup_and_exit 1
     fi
   fi
+
+  GITDIFFLINES=${PATCH_DIR}/gitdifflines.txt
 }
 
 ## @description  Locate the pom.xml file for a given directory
@@ -716,12 +765,14 @@ function find_changed_files
   # get a list of all of the files that have been changed,
   # except for /dev/null (which would be present for new files).
   # Additionally, remove any a/ b/ patterns at the front
-  # of the patch filenames
+  # of the patch filenames and any revision info at the end
+  # shellcheck disable=SC2016
   CHANGED_FILES=$(${GREP} -E '^(\+\+\+|---) ' "${PATCH_DIR}/patch" \
     | ${SED} \
       -e 's,^....,,' \
       -e 's,^[ab]/,,' \
     | ${GREP} -v /dev/null \
+    | ${AWK} '{print $1}' \
     | sort -u)
 }
 
@@ -1552,7 +1603,7 @@ function check_javac
         > "${PATCH_DIR}/diffJavacWarnings.txt"
 
         add_jira_table -1 javac "The applied patch generated "\
-        "$((patchJavacWarnings-branchJavacWarnings))" \
+        "$((patchJavacWarnings-${PATCH_BRANCH}JavacWarnings))" \
         " additional warning messages."
 
         add_jira_footer javac "@@BASE@@/diffJavacWarnings.txt"
@@ -1712,6 +1763,7 @@ function check_findbugs
       "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
       "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
 
+    #shellcheck disable=SC2016
     newFindbugsWarnings=$("${FINDBUGS_HOME}/bin/filterBugs" \
       -first "01/01/2000" "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
       "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml" \
@@ -1887,10 +1939,12 @@ function check_unittests
       test_timeouts="${test_timeouts} ${module_test_timeouts}"
       result=1
     fi
-    #shellcheck disable=SC2026,SC2038
+
+    #shellcheck disable=SC2026,SC2038,SC2016
     module_failed_tests=$(find . -name 'TEST*.xml'\
       | xargs "${GREP}" -l -E "<failure|<error"\
       | ${AWK} -F/ '{sub("TEST-org.apache.",""); sub(".xml",""); print $NF}')
+
     if [[ -n "${module_failed_tests}" ]] ; then
       failed_tests="${failed_tests} ${module_failed_tests}"
       result=1
@@ -2054,8 +2108,6 @@ function output_to_console
     printf "%s\n" "${comment}"
     ((i=i+1))
   done
-
-
 }
 
 ## @description  Print out the finished details to the JIRA issue
@@ -2189,7 +2241,6 @@ function postcheckout
       #shellcheck disable=SC2086
       ${plugin}_postcheckout
 
-
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
         output_to_console 1
@@ -2243,6 +2294,8 @@ function postapply
   local routine
   local plugin
   local retval
+
+  compute_gitdiff "${GITDIFFLINES}"
 
   check_javac
   retval=$?
