@@ -40,9 +40,6 @@
     },
 
     'fmt_time': function (v) {
-      if (v < 0) {
-        return "unknown";
-      }
       var s = Math.floor(v / 1000), h = Math.floor(s / 3600);
       s -= h * 3600;
       var m = Math.floor(s / 60);
