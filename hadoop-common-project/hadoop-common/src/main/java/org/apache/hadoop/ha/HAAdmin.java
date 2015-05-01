@@ -279,7 +279,13 @@ public abstract class HAAdmin extends Configured implements Tool {
             "supported with auto-failover enabled.");
         return -1;
       }
-      return gracefulFailoverThroughZKFCs(toNode);
+      try {
+        return gracefulFailoverThroughZKFCs(toNode);
+      } catch (UnsupportedOperationException e){
+        errOut.println("Failover command is not supported with " +
+            "auto-failover enabled: " + e.getLocalizedMessage());
+        return -1;
+      }
     }
     
     FailoverController fc = new FailoverController(getConf(),

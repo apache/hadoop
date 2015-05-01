@@ -13,6 +13,9 @@ Release 2.7.1 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-3006. Improve the error message when attempting manual failover with 
+    auto-failover enabled. (Akira AJISAKA via wangda)
+
   BUG FIXES
 
     YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
