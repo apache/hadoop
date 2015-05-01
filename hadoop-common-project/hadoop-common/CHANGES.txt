@@ -588,6 +588,11 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11491. HarFs incorrectly declared as requiring an authority.
     (Brahma Reddy Battula via gera)
 
+    HADOOP-11889. Make checkstyle runnable from root project
+    (Gera Shegalov via jeagles)
+
+    HADOOP-11900. Add failIfNoTests=false to hadoop-build-tools pom. (gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
