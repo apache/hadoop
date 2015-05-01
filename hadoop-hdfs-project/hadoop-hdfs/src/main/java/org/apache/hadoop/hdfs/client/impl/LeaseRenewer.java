@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -31,6 +31,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
@@ -40,7 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
- * Used by {@link DFSClient} for renewing file-being-written leases
+ * Used by {@link org.apache.hadoop.hdfs.DFSClient} for renewing file-being-written leases
  * on the namenode.
  * When a file is opened for write (create or append),
  * namenode stores a file lease for recording the identity of the writer.
@@ -53,12 +55,12 @@ import com.google.common.annotations.VisibleForTesting;
  * This class also provides the following functionality:
  * <ul>
  * <li>
- * It maintains a map from (namenode, user) pairs to lease renewers. 
+ * It maintains a map from (namenode, user) pairs to lease renewers.
  * The same {@link LeaseRenewer} instance is used for renewing lease
- * for all the {@link DFSClient} to the same namenode and the same user.
+ * for all the {@link org.apache.hadoop.hdfs.DFSClient} to the same namenode and the same user.
  * </li>
  * <li>
- * Each renewer maintains a list of {@link DFSClient}.
+ * Each renewer maintains a list of {@link org.apache.hadoop.hdfs.DFSClient}.
  * Periodically the leases for all the clients are renewed.
  * A client is removed from the list when the client is closed.
  * </li>
@@ -70,21 +72,21 @@ import com.google.common.annotations.VisibleForTesting;
  * </p>
  */
 @InterfaceAudience.Private
-class LeaseRenewer {
+public class LeaseRenewer {
   static final Log LOG = LogFactory.getLog(LeaseRenewer.class);
 
   static final long LEASE_RENEWER_GRACE_DEFAULT = 60*1000L;
   static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;
 
   /** Get a {@link LeaseRenewer} instance */
-  static LeaseRenewer getInstance(final String authority,
+  public static LeaseRenewer getInstance(final String authority,
       final UserGroupInformation ugi, final DFSClient dfsc) throws IOException {
     final LeaseRenewer r = Factory.INSTANCE.get(authority, ugi);
     r.addClient(dfsc);
     return r;
   }
 
-  /** 
+  /**
    * A factory for sharing {@link LeaseRenewer} objects
    * among {@link DFSClient} instances
    * so that there is only one renewer per authority per user.
@@ -124,7 +126,7 @@ class LeaseRenewer {
           return this.authority.equals(that.authority)
                  && this.ugi.equals(that.ugi);
         }
-        return false;        
+        return false;
       }
 
       @Override
@@ -170,17 +172,17 @@ class LeaseRenewer {
   /** Only the daemon with currentId should run. */
   private int currentId = 0;
 
-  /** 
+  /**
    * A period in milliseconds that the lease renewer thread should run
    * after the map became empty.
    * In other words,
    * if the map is empty for a time period longer than the grace period,
-   * the renewer should terminate.  
+   * the renewer should terminate.
    */
   private long gracePeriod;
   /**
    * The time period in milliseconds
-   * that the renewer sleeps for each iteration. 
+   * that the renewer sleeps for each iteration.
    */
   private long sleepPeriod;
 
@@ -199,7 +201,7 @@ class LeaseRenewer {
   private LeaseRenewer(Factory.Key factorykey) {
     this.factorykey = factorykey;
     unsyncSetGraceSleepPeriod(LEASE_RENEWER_GRACE_DEFAULT);
-    
+
     if (LOG.isTraceEnabled()) {
       instantiationTrace = StringUtils.stringifyException(
         new Throwable("TRACE"));
@@ -244,7 +246,7 @@ class LeaseRenewer {
   }
 
   private synchronized long getSleepPeriod() {
-    return sleepPeriod;    
+    return sleepPeriod;
   }
 
   /** Set the grace period and adjust the sleep period accordingly. */
@@ -272,19 +274,19 @@ class LeaseRenewer {
   public boolean isEmpty() {
     return dfsclients.isEmpty();
   }
-  
+
   /** Used only by tests */
   synchronized String getDaemonName() {
     return daemon.getName();
   }
 
-  /** Is the empty period longer than the grace period? */  
+  /** Is the empty period longer than the grace period? */
   private synchronized boolean isRenewerExpired() {
     return emptyTime != Long.MAX_VALUE
         && Time.monotonicNow() - emptyTime > gracePeriod;
   }
 
-  synchronized void put(final long inodeId, final DFSOutputStream out,
+  public synchronized void put(final long inodeId, final DFSOutputStream out,
       final DFSClient dfsc) {
     if (dfsc.isClientRunning()) {
       if (!isRunning() || isRenewerExpired()) {
@@ -314,7 +316,7 @@ class LeaseRenewer {
               }
             }
           }
-          
+
           @Override
           public String toString() {
             return String.valueOf(LeaseRenewer.this);
@@ -333,7 +335,7 @@ class LeaseRenewer {
   }
 
   /** Close a file. */
-  void closeFile(final long inodeId, final DFSClient dfsc) {
+  public void closeFile(final long inodeId, final DFSClient dfsc) {
     dfsc.removeFileBeingWritten(inodeId);
 
     synchronized(this) {
@@ -355,7 +357,7 @@ class LeaseRenewer {
   }
 
   /** Close the given client. */
-  synchronized void closeClient(final DFSClient dfsc) {
+  public synchronized void closeClient(final DFSClient dfsc) {
     dfsclients.remove(dfsc);
     if (dfsclients.isEmpty()) {
       if (!isRunning() || isRenewerExpired()) {
@@ -381,7 +383,7 @@ class LeaseRenewer {
     }
   }
 
-  void interruptAndJoin() throws InterruptedException {
+  public void interruptAndJoin() throws InterruptedException {
     Daemon daemonCopy = null;
     synchronized (this) {
       if (isRunning()) {
@@ -389,7 +391,7 @@ class LeaseRenewer {
         daemonCopy = daemon;
       }
     }
-   
+
     if (daemonCopy != null) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Wait for lease checker to terminate");
