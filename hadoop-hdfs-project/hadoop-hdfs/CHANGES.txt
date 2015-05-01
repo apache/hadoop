@@ -539,9 +539,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8096. DatanodeMetrics#blocksReplicated will get incremented early and
     even for failed transfers (vinayakumarb)
 
-    HDFS-8091: ACLStatus and XAttributes should be presented to
-    INodeAttributesProvider before returning to client (asuresh)
-
     HDFS-7939. Two fsimage_rollback_* files are created which are not deleted
     after rollback. (J.Andreina via vinayakumarb)
 
@@ -659,6 +656,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8269. getBlockLocations() does not resolve the .reserved path and
     generates incorrect edit logs when updating the atime. (wheat9)
+
+    HDFS-8091: ACLStatus and XAttributes should be presented to
+    INodeAttributesProvider before returning to client (asuresh)
 
 Release 2.7.0 - 2015-04-20
 
