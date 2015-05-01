@@ -155,3 +155,6 @@
 
     HDFS-8308. Erasure Coding: NameNode may get blocked in waitForLoadingFSImage()
     when loading editlog. (jing9)
+
+    HDFS-7949. WebImageViewer need support file size calculation with striped 
+    blocks. (Rakesh R via Zhe Zhang)
