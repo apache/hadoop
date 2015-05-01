@@ -287,6 +287,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3564. Fix TestContainerAllocation.testAMContainerAllocationWhenDNSUnavailable 
     fails randomly. (Jian He via wangda)
 
+    YARN-2893. AMLaucher: sporadic job failures due to EOFException in
+    readTokenStorageStream. (Zhihai Xu via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

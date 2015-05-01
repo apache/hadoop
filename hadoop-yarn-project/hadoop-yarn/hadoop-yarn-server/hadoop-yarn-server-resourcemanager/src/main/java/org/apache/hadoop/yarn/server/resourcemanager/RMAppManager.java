@@ -281,29 +281,29 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMAppImpl application =
         createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
     ApplicationId appId = submissionContext.getApplicationId();
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      try {
+    Credentials credentials = null;
+    try {
+      credentials = parseCredentials(submissionContext);
+      if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-            parseCredentials(submissionContext),
-            submissionContext.getCancelTokensWhenComplete(),
+            credentials, submissionContext.getCancelTokensWhenComplete(),
             application.getUser());
-      } catch (Exception e) {
-        LOG.warn("Unable to parse credentials.", e);
-        // Sending APP_REJECTED is fine, since we assume that the
-        // RMApp is in NEW state and thus we haven't yet informed the
-        // scheduler about the existence of the application
-        assert application.getState() == RMAppState.NEW;
+      } else {
+        // Dispatcher is not yet started at this time, so these START events
+        // enqueued should be guaranteed to be first processed when dispatcher
+        // gets started.
         this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(applicationId, e.getMessage()));
-        throw RPCUtil.getRemoteException(e);
+            .handle(new RMAppEvent(applicationId, RMAppEventType.START));
       }
-    } else {
-      // Dispatcher is not yet started at this time, so these START events
-      // enqueued should be guaranteed to be first processed when dispatcher
-      // gets started.
+    } catch (Exception e) {
+      LOG.warn("Unable to parse credentials.", e);
+      // Sending APP_REJECTED is fine, since we assume that the
+      // RMApp is in NEW state and thus we haven't yet informed the
+      // scheduler about the existence of the application
+      assert application.getState() == RMAppState.NEW;
       this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMAppEvent(applicationId, RMAppEventType.START));
+          .handle(new RMAppRejectedEvent(applicationId, e.getMessage()));
+      throw RPCUtil.getRemoteException(e);
     }
   }
 
