@@ -18,6 +18,7 @@
 package org.apache.hadoop.tracing;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.Assert;
@@ -57,7 +58,8 @@ public class TestTraceAdmin {
   public void testCreateAndDestroySpanReceiver() throws Exception {
     Configuration conf = new Configuration();
     conf = new Configuration();
-    conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY, "");
+    conf.set(DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX  +
+        SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX, "");
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();

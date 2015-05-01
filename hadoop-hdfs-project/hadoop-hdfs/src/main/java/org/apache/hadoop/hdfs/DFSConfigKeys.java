@@ -101,6 +101,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
+  // HDFS HTrace configuration is controlled by dfs.htrace.spanreceiver.classes,
+  // etc.
+  public static final String  DFS_SERVER_HTRACE_PREFIX = "dfs.htrace.";
+
+  // HDFS client HTrace configuration.
+  public static final String  DFS_CLIENT_HTRACE_PREFIX = "dfs.client.htrace.";
+
   // HA related configuration
   public static final String  DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX = "dfs.client.failover.proxy.provider";
   public static final String  DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY = "dfs.client.failover.max.attempts";

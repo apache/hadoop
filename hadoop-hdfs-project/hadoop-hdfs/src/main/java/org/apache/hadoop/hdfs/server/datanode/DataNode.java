@@ -1099,7 +1099,8 @@ public class DataNode extends ReconfigurableBase
     this.dnConf = new DNConf(conf);
     checkSecureConfig(dnConf, conf, resources);
 
-    this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
+    this.spanReceiverHost =
+      SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
 
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {

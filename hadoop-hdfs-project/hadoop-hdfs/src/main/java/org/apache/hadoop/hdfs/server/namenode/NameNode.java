@@ -638,7 +638,8 @@ public class NameNode implements NameNodeStatusMXBean {
       startHttpServer(conf);
     }
 
-    this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
+    this.spanReceiverHost =
+      SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
 
     loadNamesystem(conf);
 

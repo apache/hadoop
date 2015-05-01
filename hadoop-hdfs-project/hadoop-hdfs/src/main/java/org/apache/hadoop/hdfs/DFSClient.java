@@ -631,8 +631,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
-    SpanReceiverHost.getInstance(conf);
-    traceSampler = new SamplerBuilder(TraceUtils.wrapHadoopConf(conf)).build();
+    SpanReceiverHost.get(conf, DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX);
+    traceSampler = new SamplerBuilder(TraceUtils.
+        wrapHadoopConf(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX, conf)).build();
     // Copy only the required DFSClient configuration
     this.dfsClientConf = new Conf(conf);
     if (this.dfsClientConf.useLegacyBlockReaderLocal) {
