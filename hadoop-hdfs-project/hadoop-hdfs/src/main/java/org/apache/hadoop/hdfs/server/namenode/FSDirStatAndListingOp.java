@@ -417,7 +417,8 @@ class FSDirStatAndListingOp {
 
     if (node.isFile()) {
       FlatINodeFileFeature f = node.feature(FlatINodeFileFeature.class);
-      size = f.fileSize();
+      size =
+          f.fileSize();
       replication = f.replication();
       blocksize = f.blockSize();
       isEncrypted = false;

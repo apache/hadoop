@@ -93,9 +93,7 @@ public class TestGetBlockLocations {
       public Void answer(InvocationOnMock invocation) throws Throwable {
         invocation.callRealMethod();
         if (!renamed[0]) {
-          FSDirRenameOp.renameTo(fsd, fsd.getPermissionChecker(), FILE_PATH,
-                                 DST_PATH, new INode.BlocksMapUpdateInfo(),
-                                 false);
+          FSDirRenameOp.renameToInt(fsd, FILE_PATH, DST_PATH, false);
           renamed[0] = true;
         }
         return null;
