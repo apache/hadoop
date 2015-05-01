@@ -4767,7 +4767,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     public void run() {
       while (fsRunning && shouldRun) {
         try {
-          clearCorruptLazyPersistFiles();
+          if (!isInSafeMode()) {
+            clearCorruptLazyPersistFiles();
+          } else {
+            if (FSNamesystem.LOG.isDebugEnabled()) {
+              FSNamesystem.LOG
+                  .debug("Namenode is in safemode, skipping scrubbing of corrupted lazy-persist files.");
+            }
+          }
           Thread.sleep(scrubIntervalSec * 1000);
         } catch (InterruptedException e) {
           FSNamesystem.LOG.info(

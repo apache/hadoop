@@ -601,6 +601,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8276. LazyPersistFileScrubber should be disabled if scrubber interval
     configured zero. (Surendra Singh Lilhore via Arpit Agarwal)
 
+    HDFS-8229. LAZY_PERSIST file gets deleted after NameNode restart.
+    (Surendra Singh Lilhore via Arpit Agarwal) 
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
