@@ -232,6 +232,28 @@ public class StripedBlockUtil {
   }
 
   /**
+   * Get the total usage of the striped blocks, which is the total of data
+   * blocks and parity blocks
+   *
+   * @param numDataBlkBytes
+   *          Size of the block group only counting data blocks
+   * @param dataBlkNum
+   *          The number of data blocks
+   * @param parityBlkNum
+   *          The number of parity blocks
+   * @param cellSize
+   *          The size of a striping cell
+   * @return The total usage of data blocks and parity blocks
+   */
+  public static long spaceConsumedByStripedBlock(long numDataBlkBytes,
+      int dataBlkNum, int parityBlkNum, int cellSize) {
+    int parityIndex = dataBlkNum + 1;
+    long numParityBlkBytes = getInternalBlockLength(numDataBlkBytes, cellSize,
+        dataBlkNum, parityIndex) * parityBlkNum;
+    return numDataBlkBytes + numParityBlkBytes;
+  }
+
+  /**
    * This class represents the portion of I/O associated with each block in the
    * striped block group.
    */
