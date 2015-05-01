@@ -595,6 +595,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8300. Fix unit test failures and findbugs warning caused by HDFS-8283.
     (jing9)
 
+    HDFS-8276. LazyPersistFileScrubber should be disabled if scrubber interval
+    configured zero. (Surendra Singh Lilhore via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

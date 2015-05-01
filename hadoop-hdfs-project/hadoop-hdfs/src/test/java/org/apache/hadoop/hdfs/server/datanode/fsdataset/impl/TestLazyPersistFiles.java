@@ -120,6 +120,31 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
                is(0L));
   }
 
+  @Test
+  public void testDisableLazyPersistFileScrubber()
+      throws IOException, InterruptedException {
+    getClusterBuilder().setRamDiskReplicaCapacity(2).disableScrubber().build();
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
+
+    makeTestFile(path1, BLOCK_SIZE, true);
+    ensureFileReplicasOnStorageType(path1, RAM_DISK);
+
+    // Stop the DataNode and sleep for the time it takes the NN to
+    // detect the DN as being dead.
+    cluster.shutdownDataNodes();
+    Thread.sleep(30000L);
+
+    // Next, wait for the replication monitor to mark the file as corrupt
+    Thread.sleep(2 * DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT * 1000);
+
+    // Wait for the LazyPersistFileScrubber to run
+    Thread.sleep(2 * LAZY_WRITE_FILE_SCRUBBER_INTERVAL_SEC * 1000);
+
+    // Ensure that path1 exist.
+    Assert.assertTrue(fs.exists(path1));
+
+  }
   /**
    * Concurrent read from the same node and verify the contents.
    */
