@@ -174,13 +174,13 @@ class DataStreamer extends Daemon {
     packets.clear();
   }
   
-  static class LastException {
-    private Throwable thrown;
+  static class LastExceptionInStreamer {
+    private IOException thrown;
 
     synchronized void set(Throwable t) {
-      Preconditions.checkNotNull(t);
-      Preconditions.checkState(thrown == null);
-      this.thrown = t;
+      assert t != null;
+      this.thrown = t instanceof IOException ?
+          (IOException) t : new IOException(t);
     }
 
     synchronized void clear() {
@@ -188,17 +188,23 @@ class DataStreamer extends Daemon {
     }
 
     /** Check if there already is an exception. */
-    synchronized void check() throws IOException {
+    synchronized void check(boolean resetToNull) throws IOException {
       if (thrown != null) {
-        throw new IOException(thrown);
+        if (LOG.isTraceEnabled()) {
+          // wrap and print the exception to know when the check is called
+          LOG.trace("Got Exception while checking", new Throwable(thrown));
+        }
+        final IOException e = thrown;
+        if (resetToNull) {
+          thrown = null;
+        }
+        throw e;
       }
     }
 
     synchronized void throwException4Close() throws IOException {
-      check();
-      final IOException ioe = new ClosedChannelException();
-      thrown = ioe;
-      throw ioe;
+      check(false);
+      throw new ClosedChannelException();
     }
   }
 
@@ -234,7 +240,7 @@ class DataStreamer extends Daemon {
   private long lastQueuedSeqno = -1;
   private long lastAckedSeqno = -1;
   private long bytesCurBlock = 0; // bytes written in current block
-  private final LastException lastException = new LastException();
+  private final LastExceptionInStreamer lastException = new LastExceptionInStreamer();
   private Socket s;
 
   private final DFSClient dfsClient;
@@ -1741,7 +1747,7 @@ class DataStreamer extends Daemon {
   /**
    * @return the last exception
    */
-  LastException getLastException(){
+  LastExceptionInStreamer getLastException(){
     return lastException;
   }
 
