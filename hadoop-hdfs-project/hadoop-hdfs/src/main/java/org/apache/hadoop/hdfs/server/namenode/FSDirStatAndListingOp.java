@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstantsClient;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -139,7 +138,7 @@ class FSDirStatAndListingOp {
   }
 
   private static byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
-    return inodePolicy != HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED ? inodePolicy :
+    return inodePolicy != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED ? inodePolicy :
         parentPolicy;
   }
 
@@ -175,7 +174,7 @@ class FSDirStatAndListingOp {
       if (targetNode == null)
         return null;
       byte parentStoragePolicy = isSuperUser ?
-          targetNode.getStoragePolicyID() : HdfsConstantsClient
+          targetNode.getStoragePolicyID() : HdfsConstants
           .BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
 
       if (!targetNode.isDirectory()) {
@@ -202,7 +201,7 @@ class FSDirStatAndListingOp {
         INode cur = contents.get(startChild+i);
         byte curPolicy = isSuperUser && !cur.isSymlink()?
             cur.getLocalStoragePolicyID():
-            HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
         INodeAttributes nodeAttrs = getINodeAttributes(
             fsd, src, cur.getLocalNameBytes(), cur,
             snapshot);
@@ -265,7 +264,7 @@ class FSDirStatAndListingOp {
       listing[i] = createFileStatus(
           fsd, sRoot.getLocalNameBytes(),
           sRoot, nodeAttrs,
-          HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
+          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
           Snapshot.CURRENT_STATE_ID, false,
           INodesInPath.fromINode(sRoot));
     }
@@ -293,8 +292,8 @@ class FSDirStatAndListingOp {
       }
 
       byte policyId = includeStoragePolicy && !i.isSymlink() ?
-          i.getStoragePolicyID() : HdfsConstantsClient
-          .BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+          i.getStoragePolicyID() :
+          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
       INodeAttributes nodeAttrs = getINodeAttributes(
           fsd, path, HdfsFileStatus.EMPTY_NAME, i, src.getPathSnapshotId());
       return createFileStatus(
@@ -316,7 +315,7 @@ class FSDirStatAndListingOp {
       if (fsd.getINode4DotSnapshot(srcs) != null) {
         return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
             HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-            HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED);
+            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED);
       }
       return null;
     }
@@ -329,7 +328,6 @@ class FSDirStatAndListingOp {
       fsd.readUnlock();
     }
   }
-
 
   /**
    * create an hdfs file status from an inode

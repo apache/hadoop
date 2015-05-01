@@ -59,7 +59,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstantsClient;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.*;
@@ -171,7 +171,7 @@ public class WebHdfsFileSystem extends FileSystem
               HdfsClientConfigKeys.HttpClient.RETRY_POLICY_ENABLED_DEFAULT,
               HdfsClientConfigKeys.HttpClient.RETRY_POLICY_SPEC_KEY,
               HdfsClientConfigKeys.HttpClient.RETRY_POLICY_SPEC_DEFAULT,
-              HdfsConstantsClient.SAFEMODE_EXCEPTION_CLASS_NAME);
+              HdfsConstants.SAFEMODE_EXCEPTION_CLASS_NAME);
     } else {
 
       int maxFailoverAttempts = conf.getInt(

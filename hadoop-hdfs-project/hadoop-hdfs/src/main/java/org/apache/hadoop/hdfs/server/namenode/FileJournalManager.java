@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -286,7 +286,7 @@ public class FileJournalManager implements JournalManager {
         try {
           long startTxId = Long.parseLong(inProgressEditsMatch.group(1));
           ret.add(
-              new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID, true));
+              new EditLogFile(f, startTxId, HdfsServerConstants.INVALID_TXID, true));
           continue;
         } catch (NumberFormatException nfe) {
           LOG.error("In-progress edits file " + f + " has improperly " +
@@ -301,7 +301,7 @@ public class FileJournalManager implements JournalManager {
         if (staleInprogressEditsMatch.matches()) {
           try {
             long startTxId = Long.parseLong(staleInprogressEditsMatch.group(1));
-            ret.add(new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID,
+            ret.add(new EditLogFile(f, startTxId, HdfsServerConstants.INVALID_TXID,
                 true));
             continue;
           } catch (NumberFormatException nfe) {
@@ -348,7 +348,7 @@ public class FileJournalManager implements JournalManager {
         }
       }
       if (elf.lastTxId < fromTxId) {
-        assert elf.lastTxId != HdfsConstants.INVALID_TXID;
+        assert elf.lastTxId != HdfsServerConstants.INVALID_TXID;
         if (LOG.isDebugEnabled()) {
           LOG.debug("passing over " + elf + " because it ends at " +
               elf.lastTxId + ", but we only care about transactions " +
@@ -391,7 +391,7 @@ public class FileJournalManager implements JournalManager {
           throw new CorruptionException("In-progress edit log file is corrupt: "
               + elf);
         }
-        if (elf.getLastTxId() == HdfsConstants.INVALID_TXID) {
+        if (elf.getLastTxId() == HdfsServerConstants.INVALID_TXID) {
           // If the file has a valid header (isn't corrupt) but contains no
           // transactions, we likely just crashed after opening the file and
           // writing the header, but before syncing any transactions. Safe to
@@ -480,19 +480,19 @@ public class FileJournalManager implements JournalManager {
     EditLogFile(File file,
         long firstTxId, long lastTxId) {
       this(file, firstTxId, lastTxId, false);
-      assert (lastTxId != HdfsConstants.INVALID_TXID)
+      assert (lastTxId != HdfsServerConstants.INVALID_TXID)
         && (lastTxId >= firstTxId);
     }
     
     EditLogFile(File file, long firstTxId, 
                 long lastTxId, boolean isInProgress) { 
-      assert (lastTxId == HdfsConstants.INVALID_TXID && isInProgress)
-        || (lastTxId != HdfsConstants.INVALID_TXID && lastTxId >= firstTxId);
-      assert (firstTxId > 0) || (firstTxId == HdfsConstants.INVALID_TXID);
+      assert (lastTxId == HdfsServerConstants.INVALID_TXID && isInProgress)
+        || (lastTxId != HdfsServerConstants.INVALID_TXID && lastTxId >= firstTxId);
+      assert (firstTxId > 0) || (firstTxId == HdfsServerConstants.INVALID_TXID);
       assert file != null;
       
       Preconditions.checkArgument(!isInProgress ||
-          lastTxId == HdfsConstants.INVALID_TXID);
+          lastTxId == HdfsServerConstants.INVALID_TXID);
       
       this.firstTxId = firstTxId;
       this.lastTxId = lastTxId;
@@ -552,7 +552,7 @@ public class FileJournalManager implements JournalManager {
     }
 
     public void moveAsideEmptyFile() throws IOException {
-      assert lastTxId == HdfsConstants.INVALID_TXID;
+      assert lastTxId == HdfsServerConstants.INVALID_TXID;
       renameSelf(".empty");
     }
       

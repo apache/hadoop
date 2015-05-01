@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.junit.After;
 import org.junit.Assert;
@@ -68,7 +68,7 @@ public class TestTruncateQuotaUpdate {
     dfs.mkdirs(dir);
     dfs.setQuota(dir, Long.MAX_VALUE - 1, DISKQUOTA);
     dfs.setQuotaByStorageType(dir, StorageType.DISK, DISKQUOTA);
-    dfs.setStoragePolicy(dir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
+    dfs.setStoragePolicy(dir, HdfsServerConstants.HOT_STORAGE_POLICY_NAME);
   }
 
   @After

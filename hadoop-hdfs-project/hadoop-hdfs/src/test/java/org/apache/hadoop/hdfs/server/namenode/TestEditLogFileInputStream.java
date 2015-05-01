@@ -29,7 +29,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumMap;
 
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.junit.Test;
@@ -51,7 +51,7 @@ public class TestEditLogFileInputStream {
 
     URL url = new URL("http://localhost/fakeLog");
     EditLogInputStream elis = EditLogFileInputStream.fromUrl(factory, url,
-        HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
+        HdfsServerConstants.INVALID_TXID, HdfsServerConstants.INVALID_TXID, false);
     // Read the edit log and verify that we got all of the data.
     EnumMap<FSEditLogOpCodes, Holder<Integer>> counts = FSImageTestUtil
         .countEditLogOpTypes(elis);

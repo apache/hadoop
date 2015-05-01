@@ -967,8 +967,8 @@ public interface ClientProtocol {
    * <br><br>
    *                       
    * The quota can have three types of values : (1) 0 or more will set 
-   * the quota to that value, (2) {@link HdfsConstants#QUOTA_DONT_SET}  implies 
-   * the quota will not be changed, and (3) {@link HdfsConstants#QUOTA_RESET} 
+   * the quota to that value, (2) {@link HdfsConstants#QUOTA_DONT_SET}  implies
+   * the quota will not be changed, and (3) {@link HdfsConstants#QUOTA_RESET}
    * implies the quota will be reset. Any other value is a runtime error.
    * 
    * @throws AccessControlException permission denied

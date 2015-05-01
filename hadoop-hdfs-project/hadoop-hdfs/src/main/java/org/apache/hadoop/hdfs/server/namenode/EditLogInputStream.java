@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -112,7 +112,7 @@ public abstract class EditLogInputStream implements Closeable {
    */
   protected long scanNextOp() throws IOException {
     FSEditLogOp next = readOp();
-    return next != null ? next.txid : HdfsConstants.INVALID_TXID;
+    return next != null ? next.txid : HdfsServerConstants.INVALID_TXID;
   }
   
   /** 

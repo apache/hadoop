@@ -27,7 +27,7 @@ import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -68,7 +68,7 @@ public class TestBookKeeperEditLogStreams {
       lh.close();
 
       EditLogLedgerMetadata metadata = new EditLogLedgerMetadata("/foobar",
-          HdfsConstants.NAMENODE_LAYOUT_VERSION, lh.getId(), 0x1234);
+          HdfsServerConstants.NAMENODE_LAYOUT_VERSION, lh.getId(), 0x1234);
       try {
         new BookKeeperEditLogInputStream(lh, metadata, -1);
         fail("Shouldn't get this far, should have thrown");
@@ -77,7 +77,7 @@ public class TestBookKeeperEditLogStreams {
       }
 
       metadata = new EditLogLedgerMetadata("/foobar",
-          HdfsConstants.NAMENODE_LAYOUT_VERSION, lh.getId(), 0x1234);
+          HdfsServerConstants.NAMENODE_LAYOUT_VERSION, lh.getId(), 0x1234);
       try {
         new BookKeeperEditLogInputStream(lh, metadata, 0);
         fail("Shouldn't get this far, should have thrown");

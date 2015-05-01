@@ -25,7 +25,7 @@ import org.apache.hadoop.security.token.Token;
 
 import java.net.URI;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsConstantsClient.HA_DT_SERVICE_PREFIX;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
 
 @InterfaceAudience.Private
 public class HAUtilClient {

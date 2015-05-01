@@ -24,9 +24,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.util.StringUtils;
 
 /************************************
@@ -35,21 +42,75 @@ import org.apache.hadoop.util.StringUtils;
  ************************************/
 
 @InterfaceAudience.Private
-public final class HdfsServerConstants {
-  /* Hidden constructor */
-  private HdfsServerConstants() { }
-  
+public interface HdfsServerConstants {
+  int MIN_BLOCKS_FOR_WRITE = 1;
+  //
+  // Timeouts, constants
+  //
+  long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
+  long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
+  long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms
+  // We need to limit the length and depth of a path in the filesystem.
+  // HADOOP-438
+  // Currently we set the maximum length to 8k characters and the maximum depth
+  // to 1k.
+  int MAX_PATH_LENGTH = 8000;
+  int MAX_PATH_DEPTH = 1000;
+  int IO_FILE_BUFFER_SIZE = new HdfsConfiguration().getInt(
+      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
+      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
+  // Used for writing header etc.
+  int SMALL_BUFFER_SIZE = Math.min(IO_FILE_BUFFER_SIZE / 2,
+      512);
+  // An invalid transaction ID that will never be seen in a real namesystem.
+  long INVALID_TXID = -12345;
+  // Number of generation stamps reserved for legacy blocks.
+  long RESERVED_GENERATION_STAMPS_V1 =
+      1024L * 1024 * 1024 * 1024;
+  /**
+   * Current layout version for NameNode.
+   * Please see {@link NameNodeLayoutVersion.Feature} on adding new layout version.
+   */
+  int NAMENODE_LAYOUT_VERSION
+      = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+  /**
+   * Current layout version for DataNode.
+   * Please see {@link DataNodeLayoutVersion.Feature} on adding new layout version.
+   */
+  int DATANODE_LAYOUT_VERSION
+      = DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+  /**
+   * Path components that are reserved in HDFS.
+   * <p>
+   * .reserved is only reserved under root ("/").
+   */
+  String[] RESERVED_PATH_COMPONENTS = new String[] {
+      HdfsConstants.DOT_SNAPSHOT_DIR,
+      FSDirectory.DOT_RESERVED_STRING
+  };
+  byte[] DOT_SNAPSHOT_DIR_BYTES
+              = DFSUtil.string2Bytes(HdfsConstants.DOT_SNAPSHOT_DIR);
+  String HOT_STORAGE_POLICY_NAME = "HOT";
+  String WARM_STORAGE_POLICY_NAME = "WARM";
+  String COLD_STORAGE_POLICY_NAME = "COLD";
+  byte MEMORY_STORAGE_POLICY_ID = 15;
+  byte ALLSSD_STORAGE_POLICY_ID = 12;
+  byte ONESSD_STORAGE_POLICY_ID = 10;
+  byte HOT_STORAGE_POLICY_ID = 7;
+  byte WARM_STORAGE_POLICY_ID = 5;
+  byte COLD_STORAGE_POLICY_ID = 2;
+
   /**
    * Type of the node
    */
-  static public enum NodeType {
+  enum NodeType {
     NAME_NODE,
     DATA_NODE,
-    JOURNAL_NODE;
+    JOURNAL_NODE
   }
 
   /** Startup options for rolling upgrade. */
-  public static enum RollingUpgradeStartupOption{
+  enum RollingUpgradeStartupOption{
     ROLLBACK, STARTED;
 
     public String getOptionString() {
@@ -93,7 +154,7 @@ public final class HdfsServerConstants {
   }
 
   /** Startup options */
-  static public enum StartupOption{
+  enum StartupOption{
     FORMAT  ("-format"),
     CLUSTERID ("-clusterid"),
     GENCLUSTERID ("-genclusterid"),
@@ -137,7 +198,7 @@ public final class HdfsServerConstants {
     // Used only with recovery option
     private int force = 0;
 
-    private StartupOption(String arg) {this.name = arg;}
+    StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
       switch(this) {
@@ -221,21 +282,21 @@ public final class HdfsServerConstants {
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads
-  public static final int READ_TIMEOUT = 60 * 1000;
-  public static final int READ_TIMEOUT_EXTENSION = 5 * 1000;
-  public static final int WRITE_TIMEOUT = 8 * 60 * 1000;
-  public static final int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
+  int READ_TIMEOUT = 60 * 1000;
+  int READ_TIMEOUT_EXTENSION = 5 * 1000;
+  int WRITE_TIMEOUT = 8 * 60 * 1000;
+  int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
 
   /**
    * Defines the NameNode role.
    */
-  static public enum NamenodeRole {
+  enum NamenodeRole {
     NAMENODE  ("NameNode"),
     BACKUP    ("Backup Node"),
     CHECKPOINT("Checkpoint Node");
 
     private String description = null;
-    private NamenodeRole(String arg) {this.description = arg;}
+    NamenodeRole(String arg) {this.description = arg;}
   
     @Override
     public String toString() {
@@ -246,7 +307,7 @@ public final class HdfsServerConstants {
   /**
    * Block replica states, which it can go through while being constructed.
    */
-  static public enum ReplicaState {
+  enum ReplicaState {
     /** Replica is finalized. The state when replica is not modified. */
     FINALIZED(0),
     /** Replica is being written to. */
@@ -260,7 +321,7 @@ public final class HdfsServerConstants {
 
     private final int value;
 
-    private ReplicaState(int v) {
+    ReplicaState(int v) {
       value = v;
     }
 
@@ -286,7 +347,7 @@ public final class HdfsServerConstants {
   /**
    * States, which a block can go through while it is under construction.
    */
-  static public enum BlockUCState {
+  enum BlockUCState {
     /**
      * Block construction completed.<br>
      * The block has at least the configured minimal replication number
@@ -315,16 +376,16 @@ public final class HdfsServerConstants {
      * {@link ReplicaState#FINALIZED} 
      * replicas has yet been reported by data-nodes themselves.
      */
-    COMMITTED;
+    COMMITTED
   }
   
-  public static final String NAMENODE_LEASE_HOLDER = "HDFS_NameNode";
-  public static final long NAMENODE_LEASE_RECHECK_INTERVAL = 2000;
+  String NAMENODE_LEASE_HOLDER = "HDFS_NameNode";
+  long NAMENODE_LEASE_RECHECK_INTERVAL = 2000;
 
-  public static final String CRYPTO_XATTR_ENCRYPTION_ZONE =
+  String CRYPTO_XATTR_ENCRYPTION_ZONE =
       "raw.hdfs.crypto.encryption.zone";
-  public static final String CRYPTO_XATTR_FILE_ENCRYPTION_INFO =
+  String CRYPTO_XATTR_FILE_ENCRYPTION_INFO =
       "raw.hdfs.crypto.file.encryption.info";
-  public static final String SECURITY_XATTR_UNREADABLE_BY_SUPERUSER =
+  String SECURITY_XATTR_UNREADABLE_BY_SUPERUSER =
       "security.hdfs.unreadable.by.superuser";
 }

@@ -33,9 +33,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
@@ -85,7 +85,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
    */
   EditLogFileInputStream(File name)
       throws LogHeaderCorruptException, IOException {
-    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
+    this(name, HdfsServerConstants.INVALID_TXID, HdfsServerConstants.INVALID_TXID, false);
   }
 
   /**
@@ -203,7 +203,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       if ((op != null) && (op.hasTransactionId())) {
         long txId = op.getTransactionId();
         if ((txId >= lastTxId) &&
-            (lastTxId != HdfsConstants.INVALID_TXID)) {
+            (lastTxId != HdfsServerConstants.INVALID_TXID)) {
           //
           // Sometimes, the NameNode crashes while it's writing to the
           // edit log.  In that case, you can end up with an unfinalized edit log
@@ -310,7 +310,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       // If the header is malformed or the wrong value, this indicates a corruption
       LOG.warn("Log file " + file + " has no valid header", e);
       return new FSEditLogLoader.EditLogValidation(0,
-          HdfsConstants.INVALID_TXID, true);
+          HdfsServerConstants.INVALID_TXID, true);
     }
     
     try {
@@ -331,18 +331,18 @@ public class EditLogFileInputStream extends EditLogInputStream {
     } catch (LogHeaderCorruptException e) {
       LOG.warn("Log file " + file + " has no valid header", e);
       return new FSEditLogLoader.EditLogValidation(0,
-          HdfsConstants.INVALID_TXID, true);
+          HdfsServerConstants.INVALID_TXID, true);
     }
 
     long lastPos = 0;
-    long lastTxId = HdfsConstants.INVALID_TXID;
+    long lastTxId = HdfsServerConstants.INVALID_TXID;
     long numValid = 0;
     try {
       while (true) {
-        long txid = HdfsConstants.INVALID_TXID;
+        long txid = HdfsServerConstants.INVALID_TXID;
         lastPos = in.getPosition();
         try {
-          if ((txid = in.scanNextOp()) == HdfsConstants.INVALID_TXID) {
+          if ((txid = in.scanNextOp()) == HdfsServerConstants.INVALID_TXID) {
             break;
           }
         } catch (Throwable t) {
@@ -354,7 +354,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
           FSImage.LOG.warn("After resync, position is " + in.getPosition());
           continue;
         }
-        if (lastTxId == HdfsConstants.INVALID_TXID || txid > lastTxId) {
+        if (lastTxId == HdfsServerConstants.INVALID_TXID || txid > lastTxId) {
           lastTxId = txid;
         }
         numValid++;
@@ -382,12 +382,12 @@ public class EditLogFileInputStream extends EditLogInputStream {
           "Reached EOF when reading log header");
     }
     if (verifyLayoutVersion &&
-        (logVersion < HdfsConstants.NAMENODE_LAYOUT_VERSION || // future version
+        (logVersion < HdfsServerConstants.NAMENODE_LAYOUT_VERSION || // future version
          logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION)) { // unsupported
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "
-          + HdfsConstants.NAMENODE_LAYOUT_VERSION + ".");
+          + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + ".");
     }
     return logVersion;
   }
