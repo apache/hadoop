@@ -22,8 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
@@ -49,8 +48,8 @@ interface OfflineEditsLoader {
         OfflineEditsLoader loader = null;
         try {
           file = new File(inputFileName);
-          elis = new EditLogFileInputStream(file, HdfsConstants.INVALID_TXID,
-              HdfsConstants.INVALID_TXID, false);
+          elis = new EditLogFileInputStream(file, HdfsServerConstants.INVALID_TXID,
+              HdfsServerConstants.INVALID_TXID, false);
           loader = new OfflineEditsBinaryLoader(visitor, elis, flags);
         } finally {
           if ((loader == null) && (elis != null)) {

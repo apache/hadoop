@@ -31,9 +31,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
@@ -75,12 +75,12 @@ public class EditLogTailer {
   /**
    * The last transaction ID at which an edit log roll was initiated.
    */
-  private long lastRollTriggerTxId = HdfsConstants.INVALID_TXID;
+  private long lastRollTriggerTxId = HdfsServerConstants.INVALID_TXID;
   
   /**
    * The highest transaction ID loaded by the Standby.
    */
-  private long lastLoadedTxnId = HdfsConstants.INVALID_TXID;
+  private long lastLoadedTxnId = HdfsServerConstants.INVALID_TXID;
 
   /**
    * The last time we successfully loaded a non-zero number of edits from the

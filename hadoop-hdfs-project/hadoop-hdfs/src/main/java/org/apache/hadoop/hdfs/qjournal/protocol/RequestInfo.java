@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 @InterfaceAudience.Private
 public class RequestInfo {
@@ -60,6 +60,6 @@ public class RequestInfo {
   }
 
   public boolean hasCommittedTxId() {
-    return (committedTxId != HdfsConstants.INVALID_TXID);
+    return (committedTxId != HdfsServerConstants.INVALID_TXID);
   }
 }

@@ -37,9 +37,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -533,7 +533,7 @@ public class UpgradeUtilities {
    * of the Namenode, whether it is running or not.
    */
   public static int getCurrentNameNodeLayoutVersion() {
-    return HdfsConstants.NAMENODE_LAYOUT_VERSION;
+    return HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
   }
   
   /**

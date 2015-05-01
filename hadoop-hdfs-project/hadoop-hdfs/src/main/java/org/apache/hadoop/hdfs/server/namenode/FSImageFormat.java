@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
@@ -1046,10 +1047,10 @@ public class FSImageFormat {
   @VisibleForTesting
   public static void useDefaultRenameReservedPairs() {
     renameReservedMap.clear();
-    for (String key: HdfsConstants.RESERVED_PATH_COMPONENTS) {
+    for (String key: HdfsServerConstants.RESERVED_PATH_COMPONENTS) {
       renameReservedMap.put(
           key,
-          key + "." + HdfsConstants.NAMENODE_LAYOUT_VERSION + "."
+          key + "." + HdfsServerConstants.NAMENODE_LAYOUT_VERSION + "."
               + "UPGRADE_RENAMED");
     }
   }
@@ -1147,7 +1148,7 @@ public class FSImageFormat {
       final int layoutVersion) {
     // If the LV doesn't support snapshots, we're doing an upgrade
     if (!NameNodeLayoutVersion.supports(Feature.SNAPSHOT, layoutVersion)) {
-      if (Arrays.equals(component, HdfsConstants.DOT_SNAPSHOT_DIR_BYTES)) {
+      if (Arrays.equals(component, HdfsServerConstants.DOT_SNAPSHOT_DIR_BYTES)) {
         Preconditions.checkArgument(
             renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR),
             RESERVED_ERROR_MSG);

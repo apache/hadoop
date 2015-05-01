@@ -68,9 +68,9 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -880,12 +880,12 @@ public class TestEditLog {
   
     @Override
     public long getFirstTxId() {
-      return HdfsConstants.INVALID_TXID;
+      return HdfsServerConstants.INVALID_TXID;
     }
     
     @Override
     public long getLastTxId() {
-      return HdfsConstants.INVALID_TXID;
+      return HdfsServerConstants.INVALID_TXID;
     }
   
     @Override

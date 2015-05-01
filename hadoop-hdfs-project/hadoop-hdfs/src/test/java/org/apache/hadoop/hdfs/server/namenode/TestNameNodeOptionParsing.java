@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.Assert;
@@ -70,11 +70,11 @@ public class TestNameNodeOptionParsing {
     opt = NameNode.parseArguments(new String[] { "-upgrade", "-renameReserved"});
     assertEquals(StartupOption.UPGRADE, opt);
     assertEquals(
-        ".snapshot." + HdfsConstants.NAMENODE_LAYOUT_VERSION
+        ".snapshot." + HdfsServerConstants.NAMENODE_LAYOUT_VERSION
             + ".UPGRADE_RENAMED",
         FSImageFormat.renameReservedMap.get(".snapshot"));
     assertEquals(
-        ".reserved." + HdfsConstants.NAMENODE_LAYOUT_VERSION
+        ".reserved." + HdfsServerConstants.NAMENODE_LAYOUT_VERSION
             + ".UPGRADE_RENAMED",
         FSImageFormat.renameReservedMap.get(".reserved"));
 

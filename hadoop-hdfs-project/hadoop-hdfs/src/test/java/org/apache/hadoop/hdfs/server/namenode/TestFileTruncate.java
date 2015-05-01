@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -650,8 +649,8 @@ public class TestFileTruncate {
     checkBlockRecovery(p);
 
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
-        .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-            HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+        .setLeasePeriod(HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD,
+            HdfsServerConstants.LEASE_HARDLIMIT_PERIOD);
 
     checkFullFile(p, newLength, contents);
     fs.delete(p, false);

@@ -38,10 +38,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster.Builder;
 import org.apache.hadoop.hdfs.qjournal.server.Journal;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -304,7 +304,7 @@ public class TestDFSUpgradeWithHA {
     BestEffortLongFile committedTxnId = (BestEffortLongFile) Whitebox
         .getInternalState(journal1, "committedTxnId");
     return committedTxnId != null ? committedTxnId.get() :
-        HdfsConstants.INVALID_TXID;
+        HdfsServerConstants.INVALID_TXID;
   }
 
   /**

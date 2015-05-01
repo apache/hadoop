@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
@@ -129,7 +128,7 @@ public class NNStorage extends Storage implements Closeable,
    * recent fsimage file. This does not include any transactions
    * that have since been written to the edit log.
    */
-  protected volatile long mostRecentCheckpointTxId = HdfsConstants.INVALID_TXID;
+  protected volatile long mostRecentCheckpointTxId = HdfsServerConstants.INVALID_TXID;
   
   /**
    * Time of the last checkpoint, in milliseconds since the epoch.
@@ -558,7 +557,7 @@ public class NNStorage extends Storage implements Closeable,
    */
   public void format(NamespaceInfo nsInfo) throws IOException {
     Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() == HdfsConstants.NAMENODE_LAYOUT_VERSION,
+        nsInfo.getLayoutVersion() == HdfsServerConstants.NAMENODE_LAYOUT_VERSION,
         "Bad layout version: %s", nsInfo.getLayoutVersion());
     
     this.setStorageInfo(nsInfo);
@@ -577,7 +576,7 @@ public class NNStorage extends Storage implements Closeable,
   }
   
   public void format() throws IOException {
-    this.layoutVersion = HdfsConstants.NAMENODE_LAYOUT_VERSION;
+    this.layoutVersion = HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it =
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -634,7 +633,7 @@ public class NNStorage extends Storage implements Closeable,
             "storage directory " + sd.getRoot().getAbsolutePath());
       }
       props.setProperty("layoutVersion",
-          Integer.toString(HdfsConstants.NAMENODE_LAYOUT_VERSION));
+          Integer.toString(HdfsServerConstants.NAMENODE_LAYOUT_VERSION));
     }
     setFieldsFromProperties(props, sd);
   }
@@ -657,7 +656,7 @@ public class NNStorage extends Storage implements Closeable,
    * This should only be used during upgrades.
    */
   String getDeprecatedProperty(String prop) {
-    assert getLayoutVersion() > HdfsConstants.NAMENODE_LAYOUT_VERSION :
+    assert getLayoutVersion() > HdfsServerConstants.NAMENODE_LAYOUT_VERSION :
       "getDeprecatedProperty should only be done when loading " +
       "storage from past versions during upgrade.";
     return deprecatedProperties.get(prop);

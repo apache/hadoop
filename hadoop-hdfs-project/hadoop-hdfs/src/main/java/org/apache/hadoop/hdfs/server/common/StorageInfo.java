@@ -26,7 +26,6 @@ import java.util.Properties;
 import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.LayoutFeature;
@@ -197,8 +196,8 @@ public class StorageInfo {
   }
 
   public int getServiceLayoutVersion() {
-    return storageType == NodeType.DATA_NODE ? HdfsConstants.DATANODE_LAYOUT_VERSION
-        : HdfsConstants.NAMENODE_LAYOUT_VERSION;
+    return storageType == NodeType.DATA_NODE ? HdfsServerConstants.DATANODE_LAYOUT_VERSION
+        : HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
   }
 
   public Map<Integer, SortedSet<LayoutFeature>> getServiceLayoutFeatureMap() {

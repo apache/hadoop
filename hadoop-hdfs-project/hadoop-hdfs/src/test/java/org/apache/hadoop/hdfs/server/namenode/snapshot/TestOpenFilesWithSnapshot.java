@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
-import org.apache.hadoop.hdfs.protocol.HdfsConstantsClient;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -196,7 +196,7 @@ public class TestOpenFilesWithSnapshot {
     String clientName = fs.getClient().getClientName();
     // create one empty block
     nameNodeRpc.addBlock(fileWithEmptyBlock.toString(), clientName, null, null,
-        HdfsConstantsClient.GRANDFATHER_INODE_ID, null);
+        HdfsConstants.GRANDFATHER_INODE_ID, null);
     fs.createSnapshot(path, "s2");
 
     fs.rename(new Path("/test/test"), new Path("/test/test-renamed"));

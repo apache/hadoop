@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
@@ -66,6 +65,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogs
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -263,7 +263,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
         reqInfo.getEpoch(),
         reqInfo.getIpcSerialNumber(),
         reqInfo.hasCommittedTxId() ?
-          reqInfo.getCommittedTxId() : HdfsConstants.INVALID_TXID);
+          reqInfo.getCommittedTxId() : HdfsServerConstants.INVALID_TXID);
   }
 
   @Override
