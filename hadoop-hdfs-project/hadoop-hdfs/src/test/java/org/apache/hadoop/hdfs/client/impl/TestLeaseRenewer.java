@@ -15,13 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -46,19 +48,19 @@ public class TestLeaseRenewer {
 
   private DFSClient MOCK_DFSCLIENT;
   private LeaseRenewer renewer;
-  
+
   /** Cause renewals often so test runs quickly. */
   private static final long FAST_GRACE_PERIOD = 100L;
-  
+
   @Before
   public void setupMocksAndRenewer() throws IOException {
     MOCK_DFSCLIENT = createMockClient();
-    
+
     renewer = LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
     renewer.setGraceSleepPeriod(FAST_GRACE_PERIOD);
 }
- 
+
   private DFSClient createMockClient() {
     final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
     Mockito.doReturn((int)FAST_GRACE_PERIOD).when(mockConf).getHdfsTimeout();
@@ -79,12 +81,12 @@ public class TestLeaseRenewer {
     LeaseRenewer lr2 = LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_A, MOCK_DFSCLIENT);
     Assert.assertSame(lr, lr2);
-    
+
     // But a different UGI should return a different instance
     LeaseRenewer lr3 = LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_B, MOCK_DFSCLIENT);
     Assert.assertNotSame(lr, lr3);
-    
+
     // A different authority with same UGI should also be a different
     // instance.
     LeaseRenewer lr4 = LeaseRenewer.getInstance(
@@ -92,7 +94,7 @@ public class TestLeaseRenewer {
     Assert.assertNotSame(lr, lr4);
     Assert.assertNotSame(lr3, lr4);
   }
-  
+
   @Test
   public void testRenewal() throws Exception {
     // Keep track of how many times the lease gets renewed
@@ -105,7 +107,7 @@ public class TestLeaseRenewer {
       }
     }).when(MOCK_DFSCLIENT).renewLease();
 
-    
+
     // Set up a file so that we start renewing our lease.
     DFSOutputStream mockStream = Mockito.mock(DFSOutputStream.class);
     long fileId = 123L;
@@ -123,7 +125,7 @@ public class TestLeaseRenewer {
 
     renewer.closeFile(fileId, MOCK_DFSCLIENT);
   }
-  
+
   /**
    * Regression test for HDFS-2810. In this bug, the LeaseRenewer has handles
    * to several DFSClients with the same name, the first of which has no files
@@ -136,7 +138,7 @@ public class TestLeaseRenewer {
     Mockito.doReturn(false).when(mockClient1).renewLease();
     assertSame(renewer, LeaseRenewer.getInstance(
         FAKE_AUTHORITY, FAKE_UGI_A, mockClient1));
-    
+
     // Set up a file so that we start renewing our lease.
     DFSOutputStream mockStream1 = Mockito.mock(DFSOutputStream.class);
     long fileId = 456L;
@@ -152,7 +154,7 @@ public class TestLeaseRenewer {
     DFSOutputStream mockStream2 = Mockito.mock(DFSOutputStream.class);
     renewer.put(fileId, mockStream2, mockClient2);
 
-    
+
     // Wait for lease to get renewed
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -174,28 +176,28 @@ public class TestLeaseRenewer {
     renewer.closeFile(fileId, mockClient1);
     renewer.closeFile(fileId, mockClient2);
   }
-  
+
   @Test
   public void testThreadName() throws Exception {
     DFSOutputStream mockStream = Mockito.mock(DFSOutputStream.class);
     long fileId = 789L;
     Assert.assertFalse("Renewer not initially running",
         renewer.isRunning());
-    
+
     // Pretend to open a file
     renewer.put(fileId, mockStream, MOCK_DFSCLIENT);
-    
+
     Assert.assertTrue("Renewer should have started running",
         renewer.isRunning());
-    
+
     // Check the thread name is reasonable
     String threadName = renewer.getDaemonName();
     Assert.assertEquals("LeaseRenewer:myuser@hdfs://nn1/", threadName);
-    
+
     // Pretend to close the file
     renewer.closeFile(fileId, MOCK_DFSCLIENT);
     renewer.setEmptyTime(Time.monotonicNow());
-    
+
     // Should stop the renewer running within a few seconds
     long failTime = Time.monotonicNow() + 5000;
     while (renewer.isRunning() && Time.monotonicNow() < failTime) {
@@ -203,5 +205,5 @@ public class TestLeaseRenewer {
     }
     Assert.assertFalse(renewer.isRunning());
   }
-  
+
 }
