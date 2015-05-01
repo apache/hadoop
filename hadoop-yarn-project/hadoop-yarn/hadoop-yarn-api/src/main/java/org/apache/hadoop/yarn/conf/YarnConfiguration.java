@@ -823,38 +823,68 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
       100;
 
+  /**
+   * Prefix for disk configurations. Work in progress: This configuration
+   * parameter may be changed/removed in the future.
+   */
+  @Private
+  public static final String NM_DISK_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.disk.";
+  /**
+   * This setting controls if resource handling for disk operations is enabled.
+   * Work in progress: This configuration parameter may be changed/removed in
+   * the future
+   */
+  @Private
+  public static final String NM_DISK_RESOURCE_ENABLED = NM_DISK_RESOURCE_PREFIX
+      + "enabled";
+  /** Disk as a resource is disabled by default. **/
+  @Private
+  public static final boolean DEFAULT_NM_DISK_RESOURCE_ENABLED = false;
 
-  public static final String NM_NETWORK_RESOURCE_PREFIX = NM_PREFIX + "resource.network.";
+  public static final String NM_NETWORK_RESOURCE_PREFIX = NM_PREFIX
+      + "resource.network.";
 
-  /** This setting controls if resource handling for network bandwidth is enabled **/
-  /* Work in progress: This configuration parameter may be changed/removed in the future */
+  /**
+   * This setting controls if resource handling for network bandwidth is
+   * enabled. Work in progress: This configuration parameter may be
+   * changed/removed in the future
+   */
   @Private
   public static final String NM_NETWORK_RESOURCE_ENABLED =
       NM_NETWORK_RESOURCE_PREFIX + "enabled";
-  /** Network as a resource is disabled by default **/
+  /** Network as a resource is disabled by default. **/
   @Private
   public static final boolean DEFAULT_NM_NETWORK_RESOURCE_ENABLED = false;
 
-  /** Specifies the interface to be used for applying network throttling rules **/
-  /* Work in progress: This configuration parameter may be changed/removed in the future */
+  /**
+   * Specifies the interface to be used for applying network throttling rules.
+   * Work in progress: This configuration parameter may be changed/removed in
+   * the future
+   */
   @Private
   public static final String NM_NETWORK_RESOURCE_INTERFACE =
       NM_NETWORK_RESOURCE_PREFIX + "interface";
   @Private
   public static final String DEFAULT_NM_NETWORK_RESOURCE_INTERFACE = "eth0";
 
-  /** Specifies the total available outbound bandwidth on the node **/
-  /* Work in progress: This configuration parameter may be changed/removed in the future */
+  /**
+   * Specifies the total available outbound bandwidth on the node. Work in
+   * progress: This configuration parameter may be changed/removed in the future
+   */
   @Private
   public static final String NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT =
       NM_NETWORK_RESOURCE_PREFIX + "outbound-bandwidth-mbit";
   @Private
-  public static final int DEFAULT_NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT = 1000;
+  public static final int DEFAULT_NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT =
+      1000;
 
-  /** Specifies the total outbound bandwidth available to YARN containers. defaults to
-   * NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT if not specified.
+  /**
+   * Specifies the total outbound bandwidth available to YARN containers.
+   * defaults to NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT if not specified.
+   * Work in progress: This configuration parameter may be changed/removed in
+   * the future
    */
-  /* Work in progress: This configuration parameter may be changed/removed in the future */
   @Private
   public static final String NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_YARN_MBIT =
       NM_NETWORK_RESOURCE_PREFIX + "outbound-bandwidth-yarn-mbit";

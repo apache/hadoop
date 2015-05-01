@@ -33,7 +33,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface CGroupsHandler {
   public enum CGroupController {
     CPU("cpu"),
-    NET_CLS("net_cls");
+    NET_CLS("net_cls"),
+    BLKIO("blkio");
 
     private final String name;
 
@@ -48,6 +49,7 @@ public interface CGroupsHandler {
 
   public static final String CGROUP_FILE_TASKS = "tasks";
   public static final String CGROUP_PARAM_CLASSID = "classid";
+  public static final String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
 
   /**
    * Mounts a cgroup controller
