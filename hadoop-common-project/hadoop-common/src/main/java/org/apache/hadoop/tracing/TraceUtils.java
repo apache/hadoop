@@ -31,15 +31,15 @@ import org.apache.htrace.HTraceConfiguration;
  */
 @InterfaceAudience.Private
 public class TraceUtils {
-  public static final String HTRACE_CONF_PREFIX = "hadoop.htrace.";
   private static List<ConfigurationPair> EMPTY = Collections.emptyList();
 
-  public static HTraceConfiguration wrapHadoopConf(final Configuration conf) {
-    return wrapHadoopConf(conf, EMPTY);
+  public static HTraceConfiguration wrapHadoopConf(final String prefix,
+        final Configuration conf) {
+    return wrapHadoopConf(prefix, conf, EMPTY);
   }
 
-  public static HTraceConfiguration wrapHadoopConf(final Configuration conf,
-          List<ConfigurationPair> extraConfig) {
+  public static HTraceConfiguration wrapHadoopConf(final String prefix,
+        final Configuration conf, List<ConfigurationPair> extraConfig) {
     final HashMap<String, String> extraMap = new HashMap<String, String>();
     for (ConfigurationPair pair : extraConfig) {
       extraMap.put(pair.getKey(), pair.getValue());
@@ -50,7 +50,7 @@ public class TraceUtils {
         if (extraMap.containsKey(key)) {
           return extraMap.get(key);
         }
-        return conf.get(HTRACE_CONF_PREFIX + key, "");
+        return conf.get(prefix + key, "");
       }
 
       @Override
@@ -58,7 +58,7 @@ public class TraceUtils {
         if (extraMap.containsKey(key)) {
           return extraMap.get(key);
         }
-        return conf.get(HTRACE_CONF_PREFIX + key, defaultValue);
+        return conf.get(prefix + key, defaultValue);
       }
     };
   }

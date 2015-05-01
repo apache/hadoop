@@ -64,7 +64,8 @@ public class TestTracingShortCircuitLocalRead {
   public void testShortCircuitTraceHooks() throws IOException {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     conf = new Configuration();
-    conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
+    conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
+        SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
         TestTracing.SetSpanReceiver.class.getName());
     conf.setLong("dfs.blocksize", 100 * 1024);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
@@ -78,7 +79,6 @@ public class TestTracingShortCircuitLocalRead {
     dfs = cluster.getFileSystem();
 
     try {
-      spanReceiverHost = SpanReceiverHost.getInstance(conf);
       DFSTestUtil.createFile(dfs, TEST_PATH, TEST_LENGTH, (short)1, 5678L);
 
       TraceScope ts = Trace.startSpan("testShortCircuitTraceHooks", Sampler.ALWAYS);

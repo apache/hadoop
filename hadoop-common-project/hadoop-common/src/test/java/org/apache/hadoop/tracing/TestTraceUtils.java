@@ -25,13 +25,15 @@ import org.apache.htrace.HTraceConfiguration;
 import org.junit.Test;
 
 public class TestTraceUtils {
+  private static String TEST_PREFIX = "test.prefix.htrace.";
+
   @Test
   public void testWrappedHadoopConf() {
     String key = "sampler";
     String value = "ProbabilitySampler";
     Configuration conf = new Configuration();
-    conf.set(TraceUtils.HTRACE_CONF_PREFIX + key, value);
-    HTraceConfiguration wrapped = TraceUtils.wrapHadoopConf(conf);
+    conf.set(TEST_PREFIX + key, value);
+    HTraceConfiguration wrapped = TraceUtils.wrapHadoopConf(TEST_PREFIX, conf);
     assertEquals(value, wrapped.get(key));
   }
 
@@ -41,11 +43,11 @@ public class TestTraceUtils {
     String oldValue = "old value";
     String newValue = "new value";
     Configuration conf = new Configuration();
-    conf.set(TraceUtils.HTRACE_CONF_PREFIX + key, oldValue);
+    conf.set(TEST_PREFIX + key, oldValue);
     LinkedList<ConfigurationPair> extraConfig =
         new LinkedList<ConfigurationPair>();
     extraConfig.add(new ConfigurationPair(key, newValue));
-    HTraceConfiguration wrapped = TraceUtils.wrapHadoopConf(conf, extraConfig);
+    HTraceConfiguration wrapped = TraceUtils.wrapHadoopConf(TEST_PREFIX, conf, extraConfig);
     assertEquals(newValue, wrapped.get(key));
   }
 }
