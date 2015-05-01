@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 
@@ -46,6 +47,9 @@ public class ContainerMetrics implements MetricsSource {
   public static final String VMEM_LIMIT_METRIC_NAME = "vMemLimitMBs";
   public static final String VCORE_LIMIT_METRIC_NAME = "vCoreLimit";
   public static final String PMEM_USAGE_METRIC_NAME = "pMemUsageMBs";
+  public static final String LAUNCH_DURATION_METRIC_NAME = "launchDurationMs";
+  public static final String LOCALIZATION_DURATION_METRIC_NAME =
+      "localizationDurationMs";
   private static final String PHY_CPU_USAGE_METRIC_NAME = "pCpuUsagePercent";
 
   // Use a multiplier of 1000 to avoid losing too much precision when
@@ -73,6 +77,12 @@ public class ContainerMetrics implements MetricsSource {
 
   @Metric
   public MutableGaugeInt cpuVcoreLimit;
+
+  @Metric
+  public MutableGaugeLong launchDurationMs;
+
+  @Metric
+  public MutableGaugeLong localizationDurationMs;
 
   static final MetricsInfo RECORD_INFO =
       info("ContainerResource", "Resource limit and usage by container");
@@ -122,6 +132,10 @@ public class ContainerMetrics implements MetricsSource {
         VMEM_LIMIT_METRIC_NAME, "Virtual memory limit in MBs", 0);
     this.cpuVcoreLimit = registry.newGauge(
         VCORE_LIMIT_METRIC_NAME, "CPU limit in number of vcores", 0);
+    this.launchDurationMs = registry.newGauge(
+        LAUNCH_DURATION_METRIC_NAME, "Launch duration in MS", 0L);
+    this.localizationDurationMs = registry.newGauge(
+        LOCALIZATION_DURATION_METRIC_NAME, "Localization duration in MS", 0L);
   }
 
   ContainerMetrics tag(MetricsInfo info, ContainerId containerId) {
@@ -211,6 +225,12 @@ public class ContainerMetrics implements MetricsSource {
     this.vMemLimitMbs.set(vmemLimit);
     this.pMemLimitMbs.set(pmemLimit);
     this.cpuVcoreLimit.set(cpuVcores);
+  }
+
+  public void recordStateChangeDurations(long launchDuration,
+      long localizationDuration) {
+    this.launchDurationMs.set(launchDuration);
+    this.localizationDurationMs.set(localizationDuration);
   }
 
   private synchronized void scheduleTimerTaskIfRequired() {

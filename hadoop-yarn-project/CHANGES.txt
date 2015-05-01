@@ -177,6 +177,10 @@ Release 2.8.0 - UNRELEASED
     YARN-3406. Display count of running containers in the RM's Web UI.
     (Ryu Kobayashi via ozawa)
 
+    YARN-3363. add localization and container launch time to ContainerMetrics
+    at NM to show these timing information for each active container.
+    (zxu via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
