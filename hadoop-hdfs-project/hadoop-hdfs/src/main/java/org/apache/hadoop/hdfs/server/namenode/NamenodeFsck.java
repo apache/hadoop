@@ -531,6 +531,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     int missing = 0;
     int corrupt = 0;
     long missize = 0;
+    long corruptSize = 0;
     int underReplicatedPerFile = 0;
     int misReplicatedPerFile = 0;
     StringBuilder report = new StringBuilder();
@@ -570,10 +571,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       // count corrupt blocks
       boolean isCorrupt = lBlk.isCorrupt();
       if (isCorrupt) {
+        res.addCorrupt(block.getNumBytes());
         corrupt++;
-        res.corruptBlocks++;
-        out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() + 
-            " block " + block.getBlockName()+"\n");
+        corruptSize += block.getNumBytes();
+        out.print("\n" + path + ": CORRUPT blockpool " +
+            block.getBlockPoolId() + " block " + block.getBlockName() + "\n");
       }
 
       // count minimally replicated blocks
@@ -619,7 +621,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       // report
       String blkName = block.toString();
       report.append(blockNumber + ". " + blkName + " len=" + block.getNumBytes());
-      if (totalReplicasPerBlock == 0) {
+      if (totalReplicasPerBlock == 0 && !isCorrupt) {
+        // If the block is corrupted, it means all its available replicas are
+        // corrupted. We don't mark it as missing given these available replicas
+        // might still be accessible as the block might be incorrectly marked as
+        // corrupted by client machines.
         report.append(" MISSING!");
         res.addMissing(block.toString(), block.getNumBytes());
         missing++;
@@ -674,9 +680,15 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
     // count corrupt file & move or delete if necessary
     if ((missing > 0) || (corrupt > 0)) {
-      if (!showFiles && (missing > 0)) {
-        out.print("\n" + path + ": MISSING " + missing
-            + " blocks of total size " + missize + " B.");
+      if (!showFiles) {
+        if (missing > 0) {
+          out.print("\n" + path + ": MISSING " + missing
+              + " blocks of total size " + missize + " B.");
+        }
+        if (corrupt > 0) {
+          out.print("\n" + path + ": CORRUPT " + corrupt
+              + " blocks of total size " + corruptSize + " B.");
+        }
       }
       res.corruptFiles++;
       if (isOpen) {
@@ -688,9 +700,16 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     }
 
     if (showFiles) {
-      if (missing > 0) {
-        out.print(" MISSING " + missing + " blocks of total size " + missize + " B\n");
-      }  else if (underReplicatedPerFile == 0 && misReplicatedPerFile == 0) {
+      if (missing > 0 || corrupt > 0) {
+        if (missing > 0) {
+          out.print(" MISSING " + missing + " blocks of total size " +
+              missize + " B\n");
+        }
+        if (corrupt > 0) {
+          out.print(" CORRUPT " + corrupt + " blocks of total size " +
+              corruptSize + " B\n");
+        }
+      } else if (underReplicatedPerFile == 0 && misReplicatedPerFile == 0) {
         out.print(" OK\n");
       }
       if (showBlocks) {
@@ -956,6 +975,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long missingSize = 0L;
     long corruptFiles = 0L;
     long corruptBlocks = 0L;
+    long corruptSize = 0L;
     long excessiveReplicas = 0L;
     long missingReplicas = 0L;
     long decommissionedReplicas = 0L;
@@ -998,7 +1018,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       missingIds.add(id);
       missingSize += size;
     }
-    
+
+    /** Add a corrupt block. */
+    void addCorrupt(long size) {
+      corruptBlocks++;
+      corruptSize += size;
+    }
+
     /** Return the actual replication factor. */
     float getReplicationFactor() {
       if (totalBlocks == 0)
@@ -1051,7 +1077,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                 "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
           }
           if (corruptBlocks > 0) {
-            res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
+            res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks).append(
+                "\n  CORRUPT SIZE:\t\t").append(corruptSize).append(" B");
           }
         }
         res.append("\n  ********************************");
@@ -1086,7 +1113,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       res.append("\n Default replication factor:\t").append(replication)
           .append("\n Average block replication:\t").append(
-              getReplicationFactor()).append("\n Corrupt blocks:\t\t").append(
+              getReplicationFactor()).append("\n Missing blocks:\t\t").append(
+              missingIds.size()).append("\n Corrupt blocks:\t\t").append(
               corruptBlocks).append("\n Missing replicas:\t\t").append(
               missingReplicas);
       if (totalReplicas > 0) {

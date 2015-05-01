@@ -120,7 +120,10 @@ public class TestFsck {
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
       "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null\\s" + "proto=.*");
-  
+
+  static final Pattern numMissingBlocksPattern = Pattern.compile(
+      ".*Missing blocks:\t\t([0123456789]*).*");
+
   static final Pattern numCorruptBlocksPattern = Pattern.compile(
       ".*Corrupt blocks:\t\t([0123456789]*).*");
   
@@ -360,19 +363,27 @@ public class TestFsck {
       // Wait for fsck to discover all the missing blocks
       while (true) {
         outStr = runFsck(conf, 1, false, "/");
+        String numMissing = null;
         String numCorrupt = null;
         for (String line : outStr.split(LINE_SEPARATOR)) {
-          Matcher m = numCorruptBlocksPattern.matcher(line);
+          Matcher m = numMissingBlocksPattern.matcher(line);
+          if (m.matches()) {
+            numMissing = m.group(1);
+          }
+          m = numCorruptBlocksPattern.matcher(line);
           if (m.matches()) {
             numCorrupt = m.group(1);
+          }
+          if (numMissing != null && numCorrupt != null) {
             break;
           }
         }
-        if (numCorrupt == null) {
-          throw new IOException("failed to find number of corrupt " +
-              "blocks in fsck output.");
+        if (numMissing == null || numCorrupt == null) {
+          throw new IOException("failed to find number of missing or corrupt" +
+              " blocks in fsck output.");
         }
-        if (numCorrupt.equals(Integer.toString(totalMissingBlocks))) {
+        if (numMissing.equals(Integer.toString(totalMissingBlocks))) {
+          assertTrue(numCorrupt.equals(Integer.toString(0)));
           assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
           break;
         }
