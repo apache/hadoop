@@ -762,7 +762,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      streamer.getLastException().check();
+      streamer.getLastException().check(true);
       return;
     }
 

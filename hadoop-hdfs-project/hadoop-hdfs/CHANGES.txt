@@ -592,6 +592,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8214. Secondary NN Web UI shows wrong date for Last Checkpoint. (clamb via wang)
 
+    HDFS-8300. Fix unit test failures and findbugs warning caused by HDFS-8283.
+    (jing9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
