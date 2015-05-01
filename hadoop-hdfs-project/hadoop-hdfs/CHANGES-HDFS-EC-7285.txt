@@ -152,3 +152,6 @@
 
     HDFS-8183. Erasure Coding: Improve DFSStripedOutputStream closing of 
     datastreamer threads. (Rakesh R via Zhe Zhang)
+
+    HDFS-8308. Erasure Coding: NameNode may get blocked in waitForLoadingFSImage()
+    when loading editlog. (jing9)

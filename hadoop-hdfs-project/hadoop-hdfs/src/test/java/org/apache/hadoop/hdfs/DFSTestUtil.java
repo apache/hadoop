@@ -1948,4 +1948,16 @@ public class DFSTestUtil {
     lastBlock.setNumBytes(numStripes * BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS);
     return lastBlock;
   }
+
+  /**
+   * Because currently DFSStripedOutputStream does not support hflush/hsync,
+   * tests can use this method to flush all the buffered data to DataNodes.
+   */
+  public static void writeAndFlushStripedOutputStream(
+      DFSStripedOutputStream out, int chunkSize) throws IOException {
+    // FSOutputSummer.BUFFER_NUM_CHUNKS == 9
+    byte[] toWrite = new byte[chunkSize * 9 + 1];
+    out.write(toWrite);
+    out.flushInternal();
+  }
 }

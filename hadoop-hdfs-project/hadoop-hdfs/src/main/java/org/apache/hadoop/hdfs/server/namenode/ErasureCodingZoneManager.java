@@ -79,7 +79,8 @@ public class ErasureCodingZoneManager {
       for (XAttr xAttr : xAttrs) {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
           String schemaName = new String(xAttr.getValue());
-          ECSchema schema = dir.getFSNamesystem().getECSchema(schemaName);
+          ECSchema schema = dir.getFSNamesystem().getSchemaManager()
+              .getSchema(schemaName);
           return new ECZoneInfo(inode.getFullPathName(), schema);
         }
       }
