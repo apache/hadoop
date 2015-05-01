@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -55,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_DATA_BLOCKS;
 import static org.junit.Assert.assertEquals;
@@ -103,52 +105,50 @@ public class TestAddStripedBlocks {
     Assert.assertEquals(firstId + HdfsConstants.MAX_BLOCKS_IN_GROUP, secondId);
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testAddStripedBlock() throws Exception {
     final Path file = new Path("/file1");
     // create an empty file
     FSDataOutputStream out = null;
     try {
       out = dfs.create(file, (short) 1);
+      DFSTestUtil.writeAndFlushStripedOutputStream(
+          (DFSStripedOutputStream) out.getWrappedStream(),
+          DFS_BYTES_PER_CHECKSUM_DEFAULT);
 
       FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
       INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
-      LocatedBlock newBlock = cluster.getNamesystem().getAdditionalBlock(
-          file.toString(), fileNode.getId(), dfs.getClient().getClientName(),
-          null, null, null);
-      assertEquals(GROUP_SIZE, newBlock.getLocations().length);
-      assertEquals(GROUP_SIZE, newBlock.getStorageIDs().length);
 
       BlockInfo[] blocks = fileNode.getBlocks();
       assertEquals(1, blocks.length);
       Assert.assertTrue(blocks[0].isStriped());
 
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), true);
+
+      // restart NameNode to check editlog
+      cluster.restartNameNode(true);
+      fsdir = cluster.getNamesystem().getFSDirectory();
+      fileNode = fsdir.getINode4Write(file.toString()).asFile();
+      blocks = fileNode.getBlocks();
+      assertEquals(1, blocks.length);
+      Assert.assertTrue(blocks[0].isStriped());
+      checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
+
+      // save namespace, restart namenode, and check
+      dfs = cluster.getFileSystem();
+      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      dfs.saveNamespace();
+      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      cluster.restartNameNode(true);
+      fsdir = cluster.getNamesystem().getFSDirectory();
+      fileNode = fsdir.getINode4Write(file.toString()).asFile();
+      blocks = fileNode.getBlocks();
+      assertEquals(1, blocks.length);
+      Assert.assertTrue(blocks[0].isStriped());
+      checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
     } finally {
       IOUtils.cleanup(null, out);
     }
-
-    // restart NameNode to check editlog
-    cluster.restartNameNode(true);
-    FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
-    INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
-    BlockInfo[] blocks = fileNode.getBlocks();
-    assertEquals(1, blocks.length);
-    Assert.assertTrue(blocks[0].isStriped());
-    checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
-
-    // save namespace, restart namenode, and check
-    dfs = cluster.getFileSystem();
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
-    dfs.saveNamespace();
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-    cluster.restartNameNode(true);
-    fsdir = cluster.getNamesystem().getFSDirectory();
-    fileNode = fsdir.getINode4Write(file.toString()).asFile();
-    blocks = fileNode.getBlocks();
-    assertEquals(1, blocks.length);
-    Assert.assertTrue(blocks[0].isStriped());
-    checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
   }
 
   private void checkStripedBlockUC(BlockInfoStriped block,
@@ -190,11 +190,12 @@ public class TestAddStripedBlocks {
     FSDataOutputStream out = null;
     try {
       out = dfs.create(file, (short) 1);
+      DFSTestUtil.writeAndFlushStripedOutputStream(
+          (DFSStripedOutputStream) out.getWrappedStream(),
+          DFS_BYTES_PER_CHECKSUM_DEFAULT);
 
       FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
       INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
-      cluster.getNamesystem().getAdditionalBlock(file.toString(),
-          fileNode.getId(), dfs.getClient().getClientName(), null, null, null);
       BlockInfoStripedUnderConstruction lastBlk =
           (BlockInfoStripedUnderConstruction) fileNode.getLastBlock();
       DatanodeInfo[] expectedDNs = DatanodeStorageInfo

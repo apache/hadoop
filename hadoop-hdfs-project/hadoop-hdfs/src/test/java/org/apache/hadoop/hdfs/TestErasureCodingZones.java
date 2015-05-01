@@ -35,8 +35,6 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.*;
 
 public class TestErasureCodingZones {
-  private final int NUM_OF_DATANODES = 3;
-  private Configuration conf;
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private static final int BLOCK_SIZE = 1024;
@@ -44,10 +42,10 @@ public class TestErasureCodingZones {
 
   @Before
   public void setupCluster() throws IOException {
-    conf = new HdfsConfiguration();
+    Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     cluster = new MiniDFSCluster.Builder(conf).
-        numDataNodes(NUM_OF_DATANODES).build();
+        numDataNodes(1).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     namesystem = cluster.getNamesystem();
