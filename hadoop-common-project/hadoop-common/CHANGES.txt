@@ -10,6 +10,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
 
+    HADOOP-11491. HarFs incorrectly declared as requiring an authority.
+    (Brahma Reddy Battula via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
