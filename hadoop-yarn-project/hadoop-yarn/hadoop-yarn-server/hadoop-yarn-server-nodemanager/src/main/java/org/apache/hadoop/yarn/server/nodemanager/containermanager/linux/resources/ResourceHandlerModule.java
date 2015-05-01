@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -31,25 +32,27 @@ import java.util.List;
 
 /**
  * Provides mechanisms to get various resource handlers - cpu, memory, network,
- * disk etc., - based on configuration
+ * disk etc., - based on configuration.
  */
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ResourceHandlerModule {
-  private volatile static ResourceHandlerChain resourceHandlerChain;
+  private static volatile ResourceHandlerChain resourceHandlerChain;
 
   /**
    * This specific implementation might provide resource management as well
    * as resource metrics functionality. We need to ensure that the same
    * instance is used for both.
    */
-  private volatile static TrafficControlBandwidthHandlerImpl
+  private static volatile TrafficControlBandwidthHandlerImpl
       trafficControlBandwidthHandler;
-  private volatile static CGroupsHandler cGroupsHandler;
+  private static volatile CGroupsHandler cGroupsHandler;
+  private static volatile CGroupsBlkioResourceHandlerImpl
+      cGroupsBlkioResourceHandler;
 
   /**
-   * Returns an initialized, thread-safe CGroupsHandler instance
+   * Returns an initialized, thread-safe CGroupsHandler instance.
    */
   public static CGroupsHandler getCGroupsHandler(Configuration conf)
       throws ResourceHandlerException {
@@ -94,6 +97,28 @@ public class ResourceHandlerModule {
     return getTrafficControlBandwidthHandler(conf);
   }
 
+  public static DiskResourceHandler getDiskResourceHandler(Configuration conf)
+      throws ResourceHandlerException {
+    if (conf.getBoolean(YarnConfiguration.NM_DISK_RESOURCE_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISK_RESOURCE_ENABLED)) {
+      return getCgroupsBlkioResourceHandler(conf);
+    }
+    return null;
+  }
+
+  private static CGroupsBlkioResourceHandlerImpl getCgroupsBlkioResourceHandler(
+      Configuration conf) throws ResourceHandlerException {
+    if (cGroupsBlkioResourceHandler == null) {
+      synchronized (DiskResourceHandler.class) {
+        if (cGroupsBlkioResourceHandler == null) {
+          cGroupsBlkioResourceHandler =
+              new CGroupsBlkioResourceHandlerImpl(getCGroupsHandler(conf));
+        }
+      }
+    }
+    return cGroupsBlkioResourceHandler;
+  }
+
   private static void addHandlerIfNotNull(List<ResourceHandler> handlerList,
       ResourceHandler handler) {
     if (handler != null) {
@@ -106,11 +131,12 @@ public class ResourceHandlerModule {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
+    addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
-  public static ResourceHandlerChain getConfiguredResourceHandlerChain
-      (Configuration conf) throws ResourceHandlerException {
+  public static ResourceHandlerChain getConfiguredResourceHandlerChain(
+      Configuration conf) throws ResourceHandlerException {
     if (resourceHandlerChain == null) {
       synchronized (ResourceHandlerModule.class) {
         if (resourceHandlerChain == null) {
@@ -124,5 +150,10 @@ public class ResourceHandlerModule {
     } else {
       return null;
     }
+  }
+
+  @VisibleForTesting
+  static void nullifyResourceHandlerChain() throws ResourceHandlerException {
+    resourceHandlerChain = null;
   }
 }

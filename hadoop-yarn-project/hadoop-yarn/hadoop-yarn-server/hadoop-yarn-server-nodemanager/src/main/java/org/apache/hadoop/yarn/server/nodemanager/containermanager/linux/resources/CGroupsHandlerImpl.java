@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,6 +39,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +65,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
   private final String cGroupMountPath;
   private final long deleteCGroupTimeout;
   private final long deleteCGroupDelay;
-  private final Map<CGroupController, String> controllerPaths;
+  private Map<CGroupController, String> controllerPaths;
   private final ReadWriteLock rwLock;
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
   private final Clock clock;
@@ -106,55 +108,61 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
   private void initializeControllerPaths() throws ResourceHandlerException {
     if (enableCGroupMount) {
-      //nothing to do here - we support 'deferred' mounting of specific
-      //controllers - we'll populate the path for a given controller when an
-      //explicit mountCGroupController request is issued.
+      // nothing to do here - we support 'deferred' mounting of specific
+      // controllers - we'll populate the path for a given controller when an
+      // explicit mountCGroupController request is issued.
       LOG.info("CGroup controller mounting enabled.");
     } else {
-      //cluster admins are expected to have mounted controllers in specific
-      //locations - we'll attempt to figure out mount points
-      initializeControllerPathsFromMtab();
+      // cluster admins are expected to have mounted controllers in specific
+      // locations - we'll attempt to figure out mount points
+
+      Map<CGroupController, String> cPaths =
+          initializeControllerPathsFromMtab(MTAB_FILE, this.cGroupPrefix);
+      // we want to do a bulk update without the paths changing concurrently
+      try {
+        rwLock.writeLock().lock();
+        controllerPaths = cPaths;
+      } finally {
+        rwLock.writeLock().unlock();
+      }
     }
   }
 
-  private void initializeControllerPathsFromMtab()
-      throws ResourceHandlerException {
+  @VisibleForTesting
+  static Map<CGroupController, String> initializeControllerPathsFromMtab(
+      String mtab, String cGroupPrefix) throws ResourceHandlerException {
     try {
-      Map<String, List<String>> parsedMtab = parseMtab();
-
-      //we want to do a bulk update without the paths changing concurrently
-      rwLock.writeLock().lock();
+      Map<String, List<String>> parsedMtab = parseMtab(mtab);
+      Map<CGroupController, String> ret = new HashMap<>();
 
       for (CGroupController controller : CGroupController.values()) {
         String name = controller.getName();
         String controllerPath = findControllerInMtab(name, parsedMtab);
 
         if (controllerPath != null) {
-          File f = new File(controllerPath + "/" + this.cGroupPrefix);
+          File f = new File(controllerPath + "/" + cGroupPrefix);
 
           if (FileUtil.canWrite(f)) {
-            controllerPaths.put(controller, controllerPath);
+            ret.put(controller, controllerPath);
           } else {
             String error =
                 new StringBuffer("Mount point Based on mtab file: ")
-                    .append(MTAB_FILE).append(
-                    ". Controller mount point not writable for: ")
-                    .append(name).toString();
+                  .append(mtab)
+                  .append(". Controller mount point not writable for: ")
+                  .append(name).toString();
 
             LOG.error(error);
             throw new ResourceHandlerException(error);
           }
         } else {
-
-            LOG.warn("Controller not mounted but automount disabled: " + name);
+          LOG.warn("Controller not mounted but automount disabled: " + name);
         }
       }
+      return ret;
     } catch (IOException e) {
       LOG.warn("Failed to initialize controller paths! Exception: " + e);
       throw new ResourceHandlerException(
-          "Failed to initialize controller paths!");
-    } finally {
-      rwLock.writeLock().unlock();
+        "Failed to initialize controller paths!");
     }
   }
 
@@ -173,12 +181,13 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * for mounts with type "cgroup". Cgroup controllers will
    * appear in the list of options for a path.
    */
-  private Map<String, List<String>> parseMtab() throws IOException {
+  private static Map<String, List<String>> parseMtab(String mtab)
+      throws IOException {
     Map<String, List<String>> ret = new HashMap<String, List<String>>();
     BufferedReader in = null;
 
     try {
-      FileInputStream fis = new FileInputStream(new File(getMtabFileName()));
+      FileInputStream fis = new FileInputStream(new File(mtab));
       in = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
 
       for (String str = in.readLine(); str != null;
@@ -197,7 +206,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
         }
       }
     } catch (IOException e) {
-      throw new IOException("Error while reading " + getMtabFileName(), e);
+      throw new IOException("Error while reading " + mtab, e);
     } finally {
       IOUtils.cleanup(LOG, in);
     }
@@ -205,7 +214,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     return ret;
   }
 
-  private String findControllerInMtab(String controller,
+  private static String findControllerInMtab(String controller,
       Map<String, List<String>> entries) {
     for (Map.Entry<String, List<String>> e : entries.entrySet()) {
       if (e.getValue().contains(controller))
@@ -213,10 +222,6 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     }
 
     return null;
-  }
-
-  String getMtabFileName() {
-    return MTAB_FILE;
   }
 
   @Override

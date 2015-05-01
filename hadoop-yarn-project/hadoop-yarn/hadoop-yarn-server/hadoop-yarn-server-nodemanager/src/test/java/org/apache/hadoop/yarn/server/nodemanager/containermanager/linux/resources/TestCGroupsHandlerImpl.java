@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,18 +36,21 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
+/**
+ * Tests for the CGroups handler implementation.
+ */
 public class TestCGroupsHandlerImpl {
   private static final Log LOG =
       LogFactory.getLog(TestCGroupsHandlerImpl.class);
@@ -84,8 +88,8 @@ public class TestCGroupsHandlerImpl {
     try {
       cGroupsHandler = new CGroupsHandlerImpl(conf,
           privilegedOperationExecutorMock);
-      PrivilegedOperation expectedOp = new PrivilegedOperation
-          (PrivilegedOperation.OperationType.MOUNT_CGROUPS, (String) null);
+      PrivilegedOperation expectedOp = new PrivilegedOperation(
+          PrivilegedOperation.OperationType.MOUNT_CGROUPS, (String) null);
       //This is expected to be of the form :
       //net_cls=<mount_path>/net_cls
       StringBuffer controllerKV = new StringBuffer(controller.getName())
@@ -94,8 +98,8 @@ public class TestCGroupsHandlerImpl {
 
       cGroupsHandler.mountCGroupController(controller);
       try {
-        ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass
-            (PrivilegedOperation.class);
+        ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
+            PrivilegedOperation.class);
         verify(privilegedOperationExecutorMock)
             .executePrivilegedOperation(opCaptor.capture(), eq(false));
 
@@ -200,17 +204,15 @@ public class TestCGroupsHandlerImpl {
 
       Assert.assertTrue(paramFile.exists());
       try {
-        Assert.assertEquals(paramValue, new String(Files.readAllBytes
-            (paramFile
-                .toPath())));
+        Assert.assertEquals(paramValue, new String(Files.readAllBytes(
+            paramFile.toPath())));
       } catch (IOException e) {
         LOG.error("Caught exception: " + e);
-        Assert.assertTrue("Unexpected IOException trying to read cgroup param!",
-            false);
+        Assert.fail("Unexpected IOException trying to read cgroup param!");
       }
 
-      Assert.assertEquals(paramValue, cGroupsHandler.getCGroupParam
-          (controller, testCGroup, param));
+      Assert.assertEquals(paramValue,
+          cGroupsHandler.getCGroupParam(controller, testCGroup, param));
 
       //We can't really do a delete test here. Linux cgroups
       //implementation provides additional semantics - the cgroup cannot be
@@ -222,10 +224,77 @@ public class TestCGroupsHandlerImpl {
       //delete is not possible with a regular non-empty directory.
     } catch (ResourceHandlerException e) {
       LOG.error("Caught exception: " + e);
-      Assert.assertTrue(
-          "Unexpected ResourceHandlerException during cgroup operations!",
-          false);
+      Assert
+        .fail("Unexpected ResourceHandlerException during cgroup operations!");
     }
+  }
+
+  public static File createMockCgroupMount(File parentDir, String type)
+      throws IOException {
+    return createMockCgroupMount(parentDir, type, "hadoop-yarn");
+  }
+
+  public static File createMockCgroupMount(File parentDir, String type,
+      String hierarchy) throws IOException {
+    File cgroupMountDir =
+        new File(parentDir.getAbsolutePath(), type + "/" + hierarchy);
+    FileUtils.deleteQuietly(cgroupMountDir);
+    if (!cgroupMountDir.mkdirs()) {
+      String message =
+          "Could not create dir " + cgroupMountDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    return cgroupMountDir;
+  }
+
+  public static File createMockMTab(File parentDir) throws IOException {
+    String cpuMtabContent =
+        "none " + parentDir.getAbsolutePath()
+            + "/cpu cgroup rw,relatime,cpu 0 0\n";
+    String blkioMtabContent =
+        "none " + parentDir.getAbsolutePath()
+            + "/blkio cgroup rw,relatime,blkio 0 0\n";
+
+    File mockMtab = new File(parentDir, UUID.randomUUID().toString());
+    if (!mockMtab.exists()) {
+      if (!mockMtab.createNewFile()) {
+        String message = "Could not create file " + mockMtab.getAbsolutePath();
+        throw new IOException(message);
+      }
+    }
+    FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
+    mtabWriter.write(cpuMtabContent);
+    mtabWriter.write(blkioMtabContent);
+    mtabWriter.close();
+    mockMtab.deleteOnExit();
+    return mockMtab;
+  }
+
+
+  @Test
+  public void testMtabParsing() throws Exception {
+    File parentDir = new File(tmpPath);
+    // create mock cgroup
+    File cpuCgroupMountDir = createMockCgroupMount(parentDir, "cpu",
+        hierarchy);
+    Assert.assertTrue(cpuCgroupMountDir.exists());
+    File blkioCgroupMountDir = createMockCgroupMount(parentDir,
+        "blkio", hierarchy);
+    Assert.assertTrue(blkioCgroupMountDir.exists());
+    File mockMtabFile = createMockMTab(parentDir);
+    Map<CGroupsHandler.CGroupController, String> controllerPaths =
+        CGroupsHandlerImpl.initializeControllerPathsFromMtab(
+          mockMtabFile.getAbsolutePath(), hierarchy);
+    Assert.assertEquals(2, controllerPaths.size());
+    Assert.assertTrue(controllerPaths
+        .containsKey(CGroupsHandler.CGroupController.CPU));
+    Assert.assertTrue(controllerPaths
+        .containsKey(CGroupsHandler.CGroupController.BLKIO));
+    String cpuDir = controllerPaths.get(CGroupsHandler.CGroupController.CPU);
+    String blkioDir =
+        controllerPaths.get(CGroupsHandler.CGroupController.BLKIO);
+    Assert.assertEquals(parentDir.getAbsolutePath() + "/cpu", cpuDir);
+    Assert.assertEquals(parentDir.getAbsolutePath() + "/blkio", blkioDir);
   }
 
   @After
