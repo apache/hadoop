@@ -739,7 +739,7 @@
     org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
     ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
     is enabled for the ApplicationMaster when both
-    mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.am.container.log.limit.kb and
     yarn.app.mapreduce.am.container.log.backups are greater than zero.
   </description>
 </property>
