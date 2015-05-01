@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -53,14 +54,9 @@ public class TestTracing {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
-  private static SpanReceiverHost spanReceiverHost;
 
   @Test
   public void testTracing() throws Exception {
-    // getting instance already loaded.
-    Assert.assertEquals(spanReceiverHost,
-        SpanReceiverHost.getInstance(new Configuration()));
-
     // write and read without tracing started
     String fileName = "testTracingDisabled.dat";
     writeTestFile(fileName);
@@ -196,9 +192,9 @@ public class TestTracing {
   public static void setup() throws IOException {
     conf = new Configuration();
     conf.setLong("dfs.blocksize", 100 * 1024);
-    conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
+    conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
+        SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
         SetSpanReceiver.class.getName());
-    spanReceiverHost = SpanReceiverHost.getInstance(conf);
   }
 
   @Before

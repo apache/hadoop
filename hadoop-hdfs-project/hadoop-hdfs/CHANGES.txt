@@ -617,6 +617,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7770. Need document for storage type label of data node storage
     locations under dfs.data.dir. (Xiaoyu Yao via aajisaka)
 
+    HDFS-8213. DFSClient should use hdfs.client.htrace HTrace configuration
+    prefix rather than hadoop.htrace (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
