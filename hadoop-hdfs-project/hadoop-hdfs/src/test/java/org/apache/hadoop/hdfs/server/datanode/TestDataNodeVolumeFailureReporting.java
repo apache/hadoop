@@ -76,9 +76,8 @@ public class TestDataNodeVolumeFailureReporting {
 
   @Before
   public void setUp() throws Exception {
-    // These tests simulate volume failures by denying execute permission on the
-    // volume's path.  On Windows, the owner of an object is always allowed
-    // access, so we can't run these tests on Windows.
+    // These tests use DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
     assumeTrue(!Path.WINDOWS);
     // Allow a single volume failure (there are two volumes)
     initCluster(1, 2, 1);
