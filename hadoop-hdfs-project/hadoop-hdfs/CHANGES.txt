@@ -605,7 +605,10 @@ Release 2.8.0 - UNRELEASED
     configured zero. (Surendra Singh Lilhore via Arpit Agarwal)
 
     HDFS-8229. LAZY_PERSIST file gets deleted after NameNode restart.
-    (Surendra Singh Lilhore via Arpit Agarwal) 
+    (Surendra Singh Lilhore via Arpit Agarwal)
+
+    HDFS-8309. Skip unit test using DataNodeTestUtils#injectDataDirFailure() on Windows.
+    (xyao)
 
 Release 2.7.1 - UNRELEASED
 

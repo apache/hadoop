@@ -207,8 +207,12 @@ public class TestDataNodeVolumeFailure {
    * after failure.
    */
   @Test(timeout=150000)
-  public void testFailedVolumeBeingRemovedFromDataNode()
+    public void testFailedVolumeBeingRemovedFromDataNode()
       throws InterruptedException, IOException, TimeoutException {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeTrue(!Path.WINDOWS);
+
     Path file1 = new Path("/test1");
     DFSTestUtil.createFile(fs, file1, 1024, (short) 2, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short) 2);
@@ -270,9 +274,8 @@ public class TestDataNodeVolumeFailure {
    */
   @Test
   public void testUnderReplicationAfterVolFailure() throws Exception {
-    // This test relies on denying access to data volumes to simulate data volume
-    // failure.  This doesn't work on Windows, because an owner of an object
-    // always has the ability to read and change permissions on the object.
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
     assumeTrue(!Path.WINDOWS);
 
     // Bring up one more datanode

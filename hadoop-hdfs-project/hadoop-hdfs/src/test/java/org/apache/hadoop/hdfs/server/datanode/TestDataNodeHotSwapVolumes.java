@@ -78,6 +78,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -705,6 +706,10 @@ public class TestDataNodeHotSwapVolumes {
   public void testDirectlyReloadAfterCheckDiskError()
       throws IOException, TimeoutException, InterruptedException,
       ReconfigurationException {
+    // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
+    // volume failures which is currently not supported on Windows.
+    assumeTrue(!Path.WINDOWS);
+
     startDFSCluster(1, 2);
     createFile(new Path("/test"), 32, (short)2);
 
