@@ -293,6 +293,10 @@ Release 2.8.0 - UNRELEASED
     YARN-2454. Fix compareTo of variable UNBOUNDED in o.a.h.y.util.resource.Resources.
     (Xu Yang via junping_du)
 
+    YARN-1993. Cross-site scripting vulnerability in TextView.java. (Kenji Kikushima
+    via ozawa)
+
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

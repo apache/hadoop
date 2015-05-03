@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.webapp.view;
 
 import java.io.PrintWriter;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.View;
 
@@ -45,7 +46,9 @@ public abstract class TextView extends View {
   public void echo(Object... args) {
     PrintWriter out = writer();
     for (Object s : args) {
-      out.print(s);
+      String escapedString = StringEscapeUtils.escapeJavaScript(
+          StringEscapeUtils.escapeHtml(s.toString()));
+      out.print(escapedString);
     }
   }
 
