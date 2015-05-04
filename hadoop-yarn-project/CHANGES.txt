@@ -296,6 +296,8 @@ Release 2.8.0 - UNRELEASED
     YARN-1993. Cross-site scripting vulnerability in TextView.java. (Kenji Kikushima
     via ozawa)
 
+    YARN-3097. Logging of resource recovery on NM restart has redundancies
+    (Eric Payne via jlowe)
 
 Release 2.7.1 - UNRELEASED
 
