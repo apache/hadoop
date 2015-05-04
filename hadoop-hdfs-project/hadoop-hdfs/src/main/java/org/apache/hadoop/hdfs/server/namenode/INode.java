@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -765,7 +766,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   @Override
   public final int compareTo(byte[] bytes) {
-    return DFSUtil.compareBytes(getLocalNameBytes(), bytes);
+    return DFSUtilClient.compareBytes(getLocalNameBytes(), bytes);
   }
 
   @Override

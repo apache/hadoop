@@ -11,6 +11,9 @@
       <Class name="org.apache.hadoop.hdfs.protocol.DirectoryListing"/>
       <Class name="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"/>
       <Class name="org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReport$DiffReportEntry"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus"/>
+      <Class name="org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport"/>
     </Or>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
   </Match>

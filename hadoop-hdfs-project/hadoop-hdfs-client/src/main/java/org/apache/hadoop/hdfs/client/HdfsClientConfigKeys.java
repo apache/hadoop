@@ -42,6 +42,7 @@ public interface HdfsClientConfigKeys {
   boolean DFS_WEBHDFS_ENABLED_DEFAULT = true;
   String  DFS_NAMENODE_HTTP_PORT_KEY = "dfs.http.port";
   String  DFS_NAMENODE_HTTPS_PORT_KEY = "dfs.https.port";
+  int DFS_NAMENODE_RPC_PORT_DEFAULT = 8020;
 
   /** dfs.client.retry configuration properties */
   interface Retry {

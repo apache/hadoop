@@ -24,9 +24,9 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**
  * Describes a path-based cache directive.
@@ -244,9 +244,9 @@ public class CacheDirectiveInfo {
     @Override
     public String toString() {
       if (isRelative) {
-        return DFSUtil.durationToString(ms);
+        return DFSUtilClient.durationToString(ms);
       }
-      return DFSUtil.dateToIso8601String(new Date(ms));
+      return DFSUtilClient.dateToIso8601String(new Date(ms));
     }
   }
 
