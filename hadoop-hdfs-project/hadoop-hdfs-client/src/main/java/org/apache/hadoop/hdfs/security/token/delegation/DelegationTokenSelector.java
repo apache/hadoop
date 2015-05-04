@@ -22,7 +22,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -57,7 +57,7 @@ public class DelegationTokenSelector
     Text serviceName = SecurityUtil.buildTokenService(nnUri);
     final String nnServiceName = conf.get(SERVICE_NAME_KEY + serviceName);
     
-    int nnRpcPort = NameNode.DEFAULT_PORT;
+    int nnRpcPort = HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
     if (nnServiceName != null) {
       nnRpcPort = NetUtils.createSocketAddr(nnServiceName, nnRpcPort).getPort(); 
     }

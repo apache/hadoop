@@ -47,9 +47,9 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.Event;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -469,7 +469,7 @@ public class PBHelper {
   public static BlockKeyProto convert(BlockKey key) {
     byte[] encodedKey = key.getEncodedKey();
     ByteString keyBytes = ByteString.copyFrom(encodedKey == null ? 
-        DFSUtil.EMPTY_BYTES : encodedKey);
+        DFSUtilClient.EMPTY_BYTES : encodedKey);
     return BlockKeyProto.newBuilder().setKeyId(key.getKeyId())
         .setKeyBytes(keyBytes).setExpiryDate(key.getExpiryDate()).build();
   }
@@ -1514,7 +1514,7 @@ public class PBHelper {
     int snapshotQuota = status.getSnapshotQuota();
     byte[] parentFullPath = status.getParentFullPath();
     ByteString parentFullPathBytes = ByteString.copyFrom(
-        parentFullPath == null ? DFSUtil.EMPTY_BYTES : parentFullPath);
+        parentFullPath == null ? DFSUtilClient.EMPTY_BYTES : parentFullPath);
     HdfsFileStatusProto fs = convert(status.getDirStatus());
     SnapshottableDirectoryStatusProto.Builder builder = 
         SnapshottableDirectoryStatusProto
@@ -2024,7 +2024,7 @@ public class PBHelper {
       return null;
     }
     ByteString sourcePath = ByteString
-        .copyFrom(entry.getSourcePath() == null ? DFSUtil.EMPTY_BYTES : entry
+        .copyFrom(entry.getSourcePath() == null ? DFSUtilClient.EMPTY_BYTES : entry
             .getSourcePath());
     String modification = entry.getType().getLabel();
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
@@ -2032,7 +2032,7 @@ public class PBHelper {
         .setModificationLabel(modification);
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath = ByteString
-          .copyFrom(entry.getTargetPath() == null ? DFSUtil.EMPTY_BYTES : entry
+          .copyFrom(entry.getTargetPath() == null ? DFSUtilClient.EMPTY_BYTES : entry
               .getTargetPath());
       builder.setTargetPath(targetPath);
     }

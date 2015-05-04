@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
@@ -342,7 +343,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
             dir.getDirectorySnapshottableFeature().getNumSnapshots(),
             dir.getDirectorySnapshottableFeature().getSnapshotQuota(),
-            dir.getParent() == null ? DFSUtil.EMPTY_BYTES :
+            dir.getParent() == null ? DFSUtilClient.EMPTY_BYTES :
                 DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
         statusList.add(status);
       }

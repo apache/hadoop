@@ -24,7 +24,7 @@ import java.util.Date;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**
  * Metadata about a snapshottable directory
@@ -36,9 +36,9 @@ public class SnapshottableDirectoryStatus {
     @Override
     public int compare(SnapshottableDirectoryStatus left,
                        SnapshottableDirectoryStatus right) {
-      int d = DFSUtil.compareBytes(left.parentFullPath, right.parentFullPath);
+      int d = DFSUtilClient.compareBytes(left.parentFullPath, right.parentFullPath);
       return d != 0? d
-          : DFSUtil.compareBytes(left.dirStatus.getLocalNameInBytes(),
+          : DFSUtilClient.compareBytes(left.dirStatus.getLocalNameInBytes(),
               right.dirStatus.getLocalNameInBytes());
     }
   };
@@ -101,7 +101,7 @@ public class SnapshottableDirectoryStatus {
   public Path getFullPath() {
     String parentFullPathStr = 
         (parentFullPath == null || parentFullPath.length == 0) ? 
-            null : DFSUtil.bytes2String(parentFullPath);
+            null : DFSUtilClient.bytes2String(parentFullPath);
     if (parentFullPathStr == null
         && dirStatus.getLocalNameInBytes().length == 0) {
       // root

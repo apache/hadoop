@@ -22,9 +22,9 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
 
 import com.google.common.base.Objects;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**
  * This class represents to end users the difference between two snapshots of 
@@ -102,8 +102,8 @@ public class SnapshotDiffReport {
     public DiffReportEntry(DiffType type, byte[][] sourcePathComponents,
         byte[][] targetPathComponents) {
       this.type = type;
-      this.sourcePath = DFSUtil.byteArray2bytes(sourcePathComponents);
-      this.targetPath = targetPathComponents == null ? null : DFSUtil
+      this.sourcePath = DFSUtilClient.byteArray2bytes(sourcePathComponents);
+      this.targetPath = targetPathComponents == null ? null : DFSUtilClient
           .byteArray2bytes(targetPathComponents);
     }
     
@@ -121,7 +121,7 @@ public class SnapshotDiffReport {
     }
 
     static String getPathString(byte[] path) {
-      String pathStr = DFSUtil.bytes2String(path);
+      String pathStr = DFSUtilClient.bytes2String(path);
       if (pathStr.isEmpty()) {
         return Path.CUR_DIR;
       } else {

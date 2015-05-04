@@ -504,6 +504,9 @@ Release 2.8.0 - UNRELEASED
     "dfs.client.read.shortcircuit.streams.cache.size" (Brahma Reddy Battula via
     Colin P. McCabe)
 
+    HDFS-8237. Move all protocol classes used by ClientProtocol to hdfs-client.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

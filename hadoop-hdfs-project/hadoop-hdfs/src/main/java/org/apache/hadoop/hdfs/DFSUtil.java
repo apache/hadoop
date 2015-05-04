@@ -43,14 +43,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -97,26 +95,12 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.SignedBytes;
 import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
   public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
-  public static final byte[] EMPTY_BYTES = {};
-
-  /** Compare two byte arrays by lexicographical order. */
-  public static int compareBytes(byte[] left, byte[] right) {
-    if (left == null) {
-      left = EMPTY_BYTES;
-    }
-    if (right == null) {
-      right = EMPTY_BYTES;
-    }
-    return SignedBytes.lexicographicalComparator().compare(left, right);
-  }
-
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
     @Override
@@ -343,37 +327,6 @@ public class DFSUtil {
       }
     }
     return Joiner.on(Path.SEPARATOR).join(components);
-  }
-
-  /**
-   * Given a list of path components returns a byte array
-   */
-  public static byte[] byteArray2bytes(byte[][] pathComponents) {
-    if (pathComponents.length == 0) {
-      return EMPTY_BYTES;
-    } else if (pathComponents.length == 1
-        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
-      return new byte[]{(byte) Path.SEPARATOR_CHAR};
-    }
-    int length = 0;
-    for (int i = 0; i < pathComponents.length; i++) {
-      length += pathComponents[i].length;
-      if (i < pathComponents.length - 1) {
-        length++; // for SEPARATOR
-      }
-    }
-    byte[] path = new byte[length];
-    int index = 0;
-    for (int i = 0; i < pathComponents.length; i++) {
-      System.arraycopy(pathComponents[i], 0, path, index,
-          pathComponents[i].length);
-      index += pathComponents[i].length;
-      if (i < pathComponents.length - 1) {
-        path[index] = (byte) Path.SEPARATOR_CHAR;
-        index++;
-      }
-    }
-    return path;
   }
 
   /** Convert an object representing a path to a string. */
@@ -1377,38 +1330,14 @@ public class DFSUtil {
    * Converts a Date into an ISO-8601 formatted datetime string.
    */
   public static String dateToIso8601String(Date date) {
-    SimpleDateFormat df =
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH);
-    return df.format(date);
+    return DFSUtilClient.dateToIso8601String(date);
   }
 
   /**
    * Converts a time duration in milliseconds into DDD:HH:MM:SS format.
    */
   public static String durationToString(long durationMs) {
-    boolean negative = false;
-    if (durationMs < 0) {
-      negative = true;
-      durationMs = -durationMs;
-    }
-    // Chop off the milliseconds
-    long durationSec = durationMs / 1000;
-    final int secondsPerMinute = 60;
-    final int secondsPerHour = 60*60;
-    final int secondsPerDay = 60*60*24;
-    final long days = durationSec / secondsPerDay;
-    durationSec -= days * secondsPerDay;
-    final long hours = durationSec / secondsPerHour;
-    durationSec -= hours * secondsPerHour;
-    final long minutes = durationSec / secondsPerMinute;
-    durationSec -= minutes * secondsPerMinute;
-    final long seconds = durationSec;
-    final long milliseconds = durationMs % 1000;
-    String format = "%03d:%02d:%02d:%02d.%03d";
-    if (negative)  {
-      format = "-" + format;
-    }
-    return String.format(format, days, hours, minutes, seconds, milliseconds);
+    return DFSUtilClient.durationToString(durationMs);
   }
 
   /**
