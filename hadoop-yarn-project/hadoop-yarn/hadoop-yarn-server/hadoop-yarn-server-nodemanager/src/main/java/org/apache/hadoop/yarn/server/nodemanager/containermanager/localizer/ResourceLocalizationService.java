@@ -303,8 +303,10 @@ public class ResourceLocalizationService extends CompositeService
     for (LocalizedResourceProto proto : state.getLocalizedResources()) {
       LocalResource rsrc = new LocalResourcePBImpl(proto.getResource());
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
-      LOG.info("Recovering localized resource " + req + " at "
-          + proto.getLocalPath());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Recovering localized resource " + req + " at "
+            + proto.getLocalPath());
+      }
       tracker.handle(new ResourceRecoveredEvent(req,
           new Path(proto.getLocalPath()), proto.getSize()));
     }
