@@ -260,4 +260,33 @@ public class TestMergeManager {
     }
 
   }
+
+  @Test
+  public void testLargeMemoryLimits() throws Exception {
+    final JobConf conf = new JobConf();
+    // Xmx in production
+    conf.setLong(MRJobConfig.REDUCE_MEMORY_TOTAL_BYTES,
+        8L * 1024 * 1024 * 1024);
+
+    // M1 = Xmx fraction for map outputs
+    conf.setFloat(MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT, 1.0f);
+
+    // M2 = max M1 fraction for a single maple output
+    conf.setFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT, 0.95f);
+
+    // M3 = M1 fraction at which in memory merge is triggered
+    conf.setFloat(MRJobConfig.SHUFFLE_MERGE_PERCENT, 1.0f);
+
+    // M4 = M1 fraction of map outputs remaining in memory for a reduce
+    conf.setFloat(MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT, 1.0f);
+
+    final MergeManagerImpl<Text, Text> mgr = new MergeManagerImpl<Text, Text>(
+        null, conf, mock(LocalFileSystem.class), null, null, null, null, null,
+        null, null, null, null, null, new MROutputFiles());
+    assertTrue("Large shuffle area unusable: " + mgr.memoryLimit,
+        mgr.memoryLimit > Integer.MAX_VALUE);
+    final long maxInMemReduce = mgr.getMaxInMemReduceLimit();
+    assertTrue("Large in-memory reduce area unusable: " + maxInMemReduce,
+        maxInMemReduce > Integer.MAX_VALUE);
+  }
 }
