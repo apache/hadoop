@@ -299,6 +299,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3097. Logging of resource recovery on NM restart has redundancies
     (Eric Payne via jlowe)
 
+    YARN-3375. NodeHealthScriptRunner.shouldRun() check is performing 3 times for 
+    starting NodeHealthScriptRunner. (Devaraj K via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
