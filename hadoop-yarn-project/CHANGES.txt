@@ -302,6 +302,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3375. NodeHealthScriptRunner.shouldRun() check is performing 3 times for 
     starting NodeHealthScriptRunner. (Devaraj K via wangda)
 
+    YARN-2725. Added test cases of retrying creating znode in ZKRMStateStore.
+    (Tsuyoshi Ozawa via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

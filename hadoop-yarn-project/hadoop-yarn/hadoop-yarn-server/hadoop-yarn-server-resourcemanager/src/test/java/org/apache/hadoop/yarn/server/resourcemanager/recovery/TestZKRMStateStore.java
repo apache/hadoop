@@ -100,6 +100,15 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         return workingZnode + "/" + ROOT_ZNODE_NAME + "/" + RM_APP_ROOT + "/"
             + appId;
       }
+
+      /**
+       * Emulating retrying createRootDir not to raise NodeExist exception
+       * @throws Exception
+       */
+      public void testRetryingCreateRootDir() throws Exception {
+        createRootDir(znodeWorkingPath);
+      }
+
     }
 
     public RMStateStore getRMStateStore() throws Exception {
@@ -148,6 +157,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testDeleteStore(zkTester);
     testRemoveApplication(zkTester);
     testAMRMTokenSecretManagerStateStore(zkTester);
+    ((TestZKRMStateStoreTester.TestZKRMStateStoreInternal)
+        zkTester.getRMStateStore()).testRetryingCreateRootDir();
   }
 
   @Test (timeout = 60000)
