@@ -161,3 +161,6 @@
 
     HDFS-8316. Erasure coding: refactor EC constants to be consistent with HDFS-8249.
     (Zhe Zhang via jing9)
+
+    HDFS-8281. Erasure Coding: implement parallel stateful reading for striped layout.
+    (jing9)
