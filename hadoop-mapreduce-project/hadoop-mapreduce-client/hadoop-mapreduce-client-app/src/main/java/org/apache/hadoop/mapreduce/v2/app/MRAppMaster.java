@@ -1032,7 +1032,7 @@ public class MRAppMaster extends CompositeService {
           new JobHistoryEvent(job.getID(), new AMStartedEvent(info
               .getAppAttemptId(), info.getStartTime(), info.getContainerId(),
               info.getNodeManagerHost(), info.getNodeManagerPort(), info
-                  .getNodeManagerHttpPort())));
+                  .getNodeManagerHttpPort(), appSubmitTime)));
     }
 
     // Send out an MR AM inited event for this AM.
@@ -1041,7 +1041,7 @@ public class MRAppMaster extends CompositeService {
             .getAppAttemptId(), amInfo.getStartTime(), amInfo.getContainerId(),
             amInfo.getNodeManagerHost(), amInfo.getNodeManagerPort(), amInfo
                 .getNodeManagerHttpPort(), this.forcedState == null ? null
-                    : this.forcedState.toString())));
+                    : this.forcedState.toString(), appSubmitTime)));
     amInfos.add(amInfo);
 
     // metrics system init is really init & start.
