@@ -80,7 +80,7 @@ public class TimelineEntity {
   private TimelineEntity real;
   private Identifier identifier;
   private HashMap<String, Object> info = new HashMap<>();
-  private HashMap<String, Object> configs = new HashMap<>();
+  private HashMap<String, String> configs = new HashMap<>();
   private Set<TimelineMetric> metrics = new HashSet<>();
   private Set<TimelineEvent> events = new HashSet<>();
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
@@ -213,7 +213,7 @@ public class TimelineEntity {
   // required by JAXB
   @InterfaceAudience.Private
   @XmlElement(name = "configs")
-  public HashMap<String, Object> getConfigsJAXB() {
+  public HashMap<String, String> getConfigsJAXB() {
     if (real == null) {
       return configs;
     } else {
@@ -221,7 +221,7 @@ public class TimelineEntity {
     }
   }
 
-  public Map<String, Object> getConfigs() {
+  public Map<String, String> getConfigs() {
     if (real == null) {
       return configs;
     } else {
@@ -229,19 +229,19 @@ public class TimelineEntity {
     }
   }
 
-  public void setConfigs(Map<String, Object> configs) {
+  public void setConfigs(Map<String, String> configs) {
     if (real == null) {
       if (configs != null && !(configs instanceof HashMap)) {
-        this.configs = new HashMap<String, Object>(configs);
+        this.configs = new HashMap<String, String>(configs);
       } else {
-        this.configs = (HashMap<String, Object>) configs;
+        this.configs = (HashMap<String, String>) configs;
       }
     } else {
       real.setConfigs(configs);
     }
   }
 
-  public void addConfigs(Map<String, Object> configs) {
+  public void addConfigs(Map<String, String> configs) {
     if (real == null) {
       this.configs.putAll(configs);
     } else {
@@ -249,7 +249,7 @@ public class TimelineEntity {
     }
   }
 
-  public void addConfig(String key, Object value) {
+  public void addConfig(String key, String value) {
     if (real == null) {
       configs.put(key, value);
     } else {
