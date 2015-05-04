@@ -35,6 +35,9 @@ Release 2.6.1 - UNRELEASED
     MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
     tokens when they roll-over. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
+    (Gera Shegalov via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
