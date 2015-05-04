@@ -93,8 +93,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   
   Set<CompressAwarePath> onDiskMapOutputs = new TreeSet<CompressAwarePath>();
   private final OnDiskMerger onDiskMerger;
-  
-  private final long memoryLimit;
+
+  @VisibleForTesting
+  final long memoryLimit;
+
   private long usedMemory;
   private long commitMemory;
   private final long maxSingleShuffleLimit;
@@ -167,11 +169,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     }
 
     // Allow unit tests to fix Runtime memory
-    this.memoryLimit = 
-      (long)(jobConf.getLong(MRJobConfig.REDUCE_MEMORY_TOTAL_BYTES,
-          Math.min(Runtime.getRuntime().maxMemory(), Integer.MAX_VALUE))
-        * maxInMemCopyUse);
- 
+    this.memoryLimit = (long)(jobConf.getLong(
+        MRJobConfig.REDUCE_MEMORY_TOTAL_BYTES,
+        Runtime.getRuntime().maxMemory()) * maxInMemCopyUse);
+
     this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR, 100);
 
     final float singleShuffleMemoryLimitPercent =
@@ -201,7 +202,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
 
     if (this.maxSingleShuffleLimit >= this.mergeThreshold) {
       throw new RuntimeException("Invalid configuration: "
-          + "maxSingleShuffleLimit should be less than mergeThreshold"
+          + "maxSingleShuffleLimit should be less than mergeThreshold "
           + "maxSingleShuffleLimit: " + this.maxSingleShuffleLimit
           + "mergeThreshold: " + this.mergeThreshold);
     }
@@ -667,24 +668,26 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     }
   }
 
+  @VisibleForTesting
+  final long getMaxInMemReduceLimit() {
+    final float maxRedPer =
+        jobConf.getFloat(MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT, 0f);
+    if (maxRedPer > 1.0 || maxRedPer < 0.0) {
+      throw new RuntimeException(maxRedPer + ": "
+          + MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT
+          + " must be a float between 0 and 1.0");
+    }
+    return (long)(memoryLimit * maxRedPer);
+  }
+
   private RawKeyValueIterator finalMerge(JobConf job, FileSystem fs,
                                        List<InMemoryMapOutput<K,V>> inMemoryMapOutputs,
                                        List<CompressAwarePath> onDiskMapOutputs
                                        ) throws IOException {
-    LOG.info("finalMerge called with " + 
-             inMemoryMapOutputs.size() + " in-memory map-outputs and " + 
-             onDiskMapOutputs.size() + " on-disk map-outputs");
-    
-    final float maxRedPer =
-      job.getFloat(MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT, 0f);
-    if (maxRedPer > 1.0 || maxRedPer < 0.0) {
-      throw new IOException(MRJobConfig.REDUCE_INPUT_BUFFER_PERCENT +
-                            maxRedPer);
-    }
-    int maxInMemReduce = (int)Math.min(
-        Runtime.getRuntime().maxMemory() * maxRedPer, Integer.MAX_VALUE);
-    
-
+    LOG.info("finalMerge called with " +
+        inMemoryMapOutputs.size() + " in-memory map-outputs and " +
+        onDiskMapOutputs.size() + " on-disk map-outputs");
+    final long maxInMemReduce = getMaxInMemReduceLimit();
     // merge config params
     Class<K> keyClass = (Class<K>)job.getMapOutputKeyClass();
     Class<V> valueClass = (Class<V>)job.getMapOutputValueClass();
