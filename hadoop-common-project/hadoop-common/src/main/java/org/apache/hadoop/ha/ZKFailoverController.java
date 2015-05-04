@@ -180,6 +180,7 @@ public abstract class ZKFailoverController {
         }
       });
     } catch (RuntimeException rte) {
+      LOG.fatal("The failover controller encounters runtime error: " + rte);
       throw (Exception)rte.getCause();
     }
   }
