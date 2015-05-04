@@ -365,6 +365,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6349. Fix typo in property org.apache.hadoop.mapreduce.
     lib.chain.Chain.REDUCER_INPUT_VALUE_CLASS. (Ray Chiang via ozawa)
 
+    MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
+    (Gera Shegalov via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
