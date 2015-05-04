@@ -75,6 +75,17 @@ public final class HdfsConstants {
   public static final String CLIENT_NAMENODE_PROTOCOL_NAME =
       "org.apache.hadoop.hdfs.protocol.ClientProtocol";
 
+  /*
+   * These values correspond to the values used by the system default erasure
+   * coding schema.
+   * TODO: to be removed once all places use schema.
+   */
+
+  public static final byte NUM_DATA_BLOCKS = 6;
+  public static final byte NUM_PARITY_BLOCKS = 3;
+  // The chunk size for striped block which is used by erasure coding
+  public static final int BLOCK_STRIPED_CELL_SIZE = 256 * 1024;
+
   // SafeMode actions
   public enum SafeModeAction {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET

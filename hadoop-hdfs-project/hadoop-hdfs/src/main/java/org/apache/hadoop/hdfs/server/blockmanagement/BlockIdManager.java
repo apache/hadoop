@@ -241,11 +241,11 @@ public class BlockIdManager {
    * data/parity block id in the same striped block group.
    */
   public static long convertToStripedID(long id) {
-    return id & (~HdfsConstants.BLOCK_GROUP_INDEX_MASK);
+    return id & (~HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 
   public static int getBlockIndex(Block reportedBlock) {
     return (int) (reportedBlock.getBlockId() &
-        HdfsConstants.BLOCK_GROUP_INDEX_MASK);
+        HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
 }
