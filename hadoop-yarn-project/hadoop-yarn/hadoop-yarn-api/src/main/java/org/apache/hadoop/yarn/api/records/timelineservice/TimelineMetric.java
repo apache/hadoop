@@ -24,24 +24,47 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.TreeMap;
 
 @XmlRootElement(name = "metric")
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class TimelineMetric {
+
+  public static enum Type {
+    SINGLE_VALUE,
+    TIME_SERIES
+  }
+
+  private Type type;
   private String id;
-  private HashMap<String, Object> info = new HashMap<>();
-  private Object singleData;
-  private HashMap<Long, Object> timeSeries = new LinkedHashMap<>();
-  private long startTime;
-  private long endTime;
+  private Comparator<Long> reverseComparator = new Comparator<Long>() {
+    @Override
+    public int compare(Long l1, Long l2) {
+      return -l1.compareTo(l2);
+    }
+  };
+  private TreeMap<Long, Number> values = new TreeMap<>(reverseComparator);
 
   public TimelineMetric() {
+    this(Type.SINGLE_VALUE);
+  }
 
+  public TimelineMetric(Type type) {
+    this.type = type;
+  }
+
+
+  @XmlElement(name = "type")
+  public Type getType() {
+    return type;
+  }
+
+  public void setType(Type type) {
+    this.type = type;
   }
 
   @XmlElement(name = "id")
@@ -55,82 +78,50 @@ public class TimelineMetric {
 
   // required by JAXB
   @InterfaceAudience.Private
-  @XmlElement(name = "info")
-  public HashMap<String, Object> getInfoJAXB() {
-    return info;
+  @XmlElement(name = "values")
+  public TreeMap<Long, Number> getValuesJAXB() {
+    return values;
   }
 
-  public Map<String, Object> getInfo() {
-    return info;
+  public Map<Long, Number> getValues() {
+    return values;
   }
 
-  public void setInfo(Map<String, Object> info) {
-    if (info != null && !(info instanceof HashMap)) {
-      this.info = new HashMap<String, Object>(info);
+  public void setValues(Map<Long, Number> values) {
+    if (type == Type.SINGLE_VALUE) {
+      overwrite(values);
     } else {
-      this.info = (HashMap<String, Object>) info;
+      if (values != null) {
+        this.values = new TreeMap<Long, Number>(reverseComparator);
+        this.values.putAll(values);
+      } else {
+        this.values = null;
+      }
     }
   }
 
-  public void addInfo(Map<String, Object> info) {
-    this.info.putAll(info);
-  }
-
-  public void addInfo(String key, Object value) {
-    info.put(key, value);
-  }
-
-  @XmlElement(name = "data")
-  public Object getSingleData() {
-    return singleData;
-  }
-
-  public void setSingleData(Object singleData) {
-    this.singleData = singleData;
-  }
-
-  // required by JAXB
-  @InterfaceAudience.Private
-  @XmlElement(name = "timeseries")
-  public HashMap<Long, Object> getTimeSeriesJAXB() {
-    return timeSeries;
-  }
-
-  public Map<Long, Object> getTimeSeries() {
-    return timeSeries;
-  }
-
-  public void setTimeSeries(Map<Long, Object> timeSeries) {
-    if (timeSeries != null && !(timeSeries instanceof LinkedHashMap)) {
-      this.timeSeries = new LinkedHashMap<Long, Object>(timeSeries);
+  public void addValues(Map<Long, Number> values) {
+    if (type == Type.SINGLE_VALUE) {
+      overwrite(values);
     } else {
-      this.timeSeries = (LinkedHashMap<Long, Object>) timeSeries;
+      this.values.putAll(values);
     }
   }
 
-  public void addTimeSeries(Map<Long, Object> timeSeries) {
-    this.timeSeries.putAll(timeSeries);
+  public void addValue(long timestamp, Number value) {
+    if (type == Type.SINGLE_VALUE) {
+      values.clear();
+    }
+    values.put(timestamp, value);
   }
 
-  public void addTimeSeriesData(long timestamp, Object value) {
-    timeSeries.put(timestamp, value);
-  }
-
-  @XmlElement(name = "starttime")
-  public long getStartTime() {
-    return startTime;
-  }
-
-  public void setStartTime(long startTime) {
-    this.startTime = startTime;
-  }
-
-  @XmlElement(name = "endtime")
-  public long getEndTime() {
-    return endTime;
-  }
-
-  public void setEndTime(long endTime) {
-    this.endTime = endTime;
+  private void overwrite(Map<Long, Number> values) {
+    if (values.size() > 1) {
+      throw new IllegalArgumentException(
+          "Values cannot contain more than one point in " +
+              Type.SINGLE_VALUE + " mode");
+    }
+    this.values.clear();
+    this.values.putAll(values);
   }
 }

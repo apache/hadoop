@@ -28,7 +28,11 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Test;
 import org.junit.Assert;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 
 public class TestTimelineServiceRecords {
@@ -41,38 +45,83 @@ public class TestTimelineServiceRecords {
     entity.setType("test type 1");
     entity.setId("test id 1");
     entity.addInfo("test info key 1", "test info value 1");
-    entity.addInfo("test info key 2", "test info value 2");
+    entity.addInfo("test info key 2",
+        Arrays.asList("test info value 2", "test info value 3"));
+    entity.addInfo("test info key 3", true);
+    Assert.assertTrue(
+        entity.getInfo().get("test info key 3") instanceof Boolean);
     entity.addConfig("test config key 1", "test config value 1");
     entity.addConfig("test config key 2", "test config value 2");
-    TimelineMetric metric1 = new TimelineMetric();
+
+    TimelineMetric metric1 =
+        new TimelineMetric(TimelineMetric.Type.TIME_SERIES);
     metric1.setId("test metric id 1");
-    metric1.addInfo("test info key 1", "test info value 1");
-    metric1.addInfo("test info key 2", "test info value 2");
-    metric1.addTimeSeriesData(1L, "test time series 1");
-    metric1.addTimeSeriesData(2L, "test time series 2");
-    metric1.setStartTime(0L);
-    metric1.setEndTime(1L);
+    metric1.addValue(1L, 1.0F);
+    metric1.addValue(3L, 3.0D);
+    metric1.addValue(2L, 2);
+    Assert.assertEquals(TimelineMetric.Type.TIME_SERIES, metric1.getType());
+    Iterator<Map.Entry<Long, Number>> itr =
+        metric1.getValues().entrySet().iterator();
+    Map.Entry<Long, Number> entry = itr.next();
+    Assert.assertEquals(new Long(3L), entry.getKey());
+    Assert.assertEquals(new Double(3.0D), entry.getValue());
+    entry = itr.next();
+    Assert.assertEquals(new Long(2L), entry.getKey());
+    Assert.assertEquals(new Integer(2), entry.getValue());
+    entry = itr.next();
+    Assert.assertEquals(new Long(1L), entry.getKey());
+    Assert.assertEquals(new Float(1.0F), entry.getValue());
+    Assert.assertFalse(itr.hasNext());
     entity.addMetric(metric1);
-    TimelineMetric metric2 = new TimelineMetric();
+
+    TimelineMetric metric2 =
+        new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
     metric2.setId("test metric id 1");
-    metric2.addInfo("test info key 1", "test info value 1");
-    metric2.addInfo("test info key 2", "test info value 2");
-    metric2.setSingleData("test info value 3");
-    metric1.setStartTime(0L);
-    metric1.setEndTime(1L);
+    metric2.addValue(3L, (short) 3);
+    Assert.assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric2.getType());
+    Assert.assertTrue(
+        metric2.getValues().values().iterator().next() instanceof Short);
+    Map<Long, Number> points = new HashMap<>();
+    points.put(4L, 4.0D);
+    points.put(5L, 5.0D);
+    try {
+      metric2.setValues(points);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Values cannot contain more than one point in"));
+    }
+    try {
+      metric2.addValues(points);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Values cannot contain more than one point in"));
+    }
     entity.addMetric(metric2);
+
     TimelineEvent event1 = new TimelineEvent();
     event1.setId("test event id 1");
     event1.addInfo("test info key 1", "test info value 1");
-    event1.addInfo("test info key 2", "test info value 2");
+    event1.addInfo("test info key 2",
+        Arrays.asList("test info value 2", "test info value 3"));
+    event1.addInfo("test info key 3", true);
+    Assert.assertTrue(
+        event1.getInfo().get("test info key 3") instanceof Boolean);
     event1.setTimestamp(0L);
     entity.addEvent(event1);
+
     TimelineEvent event2 = new TimelineEvent();
     event2.setId("test event id 2");
     event2.addInfo("test info key 1", "test info value 1");
-    event2.addInfo("test info key 2", "test info value 2");
+    event2.addInfo("test info key 2",
+        Arrays.asList("test info value 2", "test info value 3"));
+    event2.addInfo("test info key 3", true);
+    Assert.assertTrue(
+        event2.getInfo().get("test info key 3") instanceof Boolean);
     event2.setTimestamp(1L);
     entity.addEvent(event2);
+
     entity.setCreatedTime(0L);
     entity.setModifiedTime(1L);
     entity.addRelatesToEntity("test type 2", "test id 2");

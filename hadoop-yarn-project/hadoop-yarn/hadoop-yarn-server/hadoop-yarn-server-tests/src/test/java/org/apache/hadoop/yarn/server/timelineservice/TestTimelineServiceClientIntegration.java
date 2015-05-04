@@ -81,6 +81,12 @@ public class TestTimelineServiceClientIntegration {
       TimelineEntity entity = new TimelineEntity();
       entity.setType("test entity type");
       entity.setId("test entity id");
+      TimelineMetric metric =
+          new TimelineMetric(TimelineMetric.Type.TIME_SERIES);
+      metric.setId("test metric id");
+      metric.addValue(1L, 1.0D);
+      metric.addValue(2L, 2.0D);
+      entity.addMetric(metric);
       client.putEntities(entity);
       client.putEntitiesAsync(entity);
     } finally {
