@@ -426,10 +426,10 @@ public class JobHistoryEventHandler extends AbstractService
    * This should be the first call to history for a job
    * 
    * @param jobId the jobId.
-   * @param forcedJobStateOnShutDown
+   * @param amStartedEvent
    * @throws IOException
    */
-  protected void setupEventWriter(JobId jobId, String forcedJobStateOnShutDown)
+  protected void setupEventWriter(JobId jobId, AMStartedEvent amStartedEvent)
       throws IOException {
     if (stagingDirPath == null) {
       LOG.error("Log Directory is null, returning");
@@ -489,8 +489,13 @@ public class JobHistoryEventHandler extends AbstractService
     }
 
     MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer,
-        user, jobName, jobId, forcedJobStateOnShutDown, queueName);
+        user, jobName, jobId, amStartedEvent.getForcedJobStateOnShutDown(),
+        queueName);
     fi.getJobSummary().setJobId(jobId);
+    fi.getJobSummary().setJobLaunchTime(amStartedEvent.getStartTime());
+    fi.getJobSummary().setJobSubmitTime(amStartedEvent.getSubmitTime());
+    fi.getJobIndexInfo().setJobStartTime(amStartedEvent.getStartTime());
+    fi.getJobIndexInfo().setSubmitTime(amStartedEvent.getSubmitTime());
     fileMap.put(jobId, fi);
   }
 
@@ -541,8 +546,7 @@ public class JobHistoryEventHandler extends AbstractService
         try {
           AMStartedEvent amStartedEvent =
               (AMStartedEvent) event.getHistoryEvent();
-          setupEventWriter(event.getJobID(),
-              amStartedEvent.getForcedJobStateOnShutDown());
+          setupEventWriter(event.getJobID(), amStartedEvent);
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -982,6 +986,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("NODE_MANAGER_HTTP_PORT",
                 ase.getNodeManagerHttpPort());
         tEvent.addEventInfo("START_TIME", ase.getStartTime());
+        tEvent.addEventInfo("SUBMIT_TIME", ase.getSubmitTime());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(jobId.toString());
         tEntity.setEntityType(MAPREDUCE_JOB_ENTITY_TYPE);

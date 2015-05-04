@@ -125,7 +125,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -168,7 +168,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -213,7 +213,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -256,7 +256,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
@@ -293,7 +293,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       verify(jheh, times(0)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
@@ -338,7 +338,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+        t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
       verify(jheh, times(0)).processDoneFiles(t.jobId);
 
       // skip processing done files
@@ -395,7 +395,7 @@ public class TestJobHistoryEventHandler {
     try {
       jheh.start();
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000)));
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
           TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
@@ -441,6 +441,47 @@ public class TestJobHistoryEventHandler {
         pathStr);
   }
 
+  // test AMStartedEvent for submitTime and startTime
+  @Test (timeout=50000)
+  public void testAMStartedEvent() throws Exception {
+    TestParams t = new TestParams();
+    Configuration conf = new Configuration();
+
+    JHEvenHandlerForTest realJheh =
+        new JHEvenHandlerForTest(t.mockAppContext, 0);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    EventWriter mockWriter = null;
+    try {
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, 100)));
+
+      JobHistoryEventHandler.MetaInfo mi =
+          JobHistoryEventHandler.fileMap.get(t.jobId);
+      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
+      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+
+      handleEvent(jheh, new JobHistoryEvent(t.jobId,
+        new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
+          0, 0, JobStateInternal.FAILED.toString())));
+
+      Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
+      Assert.assertEquals(mi.getJobSummary().getJobSubmitTime(), 100);
+      Assert.assertEquals(mi.getJobSummary().getJobLaunchTime(), 200);
+      verify(jheh, times(1)).processDoneFiles(t.jobId);
+
+      mockWriter = jheh.getEventWriter();
+      verify(mockWriter, times(2)).write(any(HistoryEvent.class));
+    } finally {
+      jheh.stop();
+    }
+  }
+
   // Have JobHistoryEventHandler handle some events and make sure they get
   // stored to the Timeline store
   @Test (timeout=50000)
@@ -463,7 +504,7 @@ public class TestJobHistoryEventHandler {
               .getTimelineStore();
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
-              t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000),
+              t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1),
               currentTime - 10));
       TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
               null, null, null, null, null, null, null);

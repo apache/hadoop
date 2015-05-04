@@ -397,6 +397,9 @@ Release 2.7.1 - UNRELEASED
     MAPREDUCE-6339. Job history file is not flushed correctly because isTimerActive 
     flag is not set true when flushTimerTask is scheduled. (zhihai xu via devaraj)
 
+    MAPREDUCE-6259. IllegalArgumentException due to missing job submit time
+    (zhihai xu via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
