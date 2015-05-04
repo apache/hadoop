@@ -261,7 +261,7 @@ public class TimelineServicePerformanceV2 extends Configured implements Tool {
           // add a metric
           TimelineMetric metric = new TimelineMetric();
           metric.setId("foo_metric");
-          metric.setSingleData(123456789L);
+          metric.addValue(System.currentTimeMillis(), 123456789L);
           entity.addMetric(metric);
           // add a config
           entity.addConfig("foo", "bar");
