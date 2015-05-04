@@ -38,8 +38,8 @@ public class TestPlanReadPortions {
     assertEquals(GROUP_SIZE, results.length);
 
     for (int i = 0; i < GROUP_SIZE; i++) {
-      assertEquals(readLengths[i], results[i].readLength);
-      assertEquals(offsetsInBlock[i], results[i].startOffsetInBlock);
+      assertEquals(readLengths[i], results[i].getReadLength());
+      assertEquals(offsetsInBlock[i], results[i].getStartOffsetInBlock());
       final int[] bOffsets = results[i].getOffsets();
       assertArrayEquals(bufferOffsets[i], bOffsets);
       final int[] bLengths = results[i].getLengths();

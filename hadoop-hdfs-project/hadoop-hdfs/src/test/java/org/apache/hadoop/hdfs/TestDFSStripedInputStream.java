@@ -158,7 +158,7 @@ public class TestDFSStripedInputStream {
   private void testOneFileUsingDFSStripedInputStream(String src, int writeBytes)
       throws IOException {
     Path testPath = new Path(src);
-    byte[] bytes = generateBytes(writeBytes);
+    final byte[] bytes = generateBytes(writeBytes);
     DFSTestUtil.writeFile(fs, testPath, new String(bytes));
 
     //check file length
@@ -175,7 +175,8 @@ public class TestDFSStripedInputStream {
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
-        Assert.assertEquals("Byte at i should be the same", getByte(i), buf[i]);
+        Assert.assertEquals("Byte at " + i + " should be the same", getByte(i),
+            buf[i]);
       }
     }
 
@@ -190,12 +191,12 @@ public class TestDFSStripedInputStream {
           readLen += ret;
         }
       } while (ret >= 0);
-
       readLen = readLen >= 0 ? readLen : 0;
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
-        Assert.assertEquals("Byte at i should be the same", getByte(i), buf[i]);
+        Assert.assertEquals("Byte at " + i + " should be the same", getByte(i),
+            buf[i]);
       }
     }
 
@@ -214,8 +215,47 @@ public class TestDFSStripedInputStream {
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
-        Assert.assertEquals("Byte at i should be the same", getByte(i), buf.array()[i]);
+        Assert.assertEquals("Byte at " + i + " should be the same", getByte(i),
+            buf.array()[i]);
       }
+    }
+
+    // stateful read with 1KB size byte array
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
+      final byte[] result = new byte[writeBytes];
+      final byte[] buf = new byte[1024];
+      int readLen = 0;
+      int ret;
+      do {
+        ret = fsdis.read(buf, 0, buf.length);
+        if (ret > 0) {
+          System.arraycopy(buf, 0, result, readLen, ret);
+          readLen += ret;
+        }
+      } while (ret >= 0);
+      Assert.assertEquals("The length of file should be the same to write size",
+          writeBytes, readLen);
+      Assert.assertArrayEquals(bytes, result);
+    }
+
+    // stateful read using ByteBuffer with 1KB size
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
+      final ByteBuffer result = ByteBuffer.allocate(writeBytes);
+      final ByteBuffer buf = ByteBuffer.allocate(1024);
+      int readLen = 0;
+      int ret;
+      do {
+        ret = fsdis.read(buf);
+        if (ret > 0) {
+          readLen += ret;
+          buf.flip();
+          result.put(buf);
+          buf.clear();
+        }
+      } while (ret >= 0);
+      Assert.assertEquals("The length of file should be the same to write size",
+          writeBytes, readLen);
+      Assert.assertArrayEquals(bytes, result.array());
     }
   }
 }

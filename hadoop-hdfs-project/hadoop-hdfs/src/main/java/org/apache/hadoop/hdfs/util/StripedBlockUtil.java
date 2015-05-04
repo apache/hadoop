@@ -169,22 +169,22 @@ public class StripedBlockUtil {
     // blkIdxInGroup is the index of the block in the striped block group
     // E.g., blk_2 is the 3rd block in the group
     final int blkIdxInGroup = (int) (startInBlk / cellSize % dataBlkNum);
-    results[blkIdxInGroup].startOffsetInBlock = cellSize * cellIdxInBlk +
-        startInBlk % cellSize;
+    results[blkIdxInGroup].setStartOffsetInBlock(cellSize * cellIdxInBlk +
+        startInBlk % cellSize);
     boolean crossStripe = false;
     for (int i = 1; i < dataBlkNum; i++) {
       if (blkIdxInGroup + i >= dataBlkNum && !crossStripe) {
         cellIdxInBlk++;
         crossStripe = true;
       }
-      results[(blkIdxInGroup + i) % dataBlkNum].startOffsetInBlock =
-          cellSize * cellIdxInBlk;
+      results[(blkIdxInGroup + i) % dataBlkNum].setStartOffsetInBlock(
+          cellSize * cellIdxInBlk);
     }
 
     int firstCellLen = Math.min(cellSize - (int) (startInBlk % cellSize), len);
     results[blkIdxInGroup].offsetsInBuf.add(bufOffset);
     results[blkIdxInGroup].lengths.add(firstCellLen);
-    results[blkIdxInGroup].readLength += firstCellLen;
+    results[blkIdxInGroup].addReadLength(firstCellLen);
 
     int i = (blkIdxInGroup + 1) % dataBlkNum;
     for (int done = firstCellLen; done < len; done += cellSize) {
@@ -192,7 +192,7 @@ public class StripedBlockUtil {
       rp.offsetsInBuf.add(done + bufOffset);
       final int readLen = Math.min(len - done, cellSize);
       rp.lengths.add(readLen);
-      rp.readLength += readLen;
+      rp.addReadLength(readLen);
       i = (i + 1) % dataBlkNum;
     }
     return results;
@@ -274,8 +274,8 @@ public class StripedBlockUtil {
      * |  (partial)  |    (from blk_1 and blk_2)   |          |
      * +------------------------------------------------------+
      */
-    public long startOffsetInBlock = 0;
-    public int readLength = 0;
+    private long startOffsetInBlock = 0;
+    private int readLength = 0;
     public final List<Integer> offsetsInBuf = new ArrayList<>();
     public final List<Integer> lengths = new ArrayList<>();
 
@@ -295,10 +295,20 @@ public class StripedBlockUtil {
       return lens;
     }
 
-    public boolean containsReadPortion(ReadPortion rp) {
-      long end = startOffsetInBlock + readLength;
-      return startOffsetInBlock <= rp.startOffsetInBlock && end >=
-          rp.startOffsetInBlock + rp.readLength;
+    public long getStartOffsetInBlock() {
+      return startOffsetInBlock;
+    }
+
+    public int getReadLength() {
+      return readLength;
+    }
+
+    public void setStartOffsetInBlock(long startOffsetInBlock) {
+      this.startOffsetInBlock = startOffsetInBlock;
+    }
+
+    void addReadLength(int extraLength) {
+      this.readLength += extraLength;
     }
   }
 
