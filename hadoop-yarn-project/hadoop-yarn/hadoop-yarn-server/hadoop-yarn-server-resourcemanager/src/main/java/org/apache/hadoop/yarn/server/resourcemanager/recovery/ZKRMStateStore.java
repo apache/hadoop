@@ -297,7 +297,7 @@ public class ZKRMStateStore extends RMStateStore {
     createRootDir(amrmTokenSecretManagerRoot);
   }
 
-  private void createRootDir(final String rootPath) throws Exception {
+  protected void createRootDir(final String rootPath) throws Exception {
     // For root dirs, we shouldn't use the doMulti helper methods
     new ZKAction<String>() {
       @Override
