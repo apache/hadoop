@@ -210,7 +210,9 @@ public class NodeManager extends CompositeService
     String nodeHealthScript = 
         conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
     if(!NodeHealthScriptRunner.shouldRun(nodeHealthScript)) {
-      LOG.info("Abey khali");
+      LOG.info("Node Manager health check script is not available "
+          + "or doesn't have execute permission, so not "
+          + "starting the node health script runner.");
       return null;
     }
     long nmCheckintervalTime = conf.getLong(

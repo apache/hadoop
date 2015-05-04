@@ -214,11 +214,6 @@ public class NodeHealthScriptRunner extends AbstractService {
    */
   @Override
   protected void serviceStart() throws Exception {
-    // if health script path is not configured don't start the thread.
-    if (!shouldRun(nodeHealthScript)) {
-      LOG.info("Not starting node health monitor");
-      return;
-    }
     nodeHealthScriptScheduler = new Timer("NodeHealthMonitor-Timer", true);
     // Start the timer task immediately and
     // then periodically at interval time.
@@ -232,9 +227,6 @@ public class NodeHealthScriptRunner extends AbstractService {
    */
   @Override
   protected void serviceStop() {
-    if (!shouldRun(nodeHealthScript)) {
-      return;
-    }
     if (nodeHealthScriptScheduler != null) {
       nodeHealthScriptScheduler.cancel();
     }
