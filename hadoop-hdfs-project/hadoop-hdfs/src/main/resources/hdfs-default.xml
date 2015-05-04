@@ -2063,7 +2063,7 @@
   <value>256</value>
   <description>
     The DFSClient maintains a cache of recently opened file descriptors.
-    This parameter controls the size of that cache.
+    This parameter controls the maximum number of file descriptors in the cache.
     Setting this higher will use more file descriptors,
     but potentially provide better performance on workloads
     involving lots of seeks.

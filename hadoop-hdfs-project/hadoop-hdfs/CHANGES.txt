@@ -500,6 +500,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8249. Separate HdfsConstants into the client and the server side
     class. (wheat9)
 
+    HDFS-7397. Add more detail to the documentation for the conf key
+    "dfs.client.read.shortcircuit.streams.cache.size" (Brahma Reddy Battula via
+    Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
