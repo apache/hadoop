@@ -645,6 +645,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8325. Misspelling of threshold in log4j.properties for tests.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-8321. CacheDirectives and CachePool operations should throw
+    RetriableException in safemode. (wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
