@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -164,7 +165,11 @@ public class NamenodeWebHdfsMethods {
   static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize, final String excludeDatanodes) throws IOException {
-    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    FSNamesystem fsn = namenode.getNamesystem();
+    if (fsn == null) {
+      throw new IOException("Namesystem has not been intialized yet.");
+    }
+    final BlockManager bm = fsn.getBlockManager();
     
     HashSet<Node> excludes = new HashSet<Node>();
     if (excludeDatanodes != null) {

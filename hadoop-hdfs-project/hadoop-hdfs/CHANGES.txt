@@ -610,6 +610,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8309. Skip unit test using DataNodeTestUtils#injectDataDirFailure() on Windows.
     (xyao)
 
+    HDFS-8290. WebHDFS calls before namesystem initialization can cause
+    NullPointerException. (cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
