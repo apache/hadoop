@@ -419,7 +419,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   @Override
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      getLeadingStreamer().getLastException().check();
+      getLeadingStreamer().getLastException().check(true);
       return;
     }
 

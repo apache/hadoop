@@ -158,3 +158,6 @@
 
     HDFS-7949. WebImageViewer need support file size calculation with striped 
     blocks. (Rakesh R via Zhe Zhang)
+
+    HDFS-8316. Erasure coding: refactor EC constants to be consistent with HDFS-8249.
+    (Zhe Zhang via jing9)

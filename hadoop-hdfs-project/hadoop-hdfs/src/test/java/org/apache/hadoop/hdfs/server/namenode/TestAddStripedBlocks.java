@@ -102,7 +102,7 @@ public class TestAddStripedBlocks {
     DFSTestUtil.writeFile(dfs, testPath, "hello again");
     lb = dfs.getClient().getLocatedBlocks(testPath.toString(), 0);
     final long secondId = lb.get(0).getBlock().getBlockId();
-    Assert.assertEquals(firstId + HdfsConstants.MAX_BLOCKS_IN_GROUP, secondId);
+    Assert.assertEquals(firstId + HdfsServerConstants.MAX_BLOCKS_IN_GROUP, secondId);
   }
 
   @Test (timeout=60000)
@@ -159,7 +159,7 @@ public class TestAddStripedBlocks {
     Assert.assertEquals(HdfsConstants.NUM_PARITY_BLOCKS,
         block.getParityBlockNum());
     Assert.assertEquals(0,
-        block.getBlockId() & HdfsConstants.BLOCK_GROUP_INDEX_MASK);
+        block.getBlockId() & HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
 
     final BlockInfoStripedUnderConstruction blockUC =
         (BlockInfoStripedUnderConstruction) block;
