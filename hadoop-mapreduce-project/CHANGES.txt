@@ -362,6 +362,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5905. CountersStrings.toEscapedCompactStrings outputs
     unnecessary "null" strings. (Akira AJISAKA via ozawa)
 
+    MAPREDUCE-6349. Fix typo in property org.apache.hadoop.mapreduce.
+    lib.chain.Chain.REDUCER_INPUT_VALUE_CLASS. (Ray Chiang via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
