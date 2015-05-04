@@ -731,6 +731,7 @@ public class INodeFile extends INodeWithAdditionalFields
     for (BlockInfoContiguous b : blocks) {
       long blockSize = b.isComplete() ? b.getNumBytes() :
           getPreferredBlockSize();
+      final short replication = b.getReplication();
       counts.addStorageSpace(blockSize * replication);
       if (bsp != null) {
         List<StorageType> types = bsp.chooseStorageTypes(replication);
@@ -849,7 +850,7 @@ public class INodeFile extends INodeWithAdditionalFields
         truncatedBytes -= bi.getNumBytes();
       }
 
-      delta.addStorageSpace(-truncatedBytes * getPreferredBlockReplication());
+      delta.addStorageSpace(-truncatedBytes * bi.getReplication());
       if (bsps != null) {
         List<StorageType> types = bsps.chooseStorageTypes(
             getPreferredBlockReplication());

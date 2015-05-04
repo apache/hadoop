@@ -53,6 +53,8 @@ public class BlockInfoContiguous extends Block
    */
   private Object[] triplets;
 
+  private short replication;
+
   /**
    * Construct an entry for blocksmap
    * @param replication the block's replication factor
@@ -60,12 +62,14 @@ public class BlockInfoContiguous extends Block
   public BlockInfoContiguous(short replication) {
     this.triplets = new Object[3*replication];
     this.bc = null;
+    this.replication = replication;
   }
   
   public BlockInfoContiguous(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.bc = null;
+    this.replication = replication;
   }
 
   /**
@@ -74,9 +78,16 @@ public class BlockInfoContiguous extends Block
    * @param from BlockInfo to copy from.
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
-    super(from);
-    this.triplets = new Object[from.triplets.length];
+    this(from, from.getReplication());
     this.bc = from.bc;
+  }
+
+  public void setReplication(short replication) {
+    this.replication = replication;
+  }
+
+  public short getReplication() {
+    return replication;
   }
 
   public BlockCollection getBlockCollection() {
@@ -362,7 +373,7 @@ public class BlockInfoContiguous extends Block
     if(isComplete()) {
       BlockInfoContiguousUnderConstruction ucBlock =
           new BlockInfoContiguousUnderConstruction(this,
-          getBlockCollection().getPreferredBlockReplication(), s, targets);
+          getReplication(), s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
       return ucBlock;
     }

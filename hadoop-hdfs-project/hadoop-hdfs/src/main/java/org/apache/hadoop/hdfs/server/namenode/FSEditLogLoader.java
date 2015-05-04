@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -511,10 +512,11 @@ public class FSEditLogLoader {
     }
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
-      short replication = fsNamesys.getBlockManager().adjustReplication(
-          setReplicationOp.replication);
-      FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
-          setReplicationOp.path, logVersion), replication, null);
+      BlockManager bm = fsNamesys.getBlockManager();
+      short replication = bm.adjustReplication(setReplicationOp.replication);
+      FSDirAttrOp.unprotectedSetReplication(fsDir, bm,
+                                            renameReservedPathsOnUpgrade(
+          setReplicationOp.path, logVersion), replication);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -969,7 +971,7 @@ public class FSEditLogLoader {
     }
     // add the new block
     BlockInfoContiguous newBI = new BlockInfoContiguousUnderConstruction(
-          newBlock, file.getPreferredBlockReplication());
+          newBlock, file.getFileReplication());
     fsNamesys.getBlockManager().addBlockCollection(newBI, file);
     file.addBlock(newBI);
     fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);

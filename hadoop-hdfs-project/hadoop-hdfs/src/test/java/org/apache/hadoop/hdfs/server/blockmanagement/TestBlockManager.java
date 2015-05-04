@@ -433,7 +433,6 @@ public class TestBlockManager {
   
   private BlockInfoContiguous addBlockOnNodes(long blockId, List<DatanodeDescriptor> nodes) {
     BlockCollection bc = Mockito.mock(BlockCollection.class);
-    Mockito.doReturn((short)3).when(bc).getPreferredBlockReplication();
     BlockInfoContiguous blockInfo = blockOnNodes(blockId, nodes);
 
     bm.blocksMap.addBlockCollection(blockInfo, bc);

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.util.EnumCounters;
@@ -147,13 +148,11 @@ public class FSDirAttrOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
 
-      final short[] blockRepls = new short[2]; // 0: old, 1: new
-      final Block[] blocks = unprotectedSetReplication(fsd, src, replication,
-                                                       blockRepls);
+      final Block[] blocks = unprotectedSetReplication(fsd, bm, src,
+                                                       replication);
       isFile = blocks != null;
       if (isFile) {
         fsd.getEditLog().logSetReplication(src, replication);
-        bm.setReplication(blockRepls[0], blockRepls[1], src, blocks);
       }
     } finally {
       fsd.writeUnlock();
@@ -376,7 +375,7 @@ public class FSDirAttrOp {
   }
 
   static Block[] unprotectedSetReplication(
-      FSDirectory fsd, String src, short replication, short[] blockRepls)
+      FSDirectory fsd, BlockManager bm, String src, short replication)
       throws QuotaExceededException, UnresolvedLinkException,
              SnapshotAccessControlException {
     assert fsd.hasWriteLock();
@@ -387,29 +386,17 @@ public class FSDirAttrOp {
       return null;
     }
     INodeFile file = inode.asFile();
-    final short oldBR = file.getPreferredBlockReplication();
-
-    // before setFileReplication, check for increasing block replication.
-    // if replication > oldBR, then newBR == replication.
-    // if replication < oldBR, we don't know newBR yet.
-    if (replication > oldBR) {
-      long dsDelta = file.storagespaceConsumed(null).getStorageSpace() / oldBR;
-      fsd.updateCount(iip, 0L, dsDelta, oldBR, replication, true);
-    }
-
     file.setFileReplication(replication, iip.getLatestSnapshotId());
 
-    final short newBR = file.getPreferredBlockReplication();
-    // check newBR < oldBR case.
-    if (newBR < oldBR) {
-      long dsDelta = file.storagespaceConsumed(null).getStorageSpace() / newBR;
-      fsd.updateCount(iip, 0L, dsDelta, oldBR, newBR, true);
+    for (BlockInfoContiguous block : file.getBlocks()) {
+      final short oldBR = block.getReplication();
+      if (oldBR == replication) {
+        continue;
+      }
+      fsd.updateCount(iip, 0L, block.getNumBytes(), oldBR, replication, true);
+      bm.setReplication(oldBR, replication, src, block);
     }
 
-    if (blockRepls != null) {
-      blockRepls[0] = oldBR;
-      blockRepls[1] = newBR;
-    }
     return file.getBlocks();
   }
 

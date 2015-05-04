@@ -251,7 +251,7 @@ public class DecommissionManager {
   private boolean isSufficientlyReplicated(BlockInfoContiguous block, 
       BlockCollection bc,
       NumberReplicas numberReplicas) {
-    final int numExpected = bc.getPreferredBlockReplication();
+    final int numExpected = block.getReplication();
     final int numLive = numberReplicas.liveReplicas();
     if (!blockManager.isNeededReplication(block, numExpected, numLive)) {
       // Block doesn't need replication. Skip.
@@ -284,11 +284,12 @@ public class DecommissionManager {
     return false;
   }
 
-  private static void logBlockReplicationInfo(Block block, BlockCollection bc,
+  private static void logBlockReplicationInfo(
+      BlockInfoContiguous block, BlockCollection bc,
       DatanodeDescriptor srcNode, NumberReplicas num,
       Iterable<DatanodeStorageInfo> storages) {
     int curReplicas = num.liveReplicas();
-    int curExpectedReplicas = bc.getPreferredBlockReplication();
+    int curExpectedReplicas = block.getReplication();
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
@@ -564,8 +565,8 @@ public class DecommissionManager {
 
         // Schedule under-replicated blocks for replication if not already
         // pending
-        if (blockManager.isNeededReplication(block,
-            bc.getPreferredBlockReplication(), liveReplicas)) {
+        if (blockManager.isNeededReplication(block, block.getReplication(),
+            liveReplicas)) {
           if (!blockManager.neededReplications.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
               namesystem.isPopulatingReplQueues()) {
@@ -573,7 +574,7 @@ public class DecommissionManager {
             blockManager.neededReplications.add(block,
                 curReplicas,
                 num.decommissionedAndDecommissioning(),
-                bc.getPreferredBlockReplication());
+                block.getReplication());
           }
         }
 

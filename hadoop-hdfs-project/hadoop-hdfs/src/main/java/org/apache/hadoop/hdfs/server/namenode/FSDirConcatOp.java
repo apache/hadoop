@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -167,25 +168,28 @@ class FSDirConcatOp {
   private static QuotaCounts computeQuotaDeltas(FSDirectory fsd,
       INodeFile target, INodeFile[] srcList) {
     QuotaCounts deltas = new QuotaCounts.Builder().build();
-    final short targetRepl = target.getPreferredBlockReplication();
+    final short targetRepl = target.getFileReplication();
     for (INodeFile src : srcList) {
-      short srcRepl = src.getPreferredBlockReplication();
-      long fileSize = src.computeFileSize();
-      if (targetRepl != srcRepl) {
-        deltas.addStorageSpace(fileSize * (targetRepl - srcRepl));
-        BlockStoragePolicy bsp =
-            fsd.getBlockStoragePolicySuite().getPolicy(src.getStoragePolicyID());
+      BlockStoragePolicy bsp =
+          fsd.getBlockStoragePolicySuite().getPolicy(src.getStoragePolicyID());
+      for (BlockInfoContiguous b : src.getBlocks()) {
+        short srcRepl = b.getReplication();
+        if (targetRepl == srcRepl) {
+          continue;
+        }
+
+        deltas.addStorageSpace(b.getNumBytes() * (targetRepl - srcRepl));
         if (bsp != null) {
           List<StorageType> srcTypeChosen = bsp.chooseStorageTypes(srcRepl);
           for (StorageType t : srcTypeChosen) {
             if (t.supportTypeQuota()) {
-              deltas.addTypeSpace(t, -fileSize);
+              deltas.addTypeSpace(t, -b.getNumBytes());
             }
           }
           List<StorageType> targetTypeChosen = bsp.chooseStorageTypes(targetRepl);
           for (StorageType t : targetTypeChosen) {
             if (t.supportTypeQuota()) {
-              deltas.addTypeSpace(t, fileSize);
+              deltas.addTypeSpace(t, b.getNumBytes());
             }
           }
         }
