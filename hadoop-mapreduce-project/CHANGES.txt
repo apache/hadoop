@@ -359,6 +359,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6345. Documentation fix for when CRLA is enabled for MRAppMaster
     logs. (Rohit Agarwal via gera)
 
+    MAPREDUCE-5905. CountersStrings.toEscapedCompactStrings outputs
+    unnecessary "null" strings. (Akira AJISAKA via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
