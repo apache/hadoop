@@ -596,6 +596,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11900. Add failIfNoTests=false to hadoop-build-tools pom. (gera)
 
+    HADOOP-11916. TestStringUtils#testLowerAndUpperStrings failed on MAC
+    due to a JVM bug. (Ming Ma via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
