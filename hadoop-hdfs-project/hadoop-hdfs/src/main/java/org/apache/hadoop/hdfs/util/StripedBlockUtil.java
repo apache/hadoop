@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.util;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -77,10 +78,8 @@ public class StripedBlockUtil {
   public static LocatedBlock constructInternalBlock(LocatedStripedBlock bg,
       int idxInReturnedLocs, int cellSize, int dataBlkNum,
       int idxInBlockGroup) {
-    final ExtendedBlock blk = new ExtendedBlock(bg.getBlock());
-    blk.setBlockId(bg.getBlock().getBlockId() + idxInBlockGroup);
-    blk.setNumBytes(getInternalBlockLength(bg.getBlockSize(),
-        cellSize, dataBlkNum, idxInBlockGroup));
+    final ExtendedBlock blk = constructInternalBlock(
+        bg.getBlock(), cellSize, dataBlkNum, idxInBlockGroup);
 
     return new LocatedBlock(blk,
         new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
@@ -88,6 +87,44 @@ public class StripedBlockUtil {
         new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
         bg.getStartOffset() + idxInBlockGroup * cellSize, bg.isCorrupt(),
         null);
+  }
+
+  /**
+   * This method creates an internal {@link ExtendedBlock} at the given index
+   * of a block group.
+   */
+  public static ExtendedBlock constructInternalBlock(ExtendedBlock blockGroup,
+      int cellSize, int dataBlkNum, int idxInBlockGroup) {
+    ExtendedBlock block = new ExtendedBlock(blockGroup);
+    block.setBlockId(blockGroup.getBlockId() + idxInBlockGroup);
+    block.setNumBytes(getInternalBlockLength(blockGroup.getNumBytes(),
+        cellSize, dataBlkNum, idxInBlockGroup));
+    return block;
+  }
+  
+  /**
+   * This method creates an internal {@link ExtendedBlock} at the given index
+   * of a block group, for both data and parity block.
+   */
+  public static ExtendedBlock constructStripedBlock(ExtendedBlock blockGroup,
+      int cellSize, int dataBlkNum, int idxInBlockGroup) {
+    ExtendedBlock block = new ExtendedBlock(blockGroup);
+    block.setBlockId(blockGroup.getBlockId() + idxInBlockGroup);
+    block.setNumBytes(getStripedBlockLength(blockGroup.getNumBytes(), cellSize,
+        dataBlkNum, idxInBlockGroup));
+    return block;
+  }
+
+  /**
+   * Returns an internal block length at the given index of a block group,
+   * for both data and parity block.
+   */
+  public static long getStripedBlockLength(long numBytes, int cellSize,
+      int dataBlkNum, int idxInBlockGroup) {
+    // parity block length is the same as the first striped block length. 
+    return StripedBlockUtil.getInternalBlockLength(
+        numBytes, cellSize, dataBlkNum, 
+        idxInBlockGroup < dataBlkNum ? idxInBlockGroup : 0);
   }
 
   /**
@@ -208,8 +245,8 @@ public class StripedBlockUtil {
    * @throws InterruptedException
    */
   public static StripedReadResult getNextCompletedStripedRead(
-      CompletionService<Void> readService, Map<Future<Void>,
-      Integer> futures, final long threshold) throws InterruptedException {
+      CompletionService<Void> readService, Map<Future<Void>, Integer> futures,
+      final long threshold) throws InterruptedException {
     Preconditions.checkArgument(!futures.isEmpty());
     Preconditions.checkArgument(threshold > 0);
     Future<Void> future = null;

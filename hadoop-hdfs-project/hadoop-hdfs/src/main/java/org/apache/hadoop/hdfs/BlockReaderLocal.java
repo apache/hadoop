@@ -738,4 +738,9 @@ class BlockReaderLocal implements BlockReader {
   void forceUnanchorable() {
     replica.getSlot().makeUnanchorable();
   }
+
+  @Override
+  public DataChecksum getDataChecksum() {
+    return checksum;
+  }
 }
