@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -47,4 +49,14 @@ public interface Namesystem extends RwLock, SafeMode {
   public void checkOperation(OperationCategory read) throws StandbyException;
 
   public boolean isInSnapshot(BlockCollection bc);
+
+  /**
+   * Gets the ECSchema for the specified path
+   * 
+   * @param src
+   *          - path
+   * @return ECSchema
+   * @throws IOException
+   */
+  public ECSchema getECSchemaForPath(String src) throws IOException;
 }

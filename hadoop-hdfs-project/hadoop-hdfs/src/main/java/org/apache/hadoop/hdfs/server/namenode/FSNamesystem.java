@@ -7581,25 +7581,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   ECInfo getErasureCodingInfo(String src) throws AccessControlException,
       UnresolvedLinkException, IOException {
-    checkOperation(OperationCategory.READ);
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(src);
-    final FSPermissionChecker pc = getPermissionChecker();
-    readLock();
-    try {
-      checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.READ);
-      }
-      // Get schema set for the zone
-      ECSchema schema = dir.getECSchema(iip);
-      if (schema != null) {
-        return new ECInfo(src, schema);
-      }
-    } finally {
-      readUnlock();
+    ECSchema schema = getECSchemaForPath(src);
+    if (schema != null) {
+      return new ECInfo(src, schema);
     }
     return null;
   }
@@ -7838,6 +7822,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         asyncAppender.addAppender(appender);
       }
       logger.addAppender(asyncAppender);        
+    }
+  }
+
+  @Override
+  public ECSchema getECSchemaForPath(String src) throws IOException {
+    checkOperation(OperationCategory.READ);
+    final byte[][] pathComponents = FSDirectory
+        .getPathComponentsForReservedPath(src);
+    final FSPermissionChecker pc = getPermissionChecker();
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      src = dir.resolvePath(pc, src, pathComponents);
+      final INodesInPath iip = dir.getINodesInPath(src, true);
+      if (isPermissionEnabled) {
+        dir.checkPathAccess(pc, iip, FsAction.READ);
+      }
+      // Get schema set for the zone
+      return dir.getECSchema(iip);
+    } finally {
+      readUnlock();
     }
   }
 
