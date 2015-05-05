@@ -476,7 +476,7 @@ class FSDirRenameOp {
       fsd.writeUnlock();
     }
     if (stat) {
-      fsd.getEditLog().logRename(src, dst, mtime, logRetryCache);
+      fsd.getEditLog().logRename(src, actualDst, mtime, logRetryCache);
       return true;
     }
     return false;
