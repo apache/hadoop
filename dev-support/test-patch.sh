@@ -915,6 +915,13 @@ function git_checkout
   fi
 
   add_jira_footer "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
+
+  if [[ ! -f ${BASEDIR}/pom.xml ]]; then
+    hadoop_error "ERROR: This verison of test-patch.sh only supports Maven-based builds. Aborting."
+    add_jira_table -1 pre-patch "Unsupported build system."
+    output_to_jira 1
+    cleanup_and_exit 1
+  fi
   return 0
 }
 
@@ -1331,7 +1338,6 @@ function apply_patch_file
 ## @return       none; otherwise relaunches
 function check_reexec
 {
-  set +x
   local commentfile=${PATCH_DIR}/tp.${RANDOM}
 
   if [[ ${REEXECED} == true ]]; then

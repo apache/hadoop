@@ -604,6 +604,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11916. TestStringUtils#testLowerAndUpperStrings failed on MAC
     due to a JVM bug. (Ming Ma via ozawa)
 
+    HADOOP-11904. test-patch.sh goes into an infinite loop on non-maven
+    builds (aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
