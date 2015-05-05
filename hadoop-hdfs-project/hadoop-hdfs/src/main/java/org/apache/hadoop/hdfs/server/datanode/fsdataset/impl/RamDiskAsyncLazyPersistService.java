@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
@@ -54,6 +56,7 @@ class RamDiskAsyncLazyPersistService {
   private final ThreadGroup threadGroup;
   private Map<File, ThreadPoolExecutor> executors
       = new HashMap<File, ThreadPoolExecutor>();
+  private final static HdfsConfiguration EMPTY_HDFS_CONF = new HdfsConfiguration();
 
   /**
    * Create a RamDiskAsyncLazyPersistService with a set of volumes (specified by their
@@ -232,10 +235,12 @@ class RamDiskAsyncLazyPersistService {
     public void run() {
       boolean succeeded = false;
       final FsDatasetImpl dataset = (FsDatasetImpl)datanode.getFSDataset();
-      try {
+      try (FsVolumeReference ref = this.targetVolume) {
+        int smallBufferSize = DFSUtil.getSmallBufferSize(EMPTY_HDFS_CONF);
         // No FsDatasetImpl lock for the file copy
         File targetFiles[] = FsDatasetImpl.copyBlockFiles(
-            blockId, genStamp, metaFile, blockFile, lazyPersistDir, true);
+            blockId, genStamp, metaFile, blockFile, lazyPersistDir, true,
+            smallBufferSize);
 
         // Lock FsDataSetImpl during onCompleteLazyPersist callback
         dataset.onCompleteLazyPersist(bpId, blockId,

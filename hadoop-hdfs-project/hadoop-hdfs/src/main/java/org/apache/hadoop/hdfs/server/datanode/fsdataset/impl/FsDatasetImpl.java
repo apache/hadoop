@@ -59,7 +59,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -67,7 +69,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
@@ -249,6 +250,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   private static final int MAX_BLOCK_EVICTIONS_PER_ITERATION = 3;
 
+  private final int smallBufferSize;
 
   // Used for synchronizing access to usage stats
   private final Object statsLock = new Object();
@@ -266,6 +268,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.datanode = datanode;
     this.dataStorage = storage;
     this.conf = conf;
+    this.smallBufferSize = DFSUtil.getSmallBufferSize(conf);
     // The number of volumes required for operation is the total number 
     // of volumes minus the number of failed volumes we can tolerate.
     final int volFailuresTolerated =
@@ -839,19 +842,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @throws IOException
    */
   static File[] copyBlockFiles(long blockId, long genStamp, File srcMeta,
-      File srcFile, File destRoot, boolean calculateChecksum)
-      throws IOException {
+      File srcFile, File destRoot, boolean calculateChecksum,
+      int smallBufferSize) throws IOException {
     final File destDir = DatanodeUtil.idToBlockDir(destRoot, blockId);
     final File dstFile = new File(destDir, srcFile.getName());
     final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
-    return copyBlockFiles(srcMeta, srcFile, dstMeta, dstFile, calculateChecksum);
+    return copyBlockFiles(srcMeta, srcFile, dstMeta, dstFile, calculateChecksum,
+        smallBufferSize);
   }
 
   static File[] copyBlockFiles(File srcMeta, File srcFile, File dstMeta,
-                               File dstFile, boolean calculateChecksum)
+                               File dstFile, boolean calculateChecksum,
+                               int smallBufferSize)
       throws IOException {
     if (calculateChecksum) {
-      computeChecksum(srcMeta, dstMeta, srcFile);
+      computeChecksum(srcMeta, dstMeta, srcFile, smallBufferSize);
     } else {
       try {
         Storage.nativeCopyFileUnbuffered(srcMeta, dstMeta, true);
@@ -915,7 +920,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       File[] blockFiles = copyBlockFiles(block.getBlockId(),
           block.getGenerationStamp(), oldMetaFile, oldBlockFile,
           targetVolume.getTmpDir(block.getBlockPoolId()),
-          replicaInfo.isOnTransientStorage());
+          replicaInfo.isOnTransientStorage(), smallBufferSize);
 
       ReplicaInfo newReplicaInfo = new ReplicaInPipeline(
           replicaInfo.getBlockId(), replicaInfo.getGenerationStamp(),
@@ -943,7 +948,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param blockFile block file for which the checksum will be computed
    * @throws IOException
    */
-  private static void computeChecksum(File srcMeta, File dstMeta, File blockFile)
+  private static void computeChecksum(File srcMeta, File dstMeta,
+      File blockFile, int smallBufferSize)
       throws IOException {
     final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(srcMeta);
     final byte[] data = new byte[1 << 16];
@@ -959,7 +965,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
       }
       metaOut = new DataOutputStream(new BufferedOutputStream(
-          new FileOutputStream(dstMeta), HdfsServerConstants.SMALL_BUFFER_SIZE));
+          new FileOutputStream(dstMeta), smallBufferSize));
       BlockMetadataHeader.writeHeader(metaOut, checksum);
 
       int offset = 0;
@@ -2480,8 +2486,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File destDir = DatanodeUtil.idToBlockDir(tmpDir, newBlkId);
     final File dstBlockFile = new File(destDir, blockFileName);
     final File dstMetaFile = FsDatasetUtil.getMetaFile(dstBlockFile, newGS);
-    return copyBlockFiles(replicaInfo.getMetaFile(), replicaInfo.getBlockFile(),
-        dstMetaFile, dstBlockFile, true);
+    return copyBlockFiles(replicaInfo.getMetaFile(),
+        replicaInfo.getBlockFile(),
+        dstMetaFile, dstBlockFile, true, smallBufferSize);
   }
 
   @Override // FsDatasetSpi

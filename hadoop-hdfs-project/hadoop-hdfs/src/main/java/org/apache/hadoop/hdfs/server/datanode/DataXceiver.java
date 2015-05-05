@@ -48,7 +48,9 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -109,7 +111,9 @@ class DataXceiver extends Receiver implements Runnable {
   private final InputStream socketIn;
   private OutputStream socketOut;
   private BlockReceiver blockReceiver = null;
-  
+  private final int ioFileBufferSize;
+  private final int smallBufferSize;
+
   /**
    * Client Name used in previous operation. Not available on first request
    * on the socket.
@@ -131,6 +135,8 @@ class DataXceiver extends Receiver implements Runnable {
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
     this.connectToDnViaHostname = datanode.getDnConf().connectToDnViaHostname;
+    this.ioFileBufferSize = DFSUtil.getIoFileBufferSize(datanode.getConf());
+    this.smallBufferSize = DFSUtil.getSmallBufferSize(datanode.getConf());
     remoteAddress = peer.getRemoteAddressString();
     final int colonIdx = remoteAddress.indexOf(':');
     remoteAddressWithoutPort =
@@ -191,7 +197,7 @@ class DataXceiver extends Receiver implements Runnable {
           socketIn, datanode.getXferAddress().getPort(),
           datanode.getDatanodeId());
         input = new BufferedInputStream(saslStreams.in,
-          HdfsServerConstants.SMALL_BUFFER_SIZE);
+            smallBufferSize);
         socketOut = saslStreams.out;
       } catch (InvalidMagicNumberException imne) {
         if (imne.isHandshake4Encryption()) {
@@ -514,7 +520,7 @@ class DataXceiver extends Receiver implements Runnable {
     long read = 0;
     OutputStream baseStream = getOutputStream();
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-        baseStream, HdfsServerConstants.SMALL_BUFFER_SIZE));
+        baseStream, smallBufferSize));
     checkAccess(out, true, block, blockToken,
         Op.READ_BLOCK, BlockTokenIdentifier.AccessMode.READ);
   
@@ -658,7 +664,7 @@ class DataXceiver extends Receiver implements Runnable {
     final DataOutputStream replyOut = new DataOutputStream(
         new BufferedOutputStream(
             getOutputStream(),
-            HdfsServerConstants.SMALL_BUFFER_SIZE));
+            smallBufferSize));
     checkAccess(replyOut, isClient, block, blockToken,
         Op.WRITE_BLOCK, BlockTokenIdentifier.AccessMode.WRITE);
 
@@ -717,7 +723,7 @@ class DataXceiver extends Receiver implements Runnable {
           unbufMirrorOut = saslStreams.out;
           unbufMirrorIn = saslStreams.in;
           mirrorOut = new DataOutputStream(new BufferedOutputStream(unbufMirrorOut,
-              HdfsServerConstants.SMALL_BUFFER_SIZE));
+              smallBufferSize));
           mirrorIn = new DataInputStream(unbufMirrorIn);
 
           // Do not propagate allowLazyPersist to downstream DataNodes.
@@ -932,7 +938,7 @@ class DataXceiver extends Receiver implements Runnable {
         .getMetaDataInputStream(block);
     
     final DataInputStream checksumIn = new DataInputStream(
-        new BufferedInputStream(metadataIn, HdfsServerConstants.IO_FILE_BUFFER_SIZE));
+        new BufferedInputStream(metadataIn, ioFileBufferSize));
     updateCurrentThreadName("Getting checksum for block " + block);
     try {
       //read metadata file
@@ -1024,7 +1030,7 @@ class DataXceiver extends Receiver implements Runnable {
       // set up response stream
       OutputStream baseStream = getOutputStream();
       reply = new DataOutputStream(new BufferedOutputStream(
-          baseStream, HdfsServerConstants.SMALL_BUFFER_SIZE));
+          baseStream, smallBufferSize));
 
       // send status first
       writeSuccessWithChecksumInfo(blockSender, reply);
@@ -1131,10 +1137,10 @@ class DataXceiver extends Receiver implements Runnable {
         unbufProxyOut = saslStreams.out;
         unbufProxyIn = saslStreams.in;
         
-        proxyOut = new DataOutputStream(new BufferedOutputStream(unbufProxyOut, 
-            HdfsServerConstants.SMALL_BUFFER_SIZE));
+        proxyOut = new DataOutputStream(new BufferedOutputStream(unbufProxyOut,
+            smallBufferSize));
         proxyReply = new DataInputStream(new BufferedInputStream(unbufProxyIn,
-            HdfsServerConstants.IO_FILE_BUFFER_SIZE));
+            ioFileBufferSize));
         
         /* send request to the proxy */
         IoeDuringCopyBlockOperation = true;

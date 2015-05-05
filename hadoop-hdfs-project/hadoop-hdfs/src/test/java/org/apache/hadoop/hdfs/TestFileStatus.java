@@ -93,7 +93,7 @@ public class TestFileStatus {
       int fileSize, int blockSize) throws IOException {
     // Create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, true,
-        HdfsServerConstants.IO_FILE_BUFFER_SIZE, (short)repl, (long)blockSize);
+        DFSUtil.getIoFileBufferSize(conf), (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
