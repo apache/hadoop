@@ -133,7 +133,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
-      .append(appInfo.getRunningContainers()).append("\",\"")
+      .append(appInfo.getRunningContainers() == -1 ? "N/A" : String
+         .valueOf(appInfo.getRunningContainers())).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
