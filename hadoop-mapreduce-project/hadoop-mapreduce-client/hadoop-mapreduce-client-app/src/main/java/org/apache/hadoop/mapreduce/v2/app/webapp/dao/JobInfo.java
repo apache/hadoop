@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
-import static org.apache.hadoop.yarn.util.StringHelper.percent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +37,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
 
 @XmlRootElement(name = "job")
@@ -102,11 +101,13 @@ public class JobInfo {
     this.mapsTotal = job.getTotalMaps();
     this.mapsCompleted = job.getCompletedMaps();
     this.mapProgress = report.getMapProgress() * 100;
-    this.mapProgressPercent = percent(report.getMapProgress());
+    this.mapProgressPercent =
+        StringUtils.formatPercent(report.getMapProgress(), 2);
     this.reducesTotal = job.getTotalReduces();
     this.reducesCompleted = job.getCompletedReduces();
     this.reduceProgress = report.getReduceProgress() * 100;
-    this.reduceProgressPercent = percent(report.getReduceProgress());
+    this.reduceProgressPercent =
+        StringUtils.formatPercent(report.getReduceProgress(), 2);
 
     this.acls = new ArrayList<ConfEntryInfo>();
     if (hasAccess) {

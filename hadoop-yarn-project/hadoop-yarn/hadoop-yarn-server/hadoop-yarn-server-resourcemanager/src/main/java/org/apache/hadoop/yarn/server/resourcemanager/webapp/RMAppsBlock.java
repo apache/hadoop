@@ -25,6 +25,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -82,7 +83,7 @@ public class RMAppsBlock extends AppsBlock {
       if (nodes != null) {
         blacklistedNodesCount = String.valueOf(nodes.size());
       }
-      String percent = String.format("%.1f", app.getProgress());
+      String percent = StringUtils.format("%.1f", app.getProgress());
       appsTableData
         .append("[\"<a href='")
         .append(url("app", app.getAppId()))

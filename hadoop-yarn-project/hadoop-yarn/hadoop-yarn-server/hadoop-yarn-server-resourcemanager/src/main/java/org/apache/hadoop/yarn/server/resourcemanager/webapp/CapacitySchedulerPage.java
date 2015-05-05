@@ -94,7 +94,8 @@ class CapacitySchedulerPage extends RmView {
           _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
           _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
-          _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
+          _("Configured User Limit Factor:", StringUtils.format(
+              "%.1f", lqinfo.getUserLimitFactor())).
           _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
           _("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
           _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
@@ -432,14 +433,14 @@ class CapacitySchedulerPage extends RmView {
   }
 
   static String percent(float f) {
-    return String.format("%.1f%%", f * 100);
+    return StringUtils.formatPercent(f, 1);
   }
 
   static String width(float f) {
-    return String.format("width:%.1f%%", f * 100);
+    return StringUtils.format("width:%.1f%%", f * 100);
   }
 
   static String left(float f) {
-    return String.format("left:%.1f%%", f * 100);
+    return StringUtils.format("left:%.1f%%", f * 100);
   }
 }

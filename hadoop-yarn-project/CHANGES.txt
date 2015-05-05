@@ -310,6 +310,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3552. RM Web UI shows -1 running containers for completed apps
     (Rohith via jlowe)
 
+    YARN-2123. Progress bars in Web UI always at 100% due to non-US locale.
+    (Akira AJISAKA via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
