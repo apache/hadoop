@@ -71,7 +71,6 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -91,6 +90,7 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1573,10 +1573,25 @@ public class BlockManager implements BlockStatsMXBean {
           if (block.isStriped()) {
             assert rw instanceof ErasureCodingWork;
             assert rw.targets.length > 0;
+            String src = block.getBlockCollection().getName();
+            ECSchema ecSchema = null;
+            try {
+              ecSchema = namesystem.getECSchemaForPath(src);
+            } catch (IOException e) {
+              blockLog
+                  .warn("Failed to get the EC schema for the file {} ", src);
+            }
+            if (ecSchema == null) {
+              blockLog.warn("No EC schema found for the file {}. "
+                  + "So cannot proceed for recovery", src);
+              // TODO: we may have to revisit later for what we can do better to
+              // handle this case.
+              continue;
+            }
             rw.targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
                 new ExtendedBlock(namesystem.getBlockPoolId(), block),
                 rw.srcNodes, rw.targets,
-                ((ErasureCodingWork) rw).liveBlockIndicies);
+                ((ErasureCodingWork) rw).liveBlockIndicies, ecSchema);
           } else {
             rw.srcNodes[0].addBlockToBeReplicated(block, targets);
           }

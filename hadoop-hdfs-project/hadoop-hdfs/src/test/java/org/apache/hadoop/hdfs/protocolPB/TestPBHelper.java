@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -71,8 +70,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.ECSchemaManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -88,6 +87,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -663,7 +663,7 @@ public class TestPBHelper {
     short[] liveBlkIndices0 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo0 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0);
+        liveBlkIndices0, ECSchemaManager.getSystemDefaultSchema());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -677,7 +677,7 @@ public class TestPBHelper {
     short[] liveBlkIndices1 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo1 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1);
+        liveBlkIndices1, ECSchemaManager.getSystemDefaultSchema());
     List<BlockECRecoveryInfo> blkRecoveryInfosList = new ArrayList<BlockECRecoveryInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
@@ -718,6 +718,19 @@ public class TestPBHelper {
     for (int i = 0; i < liveBlockIndices1.length; i++) {
       assertEquals(liveBlockIndices1[i], liveBlockIndices2[i]);
     }
+    
+    ECSchema ecSchema1 = blkECRecoveryInfo1.getECSchema();
+    ECSchema ecSchema2 = blkECRecoveryInfo2.getECSchema();
+    // Compare ECSchemas same as default ECSchema as we used system default
+    // ECSchema used in this test
+    compareECSchemas(ECSchemaManager.getSystemDefaultSchema(), ecSchema1);
+    compareECSchemas(ECSchemaManager.getSystemDefaultSchema(), ecSchema2);
+  }
+
+  private void compareECSchemas(ECSchema ecSchema1, ECSchema ecSchema2) {
+    assertEquals(ecSchema1.getSchemaName(), ecSchema2.getSchemaName());
+    assertEquals(ecSchema1.getNumDataUnits(), ecSchema2.getNumDataUnits());
+    assertEquals(ecSchema1.getNumParityUnits(), ecSchema2.getNumParityUnits());
   }
 
   private void assertDnInfosEqual(DatanodeInfo[] dnInfos1,

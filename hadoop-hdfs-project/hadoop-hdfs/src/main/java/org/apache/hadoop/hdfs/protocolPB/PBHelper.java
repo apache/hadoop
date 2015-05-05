@@ -3209,8 +3209,10 @@ public class PBHelper {
       liveBlkIndices[i] = liveBlockIndicesList.get(i).shortValue();
     }
 
+    ECSchema ecSchema = convertECSchema(blockEcRecoveryInfoProto.getEcSchema());
+
     return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices);
+        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecSchema);
   }
 
   public static BlockECRecoveryInfoProto convertBlockECRecoveryInfo(
@@ -3234,6 +3236,8 @@ public class PBHelper {
 
     short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
     builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
+
+    builder.setEcSchema(convertECSchema(blockEcRecoveryInfo.getECSchema()));
 
     return builder.build();
   }

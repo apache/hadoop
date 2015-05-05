@@ -99,4 +99,5 @@ message BlockECRecoveryInfoProto {
   required StorageUuidsProto targetStorageUuids = 4;
   required StorageTypesProto targetStorageTypes = 5;
   repeated uint32 liveBlockIndices = 6;
+  required ECSchemaProto ecSchema = 7;
 }

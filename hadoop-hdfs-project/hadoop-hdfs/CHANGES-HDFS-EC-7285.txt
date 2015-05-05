@@ -164,3 +164,5 @@
 
     HDFS-8281. Erasure Coding: implement parallel stateful reading for striped layout.
     (jing9)
+
+    HDFS-8137. Send the EC schema to DataNode via EC encoding/recovering command(umamahesh)

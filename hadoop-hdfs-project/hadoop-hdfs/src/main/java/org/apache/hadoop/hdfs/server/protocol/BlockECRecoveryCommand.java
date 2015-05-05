@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -76,9 +77,11 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     private String[] targetStorageIDs;
     private StorageType[] targetStorageTypes;
     private final short[] liveBlockIndices;
+    private final ECSchema ecSchema;
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
-        DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices) {
+        DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices,
+        ECSchema ecSchema) {
       this.block = block;
       this.sources = sources;
       this.targets = DatanodeStorageInfo.toDatanodeInfos(targetDnStorageInfo);
@@ -87,17 +90,20 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
       this.targetStorageTypes = DatanodeStorageInfo
           .toStorageTypes(targetDnStorageInfo);
       this.liveBlockIndices = liveBlockIndices;
+      this.ecSchema = ecSchema;
     }
     
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeInfo[] targets, String[] targetStorageIDs,
-        StorageType[] targetStorageTypes, short[] liveBlockIndices) {
+        StorageType[] targetStorageTypes, short[] liveBlockIndices,
+        ECSchema ecSchema) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
       this.targetStorageIDs = targetStorageIDs;
       this.targetStorageTypes = targetStorageTypes;
       this.liveBlockIndices = liveBlockIndices;
+      this.ecSchema = ecSchema;
     }
 
     public ExtendedBlock getExtendedBlock() {
@@ -122,6 +128,10 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
 
     public short[] getLiveBlockIndices() {
       return liveBlockIndices;
+    }
+    
+    public ECSchema getECSchema() {
+      return ecSchema;
     }
 
     @Override
