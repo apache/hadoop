@@ -21,6 +21,7 @@ package org.apache.hadoop.service.workflow;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceParent;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.service.ServiceStateException;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ import java.util.List;
 /**
  * This resembles the YARN CompositeService, except that it
  * starts one service after another
- * 
+ * <p>
  * Workflow
  * <ol>
  *   <li>When the <code>WorkflowSequenceService</code> instance is
@@ -65,7 +66,7 @@ public class WorkflowSequenceService extends AbstractService implements
   /**
    * list of services
    */
-  private final List<Service> serviceList = new ArrayList<Service>();
+  private final List<Service> serviceList = new ArrayList<>();
 
   /**
    * The currently active service.
@@ -75,8 +76,9 @@ public class WorkflowSequenceService extends AbstractService implements
   private volatile Service activeService;
 
   /**
-  the previous service -the last one that finished. 
-  null if one did not finish yet
+   * The previous service to the one (if any) that is running.
+   *  <code>null</code> if none have finished yet; this implicitly
+   *  holds before any service has been started.
    */
   private volatile Service previousService;
 
@@ -105,7 +107,9 @@ public class WorkflowSequenceService extends AbstractService implements
     for (Service service : children) {
       addService(service);
     }
-  }  /**
+  }
+
+  /**
    * Create a service sequence with the given list of services
    * @param name service name
    * @param children initial sequence
@@ -134,7 +138,7 @@ public class WorkflowSequenceService extends AbstractService implements
   }
 
   /**
-   * When started
+   * start the first service. If there are none to start, <code>stop()</code> this service.
    * @throws Exception
    */
   @Override
@@ -145,6 +149,10 @@ public class WorkflowSequenceService extends AbstractService implements
     }
   }
 
+  /**
+   * Stop the service. This stops any currently running child service.
+   * @throws Exception on any failure
+   */
   @Override
   protected void serviceStop() throws Exception {
     //stop current service.
@@ -167,6 +175,7 @@ public class WorkflowSequenceService extends AbstractService implements
    * the service is started
    */
   public synchronized boolean startNextService() {
+    LOG.debug("Starting next child service");
     if (isInState(STATE.STOPPED)) {
       //downgrade to a failed
       LOG.debug("Not starting next service -{} is stopped", this);
@@ -179,6 +188,7 @@ public class WorkflowSequenceService extends AbstractService implements
     }
     if (serviceList.isEmpty()) {
       //nothing left to run
+      LOG.debug("No services left to start");
       return false;
     }
     if (activeService != null && activeService.getFailureCause() != null) {
@@ -187,6 +197,7 @@ public class WorkflowSequenceService extends AbstractService implements
           activeService);
       return false;
     }
+
     //bear in mind that init & start can fail, which
     //can trigger re-entrant calls into the state change listener.
     //by setting the current service to null
@@ -195,7 +206,7 @@ public class WorkflowSequenceService extends AbstractService implements
 
     activeService = null;
     Service head = serviceList.remove(0);
-
+    LOG.debug("Starting {}", head);
     try {
       head.init(getConfig());
       head.registerServiceListener(this);
@@ -207,6 +218,7 @@ public class WorkflowSequenceService extends AbstractService implements
     //at this point the service must have explicitly started & not failed,
     //else an exception would have been raised
     activeService = head;
+
     return true;
   }
 
@@ -240,8 +252,9 @@ public class WorkflowSequenceService extends AbstractService implements
       //did the service fail? if so: propagate
       Throwable failureCause = service.getFailureCause();
       if (failureCause != null) {
-        Exception e = (failureCause instanceof Exception) ?
-                      (Exception) failureCause : new Exception(failureCause);
+        Exception e = (failureCause instanceof Exception)
+            ? (Exception) failureCause
+            : new Exception(failureCause);
         noteFailure(e);
         stop();
       }

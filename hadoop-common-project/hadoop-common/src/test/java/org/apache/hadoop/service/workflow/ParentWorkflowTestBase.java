@@ -19,6 +19,7 @@
 package org.apache.hadoop.service.workflow;
 
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceParent;
 
 /**
  * Extends {@link WorkflowServiceTestBase} with parent-specific operations

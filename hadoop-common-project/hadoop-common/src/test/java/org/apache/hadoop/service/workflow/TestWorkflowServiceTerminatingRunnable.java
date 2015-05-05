@@ -25,16 +25,9 @@ import org.junit.Test;
  */
 public class TestWorkflowServiceTerminatingRunnable extends WorkflowServiceTestBase {
 
-  @Test
+  @Test(expected = IllegalArgumentException.class)
   public void testNoservice() throws Throwable {
-
-    try {
-      new ServiceTerminatingRunnable(null, new SimpleRunnable());
-      fail("unexpected ");
-    } catch (IllegalArgumentException e) {
-
-      // expected 
-    }
+    new ServiceTerminatingRunnable(null, new SimpleRunnable());
   }
 
   @Test

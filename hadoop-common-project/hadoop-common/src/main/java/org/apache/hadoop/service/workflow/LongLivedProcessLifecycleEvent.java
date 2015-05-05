@@ -19,7 +19,7 @@
 package org.apache.hadoop.service.workflow;
 
 /**
- * Callback when a long-lived application exits
+ * Callback invoked when a long-lived application exits.
  */
 public interface LongLivedProcessLifecycleEvent {
 

@@ -41,7 +41,7 @@ public class TestWorkflowClosingService extends WorkflowServiceTestBase {
   @Test
   public void testNullClose() throws Throwable {
     WorkflowClosingService<OpenClose>
-        svc = new WorkflowClosingService<OpenClose>(null);
+        svc = new WorkflowClosingService<>(null);
     svc.init(new Configuration());
     svc.start();
     assertNull(svc.getCloseable());
@@ -85,7 +85,7 @@ public class TestWorkflowClosingService extends WorkflowServiceTestBase {
   @Test
   public void testCloseSelf() throws Throwable {
     WorkflowClosingService<WorkflowClosingService> svc =
-        new WorkflowClosingService<WorkflowClosingService>(null);
+        new WorkflowClosingService<>(null);
     svc.setCloseable(svc);
     svc.stop();
   }

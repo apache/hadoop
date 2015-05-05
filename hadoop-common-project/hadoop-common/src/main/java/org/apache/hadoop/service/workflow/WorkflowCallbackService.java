@@ -89,6 +89,7 @@ public class WorkflowCallbackService<V> extends
    * note the exception in this class
    * @throws Exception exception.
    */
+  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();

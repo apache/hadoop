@@ -29,8 +29,8 @@ public class TestWorkflowExecutorService extends WorkflowServiceTestBase {
   public void testAsyncRun() throws Throwable {
 
     ExecutorSvc svc = run(new ExecutorSvc());
-    ServiceTerminatingRunnable runnable = new ServiceTerminatingRunnable(svc,
-        new SimpleRunnable());
+    ServiceTerminatingRunnable runnable =
+        new ServiceTerminatingRunnable(svc, new SimpleRunnable());
 
     // synchronous in-thread execution
     svc.execute(runnable);
@@ -42,8 +42,8 @@ public class TestWorkflowExecutorService extends WorkflowServiceTestBase {
   public void testFailureRun() throws Throwable {
 
     ExecutorSvc svc = run(new ExecutorSvc());
-    ServiceTerminatingRunnable runnable = new ServiceTerminatingRunnable(svc,
-        new SimpleRunnable(true));
+    ServiceTerminatingRunnable runnable =
+        new ServiceTerminatingRunnable(svc, new SimpleRunnable(true));
 
     // synchronous in-thread execution
     svc.execute(runnable);

@@ -57,7 +57,6 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
     this.callable = callable;
   }
 
-
   /**
    * Get the owning service
    * @return the service to receive notification when
@@ -77,8 +76,9 @@ public class ServiceTerminatingCallable<V> implements Callable<V> {
 
   /**
    * Delegates the call to the callable supplied in the constructor,
-   * then calls the stop() operation on its owner. Any exception
-   * is caught, noted and rethrown
+   * then calls the <code>stop()</code> operation on its owner.
+   * <p>
+   * Any exception is caught, noted and rethrown
    * @return the outcome of the delegated call operation
    * @throws Exception if one was raised.
    */

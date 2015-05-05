@@ -50,7 +50,7 @@ public class ProcessCommandFactory {
    * @return commands
    */
   public List<String> echo(String text) {
-    List<String> commands = new ArrayList<String>(5);
+    List<String> commands = new ArrayList<>(5);
     commands.add("echo");
     commands.add(text);
     return commands;
@@ -61,7 +61,7 @@ public class ProcessCommandFactory {
    * @return commands
    */
   public List<String> env() {
-    List<String> commands = new ArrayList<String>(1);
+    List<String> commands = new ArrayList<>(1);
     commands.add("env");
     return commands;
   }
@@ -72,7 +72,7 @@ public class ProcessCommandFactory {
    * @return commands
    */
   public List<String> exitFalse() {
-    List<String> commands = new ArrayList<String>(2);
+    List<String> commands = new ArrayList<>(2);
     commands.add("false");
     return commands;
   }

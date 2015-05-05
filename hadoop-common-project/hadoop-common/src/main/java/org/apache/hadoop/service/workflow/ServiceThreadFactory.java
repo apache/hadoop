@@ -30,11 +30,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * using the name and naming policy supplied.
  * The thread counter starts at 1, increments atomically, 
  * and is supplied as the second argument in the format string.
- * 
+ * <p>
  * A static method, {@link #singleThreadExecutor(String, boolean)},
  * exists to simplify the construction of an executor with a single well-named
  * threads. 
- * 
+ * <p>
  * Example
  * <pre>
  *  ExecutorService exec = ServiceThreadFactory.newSingleThreadExecutor("live", true)

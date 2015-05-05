@@ -79,7 +79,7 @@ public class LongLivedProcess implements Runnable {
   
   private ProcessStreamReader processStreamReader;
   //list of recent lines, recorded for extraction into reports
-  private final List<String> recentLines = new LinkedList<String>();
+  private final List<String> recentLines = new LinkedList<>();
   private int recentLineLimit = RECENT_LINE_LOG_LIMIT;
   private LongLivedProcessLifecycleEvent lifecycleCallback;
 
@@ -210,7 +210,7 @@ public class LongLivedProcess implements Runnable {
   public Integer getExitCode() {
     return exitCode;
   }
-  
+
     /**
    * Get the exit code sign corrected: null until the process has finished
    * @return the exit code or null
@@ -218,14 +218,12 @@ public class LongLivedProcess implements Runnable {
   public Integer getExitCodeSignCorrected() {
     Integer result;
     if (exitCode != null) {
-      result = (exitCode << 24) >> 24;
+      result = signCorrectExitCode(exitCode);
     } else {
       result = null;
     }
     return result;
   }
-  
-  
 
   /**
    * Stop the process if it is running.
@@ -258,7 +256,7 @@ public class LongLivedProcess implements Runnable {
     buffer.append("\nEnvironment\n-----------");
     Map<String, String> env = processBuilder.environment();
     Set<String> keys = env.keySet();
-    List<String> sortedKeys = new ArrayList<String>(keys);
+    List<String> sortedKeys = new ArrayList<>(keys);
     Collections.sort(sortedKeys);
     for (String key : sortedKeys) {
       buffer.append(key).append("=").append(env.get(key)).append('\n');
@@ -266,7 +264,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Exec the process
+   * Execute the process.
    * @return the process
    * @throws IOException on any problem
    * @throws FileNotFoundException if the process could not be found
@@ -283,7 +281,7 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * Entry point for waiting for the program to finish
+   * Entry point for waiting for the program to finish.
    */
   @Override // Runnable
   public void run() {
@@ -339,9 +337,8 @@ public class LongLivedProcess implements Runnable {
    * or the process is not actually running
    */
   public synchronized List<String> getRecentOutput() {
-    return new ArrayList<String>(recentLines);
+    return new ArrayList<>(recentLines);
   }
-
 
   /**
    * add the recent line to the list of recent lines; deleting
@@ -501,4 +498,15 @@ public class LongLivedProcess implements Runnable {
       }
     }
   }
+
+
+  /**
+   * Sign correct an exit code.
+   * @param code an integer code value in the range 0-255.
+   * @return a code in the range -127 to +128.
+   */
+  public static int signCorrectExitCode(int code) {
+    return (code << 24) >> 24;
+  }
+
 }

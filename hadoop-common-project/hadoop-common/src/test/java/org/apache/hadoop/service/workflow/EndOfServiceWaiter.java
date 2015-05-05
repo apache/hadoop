@@ -25,7 +25,7 @@ import org.junit.Assert;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Wait for a service to stop
+ * a {@link ServiceStateChangeListener} that waits for a service to stop;
  */
 public class EndOfServiceWaiter implements ServiceStateChangeListener {
 

@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 /**
- * A service that hosts an executor -when the service is stopped,
+ * An abstract service that hosts an executor. When the service is stopped,
  * {@link ExecutorService#shutdownNow()} is invoked.
  */
 public abstract class AbstractWorkflowExecutorService extends AbstractService {
@@ -37,7 +37,7 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
    * no executor
    * @param name service name
    */
-  public AbstractWorkflowExecutorService(String name) {
+  protected AbstractWorkflowExecutorService(String name) {
     this(name, null);
   }
 
@@ -87,8 +87,9 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
   public <V> Future<V> submit(Callable<V> callable) {
     return getExecutor().submit(callable);
   }
+
   /**
-   * Stop the service: halt the executor. 
+   * Stop the service: halt any executor.
    * @throws Exception exception.
    */
   @Override

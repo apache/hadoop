@@ -33,12 +33,7 @@ import java.util.List;
 public class TestLongLivedProcess extends WorkflowServiceTestBase implements
     LongLivedProcessLifecycleEvent {
   private static final Logger
-      log = LoggerFactory.getLogger(TestLongLivedProcess.class);
-
-  private static final Logger
-      processLog =
-      LoggerFactory.getLogger("org.apache.hadoop.services.workflow.Process");
-
+      LOG = LoggerFactory.getLogger(TestLongLivedProcess.class);
 
   private LongLivedProcess process;
   private File testDir = new File("target");
@@ -133,7 +128,7 @@ public class TestLongLivedProcess extends WorkflowServiceTestBase implements
   }
 
   private LongLivedProcess initProcess(List<String> commands) {
-    process = new LongLivedProcess(name.getMethodName(), log, commands);
+    process = new LongLivedProcess(name.getMethodName(), LOG, commands);
     process.setLifecycleCallback(this);
     return process;
   }

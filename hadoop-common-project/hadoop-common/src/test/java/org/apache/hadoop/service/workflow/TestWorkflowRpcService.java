@@ -68,11 +68,17 @@ public class TestWorkflowRpcService extends WorkflowServiceTestBase {
     svc.stop();
     assertTrue(rpc.stopped);
   }
-  
+
+  /**
+   * Mock RPC server; can be set to fail on startup
+   */
   private static class MockRPC extends Server {
 
     public boolean stopped;
     public boolean started;
+    /**
+     * Flag to indicate that the server should fail when started
+     */
     public boolean failOnStart;
 
     private MockRPC() throws IOException {

@@ -21,6 +21,7 @@ package org.apache.hadoop.service.workflow;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceParent;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,7 +110,7 @@ public class WorkflowCompositeService extends CompositeService
       //did the child fail? if so: propagate
       Throwable failureCause = child.getFailureCause();
       if (failureCause != null) {
-        LOG.info("Child service " + child + " failed", failureCause);
+        LOG.info("Child service {} failed: {}", child, failureCause.toString());
         //failure. Convert to an exception
         Exception e = (failureCause instanceof Exception) ?
             (Exception) failureCause : new Exception(failureCause);

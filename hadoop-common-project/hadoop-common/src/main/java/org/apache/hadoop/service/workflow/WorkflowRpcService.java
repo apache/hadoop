@@ -31,13 +31,18 @@ import java.net.InetSocketAddress;
  */
 public class WorkflowRpcService extends AbstractService {
 
-  /** RPC server*/
+  /**
+   * RPC server.
+   * <p>
+   * Invariant: this is non-null.
+   */
   private final Server server;
 
   /**
    * Construct an instance
    * @param name service name
-   * @param server service to stop
+   * @param server service to stop. It must not be null
+   * @throws IllegalArgumentException if <code>server</code> is null.
    */
   public WorkflowRpcService(String name, Server server) {
     super(name);
@@ -54,7 +59,7 @@ public class WorkflowRpcService extends AbstractService {
   }
 
   /**
-   * Get the socket address of this server
+   * Get the socket address of this server.
    * @return the address this server is listening on
    */
   public InetSocketAddress getConnectAddress() {
@@ -67,10 +72,13 @@ public class WorkflowRpcService extends AbstractService {
     server.start();
   }
 
+  /**
+   * Stop the service.
+   *
+   * @throws Exception any failure.
+   */
   @Override
   protected void serviceStop() throws Exception {
-    if (server != null) {
-      server.stop();
-    }
+    server.stop();
   }
 }

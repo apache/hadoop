@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.service.workflow;
-
-import org.apache.hadoop.service.Service;
+package org.apache.hadoop.service;
 
 import java.util.List;
 

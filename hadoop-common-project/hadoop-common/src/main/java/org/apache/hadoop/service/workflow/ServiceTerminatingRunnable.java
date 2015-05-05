@@ -52,7 +52,7 @@ public class ServiceTerminatingRunnable implements Runnable {
   }
 
   /**
-   * Any exception raised by inner <code>action's</code> run.
+   * Any exception raised by inner <code>action</code>'s run.
    * @return an exception or null.
    */
   public Exception getException() {

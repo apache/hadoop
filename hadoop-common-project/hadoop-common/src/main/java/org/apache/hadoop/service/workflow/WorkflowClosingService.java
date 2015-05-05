@@ -31,8 +31,10 @@ import java.io.IOException;
  */
 public class WorkflowClosingService<C extends Closeable> extends AbstractService {
 
+  /**
+   * Entity to close
+   */
   private C closeable;
-
 
   /**
    * Construct an instance of the service

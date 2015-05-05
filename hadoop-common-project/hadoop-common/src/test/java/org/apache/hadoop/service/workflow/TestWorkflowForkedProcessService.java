@@ -33,21 +33,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Test the {@link TestWorkflowForkedProcessService}
+ * Test the {@link WorkflowForkedProcessService}
  */
 public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
-  private static final Logger
-      log = LoggerFactory.getLogger(TestWorkflowForkedProcessService.class);
-
-  private static final Logger
-      processLog =
-      LoggerFactory.getLogger("org.apache.hadoop.services.workflow.Process");
-  public static final int RECENT_OUTPUT_SLEEP_DURATION = 4000;
 
   private WorkflowForkedProcessService process;
   private File testDir = new File("target");
   private ProcessCommandFactory commandFactory;
-  private Map<String, String> env = new HashMap<String, String>();
+  private Map<String, String> env = new HashMap<>();
 
   @Before
   public void setupProcesses() {
@@ -75,8 +68,7 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
     initProcess(commandFactory.exitFalse());
     exec();
     assertFalse(process.isProcessRunning());
-    Integer exitCode = process.getExitCode();
-    assertNotNull("null exit code", exitCode);
+    int exitCode = process.getExitCode();
     assertTrue(exitCode != 0);
     int corrected = process.getExitCodeSignCorrected();
     assertEquals(1, corrected);
@@ -99,9 +91,8 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
   protected void assertExecCompletes(int expected) throws InterruptedException {
     exec();
     assertFalse(process.isProcessRunning());
-    Integer exitCode = process.getExitCode();
-    assertNotNull("null exit code", exitCode);
-    assertEquals(expected, exitCode.intValue());
+    int exitCode = process.getExitCode();
+    assertEquals(expected, exitCode);
   }
 
   @Test
@@ -113,7 +104,7 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
     initProcess(commandFactory.env());
     exec();
 
-    assertEquals(0, process.getExitCode().intValue());
+    assertEquals(0, process.getExitCode());
     assertStringInOutput(val, getFinalOutput());
   }
 
@@ -125,8 +116,8 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
     return process.getRecentOutput();
   }
 
-  private WorkflowForkedProcessService initProcess(List<String> commands) throws
-      IOException {
+  private WorkflowForkedProcessService initProcess(List<String> commands)
+      throws IOException {
     process = new WorkflowForkedProcessService(name.getMethodName(), env,
         commands);
     process.init(new Configuration());

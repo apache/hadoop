@@ -24,22 +24,39 @@ import org.apache.hadoop.service.ServiceStateException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Mock service which can be set to fail at different points
+ */
 public class MockService extends AbstractService {
   private final boolean fail;
   private final int lifespan;
   private final ExecutorService executorService =
       Executors.newSingleThreadExecutor();
 
+  /**
+   * Create with an infinite lifespan and no failures
+   */
   MockService() {
     this("mock", false, -1);
   }
 
+  /**
+   * Create with  a name, optional failure option and a lifespan in millis
+   * @param name
+   * @param fail
+   * @param lifespan
+   */
   MockService(String name, boolean fail, int lifespan) {
     super(name);
     this.fail = fail;
     this.lifespan = lifespan;
   }
 
+  /**
+   * Start the service. This will start an asynchronous thread (in an executor service)
+   * which will sleep for the given time period.
+   * @throws Exception on any failure
+   */
   @Override
   protected void serviceStart() throws Exception {
     //act on the lifespan here
@@ -64,7 +81,10 @@ public class MockService extends AbstractService {
     }
   }
 
-  void finish() {
+  /**
+   * Finish the service
+   */
+  private void finish() {
     if (fail) {
       ServiceStateException e =
           new ServiceStateException(getName() + " failed");

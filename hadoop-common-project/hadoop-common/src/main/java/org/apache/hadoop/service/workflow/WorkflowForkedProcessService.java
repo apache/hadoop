@@ -75,6 +75,7 @@ public class WorkflowForkedProcessService
    */
   private static final Logger LOG =
     LoggerFactory.getLogger(WorkflowForkedProcessService.class);
+  public static final String ERROR_PROCESS_NOT_SET = "Process not yet configured";
 
   private final AtomicBoolean processTerminated = new AtomicBoolean(false);
   private boolean processStarted = false;
@@ -108,10 +109,15 @@ public class WorkflowForkedProcessService
     build(env, commandList);
   }
 
+  /**
+   * Start the service
+   * @throws ServiceStateException if
+   * @throws Exception
+   */
   @Override //AbstractService
   protected void serviceStart() throws Exception {
     if (process == null) {
-      throw new ServiceStateException("Process not yet configured");
+      throw new ServiceStateException(ERROR_PROCESS_NOT_SET);
     }
     //now spawn the process -expect updates via callbacks
     process.start();
@@ -227,6 +233,7 @@ public class WorkflowForkedProcessService
    */
   protected void completed(int code) {
     processTerminated.set(true);
+    exitCode.set(code);
     synchronized (processTerminated) {
       processTerminated.notify();
     }
@@ -253,8 +260,8 @@ public class WorkflowForkedProcessService
    * Get the process exit code.
    * @return the raw exit code in the range 0 to 255
    */
-  public Integer getExitCode() {
-    return process.getExitCode();
+  public int getExitCode() {
+    return exitCode.get();
   }
 
   /**
@@ -262,7 +269,7 @@ public class WorkflowForkedProcessService
    * @return an exit code in the range -127 to +128
    */
   public int getExitCodeSignCorrected() {
-    return process.getExitCodeSignCorrected();
+    return LongLivedProcess.signCorrectExitCode(getExitCode());
   }
 
   /**

@@ -20,6 +20,7 @@ package org.apache.hadoop.service.workflow;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceParent;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -38,7 +39,7 @@ import java.util.concurrent.Callable;
  */
 public abstract class WorkflowServiceTestBase extends Assert {
   private static final Logger
-      log = LoggerFactory.getLogger(WorkflowServiceTestBase.class);
+      LOG = LoggerFactory.getLogger(WorkflowServiceTestBase.class);
 
   /**
    * Set the timeout for every test
@@ -54,7 +55,11 @@ public abstract class WorkflowServiceTestBase extends Assert {
     Thread.currentThread().setName("JUnit");
   }
 
-
+  /**
+   * Assert that a service is in a state
+   * @param service service
+   * @param expected expected state
+   */
   protected void assertInState(Service service, Service.STATE expected) {
     Service.STATE actual = service.getServiceState();
     if (actual != expected) {
@@ -63,22 +68,34 @@ public abstract class WorkflowServiceTestBase extends Assert {
     }
   }
 
+  /**
+   * assert that a service has stopped.
+   * @param service service to check
+   */
   protected void assertStopped(Service service) {
     assertInState(service, Service.STATE.STOPPED);
   }
 
-  protected void logState(ServiceParent p) {
-    logService(p);
-    for (Service s : p.getServices()) {
+  /**
+   * Log the state of a service parent, and that of all its children
+   * @param parent
+   */
+  protected void logState(ServiceParent parent) {
+    logService(parent);
+    for (Service s : parent.getServices()) {
       logService(s);
     }
   }
 
-  protected void logService(Service s) {
-    log.info(s.toString());
-    Throwable failureCause = s.getFailureCause();
+  /**
+   * Log details about a service, including any failure cause.
+   * @param service service to log
+   */
+  protected void logService(Service service) {
+    LOG.info(service.toString());
+    Throwable failureCause = service.getFailureCause();
     if (failureCause != null) {
-      log.info("Failed in state {} with {}", s.getFailureState(),
+      LOG.info("Failed in state {} with {}", service.getFailureState(),
           failureCause, failureCause);
     }
   }
@@ -107,7 +124,7 @@ public abstract class WorkflowServiceTestBase extends Assert {
 
     @Override
     public String call() throws Exception {
-      log.info("CallableHandler::call");
+      LOG.info("CallableHandler::call");
       notified = true;
       return result;
     }
@@ -149,7 +166,7 @@ public abstract class WorkflowServiceTestBase extends Assert {
   }
 
   public static void skip(String message) {
-    log.warn("Skipping test: {}", message);
+    LOG.warn("Skipping test: {}", message);
     Assume.assumeTrue(message, false);
   }
 }
