@@ -141,7 +141,7 @@ class Delete {
 
     @Override
     public String getReplacementCommand() {
-      return "rm -r";
+      return "-rm -r";
     }
   }
 

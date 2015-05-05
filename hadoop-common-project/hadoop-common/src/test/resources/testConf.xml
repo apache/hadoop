@@ -453,7 +453,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*\(DEPRECATED\) Same as 'rm -r'\s*</expected-output>
+          <expected-output>^\s*\(DEPRECATED\) Same as '-rm -r'\s*</expected-output>
         </comparator>
       </comparators>
     </test>
