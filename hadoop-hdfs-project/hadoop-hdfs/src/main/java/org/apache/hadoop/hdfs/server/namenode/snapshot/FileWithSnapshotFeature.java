@@ -150,9 +150,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       bsp = reclaimContext.storagePolicySuite().getPolicy(file.getStoragePolicyID());
     }
 
-
     QuotaCounts oldCounts = file.storagespaceConsumed(null);
-    long oldStoragespace;
     if (removed.snapshotINode != null) {
       short replication = removed.snapshotINode.getFileReplication();
       short currentRepl = file.getPreferredBlockReplication();
@@ -161,7 +159,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
             ? file.computeFileSize(true, true)
             : oldCounts.getStorageSpace() /
             file.getPreferredBlockReplication();
-        oldStoragespace = oldFileSizeNoRep * replication;
+        long oldStoragespace = oldFileSizeNoRep * replication;
         oldCounts.setStorageSpace(oldStoragespace);
 
         if (bsp != null) {

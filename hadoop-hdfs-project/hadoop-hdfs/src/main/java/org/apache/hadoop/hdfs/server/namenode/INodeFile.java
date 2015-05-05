@@ -595,12 +595,12 @@ public class INodeFile extends INodeWithAdditionalFields
     if (bsp != null) {
       List<StorageType> storageTypes = bsp.chooseStorageTypes(replication);
       for (StorageType t : storageTypes) {
-        if (!t.supportTypeQuota()) {
-          continue;
+        if (t.supportTypeQuota()) {
+          counts.addTypeSpace(t, ssDeltaNoReplication);
         }
-        counts.addTypeSpace(t, ssDeltaNoReplication);
       }
     }
+
     return counts;
   }
 
@@ -727,7 +727,6 @@ public class INodeFile extends INodeWithAdditionalFields
       blocks = allBlocks;
     }
 
-    final short replication = getPreferredBlockReplication();
     for (BlockInfoContiguous b : blocks) {
       long blockSize = b.isComplete() ? b.getNumBytes() :
           getPreferredBlockSize();
