@@ -29,7 +29,6 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -142,48 +142,55 @@ public class TestIncrementalBrVariations {
     // Get the block list for the file with the block locations.
     LocatedBlocks blocks = createFileGetBlocks(GenericTestUtils.getMethodName());
 
-    // We will send 'fake' incremental block reports to the NN that look
-    // like they originated from DN 0.
-    StorageReceivedDeletedBlocks reports[] =
-        new StorageReceivedDeletedBlocks[dn0.getFSDataset().getVolumes().size()];
+    try (FsDatasetSpi.FsVolumeReferences volumes
+        = dn0.getFSDataset().getFsVolumeReferences()) {
+      // We will send 'fake' incremental block reports to the NN that look
+      // like they originated from DN 0.
+      StorageReceivedDeletedBlocks reports[] =
+          new StorageReceivedDeletedBlocks[volumes.size()];
 
-    // Lie to the NN that one block on each storage has been deleted.
-    for (int i = 0; i < reports.length; ++i) {
-      FsVolumeSpi volume = dn0.getFSDataset().getVolumes().get(i);
+      // Lie to the NN that one block on each storage has been deleted.
+      for (int i = 0; i < reports.length; ++i) {
+        FsVolumeSpi volume = volumes.get(i);
 
-      boolean foundBlockOnStorage = false;
-      ReceivedDeletedBlockInfo rdbi[] = new ReceivedDeletedBlockInfo[1];
+        boolean foundBlockOnStorage = false;
+        ReceivedDeletedBlockInfo rdbi[] = new ReceivedDeletedBlockInfo[1];
 
-      // Find the first block on this storage and mark it as deleted for the
-      // report.
-      for (LocatedBlock block : blocks.getLocatedBlocks()) {
-        if (block.getStorageIDs()[0].equals(volume.getStorageID())) {
-          rdbi[0] = new ReceivedDeletedBlockInfo(block.getBlock().getLocalBlock(),
-              ReceivedDeletedBlockInfo.BlockStatus.DELETED_BLOCK, null);
-          foundBlockOnStorage = true;
-          break;
+        // Find the first block on this storage and mark it as deleted for the
+        // report.
+        for (LocatedBlock block : blocks.getLocatedBlocks()) {
+          if (block.getStorageIDs()[0].equals(volume.getStorageID())) {
+            rdbi[0] =
+                new ReceivedDeletedBlockInfo(block.getBlock().getLocalBlock(),
+                    ReceivedDeletedBlockInfo.BlockStatus.DELETED_BLOCK, null);
+            foundBlockOnStorage = true;
+            break;
+          }
+        }
+
+        assertTrue(foundBlockOnStorage);
+        reports[i] =
+            new StorageReceivedDeletedBlocks(volume.getStorageID(), rdbi);
+
+        if (splitReports) {
+          // If we are splitting reports then send the report for this storage now.
+          StorageReceivedDeletedBlocks singletonReport[] = { reports[i] };
+          cluster.getNameNodeRpc().blockReceivedAndDeleted(
+              dn0Reg, poolId, singletonReport);
         }
       }
 
-      assertTrue(foundBlockOnStorage);
-      reports[i] = new StorageReceivedDeletedBlocks(volume.getStorageID(), rdbi);
-
-      if (splitReports) {
-        // If we are splitting reports then send the report for this storage now.
-        StorageReceivedDeletedBlocks singletonReport[] = { reports[i] };
-        cluster.getNameNodeRpc().blockReceivedAndDeleted(
-            dn0Reg, poolId, singletonReport);
+      if (!splitReports) {
+        // Send a combined report.
+        cluster.getNameNodeRpc()
+            .blockReceivedAndDeleted(dn0Reg, poolId, reports);
       }
-    }
 
-    if (!splitReports) {
-      // Send a combined report.
-      cluster.getNameNodeRpc().blockReceivedAndDeleted(dn0Reg, poolId, reports);
+      // Make sure that the deleted block from each storage was picked up
+      // by the NameNode.
+      assertThat(cluster.getNamesystem().getMissingBlocksCount(),
+          is((long) reports.length));
     }
-
-    // Make sure that the deleted block from each storage was picked up
-    // by the NameNode.
-    assertThat(cluster.getNamesystem().getMissingBlocksCount(), is((long) reports.length));
   }
 
   /**

@@ -45,6 +45,8 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.junit.Assert;
@@ -161,31 +163,37 @@ public class TestWriteToReplica {
     };
     
     ReplicaMap replicasMap = dataSet.volumeMap;
-    FsVolumeImpl vol = (FsVolumeImpl) dataSet.volumes
-        .getNextVolume(StorageType.DEFAULT, 0).getVolume();
-    ReplicaInfo replicaInfo = new FinalizedReplica(
-        blocks[FINALIZED].getLocalBlock(), vol, vol.getCurrentDir().getParentFile());
-    replicasMap.add(bpid, replicaInfo);
-    replicaInfo.getBlockFile().createNewFile();
-    replicaInfo.getMetaFile().createNewFile();
-    
-    replicasMap.add(bpid, new ReplicaInPipeline(
-        blocks[TEMPORARY].getBlockId(),
-        blocks[TEMPORARY].getGenerationStamp(), vol,
-        vol.createTmpFile(bpid, blocks[TEMPORARY].getLocalBlock()).getParentFile(), 0));
-    
-    replicaInfo = new ReplicaBeingWritten(blocks[RBW].getLocalBlock(), vol,
-        vol.createRbwFile(bpid, blocks[RBW].getLocalBlock()).getParentFile(), null);
-    replicasMap.add(bpid, replicaInfo);
-    replicaInfo.getBlockFile().createNewFile();
-    replicaInfo.getMetaFile().createNewFile();
-    
-    replicasMap.add(bpid, new ReplicaWaitingToBeRecovered(
-        blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(bpid,
-            blocks[RWR].getLocalBlock()).getParentFile()));
-    replicasMap.add(bpid, new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
-        .getLocalBlock(), vol, vol.getCurrentDir().getParentFile()), 2007));    
-    
+    try (FsDatasetSpi.FsVolumeReferences references =
+        dataSet.getFsVolumeReferences()) {
+      FsVolumeImpl vol = (FsVolumeImpl) references.get(0);
+      ReplicaInfo replicaInfo = new FinalizedReplica(
+          blocks[FINALIZED].getLocalBlock(), vol,
+          vol.getCurrentDir().getParentFile());
+      replicasMap.add(bpid, replicaInfo);
+      replicaInfo.getBlockFile().createNewFile();
+      replicaInfo.getMetaFile().createNewFile();
+
+      replicasMap.add(bpid, new ReplicaInPipeline(
+          blocks[TEMPORARY].getBlockId(),
+          blocks[TEMPORARY].getGenerationStamp(), vol,
+          vol.createTmpFile(bpid, blocks[TEMPORARY].getLocalBlock())
+              .getParentFile(), 0));
+
+      replicaInfo = new ReplicaBeingWritten(blocks[RBW].getLocalBlock(), vol,
+          vol.createRbwFile(bpid, blocks[RBW].getLocalBlock()).getParentFile(),
+          null);
+      replicasMap.add(bpid, replicaInfo);
+      replicaInfo.getBlockFile().createNewFile();
+      replicaInfo.getMetaFile().createNewFile();
+
+      replicasMap.add(bpid, new ReplicaWaitingToBeRecovered(
+          blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(bpid,
+          blocks[RWR].getLocalBlock()).getParentFile()));
+      replicasMap
+          .add(bpid, new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
+              .getLocalBlock(), vol, vol.getCurrentDir().getParentFile()),
+              2007));
+    }
     return blocks;
   }
   
@@ -538,9 +546,15 @@ public class TestWriteToReplica {
           getFSDataset(dn);
       ReplicaMap replicaMap = dataSet.volumeMap;
       
-      List<FsVolumeImpl> volumes = dataSet.getVolumes();
-      // number of volumes should be 2 - [data1, data2]
-      assertEquals("number of volumes is wrong", 2, volumes.size());
+      List<FsVolumeImpl> volumes = null;
+      try (FsDatasetSpi.FsVolumeReferences referredVols = dataSet.getFsVolumeReferences()) {
+        // number of volumes should be 2 - [data1, data2]
+        assertEquals("number of volumes is wrong", 2, referredVols.size());
+        volumes = new ArrayList<>(referredVols.size());
+        for (FsVolumeSpi vol : referredVols) {
+          volumes.add((FsVolumeImpl) vol);
+        }
+      }
       ArrayList<String> bpList = new ArrayList<String>(Arrays.asList(
           cluster.getNamesystem(0).getBlockPoolId(), 
           cluster.getNamesystem(1).getBlockPoolId()));

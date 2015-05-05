@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
@@ -44,7 +45,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -64,6 +64,7 @@ public class TestRbwSpaceReservation {
   private Configuration conf;
   private DistributedFileSystem fs = null;
   private DFSClient client = null;
+  FsVolumeReference singletonVolumeRef = null;
   FsVolumeImpl singletonVolume = null;
 
   private static Random rand = new Random();
@@ -104,23 +105,22 @@ public class TestRbwSpaceReservation {
     cluster.waitActive();
 
     if (perVolumeCapacity >= 0) {
-      for (DataNode dn : cluster.getDataNodes()) {
-        for (FsVolumeSpi volume : dn.getFSDataset().getVolumes()) {
-          ((FsVolumeImpl) volume).setCapacityForTesting(perVolumeCapacity);
-        }
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
+        singletonVolumeRef = volumes.get(0).obtainReference();
       }
-    }
-
-    if (numDatanodes == 1) {
-      List<? extends FsVolumeSpi> volumes =
-          cluster.getDataNodes().get(0).getFSDataset().getVolumes();
-      assertThat(volumes.size(), is(1));
-      singletonVolume = ((FsVolumeImpl) volumes.get(0));
+      singletonVolume = ((FsVolumeImpl) singletonVolumeRef.getVolume());
+      singletonVolume.setCapacityForTesting(perVolumeCapacity);
     }
   }
 
   @After
   public void shutdownCluster() throws IOException {
+    if (singletonVolumeRef != null) {
+      singletonVolumeRef.close();
+      singletonVolumeRef = null;
+    }
+
     if (client != null) {
       client.close();
       client = null;
@@ -266,13 +266,16 @@ public class TestRbwSpaceReservation {
     // Ensure all space reserved for the replica was released on each
     // DataNode.
     for (DataNode dn : cluster.getDataNodes()) {
-      final FsVolumeImpl volume = (FsVolumeImpl) dn.getFSDataset().getVolumes().get(0);
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          return (volume.getReservedForRbw() == 0);
-        }
-      }, 500, Integer.MAX_VALUE); // Wait until the test times out.
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dn.getFSDataset().getFsVolumeReferences()) {
+        final FsVolumeImpl volume = (FsVolumeImpl) volumes.get(0);
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return (volume.getReservedForRbw() == 0);
+          }
+        }, 500, Integer.MAX_VALUE); // Wait until the test times out.
+      }
     }
   }
 

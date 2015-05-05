@@ -63,7 +63,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -249,9 +248,11 @@ public class TestDataNodeVolumeFailure {
 
     // 2. dn0Vol1 is removed from FsDataset
     FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
-    for (FsVolumeSpi volume : data.getVolumes()) {
-      assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
-          dn0Vol1.getAbsoluteFile());
+    try (FsDatasetSpi.FsVolumeReferences vols = data.getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : vols) {
+        assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
+            dn0Vol1.getAbsoluteFile());
+      }
     }
 
     // 3. all blocks on dn0Vol1 have been removed.

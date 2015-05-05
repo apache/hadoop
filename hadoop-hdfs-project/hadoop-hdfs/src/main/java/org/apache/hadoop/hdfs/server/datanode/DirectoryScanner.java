@@ -527,59 +527,48 @@ public class DirectoryScanner implements Runnable {
     diffRecord.add(new ScanInfo(blockId, null, null, vol));
   }
 
-  /** Is the given volume still valid in the dataset? */
-  private static boolean isValid(final FsDatasetSpi<?> dataset,
-      final FsVolumeSpi volume) {
-    for (FsVolumeSpi vol : dataset.getVolumes()) {
-      if (vol == volume) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /** Get lists of blocks on the disk sorted by blockId, per blockpool */
   private Map<String, ScanInfo[]> getDiskReport() {
+    ScanInfoPerBlockPool list = new ScanInfoPerBlockPool();
+    ScanInfoPerBlockPool[] dirReports = null;
     // First get list of data directories
-    final List<? extends FsVolumeSpi> volumes = dataset.getVolumes();
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
 
-    // Use an array since the threads may return out of order and
-    // compilersInProgress#keySet may return out of order as well.
-    ScanInfoPerBlockPool[] dirReports = new ScanInfoPerBlockPool[volumes.size()];
+      // Use an array since the threads may return out of order and
+      // compilersInProgress#keySet may return out of order as well.
+      dirReports = new ScanInfoPerBlockPool[volumes.size()];
 
-    Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
-      new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
+      Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
+          new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
 
-    for (int i = 0; i < volumes.size(); i++) {
-      if (isValid(dataset, volumes.get(i))) {
+      for (int i = 0; i < volumes.size(); i++) {
         ReportCompiler reportCompiler =
-          new ReportCompiler(datanode,volumes.get(i));
-        Future<ScanInfoPerBlockPool> result = 
-          reportCompileThreadPool.submit(reportCompiler);
+            new ReportCompiler(datanode, volumes.get(i));
+        Future<ScanInfoPerBlockPool> result =
+            reportCompileThreadPool.submit(reportCompiler);
         compilersInProgress.put(i, result);
       }
+
+      for (Entry<Integer, Future<ScanInfoPerBlockPool>> report :
+          compilersInProgress.entrySet()) {
+        try {
+          dirReports[report.getKey()] = report.getValue().get();
+        } catch (Exception ex) {
+          LOG.error("Error compiling report", ex);
+          // Propagate ex to DataBlockScanner to deal with
+          throw new RuntimeException(ex);
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Unexpected IOException by closing FsVolumeReference", e);
     }
-    
-    for (Entry<Integer, Future<ScanInfoPerBlockPool>> report :
-        compilersInProgress.entrySet()) {
-      try {
-        dirReports[report.getKey()] = report.getValue().get();
-      } catch (Exception ex) {
-        LOG.error("Error compiling report", ex);
-        // Propagate ex to DataBlockScanner to deal with
-        throw new RuntimeException(ex);
+    if (dirReports != null) {
+      // Compile consolidated report for all the volumes
+      for (ScanInfoPerBlockPool report : dirReports) {
+        list.addAll(report);
       }
     }
-
-    // Compile consolidated report for all the volumes
-    ScanInfoPerBlockPool list = new ScanInfoPerBlockPool();
-    for (int i = 0; i < volumes.size(); i++) {
-      if (isValid(dataset, volumes.get(i))) {
-        // volume is still valid
-        list.addAll(dirReports[i]);
-      }
-    }
-
     return list.toSortedArrays();
   }
 
