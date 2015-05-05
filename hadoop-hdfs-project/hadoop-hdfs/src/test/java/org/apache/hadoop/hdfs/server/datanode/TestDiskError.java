@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.util.DataChecksum;
@@ -190,12 +191,15 @@ public class TestDiskError {
     // Check permissions on directories in 'dfs.datanode.data.dir'
     FileSystem localFS = FileSystem.getLocal(conf);
     for (DataNode dn : cluster.getDataNodes()) {
-      for (FsVolumeSpi v : dn.getFSDataset().getVolumes()) {
-        String dir = v.getBasePath();
-        Path dataDir = new Path(dir);
-        FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dn.getFSDataset().getFsVolumeReferences()) {
+        for (FsVolumeSpi vol : volumes) {
+          String dir = vol.getBasePath();
+          Path dataDir = new Path(dir);
+          FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
           assertEquals("Permission for dir: " + dataDir + ", is " + actual +
               ", while expected is " + expected, expected, actual);
+        }
       }
     }
   }

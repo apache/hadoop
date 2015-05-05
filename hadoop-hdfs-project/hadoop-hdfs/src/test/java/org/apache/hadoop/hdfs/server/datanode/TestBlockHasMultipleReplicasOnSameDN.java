@@ -27,8 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -115,11 +115,13 @@ public class TestBlockHasMultipleReplicasOnSameDN {
       blocks.add(new FinalizedReplica(localBlock, null, null));
     }
 
-    BlockListAsLongs bll = BlockListAsLongs.encode(blocks);
-    for (int i = 0; i < cluster.getStoragesPerDatanode(); ++i) {
-      FsVolumeSpi v = dn.getFSDataset().getVolumes().get(i);
-      DatanodeStorage dns = new DatanodeStorage(v.getStorageID());
-      reports[i] = new StorageBlockReport(dns, bll);
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+      dn.getFSDataset().getFsVolumeReferences()) {
+      BlockListAsLongs bll = BlockListAsLongs.encode(blocks);
+      for (int i = 0; i < cluster.getStoragesPerDatanode(); ++i) {
+        DatanodeStorage dns = new DatanodeStorage(volumes.get(i).getStorageID());
+        reports[i] = new StorageBlockReport(dns, bll);
+      }
     }
 
     // Should not assert!

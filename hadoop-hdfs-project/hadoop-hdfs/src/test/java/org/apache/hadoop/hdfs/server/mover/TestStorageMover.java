@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
@@ -627,14 +628,18 @@ public class TestStorageMover {
   }
 
   private void setVolumeFull(DataNode dn, StorageType type) {
-    List<? extends FsVolumeSpi> volumes = dn.getFSDataset().getVolumes();
-    for (FsVolumeSpi v : volumes) {
-      FsVolumeImpl volume = (FsVolumeImpl) v;
-      if (volume.getStorageType() == type) {
-        LOG.info("setCapacity to 0 for [" + volume.getStorageType() + "]"
-            + volume.getStorageID());
-        volume.setCapacityForTesting(0);
+    try (FsDatasetSpi.FsVolumeReferences refs = dn.getFSDataset()
+        .getFsVolumeReferences()) {
+      for (FsVolumeSpi fvs : refs) {
+        FsVolumeImpl volume = (FsVolumeImpl) fvs;
+        if (volume.getStorageType() == type) {
+          LOG.info("setCapacity to 0 for [" + volume.getStorageType() + "]"
+              + volume.getStorageID());
+          volume.setCapacityForTesting(0);
+        }
       }
+    } catch (IOException e) {
+      LOG.error("Unexpected exception by closing FsVolumeReference", e);
     }
   }
 

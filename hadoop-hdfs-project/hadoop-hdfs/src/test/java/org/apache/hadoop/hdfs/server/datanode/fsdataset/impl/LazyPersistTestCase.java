@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -62,11 +61,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
@@ -155,30 +154,34 @@ public abstract class LazyPersistTestCase {
   protected final void ensureLazyPersistBlocksAreSaved(
       LocatedBlocks locatedBlocks) throws IOException, InterruptedException {
     final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-      cluster.getDataNodes().get(0).getFSDataset().getVolumes();
+
     final Set<Long> persistedBlockIds = new HashSet<Long>();
 
-    while (persistedBlockIds.size() < locatedBlocks.getLocatedBlocks().size()) {
-      // Take 1 second sleep before each verification iteration
-      Thread.sleep(1000);
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
+      while (persistedBlockIds.size() < locatedBlocks.getLocatedBlocks()
+          .size()) {
+        // Take 1 second sleep before each verification iteration
+        Thread.sleep(1000);
 
-      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        for (FsVolumeSpi v : volumes) {
-          if (v.isTransientStorage()) {
-            continue;
-          }
+        for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+          for (FsVolumeSpi v : volumes) {
+            if (v.isTransientStorage()) {
+              continue;
+            }
 
-          FsVolumeImpl volume = (FsVolumeImpl) v;
-          File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
+            FsVolumeImpl volume = (FsVolumeImpl) v;
+            File lazyPersistDir =
+                volume.getBlockPoolSlice(bpid).getLazypersistDir();
 
-          long blockId = lb.getBlock().getBlockId();
-          File targetDir =
-            DatanodeUtil.idToBlockDir(lazyPersistDir, blockId);
-          File blockFile = new File(targetDir, lb.getBlock().getBlockName());
-          if (blockFile.exists()) {
-            // Found a persisted copy for this block and added to the Set
-            persistedBlockIds.add(blockId);
+            long blockId = lb.getBlock().getBlockId();
+            File targetDir =
+                DatanodeUtil.idToBlockDir(lazyPersistDir, blockId);
+            File blockFile = new File(targetDir, lb.getBlock().getBlockName());
+            if (blockFile.exists()) {
+              // Found a persisted copy for this block and added to the Set
+              persistedBlockIds.add(blockId);
+            }
           }
         }
       }
@@ -432,18 +435,21 @@ public abstract class LazyPersistTestCase {
     }
 
     final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-      cluster.getDataNodes().get(0).getFSDataset().getVolumes();
+    final FsDatasetSpi<?> dataset =
+        cluster.getDataNodes().get(0).getFSDataset();
 
     // Make sure deleted replica does not have a copy on either finalized dir of
     // transient volume or finalized dir of non-transient volume
-    for (FsVolumeSpi v : volumes) {
-      FsVolumeImpl volume = (FsVolumeImpl) v;
-      File targetDir = (v.isTransientStorage()) ?
-          volume.getBlockPoolSlice(bpid).getFinalizedDir() :
-          volume.getBlockPoolSlice(bpid).getLazypersistDir();
-      if (verifyBlockDeletedFromDir(targetDir, locatedBlocks) == false) {
-        return false;
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        FsVolumeImpl volume = (FsVolumeImpl) vol;
+        File targetDir = (volume.isTransientStorage()) ?
+            volume.getBlockPoolSlice(bpid).getFinalizedDir() :
+            volume.getBlockPoolSlice(bpid).getLazypersistDir();
+        if (verifyBlockDeletedFromDir(targetDir, locatedBlocks) == false) {
+          return false;
+        }
       }
     }
     return true;

@@ -517,9 +517,12 @@ public class TestDataNodeHotSwapVolumes {
 
     // Make sure that vol0 and vol2's metadata are not left in memory.
     FsDatasetSpi<?> dataset = dn.getFSDataset();
-    for (FsVolumeSpi volume : dataset.getVolumes()) {
-      assertThat(volume.getBasePath(), is(not(anyOf(
-          is(newDirs.get(0)), is(newDirs.get(2))))));
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        dataset.getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : volumes) {
+        assertThat(volume.getBasePath(), is(not(anyOf(
+            is(newDirs.get(0)), is(newDirs.get(2))))));
+      }
     }
     DataStorage storage = dn.getStorage();
     for (int i = 0; i < storage.getNumStorageDirs(); i++) {
@@ -688,10 +691,14 @@ public class TestDataNodeHotSwapVolumes {
   }
 
   /** Get the FsVolume on the given basePath */
-  private FsVolumeImpl getVolume(DataNode dn, File basePath) {
-    for (FsVolumeSpi vol : dn.getFSDataset().getVolumes()) {
-      if (vol.getBasePath().equals(basePath.getPath())) {
-        return (FsVolumeImpl)vol;
+  private FsVolumeImpl getVolume(DataNode dn, File basePath)
+      throws IOException {
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+      dn.getFSDataset().getFsVolumeReferences()) {
+      for (FsVolumeSpi vol : volumes) {
+        if (vol.getBasePath().equals(basePath.getPath())) {
+          return (FsVolumeImpl) vol;
+        }
       }
     }
     return null;

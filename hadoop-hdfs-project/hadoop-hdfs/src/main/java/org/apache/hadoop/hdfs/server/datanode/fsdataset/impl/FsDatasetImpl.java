@@ -138,8 +138,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public List<FsVolumeImpl> getVolumes() {
-    return volumes.getVolumes();
+  public FsVolumeReferences getFsVolumeReferences() {
+    return new FsVolumeReferences(volumes.getVolumes());
   }
 
   @Override
@@ -152,7 +152,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     List<StorageReport> reports;
     synchronized (statsLock) {
-      List<FsVolumeImpl> curVolumes = getVolumes();
+      List<FsVolumeImpl> curVolumes = volumes.getVolumes();
       reports = new ArrayList<>(curVolumes.size());
       for (FsVolumeImpl volume : curVolumes) {
         try (FsVolumeReference ref = volume.obtainReference()) {
@@ -231,7 +231,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     
   final DataNode datanode;
   final DataStorage dataStorage;
-  final FsVolumeList volumes;
+  private final FsVolumeList volumes;
   final Map<String, DatanodeStorage> storageMap;
   final FsDatasetAsyncDiskService asyncDiskService;
   final Daemon lazyWriter;
@@ -540,7 +540,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override // FsDatasetSpi
   public boolean hasEnoughResource() {
-    return getVolumes().size() >= validVolsRequired; 
+    return volumes.getVolumes().size() >= validVolsRequired;
   }
 
   /**
@@ -1628,7 +1628,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     Map<String, BlockListAsLongs.Builder> builders =
         new HashMap<String, BlockListAsLongs.Builder>();
 
-    List<FsVolumeImpl> curVolumes = getVolumes();
+    List<FsVolumeImpl> curVolumes = volumes.getVolumes();
     for (FsVolumeSpi v : curVolumes) {
       builders.put(v.getStorageID(), BlockListAsLongs.builder());
     }
@@ -2535,7 +2535,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   private Collection<VolumeInfo> getVolumeInfo() {
     Collection<VolumeInfo> info = new ArrayList<VolumeInfo>();
-    for (FsVolumeImpl volume : getVolumes()) {
+    for (FsVolumeImpl volume : volumes.getVolumes()) {
       long used = 0;
       long free = 0;
       try (FsVolumeReference ref = volume.obtainReference()) {
@@ -2571,7 +2571,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override //FsDatasetSpi
   public synchronized void deleteBlockPool(String bpid, boolean force)
       throws IOException {
-    List<FsVolumeImpl> curVolumes = getVolumes();
+    List<FsVolumeImpl> curVolumes = volumes.getVolumes();
     if (!force) {
       for (FsVolumeImpl volume : curVolumes) {
         try (FsVolumeReference ref = volume.obtainReference()) {
@@ -2622,7 +2622,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public HdfsBlocksMetadata getHdfsBlocksMetadata(String poolId,
       long[] blockIds) throws IOException {
-    List<FsVolumeImpl> curVolumes = getVolumes();
+    List<FsVolumeImpl> curVolumes = volumes.getVolumes();
     // List of VolumeIds, one per volume on the datanode
     List<byte[]> blocksVolumeIds = new ArrayList<>(curVolumes.size());
     // List of indexes into the list of VolumeIds, pointing at the VolumeId of
@@ -2730,7 +2730,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   private boolean ramDiskConfigured() {
-    for (FsVolumeImpl v: getVolumes()){
+    for (FsVolumeImpl v: volumes.getVolumes()){
       if (v.isTransientStorage()) {
         return true;
       }
@@ -2742,7 +2742,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   // added or removed.
   // This should only be called when the FsDataSetImpl#volumes list is finalized.
   private void setupAsyncLazyPersistThreads() {
-    for (FsVolumeImpl v: getVolumes()){
+    for (FsVolumeImpl v: volumes.getVolumes()){
       setupAsyncLazyPersistThread(v);
     }
   }
@@ -2880,14 +2880,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       // Don't worry about fragmentation for now. We don't expect more than one
       // transient volume per DN.
-      for (FsVolumeImpl v : getVolumes()) {
-        try (FsVolumeReference ref = v.obtainReference()) {
+      try (FsVolumeReferences volumes = getFsVolumeReferences()) {
+        for (FsVolumeSpi fvs : volumes) {
+          FsVolumeImpl v = (FsVolumeImpl) fvs;
           if (v.isTransientStorage()) {
             capacity += v.getCapacity();
             free += v.getAvailable();
           }
-        } catch (ClosedChannelException e) {
-          // ignore.
         }
       }
 

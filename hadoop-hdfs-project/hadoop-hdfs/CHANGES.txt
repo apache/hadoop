@@ -507,6 +507,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8237. Move all protocol classes used by ClientProtocol to hdfs-client.
     (wheat9)
 
+    HDFS-7758. Retire FsDatasetSpi#getVolumes() and use
+    FsDatasetSpi#getVolumeRefs() instead (Lei (Eddy) Xu via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

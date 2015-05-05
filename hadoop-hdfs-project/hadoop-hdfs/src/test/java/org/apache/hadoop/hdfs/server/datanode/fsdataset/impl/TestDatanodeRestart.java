@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -101,13 +102,18 @@ public class TestDatanodeRestart {
       out.write(writeBuf);
       out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
-      for (FsVolumeSpi v : dataset(dn).getVolumes()) {
-        final FsVolumeImpl volume = (FsVolumeImpl)v;
-        File currentDir = volume.getCurrentDir().getParentFile().getParentFile();
-        File rbwDir = new File(currentDir, "rbw");
-        for (File file : rbwDir.listFiles()) {
-          if (isCorrupt && Block.isBlockFilename(file)) {
-            new RandomAccessFile(file, "rw").setLength(fileLen-1); // corrupt
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          dataset(dn).getFsVolumeReferences()) {
+        for (FsVolumeSpi vol : volumes) {
+          final FsVolumeImpl volume = (FsVolumeImpl) vol;
+          File currentDir =
+              volume.getCurrentDir().getParentFile().getParentFile();
+          File rbwDir = new File(currentDir, "rbw");
+          for (File file : rbwDir.listFiles()) {
+            if (isCorrupt && Block.isBlockFilename(file)) {
+              new RandomAccessFile(file, "rw")
+                  .setLength(fileLen - 1); // corrupt
+            }
           }
         }
       }

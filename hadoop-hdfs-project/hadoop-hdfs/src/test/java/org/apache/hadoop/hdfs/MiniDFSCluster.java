@@ -1493,15 +1493,20 @@ public class MiniDFSCluster {
     if (storageCapacities != null) {
       for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; ++i) {
         final int index = i - curDatanodesNum;
-        List<? extends FsVolumeSpi> volumes = dns[index].getFSDataset().getVolumes();
-        assert storageCapacities[index].length == storagesPerDatanode;
-        assert volumes.size() == storagesPerDatanode;
+        try (FsDatasetSpi.FsVolumeReferences volumes =
+            dns[index].getFSDataset().getFsVolumeReferences()) {
+          assert storageCapacities[index].length == storagesPerDatanode;
+          assert volumes.size() == storagesPerDatanode;
 
-        for (int j = 0; j < volumes.size(); ++j) {
-          FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
-          LOG.info("setCapacityForTesting "  + storageCapacities[index][j]
-              + " for [" + volume.getStorageType() + "]" + volume.getStorageID());
-          volume.setCapacityForTesting(storageCapacities[index][j]);
+          int j = 0;
+          for (FsVolumeSpi fvs : volumes) {
+            FsVolumeImpl volume = (FsVolumeImpl) fvs;
+            LOG.info("setCapacityForTesting " + storageCapacities[index][j]
+                + " for [" + volume.getStorageType() + "]" + volume
+                .getStorageID());
+            volume.setCapacityForTesting(storageCapacities[index][j]);
+            j++;
+          }
         }
       }
     }

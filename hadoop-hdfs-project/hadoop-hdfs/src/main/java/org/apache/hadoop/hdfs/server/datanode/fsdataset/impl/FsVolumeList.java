@@ -276,10 +276,11 @@ class FsVolumeList {
    * @param ref       a reference to the new FsVolumeImpl instance.
    */
   void addVolume(FsVolumeReference ref) {
+    FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
     while (true) {
       final FsVolumeImpl[] curVolumes = volumes.get();
       final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
-      volumeList.add((FsVolumeImpl)ref.getVolume());
+      volumeList.add(volume);
       if (volumes.compareAndSet(curVolumes,
           volumeList.toArray(new FsVolumeImpl[volumeList.size()]))) {
         break;
@@ -300,9 +301,9 @@ class FsVolumeList {
     }
     // If the volume is used to replace a failed volume, it needs to reset the
     // volume failure info for this volume.
-    removeVolumeFailureInfo(new File(ref.getVolume().getBasePath()));
+    removeVolumeFailureInfo(new File(volume.getBasePath()));
     FsDatasetImpl.LOG.info("Added new volume: " +
-        ref.getVolume().getStorageID());
+        volume.getStorageID());
   }
 
   /**

@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -43,9 +44,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -199,15 +198,16 @@ public class TestNameNodePrunesMissingStorages {
         datanodeToRemoveStorageFromIdx++;
       }
       // Find the volume within the datanode which holds that first storage.
-      List<? extends FsVolumeSpi> volumes =
-          datanodeToRemoveStorageFrom.getFSDataset().getVolumes();
-      assertEquals(NUM_STORAGES_PER_DN, volumes.size());
       String volumeDirectoryToRemove = null;
-      for (FsVolumeSpi volume : volumes) {
-        if (volume.getStorageID().equals(storageIdToRemove)) {
-          volumeDirectoryToRemove = volume.getBasePath();
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+          datanodeToRemoveStorageFrom.getFSDataset().getFsVolumeReferences()) {
+        assertEquals(NUM_STORAGES_PER_DN, volumes.size());
+        for (FsVolumeSpi volume : volumes) {
+          if (volume.getStorageID().equals(storageIdToRemove)) {
+            volumeDirectoryToRemove = volume.getBasePath();
+          }
         }
-      }
+      };
       // Shut down the datanode and remove the volume.
       // Replace the volume directory with a regular file, which will
       // cause a volume failure.  (If we merely removed the directory,

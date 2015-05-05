@@ -51,7 +51,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
       StorageType.DEFAULT);
 
   @Override
-  public List<ExternalVolumeImpl> getVolumes() {
+  public FsVolumeReferences getFsVolumeReferences() {
     return null;
   }
 

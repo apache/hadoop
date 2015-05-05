@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -71,7 +72,10 @@ public class TestIncrementalBlockReports {
     singletonDn = cluster.getDataNodes().get(0);
     bpos = singletonDn.getAllBpOs().get(0);
     actor = bpos.getBPServiceActors().get(0);
-    storageUuid = singletonDn.getFSDataset().getVolumes().get(0).getStorageID();
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        singletonDn.getFSDataset().getFsVolumeReferences()) {
+      storageUuid = volumes.get(0).getStorageID();
+    }
   }
 
   private static Block getDummyBlock() {

@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 
 public class TestFsVolumeList {
@@ -113,11 +113,6 @@ public class TestFsVolumeList {
         conf, StorageType.DEFAULT);
     FsVolumeReference ref = volume.obtainReference();
     volumeList.addVolume(ref);
-    try {
-      ref.close();
-      fail("Should throw exception because the reference is closed in "
-          + "VolumeList#addVolume().");
-    } catch (IllegalStateException e) {
-    }
+    assertNull(ref.getVolume());
   }
 }
