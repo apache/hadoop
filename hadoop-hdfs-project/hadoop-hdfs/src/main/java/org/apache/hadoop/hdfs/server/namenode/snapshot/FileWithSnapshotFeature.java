@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.util.List;
 
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.util.EnumCounters;
 
 /**
  * Feature for file with snapshot-related information.
@@ -145,50 +144,36 @@ public class FileWithSnapshotFeature implements INode.Feature {
   public QuotaCounts updateQuotaAndCollectBlocks(BlockStoragePolicySuite bsps, INodeFile file,
       FileDiff removed, BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
-    long oldStoragespace = file.storagespaceConsumed();
 
     byte storagePolicyID = file.getStoragePolicyID();
     BlockStoragePolicy bsp = null;
-    EnumCounters<StorageType> typeSpaces =
-        new EnumCounters<StorageType>(StorageType.class);
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
       bsp = bsps.getPolicy(file.getStoragePolicyID());
     }
 
+
+    QuotaCounts oldCounts = file.storagespaceConsumed(null);
+    long oldStoragespace;
     if (removed.snapshotINode != null) {
       short replication = removed.snapshotINode.getFileReplication();
       short currentRepl = file.getBlockReplication();
-      if (currentRepl == 0) {
-        long oldFileSizeNoRep = file.computeFileSize(true, true);
-        oldStoragespace =  oldFileSizeNoRep * replication;
-
-        if (bsp != null) {
-          List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
-          for (StorageType t : oldTypeChosen) {
-            if (t.supportTypeQuota()) {
-              typeSpaces.add(t, -oldFileSizeNoRep);
-            }
-          }
-        }
-      } else if (replication > currentRepl) {
-        long oldFileSizeNoRep = file.storagespaceConsumedNoReplication();
+      if (replication > currentRepl) {
+        long oldFileSizeNoRep = currentRepl == 0
+            ? file.computeFileSize(true, true)
+            : oldCounts.getStorageSpace() / file.getBlockReplication();
         oldStoragespace = oldFileSizeNoRep * replication;
+        oldCounts.setStorageSpace(oldStoragespace);
 
         if (bsp != null) {
           List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
           for (StorageType t : oldTypeChosen) {
             if (t.supportTypeQuota()) {
-              typeSpaces.add(t, -oldFileSizeNoRep);
-            }
-          }
-          List<StorageType> newTypeChosen = bsp.chooseStorageTypes(currentRepl);
-          for (StorageType t: newTypeChosen) {
-            if (t.supportTypeQuota()) {
-              typeSpaces.add(t, oldFileSizeNoRep);
+              oldCounts.addTypeSpace(t, oldFileSizeNoRep);
             }
           }
         }
       }
+
       AclFeature aclFeature = removed.getSnapshotINode().getAclFeature();
       if (aclFeature != null) {
         AclStorage.removeAclFeature(aclFeature);
@@ -198,11 +183,9 @@ public class FileWithSnapshotFeature implements INode.Feature {
     getDiffs().combineAndCollectSnapshotBlocks(
         bsps, file, removed, collectedBlocks, removedINodes);
 
-    long ssDelta = oldStoragespace - file.storagespaceConsumed();
-    return new QuotaCounts.Builder().
-        storageSpace(ssDelta).
-        typeSpaces(typeSpaces).
-        build();
+    QuotaCounts current = file.storagespaceConsumed(bsp);
+    oldCounts.subtract(current);
+    return oldCounts;
   }
 
   /**

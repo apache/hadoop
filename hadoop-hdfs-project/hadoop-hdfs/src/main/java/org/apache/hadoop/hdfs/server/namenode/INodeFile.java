@@ -251,22 +251,24 @@ public class INodeFile extends INodeWithAdditionalFields
    * Remove a block from the block list. This block should be
    * the last one on the list.
    */
-  boolean removeLastBlock(Block oldblock) {
+  BlockInfoContiguousUnderConstruction removeLastBlock(Block oldblock) {
     Preconditions.checkState(isUnderConstruction(),
         "file is no longer under construction");
     if (blocks == null || blocks.length == 0) {
-      return false;
+      return null;
     }
     int size_1 = blocks.length - 1;
     if (!blocks[size_1].equals(oldblock)) {
-      return false;
+      return null;
     }
 
+    BlockInfoContiguousUnderConstruction uc =
+        (BlockInfoContiguousUnderConstruction)blocks[size_1];
     //copy to a new list
     BlockInfoContiguous[] newlist = new BlockInfoContiguous[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
     setBlocks(newlist);
-    return true;
+    return uc;
   }
 
   /* End of Under-Construction Feature */
@@ -416,11 +418,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return header;
   }
 
-  /** @return the storagespace required for a full block. */
-  final long getPreferredBlockStoragespace() {
-    return getPreferredBlockSize() * getBlockReplication();
-  }
-
   /** @return the blocks of the file. */
   @Override
   public BlockInfoContiguous[] getBlocks() {
@@ -567,34 +564,41 @@ public class INodeFile extends INodeWithAdditionalFields
       QuotaCounts counts, boolean useCache,
       int lastSnapshotId) {
     long nsDelta = 1;
+    counts.addNameSpace(nsDelta);
+
+    BlockStoragePolicy bsp = null;
+    if (blockStoragePolicyId != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
+      bsp = bsps.getPolicy(blockStoragePolicyId);
+    }
+
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf == null) {
+      counts.add(storagespaceConsumed(bsp));
+      return counts;
+    }
+
+    FileDiffList fileDiffList = sf.getDiffs();
+    int last = fileDiffList.getLastSnapshotId();
+
+    if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
+        || last == Snapshot.CURRENT_STATE_ID) {
+      counts.add(storagespaceConsumed(bsp));
+      return counts;
+    }
+
     final long ssDeltaNoReplication;
     short replication;
-    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    if (sf != null) {
-      FileDiffList fileDiffList = sf.getDiffs();
-      int last = fileDiffList.getLastSnapshotId();
-
-      if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
-          || last == Snapshot.CURRENT_STATE_ID) {
-        ssDeltaNoReplication = storagespaceConsumedNoReplication();
-        replication = getBlockReplication();
-      } else if (last < lastSnapshotId) {
-        ssDeltaNoReplication = computeFileSize(true, false);
-        replication = getFileReplication();
-      } else {
-        int sid = fileDiffList.getSnapshotById(lastSnapshotId);
-        ssDeltaNoReplication = storagespaceConsumedNoReplication(sid);
-        replication = getReplication(sid);
-      }
+    if (last < lastSnapshotId) {
+      ssDeltaNoReplication = computeFileSize(true, false);
+      replication = getFileReplication();
     } else {
-      ssDeltaNoReplication = storagespaceConsumedNoReplication();
-      replication = getBlockReplication();
+      int sid = fileDiffList.getSnapshotById(lastSnapshotId);
+      ssDeltaNoReplication = computeFileSize(sid);
+      replication = getFileReplication(sid);
     }
-    counts.addNameSpace(nsDelta);
-    counts.addStorageSpace(ssDeltaNoReplication * replication);
 
-    if (blockStoragePolicyId != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
-      BlockStoragePolicy bsp = bsps.getPolicy(blockStoragePolicyId);
+    counts.addStorageSpace(ssDeltaNoReplication * replication);
+    if (bsp != null) {
       List<StorageType> storageTypes = bsp.chooseStorageTypes(replication);
       for (StorageType t : storageTypes) {
         if (!t.supportTypeQuota()) {
@@ -626,7 +630,8 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
     counts.addContent(Content.LENGTH, fileLen);
-    counts.addContent(Content.DISKSPACE, storagespaceConsumed());
+    counts.addContent(Content.DISKSPACE, storagespaceConsumed(null)
+        .getStorageSpace());
 
     if (getStoragePolicyID() != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
       BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
@@ -709,61 +714,40 @@ public class INodeFile extends INodeWithAdditionalFields
    * including blocks in its snapshots.
    * Use preferred block size for the last block if it is under construction.
    */
-  public final long storagespaceConsumed() {
-    return storagespaceConsumedNoReplication() * getBlockReplication();
-  }
-
-  public final long storagespaceConsumedNoReplication() {
+  public final QuotaCounts storagespaceConsumed(BlockStoragePolicy bsp) {
+    QuotaCounts counts = new QuotaCounts.Builder().build();
+    final Iterable<BlockInfoContiguous> blocks;
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    if(sf == null) {
-      return computeFileSize(true, true);
+    if (sf == null) {
+      blocks = Arrays.asList(getBlocks());
+    } else {
+      // Collect all distinct blocks
+      Set<BlockInfoContiguous> allBlocks = new HashSet<>(Arrays.asList(getBlocks()));
+      List<FileDiff> diffs = sf.getDiffs().asList();
+      for(FileDiff diff : diffs) {
+        BlockInfoContiguous[] diffBlocks = diff.getBlocks();
+        if (diffBlocks != null) {
+          allBlocks.addAll(Arrays.asList(diffBlocks));
+        }
+      }
+      blocks = allBlocks;
     }
 
-    // Collect all distinct blocks
-    long size = 0;
-    Set<Block> allBlocks = new HashSet<Block>(Arrays.asList(getBlocks()));
-    List<FileDiff> diffs = sf.getDiffs().asList();
-    for(FileDiff diff : diffs) {
-      BlockInfoContiguous[] diffBlocks = diff.getBlocks();
-      if (diffBlocks != null) {
-        allBlocks.addAll(Arrays.asList(diffBlocks));
+    final short replication = getBlockReplication();
+    for (BlockInfoContiguous b : blocks) {
+      long blockSize = b.isComplete() ? b.getNumBytes() :
+          getPreferredBlockSize();
+      counts.addStorageSpace(blockSize * replication);
+      if (bsp != null) {
+        List<StorageType> types = bsp.chooseStorageTypes(replication);
+        for (StorageType t : types) {
+          if (t.supportTypeQuota()) {
+            counts.addTypeSpace(t, blockSize);
+          }
+        }
       }
     }
-    for(Block block : allBlocks) {
-      size += block.getNumBytes();
-    }
-    // check if the last block is under construction
-    BlockInfoContiguous lastBlock = getLastBlock();
-    if(lastBlock != null &&
-        lastBlock instanceof BlockInfoContiguousUnderConstruction) {
-      size += getPreferredBlockSize() - lastBlock.getNumBytes();
-    }
-    return size;
-  }
-
-  public final long storagespaceConsumed(int lastSnapshotId) {
-    if (lastSnapshotId != CURRENT_STATE_ID) {
-      return computeFileSize(lastSnapshotId)
-        * getFileReplication(lastSnapshotId);
-    } else {
-      return storagespaceConsumed();
-    }
-  }
-
-  public final short getReplication(int lastSnapshotId) {
-    if (lastSnapshotId != CURRENT_STATE_ID) {
-      return getFileReplication(lastSnapshotId);
-    } else {
-      return getBlockReplication();
-    }
-  }
-
-  public final long storagespaceConsumedNoReplication(int lastSnapshotId) {
-    if (lastSnapshotId != CURRENT_STATE_ID) {
-      return computeFileSize(lastSnapshotId);
-    } else {
-      return storagespaceConsumedNoReplication();
-    }
+    return counts;
   }
 
   /**
@@ -832,38 +816,56 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * compute the quota usage change for a truncate op
    * @param newLength the length for truncation
-   * @return the quota usage delta (not considering replication factor)
-   */
-  long computeQuotaDeltaForTruncate(final long newLength) {
+   **/
+  void computeQuotaDeltaForTruncate(
+      long newLength, BlockStoragePolicy bsps,
+      QuotaCounts delta) {
     final BlockInfoContiguous[] blocks = getBlocks();
     if (blocks == null || blocks.length == 0) {
-      return 0;
+      return;
     }
 
-    int n = 0;
     long size = 0;
-    for (; n < blocks.length && newLength > size; n++) {
-      size += blocks[n].getNumBytes();
-    }
-    final boolean onBoundary = size == newLength;
-
-    long truncateSize = 0;
-    for (int i = (onBoundary ? n : n - 1); i < blocks.length; i++) {
-      truncateSize += blocks[i].getNumBytes();
+    for (BlockInfoContiguous b : blocks) {
+      size += b.getNumBytes();
     }
 
+    BlockInfoContiguous[] sblocks = null;
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       FileDiff diff = sf.getDiffs().getLast();
-      BlockInfoContiguous[] sblocks = diff != null ? diff.getBlocks() : null;
-      if (sblocks != null) {
-        for (int i = (onBoundary ? n : n-1); i < blocks.length
-            && i < sblocks.length && blocks[i].equals(sblocks[i]); i++) {
-          truncateSize -= blocks[i].getNumBytes();
+      sblocks = diff != null ? diff.getBlocks() : null;
+    }
+
+    for (int i = blocks.length - 1; i >= 0 && size > newLength;
+         size -= blocks[i].getNumBytes(), --i) {
+      BlockInfoContiguous bi = blocks[i];
+      long truncatedBytes;
+      if (size - newLength < bi.getNumBytes()) {
+        // Record a full block as the last block will be copied during
+        // recovery
+        truncatedBytes = bi.getNumBytes() - getPreferredBlockSize();
+      } else {
+        truncatedBytes = bi.getNumBytes();
+      }
+
+      // The block exist in snapshot, adding back the truncated bytes in the
+      // existing files
+      if (sblocks != null && i < sblocks.length && bi.equals(sblocks[i])) {
+        truncatedBytes -= bi.getNumBytes();
+      }
+
+      delta.addStorageSpace(-truncatedBytes * getBlockReplication());
+      if (bsps != null) {
+        List<StorageType> types = bsps.chooseStorageTypes(
+            getBlockReplication());
+        for (StorageType t : types) {
+          if (t.supportTypeQuota()) {
+            delta.addTypeSpace(t, -truncatedBytes);
+          }
         }
       }
     }
-    return onBoundary ? -truncateSize : (getPreferredBlockSize() - truncateSize);
   }
 
   void truncateBlocksTo(int n) {

@@ -393,7 +393,7 @@ public class FSDirAttrOp {
     // if replication > oldBR, then newBR == replication.
     // if replication < oldBR, we don't know newBR yet.
     if (replication > oldBR) {
-      long dsDelta = file.storagespaceConsumed()/oldBR;
+      long dsDelta = file.storagespaceConsumed(null).getStorageSpace() / oldBR;
       fsd.updateCount(iip, 0L, dsDelta, oldBR, replication, true);
     }
 
@@ -402,7 +402,7 @@ public class FSDirAttrOp {
     final short newBR = file.getBlockReplication();
     // check newBR < oldBR case.
     if (newBR < oldBR) {
-      long dsDelta = file.storagespaceConsumed()/newBR;
+      long dsDelta = file.storagespaceConsumed(null).getStorageSpace() / newBR;
       fsd.updateCount(iip, 0L, dsDelta, oldBR, newBR, true);
     }
 

@@ -69,7 +69,7 @@ public class TestCommitBlockSynchronization {
     blockInfo.setBlockCollection(file);
     blockInfo.setGenerationStamp(genStamp);
     blockInfo.initializeBlockRecovery(genStamp);
-    doReturn(true).when(file).removeLastBlock(any(Block.class));
+    doReturn(blockInfo).when(file).removeLastBlock(any(Block.class));
     doReturn(true).when(file).isUnderConstruction();
 
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
@@ -152,7 +152,7 @@ public class TestCommitBlockSynchronization {
           true, newTargets, null);
 
     // Simulate removing the last block from the file.
-    doReturn(false).when(file).removeLastBlock(any(Block.class));
+    doReturn(null).when(file).removeLastBlock(any(Block.class));
 
     // Repeat the call to make sure it does not throw
     namesystemSpy.commitBlockSynchronization(

@@ -4330,7 +4330,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       if (deleteblock) {
         Block blockToDel = ExtendedBlock.getLocalBlock(oldBlock);
-        boolean remove = iFile.removeLastBlock(blockToDel);
+        boolean remove = iFile.removeLastBlock(blockToDel) != null;
         if (remove) {
           blockManager.removeBlock(storedBlock);
         }
