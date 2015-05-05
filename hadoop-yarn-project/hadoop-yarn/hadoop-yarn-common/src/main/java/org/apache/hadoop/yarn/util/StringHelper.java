@@ -174,9 +174,4 @@ public final class StringHelper {
     }
     sb.append(part);
   }
-  
-  public static String percent(double value) {
-    return String.format("%.2f", value * 100);
-  }
-
 }

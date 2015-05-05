@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -110,7 +111,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         continue;
       }
       AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
-      String percent = String.format("%.1f", appInfo.getProgress());
+      String percent = StringUtils.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
       int fairShare = fsinfo.getAppFairShare(attemptId);
       if (fairShare == FairSchedulerInfo.INVALID_FAIR_SHARE) {

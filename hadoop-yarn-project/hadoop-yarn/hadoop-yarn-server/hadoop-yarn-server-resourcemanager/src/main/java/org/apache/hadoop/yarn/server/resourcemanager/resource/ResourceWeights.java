@@ -63,7 +63,7 @@ public class ResourceWeights {
       }
       ResourceType resourceType = ResourceType.values()[i];
       sb.append(StringUtils.toLowerCase(resourceType.name()));
-      sb.append(String.format(" weight=%.1f", getWeight(resourceType)));
+      sb.append(StringUtils.format(" weight=%.1f", getWeight(resourceType)));
     }
     sb.append(">");
     return sb.toString();
