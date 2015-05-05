@@ -532,8 +532,8 @@ public class FSDirectory implements Closeable {
       INodeFile fileNode, Block block) throws IOException {
     // modify file-> block and blocksMap
     // fileNode should be under construction
-    boolean removed = fileNode.removeLastBlock(block);
-    if (!removed) {
+    BlockInfoContiguousUnderConstruction uc = fileNode.removeLastBlock(block);
+    if (uc == null) {
       return false;
     }
     getBlockManager().removeBlockFromMap(block);
@@ -1134,24 +1134,14 @@ public class FSDirectory implements Closeable {
       // Do not check quota if edit log is still being processed
       return;
     }
-    final long diff = file.computeQuotaDeltaForTruncate(newLength);
-    final short repl = file.getBlockReplication();
-    delta.addStorageSpace(diff * repl);
     final BlockStoragePolicy policy = getBlockStoragePolicySuite()
         .getPolicy(file.getStoragePolicyID());
-    List<StorageType> types = policy.chooseStorageTypes(repl);
-    for (StorageType t : types) {
-      if (t.supportTypeQuota()) {
-        delta.addTypeSpace(t, diff);
-      }
-    }
-    if (diff > 0) {
-      readLock();
-      try {
-        verifyQuota(iip, iip.length() - 1, delta, null);
-      } finally {
-        readUnlock();
-      }
+    file.computeQuotaDeltaForTruncate(newLength, policy, delta);
+    readLock();
+    try {
+      verifyQuota(iip, iip.length() - 1, delta, null);
+    } finally {
+      readUnlock();
     }
   }
 
