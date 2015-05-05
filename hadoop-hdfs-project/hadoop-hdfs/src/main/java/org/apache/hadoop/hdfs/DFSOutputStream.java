@@ -24,6 +24,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -86,6 +88,8 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class DFSOutputStream extends FSOutputSummer
     implements Syncable, CanSetDropBehind {
+  static final Log LOG = LogFactory.getLog(DFSOutputStream.class);
+
   /**
    * Number of times to retry creating a file when there are transient 
    * errors (typically related to encryption zones and KeyProvider operations).
@@ -419,24 +423,35 @@ public class DFSOutputStream extends FSOutputSummer
     streamer.incBytesCurBlock(len);
 
     // If packet is full, enqueue it for transmission
-    //
     if (currentPacket.getNumChunks() == currentPacket.getMaxChunks() ||
         streamer.getBytesCurBlock() == blockSize) {
-      if (DFSClient.LOG.isDebugEnabled()) {
-        DFSClient.LOG.debug("DFSClient writeChunk packet full seqno=" +
-            currentPacket.getSeqno() +
-            ", src=" + src +
-            ", bytesCurBlock=" + streamer.getBytesCurBlock() +
-            ", blockSize=" + blockSize +
-            ", appendChunk=" + streamer.getAppendChunk());
-      }
-      streamer.waitAndQueuePacket(currentPacket);
-      currentPacket = null;
-
-      adjustChunkBoundary();
-
-      endBlock();
+      enqueueCurrentPacketFull();
     }
+  }
+
+  void enqueueCurrentPacket() throws IOException {
+    streamer.waitAndQueuePacket(currentPacket);
+    currentPacket = null;
+  }
+
+  void enqueueCurrentPacketFull() throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("enqueue full " + currentPacket + ", src=" + src
+          + ", bytesCurBlock=" + streamer.getBytesCurBlock()
+          + ", blockSize=" + blockSize
+          + ", appendChunk=" + streamer.getAppendChunk()
+          + ", " + streamer);
+    }
+    enqueueCurrentPacket();
+    adjustChunkBoundary();
+    endBlock();
+  }
+
+  /** create an empty packet to mark the end of the block */
+  void setCurrentPacket2Empty() throws InterruptedIOException {
+    currentPacket = createPacket(0, 0, streamer.getBytesCurBlock(),
+        streamer.getAndIncCurrentSeqno(), true);
+    currentPacket.setSyncBlock(shouldSyncBlock);
   }
 
   /**
@@ -444,7 +459,7 @@ public class DFSOutputStream extends FSOutputSummer
    * write filled up its partial chunk. Tell the summer to generate full
    * crc chunks from now on.
    */
-  protected void adjustChunkBoundary() {
+  private void adjustChunkBoundary() {
     if (streamer.getAppendChunk() &&
         streamer.getBytesCurBlock() % bytesPerChecksum == 0) {
       streamer.setAppendChunk(false);
@@ -466,11 +481,8 @@ public class DFSOutputStream extends FSOutputSummer
    */
   protected void endBlock() throws IOException {
     if (streamer.getBytesCurBlock() == blockSize) {
-      currentPacket = createPacket(0, 0, streamer.getBytesCurBlock(),
-          streamer.getAndIncCurrentSeqno(), true);
-      currentPacket.setSyncBlock(shouldSyncBlock);
-      streamer.waitAndQueuePacket(currentPacket);
-      currentPacket = null;
+      setCurrentPacket2Empty();
+      enqueueCurrentPacket();
       streamer.setBytesCurBlock(0);
       lastFlushOffset = 0;
     }
@@ -592,8 +604,7 @@ public class DFSOutputStream extends FSOutputSummer
         }
         if (currentPacket != null) {
           currentPacket.setSyncBlock(isSync);
-          streamer.waitAndQueuePacket(currentPacket);
-          currentPacket = null;
+          enqueueCurrentPacket();
         }
         if (endBlock && streamer.getBytesCurBlock() > 0) {
           // Need to end the current block, thus send an empty packet to
@@ -601,8 +612,7 @@ public class DFSOutputStream extends FSOutputSummer
           currentPacket = createPacket(0, 0, streamer.getBytesCurBlock(),
               streamer.getAndIncCurrentSeqno(), true);
           currentPacket.setSyncBlock(shouldSyncBlock || isSync);
-          streamer.waitAndQueuePacket(currentPacket);
-          currentPacket = null;
+          enqueueCurrentPacket();
           streamer.setBytesCurBlock(0);
           lastFlushOffset = 0;
         } else {
@@ -779,15 +789,11 @@ public class DFSOutputStream extends FSOutputSummer
       flushBuffer();       // flush from all upper layers
 
       if (currentPacket != null) {
-        streamer.waitAndQueuePacket(currentPacket);
-        currentPacket = null;
+        enqueueCurrentPacket();
       }
 
       if (streamer.getBytesCurBlock() != 0) {
-        // send an empty packet to mark the end of the block
-        currentPacket = createPacket(0, 0, streamer.getBytesCurBlock(),
-            streamer.getAndIncCurrentSeqno(), true);
-        currentPacket.setSyncBlock(shouldSyncBlock);
+        setCurrentPacket2Empty();
       }
 
       flushInternal();             // flush all data to Datanodes
@@ -900,5 +906,10 @@ public class DFSOutputStream extends FSOutputSummer
   @VisibleForTesting
   public long getFileId() {
     return fileId;
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + ":" + streamer;
   }
 }

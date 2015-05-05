@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,6 +44,12 @@ import org.junit.Test;
 
 public class TestDFSStripedOutputStream {
   public static final Log LOG = LogFactory.getLog(TestDFSStripedOutputStream.class);
+
+  static {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
+  }
+
   private int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
   private int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
 
@@ -245,6 +253,11 @@ public class TestDFSStripedOutputStream {
 
   static void verifyParity(final long size, final int cellSize,
       byte[][] dataBytes, byte[][] parityBytes) {
+    verifyParity(size, cellSize, dataBytes, parityBytes, -1);
+  }
+
+  static void verifyParity(final long size, final int cellSize,
+      byte[][] dataBytes, byte[][] parityBytes, int killedDnIndex) {
     // verify the parity blocks
     int parityBlkSize = (int) StripedBlockUtil.getInternalBlockLength(
         size, cellSize, dataBytes.length, dataBytes.length);
@@ -265,7 +278,10 @@ public class TestDFSStripedOutputStream {
     encoder.initialize(dataBytes.length, parityBytes.length, cellSize);
     encoder.encode(dataBytes, expectedParityBytes);
     for (int i = 0; i < parityBytes.length; i++) {
-      Assert.assertArrayEquals(expectedParityBytes[i], parityBytes[i]);
+      if (i != killedDnIndex) {
+        Assert.assertArrayEquals("i=" + i + ", killedDnIndex=" + killedDnIndex,
+            expectedParityBytes[i], parityBytes[i]);
+      }
     }
   }
 }
