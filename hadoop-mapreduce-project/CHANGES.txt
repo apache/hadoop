@@ -21,6 +21,9 @@ Release 2.7.5 - 2017-12-01
     MAPREDUCE-6957. shuffle hangs after a node manager connection timeout.
     (Jooseong Kim via jlowe)
 
+    MAPREDUCE-6165. [JDK8] TestCombineFileInputFormat failed on JDK8.
+    Contributed by Akira AJISAKA.
+
 Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
