@@ -43,6 +43,7 @@ function setup_defaults
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
+  PATCH_BRANCH_DEFAULT="trunk"
   CHANGED_MODULES=""
   USER_MODULE_LIST=""
   OFFLINE=false
@@ -551,7 +552,8 @@ function hadoop_usage
   echo
   echo "Options:"
   echo "--basedir=<dir>        The directory to apply the patch to (default current directory)"
-  echo "--branch=<dir>         Forcibly set the branch"
+  echo "--branch=<ref>         Forcibly set the branch"
+  echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'trunk')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
@@ -603,6 +605,9 @@ function parse_args
       ;;
       --branch=*)
         PATCH_BRANCH=${i#*=}
+      ;;
+      --branch-default=*)
+        PATCH_BRANCH_DEFAULT=${i#*=}
       ;;
       --build-native=*)
         BUILD_NATIVE=${i#*=}
@@ -832,9 +837,9 @@ function git_checkout
       cleanup_and_exit 1
     fi
 
-    ${GIT} checkout --force trunk
+    ${GIT} checkout --force "${PATCH_BRANCH_DEFAULT}"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git checkout --force trunk is failing"
+      hadoop_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
       cleanup_and_exit 1
     fi
 
@@ -859,8 +864,8 @@ function git_checkout
       cleanup_and_exit 1
     fi
 
-    # we need to explicitly fetch in case the
-    # git ref hasn't been brought in tree yet
+    # if we've selected a feature branch that has new changes
+    # since our last build, we'll need to rebase to see those changes.
     if [[ ${OFFLINE} == false ]]; then
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
@@ -1011,7 +1016,7 @@ function verify_valid_branch
 ## @stability    evolving
 ## @replaceable  no
 ## @return       0 on success, with PATCH_BRANCH updated appropriately
-## @return       1 on failure, with PATCH_BRANCH updated to "trunk"
+## @return       1 on failure, with PATCH_BRANCH updated to PATCH_BRANCH_DEFAULT
 function determine_branch
 {
   local allbranches
@@ -1075,7 +1080,7 @@ function determine_branch
     fi
   done
 
-  PATCH_BRANCH=trunk
+  PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
 
   popd >/dev/null
 }
@@ -1365,7 +1370,7 @@ function check_reexec
 
   exec "${PATCH_DIR}/dev-support-test/test-patch.sh" \
     --reexec \
-    --branch ${PATCH_BRANCH} \
+    --branch "${PATCH_BRANCH}" \
     --patch-dir="${PATCH_DIR}" \
       "${USER_PARAMS[@]}"
 }
