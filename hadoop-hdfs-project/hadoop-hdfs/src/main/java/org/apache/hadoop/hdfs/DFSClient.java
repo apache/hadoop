@@ -3351,11 +3351,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
     checkOpen();
+    TraceScope scope = getPathTraceScope("getErasureCodingZoneInfo", src);
     try {
       return namenode.getErasureCodingZoneInfo(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
           AccessControlException.class, UnresolvedPathException.class);
+    } finally {
+      scope.close();
     }
   }
 }

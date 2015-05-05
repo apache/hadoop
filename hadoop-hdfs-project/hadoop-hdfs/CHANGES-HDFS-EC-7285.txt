@@ -169,3 +169,6 @@
 
     HDFS-8242. Erasure Coding: XML based end-to-end test for ECCli commands
     (Rakesh R via vinayakumarb)
+
+    HDFS-8324. Add trace info to DFSClient#getErasureCodingZoneInfo(..) (vinayakumarb via 
+    umamahesh)
