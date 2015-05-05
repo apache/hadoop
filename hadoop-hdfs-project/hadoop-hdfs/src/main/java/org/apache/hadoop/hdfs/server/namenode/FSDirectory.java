@@ -391,7 +391,7 @@ public class FSDirectory implements Closeable {
   void disableQuotaChecks() {
     skipQuotaCheck = true;
   }
-  
+
   /**
    * This is a wrapper for resolvePath(). If the path passed
    * is prefixed with /.reserved/raw, then it checks to ensure that the caller

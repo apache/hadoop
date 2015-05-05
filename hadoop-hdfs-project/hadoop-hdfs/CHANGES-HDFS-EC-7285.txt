@@ -172,3 +172,6 @@
 
     HDFS-8324. Add trace info to DFSClient#getErasureCodingZoneInfo(..) (vinayakumarb via 
     umamahesh)
+    
+    HDFS-7672. Handle write failure for stripping blocks and refactor the
+    existing code in DFSStripedOutputStream and StripedDataStreamer.  (szetszwo)

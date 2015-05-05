@@ -24,6 +24,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -110,7 +112,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected final int bytesPerChecksum;
 
   protected DFSPacket currentPacket = null;
-  private DataStreamer streamer;
+  protected DataStreamer streamer;
   protected int packetSize = 0; // write packet size, not including the header.
   protected int chunksPerPacket = 0;
   protected long lastFlushOffset = 0; // offset when flush was invoked
@@ -422,7 +424,6 @@ public class DFSOutputStream extends FSOutputSummer
     getStreamer().incBytesCurBlock(len);
 
     // If packet is full, enqueue it for transmission
-    //
     if (currentPacket.getNumChunks() == currentPacket.getMaxChunks() ||
         getStreamer().getBytesCurBlock() == blockSize) {
       enqueueCurrentPacketFull();
@@ -456,7 +457,7 @@ public class DFSOutputStream extends FSOutputSummer
    * write filled up its partial chunk. Tell the summer to generate full
    * crc chunks from now on.
    */
-  protected void adjustChunkBoundary() {
+  private void adjustChunkBoundary() {
     if (getStreamer().getAppendChunk() &&
         getStreamer().getBytesCurBlock() % bytesPerChecksum == 0) {
       getStreamer().setAppendChunk(false);
@@ -915,5 +916,10 @@ public class DFSOutputStream extends FSOutputSummer
    */
   protected DataStreamer getStreamer() {
     return streamer;
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + ":" + streamer;
   }
 }
