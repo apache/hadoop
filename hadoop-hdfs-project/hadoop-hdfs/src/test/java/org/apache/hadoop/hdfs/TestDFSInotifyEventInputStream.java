@@ -135,6 +135,7 @@ public class TestDFSInotifyEventInputStream {
       client.setAcl("/file5", AclEntry.parseAclSpec(
           "user::rwx,user:foo:rw-,group::r--,other::---", true));
       client.removeAcl("/file5"); // SetAclOp -> MetadataUpdateEvent
+      client.rename("/file5", "/dir"); // RenameOldOp -> RenameEvent
 
       EventBatch batch = null;
 
@@ -342,6 +343,16 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(mue8.getMetadataType() ==
           Event.MetadataUpdateEvent.MetadataType.ACLS);
       Assert.assertTrue(mue8.getAcls() == null);
+
+      // RenameOp (2)
+      batch = waitForNextEvents(eis);
+      Assert.assertEquals(1, batch.getEvents().length);
+      txid = checkTxid(batch, txid);
+      Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.RENAME);
+      Event.RenameEvent re3 = (Event.RenameEvent) batch.getEvents()[0];
+      Assert.assertTrue(re3.getDstPath().equals("/dir/file5"));
+      Assert.assertTrue(re3.getSrcPath().equals("/file5"));
+      Assert.assertTrue(re.getTimestamp() > 0);
 
       // Returns null when there are no further events
       Assert.assertTrue(eis.poll() == null);

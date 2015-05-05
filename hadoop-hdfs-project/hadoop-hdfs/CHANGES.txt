@@ -682,6 +682,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8091: ACLStatus and XAttributes should be presented to
     INodeAttributesProvider before returning to client (asuresh)
 
+    HDFS-8305: HDFS INotify: the destination field of RenameOp should always
+    end with the file name (cmccabe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
