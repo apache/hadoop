@@ -129,6 +129,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8070. Pre-HDFS-7915 DFSClient cannot use short circuit on
     post-HDFS-7915 DataNode (cmccabe)
 
+    HDFS-8219. setStoragePolicy with folder behavior is different after cluster restart.
+    (surendra singh lilhore via Xiaoyu Yao)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
