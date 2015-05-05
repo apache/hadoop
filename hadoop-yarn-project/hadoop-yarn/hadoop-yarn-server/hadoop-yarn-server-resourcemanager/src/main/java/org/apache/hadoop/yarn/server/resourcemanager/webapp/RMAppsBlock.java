@@ -110,7 +110,8 @@ public class RMAppsBlock extends AppsBlock {
         .append("\",\"")
         .append(app.getFinalAppStatus())
         .append("\",\"")
-        .append(String.valueOf(app.getRunningContainers()))
+        .append(app.getRunningContainers() == -1 ? "N/A" : String
+            .valueOf(app.getRunningContainers()))
         .append("\",\"")
         // Progress bar
         .append("<br title='").append(percent).append("'> <div class='")
