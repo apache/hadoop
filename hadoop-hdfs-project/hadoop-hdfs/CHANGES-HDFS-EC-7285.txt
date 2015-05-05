@@ -166,3 +166,6 @@
     (jing9)
 
     HDFS-8137. Send the EC schema to DataNode via EC encoding/recovering command(umamahesh)
+
+    HDFS-8242. Erasure Coding: XML based end-to-end test for ECCli commands
+    (Rakesh R via vinayakumarb)
