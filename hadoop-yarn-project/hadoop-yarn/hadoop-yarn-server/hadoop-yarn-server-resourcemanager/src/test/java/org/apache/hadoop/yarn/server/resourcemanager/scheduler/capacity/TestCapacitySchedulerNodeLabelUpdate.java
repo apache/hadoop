@@ -95,7 +95,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         .getMemory());
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 60000)
   public void testNodeUpdate() throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y", "z"));
