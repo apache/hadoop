@@ -664,9 +664,6 @@ Release 2.7.1 - UNRELEASED
     HDFS-8179. DFSClient#getServerDefaults returns null within 1
     hour of system start. (Xiaoyu Yao via Arpit Agarwal)
 
-    HDFS-7916. 'reportBadBlocks' from datanodes to standby Node BPServiceActor
-    goes for infinite loop (vinayakumarb)
-
     HDFS-8163. Using monotonicNow for block report scheduling causes
     test failures on recently restarted systems. (Arpit Agarwal)
 
