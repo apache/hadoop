@@ -17,7 +17,9 @@
 package org.apache.hadoop.hdfs.tools.erasurecode;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -120,11 +122,12 @@ public abstract class ECCommand extends Command {
             sb.append("Schema '");
             sb.append(schemaName);
             sb.append("' does not match any of the supported schemas.");
-            sb.append("Please select any one of [");
+            sb.append(" Please select any one of ");
+            List<String> schemaNames = new ArrayList<String>();
             for (ECSchema ecSchema : ecSchemas) {
-              sb.append(ecSchema.getSchemaName());
-              sb.append(", ");
+              schemaNames.add(ecSchema.getSchemaName());
             }
+            sb.append(schemaNames);
             throw new HadoopIllegalArgumentException(sb.toString());
           }
         }

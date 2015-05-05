@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="testConf.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<configuration>
+  <!-- Normal mode is test. To run just the commands and dump the output
+       to the log, set it to nocompare -->
+  <mode>test</mode>
+
+  <!--  Comparator types:
+           ExactComparator
+           SubstringComparator
+           RegexpComparator
+           TokenComparator
+           -->
+  <tests>
+
+  <!-- Test help options -->
+    <test>
+      <description>help: help for erasure coding command</description>
+      <test-commands>
+        <ec-admin-command>-help</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Usage: hdfs erasurecode [generic options]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: createZone command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help createZone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^[ \t]*Create a zone to encode files using a specified schema( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-createZone \[-s &lt;schemaName&gt;\] &lt;path&gt;(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: getZoneInfo command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help getZoneInfo</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Get information about the EC zone at specified path</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-getZoneInfo &lt;path&gt;(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: listSchemas command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help listSchemas</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Get the list of ECSchemas supported</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-listSchemas (.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+  <!-- Test erasure code commands -->
+    <test>
+      <description>createZone : create a zone to encode files</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>EC Zone created successfully at NAMENODE/eczone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>createZone : default schema</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : get information about the EC zone at specified path</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : get EC zone at specified file path</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+        <command>-fs NAMENODE -touchz /eczone/ecfile</command>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone/ecfile</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /eczone/ecfile</command>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listSchemas : get the list of ECSchemas supported</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listSchemas</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+<!-- Test illegal parameters -->
+    <test>
+      <description>createZone : illegal parameters - path is missing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-createZone: &lt;path&gt; is missing(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>createZone : illegal parameters - schema name is missing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone -s</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-createZone: option -s requires 1 argument(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>createZone : illegal parameters - too many arguments</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone /eczone1 /eczone2</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-createZone: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>createZone : illegal parameters - invalidschema</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone -s invalidschema /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Schema 'invalidschema' does not match any of the supported schemas. Please select any one of [RS-6-3]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>createZone : illegal parameters - no such file</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^createZone: `/eczone': No such file or directory(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : illegal parameters - path is missing</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo </ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-getZoneInfo: &lt;path&gt; is missing(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : illegal parameters - too many arguments</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-getZoneInfo: Too many arguments</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : illegal parameters - no such file</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^getZoneInfo: `/eczone': No such file or directory(.)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>listSchemas : illegal parameters - too many parameters</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -listSchemas /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>-listSchemas: Too many parameters</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+  </tests>
+</configuration>
