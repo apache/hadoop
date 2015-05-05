@@ -118,6 +118,8 @@ public class Dispatcher {
   /** The maximum number of concurrent blocks moves at a datanode */
   private final int maxConcurrentMovesPerNode;
 
+  private final int ioFileBufferSize;
+
   private static class GlobalBlockMap {
     private final Map<Block, DBlock> map = new HashMap<Block, DBlock>();
 
@@ -308,9 +310,9 @@ public class Dispatcher {
         unbufOut = saslStreams.out;
         unbufIn = saslStreams.in;
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-            HdfsServerConstants.IO_FILE_BUFFER_SIZE));
+            ioFileBufferSize));
         in = new DataInputStream(new BufferedInputStream(unbufIn,
-            HdfsServerConstants.IO_FILE_BUFFER_SIZE));
+            ioFileBufferSize));
 
         sendRequest(out, eb, accessToken);
         receiveResponse(in);
@@ -801,6 +803,7 @@ public class Dispatcher {
     this.saslClient = new SaslDataTransferClient(conf,
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnc.fallbackToSimpleAuth);
+    this.ioFileBufferSize = DFSUtil.getIoFileBufferSize(conf);
   }
 
   public DistributedFileSystem getDistributedFileSystem() {

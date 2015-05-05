@@ -33,7 +33,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -60,6 +61,8 @@ public class BlockMetadataHeader {
    */
   private final short version;
   private DataChecksum checksum = null;
+
+  private static final HdfsConfiguration conf = new HdfsConfiguration();
     
   @VisibleForTesting
   public BlockMetadataHeader(short version, DataChecksum checksum) {
@@ -85,7 +88,7 @@ public class BlockMetadataHeader {
     DataInputStream in = null;
     try {
       in = new DataInputStream(new BufferedInputStream(
-        new FileInputStream(metaFile), HdfsServerConstants.IO_FILE_BUFFER_SIZE));
+        new FileInputStream(metaFile), DFSUtil.getIoFileBufferSize(conf)));
       return readDataChecksum(in, metaFile);
     } finally {
       IOUtils.closeStream(in);
