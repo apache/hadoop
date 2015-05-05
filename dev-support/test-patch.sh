@@ -535,6 +535,26 @@ function echo_and_redirect
   "${@}" > "${logfile}" 2>&1
 }
 
+## @description is PATCH_DIR relative to BASEDIR?
+## @audience    public
+## @stability   stable
+## @replaceable yes
+## @returns     1 - no, PATCH_DIR
+## @returns     0 - yes, PATCH_DIR - BASEDIR
+function relative_patchdir
+{
+  local p=${PATCH_DIR#${BASEDIR}}
+
+  if [[ ${#p} -eq ${#PATCH_DIR} ]]; then
+    echo ${p}
+    return 1
+  fi
+  p=${p#/}
+  echo ${p}
+  return 0
+}
+
+
 ## @description  Print the usage information
 ## @audience     public
 ## @stability    stable
@@ -697,7 +717,8 @@ function parse_args
     esac
   done
 
-  # if we get a relative path, turn it absolute
+  # we need absolute dir for ${BASEDIR}
+  cd "${CWD}"
   BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
 
   if [[ ${BUILD_NATIVE} == "true" ]] ; then
@@ -723,6 +744,7 @@ function parse_args
     JENKINS=false
   fi
 
+  cd "${CWD}"
   if [[ ! -d ${PATCH_DIR} ]]; then
     mkdir -p "${PATCH_DIR}"
     if [[ $? == 0 ]] ; then
@@ -732,6 +754,9 @@ function parse_args
       cleanup_and_exit 1
     fi
   fi
+
+  # we need absolute dir for PATCH_DIR
+  PATCH_DIR=$(cd -P -- "${PATCH_DIR}" >/dev/null && pwd -P)
 
   GITDIFFLINES=${PATCH_DIR}/gitdifflines.txt
 }
@@ -821,17 +846,36 @@ function find_changed_modules
 function git_checkout
 {
   local currentbranch
+  local exemptdir
 
   big_console_header "Confirming git environment"
 
+  cd "${BASEDIR}"
+  if [[ ! -d .git ]]; then
+    hadoop_error "ERROR: ${BASEDIR} is not a git repo."
+    cleanup_and_exit 1
+  fi
+
   if [[ ${RESETREPO} == "true" ]] ; then
-    cd "${BASEDIR}"
     ${GIT} reset --hard
     if [[ $? != 0 ]]; then
       hadoop_error "ERROR: git reset is failing"
       cleanup_and_exit 1
     fi
-    ${GIT} clean -xdf
+
+    # if PATCH_DIR is in BASEDIR, then we don't want
+    # git wiping it out.
+    exemptdir=$(relative_patchdir)
+    if [[ $? == 1 ]]; then
+      ${GIT} clean -xdf
+    else
+      # we do, however, want it emptied of all _files_.
+      # we need to leave _directories_ in case we are in
+      # re-exec mode (which places a directory full of stuff in it)
+      hadoop_debug "Exempting ${exemptdir} from clean"
+      rm "${PATCH_DIR}/*" 2>/dev/null
+      ${GIT} clean -xdf -e "${exemptdir}"
+    fi
     if [[ $? != 0 ]]; then
       hadoop_error "ERROR: git clean is failing"
       cleanup_and_exit 1
@@ -875,11 +919,6 @@ function git_checkout
     fi
 
   else
-    cd "${BASEDIR}"
-    if [[ ! -d .git ]]; then
-      hadoop_error "ERROR: ${BASEDIR} is not a git repo."
-      cleanup_and_exit 1
-    fi
 
     status=$(${GIT} status --porcelain)
     if [[ "${status}" != "" && -z ${DIRTY_WORKSPACE} ]] ; then
@@ -999,6 +1038,16 @@ function verify_valid_branch
   local branches=$1
   local check=$2
   local i
+
+  # shortcut some common
+  # non-resolvable names
+  if [[ -z ${check} ]]; then
+    return 1
+  fi
+
+  if [[ ${check} == patch ]]; then
+    return 1
+  fi
 
   if [[ ${check} =~ ^git ]]; then
     ref=$(echo "${check}" | cut -f2 -dt)
@@ -2207,9 +2256,16 @@ function cleanup_and_exit
 
   if [[ ${JENKINS} == "true" ]] ; then
     if [[ -e "${PATCH_DIR}" ]] ; then
-      hadoop_debug "mv ${PATCH_DIR} ${BASEDIR} "
       if [[ -d "${PATCH_DIR}" ]]; then
-        mv "${PATCH_DIR}" "${BASEDIR}"
+        # if PATCH_DIR is already inside BASEDIR, then
+        # there is no need to move it since we assume that
+        # Jenkins or whatever already knows where it is at
+        # since it told us to put it there!
+        relative_patchdir >/dev/null
+        if [[ $? == 0 ]]; then
+          hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
+          mv "${PATCH_DIR}" "${BASEDIR}"
+        fi
       fi
     fi
   fi
@@ -2442,6 +2498,8 @@ find_changed_files
 
 determine_needed_tests
 
+# from here on out, we'll be in ${BASEDIR} for cwd
+# routines need to pushd/popd if they change.
 git_checkout
 RESULT=$?
 if [[ ${JENKINS} == "true" ]] ; then
