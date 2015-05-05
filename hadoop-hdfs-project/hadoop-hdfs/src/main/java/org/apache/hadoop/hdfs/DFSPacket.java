@@ -37,7 +37,7 @@ import org.apache.htrace.Span;
  ****************************************************************/
 
 @InterfaceAudience.Private
-class DFSPacket {
+public class DFSPacket {
   public static final long HEART_BEAT_SEQNO = -1L;
   private static long[] EMPTY = new long[0];
   private final long seqno; // sequence number of buffer in block
@@ -80,7 +80,7 @@ class DFSPacket {
    * @param checksumSize the size of checksum
    * @param lastPacketInBlock if this is the last packet
    */
-  DFSPacket(byte[] buf, int chunksPerPkt, long offsetInBlock, long seqno,
+  public DFSPacket(byte[] buf, int chunksPerPkt, long offsetInBlock, long seqno,
                    int checksumSize, boolean lastPacketInBlock) {
     this.lastPacketInBlock = lastPacketInBlock;
     this.numChunks = 0;
@@ -114,7 +114,7 @@ class DFSPacket {
     dataPos += len;
   }
 
-  synchronized void writeData(ByteBuffer inBuffer, int len)
+  public synchronized void writeData(ByteBuffer inBuffer, int len)
       throws ClosedChannelException {
     checkBuffer();
     len =  len > inBuffer.remaining() ? inBuffer.remaining() : len;
@@ -135,7 +135,7 @@ class DFSPacket {
    * @param len the length of checksums to write
    * @throws ClosedChannelException
    */
-  synchronized void writeChecksum(byte[] inarray, int off, int len)
+  public synchronized void writeChecksum(byte[] inarray, int off, int len)
       throws ClosedChannelException {
     checkBuffer();
     if (len == 0) {
@@ -154,7 +154,7 @@ class DFSPacket {
    * @param stm
    * @throws IOException
    */
-  synchronized void writeTo(DataOutputStream stm) throws IOException {
+  public synchronized void writeTo(DataOutputStream stm) throws IOException {
     checkBuffer();
 
     final int dataLen = dataPos - dataStart;
