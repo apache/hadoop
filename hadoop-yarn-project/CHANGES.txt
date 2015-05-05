@@ -180,6 +180,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3363. add localization and container launch time to ContainerMetrics
     at NM to show these timing information for each active container.
     (zxu via rkanter)
+    YARN-3396. Handle URISyntaxException in ResourceLocalizationService. 
+    (Brahma Reddy Battula via junping_du)
 
   OPTIMIZATIONS
 
