@@ -368,6 +368,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
     (Gera Shegalov via jlowe)
 
+    MAPREDUCE-6165. [JDK8] TestCombineFileInputFormat failed on JDK8.
+    (Akira AJISAKA via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
