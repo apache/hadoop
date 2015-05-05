@@ -105,6 +105,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-8549. Abort the balancer if an upgrade is in progress. (wang)
     Backport HDFS-11808 by Akira Ajisaka.
 
+    HDFS-7847. Modify NNThroughputBenchmark to be able to operate on a remote
+    NameNode (Charles Lamb via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
