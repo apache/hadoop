@@ -304,6 +304,9 @@ Release 2.8.0 - UNRELEASED
     mapreduce.tasktracker.taskmemorymanager.monitoringinterval.
     (J.Andreina via aajisaka)
 
+    MAPREDUCE-6192. Create unit test to automatically compare
+    MR related classes and mapred-default.xml (rchiang via rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES
