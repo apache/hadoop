@@ -131,6 +131,13 @@ public class TestWebAppProxyServlet {
 
     // wrong url
     try {
+      // wrong url without app ID
+      URL emptyUrl = new URL("http://localhost:" + proxyPort + "/proxy");
+      HttpURLConnection emptyProxyConn = (HttpURLConnection) emptyUrl
+          .openConnection();
+      emptyProxyConn.connect();;
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND, emptyProxyConn.getResponseCode());
+
       // wrong url. Set wrong app ID
       URL wrongUrl = new URL("http://localhost:" + proxyPort + "/proxy/app");
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl

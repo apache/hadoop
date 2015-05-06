@@ -248,8 +248,11 @@ public class WebAppProxyServlet extends HttpServlet {
       final String remoteUser = req.getRemoteUser();
       final String pathInfo = req.getPathInfo();
 
-      String[] parts = pathInfo.split("/", 3);
-      if(parts.length < 2) {
+      String[] parts = null;
+      if (pathInfo != null) {
+        parts = pathInfo.split("/", 3);
+      }
+      if(parts == null || parts.length < 2) {
         LOG.warn("{} gave an invalid proxy path {}", remoteUser,  pathInfo);
         notFound(resp, "Your path appears to be formatted incorrectly.");
         return;

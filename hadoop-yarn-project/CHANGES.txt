@@ -316,6 +316,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3343. Increased TestCapacitySchedulerNodeLabelUpdate#testNodeUpdate
     timeout. (Rohith Sharmaks via jianhe)
 
+    YARN-3582. NPE in WebAppProxyServlet. (jian he via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
