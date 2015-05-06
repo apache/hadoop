@@ -316,6 +316,9 @@ Release 2.8.0 - UNRELEASED
     timeout. (Rohith Sharmaks via jianhe)
 
     YARN-3582. NPE in WebAppProxyServlet. (jian he via xgong)
+    
+    YARN-3580. [JDK8] TestClientRMService.testGetLabelsToNodes fails. (Robert Kanter
+    via junping_du)
 
 Release 2.7.1 - UNRELEASED
 
