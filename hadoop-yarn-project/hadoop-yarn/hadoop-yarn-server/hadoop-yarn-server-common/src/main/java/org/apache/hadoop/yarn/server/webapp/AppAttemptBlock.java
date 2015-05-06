@@ -174,6 +174,8 @@ public class AppAttemptBlock extends HtmlBlock {
     createAttemptHeadRoomTable(html);
     html._(InfoBlock.class);
 
+    createTablesForAttemptMetrics(html);
+
     // Container Table
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#containers").thead().tr().th(".id", "Container ID")
@@ -226,5 +228,9 @@ public class AppAttemptBlock extends HtmlBlock {
 
   protected void createAttemptHeadRoomTable(Block html) {
     
+  }
+
+  protected void createTablesForAttemptMetrics(Block html) {
+
   }
 }
