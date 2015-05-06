@@ -635,6 +635,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8310. Fix TestCLI.testAll "help: help for find" on Windows.
     (Kiran Kumar M R via Xiaoyu Yao)
 
+    HDFS-2484. checkLease should throw FileNotFoundException when file does
+    not exist. (Rakesh R via shv)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

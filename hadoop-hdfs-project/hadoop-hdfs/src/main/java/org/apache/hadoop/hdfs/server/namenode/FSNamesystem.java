@@ -3451,7 +3451,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String ident = src + " (inode " + fileId + ")";
     if (inode == null) {
       Lease lease = leaseManager.getLease(holder);
-      throw new LeaseExpiredException(
+      throw new FileNotFoundException(
           "No lease on " + ident + ": File does not exist. "
           + (lease != null ? lease.toString()
               : "Holder " + holder + " does not have any open files."));
