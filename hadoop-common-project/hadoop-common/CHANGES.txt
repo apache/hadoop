@@ -160,6 +160,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11898. add nfs3 and portmap starting command in hadoop-daemon.sh
     in branch-2 (brandonli)
 
+    HADOOP-11926. test-patch.sh mv does wrong math (aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
