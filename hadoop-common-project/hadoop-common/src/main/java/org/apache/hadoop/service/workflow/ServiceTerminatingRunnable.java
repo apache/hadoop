@@ -37,6 +37,7 @@ public class ServiceTerminatingRunnable implements Runnable {
    * @param action action to execute before terminating the service
    */
   public ServiceTerminatingRunnable(Service owner, Runnable action) {
+    Preconditions.checkArgument(owner != null, "null owner");
     Preconditions.checkArgument(action != null, "null action");
     this.owner = owner;
     this.action = action;
@@ -66,8 +67,6 @@ public class ServiceTerminatingRunnable implements Runnable {
     } catch (Exception e) {
       exception = e;
     }
-    if (owner != null) {
-      owner.stop();
-    }
+    owner.stop();
   }
 }

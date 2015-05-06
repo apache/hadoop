@@ -54,7 +54,7 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
 
   @Test
   public void testLs() throws Throwable {
-
+    skipOnWindows();
     initProcess(commandFactory.ls(testDir));
     assertExecCompletes(0);
     // assert that the service did not fail
@@ -62,49 +62,39 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
   }
 
   @Test
-  
   public void testExitCodes() throws Throwable {
     skipOnWindows();
     initProcess(commandFactory.exitFalse());
-    exec();
-    assertFalse(process.isProcessRunning());
-    int exitCode = process.getExitCode();
-    assertTrue(exitCode != 0);
-    int corrected = process.getExitCodeSignCorrected();
-    assertEquals(1, corrected);
+    assertExecCompletes(1);
     // assert that the exit code was uprated to a service failure
-    assertNotNull(process.getFailureCause());
+    assertNotNull("process failure cause is null",
+        process.getFailureCause());
   }
 
   @Test
   public void testEcho() throws Throwable {
     skipOnWindows();
-
     String echoText = "hello, world";
     initProcess(commandFactory.echo(echoText));
-
     assertExecCompletes(0);
     assertStringInOutput(echoText, getFinalOutput());
-
   }
 
   protected void assertExecCompletes(int expected) throws InterruptedException {
     exec();
-    assertFalse(process.isProcessRunning());
+    assertFalse("process is still running", process.isProcessRunning());
     int exitCode = process.getExitCode();
-    assertEquals(expected, exitCode);
+    assertEquals("process exit code is zero: " + process.toString(),
+        expected, exitCode);
   }
 
   @Test
   public void testSetenv() throws Throwable {
-
     String var = "TEST_RUN";
     String val = "TEST-RUN-ENV-VALUE";
     env.put(var, val);
     initProcess(commandFactory.env());
-    exec();
-
-    assertEquals(0, process.getExitCode());
+    assertExecCompletes(0);
     assertStringInOutput(val, getFinalOutput());
   }
 
@@ -121,7 +111,6 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
     process = new WorkflowForkedProcessService(name.getMethodName(), env,
         commands);
     process.init(new Configuration());
-
     return process;
   }
 

@@ -35,6 +35,12 @@ public class EndOfServiceWaiter implements ServiceStateChangeListener {
     svc.registerServiceListener(this);
   }
 
+  /**
+   * Wait for a service to stop. Raises an assertion if the
+   * service does not stop in the time period.
+   * @param timeout time to wait in millis before failing.
+   * @throws InterruptedException
+   */
   public synchronized void waitForServiceToStop(long timeout) throws
       InterruptedException {
     if (!finished.get()) {

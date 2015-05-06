@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Execute a long-lived process.
@@ -73,7 +74,7 @@ public class LongLivedProcess implements Runnable {
   private final ProcessBuilder processBuilder;
   private Process process;
   private Integer exitCode = null;
-  private final String name;
+  private final String description;
   private final ExecutorService processExecutor;
   private final ExecutorService logExecutor;
   
@@ -82,13 +83,13 @@ public class LongLivedProcess implements Runnable {
   private final List<String> recentLines = new LinkedList<>();
   private int recentLineLimit = RECENT_LINE_LOG_LIMIT;
   private LongLivedProcessLifecycleEvent lifecycleCallback;
+  private final AtomicBoolean finalOutputProcessed = new AtomicBoolean(false);
 
-  
   /**
    * Log supplied in the constructor for the spawned process -accessible
    * to inner classes
    */
-  private final Logger processLog;
+  private Logger processLog;
   
   /**
    * Class log -accessible to inner classes
@@ -103,16 +104,30 @@ public class LongLivedProcess implements Runnable {
   public LongLivedProcess(String name,
       Logger processLog,
       List<String> commands) {
-    Preconditions.checkArgument(processLog != null, "processLog");
-    Preconditions.checkArgument(commands != null, "commands");
+    Preconditions.checkArgument(processLog != null, "null processLog");
+    Preconditions.checkArgument(commands != null, "null command list");
+    Preconditions.checkArgument(!commands.isEmpty(), "empty command list");
+    String command = commands.get(0);
+    Preconditions.checkArgument(command != null && !command.isEmpty(),
+        "null or empty command list");
 
-    this.name = name;
+    this.description = String.format("%s: \"%s\"", name, command);
     this.processLog = processLog;
     ServiceThreadFactory factory = new ServiceThreadFactory(name, true);
     processExecutor = Executors.newSingleThreadExecutor(factory);
-    logExecutor=    Executors.newSingleThreadExecutor(factory);
+    logExecutor = Executors.newSingleThreadExecutor(factory);
     processBuilder = new ProcessBuilder(commands);
     processBuilder.redirectErrorStream(false);
+  }
+
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(description);
+    sb.append(", running=").append(isRunning());
+    sb.append(", finished=").append(finished);
+    sb.append(", exitCode=").append(exitCode);
+    return sb.toString();
   }
 
   /**
@@ -166,6 +181,14 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
+   * Set the process log. Ignored once the process starts
+   * @param processLog new log ... may be null
+   */
+  public void setProcessLog(Logger processLog) {
+    this.processLog = processLog;
+  }
+
+  /**
    * Get the process reference
    * @return the process -null if the process is  not started
    */
@@ -191,6 +214,11 @@ public class LongLivedProcess implements Runnable {
     return processBuilder.command();
   }
 
+  /**
+   * Get the first command. Construction-time checks guarantee
+   * that this always returns a string.
+   * @return the command to execute
+   */
   public String getCommand() {
     return getCommands().get(0);
   }
@@ -298,7 +326,7 @@ public class LongLivedProcess implements Runnable {
       LOG.debug("Process wait interrupted -exiting thread", e);
     } finally {
       //here the process has finished
-      LOG.debug("process {} has finished", name);
+      LOG.debug("process {} has finished", description);
       //tell the logger it has to finish too
       finished = true;
 
@@ -308,6 +336,7 @@ public class LongLivedProcess implements Runnable {
         logExecutor.awaitTermination(60, TimeUnit.SECONDS);
       } catch (InterruptedException ignored) {
         //ignored
+        LOG.debug("Interrupted while waiting for logExectuor to stop");
       }
 
       //now call the callback if it is set
@@ -325,10 +354,12 @@ public class LongLivedProcess implements Runnable {
   public void start() throws IOException {
 
     spawnChildProcess();
-    processExecutor.submit(this);
     processStreamReader =
       new ProcessStreamReader(processLog, STREAM_READER_SLEEP_TIME);
+    LOG.debug("Submitting process stream reader for execution  on a thread");
     logExecutor.submit(processStreamReader);
+    LOG.debug("Submitting self for execution on a thread");
+    processExecutor.submit(this);
   }
 
   /**
@@ -341,18 +372,67 @@ public class LongLivedProcess implements Runnable {
   }
 
   /**
-   * add the recent line to the list of recent lines; deleting
-   * an earlier on if the limit is reached.
+   * @return whether lines of recent output are empty
+   */
+  public synchronized boolean isRecentOutputEmpty() {
+    return recentLines.isEmpty();
+  }
+
+  /**
+   * Query to see if the final output has been processed
+   * @return
+   */
+  public boolean isFinalOutputProcessed() {
+    return finalOutputProcessed.get();
+  }
+
+  /**
+   * Get the recent output from the process, or [] if not defined
    *
+   * @param finalOutput flag to indicate "wait for the final output of the process"
+   * @param duration the duration, in ms,
+   * ro wait for recent output to become non-empty
+   * @return a possibly empty list
+   */
+  public List<String> getRecentOutput(boolean finalOutput, int duration) {
+    long start = System.currentTimeMillis();
+    while (System.currentTimeMillis() - start <= duration) {
+      boolean finishedOutput;
+      if (finalOutput) {
+        // final flag means block until all data is done
+        finishedOutput = isFinalOutputProcessed();
+      } else {
+        // there is some output
+        finishedOutput = !isRecentOutputEmpty();
+      }
+      if (finishedOutput) {
+        break;
+      }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
+    return getRecentOutput();
+  }
+
+  /**
+   * Add the recent line to the list of recent lines; deleting
+   * an earlier on if the limit is reached.
+   * <p>
    * Implementation note: yes, a circular array would be more
    * efficient, especially with some power of two as the modulo,
    * but is it worth the complexity and risk of errors for
    * something that is only called once per line of IO?
    * @param line line to record
    * @param isErrorStream is the line from the error stream
+   * @param logger logger to log to - null for no logging
    */
   private synchronized void recordRecentLine(String line,
-                                             boolean isErrorStream) {
+      boolean isErrorStream,
+      Logger logger) {
     if (line == null) {
       return;
     }
@@ -361,7 +441,15 @@ public class LongLivedProcess implements Runnable {
     if (recentLines.size() > recentLineLimit) {
       recentLines.remove(0);
     }
+    if (logger != null) {
+      if (isErrorStream) {
+        logger.warn(line);
+      } else {
+        logger.info(line);
+      }
+    }
   }
+
 
   /**
    * Class to read data from the two process streams, and, when run in a thread
@@ -405,8 +493,7 @@ public class LongLivedProcess implements Runnable {
     @SuppressWarnings("NestedAssignment")
     private boolean readAnyLine(BufferedReader reader,
                                 StringBuilder line,
-                                int limit)
-      throws IOException {
+                                int limit) throws IOException {
       int next;
       while ((-1 != (next = readCharNonBlocking(reader)))) {
         if (next != '\n') {
@@ -429,28 +516,23 @@ public class LongLivedProcess implements Runnable {
     @Override //Runnable
     @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
     public void run() {
-      BufferedReader errReader = null;
-      BufferedReader outReader = null;
       StringBuilder outLine = new StringBuilder(LINE_LENGTH);
       StringBuilder errorLine = new StringBuilder(LINE_LENGTH);
-      try {
-        errReader = new BufferedReader(
-            new InputStreamReader(process.getErrorStream()));
-        outReader = new BufferedReader(
-            new InputStreamReader(process.getInputStream()));
+      try(BufferedReader errReader =
+              new BufferedReader(
+                new InputStreamReader(process.getErrorStream()));
+          BufferedReader outReader =
+              new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
         while (!finished) {
           boolean processed = false;
           if (readAnyLine(errReader, errorLine, LINE_LENGTH)) {
-            String line = errorLine.toString();
-            recordRecentLine(line, true);
-            streamLog.warn(line);
+            recordRecentLine(errorLine.toString(), true, streamLog);
             errorLine.setLength(0);
             processed = true;
           }
           if (readAnyLine(outReader, outLine, LINE_LENGTH)) {
-            String line = outLine.toString();
-            recordRecentLine(line, false);
-            streamLog.info(line);
+            recordRecentLine(outLine.toString(), false, streamLog);
             outLine.setLength(0);
             processed |= true;
           }
@@ -467,38 +549,44 @@ public class LongLivedProcess implements Runnable {
         // finished: cleanup
 
         //print the current error line then stream through the rest
-        streamLog.error(errorLine.toString());
-        String line = errReader.readLine();
-        while (line != null) {
-          streamLog.error(line);
-          if (Thread.interrupted()) {
-            break;
-          }
-          line = errReader.readLine();
-          recordRecentLine(line, true);
-        }
+        recordFinalOutput(errReader, errorLine, true, streamLog);
         //now do the info line
-        streamLog.info(outLine.toString());
-        line = outReader.readLine();
-        while (line != null) {
-          streamLog.info(line);
-          if (Thread.interrupted()) {
-            break;
-          }
-          line = outReader.readLine();
-          recordRecentLine(line, false);
-        }
+        recordFinalOutput(outReader, outLine, false, streamLog);
+
 
       } catch (Exception ignored) {
         LOG.warn("encountered {}", ignored, ignored);
         //process connection has been torn down
       } finally {
-        IOUtils.closeStream(errReader);
-        IOUtils.closeStream(outReader);
+        //mark output as done
+        finalOutputProcessed.set(true);
       }
     }
   }
 
+  /**
+   * Record the final output of a process stream
+   * @param reader reader of output
+   * @param lineBuilder string builder into which line is built
+   * @param isErrorStream flag to indicate whether or not this is the
+   * is the line from the error stream
+   * @param logger logger to log to
+   * @throws IOException
+   */
+  protected void recordFinalOutput(BufferedReader reader,
+      StringBuilder lineBuilder, boolean isErrorStream, Logger logger) throws
+      IOException {
+    String line = lineBuilder.toString();
+    recordRecentLine(line, isErrorStream, logger);
+    line = reader.readLine();
+    while (line != null) {
+      recordRecentLine(line, isErrorStream, logger);
+      line = reader.readLine();
+      if (Thread.interrupted()) {
+        break;
+      }
+    }
+  }
 
   /**
    * Sign correct an exit code.

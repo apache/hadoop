@@ -19,6 +19,8 @@
 package org.apache.hadoop.service.workflow;
 
 import org.apache.hadoop.service.AbstractService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -27,9 +29,17 @@ import java.util.concurrent.Future;
 /**
  * An abstract service that hosts an executor. When the service is stopped,
  * {@link ExecutorService#shutdownNow()} is invoked.
+ * <p>
+ * The executor itself is not created: it must be set in the constructor
+ * or in {@link #setExecutor(ExecutorService)}
  */
 public abstract class AbstractWorkflowExecutorService extends AbstractService {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractWorkflowExecutorService.class);
 
+  /**
+   * The executor.
+   */
   private ExecutorService executor;
 
   /**
@@ -105,6 +115,7 @@ public abstract class AbstractWorkflowExecutorService extends AbstractService {
    */
   protected synchronized void stopExecutor() {
     if (executor != null) {
+      LOG.debug("Stopping executor");
       executor.shutdownNow();
     }
   }
