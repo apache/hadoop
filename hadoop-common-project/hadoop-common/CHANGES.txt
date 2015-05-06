@@ -167,9 +167,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
     occurs (Jason Lowe via jeagles)
 
-    HADOOP-12158. Improve error message in
-    TestCryptoStreamsWithOpensslAesCtrCryptoCodec when OpenSSL is not
-    installed. (wang)
+    HADOOP-11813. releasedocmaker.py should use today's date instead of
+    unreleased (Darrell Taylor via aw)
+
+  BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
 
