@@ -103,6 +103,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4313. Race condition in MiniMRYarnCluster when getting history server
     address. (Jian He via xgong)
 
+    YARN-3580. [JDK8] TestClientRMService.testGetLabelsToNodes fails. (Robert Kanter
+    via junping_du)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
