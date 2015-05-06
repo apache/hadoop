@@ -135,6 +135,8 @@ Release 2.8.0 - UNRELEASED
     YARN-2980. Move health check script related functionality to hadoop-common
     (Varun Saxena via aw)
 
+    YARN-3491. PublicLocalizer#addResource is too slow. (zxu via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
