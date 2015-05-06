@@ -2262,7 +2262,7 @@ function cleanup_and_exit
         # Jenkins or whatever already knows where it is at
         # since it told us to put it there!
         relative_patchdir >/dev/null
-        if [[ $? == 0 ]]; then
+        if [[ $? == 1 ]]; then
           hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
           mv "${PATCH_DIR}" "${BASEDIR}"
         fi

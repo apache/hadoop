@@ -610,6 +610,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11904. test-patch.sh goes into an infinite loop on non-maven
     builds (aw)
 
+    HADOOP-11926. test-patch.sh mv does wrong math (aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
