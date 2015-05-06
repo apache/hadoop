@@ -365,6 +365,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3544. Got back AM logs link on the RM web UI for a completed app.
     (Xuan Gong via zjshen)
 
+    YARN-3301. Fixed the format issue of the new RM attempt web page.
+    (Xuan Gong via jianhe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
