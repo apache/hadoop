@@ -113,9 +113,6 @@ Release 2.8.0 - UNRELEASED
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
     (ozawa via harsh)
 
-    YARN-3243. CapacityScheduler should pass headroom from parent to children
-    to make sure ParentQueue obey its capacity limits. (Wangda Tan via jianhe)
-
     YARN-3357. Move TestFifoScheduler to FIFO package. (Rohith Sharmaks 
     via devaraj)
 
@@ -325,6 +322,9 @@ Release 2.7.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    YARN-3243. CapacityScheduler should pass headroom from parent to children
+    to make sure ParentQueue obey its capacity limits. (Wangda Tan via jianhe)
 
   OPTIMIZATIONS
 
