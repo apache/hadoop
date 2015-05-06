@@ -180,6 +180,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3396. Handle URISyntaxException in ResourceLocalizationService. 
     (Brahma Reddy Battula via junping_du)
 
+    YARN-3491. PublicLocalizer#addResource is too slow. (zxu via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

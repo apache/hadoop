@@ -1098,7 +1098,6 @@ public class TestResourceLocalizationService {
           isA(Configuration.class));
 
       spyService.init(conf);
-      spyService.start();
 
       final FsPermission defaultPerm = new FsPermission((short)0755);
 
@@ -1109,6 +1108,8 @@ public class TestResourceLocalizationService {
         verify(spylfs, never())
             .mkdir(eq(publicCache),eq(defaultPerm), eq(true));
       }
+
+      spyService.start();
 
       final String user = "user0";
       // init application
@@ -1131,20 +1132,31 @@ public class TestResourceLocalizationService {
       r.setSeed(seed);
 
       // Queue up public resource localization
-      final LocalResource pubResource = getPublicMockedResource(r);
-      final LocalResourceRequest pubReq = new LocalResourceRequest(pubResource);
+      final LocalResource pubResource1 = getPublicMockedResource(r);
+      final LocalResourceRequest pubReq1 =
+          new LocalResourceRequest(pubResource1);
+
+      LocalResource pubResource2 = null;
+      do {
+        pubResource2 = getPublicMockedResource(r);
+      } while (pubResource2 == null || pubResource2.equals(pubResource1));
+      // above call to make sure we don't get identical resources.
+      final LocalResourceRequest pubReq2 =
+          new LocalResourceRequest(pubResource2);
+
+      Set<LocalResourceRequest> pubRsrcs = new HashSet<LocalResourceRequest>();
+      pubRsrcs.add(pubReq1);
+      pubRsrcs.add(pubReq2);
 
       Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
           new HashMap<LocalResourceVisibility,
               Collection<LocalResourceRequest>>();
-      req.put(LocalResourceVisibility.PUBLIC,
-          Collections.singletonList(pubReq));
-
-      Set<LocalResourceRequest> pubRsrcs = new HashSet<LocalResourceRequest>();
-      pubRsrcs.add(pubReq);
+      req.put(LocalResourceVisibility.PUBLIC, pubRsrcs);
 
       spyService.handle(new ContainerLocalizationRequestEvent(c, req));
       dispatcher.await();
+
+      verify(spyService, times(1)).checkAndInitializeLocalDirs();
 
       // verify directory creation
       for (Path p : localDirs) {
