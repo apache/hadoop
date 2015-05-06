@@ -612,6 +612,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11926. test-patch.sh mv does wrong math (aw)
 
+    HADOOP-11912. Extra configuration key used in TraceUtils should respect
+    prefix (Masatake Iwasaki via Colin P. McCabe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

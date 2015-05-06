@@ -46,7 +46,7 @@ public class TestTraceUtils {
     conf.set(TEST_PREFIX + key, oldValue);
     LinkedList<ConfigurationPair> extraConfig =
         new LinkedList<ConfigurationPair>();
-    extraConfig.add(new ConfigurationPair(key, newValue));
+    extraConfig.add(new ConfigurationPair(TEST_PREFIX + key, newValue));
     HTraceConfiguration wrapped = TraceUtils.wrapHadoopConf(TEST_PREFIX, conf, extraConfig);
     assertEquals(newValue, wrapped.get(key));
   }

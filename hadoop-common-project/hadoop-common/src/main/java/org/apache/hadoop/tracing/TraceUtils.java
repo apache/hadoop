@@ -47,18 +47,16 @@ public class TraceUtils {
     return new HTraceConfiguration() {
       @Override
       public String get(String key) {
-        if (extraMap.containsKey(key)) {
-          return extraMap.get(key);
-        }
-        return conf.get(prefix + key, "");
+        return get(key, "");
       }
 
       @Override
       public String get(String key, String defaultValue) {
-        if (extraMap.containsKey(key)) {
-          return extraMap.get(key);
+        String prefixedKey = prefix + key;
+        if (extraMap.containsKey(prefixedKey)) {
+          return extraMap.get(prefixedKey);
         }
-        return conf.get(prefix + key, defaultValue);
+        return conf.get(prefixedKey, defaultValue);
       }
     };
   }
