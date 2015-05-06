@@ -209,6 +209,9 @@ Trunk (Unreleased)
     HADOOP-11857. Fix CommandFormat#commandFormat java doc annotation.
     (J.Andreina via jghoman)
 
+    HADOOP-11813. releasedocmaker.py should use today's date instead of
+    unreleased (Darrell Taylor via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

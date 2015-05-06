@@ -929,6 +929,7 @@
                             <argument>--version</argument>
                             <argument>${project.version}</argument>
                             <argument>--index</argument>
+                            <argument>--usetoday</argument>
                         </arguments>
                     </configuration>
                 </execution>

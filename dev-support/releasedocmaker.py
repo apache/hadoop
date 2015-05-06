@@ -18,6 +18,7 @@
 
 from glob import glob
 from optparse import OptionParser
+from time import gmtime, strftime
 import os
 import re
 import sys
@@ -82,6 +83,7 @@ def notableclean(str):
   str=str.replace("|","\|")
   str=str.replace("<","\<")
   str=str.replace(">","\>")
+  str=str.replace("*","\*")
   str=str.rstrip()
   return str
 
@@ -335,6 +337,8 @@ def main():
              help="only create the master, merged project files")
   parser.add_option("-i","--index", dest="index", action="store_true",
              help="build an index file")
+  parser.add_option("-u","--usetoday", dest="usetoday", action="store_true",
+             help="use current date for unreleased versions")
   (options, args) = parser.parse_args()
 
   if (options.versions == None):
@@ -356,6 +360,8 @@ def main():
 
   if version in releaseVersion:
     reldate=releaseVersion[version]
+  elif options.usetoday:
+    reldate=strftime("%Y-%m-%d", gmtime())
   else:
     reldate="Unreleased"
 
