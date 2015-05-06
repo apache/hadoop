@@ -178,3 +178,8 @@
 
     HDFS-7348. Erasure Coding: DataNode reconstruct striped blocks. 
     (Yi Liu via Zhe Zhang)
+
+    HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng)
+
+    HDFS-8334. Erasure coding: rename DFSStripedInputStream related test 
+    classes. (Zhe Zhang)
