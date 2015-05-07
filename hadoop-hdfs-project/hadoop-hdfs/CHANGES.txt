@@ -642,6 +642,9 @@ Release 2.8.0 - UNRELEASED
     required, based on configured failed volumes tolerated.
     (Lei (Eddy) Xu via cnauroth)
 
+    HDFS-8325. Misspelling of threshold in log4j.properties for tests.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
