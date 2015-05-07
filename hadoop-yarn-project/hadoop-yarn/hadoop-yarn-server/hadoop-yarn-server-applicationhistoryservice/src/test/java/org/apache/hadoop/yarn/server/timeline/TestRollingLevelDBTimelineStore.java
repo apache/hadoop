@@ -17,16 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,24 +30,24 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
-import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
+/** Test class to verify RollingLevelDBTimelineStore. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
+public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
   private FileContext fsContext;
   private File fsPath;
   private Configuration config = new YarnConfiguration();
@@ -66,7 +61,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     config.set(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH,
         fsPath.getAbsolutePath());
     config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_TTL_ENABLE, false);
-    store = new LeveldbTimelineStore();
+    store = new RollingLevelDBTimelineStore();
     store.init(config);
     store.start();
     loadTestEntityData();
@@ -83,16 +78,17 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testRootDirPermission() throws IOException {
     FileSystem fs = FileSystem.getLocal(new YarnConfiguration());
-    FileStatus file = fs.getFileStatus(
-        new Path(fsPath.getAbsolutePath(), LeveldbTimelineStore.FILENAME));
+    FileStatus file = fs.getFileStatus(new Path(fsPath.getAbsolutePath(),
+        RollingLevelDBTimelineStore.FILENAME));
     assertNotNull(file);
-    assertEquals(LeveldbTimelineStore.LEVELDB_DIR_UMASK, file.getPermission());
+    assertEquals(RollingLevelDBTimelineStore.LEVELDB_DIR_UMASK,
+        file.getPermission());
   }
 
   @Test
   public void testGetSingleEntity() throws IOException {
     super.testGetSingleEntity();
-    ((LeveldbTimelineStore)store).clearStartTimeCache();
+    ((RollingLevelDBTimelineStore)store).clearStartTimeCache();
     super.testGetSingleEntity();
     loadTestEntityData();
   }
@@ -109,7 +105,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
 
   @Test
   public void testGetEntitiesWithFromTs() throws IOException {
-    super.testGetEntitiesWithFromTs();
+    // feature not supported
   }
 
   @Test
@@ -130,157 +126,26 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testCacheSizes() {
     Configuration conf = new Configuration();
-    assertEquals(10000, LeveldbTimelineStore.getStartTimeReadCacheSize(conf));
-    assertEquals(10000, LeveldbTimelineStore.getStartTimeWriteCacheSize(conf));
+    assertEquals(10000,
+        RollingLevelDBTimelineStore.getStartTimeReadCacheSize(conf));
+    assertEquals(10000,
+        RollingLevelDBTimelineStore.getStartTimeWriteCacheSize(conf));
     conf.setInt(
         YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE,
         10001);
-    assertEquals(10001, LeveldbTimelineStore.getStartTimeReadCacheSize(conf));
+    assertEquals(10001,
+        RollingLevelDBTimelineStore.getStartTimeReadCacheSize(conf));
     conf = new Configuration();
     conf.setInt(
         YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
         10002);
-    assertEquals(10002, LeveldbTimelineStore.getStartTimeWriteCacheSize(conf));
-  }
-
-  private boolean deleteNextEntity(String entityType, byte[] ts)
-      throws IOException, InterruptedException {
-    LeveldbIterator iterator = null;
-    LeveldbIterator pfIterator = null;
-    try {
-      iterator = ((LeveldbTimelineStore)store).getDbIterator(false);
-      pfIterator = ((LeveldbTimelineStore)store).getDbIterator(false);
-      return ((LeveldbTimelineStore)store).deleteNextEntity(entityType, ts,
-          iterator, pfIterator, false);
-    } catch(DBException e) {
-      throw new IOException(e);
-    } finally {
-      IOUtils.cleanup(null, iterator, pfIterator);
-    }
-  }
-
-  @Test
-  public void testGetEntityTypes() throws IOException {
-    List<String> entityTypes = ((LeveldbTimelineStore)store).getEntityTypes();
-    assertEquals(7, entityTypes.size());
-    assertEquals("ACL_ENTITY_TYPE_1", entityTypes.get(0));
-    assertEquals("OLD_ENTITY_TYPE_1", entityTypes.get(1));
-    assertEquals(entityType1, entityTypes.get(2));
-    assertEquals(entityType2, entityTypes.get(3));
-    assertEquals(entityType4, entityTypes.get(4));
-    assertEquals(entityType5, entityTypes.get(5));
-  }
-
-  @Test
-  public void testDeleteEntities() throws IOException, InterruptedException {
-    assertEquals(3, getEntities("type_1").size());
-    assertEquals(1, getEntities("type_2").size());
-
-    assertEquals(false, deleteNextEntity(entityType1,
-        writeReverseOrderedLong(60L)));
-    assertEquals(3, getEntities("type_1").size());
-    assertEquals(1, getEntities("type_2").size());
-
-    assertEquals(true, deleteNextEntity(entityType1,
-        writeReverseOrderedLong(123L)));
-    List<TimelineEntity> entities = getEntities("type_2");
-    assertEquals(1, entities.size());
-    verifyEntityInfo(entityId2, entityType2, events2, Collections.singletonMap(
-        entityType1, Collections.singleton(entityId1b)), EMPTY_PRIMARY_FILTERS,
-        EMPTY_MAP, entities.get(0), domainId1);
-    entities = getEntitiesWithPrimaryFilter("type_1", userFilter);
-    assertEquals(2, entities.size());
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    // can retrieve entities across domains
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId2);
-
-    ((LeveldbTimelineStore)store).discardOldEntities(0L);
-    assertEquals(2, getEntities("type_1").size());
-    assertEquals(0, getEntities("type_2").size());
-    assertEquals(6, ((LeveldbTimelineStore)store).getEntityTypes().size());
-
-    ((LeveldbTimelineStore)store).discardOldEntities(123L);
-    assertEquals(0, getEntities("type_1").size());
-    assertEquals(0, getEntities("type_2").size());
-    assertEquals(0, ((LeveldbTimelineStore)store).getEntityTypes().size());
-    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
-  }
-
-  @Test
-  public void testDeleteEntitiesPrimaryFilters()
-      throws IOException, InterruptedException {
-    Map<String, Set<Object>> primaryFilter =
-        Collections.singletonMap("user", Collections.singleton(
-            (Object) "otheruser"));
-    TimelineEntities atsEntities = new TimelineEntities();
-    atsEntities.setEntities(Collections.singletonList(createEntity(entityId1b,
-        entityType1, 789l, Collections.singletonList(ev2), null, primaryFilter,
-        null, domainId1)));
-    TimelinePutResponse response = store.put(atsEntities);
-    assertEquals(0, response.getErrors().size());
-
-    NameValuePair pfPair = new NameValuePair("user", "otheruser");
-    List<TimelineEntity> entities = getEntitiesWithPrimaryFilter("type_1",
-        pfPair);
-    assertEquals(1, entities.size());
-    verifyEntityInfo(entityId1b, entityType1, Collections.singletonList(ev2),
-        EMPTY_REL_ENTITIES, primaryFilter, EMPTY_MAP, entities.get(0),
-        domainId1);
-
-    entities = getEntitiesWithPrimaryFilter("type_1", userFilter);
-    assertEquals(3, entities.size());
-    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(0), domainId1);
-    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(1), domainId1);
-    verifyEntityInfo(entityId6, entityType1, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, entities.get(2), domainId2);
-
-    ((LeveldbTimelineStore)store).discardOldEntities(-123L);
-    assertEquals(1, getEntitiesWithPrimaryFilter("type_1", pfPair).size());
-    assertEquals(3, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
-
-    ((LeveldbTimelineStore)store).discardOldEntities(123L);
-    assertEquals(0, getEntities("type_1").size());
-    assertEquals(0, getEntities("type_2").size());
-    assertEquals(0, ((LeveldbTimelineStore)store).getEntityTypes().size());
-
-    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", pfPair).size());
-    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
-  }
-
-  @Test
-  public void testFromTsWithDeletion()
-      throws IOException, InterruptedException {
-    long l = System.currentTimeMillis();
-    assertEquals(3, getEntitiesFromTs("type_1", l).size());
-    assertEquals(1, getEntitiesFromTs("type_2", l).size());
-    assertEquals(3, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
-        l).size());
-    ((LeveldbTimelineStore)store).discardOldEntities(123L);
-    assertEquals(0, getEntitiesFromTs("type_1", l).size());
-    assertEquals(0, getEntitiesFromTs("type_2", l).size());
-    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
-        l).size());
-    assertEquals(0, getEntities("type_1").size());
-    assertEquals(0, getEntities("type_2").size());
-    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
-        l).size());
-    loadTestEntityData();
-    assertEquals(0, getEntitiesFromTs("type_1", l).size());
-    assertEquals(0, getEntitiesFromTs("type_2", l).size());
-    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
-        l).size());
-    assertEquals(3, getEntities("type_1").size());
-    assertEquals(1, getEntities("type_2").size());
-    assertEquals(3, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
+    assertEquals(10002,
+        RollingLevelDBTimelineStore.getStartTimeWriteCacheSize(conf));
   }
 
   @Test
   public void testCheckVersion() throws IOException {
-    LeveldbTimelineStore dbStore = (LeveldbTimelineStore) store;
+    RollingLevelDBTimelineStore dbStore = (RollingLevelDBTimelineStore) store;
     // default version
     Version defaultVersion = dbStore.getCurrentVersion();
     Assert.assertEquals(defaultVersion, dbStore.loadVersion());
@@ -292,13 +157,14 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     dbStore.storeVersion(compatibleVersion);
     Assert.assertEquals(compatibleVersion, dbStore.loadVersion());
     restartTimelineStore();
-    dbStore = (LeveldbTimelineStore) store;
+    dbStore = (RollingLevelDBTimelineStore) store;
     // overwrite the compatible version
     Assert.assertEquals(defaultVersion, dbStore.loadVersion());
 
     // incompatible version
-    Version incompatibleVersion = Version.newInstance(
-        defaultVersion.getMajorVersion() + 1, defaultVersion.getMinorVersion());
+    Version incompatibleVersion =
+        Version.newInstance(defaultVersion.getMajorVersion() + 1,
+          defaultVersion.getMinorVersion());
     dbStore.storeVersion(incompatibleVersion);
     try {
       restartTimelineStore();
@@ -346,34 +212,30 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     }
     try {
       Configuration newConfig = new YarnConfiguration(copyConfig);
-      newConfig
-          .setLong(
-              YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE,
-              0);
+      newConfig.setLong(
+          YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE,
+          0);
       config = newConfig;
       restartTimelineStore();
       Assert.fail();
     } catch (IllegalArgumentException e) {
-      Assert
-          .assertTrue(e
-              .getMessage().contains(
-                  YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
     }
     try {
       Configuration newConfig = new YarnConfiguration(copyConfig);
-      newConfig
-          .setLong(
-              YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
-              0);
+      newConfig.setLong(
+          YarnConfiguration
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
+          0);
       config = newConfig;
       restartTimelineStore();
       Assert.fail();
     } catch (IllegalArgumentException e) {
-      Assert
-          .assertTrue(e
-              .getMessage()
-              .contains(
-                  YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
     }
     config = copyConfig;
     restartTimelineStore();
@@ -384,7 +246,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     if (store != null) {
       store.close();
     }
-    store = new LeveldbTimelineStore();
+    store = new RollingLevelDBTimelineStore();
     store.init(config);
     store.start();
   }
@@ -421,6 +283,32 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
+  public void testRelatingToEntityInSamePut() throws IOException {
+    TimelineEntity entityToRelate = new TimelineEntity();
+    entityToRelate.setEntityType("TEST_ENTITY_TYPE_2");
+    entityToRelate.setEntityId("TEST_ENTITY_ID_2");
+    entityToRelate.setDomainId("TEST_DOMAIN");
+    TimelineEntity entityToStore = new TimelineEntity();
+    entityToStore.setEntityType("TEST_ENTITY_TYPE_1");
+    entityToStore.setEntityId("TEST_ENTITY_ID_1");
+    entityToStore.setDomainId("TEST_DOMAIN");
+    entityToStore.addRelatedEntity("TEST_ENTITY_TYPE_2", "TEST_ENTITY_ID_2");
+    TimelineEntities entities = new TimelineEntities();
+    entities.addEntity(entityToStore);
+    entities.addEntity(entityToRelate);
+    store.put(entities);
+    TimelineEntity entityToGet =
+        store.getEntity("TEST_ENTITY_ID_2", "TEST_ENTITY_TYPE_2", null);
+    Assert.assertNotNull(entityToGet);
+    Assert.assertEquals("TEST_DOMAIN", entityToGet.getDomainId());
+    Assert.assertEquals("TEST_ENTITY_TYPE_1",
+        entityToGet.getRelatedEntities().keySet().iterator().next());
+    Assert.assertEquals("TEST_ENTITY_ID_1",
+        entityToGet.getRelatedEntities().values().iterator().next()
+            .iterator().next());
+  }
+
+  @Test
   public void testRelatingToOldEntityWithoutDomainId() throws IOException {
     // New entity is put in the default domain
     TimelineEntity entityToStore = new TimelineEntity();
@@ -435,7 +323,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     TimelineEntity entityToGet =
         store.getEntity("OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", null);
     Assert.assertNotNull(entityToGet);
-    Assert.assertNull(entityToGet.getDomainId());
+    Assert.assertEquals("DEFAULT", entityToGet.getDomainId());
     Assert.assertEquals("NEW_ENTITY_TYPE_1",
         entityToGet.getRelatedEntities().keySet().iterator().next());
     Assert.assertEquals("NEW_ENTITY_ID_1",
@@ -457,11 +345,83 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     entityToGet =
         store.getEntity("OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", null);
     Assert.assertNotNull(entityToGet);
-    Assert.assertNull(entityToGet.getDomainId());
+    Assert.assertEquals("DEFAULT", entityToGet.getDomainId());
     // Still have one related entity
     Assert.assertEquals(1, entityToGet.getRelatedEntities().keySet().size());
     Assert.assertEquals(1, entityToGet.getRelatedEntities().values()
         .iterator().next().size());
   }
 
+  public void testStorePerformance() throws IOException {
+    TimelineEntity entityToStorePrep = new TimelineEntity();
+    entityToStorePrep.setEntityType("TEST_ENTITY_TYPE_PREP");
+    entityToStorePrep.setEntityId("TEST_ENTITY_ID_PREP");
+    entityToStorePrep.setDomainId("TEST_DOMAIN");
+    entityToStorePrep.addRelatedEntity("TEST_ENTITY_TYPE_2",
+        "TEST_ENTITY_ID_2");
+    entityToStorePrep.setStartTime(0L);
+
+    TimelineEntities entitiesPrep = new TimelineEntities();
+    entitiesPrep.addEntity(entityToStorePrep);
+    store.put(entitiesPrep);
+
+    long start = System.currentTimeMillis();
+    int num = 1000000;
+
+    Log.info("Start test for " + num);
+
+    final String tezTaskAttemptId = "TEZ_TA";
+    final String tezEntityId = "attempt_1429158534256_0001_1_00_000000_";
+    final String tezTaskId = "TEZ_T";
+    final String tezDomainId = "Tez_ATS_application_1429158534256_0001";
+
+    TimelineEntity entityToStore = new TimelineEntity();
+    TimelineEvent startEvt = new TimelineEvent();
+    entityToStore.setEntityType(tezTaskAttemptId);
+
+    startEvt.setEventType("TASK_ATTEMPT_STARTED");
+    startEvt.setTimestamp(0);
+    entityToStore.addEvent(startEvt);
+    entityToStore.setDomainId(tezDomainId);
+
+    entityToStore.addPrimaryFilter("status", "SUCCEEDED");
+    entityToStore.addPrimaryFilter("applicationId",
+        "application_1429158534256_0001");
+    entityToStore.addPrimaryFilter("TEZ_VERTEX_ID",
+        "vertex_1429158534256_0001_1_00");
+    entityToStore.addPrimaryFilter("TEZ_DAG_ID", "dag_1429158534256_0001_1");
+    entityToStore.addPrimaryFilter("TEZ_TASK_ID",
+        "task_1429158534256_0001_1_00_000000");
+
+    entityToStore.setStartTime(0L);
+    entityToStore.addOtherInfo("startTime", 0);
+    entityToStore.addOtherInfo("inProgressLogsURL",
+        "localhost:8042/inProgressLogsURL");
+    entityToStore.addOtherInfo("completedLogsURL", "");
+    entityToStore.addOtherInfo("nodeId", "localhost:54450");
+    entityToStore.addOtherInfo("nodeHttpAddress", "localhost:8042");
+    entityToStore.addOtherInfo("containerId",
+        "container_1429158534256_0001_01_000002");
+    entityToStore.addOtherInfo("status", "RUNNING");
+    entityToStore.addRelatedEntity(tezTaskId, "TEZ_TASK_ID_1");
+
+    TimelineEntities entities = new TimelineEntities();
+    entities.addEntity(entityToStore);
+
+    for (int i = 0; i < num; ++i) {
+      entityToStore.setEntityId(tezEntityId + i);
+      store.put(entities);
+    }
+
+    long duration = System.currentTimeMillis() - start;
+    Log.info("Duration for " + num + ": " + duration);
+  }
+
+  public static void main(String[] args) throws Exception {
+    TestRollingLevelDBTimelineStore store =
+        new TestRollingLevelDBTimelineStore();
+    store.setup();
+    store.testStorePerformance();
+    store.tearDown();
+  }
 }
