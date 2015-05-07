@@ -186,3 +186,6 @@
 
     HDFS-8129. Erasure Coding: Maintain consistent naming for Erasure Coding related classes - EC/ErasureCoding
     (umamahesh)
+
+    HDFS-8203. Erasure Coding: Seek and other Ops in DFSStripedInputStream.
+    (Yi Liu via jing9)
