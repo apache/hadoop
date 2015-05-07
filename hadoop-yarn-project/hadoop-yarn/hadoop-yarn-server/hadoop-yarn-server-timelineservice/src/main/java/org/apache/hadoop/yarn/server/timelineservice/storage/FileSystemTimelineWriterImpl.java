@@ -20,8 +20,9 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -83,7 +84,9 @@ public class FileSystemTimelineWriterImpl extends AbstractService
       String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,flowName,
           flowVersion, String.valueOf(flowRun), appId, entity.getType());
       String fileName = dir + entity.getId() + TIMELINE_SERVICE_STORAGE_EXTENSION;
-      out = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)));
+      out =
+          new PrintWriter(new BufferedWriter(new OutputStreamWriter(
+              new FileOutputStream(fileName, true), "UTF-8")));
       out.println(TimelineUtils.dumpTimelineRecordtoJSON(entity));
       out.write("\n");
     } catch (IOException ioe) {
