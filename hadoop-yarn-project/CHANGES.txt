@@ -320,6 +320,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3580. [JDK8] TestClientRMService.testGetLabelsToNodes fails. (Robert Kanter
     via junping_du)
 
+    YARN-3577. Misspelling of threshold in log4j.properties for tests.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
