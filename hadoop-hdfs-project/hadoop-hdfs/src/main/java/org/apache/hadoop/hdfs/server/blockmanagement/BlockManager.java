@@ -1810,7 +1810,7 @@ public class BlockManager {
         return !node.hasStaleStorages();
       }
 
-      if (storageInfo.numBlocks() == 0) {
+      if (storageInfo.getBlockReportCount() == 0) {
         // The first block report can be processed a lot more efficiently than
         // ordinary block reports.  This shortens restart times.
         processFirstBlockReport(storageInfo, newReport);
@@ -2064,7 +2064,7 @@ public class BlockManager {
       final BlockListAsLongs report) throws IOException {
     if (report == null) return;
     assert (namesystem.hasWriteLock());
-    assert (storageInfo.numBlocks() == 0);
+    assert (storageInfo.getBlockReportCount() == 0);
 
     for (BlockReportReplica iblk : report) {
       ReplicaState reportedState = iblk.getState();
@@ -2476,14 +2476,14 @@ public class BlockManager {
     }
 
     // just add it
-    storageInfo.addBlock(storedBlock);
+    AddBlockResult result = storageInfo.addBlock(storedBlock);
 
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication) {
       completeBlock(storedBlock.getBlockCollection(), storedBlock, false);
-    } else if (storedBlock.isComplete()) {
+    } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
       // In the case that the block just became complete above, completeBlock()

@@ -710,6 +710,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8305: HDFS INotify: the destination field of RenameOp should always
     end with the file name (cmccabe)
 
+    HDFS-7980. Incremental BlockReport will dramatically slow down namenode
+    startup.  (Walter Su via szetszwo)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

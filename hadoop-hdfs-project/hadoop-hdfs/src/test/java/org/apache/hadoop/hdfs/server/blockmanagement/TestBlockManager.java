@@ -47,10 +47,14 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetworkTopology;
 import org.junit.Assert;
@@ -645,6 +649,110 @@ public class TestBlockManager {
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
         BlockListAsLongs.EMPTY, null, false);
     assertEquals(1, ds.getBlockReportCount());
+  }
+
+  /**
+   * test when NN starts and in same mode, it receives an incremental blockReport
+   * firstly. Then receives first full block report.
+   */
+  @Test
+  public void testSafeModeIBRBeforeFirstFullBR() throws Exception {
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+
+    DatanodeDescriptor node = nodes.get(0);
+    DatanodeStorageInfo ds = node.getStorageInfos()[0];
+    node.isAlive = true;
+    DatanodeRegistration nodeReg =  new DatanodeRegistration(node, null, null, "");
+
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node);
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertEquals(0, ds.getBlockReportCount());
+    // Build a incremental report
+    List<ReceivedDeletedBlockInfo> rdbiList = new ArrayList<>();
+    // Build a full report
+    BlockListAsLongs.Builder builder = BlockListAsLongs.builder();
+
+    // blk_42 is finalized.
+    long receivedBlockId = 42;  // arbitrary
+    BlockInfoContiguous receivedBlock = addBlockToBM(receivedBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivedBlock),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    builder.add(new FinalizedReplica(receivedBlock, null, null));
+
+    // blk_43 is under construction.
+    long receivingBlockId = 43;
+    BlockInfoContiguous receivingBlock = addUcBlockToBM(receivingBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingBlock),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVING_BLOCK, null));
+    builder.add(new ReplicaBeingWritten(receivingBlock, null, null, null));
+
+    // blk_44 has 2 records in IBR. It's finalized. So full BR has 1 record.
+    long receivingReceivedBlockId = 44;
+    BlockInfoContiguous receivingReceivedBlock = addBlockToBM(receivingReceivedBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingReceivedBlock),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVING_BLOCK, null));
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingReceivedBlock),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    builder.add(new FinalizedReplica(receivingReceivedBlock, null, null));
+
+    // blk_45 is not in full BR, because it's deleted.
+    long ReceivedDeletedBlockId = 45;
+    rdbiList.add(new ReceivedDeletedBlockInfo(
+        new Block(ReceivedDeletedBlockId),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    rdbiList.add(new ReceivedDeletedBlockInfo(
+        new Block(ReceivedDeletedBlockId),
+        ReceivedDeletedBlockInfo.BlockStatus.DELETED_BLOCK, null));
+
+    // blk_46 exists in DN for a long time, so it's in full BR, but not in IBR.
+    long existedBlockId = 46;
+    BlockInfoContiguous existedBlock = addBlockToBM(existedBlockId);
+    builder.add(new FinalizedReplica(existedBlock, null, null));
+
+    // process IBR and full BR
+    StorageReceivedDeletedBlocks srdb =
+        new StorageReceivedDeletedBlocks(new DatanodeStorage(ds.getStorageID()),
+            rdbiList.toArray(new ReceivedDeletedBlockInfo[rdbiList.size()]));
+    bm.processIncrementalBlockReport(node, srdb);
+    // Make sure it's the first full report
+    assertEquals(0, ds.getBlockReportCount());
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
+        builder.build(), null, false);
+    assertEquals(1, ds.getBlockReportCount());
+
+    // verify the storage info is correct
+    assertTrue(bm.getStoredBlock(new Block(receivedBlockId)).findStorageInfo
+        (ds) >= 0);
+    assertTrue(((BlockInfoContiguousUnderConstruction) bm.
+        getStoredBlock(new Block(receivingBlockId))).getNumExpectedLocations() > 0);
+    assertTrue(bm.getStoredBlock(new Block(receivingReceivedBlockId))
+        .findStorageInfo(ds) >= 0);
+    assertNull(bm.getStoredBlock(new Block(ReceivedDeletedBlockId)));
+    assertTrue(bm.getStoredBlock(new Block(existedBlock)).findStorageInfo
+        (ds) >= 0);
+  }
+
+  private BlockInfoContiguous addBlockToBM(long blkId) {
+    Block block = new Block(blkId);
+    BlockInfoContiguous blockInfo =
+        new BlockInfoContiguous(block, (short) 3);
+    BlockCollection bc = Mockito.mock(BlockCollection.class);
+    Mockito.doReturn((short) 3).when(bc).getBlockReplication();
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    return blockInfo;
+  }
+
+  private BlockInfoContiguous addUcBlockToBM(long blkId) {
+    Block block = new Block(blkId);
+    BlockInfoContiguousUnderConstruction blockInfo =
+        new BlockInfoContiguousUnderConstruction(block, (short) 3);
+    BlockCollection bc = Mockito.mock(BlockCollection.class);
+    Mockito.doReturn((short) 3).when(bc).getBlockReplication();
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    return blockInfo;
   }
   
   /**
