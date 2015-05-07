@@ -21,9 +21,6 @@ package org.apache.hadoop.yarn.server.api;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
@@ -54,45 +51,38 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceReque
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 
 @Private
-@Stable
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
   throws StandbyException, YarnException, IOException;
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
   throws StandbyException, YarnException, IOException;
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
   throws StandbyException, YarnException, IOException;
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
   throws StandbyException, YarnException, IOException;
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request)
   throws YarnException, IOException;
 
-  @Public
-  @Stable
+  @Private
   @Idempotent
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
@@ -112,33 +102,28 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    * @throws YarnException
    * @throws IOException
    */
-  @Public
-  @Evolving
+  @Private
   @Idempotent
   public UpdateNodeResourceResponse updateNodeResource(
       UpdateNodeResourceRequest request) 
   throws YarnException, IOException;
    
-  @Public
-  @Evolving
+  @Private
   @Idempotent
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(
       AddToClusterNodeLabelsRequest request) throws YarnException, IOException;
    
-  @Public
-  @Evolving
+  @Private
   @Idempotent
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request) throws YarnException, IOException;
   
-  @Public
-  @Evolving
+  @Private
   @Idempotent
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
       ReplaceLabelsOnNodeRequest request) throws YarnException, IOException;
   
-  @Public
-  @Evolving
+  @Private
   @Idempotent
   public CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
       CheckForDecommissioningNodesRequest checkForDecommissioningNodesRequest)
