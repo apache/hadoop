@@ -1690,8 +1690,8 @@ See also: [Proxy Users](#Proxy_Users)
 | Description | File system operation read/write/execute |
 | Type | String |
 | Default Value | null (an invalid value) |
-| Valid Values | Strings matching regex pattern  "[rwx-]{3} " |
-| Syntax |  "[rwx-]{3} " |
+| Valid Values | Strings matching regex pattern  "[r-][w-][x-] " |
+| Syntax |  "[r-][w-][x-] " |
 
 See also: [`CHECKACCESS`](#Check_access),
 
