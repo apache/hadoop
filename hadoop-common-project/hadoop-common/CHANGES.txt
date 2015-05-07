@@ -618,6 +618,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11912. Extra configuration key used in TraceUtils should respect
     prefix (Masatake Iwasaki via Colin P. McCabe)
 
+    HADOOP-10387. Misspelling of threshold in log4j.properties for tests in
+    hadoop-common-project. (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
