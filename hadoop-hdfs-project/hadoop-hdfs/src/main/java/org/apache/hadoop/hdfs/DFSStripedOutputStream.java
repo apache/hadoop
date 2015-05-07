@@ -219,9 +219,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       LOG.debug("Creating DFSStripedOutputStream for " + src);
     }
 
-    // ECInfo is restored from NN just before writing striped files.
-    //TODO reduce an rpc call HDFS-8289
-    final ECSchema schema = dfsClient.getErasureCodingInfo(src).getSchema();
+    final ECSchema schema = stat.getECSchema();
     final int numParityBlocks = schema.getNumParityUnits();
     cellSize = schema.getChunkSize();
     numDataBlocks = schema.getNumDataUnits();

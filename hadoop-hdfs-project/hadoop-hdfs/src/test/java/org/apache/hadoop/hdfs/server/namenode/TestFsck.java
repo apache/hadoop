@@ -1198,7 +1198,7 @@ public class TestFsck {
 
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
         blockSize, modTime, accessTime, perms, owner, group, symlink,
-        path, fileId, numChildren, null, storagePolicy);
+        path, fileId, numChildren, null, storagePolicy, null);
     Result res = new Result(conf);
 
     try {

@@ -189,3 +189,6 @@
 
     HDFS-8203. Erasure Coding: Seek and other Ops in DFSStripedInputStream.
     (Yi Liu via jing9)
+
+    HDFS-8289. Erasure Coding: add ECSchema to HdfsFileStatus. (Yong Zhang via
+    jing9)
