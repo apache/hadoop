@@ -22,12 +22,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -150,9 +150,33 @@ public class TestWriteReadStripedFile {
     return bytes;
   }
 
+  private int readAll(FSDataInputStream in, byte[] buf) throws IOException {
+    int readLen = 0;
+    int ret;
+    do {
+      ret = in.read(buf, readLen, buf.length - readLen);
+      if (ret > 0) {
+        readLen += ret;
+      }
+    } while (ret >= 0 && readLen < buf.length);
+    return readLen;
+  }
+
   private byte getByte(long pos) {
     final int mod = 29;
     return (byte) (pos % mod + 1);
+  }
+
+  private void assertSeekAndRead(FSDataInputStream fsdis, int pos,
+      int writeBytes) throws IOException {
+    fsdis.seek(pos);
+    byte[] buf = new byte[writeBytes];
+    int readLen = readAll(fsdis, buf);
+    Assert.assertEquals(readLen, writeBytes - pos);
+    for (int i = 0; i < readLen; i++) {
+      Assert.assertEquals("Byte at " + i + " should be the same",
+          getByte(pos + i), buf[i]);
+    }
   }
 
   private void testOneFileUsingDFSStripedInputStream(String src, int writeBytes)
@@ -183,20 +207,59 @@ public class TestWriteReadStripedFile {
     // stateful read with byte array
     try (FSDataInputStream fsdis = fs.open(new Path(src))) {
       byte[] buf = new byte[writeBytes + 100];
-      int readLen = 0;
-      int ret;
-      do {
-        ret = fsdis.read(buf, readLen, buf.length - readLen);
-        if (ret > 0) {
-          readLen += ret;
-        }
-      } while (ret >= 0);
-      readLen = readLen >= 0 ? readLen : 0;
+      int readLen = readAll(fsdis, buf);
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       for (int i = 0; i < writeBytes; i++) {
         Assert.assertEquals("Byte at " + i + " should be the same", getByte(i),
             buf[i]);
+      }
+    }
+
+    // seek and stateful read
+    try (FSDataInputStream fsdis = fs.open(new Path(src))) {
+      // seek to 1/2 of content
+      int pos = writeBytes/2;
+      assertSeekAndRead(fsdis, pos, writeBytes);
+
+      // seek to 1/3 of content
+      pos = writeBytes/3;
+      assertSeekAndRead(fsdis, pos, writeBytes);
+
+      // seek to 0 pos
+      pos = 0;
+      assertSeekAndRead(fsdis, pos, writeBytes);
+
+      if (writeBytes > cellSize) {
+        // seek to cellSize boundary
+        pos = cellSize -1;
+        assertSeekAndRead(fsdis, pos, writeBytes);
+      }
+
+      if (writeBytes > cellSize * dataBlocks) {
+        // seek to striped cell group boundary
+        pos = cellSize * dataBlocks - 1;
+        assertSeekAndRead(fsdis, pos, writeBytes);
+      }
+
+      if (writeBytes > blockSize * dataBlocks) {
+        // seek to striped block group boundary
+        pos = blockSize * dataBlocks - 1;
+        assertSeekAndRead(fsdis, pos, writeBytes);
+      }
+
+      try {
+        fsdis.seek(-1);
+        Assert.fail("Should be failed if seek to negative offset");
+      } catch (EOFException e) {
+        // expected
+      }
+
+      try {
+        fsdis.seek(writeBytes + 1);
+        Assert.fail("Should be failed if seek after EOF");
+      } catch (EOFException e) {
+        // expected
       }
     }
 
