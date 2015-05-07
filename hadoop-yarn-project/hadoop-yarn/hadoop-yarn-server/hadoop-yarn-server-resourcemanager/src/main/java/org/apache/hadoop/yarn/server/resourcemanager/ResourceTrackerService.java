@@ -626,8 +626,8 @@ public class ResourceTrackerService extends AbstractService implements
                 appId + " is not found in RMContext!");
           } else {
             String previousCollectorAddr = rmApp.getCollectorAddr();
-            if (previousCollectorAddr == null ||
-                previousCollectorAddr != collectorAddr) {
+            if (previousCollectorAddr == null
+                || !previousCollectorAddr.equals(collectorAddr)) {
               // sending collector update event.
               RMAppCollectorUpdateEvent event =
                   new RMAppCollectorUpdateEvent(appId, collectorAddr);
