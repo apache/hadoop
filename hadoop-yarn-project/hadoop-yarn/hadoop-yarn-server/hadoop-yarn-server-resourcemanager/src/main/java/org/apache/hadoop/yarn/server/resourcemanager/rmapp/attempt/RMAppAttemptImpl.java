@@ -1455,14 +1455,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       finishEvent.getApplicationAttemptId()).append(
       " exited with ").append(" exitCode: ").append(status.getExitStatus()).
       append("\n");
+    diagnosticsBuilder.append("Failing this attempt.").append("Diagnostics: ")
+        .append(status.getDiagnostics());
     if (this.getTrackingUrl() != null) {
       diagnosticsBuilder.append("For more detailed output,").append(
-        " check application tracking page:").append(
+        " check application tracking page: ").append(
         this.getTrackingUrl()).append(
-        "Then, click on links to logs of each attempt.\n");
+        " Then, click on links to logs of each attempt.\n");
     }
-    diagnosticsBuilder.append("Diagnostics: ").append(status.getDiagnostics())
-        .append("Failing this attempt");
     return diagnosticsBuilder.toString();
   }
 
