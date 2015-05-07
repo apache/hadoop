@@ -153,6 +153,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8270. create() always retried with hardcoded timeout when file already
     exists with open lease (J.Andreina via vinayakumarb)
 
+    HDFS-7980. Incremental BlockReport will dramatically slow down namenode
+    startup.  (Walter Su via szetszwo)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
