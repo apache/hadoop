@@ -129,6 +129,12 @@ public class TimelinePutResponse {
      */
     public static final int FORBIDDEN_RELATION = 6;
 
+    /**
+     * Error code returned if the entity start time is before the eviction
+     * period of old data.
+     */
+    public static final int EXPIRED_ENTITY = 7;
+
     private String entityId;
     private String entityType;
     private int errorCode;

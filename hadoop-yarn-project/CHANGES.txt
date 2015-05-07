@@ -108,6 +108,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2619. Added NodeManager support for disk io isolation through cgroups.
     (Varun Vasudev and Wei Yan via vinodkv)
 
+    YARN-3448. Added a rolling time-to-live LevelDB timeline store implementation.
+    (Jonathan Eagles via zjshen)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
