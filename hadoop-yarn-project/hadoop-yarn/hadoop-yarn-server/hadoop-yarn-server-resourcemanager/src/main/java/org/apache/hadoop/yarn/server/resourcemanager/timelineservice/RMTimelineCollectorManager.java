@@ -65,7 +65,7 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
           break;
         case TimelineUtils.FLOW_RUN_ID_TAG_PREFIX:
           collector.getTimelineEntityContext().setFlowRunId(
-              Long.valueOf(parts[1]));
+              Long.parseLong(parts[1]));
           break;
         default:
           break;
