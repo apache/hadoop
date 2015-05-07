@@ -30,7 +30,7 @@ public class FsActionParam extends StringParam {
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 
-  private static String FS_ACTION_PATTERN = "[rwx-]{3}";
+  private static String FS_ACTION_PATTERN = "[r-][w-][x-]";
 
   private static final Domain DOMAIN = new Domain(NAME,
       Pattern.compile(FS_ACTION_PATTERN));

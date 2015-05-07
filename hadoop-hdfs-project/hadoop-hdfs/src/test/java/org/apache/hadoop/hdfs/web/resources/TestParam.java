@@ -399,4 +399,58 @@ public class TestParam {
     Assert.assertEquals("s1", s1.getValue());
     Assert.assertEquals("s2", s2.getValue());
   }
+
+  @Test
+  public void testFsActionParam() {
+    new FsActionParam("rwx");
+    new FsActionParam("rw-");
+    new FsActionParam("r-x");
+    new FsActionParam("-wx");
+    new FsActionParam("r--");
+    new FsActionParam("-w-");
+    new FsActionParam("--x");
+    new FsActionParam("---");
+
+    try {
+      new FsActionParam("rw");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("qwx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("qrwx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("rwxx");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("xwr");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+
+    try {
+      new FsActionParam("r-w");
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      LOG.info("EXPECTED: " + e);
+    }
+  }
 }
