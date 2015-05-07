@@ -20,9 +20,15 @@ package org.apache.hadoop.mapreduce.v2.app;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,7 +38,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Assert;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,6 +68,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -435,6 +441,47 @@ public class TestMRAppMaster {
       new String(ugiCredentials.getSecretKey(keyAlias)));
 
 
+  }
+
+  @Test
+  public void testMRAppMasterShutDownJob() throws Exception,
+      InterruptedException {
+    String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
+    String containerIdStr = "container_1317529182569_0004_000002_1";
+    String userName = "TestAppMasterUser";
+    ApplicationAttemptId applicationAttemptId = ConverterUtils
+        .toApplicationAttemptId(applicationAttemptIdStr);
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+    JobConf conf = new JobConf();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+
+    File stagingDir =
+        new File(MRApps.getStagingAreaDir(conf, userName).toString());
+    stagingDir.mkdirs();
+    MRAppMasterTest appMaster =
+        spy(new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
+            System.currentTimeMillis(), false, true));
+    MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
+    doReturn(conf).when(appMaster).getConfig();
+    appMaster.isLastAMRetry = true;
+    doNothing().when(appMaster).serviceStop();
+    // Test normal shutdown.
+    appMaster.shutDownJob();
+    Assert.assertTrue("Expected shutDownJob to terminate.",
+                      ExitUtil.terminateCalled());
+    Assert.assertEquals("Expected shutDownJob to exit with status code of 0.",
+        0, ExitUtil.getFirstExitException().status);
+
+    // Test shutdown with exception.
+    ExitUtil.resetFirstExitException();
+    String msg = "Injected Exception";
+    doThrow(new RuntimeException(msg))
+            .when(appMaster).notifyIsLastAMRetry(anyBoolean());
+    appMaster.shutDownJob();
+    assertTrue("Expected message from ExitUtil.ExitException to be " + msg,
+        ExitUtil.getFirstExitException().getMessage().contains(msg));
+    Assert.assertEquals("Expected shutDownJob to exit with status code of 1.",
+        1, ExitUtil.getFirstExitException().status);
   }
 
   private void verifyFailedStatus(MRAppMasterTest appMaster,
