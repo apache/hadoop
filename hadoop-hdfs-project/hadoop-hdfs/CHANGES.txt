@@ -638,6 +638,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-2484. checkLease should throw FileNotFoundException when file does
     not exist. (Rakesh R via shv)
 
+    HDFS-7833. DataNode reconfiguration does not recalculate valid volumes
+    required, based on configured failed volumes tolerated.
+    (Lei (Eddy) Xu via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
