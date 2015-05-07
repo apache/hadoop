@@ -43,17 +43,17 @@ message ECSchemaProto {
 }
 
 /**
- * ECInfo
+ * ErasureCodingInfo
  */
-message ECInfoProto {
+message ErasureCodingInfoProto {
  required string src = 1;
  required ECSchemaProto schema = 2;
 }
 
 /**
- * ECZoneInfo
+ * ErasureCodingZoneInfo
  */
-message ECZoneInfoProto {
+message ErasureCodingZoneInfoProto {
   required string dir = 1;
   required ECSchemaProto schema = 2;
 }
@@ -71,7 +71,7 @@ message GetErasureCodingInfoRequestProto {
 }
 
 message GetErasureCodingInfoResponseProto {
-  optional ECInfoProto ECInfo = 1;
+  optional ErasureCodingInfoProto ECInfo = 1;
 }
 
 message GetECSchemasRequestProto { // void request
@@ -81,12 +81,12 @@ message GetECSchemasResponseProto {
   repeated ECSchemaProto schemas = 1;
 }
 
-message GetECZoneInfoRequestProto {
+message GetErasureCodingZoneInfoRequestProto {
   required string src = 1; // path to get the zone info
 }
 
-message GetECZoneInfoResponseProto {
-  optional ECZoneInfoProto ECZoneInfo = 1;
+message GetErasureCodingZoneInfoResponseProto {
+  optional ErasureCodingZoneInfoProto ECZoneInfo = 1;
 }
 
 /**

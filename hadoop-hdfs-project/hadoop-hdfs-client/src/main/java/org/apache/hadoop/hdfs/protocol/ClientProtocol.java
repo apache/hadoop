@@ -1501,7 +1501,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  public ECInfo getErasureCodingInfo(String src) throws IOException;
+  public ErasureCodingInfo getErasureCodingInfo(String src) throws IOException;
 
   /**
    * Gets list of ECSchemas loaded in Namenode
@@ -1519,5 +1519,5 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException;
+  public ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws IOException;
 }

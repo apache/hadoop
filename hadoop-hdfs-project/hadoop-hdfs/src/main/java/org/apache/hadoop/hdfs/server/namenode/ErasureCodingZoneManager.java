@@ -22,7 +22,7 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import java.io.IOException;
@@ -53,11 +53,11 @@ public class ErasureCodingZoneManager {
   }
 
   ECSchema getECSchema(INodesInPath iip) throws IOException {
-    ECZoneInfo ecZoneInfo = getECZoneInfo(iip);
+    ErasureCodingZoneInfo ecZoneInfo = getECZoneInfo(iip);
     return ecZoneInfo == null ? null : ecZoneInfo.getSchema();
   }
 
-  ECZoneInfo getECZoneInfo(INodesInPath iip) throws IOException {
+  ErasureCodingZoneInfo getECZoneInfo(INodesInPath iip) throws IOException {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     List<INode> inodes = iip.getReadOnlyINodes();
@@ -79,9 +79,9 @@ public class ErasureCodingZoneManager {
       for (XAttr xAttr : xAttrs) {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
           String schemaName = new String(xAttr.getValue());
-          ECSchema schema = dir.getFSNamesystem().getSchemaManager()
+          ECSchema schema = dir.getFSNamesystem().getECSchemaManager()
               .getSchema(schemaName);
-          return new ECZoneInfo(inode.getFullPathName(), schema);
+          return new ErasureCodingZoneInfo(inode.getFullPathName(), schema);
         }
       }
     }
@@ -110,7 +110,7 @@ public class ErasureCodingZoneManager {
 
     // System default schema will be used since no specified.
     if (schema == null) {
-      schema = ECSchemaManager.getSystemDefaultSchema();
+      schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     }
 
     // Now persist the schema name in xattr

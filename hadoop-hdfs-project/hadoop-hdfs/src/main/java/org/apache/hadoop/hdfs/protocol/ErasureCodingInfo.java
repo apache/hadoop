@@ -22,11 +22,11 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 /**
  * Class to provide information, such as ECSchema, for a file/block.
  */
-public class ECInfo {
+public class ErasureCodingInfo {
   private final String src;
   private final ECSchema schema;
 
-  public ECInfo(String src, ECSchema schema) {
+  public ErasureCodingInfo(String src, ECSchema schema) {
     this.src = src;
     this.schema = schema;
   }

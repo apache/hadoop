@@ -183,3 +183,6 @@
 
     HDFS-8334. Erasure coding: rename DFSStripedInputStream related test 
     classes. (Zhe Zhang)
+
+    HDFS-8129. Erasure Coding: Maintain consistent naming for Erasure Coding related classes - EC/ErasureCoding
+    (umamahesh)

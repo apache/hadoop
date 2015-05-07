@@ -176,8 +176,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECInfo;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -421,7 +421,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final BlockManager blockManager;
   private final SnapshotManager snapshotManager;
   private final CacheManager cacheManager;
-  private final ECSchemaManager schemaManager;
+  private final ErasureCodingSchemaManager ecSchemaManager;
   private final DatanodeStatistics datanodeStatistics;
 
   private String nameserviceId;
@@ -598,7 +598,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     leaseManager.removeAllLeases();
     snapshotManager.clearSnapshottableDirs();
     cacheManager.clear();
-    schemaManager.clear();
+    ecSchemaManager.clear();
     setImageLoaded(false);
     blockManager.clear();
   }
@@ -836,7 +836,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(dir);
       this.cacheManager = new CacheManager(this, conf, blockManager);
-      this.schemaManager = new ECSchemaManager();
+      this.ecSchemaManager = new ErasureCodingSchemaManager();
       this.safeMode = new SafeModeInfo(conf);
       this.topConf = new TopConf(conf);
       this.auditLoggers = initAuditLoggers(conf);
@@ -6168,8 +6168,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /** @return the schema manager. */
-  public ECSchemaManager getSchemaManager() {
-    return schemaManager;
+  public ErasureCodingSchemaManager getECSchemaManager() {
+    return ecSchemaManager;
   }
 
   @Override  // NameNodeMXBean
@@ -7169,11 +7169,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the erasure coding information for specified src
    */
-  ECInfo getErasureCodingInfo(String src) throws AccessControlException,
+  ErasureCodingInfo getErasureCodingInfo(String src) throws AccessControlException,
       UnresolvedLinkException, IOException {
     ECSchema schema = getECSchemaForPath(src);
     if (schema != null) {
-      return new ECInfo(src, schema);
+      return new ErasureCodingInfo(src, schema);
     }
     return null;
   }
@@ -7181,7 +7181,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the erasure coding zone information for specified path
    */
-  ECZoneInfo getErasureCodingZoneInfo(String src) throws AccessControlException,
+  ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws AccessControlException,
       UnresolvedLinkException, IOException {
     checkOperation(OperationCategory.READ);
     final byte[][] pathComponents = FSDirectory
@@ -7210,7 +7210,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return schemaManager.getSchemas();
+      return ecSchemaManager.getSchemas();
     } finally {
       readUnlock();
     }
@@ -7225,7 +7225,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return schemaManager.getSchema(schemaName);
+      return ecSchemaManager.getSchema(schemaName);
     } finally {
       readUnlock();
     }
