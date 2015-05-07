@@ -621,6 +621,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10387. Misspelling of threshold in log4j.properties for tests in
     hadoop-common-project. (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11936. Dockerfile references a removed image (aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -19,9 +19,19 @@
 # See BUILDING.txt.
 
 # FROM dockerfile/java:openjdk-7-jdk
-FROM dockerfile/java:oracle-java7
+# FROM dockerfile/java:oracle-java7
+FROM ubuntu:trusty
 
 WORKDIR /root
+
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository -y ppa:webupd8team/java
+RUN apt-get update
+
+# Auto-accept the Oracle JDK license
+RUN echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
+
+RUN apt-get install -y oracle-java7-installer
 
 # Install dependencies from packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
