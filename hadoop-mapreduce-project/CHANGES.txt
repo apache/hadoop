@@ -307,6 +307,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6192. Create unit test to automatically compare
     MR related classes and mapred-default.xml (rchiang via rkanter)
 
+    MAPREDUCE-6279. AM should explicity exit JVM after all services have
+    stopped (Eric Payne via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

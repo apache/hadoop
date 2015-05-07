@@ -220,6 +220,7 @@ public class MRAppMaster extends CompositeService {
   private final ScheduledExecutorService logSyncer;
 
   private long recoveredJobStartTime = 0;
+  private static boolean mainStarted = false;
 
   @VisibleForTesting
   protected AtomicBoolean successfullyUnregistered =
@@ -605,11 +606,37 @@ public class MRAppMaster extends CompositeService {
       clientService.stop();
     } catch (Throwable t) {
       LOG.warn("Graceful stop failed. Exiting.. ", t);
-      ExitUtil.terminate(1, t);
+      exitMRAppMaster(1, t);
     }
-
+    exitMRAppMaster(0, null);
   }
- 
+
+  /** MRAppMaster exit method which has been instrumented for both runtime and
+   *  unit testing.
+   * If the main thread has not been started, this method was called from a
+   * test. In that case, configure the ExitUtil object to not exit the JVM.
+   *
+   * @param status integer indicating exit status
+   * @param t throwable exception that could be null
+   */
+  private void exitMRAppMaster(int status, Throwable t) {
+    if (!mainStarted) {
+      ExitUtil.disableSystemExit();
+    }
+    try {
+      if (t != null) {
+        ExitUtil.terminate(status, t);
+      } else {
+        ExitUtil.terminate(status);
+      }
+    } catch (ExitUtil.ExitException ee) {
+      // ExitUtil.ExitException is only thrown from the ExitUtil test code when
+      // SystemExit has been disabled. It is always thrown in in the test code,
+      // even when no error occurs. Ignore the exception so that tests don't
+      // need to handle it.
+    }
+  }
+
   private class JobFinishEventHandler implements EventHandler<JobFinishEvent> {
     @Override
     public void handle(JobFinishEvent event) {
@@ -1407,6 +1434,7 @@ public class MRAppMaster extends CompositeService {
 
   public static void main(String[] args) {
     try {
+      mainStarted = true;
       Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
       String containerIdStr =
           System.getenv(Environment.CONTAINER_ID.name());
