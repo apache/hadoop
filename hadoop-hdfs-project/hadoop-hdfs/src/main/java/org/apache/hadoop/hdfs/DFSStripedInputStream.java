@@ -29,6 +29,7 @@ import org.apache.hadoop.io.ByteBufferPool;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.ReadPortion;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.planReadPortions;
 
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
@@ -132,13 +133,13 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final CompletionService<Integer> readingService;
 
   DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum,
-      ErasureCodingInfo ecInfo) throws IOException {
+      ECSchema schema) throws IOException {
     super(dfsClient, src, verifyChecksum);
-    // ECInfo is restored from NN just before reading striped file.
-    assert ecInfo != null;
-    cellSize = ecInfo.getSchema().getChunkSize();
-    dataBlkNum = (short) ecInfo.getSchema().getNumDataUnits();
-    parityBlkNum = (short) ecInfo.getSchema().getNumParityUnits();
+
+    assert schema != null;
+    cellSize = schema.getChunkSize();
+    dataBlkNum = (short) schema.getNumDataUnits();
+    parityBlkNum = (short) schema.getNumParityUnits();
     curStripeRange = new StripeRange(0, 0);
     readingService =
         new ExecutorCompletionService<>(dfsClient.getStripedReadsThreadPool());

@@ -24,25 +24,6 @@ package hadoop.hdfs;
 import "hdfs.proto";
 
 /**
- * ECSchema options entry
- */
-message ECSchemaOptionEntryProto {
-  required string key = 1;
-  required string value = 2;
-}
-
-/**
- * ECSchema for erasurecoding
- */
-message ECSchemaProto {
-  required string schemaName = 1;
-  required string codecName = 2;
-  required uint32 dataUnits = 3;
-  required uint32 parityUnits = 4;
-  repeated ECSchemaOptionEntryProto options = 5;
-}
-
-/**
  * ErasureCodingInfo
  */
 message ErasureCodingInfoProto {

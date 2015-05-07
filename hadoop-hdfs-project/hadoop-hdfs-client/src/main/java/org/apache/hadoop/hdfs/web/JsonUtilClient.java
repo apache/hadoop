@@ -132,7 +132,7 @@ class JsonUtilClient {
         blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtilClient.string2Bytes(localName),
         fileId, childrenNum, null,
-        storagePolicy);
+        storagePolicy, null);
   }
 
   /** Convert a Json map to an ExtendedBlock object. */
