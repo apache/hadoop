@@ -119,8 +119,8 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECInfo;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1193,7 +1193,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     //    Get block info from namenode
     TraceScope scope = getPathTraceScope("newDFSInputStream", src);
     try {
-      ECInfo info = getErasureCodingInfo(src);
+      ErasureCodingInfo info = getErasureCodingInfo(src);
       if (info != null) {
         return new DFSStripedInputStream(this, src, verifyChecksum, info);
       } else {
@@ -3134,7 +3134,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public ECInfo getErasureCodingInfo(String src) throws IOException {
+  public ErasureCodingInfo getErasureCodingInfo(String src) throws IOException {
     checkOpen();
     TraceScope scope = getPathTraceScope("getErasureCodingInfo", src);
     try {
@@ -3356,7 +3356,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return Returns the zone information if path is in EC Zone, null otherwise
    * @throws IOException
    */
-  public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
+  public ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
     checkOpen();
     TraceScope scope = getPathTraceScope("getErasureCodingZoneInfo", src);
     try {

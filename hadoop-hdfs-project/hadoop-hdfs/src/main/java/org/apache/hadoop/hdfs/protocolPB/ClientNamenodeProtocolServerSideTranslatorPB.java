@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECInfo;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -202,8 +202,8 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptio
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECZoneInfoRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECZoneInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneInfoRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CreateErasureCodingZoneRequestProto;
@@ -1527,7 +1527,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetErasureCodingInfoResponseProto getErasureCodingInfo(RpcController controller,
       GetErasureCodingInfoRequestProto request) throws ServiceException {
     try {
-      ECInfo ecInfo = server.getErasureCodingInfo(request.getSrc());
+      ErasureCodingInfo ecInfo = server.getErasureCodingInfo(request.getSrc());
       GetErasureCodingInfoResponseProto.Builder resBuilder = GetErasureCodingInfoResponseProto
           .newBuilder();
       if (ecInfo != null) {
@@ -1556,11 +1556,11 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetECZoneInfoResponseProto getErasureCodingZoneInfo(RpcController controller,
-      GetECZoneInfoRequestProto request) throws ServiceException {
+  public GetErasureCodingZoneInfoResponseProto getErasureCodingZoneInfo(RpcController controller,
+      GetErasureCodingZoneInfoRequestProto request) throws ServiceException {
     try {
-      ECZoneInfo ecZoneInfo = server.getErasureCodingZoneInfo(request.getSrc());
-      GetECZoneInfoResponseProto.Builder builder = GetECZoneInfoResponseProto.newBuilder();
+      ErasureCodingZoneInfo ecZoneInfo = server.getErasureCodingZoneInfo(request.getSrc());
+      GetErasureCodingZoneInfoResponseProto.Builder builder = GetErasureCodingZoneInfoResponseProto.newBuilder();
       if (ecZoneInfo != null) {
         builder.setECZoneInfo(PBHelper.convertECZoneInfo(ecZoneInfo));
       }

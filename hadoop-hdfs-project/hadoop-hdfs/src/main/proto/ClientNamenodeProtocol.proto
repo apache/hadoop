@@ -867,6 +867,6 @@ service ClientNamenodeProtocol {
       returns(GetErasureCodingInfoResponseProto);
   rpc getECSchemas(GetECSchemasRequestProto)
       returns(GetECSchemasResponseProto);
-  rpc getErasureCodingZoneInfo(GetECZoneInfoRequestProto) 
-      returns(GetECZoneInfoResponseProto);
+  rpc getErasureCodingZoneInfo(GetErasureCodingZoneInfoRequestProto) 
+      returns(GetErasureCodingZoneInfoResponseProto);
 }

@@ -77,13 +77,13 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.ECInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -135,10 +135,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ErasureCodingInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaOptionEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECZoneInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ErasureCodingZoneInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
@@ -3117,13 +3117,13 @@ public class PBHelper {
         build();
   }
 
-  public static ECInfo convertECInfo(ECInfoProto ecInfoProto) {
-    return new ECInfo(ecInfoProto.getSrc(),
+  public static ErasureCodingInfo convertECInfo(ErasureCodingInfoProto ecInfoProto) {
+    return new ErasureCodingInfo(ecInfoProto.getSrc(),
         convertECSchema(ecInfoProto.getSchema()));
   }
 
-  public static ECInfoProto convertECInfo(ECInfo ecInfo) {
-    return ECInfoProto.newBuilder().setSrc(ecInfo.getSrc())
+  public static ErasureCodingInfoProto convertECInfo(ErasureCodingInfo ecInfo) {
+    return ErasureCodingInfoProto.newBuilder().setSrc(ecInfo.getSrc())
         .setSchema(convertECSchema(ecInfo.getSchema())).build();
   }
 
@@ -3151,13 +3151,13 @@ public class PBHelper {
     return builder.build();
   }
 
-  public static ECZoneInfoProto convertECZoneInfo(ECZoneInfo ecZoneInfo) {
-    return ECZoneInfoProto.newBuilder().setDir(ecZoneInfo.getDir())
+  public static ErasureCodingZoneInfoProto convertECZoneInfo(ErasureCodingZoneInfo ecZoneInfo) {
+    return ErasureCodingZoneInfoProto.newBuilder().setDir(ecZoneInfo.getDir())
         .setSchema(convertECSchema(ecZoneInfo.getSchema())).build();
   }
 
-  public static ECZoneInfo convertECZoneInfo(ECZoneInfoProto ecZoneInfoProto) {
-    return new ECZoneInfo(ecZoneInfoProto.getDir(),
+  public static ErasureCodingZoneInfo convertECZoneInfo(ErasureCodingZoneInfoProto ecZoneInfoProto) {
+    return new ErasureCodingZoneInfo(ecZoneInfoProto.getDir(),
         convertECSchema(ecZoneInfoProto.getSchema()));
   }
   

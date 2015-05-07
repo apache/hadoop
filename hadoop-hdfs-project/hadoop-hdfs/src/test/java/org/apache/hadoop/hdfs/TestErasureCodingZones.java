@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.ECInfo;
-import org.apache.hadoop.hdfs.server.namenode.ECSchemaManager;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -158,7 +158,7 @@ public class TestErasureCodingZones {
     assertNull(fs.getClient().getErasureCodingInfo(src));
     // dir ECInfo after creating ec zone
     fs.getClient().createErasureCodingZone(src, null); //Default one will be used.
-    ECSchema sysDefaultSchema = ECSchemaManager.getSystemDefaultSchema();
+    ECSchema sysDefaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     verifyErasureCodingInfo(src, sysDefaultSchema);
     fs.create(new Path(ecDir, "/child1")).close();
     // verify for the files in ec zone
@@ -167,7 +167,7 @@ public class TestErasureCodingZones {
 
   @Test
   public void testGetErasureCodingInfo() throws Exception {
-    ECSchema[] sysSchemas = ECSchemaManager.getSystemSchemas();
+    ECSchema[] sysSchemas = ErasureCodingSchemaManager.getSystemSchemas();
     assertTrue("System schemas should be of only 1 for now",
         sysSchemas.length == 1);
 
@@ -187,7 +187,7 @@ public class TestErasureCodingZones {
 
   private void verifyErasureCodingInfo(
       String src, ECSchema usingSchema) throws IOException {
-    ECInfo ecInfo = fs.getClient().getErasureCodingInfo(src);
+    ErasureCodingInfo ecInfo = fs.getClient().getErasureCodingInfo(src);
     assertNotNull("ECInfo should have been non-null", ecInfo);
     assertEquals(src, ecInfo.getSrc());
     ECSchema schema = ecInfo.getSchema();

@@ -21,12 +21,12 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 /**
  * Information about the EC Zone at the specified path.
  */
-public class ECZoneInfo {
+public class ErasureCodingZoneInfo {
 
   private String dir;
   private ECSchema schema;
 
-  public ECZoneInfo(String dir, ECSchema schema) {
+  public ErasureCodingZoneInfo(String dir, ECSchema schema) {
     this.dir = dir;
     this.schema = schema;
   }

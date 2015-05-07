@@ -75,7 +75,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -2315,18 +2315,18 @@ public class DistributedFileSystem extends FileSystem {
    * @return Returns the zone information if path is in EC zone, null otherwise
    * @throws IOException
    */
-  public ECZoneInfo getErasureCodingZoneInfo(final Path path)
+  public ErasureCodingZoneInfo getErasureCodingZoneInfo(final Path path)
       throws IOException {
     Path absF = fixRelativePart(path);
-    return new FileSystemLinkResolver<ECZoneInfo>() {
+    return new FileSystemLinkResolver<ErasureCodingZoneInfo>() {
       @Override
-      public ECZoneInfo doCall(final Path p) throws IOException,
+      public ErasureCodingZoneInfo doCall(final Path p) throws IOException,
           UnresolvedLinkException {
         return dfs.getErasureCodingZoneInfo(getPathName(p));
       }
 
       @Override
-      public ECZoneInfo next(final FileSystem fs, final Path p)
+      public ErasureCodingZoneInfo next(final FileSystem fs, final Path p)
           throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;

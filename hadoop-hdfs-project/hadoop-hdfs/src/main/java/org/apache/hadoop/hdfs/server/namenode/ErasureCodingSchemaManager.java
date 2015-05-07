@@ -31,7 +31,7 @@ import java.util.TreeMap;
  * This class is instantiated by the FSNamesystem.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
-public final class ECSchemaManager {
+public final class ErasureCodingSchemaManager {
 
   /**
    * TODO: HDFS-8095
@@ -55,7 +55,7 @@ public final class ECSchemaManager {
    */
   private final Map<String, ECSchema> activeSchemas;
 
-  ECSchemaManager() {
+  ErasureCodingSchemaManager() {
 
     this.activeSchemas = new TreeMap<String, ECSchema>();
     for (ECSchema schema : SYS_SCHEMAS) {
