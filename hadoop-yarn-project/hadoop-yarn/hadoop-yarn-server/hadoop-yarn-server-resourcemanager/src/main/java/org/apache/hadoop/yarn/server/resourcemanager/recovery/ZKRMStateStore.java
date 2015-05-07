@@ -694,7 +694,7 @@ public class ZKRMStateStore extends RMStateStore {
       LOG.debug("Removing info for app: " + appId + " at: " + appIdRemovePath
           + " and its attempts.");
     }
-    doMultiWithRetries(opList);
+    doDeleteMultiWithRetries(opList);
   }
 
   @Override
@@ -703,13 +703,12 @@ public class ZKRMStateStore extends RMStateStore {
       throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
     addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
-    doMultiWithRetries(opList);
+    doStoreMultiWithRetries(opList);
   }
 
   @Override
   protected synchronized void removeRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier) throws Exception {
-    ArrayList<Op> opList = new ArrayList<Op>();
     String nodeRemovePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
@@ -718,11 +717,12 @@ public class ZKRMStateStore extends RMStateStore {
           + rmDTIdentifier.getSequenceNumber());
     }
     if (existsWithRetries(nodeRemovePath, false) != null) {
+      ArrayList<Op> opList = new ArrayList<Op>();
       opList.add(Op.delete(nodeRemovePath, -1));
+      doDeleteMultiWithRetries(opList);
     } else {
       LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
     }
-    doMultiWithRetries(opList);
   }
 
   @Override
@@ -741,7 +741,7 @@ public class ZKRMStateStore extends RMStateStore {
       // in case znode exists
       addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, true);
     }
-    doMultiWithRetries(opList);
+    doStoreMultiWithRetries(opList);
   }
 
   private void addStoreOrUpdateOps(ArrayList<Op> opList,
@@ -810,7 +810,7 @@ public class ZKRMStateStore extends RMStateStore {
       LOG.debug("Removing RMDelegationKey_" + delegationKey.getKeyId());
     }
     if (existsWithRetries(nodeRemovePath, false) != null) {
-      doMultiWithRetries(Op.delete(nodeRemovePath, -1));
+      doDeleteMultiWithRetries(Op.delete(nodeRemovePath, -1));
     } else {
       LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
     }
@@ -914,7 +914,7 @@ public class ZKRMStateStore extends RMStateStore {
    * Helper method that creates fencing node, executes the passed operations,
    * and deletes the fencing node.
    */
-  private synchronized void doMultiWithRetries(
+  private synchronized void doStoreMultiWithRetries(
       final List<Op> opList) throws Exception {
     final List<Op> execOpList = new ArrayList<Op>(opList.size() + 2);
     execOpList.add(createFencingNodePathOp);
@@ -933,8 +933,32 @@ public class ZKRMStateStore extends RMStateStore {
    * Helper method that creates fencing node, executes the passed operation,
    * and deletes the fencing node.
    */
-  private void doMultiWithRetries(final Op op) throws Exception {
-    doMultiWithRetries(Collections.singletonList(op));
+  private void doStoreMultiWithRetries(final Op op) throws Exception {
+    doStoreMultiWithRetries(Collections.singletonList(op));
+  }
+
+  /**
+   * Helper method that creates fencing node, executes the passed
+   * delete related operations and deletes the fencing node.
+   */
+  private synchronized void doDeleteMultiWithRetries(
+      final List<Op> opList) throws Exception {
+    final List<Op> execOpList = new ArrayList<Op>(opList.size() + 2);
+    execOpList.add(createFencingNodePathOp);
+    execOpList.addAll(opList);
+    execOpList.add(deleteFencingNodePathOp);
+    new ZKAction<Void>() {
+      @Override
+      public Void run() throws KeeperException, InterruptedException {
+        setHasDeleteNodeOp(true);
+        zkClient.multi(execOpList);
+        return null;
+      }
+    }.runWithRetries();
+  }
+
+  private void doDeleteMultiWithRetries(final Op op) throws Exception {
+    doDeleteMultiWithRetries(Collections.singletonList(op));
   }
 
   @VisibleForTesting
@@ -943,7 +967,7 @@ public class ZKRMStateStore extends RMStateStore {
   public void createWithRetries(
       final String path, final byte[] data, final List<ACL> acl,
       final CreateMode mode) throws Exception {
-    doMultiWithRetries(Op.create(path, data, acl, mode));
+    doStoreMultiWithRetries(Op.create(path, data, acl, mode));
   }
 
   @VisibleForTesting
@@ -951,7 +975,7 @@ public class ZKRMStateStore extends RMStateStore {
   @Unstable
   public void setDataWithRetries(final String path, final byte[] data,
                                  final int version) throws Exception {
-    doMultiWithRetries(Op.setData(path, data, version));
+    doStoreMultiWithRetries(Op.setData(path, data, version));
   }
 
   @VisibleForTesting
@@ -1017,7 +1041,12 @@ public class ZKRMStateStore extends RMStateStore {
     for (String child : children) {
       recursiveDeleteWithRetriesHelper(path + "/" + child, false);
     }
-    zkClient.delete(path, -1);
+
+    try {
+      zkClient.delete(path, -1);
+    } catch (KeeperException.NoNodeException nne) {
+      LOG.info("Node " + path + " doesn't exist to delete");
+    }
   }
 
   /**
@@ -1037,7 +1066,7 @@ public class ZKRMStateStore extends RMStateStore {
           if(isFencedState()) { 
             break;
           }
-          doMultiWithRetries(emptyOpList);
+          doStoreMultiWithRetries(emptyOpList);
           Thread.sleep(zkSessionTimeout);
         }
       } catch (InterruptedException ie) {
@@ -1050,6 +1079,10 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   private abstract class ZKAction<T> {
+    private boolean hasDeleteNodeOp = false;
+    void setHasDeleteNodeOp(boolean hasDeleteOp) {
+      this.hasDeleteNodeOp = hasDeleteOp;
+    }
     // run() expects synchronization on ZKRMStateStore.this
     abstract T run() throws KeeperException, InterruptedException;
 
@@ -1099,6 +1132,11 @@ public class ZKRMStateStore extends RMStateStore {
             LOG.info("znode already exists!");
             return null;
           }
+          if (hasDeleteNodeOp && ke.code() == Code.NONODE) {
+            LOG.info("znode has already been deleted!");
+            return null;
+          }
+
           LOG.info("Exception while executing a ZK operation.", ke);
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
             LOG.info("Retrying operation on ZK. Retry no. " + retry);

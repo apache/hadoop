@@ -373,6 +373,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3301. Fixed the format issue of the new RM attempt web page.
     (Xuan Gong via jianhe)
 
+    YARN-3385. Fixed a race-condition in ResourceManager's ZooKeeper based
+    state-store to avoid crashing on duplicate deletes. (Zhihai Xu via vinodkv)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
