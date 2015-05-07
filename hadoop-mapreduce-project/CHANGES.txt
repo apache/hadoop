@@ -374,6 +374,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6165. [JDK8] TestCombineFileInputFormat failed on JDK8.
     (Akira AJISAKA via ozawa)
 
+    MAPREDUCE-6356. Misspelling of threshold in log4j.properties for tests.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
