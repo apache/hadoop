@@ -192,3 +192,6 @@
 
     HDFS-8289. Erasure Coding: add ECSchema to HdfsFileStatus. (Yong Zhang via
     jing9)
+
+    HDFS-8355. Erasure Coding: Refactor BlockInfo and BlockInfoUnderConstruction.
+    (Tsz Wo Nicholas Sze via jing9)

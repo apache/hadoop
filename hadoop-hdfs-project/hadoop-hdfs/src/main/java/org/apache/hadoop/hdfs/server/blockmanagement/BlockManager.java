@@ -653,13 +653,19 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private static boolean commitBlock(final BlockInfo block,
       final Block commitBlock) throws IOException {
-    if (block.getBlockUCState() == BlockUCState.COMMITTED)
-      return false;
-    assert block.getNumBytes() <= commitBlock.getNumBytes() :
-      "commitBlock length is less than the stored one "
-      + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
-    BlockInfo.commitBlock(block, commitBlock);
-    return true;
+    if (block instanceof BlockInfoUnderConstruction
+        && block.getBlockUCState() != BlockUCState.COMMITTED) {
+      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)block;
+
+      assert block.getNumBytes() <= commitBlock.getNumBytes() :
+        "commitBlock length is less than the stored one "
+        + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
+
+      uc.commitBlock(commitBlock);
+      return true;
+    }
+
+    return false;
   }
   
   /**
@@ -716,7 +722,10 @@ public class BlockManager implements BlockStatsMXBean {
           "Cannot complete block: block has not been COMMITTED by the client");
     }
 
-    final BlockInfo completeBlock = BlockInfo.convertToCompleteBlock(curBlock);
+    final BlockInfo completeBlock
+        = !(curBlock instanceof BlockInfoUnderConstruction)? curBlock
+            : ((BlockInfoUnderConstruction)curBlock).convertToCompleteBlock();
+
     // replace penultimate block in file
     bc.setBlock(blkIndex, completeBlock);
     
@@ -754,7 +763,9 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public BlockInfo forceCompleteBlock(final BlockCollection bc,
       final BlockInfo block) throws IOException {
-    BlockInfo.commitBlock(block, block);
+    if (block instanceof BlockInfoUnderConstruction) {
+      ((BlockInfoUnderConstruction)block).commitBlock(block);
+    }
     return completeBlock(bc, block, true);
   }
 
@@ -2296,12 +2307,13 @@ public class BlockManager implements BlockStatsMXBean {
       
       // If block is under construction, add this replica to its list
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-        BlockInfo.addReplica(storedBlock, storageInfo, iblk, reportedState);
+        final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)storedBlock;
+        uc.addReplicaIfNotPresent(storageInfo, iblk, reportedState);
         // OpenFileBlocks only inside snapshots also will be added to safemode
         // threshold. So we need to update such blocks to safemode
         // refer HDFS-5283
         if (namesystem.isInSnapshot(storedBlock.getBlockCollection())) {
-          int numOfReplicas = BlockInfo.getNumExpectedLocations(storedBlock);
+          int numOfReplicas = uc.getNumExpectedLocations();
           namesystem.incrementSafeBlockCount(numOfReplicas, storedBlock);
         }
         //and fall through to next clause
@@ -2663,7 +2675,8 @@ public class BlockManager implements BlockStatsMXBean {
   void addStoredBlockUnderConstruction(StatefulBlockInfo ucBlock,
       DatanodeStorageInfo storageInfo) throws IOException {
     BlockInfo block = ucBlock.storedBlock;
-    BlockInfo.addReplica(block, storageInfo, ucBlock.reportedBlock,
+    final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)block;
+    uc.addReplicaIfNotPresent(storageInfo, ucBlock.reportedBlock,
         ucBlock.reportedState);
 
     if (ucBlock.reportedState == ReplicaState.FINALIZED &&
@@ -4002,6 +4015,20 @@ public class BlockManager implements BlockStatsMXBean {
         DatanodeStorageInfo.toStorageTypes(storages),
         indices, startOffset, corrupt,
         null);
+  }
+
+  public LocatedBlock newLocatedBlock(ExtendedBlock eb, BlockInfo info,
+      DatanodeStorageInfo[] locs, long offset) throws IOException {
+    final LocatedBlock lb;
+    if (info.isStriped()) {
+      lb = newLocatedStripedBlock(eb, locs,
+          ((BlockInfoStripedUnderConstruction)info).getBlockIndices(),
+          offset, false);
+    } else {
+      lb = newLocatedBlock(eb, locs, offset, false);
+    }
+    setBlockToken(lb, BlockTokenIdentifier.AccessMode.WRITE);
+    return lb;
   }
 
   /**
