@@ -313,6 +313,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6279. AM should explicity exit JVM after all services have
     stopped (Eric Payne via jlowe)
 
+    MAPREDUCE-6079. Rename JobImpl#username to reporterUserName.
+    (Tsuyoshi Ozawa via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
