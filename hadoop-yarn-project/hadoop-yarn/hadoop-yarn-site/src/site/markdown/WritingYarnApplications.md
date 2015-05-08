@@ -535,8 +535,8 @@ You can use the LocalResource to add resources to your application request. This
 
 ```java
 File packageFile = new File(packagePath);
-Url packageUrl = ConverterUtils.getYarnUrlFromPath(
-    FileContext.getFileContext.makeQualified(new Path(packagePath)));
+URL packageUrl = ConverterUtils.getYarnUrlFromPath(
+    FileContext.getFileContext().makeQualified(new Path(packagePath)));
 
 packageResource.setResource(packageUrl);
 packageResource.setSize(packageFile.length());
