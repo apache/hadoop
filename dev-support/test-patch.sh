@@ -35,6 +35,7 @@ function setup_defaults
   fi
 
   PROJECT_NAME=hadoop
+  HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
   JENKINS=false
   PATCH_DIR=/tmp/${PROJECT_NAME}-test-patch/$$
   BASEDIR=$(pwd)
@@ -70,6 +71,7 @@ function setup_defaults
       PATCH=${PATCH:-patch}
       DIFF=${DIFF:-/usr/gnu/bin/diff}
       JIRACLI=${JIRA:-jira}
+      FILE=${FILE:-file}
     ;;
     *)
       PS=${PS:-ps}
@@ -82,6 +84,7 @@ function setup_defaults
       PATCH=${PATCH:-patch}
       DIFF=${DIFF:-diff}
       JIRACLI=${JIRA:-jira}
+      FILE=${FILE:-file}
     ;;
   esac
 
@@ -575,6 +578,7 @@ function hadoop_usage
   echo "--branch=<ref>         Forcibly set the branch"
   echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'trunk')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
+  echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default Hadoop's wiki)"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
@@ -588,6 +592,7 @@ function hadoop_usage
   echo "Shell binary overrides:"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
+  echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
@@ -632,6 +637,9 @@ function parse_args
       --build-native=*)
         BUILD_NATIVE=${i#*=}
       ;;
+      --contrib-guide=*)
+        HOW_TO_CONTRIBUTE=${i#*=}
+      ;;
       --debug)
         HADOOP_SHELL_SCRIPT_DEBUG=true
       ;;
@@ -643,6 +651,9 @@ function parse_args
       ;;
       --eclipse-home=*)
         ECLIPSE_HOME=${i#*=}
+      ;;
+      --file-cmd=*)
+        FILE=${i#*=}
       ;;
       --findbugs-home=*)
         FINDBUGS_HOME=${i#*=}
@@ -1278,6 +1289,7 @@ function determine_needed_tests
 ## @return       1 on failure, may exit
 function locate_patch
 {
+  local notSureIfPatch=false
   hadoop_debug "locate patch"
 
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
@@ -1306,8 +1318,7 @@ function locate_patch
       relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
       PATCHURL="http://issues.apache.org${relativePatchURL}"
       if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
-        hadoop_error "ERROR: ${PATCHURL} is not a patch file."
-        cleanup_and_exit 1
+        notSureIfPatch=true
       fi
       patchNum=$(echo "${PATCHURL}" | ${GREP} -o '[0-9]*/' | ${GREP} -o '[0-9]*')
       echo "${ISSUE} patch is being downloaded at $(date) from"
@@ -1331,6 +1342,41 @@ function locate_patch
       cleanup_and_exit 1
     fi
   fi
+  if [[ ${notSureIfPatch} == "true" ]]; then
+    guess_patch_file "${PATCH_DIR}/patch"
+    if [[ $? != 0 ]]; then
+      hadoop_error "ERROR: ${PATCHURL} is not a patch file."
+      cleanup_and_exit 1
+    else
+      hadoop_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
+      add_jira_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
+    fi
+  fi
+}
+
+## @description Given a possible patch file, guess if it's a patch file without using smart-apply-patch
+## @audience private
+## @stability evolving
+## @param path to patch file to test
+## @return 0 we think it's a patch file
+## @return 1 we think it's not a patch file
+function guess_patch_file
+{
+  local patch=$1
+  local fileOutput
+
+  hadoop_debug "Trying to guess is ${patch} is a patch file."
+  fileOutput=$("${FILE}" "${patch}")
+  if [[ $fileOutput =~ \ diff\  ]]; then
+    hadoop_debug "file magic says it's a diff."
+    return 0
+  fi
+  fileOutput=$(head -n 1 "${patch}" | "${EGREP}" "^(From [a-z0-9]* Mon Sep 17 00:00:00 2001)|(diff .*)|(Index: .*)$")
+  if [[ $? == 0 ]]; then
+    hadoop_debug "first line looks like a patch file."
+    return 0
+  fi
+  return 1
 }
 
 ## @description  Given ${PATCH_DIR}/patch, verify the patch is good using ${BINDIR}/smart-apply-patch.sh
