@@ -93,6 +93,7 @@
             <exclude>.gitattributes</exclude>
             <exclude>src/test/resources/recordSpanningMultipleSplits.txt</exclude>
             <exclude>src/test/resources/testBOM.txt</exclude>
+            <exclude>src/test/resources/TestSafeguardSplittingUnsplittableFiles.txt.gz</exclude>
           </excludes>
         </configuration>
       </plugin>

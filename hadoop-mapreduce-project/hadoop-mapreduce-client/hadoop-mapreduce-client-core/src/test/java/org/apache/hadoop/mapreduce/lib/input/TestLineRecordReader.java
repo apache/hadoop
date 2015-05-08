@@ -110,6 +110,13 @@ public class TestLineRecordReader {
     testSplitRecords("blockEndingInCRThenLF.txt.bz2", 136498);
   }
 
+  @Test(expected=IOException.class)
+  public void testSafeguardSplittingUnsplittableFiles() throws IOException {
+    // The LineRecordReader must fail when trying to read a file that
+    // was compressed using an unsplittable file format
+    testSplitRecords("TestSafeguardSplittingUnsplittableFiles.txt.gz", 2);
+  }
+
   // Use the LineRecordReader to read records from the file
   public ArrayList<String> readRecords(URL testFileUrl, int splitSize)
       throws IOException {

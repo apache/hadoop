@@ -118,6 +118,13 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
         end = cIn.getAdjustedEnd();
         filePosition = cIn; // take pos from compressed stream
       } else {
+        if (start != 0) {
+          // So we have a split that is part of a file stored using
+          // a Compression codec that cannot be split.
+          throw new IOException("Cannot seek in " +
+              codec.getClass().getSimpleName() + " compressed stream");
+        }
+
         in = new SplitLineReader(codec.createInputStream(fileIn,
             decompressor), job, recordDelimiter);
         filePosition = fileIn;

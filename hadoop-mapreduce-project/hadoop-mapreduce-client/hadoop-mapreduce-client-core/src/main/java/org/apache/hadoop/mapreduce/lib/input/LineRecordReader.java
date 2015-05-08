@@ -86,7 +86,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     
     CompressionCodec codec = new CompressionCodecFactory(job).getCodec(file);
     if (null!=codec) {
-      isCompressedInput = true;	
+      isCompressedInput = true;
       decompressor = CodecPool.getDecompressor(codec);
       if (codec instanceof SplittableCompressionCodec) {
         final SplitCompressionInputStream cIn =
@@ -99,6 +99,13 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
         end = cIn.getAdjustedEnd();
         filePosition = cIn;
       } else {
+        if (start != 0) {
+          // So we have a split that is only part of a file stored using
+          // a Compression codec that cannot be split.
+          throw new IOException("Cannot seek in " +
+              codec.getClass().getSimpleName() + " compressed stream");
+        }
+
         in = new SplitLineReader(codec.createInputStream(fileIn,
             decompressor), job, this.recordDelimiterBytes);
         filePosition = fileIn;
