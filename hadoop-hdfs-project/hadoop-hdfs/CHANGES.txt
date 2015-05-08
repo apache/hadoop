@@ -672,6 +672,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8222. Remove usage of "dfsadmin -upgradeProgress" from document which
     is no longer supported. (J.Andreina via aajisaka)
 
+    HDFS-8108. Fsck should provide the info on mandatory option to be used along with "-blocks ,
+    -locations and -racks" (J.Andreina via umamahesh)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
