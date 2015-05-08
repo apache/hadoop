@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -296,6 +295,35 @@ public class TestCacheDirectives {
 
     info = new CachePoolInfo("pool2");
     dfs.addCachePool(info);
+
+    // Perform cache pool operations using a closed file system.
+    DistributedFileSystem dfs1 = (DistributedFileSystem) cluster
+        .getNewFileSystemInstance(0);
+    dfs1.close();
+    try {
+      dfs1.listCachePools();
+      fail("listCachePools using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.addCachePool(info);
+      fail("addCachePool using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.modifyCachePool(info);
+      fail("modifyCachePool using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.removeCachePool(poolName);
+      fail("removeCachePool using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
   }
 
   @Test(timeout=60000)
@@ -538,6 +566,35 @@ public class TestCacheDirectives {
     dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(
         directive).setId(id).setReplication((short)2).build());
     dfs.removeCacheDirective(id);
+
+    // Perform cache directive operations using a closed file system.
+    DistributedFileSystem dfs1 = (DistributedFileSystem) cluster
+        .getNewFileSystemInstance(0);
+    dfs1.close();
+    try {
+      dfs1.listCacheDirectives(null);
+      fail("listCacheDirectives using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.addCacheDirective(alpha);
+      fail("addCacheDirective using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.modifyCacheDirective(alpha);
+      fail("modifyCacheDirective using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfs1.removeCacheDirective(alphaId);
+      fail("removeCacheDirective using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
   }
 
   @Test(timeout=60000)

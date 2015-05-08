@@ -62,11 +62,15 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
@@ -160,22 +164,173 @@ public class TestDistributedFileSystem {
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      FileSystem fileSys = cluster.getFileSystem();
-      
+      DistributedFileSystem fileSys = cluster.getFileSystem();
+
       // create two files, leaving them open
       fileSys.create(new Path("/test/dfsclose/file-0"));
       fileSys.create(new Path("/test/dfsclose/file-1"));
-      
+
       // create another file, close it, and read it, so
       // the client gets a socket in its SocketCache
       Path p = new Path("/non-empty-file");
       DFSTestUtil.createFile(fileSys, p, 1L, (short)1, 0L);
       DFSTestUtil.readFile(fileSys, p);
-      
+
       fileSys.close();
-      
+
+      DFSClient dfsClient = fileSys.getClient();
+      verifyOpsUsingClosedClient(dfsClient);
     } finally {
       if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  private void verifyOpsUsingClosedClient(DFSClient dfsClient) {
+    Path p = new Path("/non-empty-file");
+    try {
+      dfsClient.getBlockSize(p.getName());
+      fail("getBlockSize using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getServerDefaults();
+      fail("getServerDefaults using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.reportBadBlocks(new LocatedBlock[0]);
+      fail("reportBadBlocks using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getBlockLocations(p.getName(), 0, 1);
+      fail("getBlockLocations using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getBlockStorageLocations(new ArrayList<BlockLocation>());
+      fail("getBlockStorageLocations using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.createSymlink("target", "link", true);
+      fail("createSymlink using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getLinkTarget(p.getName());
+      fail("getLinkTarget using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setReplication(p.getName(), (short) 3);
+      fail("setReplication using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setStoragePolicy(p.getName(),
+          HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
+      fail("setStoragePolicy using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getStoragePolicies();
+      fail("getStoragePolicies using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      fail("setSafeMode using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.refreshNodes();
+      fail("refreshNodes using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.metaSave(p.getName());
+      fail("metaSave using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setBalancerBandwidth(1000L);
+      fail("setBalancerBandwidth using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.finalizeUpgrade();
+      fail("finalizeUpgrade using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.rollingUpgrade(RollingUpgradeAction.QUERY);
+      fail("rollingUpgrade using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getInotifyEventStream();
+      fail("getInotifyEventStream using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getInotifyEventStream(100L);
+      fail("getInotifyEventStream using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.saveNamespace(1000L, 200L);
+      fail("saveNamespace using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.rollEdits();
+      fail("rollEdits using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.restoreFailedStorage("");
+      fail("restoreFailedStorage using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.getContentSummary(p.getName());
+      fail("getContentSummary using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setQuota(p.getName(), 1000L, 500L);
+      fail("setQuota using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
+    }
+    try {
+      dfsClient.setQuotaByStorageType(p.getName(), StorageType.DISK, 500L);
+      fail("setQuotaByStorageType using a closed filesystem!");
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
     }
   }
 
