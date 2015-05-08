@@ -31,6 +31,9 @@ add_dual_library(webhdfs
     src/hdfs_json_parser.c
     ../../main/native/libhdfs/exception.c
     ../../main/native/libhdfs/jni_helper.c
+    ../../${OS_DIR}/mutexes.c
+    ../../${OS_DIR}/thread_local_storage.c
+    ../../main/native/libhdfs/common/htable.c
 )
 target_link_dual_libraries(webhdfs
     ${JAVA_JVM_LIBRARY}

@@ -695,6 +695,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-6285. tidy an error log inside BlockReceiver. (Liang Xie via umamahesh)
 
+    HDFS-8346. libwebhdfs build fails during link due to unresolved external
+    symbols. (Chris Nauroth via wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

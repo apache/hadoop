@@ -284,7 +284,7 @@ int launchDnAPPEND(const char *url, struct webhdfsBuffer *buffer,
                    struct Response **response) __attribute__ ((warn_unused_result));
 
 /**
- * Call sys_errlist to get the error message string for the given error code
+ * Thread-safe strerror alternative.
  *
  * @param errnoval  The error code value
  * @return          The error message string mapped to the given error code
