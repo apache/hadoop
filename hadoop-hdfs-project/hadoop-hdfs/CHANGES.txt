@@ -651,6 +651,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8037. CheckAccess in WebHDFS silently accepts malformed FsActions
     parameters. (wheat9)
 
+    HDFS-8257. Namenode rollingUpgrade option is incorrect in document
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

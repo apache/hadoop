@@ -419,7 +419,7 @@ Usage:
               [-upgrade [-clusterid cid] [-renameReserved<k-v pairs>] ] |
               [-upgradeOnly [-clusterid cid] [-renameReserved<k-v pairs>] ] |
               [-rollback] |
-              [-rollingUpgrade <downgrade |rollback> ] |
+              [-rollingUpgrade <rollback |started> ] |
               [-finalize] |
               [-importCheckpoint] |
               [-initializeSharedEdits] |
