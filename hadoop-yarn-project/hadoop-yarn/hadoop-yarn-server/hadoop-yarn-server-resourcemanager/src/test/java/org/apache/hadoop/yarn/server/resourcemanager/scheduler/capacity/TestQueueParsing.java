@@ -501,7 +501,7 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(capacityScheduler);
   }
   
-  @Test(expected = Exception.class)
+  @Test
   public void testQueueParsingWhenLabelsNotExistedInNodeLabelManager()
       throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
@@ -529,7 +529,7 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(nodeLabelsManager);
   }
   
-  @Test(expected = Exception.class)
+  @Test
   public void testQueueParsingWhenLabelsInheritedNotExistedInNodeLabelManager()
       throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
@@ -557,7 +557,7 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(nodeLabelsManager);
   }
   
-  @Test(expected = Exception.class)
+  @Test
   public void testSingleLevelQueueParsingWhenLabelsNotExistedInNodeLabelManager()
       throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
@@ -585,7 +585,7 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(nodeLabelsManager);
   }
   
-  @Test(expected = Exception.class)
+  @Test
   public void testQueueParsingWhenLabelsNotExist() throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
     CapacitySchedulerConfiguration csConf =
@@ -658,5 +658,101 @@ public class TestQueueParsing {
     Assert.assertEquals(0.7 * 0.55 * 0.7, c12.getAbsoluteMaximumCapacity(),
         DELTA);
     capacityScheduler.stop();
+  }
+  
+  /**
+   * Test init a queue configuration, children's capacity for a given label
+   * doesn't equals to 100%. This expect IllegalArgumentException thrown.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testQueueParsingFailWhenSumOfChildrenNonLabeledCapacityNot100Percent()
+      throws IOException {
+    nodeLabelManager.addToCluserNodeLabels(ImmutableSet
+        .of("red", "blue"));
+
+    YarnConfiguration conf = new YarnConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfiguration(csConf);
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".c.c2", 5);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(csConf),
+            new NMTokenSecretManagerInRM(csConf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(csConf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(csConf);
+    capacityScheduler.start();
+    ServiceOperations.stopQuietly(capacityScheduler);
+  }
+
+  /**
+   * Test init a queue configuration, children's capacity for a given label
+   * doesn't equals to 100%. This expect IllegalArgumentException thrown.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testQueueParsingFailWhenSumOfChildrenLabeledCapacityNot100Percent()
+      throws IOException {
+    nodeLabelManager.addToCluserNodeLabels(ImmutableSet
+        .of("red", "blue"));
+    
+    YarnConfiguration conf = new YarnConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfigurationWithLabels(csConf);
+    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT + ".b.b3",
+        "red", 24);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(csConf),
+            new NMTokenSecretManagerInRM(csConf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(csConf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(csConf);
+    capacityScheduler.start();
+    ServiceOperations.stopQuietly(capacityScheduler);
+  }
+
+  /**
+   * Test init a queue configuration, children's capacity for a given label
+   * doesn't equals to 100%. This expect IllegalArgumentException thrown.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void testQueueParsingWithSumOfChildLabelCapacityNot100PercentWithWildCard()
+      throws IOException {
+    nodeLabelManager.addToCluserNodeLabels(ImmutableSet
+        .of("red", "blue"));
+    
+    YarnConfiguration conf = new YarnConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfigurationWithLabels(csConf);
+    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT + ".b.b3",
+        "red", 24);
+    csConf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT,
+        ImmutableSet.of(RMNodeLabelsManager.ANY));
+    csConf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT + ".b",
+        ImmutableSet.of(RMNodeLabelsManager.ANY));
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(csConf),
+            new NMTokenSecretManagerInRM(csConf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(csConf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(csConf);
+    capacityScheduler.start();
+    ServiceOperations.stopQuietly(capacityScheduler);
   }
 }

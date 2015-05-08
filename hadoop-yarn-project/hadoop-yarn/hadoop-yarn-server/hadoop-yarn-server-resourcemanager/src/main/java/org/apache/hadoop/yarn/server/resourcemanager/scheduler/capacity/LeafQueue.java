@@ -173,8 +173,8 @@ public class LeafQueue extends AbstractCSQueue {
     maxAMResourcePerQueuePercent =
         conf.getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
 
-    if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
-        this.defaultLabelExpression)) {
+    if (!SchedulerUtils.checkQueueLabelExpression(
+        this.accessibleLabels, this.defaultLabelExpression, null)) {
       throw new IOException("Invalid default label expression of "
           + " queue="
           + getQueueName()

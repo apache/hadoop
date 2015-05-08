@@ -117,10 +117,9 @@ class CSQueueUtils {
    * - Check if capacities/absolute-capacities legal
    */
   public static void loadUpdateAndCheckCapacities(String queuePath,
-      Set<String> accessibleLabels, CapacitySchedulerConfiguration csConf,
-      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities,
-      RMNodeLabelsManager nlm) {
-    loadCapacitiesByLabelsFromConf(queuePath, accessibleLabels, nlm,
+      CapacitySchedulerConfiguration csConf,
+      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
+    loadCapacitiesByLabelsFromConf(queuePath,
         queueCapacities, csConf);
 
     updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities);
@@ -128,28 +127,13 @@ class CSQueueUtils {
     capacitiesSanityCheck(queuePath, queueCapacities);
   }
   
-  // Considered NO_LABEL, ANY and null cases
-  private static Set<String> normalizeAccessibleNodeLabels(Set<String> labels,
-      RMNodeLabelsManager mgr) {
-    Set<String> accessibleLabels = new HashSet<String>();
-    if (labels != null) {
-      accessibleLabels.addAll(labels);
-    }
-    if (accessibleLabels.contains(CommonNodeLabelsManager.ANY)) {
-      accessibleLabels.addAll(mgr.getClusterNodeLabels());
-    }
-    accessibleLabels.add(CommonNodeLabelsManager.NO_LABEL);
-    
-    return accessibleLabels;
-  }
-  
   private static void loadCapacitiesByLabelsFromConf(String queuePath,
-      Set<String> labels, RMNodeLabelsManager mgr,
       QueueCapacities queueCapacities, CapacitySchedulerConfiguration csConf) {
     queueCapacities.clearConfigurableFields();
-    labels = normalizeAccessibleNodeLabels(labels, mgr);
+    Set<String> configuredNodelabels =
+        csConf.getConfiguredNodeLabels(queuePath);
 
-    for (String label : labels) {
+    for (String label : configuredNodelabels) {
       if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
         queueCapacities.setCapacity(CommonNodeLabelsManager.NO_LABEL,
             csConf.getNonLabeledQueueCapacity(queuePath) / 100);
