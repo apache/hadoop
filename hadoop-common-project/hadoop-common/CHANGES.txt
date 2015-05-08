@@ -623,6 +623,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11936. Dockerfile references a removed image (aw)
 
+    HADOOP-11922. Misspelling of threshold in log4j.properties for tests
+    in hadoop-tools (Gabor Liptak via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
