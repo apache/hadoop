@@ -658,6 +658,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8174. Update replication count to live rep count in fsck report. (J.Andreina)
 
+    HDFS-6291. FSImage may be left unclosed in BootstrapStandby#doRun()
+    (Sanghyun Yun via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

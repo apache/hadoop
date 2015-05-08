@@ -320,8 +320,9 @@ public class BootstrapStandby implements Tool, Configurable {
       image.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE, imageTxId,
           hash);
     } catch (IOException ioe) {
-      image.close();
       throw ioe;
+    } finally {
+      image.close();
     }
     return 0;
   }
