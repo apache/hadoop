@@ -666,6 +666,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8332. DFS client API calls should check filesystem closed (Rakesh R via umamahesh)
 
+    HDFS-7998. HDFS Federation : Command mentioned to add a NN to existing
+    federated cluster is wrong (Ajith S via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
