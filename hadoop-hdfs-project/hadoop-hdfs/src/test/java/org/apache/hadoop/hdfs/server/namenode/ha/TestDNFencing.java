@@ -151,10 +151,6 @@ public class TestDNFencing {
     banner("NN2 Metadata immediately after failover");
     doMetasave(nn2);
     
-    // Even though NN2 considers the blocks over-replicated, it should
-    // post-pone the block invalidation because the DNs are still "stale".
-    assertEquals(30, nn2.getNamesystem().getPostponedMisreplicatedBlocks());
-    
     banner("Triggering heartbeats and block reports so that fencing is completed");
     cluster.triggerHeartbeats();
     cluster.triggerBlockReports();
