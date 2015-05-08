@@ -1211,8 +1211,10 @@ public class MiniDFSCluster {
 
   String makeDataNodeDirs(int dnIndex, StorageType[] storageTypes) throws IOException {
     StringBuilder sb = new StringBuilder();
-    assert storageTypes == null || storageTypes.length == storagesPerDatanode;
     for (int j = 0; j < storagesPerDatanode; ++j) {
+      if ((storageTypes != null) && (j >= storageTypes.length)) {
+        break;
+      }
       File dir = getInstanceStorageDir(dnIndex, j);
       dir.mkdirs();
       if (!dir.isDirectory()) {
