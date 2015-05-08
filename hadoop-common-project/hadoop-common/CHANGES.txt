@@ -479,6 +479,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-6842. "hadoop fs -text" does not give a useful text representation
+    of MapWritable objects (Akira Ajisaka via bobby)
+
     HADOOP-11719. [Fsshell] Remove bin/hadoop reference from
     GenericOptionsParser default help text.
     (Brahma Reddy Battula via harsh)
