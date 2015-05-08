@@ -34,7 +34,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  */
 public class SnappyDecompressor implements Decompressor {
   private static final Log LOG =
-      LogFactory.getLog(SnappyCompressor.class.getName());
+      LogFactory.getLog(SnappyDecompressor.class.getName());
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
 
   private int directBufferSize;
