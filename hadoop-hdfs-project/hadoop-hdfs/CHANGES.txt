@@ -132,6 +132,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8219. setStoragePolicy with folder behavior is different after cluster restart.
     (surendra singh lilhore via Xiaoyu Yao)
 
+    HDFS-7894. Rolling upgrade readiness is not updated in jmx until query
+    command is issued. (Brahma Reddy Battula  via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
