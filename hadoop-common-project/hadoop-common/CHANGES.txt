@@ -545,6 +545,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11942. Add links to SLGUserGuide to site index.
     (Masatake Iwasaki via xyao)
 
+    HADOOP-11906. test-patch.sh should use 'file' command for patch
+    determinism (Sean Busbey via aw)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
