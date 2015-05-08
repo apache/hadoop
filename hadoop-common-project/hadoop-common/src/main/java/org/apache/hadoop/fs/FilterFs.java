@@ -185,6 +185,14 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+             UnresolvedLinkException, IOException {
+    checkPath(f);
+    return myFs.listLocatedStatus(f);
+  }
+
+  @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
     return myFs.listCorruptFileBlocks(path);
