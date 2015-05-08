@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-nodemanager</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server-nodemanager</name>
+  <name>Apache Hadoop YARN NodeManager</name>
 
   <properties>
     <!-- Basedir eeded for generating FindBugs warnings using parent pom -->

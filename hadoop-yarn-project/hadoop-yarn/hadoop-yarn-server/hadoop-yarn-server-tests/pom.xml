@@ -24,7 +24,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-tests</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server-tests</name>
+  <name>Apache Hadoop YARN Server Tests</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->

@@ -191,6 +191,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3169. Drop YARN's overview document. (Brahma Reddy Battula via ozawa)
 
+    YARN-2784. Make POM project names consistent. (Rohith via devaraj)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-site</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-site</name>
+  <name>Apache Hadoop YARN Site</name>
   <packaging>pom</packaging>
 
   <properties>

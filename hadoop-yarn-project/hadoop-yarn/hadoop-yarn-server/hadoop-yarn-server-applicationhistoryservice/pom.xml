@@ -28,7 +28,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server-applicationhistoryservice</name>
+  <name>Apache Hadoop YARN ApplicationHistoryService</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->

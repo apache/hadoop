@@ -25,7 +25,7 @@
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <name>hadoop-yarn-server</name>
+  <name>Apache Hadoop YARN Server</name>
   <packaging>pom</packaging>
 
   <properties>
