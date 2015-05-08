@@ -1,4 +1,4 @@
-<!---
+﻿<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -309,8 +309,6 @@ Usage:
               [-clrQuota <dirname>...<dirname>]
               [-setSpaceQuota <quota> [-storageType <storagetype>] <dirname>...<dirname>]
               [-clrSpaceQuota [-storageType <storagetype>] <dirname>...<dirname>]
-              [-setStoragePolicy <path> <policyName>]
-              [-getStoragePolicy <path>]
               [-finalizeUpgrade]
               [-rollingUpgrade [<query> |<prepare> |<finalize>]]
               [-metasave filename]
@@ -344,8 +342,6 @@ Usage:
 | `-clrQuota` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-setSpaceQuota` \<quota\> `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-clrSpaceQuota` `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
-| `-setStoragePolicy` \<path\> \<policyName\> | Set a storage policy to a file or a directory. |
-| `-getStoragePolicy` \<path\> | Get the storage policy of a file or a directory. |
 | `-finalizeUpgrade` | Finalize upgrade of HDFS. Datanodes delete their previous version working directories, followed by Namenode doing the same. This completes the upgrade process. |
 | `-rollingUpgrade` [\<query\>\|\<prepare\>\|\<finalize\>] | See [Rolling Upgrade document](../hadoop-hdfs/HdfsRollingUpgrade.html#dfsadmin_-rollingUpgrade) for the detail. |
 | `-metasave` filename | Save Namenode's primary data structures to *filename* in the directory specified by hadoop.log.dir property. *filename* is overwritten if it exists. *filename* will contain one line for each of the following<br/>1. Datanodes heart beating with Namenode<br/>2. Blocks waiting to be replicated<br/>3. Blocks currently being replicated<br/>4. Blocks waiting to be deleted |

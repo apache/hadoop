@@ -1,4 +1,4 @@
-<!---
+﻿<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -84,13 +84,13 @@ Note that the Lasy\_Persist policy is useful only for single replica blocks. For
 
 ### Storage Policy Resolution
 
-When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`dfsadmin -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
+When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`storagepolicies -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
 
 1.  If the file or directory is specificed with a storage policy, return it.
 
 2.  For an unspecified file or directory, if it is the root directory, return the *default storage policy*. Otherwise, return its parent's effective storage policy.
 
-The effective storage policy can be retrieved by the "[`dfsadmin -getStoragePolicy`](#Get_Storage_Policy)" command.
+The effective storage policy can be retrieved by the "[`storagepolicies -getStoragePolicy`](#Get_Storage_Policy)" command.
 
 ### Configuration
 

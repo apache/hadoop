@@ -675,6 +675,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8108. Fsck should provide the info on mandatory option to be used along with "-blocks ,
     -locations and -racks" (J.Andreina via umamahesh)
 
+    HDFS-8187. Remove usage of "-setStoragePolicy" and "-getStoragePolicy" using
+    dfsadmin cmd (as it is not been supported) (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
