@@ -189,6 +189,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3523. Cleanup ResourceManagerAdministrationProtocol interface audience.
     (Naganarasimha G R via junping_du)
 
+    YARN-3169. Drop YARN's overview document. (Brahma Reddy Battula via ozawa)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
