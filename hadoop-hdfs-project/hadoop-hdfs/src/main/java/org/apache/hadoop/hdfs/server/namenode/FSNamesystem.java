@@ -7608,11 +7608,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override  // NameNodeMXBean
   public RollingUpgradeInfo.Bean getRollingUpgradeStatus() {
+    if (!isRollingUpgrade()) {
+      return null;
+    }
     RollingUpgradeInfo upgradeInfo = getRollingUpgradeInfo();
-    if (upgradeInfo != null) {
+    if (upgradeInfo.createdRollbackImages()) {
       return new RollingUpgradeInfo.Bean(upgradeInfo);
     }
-    return null;
+    readLock();
+    try {
+      // check again after acquiring the read lock.
+      upgradeInfo = getRollingUpgradeInfo();
+      if (upgradeInfo == null) {
+        return null;
+      }
+      if (!upgradeInfo.createdRollbackImages()) {
+        boolean hasRollbackImage = this.getFSImage().hasRollbackFSImage();
+        upgradeInfo.setCreatedRollbackImages(hasRollbackImage);
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Encountered exception setting Rollback Image", ioe);
+    } finally {
+      readUnlock();
+    }
+    return new RollingUpgradeInfo.Bean(upgradeInfo);
   }
 
   /** Is rolling upgrade in progress? */
