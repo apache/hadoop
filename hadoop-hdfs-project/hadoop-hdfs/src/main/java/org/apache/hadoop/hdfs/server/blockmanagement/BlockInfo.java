@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.LinkedList;
+
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.LightWeightGSet;
-
-import java.io.IOException;
-import java.util.LinkedList;
 
 /**
  * For a given block (or an erasure coding block group), BlockInfo class
@@ -335,95 +334,5 @@ public abstract class BlockInfo extends Block
   @Override
   public void setNext(LightWeightGSet.LinkedElement next) {
     this.nextLinkedElement = next;
-  }
-
-  static BlockInfo copyOf(BlockInfo b) {
-    if (!b.isStriped()) {
-      return new BlockInfoContiguous((BlockInfoContiguous) b);
-    } else {
-      return new BlockInfoStriped((BlockInfoStriped) b);
-    }
-  }
-
-  static BlockInfo convertToCompleteBlock(BlockInfo blk) throws IOException {
-    if (blk instanceof BlockInfoContiguousUnderConstruction) {
-      return ((BlockInfoContiguousUnderConstruction) blk)
-          .convertToCompleteBlock();
-    } else if (blk instanceof BlockInfoStripedUnderConstruction) {
-      return ((BlockInfoStripedUnderConstruction) blk).convertToCompleteBlock();
-    } else {
-      return blk;
-    }
-  }
-
-  static void commitBlock(BlockInfo blockInfo, Block reported)
-      throws IOException {
-    if (blockInfo instanceof BlockInfoContiguousUnderConstruction) {
-      ((BlockInfoContiguousUnderConstruction) blockInfo).commitBlock(reported);
-    } else if (blockInfo instanceof BlockInfoStripedUnderConstruction) {
-      ((BlockInfoStripedUnderConstruction) blockInfo).commitBlock(reported);
-    }
-  }
-
-  static void addReplica(BlockInfo ucBlock, DatanodeStorageInfo storageInfo,
-      Block reportedBlock, HdfsServerConstants.ReplicaState reportedState) {
-    assert ucBlock instanceof BlockInfoContiguousUnderConstruction ||
-        ucBlock instanceof BlockInfoStripedUnderConstruction;
-    if (ucBlock instanceof BlockInfoContiguousUnderConstruction) {
-      ((BlockInfoContiguousUnderConstruction) ucBlock).addReplicaIfNotPresent(
-          storageInfo, reportedBlock, reportedState);
-    } else { // StripedUC
-      ((BlockInfoStripedUnderConstruction) ucBlock).addReplicaIfNotPresent(
-          storageInfo, reportedBlock, reportedState);
-    }
-  }
-
-  static int getNumExpectedLocations(BlockInfo ucBlock) {
-    assert ucBlock instanceof BlockInfoContiguousUnderConstruction ||
-        ucBlock instanceof BlockInfoStripedUnderConstruction;
-    if (ucBlock instanceof BlockInfoContiguousUnderConstruction) {
-      return ((BlockInfoContiguousUnderConstruction) ucBlock)
-          .getNumExpectedLocations();
-    } else { // StripedUC
-      return ((BlockInfoStripedUnderConstruction) ucBlock)
-          .getNumExpectedLocations();
-    }
-  }
-
-  public static DatanodeStorageInfo[] getExpectedStorageLocations(
-      BlockInfo ucBlock) {
-    assert ucBlock instanceof BlockInfoContiguousUnderConstruction ||
-        ucBlock instanceof BlockInfoStripedUnderConstruction;
-    if (ucBlock instanceof BlockInfoContiguousUnderConstruction) {
-      return ((BlockInfoContiguousUnderConstruction) ucBlock)
-          .getExpectedStorageLocations();
-    } else { // StripedUC
-      return ((BlockInfoStripedUnderConstruction) ucBlock)
-          .getExpectedStorageLocations();
-    }
-  }
-
-  public static void setExpectedLocations(BlockInfo ucBlock,
-      DatanodeStorageInfo[] targets) {
-    assert ucBlock instanceof BlockInfoContiguousUnderConstruction ||
-        ucBlock instanceof BlockInfoStripedUnderConstruction;
-    if (ucBlock instanceof BlockInfoContiguousUnderConstruction) {
-      ((BlockInfoContiguousUnderConstruction) ucBlock)
-          .setExpectedLocations(targets);
-    } else { // StripedUC
-      ((BlockInfoStripedUnderConstruction) ucBlock)
-          .setExpectedLocations(targets);
-    }
-  }
-
-  public static long getBlockRecoveryId(BlockInfo ucBlock) {
-    assert ucBlock instanceof BlockInfoContiguousUnderConstruction ||
-        ucBlock instanceof BlockInfoStripedUnderConstruction;
-    if (ucBlock instanceof BlockInfoContiguousUnderConstruction) {
-      return ((BlockInfoContiguousUnderConstruction) ucBlock)
-          .getBlockRecoveryId();
-    } else { // StripedUC
-      return ((BlockInfoStripedUnderConstruction) ucBlock).getBlockRecoveryId();
-    }
   }
 }

@@ -80,16 +80,8 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
     setExpectedLocations(targets);
   }
 
-  /**
-   * Convert an under construction block to a complete block.
-   * 
-   * @return BlockInfoContiguous - a complete block.
-   * @throws IOException if the state of the block 
-   * (the generation stamp and the length) has not been committed by 
-   * the client or it does not have at least a minimal number of replicas 
-   * reported from data-nodes. 
-   */
-  BlockInfoContiguous convertToCompleteBlock() throws IOException {
+  @Override
+  public BlockInfoContiguous convertToCompleteBlock() throws IOException {
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "Trying to convert a COMPLETE block";
     return new BlockInfoContiguous(this);
@@ -170,13 +162,8 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
     }
   }
 
-  /**
-   * Commit block's length and generation stamp as reported by the client.
-   * Set block state to {@link BlockUCState#COMMITTED}.
-   * @param block - contains client reported block length and generation 
-   * @throws IOException if block ids are inconsistent.
-   */
-  void commitBlock(Block block) throws IOException {
+  @Override
+  public void commitBlock(Block block) throws IOException {
     if(getBlockId() != block.getBlockId())
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
@@ -235,9 +222,9 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
     }
   }
 
-  void addReplicaIfNotPresent(DatanodeStorageInfo storage,
-                     Block block,
-                     ReplicaState rState) {
+  @Override
+  public void addReplicaIfNotPresent(DatanodeStorageInfo storage,
+      Block block, ReplicaState rState) {
     Iterator<ReplicaUnderConstruction> it = replicas.iterator();
     while (it.hasNext()) {
       ReplicaUnderConstruction r = it.next();

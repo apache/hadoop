@@ -73,16 +73,8 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     setExpectedLocations(targets);
   }
 
-  /**
-   * Convert an under construction striped block to a complete striped block.
-   *
-   * @return BlockInfoStriped - a complete block.
-   * @throws IOException if the state of the block
-   * (the generation stamp and the length) has not been committed by
-   * the client or it does not have at least a minimal number of replicas
-   * reported from data-nodes.
-   */
-  BlockInfoStriped convertToCompleteBlock() throws IOException {
+  @Override
+  public BlockInfoStriped convertToCompleteBlock() throws IOException {
     assert getBlockUCState() != COMPLETE :
       "Trying to convert a COMPLETE block";
     return new BlockInfoStriped(this);
@@ -177,12 +169,8 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     }
   }
 
-  /**
-   * Commit block's length and generation stamp as reported by the client.
-   * Set block state to {@link BlockUCState#COMMITTED}.
-   * @param block - contains client reported block length and generation
-   */
-  void commitBlock(Block block) throws IOException {
+  @Override
+  public void commitBlock(Block block) throws IOException {
     if (getBlockId() != block.getBlockId()) {
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
@@ -242,8 +230,9 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     }
   }
 
-  void addReplicaIfNotPresent(DatanodeStorageInfo storage, Block reportedBlock,
-      ReplicaState rState) {
+  @Override
+  public void addReplicaIfNotPresent(DatanodeStorageInfo storage,
+      Block reportedBlock, ReplicaState rState) {
     if (replicas == null) {
       replicas = new ReplicaUnderConstruction[1];
       replicas[0] = new ReplicaUnderConstruction(reportedBlock, storage, rState);

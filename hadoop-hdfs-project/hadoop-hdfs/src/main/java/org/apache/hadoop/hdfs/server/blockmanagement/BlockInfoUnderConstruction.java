@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 
 public interface BlockInfoUnderConstruction {
   /**
@@ -54,4 +58,27 @@ public interface BlockInfoUnderConstruction {
    * make it primary.
    */
   public void initializeBlockRecovery(long recoveryId);
+  
+  /** Add the reported replica if it is not already in the replica list. */
+  public void addReplicaIfNotPresent(DatanodeStorageInfo storage,
+      Block reportedBlock, ReplicaState rState);
+
+  /**
+   * Commit block's length and generation stamp as reported by the client.
+   * Set block state to {@link BlockUCState#COMMITTED}.
+   * @param block - contains client reported block length and generation 
+   * @throws IOException if block ids are inconsistent.
+   */
+  public void commitBlock(Block block) throws IOException;
+
+  /**
+   * Convert an under construction block to a complete block.
+   * 
+   * @return a complete block.
+   * @throws IOException
+   *           if the state of the block (the generation stamp and the length)
+   *           has not been committed by the client or it does not have at least
+   *           a minimal number of replicas reported from data-nodes.
+   */
+  public BlockInfo convertToCompleteBlock() throws IOException;
 }
