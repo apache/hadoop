@@ -90,7 +90,7 @@ public class DFSHAAdmin extends HAAdmin {
 
   @Override
   protected String getUsageString() {
-    return "Usage: haadmin";
+    return "Usage: haadmin [-ns <nameserviceId>]";
   }
 
   @Override
