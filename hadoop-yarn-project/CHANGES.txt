@@ -24,6 +24,9 @@ Release 2.6.2 - UNRELEASED
     YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
     state-store error occurs. (Jian He via xgong)
 
+    YARN-3554. Default value for maximum nodemanager connect wait time is too
+    high (Naganarasimha G R via jlowe)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES

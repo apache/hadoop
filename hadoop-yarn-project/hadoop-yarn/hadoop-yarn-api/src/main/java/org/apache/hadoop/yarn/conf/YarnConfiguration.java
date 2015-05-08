@@ -1465,7 +1465,7 @@ public class YarnConfiguration extends Configuration {
   public static final String CLIENT_NM_CONNECT_MAX_WAIT_MS =
       YARN_PREFIX + "client.nodemanager-connect.max-wait-ms";
   public static final long DEFAULT_CLIENT_NM_CONNECT_MAX_WAIT_MS =
-      15 * 60 * 1000;
+      3 * 60 * 1000;
 
   /** Time interval between each attempt to connect to NM */
   public static final String CLIENT_NM_CONNECT_RETRY_INTERVAL_MS =
