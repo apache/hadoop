@@ -1739,7 +1739,8 @@ Release 2.7.2 - UNRELEASED
     HDFS-9445. Datanode may deadlock while handling a bad volume.
     (Wlater Su via Kihwal)
 
-Release 2.7.1 - 2015-07-06
+    HDFS-8326. Documentation about when checkpoints are run is out of date.
+    (Misty Stanley-Jones via xyao)
 
   INCOMPATIBLE CHANGES
 
