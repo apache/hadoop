@@ -67,7 +67,7 @@ public class MockLocalizerStatus implements LocalizerStatus {
       return false;
     }
     MockLocalizerStatus other = (MockLocalizerStatus) o;
-    return getLocalizerId().equals(other)
+    return getLocalizerId().equals(other.getLocalizerId())
       && getResources().containsAll(other.getResources())
       && other.getResources().containsAll(getResources());
   }

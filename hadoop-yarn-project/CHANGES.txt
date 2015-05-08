@@ -336,6 +336,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2918. RM should not fail on startup if queue's configured labels do
     not exist in cluster-node-labels. (Wangda Tan via jianhe)
 
+    YARN-1832. Fix wrong MockLocalizerStatus#equals implementation.
+    (Hong Zhiguo via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
