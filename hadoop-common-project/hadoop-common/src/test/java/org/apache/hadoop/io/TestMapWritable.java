@@ -148,5 +148,14 @@ public class TestMapWritable extends TestCase {
 
     assertEquals(map1.hashCode(), map2.hashCode());
     assertFalse(map1.hashCode() == map3.hashCode());
-}
+  }
+
+  /** Verify text command outputs a useful representation for MapWritable. */
+  public void testToString() {
+    MapWritable map = new MapWritable();
+    final IntWritable key = new IntWritable(5);
+    final Text value = new Text("value");
+    map.put(key, value);
+    assertEquals("{5=value}", map.toString());
+  }
 }
