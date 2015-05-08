@@ -328,7 +328,6 @@ Release 2.8.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
     MAPREDUCE-6314. TestPipeApplication fails on trunk.
     (Varun Vasudev via harsh)
 
@@ -399,6 +398,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-3383. Duplicate job.getOutputValueGroupingComparator() in
     ReduceTask (Binglin Chang via jlowe)
+
+    MAPREDUCE-4750. Enable NNBenchWithoutMR in MapredTestDriver (Liang Xie
+    and Jason Lowe via raviprak)
 
 Release 2.7.1 - UNRELEASED
 
