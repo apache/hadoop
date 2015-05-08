@@ -342,6 +342,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3572. Correct typos in WritingYarnApplications.md.
     (Gabor Liptak via aajisaka)
 
+    YARN-3592. Fix typos in RMNodeLabelsManager. (Sunil G via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
