@@ -48,13 +48,14 @@ fi
 
 # get arguments
 if [[ $# -ge 1 ]]; then
-  nameStartOpt="$1"
+  startOpt="$1"
   shift
-  case "$nameStartOpt" in
+  case "$startOpt" in
     -upgrade)
+      nameStartOpt="$startOpt"
     ;;
     -rollback)
-      dataStartOpt="$nameStartOpt"
+      dataStartOpt="$startOpt"
     ;;
     *)
       hadoop_exit_with_usage 1

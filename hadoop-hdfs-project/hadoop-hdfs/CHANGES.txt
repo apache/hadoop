@@ -755,6 +755,8 @@ Release 2.7.1 - UNRELEASED
     HDFS-7980. Incremental BlockReport will dramatically slow down namenode
     startup.  (Walter Su via szetszwo)
 
+    HDFS-8226. Non-HA rollback compatibility broken (J.Andreina via vinayakumarb)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

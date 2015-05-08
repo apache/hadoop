@@ -318,6 +318,8 @@ When Hadoop is upgraded on an existing cluster, as with any software upgrade, it
 
     * stop the cluster and distribute earlier version of Hadoop.
 
+    * run the rollback command on the namenode (`bin/hdfs namenode -rollback`).
+
     * start the cluster with rollback option. (`sbin/start-dfs.sh -rollback`).
 
 When upgrading to a new version of HDFS, it is necessary to rename or delete any paths that are reserved in the new version of HDFS. If the NameNode encounters a reserved path during upgrade, it will print an error like the following:
