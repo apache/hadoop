@@ -684,6 +684,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8175. Provide information on snapshotDiff for supporting the comparison
     between snapshot and current status (J.Andreina via vinayakumarb)
 
+    HDFS-8209. Support different number of datanode directories in MiniDFSCluster.
+    (surendra singh lilhore via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
