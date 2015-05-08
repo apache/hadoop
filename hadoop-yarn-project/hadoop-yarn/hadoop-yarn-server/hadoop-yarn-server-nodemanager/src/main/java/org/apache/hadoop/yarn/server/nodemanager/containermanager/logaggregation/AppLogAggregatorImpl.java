@@ -417,6 +417,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public void run() {
     try {
       doAppLogAggregation();
+    } catch (Exception e) {
+      // do post clean up of log directories on any exception
+      LOG.error("Error occured while aggregating the log for the application "
+          + appId, e);
+      doAppLogAggregationPostCleanUp();
     } finally {
       if (!this.appAggregationFinished.get()) {
         LOG.warn("Aggregation did not complete for application " + appId);
@@ -454,6 +459,15 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // App is finished, upload the container logs.
     uploadLogsForContainers(true);
 
+    doAppLogAggregationPostCleanUp();
+
+    this.dispatcher.getEventHandler().handle(
+        new ApplicationEvent(this.appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
+    this.appAggregationFinished.set(true);
+  }
+
+  private void doAppLogAggregationPostCleanUp() {
     // Remove the local app-log-dirs
     List<Path> localAppLogDirs = new ArrayList<Path>();
     for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
@@ -474,11 +488,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.delService.delete(this.userUgi.getShortUserName(), null,
         localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
     }
-    
-    this.dispatcher.getEventHandler().handle(
-        new ApplicationEvent(this.appId,
-            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
-    this.appAggregationFinished.set(true);    
   }
 
   private Path getRemoteNodeTmpLogFileForApp() {
