@@ -25,7 +25,7 @@
   <artifactId>hadoop-mapreduce</artifactId>
   <version>2.8.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>hadoop-mapreduce</name>
+  <name>Apache Hadoop MapReduce</name>
   <url>http://hadoop.apache.org/mapreduce/</url>
 
   <properties>
