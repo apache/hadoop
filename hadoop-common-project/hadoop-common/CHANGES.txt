@@ -638,6 +638,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-7165. listLocatedStatus(path, filter) is not redefined in FilterFs
     (Hairong Kuang via jlowe)
 
+    HADOOP-9729. The example code of org.apache.hadoop.util.Tool is incorrect
+    (hellojinjie via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
