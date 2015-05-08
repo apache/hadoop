@@ -30,20 +30,20 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hdfs-config.sh
 
 # get arguments
-if [ $# -ge 1 ]; then
-	nameStartOpt="$1"
-	shift
-	case "$nameStartOpt" in
-	  (-upgrade)
-	  	;;
-	  (-rollback) 
-	  	dataStartOpt="$nameStartOpt"
-	  	;;
-	  (*)
-		  echo $usage
-		  exit 1
-	    ;;
-	esac
+if [[ $# -ge 1 ]]; then
+  startOpt="$1"
+  shift
+  case "$startOpt" in
+    -upgrade)
+      nameStartOpt="$startOpt"
+    ;;
+    -rollback)
+      dataStartOpt="$startOpt"
+    ;;
+    *)
+      hadoop_exit_with_usage 1
+    ;;
+  esac
 fi
 
 #Add other possible options
