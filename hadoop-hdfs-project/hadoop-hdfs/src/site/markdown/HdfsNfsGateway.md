@@ -278,7 +278,7 @@ The users can mount the HDFS namespace as shown below:
 
      [root]>mount -t nfs -o vers=3,proto=tcp,nolock,noacl,sync $server:/  $mount_point
 
-Then the users can access HDFS as part of the local file system except that, hard link and random write are not supported yet. To optimize the performance of large file I/O, one can increase the NFS transfer size(rsize and wsize) during mount. By default, NFS gateway supports 1MB as the maximum transfer size. For larger data transfer size, one needs to update "nfs.rtmax" and "nfs.rtmax" in hdfs-site.xml.
+Then the users can access HDFS as part of the local file system except that, hard link and random write are not supported yet. To optimize the performance of large file I/O, one can increase the NFS transfer size (rsize and wsize) during mount. By default, NFS gateway supports 1MB as the maximum transfer size. For larger data transfer size, one needs to update "nfs.rtmax" and "nfs.wtmax" in hdfs-site.xml.
 
 Allow mounts from unprivileged clients
 --------------------------------------

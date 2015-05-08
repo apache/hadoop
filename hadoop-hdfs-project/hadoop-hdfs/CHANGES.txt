@@ -701,6 +701,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8274. NFS configuration nfs.dump.dir not working. (Ajith S via
     Arpit Agarwal)
 
+    HDFS-8340. Fix NFS documentation of nfs.wtmax. (Ajith S via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
