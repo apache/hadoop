@@ -923,6 +923,9 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11801. Update BUILDING.txt for Ubuntu. (Gabor Liptak via
     Arpit Agarwal)
 
+    HADOOP-9737. JarFinder#getJar should delete the jar file upon destruction
+    of the JVM (jbonofre via rkanter)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
