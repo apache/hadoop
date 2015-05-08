@@ -1369,6 +1369,8 @@ Response Body:
           "allocatedMB" : 0,
           "allocatedVCores" : 0,
           "runningContainers" : 0,
+	  "applicationType" : "MAPREDUCE",
+	  "applicationTags" : ""
           "memorySeconds" : 151730,
           "vcoreSeconds" : 103
        },
@@ -1392,6 +1394,8 @@ Response Body:
           "allocatedMB" : 0,
           "allocatedVCores" : 0,
           "runningContainers" : 1,
+	  "applicationType" : "YARN",
+	  "applicationTags" : "tag1"
           "memorySeconds" : 640064,
           "vcoreSeconds" : 442
        } 
@@ -1424,6 +1428,7 @@ Response Body:
     <user>user1</user>
     <name>word count</name>
     <applicationType>MAPREDUCE</applicationType>
+    <applicationTags></applicationTags>
     <queue>default</queue>
     <state>FINISHED</state>
     <finalStatus>SUCCEEDED</finalStatus>
@@ -1448,6 +1453,7 @@ Response Body:
     <user>user1</user>
     <name>Sleep job</name>
     <applicationType>YARN</applicationType>
+    <applicationTags>tag1</applicationTags>
     <queue>default</queue>
     <state>FINISHED</state>
     <finalStatus>SUCCEEDED</finalStatus>
