@@ -1756,18 +1756,6 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 
-<property>
-  <name>hadoop.htrace.spanreceiver.classes</name>
-  <value></value>
-  <description>
-    A comma separated list of the fully-qualified class name of classes 
-    implementing SpanReceiver. The tracing system works by collecting 
-    information in structs called 'Spans'. It is up to you to choose 
-    how you want to receive this information by implementing the 
-    SpanReceiver interface.
-  </description>
-</property>
-
  <property>
   <name>ipc.server.max.connections</name>
   <value>0</value>

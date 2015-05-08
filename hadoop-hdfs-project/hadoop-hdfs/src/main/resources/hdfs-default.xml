@@ -2316,4 +2316,22 @@
     the delay time will increase exponentially(double) for each retry.
   </description>
 </property>
+
+<property>
+  <name>dfs.htrace.spanreceiver.classes</name>
+  <value></value>
+  <description>
+    The class name of the HTrace SpanReceiver for the NameNode and DataNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.htrace.spanreceiver.classes</name>
+  <value></value>
+  <description>
+    The class name of the HTrace SpanReceiver for the HDFS client. You do not
+    need to enable this if your client program has been modified to use HTrace.
+  </description>
+</property>
+
 </configuration>
