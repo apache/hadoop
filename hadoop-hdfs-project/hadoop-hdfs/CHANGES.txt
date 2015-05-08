@@ -693,6 +693,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-3384. DataStreamer thread should be closed immediatly when failed to
     setup a PipelineForAppendOrRecovery (Uma Maheswara Rao G via vinayakumarb)
 
+    HDFS-6285. tidy an error log inside BlockReceiver. (Liang Xie via umamahesh)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
