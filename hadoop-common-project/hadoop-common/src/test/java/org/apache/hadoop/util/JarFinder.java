@@ -160,6 +160,7 @@ public class JarFinder {
             File tempJar = File.createTempFile("hadoop-", "", testDir);
             tempJar = new File(tempJar.getAbsolutePath() + ".jar");
             createJar(baseDir, tempJar);
+            tempJar.deleteOnExit();
             return tempJar.getAbsolutePath();
           }
         }
