@@ -230,6 +230,12 @@ public abstract class BaseContainerManagerTest {
             ByteBuffer.wrap("AuxServiceMetaData2".getBytes()));
         return serviceData;
       }
+
+      @Override
+      protected NMTokenIdentifier selectNMTokenIdentifier(
+          UserGroupInformation remoteUgi) {
+        return new NMTokenIdentifier();
+      }
     };
   }
 
