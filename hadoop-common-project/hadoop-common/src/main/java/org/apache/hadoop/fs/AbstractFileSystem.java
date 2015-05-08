@@ -1191,6 +1191,36 @@ public abstract class AbstractFileSystem {
         + " doesn't support removeXAttr");
   }
 
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#createSnapshot(Path, String)}.
+   */
+  public Path createSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support createSnapshot");
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#renameSnapshot(Path, String, String)}.
+   */
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support renameSnapshot");
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#deleteSnapshot(Path, String)}.
+   */
+  public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support deleteSnapshot");
+  }
+
   @Override //Object
   public int hashCode() {
     return myUri.hashCode();

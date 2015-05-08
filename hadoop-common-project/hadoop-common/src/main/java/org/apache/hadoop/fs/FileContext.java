@@ -2564,4 +2564,105 @@ public class FileContext {
       }
     }.resolve(this, absF);
   }
+
+  /**
+   * Create a snapshot with a default name.
+   *
+   * @param path The directory where snapshots will be taken.
+   * @return the snapshot path.
+   *
+   * @throws IOException If an I/O error occurred
+   *
+   * <p>Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   */
+  public final Path createSnapshot(Path path) throws IOException {
+    return createSnapshot(path, null);
+  }
+
+  /**
+   * Create a snapshot.
+   *
+   * @param path The directory where snapshots will be taken.
+   * @param snapshotName The name of the snapshot
+   * @return the snapshot path.
+   *
+   * @throws IOException If an I/O error occurred
+   *
+   * <p>Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   */
+  public Path createSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<Path>() {
+
+      @Override
+      public Path next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.createSnapshot(p, snapshotName);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Rename a snapshot.
+   *
+   * @param path The directory path where the snapshot was taken
+   * @param snapshotOldName Old name of the snapshot
+   * @param snapshotNewName New name of the snapshot
+   *
+   * @throws IOException If an I/O error occurred
+   *
+   * <p>Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   */
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.renameSnapshot(p, snapshotOldName, snapshotNewName);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Delete a snapshot of a directory.
+   *
+   * @param path The directory that the to-be-deleted snapshot belongs to
+   * @param snapshotName The name of the snapshot
+   *
+   * @throws IOException If an I/O error occurred
+   *
+   * <p>Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   */
+  public void deleteSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.deleteSnapshot(p, snapshotName);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
 }
