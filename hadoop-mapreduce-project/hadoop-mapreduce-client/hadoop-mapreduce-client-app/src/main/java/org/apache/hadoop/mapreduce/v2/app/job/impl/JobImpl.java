@@ -160,7 +160,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final ApplicationAttemptId applicationAttemptId;
   private final Clock clock;
   private final JobACLsManager aclsManager;
-  private final String username;
+  private final String reporterUserName;
   private final Map<JobACL, AccessControlList> jobACLs;
   private float setupWeight = 0.05f;
   private float cleanupWeight = 0.05f;
@@ -688,7 +688,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.jobTokenSecretManager = jobTokenSecretManager;
 
     this.aclsManager = new JobACLsManager(conf);
-    this.username = System.getProperty("user.name");
+    this.reporterUserName = System.getProperty("user.name");
     this.jobACLs = aclsManager.constructJobACLs(conf);
 
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -868,13 +868,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
 
       if (getInternalState() == JobStateInternal.NEW) {
-        return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-            appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
-            cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
+        return MRBuilderUtils.newJobReport(jobId, jobName, reporterUserName,
+            state, appSubmitTime, startTime, finishTime, setupProgress, 0.0f,
+            0.0f, cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
       }
 
       computeProgress();
-      JobReport report = MRBuilderUtils.newJobReport(jobId, jobName, username,
+      JobReport report = MRBuilderUtils.newJobReport(jobId, jobName,
+          reporterUserName,
           state, appSubmitTime, startTime, finishTime, setupProgress,
           this.mapProgress, this.reduceProgress,
           cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
