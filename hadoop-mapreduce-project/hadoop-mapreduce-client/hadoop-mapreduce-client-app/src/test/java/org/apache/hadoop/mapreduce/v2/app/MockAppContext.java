@@ -95,7 +95,7 @@ public class MockAppContext implements AppContext {
   @SuppressWarnings("rawtypes")
   @Override
   public EventHandler getEventHandler() {
-    return null;
+    return new MockEventHandler();
   }
 
   @Override

@@ -261,6 +261,9 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
+   MAPREDUCE-6284. Add Task Attempt State API to MapReduce Application
+   Master REST API. (Ryu Kobayashi via ozawa)
+
   IMPROVEMENTS
 
     MAPREDUCE-6291. Correct mapred queue usage command.
