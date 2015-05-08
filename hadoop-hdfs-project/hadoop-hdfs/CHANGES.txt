@@ -698,6 +698,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8346. libwebhdfs build fails during link due to unresolved external
     symbols. (Chris Nauroth via wheat9)
 
+    HDFS-8274. NFS configuration nfs.dump.dir not working. (Ajith S via
+    Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
