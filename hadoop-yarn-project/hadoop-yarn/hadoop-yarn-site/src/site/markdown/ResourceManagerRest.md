@@ -278,7 +278,7 @@ Response Body:
 Cluster Scheduler API
 ---------------------
 
-A scheduler resource contains information about the current scheduler configured in a cluster. It currently supports both the Fifo and Capacity Scheduler. You will get different information depending on which scheduler is configured so be sure to look at the type information.
+A scheduler resource contains information about the current scheduler configured in a cluster. It currently supports the Fifo, Capacity and Fair Scheduler. You will get different information depending on which scheduler is configured so be sure to look at the type information.
 
 ### URI
 
@@ -983,6 +983,310 @@ Response Body:
   </schedulerInfo>
 </scheduler>
 ```
+
+### Fair Scheduler API
+
+### Elements of the *schedulerInfo* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| type | string | Scheduler type - fairScheduler |
+| rootQueue | The root queue object | A collection of root queue resources |
+
+### Elements of the root queue object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| maxApps | int | The maximum number of applications the queue can have |
+| minResources | A single resource object | The configured minimum resources that are guaranteed to the queue |
+| maxResources | A single resource object | The configured maximum resources that are allowed to the queue |
+| usedResources | A single resource object | The sum of resources allocated to containers within the queue |
+| fairResources | A single resource object | The queue's fair share of resources |
+| clusterResources | A single resource object | The capacity of the cluster |
+| queueName | string | The name of the queue |
+| schedulingPolicy | string | The name of the scheduling policy used by the queue |
+| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information |
+
+### Elements of the queues object for a Leaf queue - contains all elements in parent plus the following
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| type | string | type of the queue - fairSchedulerLeafQueueInfo |
+| numActiveApps | int | The number of active applications in this queue |
+| numPendingApps | int | The number of pending applications in this queue |
+
+### Elements of the resource object for resourcesUsed in queues
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | int | The amount of memory used (in MB) |
+| vCores | int | The number of virtual cores |
+
+#### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+    "scheduler": {
+        "schedulerInfo": {
+            "rootQueue": {
+                "childQueues": [
+                    {
+                        "clusterResources": {
+                            "memory": 8192,
+                            "vCores": 8
+                        },
+                        "fairResources": {
+                            "memory": 0,
+                            "vCores": 0
+                        },
+                        "maxApps": 2147483647,
+                        "maxResources": {
+                            "memory": 8192,
+                            "vCores": 8
+                        },
+                        "minResources": {
+                            "memory": 0,
+                            "vCores": 0
+                        },
+                        "numActiveApps": 0,
+                        "numPendingApps": 0,
+                        "queueName": "root.default",
+                        "schedulingPolicy": "fair",
+                        "type": "fairSchedulerLeafQueueInfo",
+                        "usedResources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    },
+                    {
+                        "childQueues": {
+                            "clusterResources": {
+                                "memory": 8192,
+                                "vCores": 8
+                            },
+                            "fairResources": {
+                                "memory": 10000,
+                                "vCores": 0
+                            },
+                            "maxApps": 2147483647,
+                            "maxResources": {
+                                "memory": 8192,
+                                "vCores": 8
+                            },
+                            "minResources": {
+                                "memory": 5000,
+                                "vCores": 0
+                            },
+                            "numActiveApps": 0,
+                            "numPendingApps": 0,
+                            "queueName": "root.sample_queue.sample_sub_queue",
+                            "schedulingPolicy": "fair",
+                            "type": [
+                                "fairSchedulerLeafQueueInfo"
+                            ],
+                            "usedResources": {
+                                "memory": 0,
+                                "vCores": 0
+                            }
+                        },
+                        "clusterResources": {
+                            "memory": 8192,
+                            "vCores": 8
+                        },
+                        "fairResources": {
+                            "memory": 10000,
+                            "vCores": 0
+                        },
+                        "maxApps": 50,
+                        "maxResources": {
+                            "memory": 8192,
+                            "vCores": 0
+                        },
+                        "minResources": {
+                            "memory": 10000,
+                            "vCores": 0
+                        },
+                        "queueName": "root.sample_queue",
+                        "schedulingPolicy": "fair",
+                        "usedResources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    }
+                ],
+                "clusterResources": {
+                    "memory": 8192,
+                    "vCores": 8
+                },
+                "fairResources": {
+                    "memory": 8192,
+                    "vCores": 8
+                },
+                "maxApps": 2147483647,
+                "maxResources": {
+                    "memory": 8192,
+                    "vCores": 8
+                },
+                "minResources": {
+                    "memory": 0,
+                    "vCores": 0
+                },
+                "queueName": "root",
+                "schedulingPolicy": "fair",
+                "usedResources": {
+                    "memory": 0,
+                    "vCores": 0
+                }
+            },
+            "type": "fairScheduler"
+        }
+    }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://<rm http address:port>/ws/v1/cluster/scheduler
+      Accept: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 2321 
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<scheduler>
+  <schedulerInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="fairScheduler">
+    <rootQueue>
+      <maxApps>2147483647</maxApps>
+      <minResources>
+        <memory>0</memory>
+        <vCores>0</vCores>
+      </minResources>
+      <maxResources>
+        <memory>8192</memory>
+        <vCores>8</vCores>
+      </maxResources>
+      <usedResources>
+        <memory>0</memory>
+        <vCores>0</vCores>
+      </usedResources>
+      <fairResources>
+        <memory>8192</memory>
+        <vCores>8</vCores>
+      </fairResources>
+      <clusterResources>
+        <memory>8192</memory>
+        <vCores>8</vCores>
+      </clusterResources>
+      <queueName>root</queueName>
+      <schedulingPolicy>fair</schedulingPolicy>
+      <childQueues xsi:type="fairSchedulerLeafQueueInfo">
+        <maxApps>2147483647</maxApps>
+        <minResources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </minResources>
+        <maxResources>
+          <memory>8192</memory>
+          <vCores>8</vCores>
+        </maxResources>
+        <usedResources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </usedResources>
+        <fairResources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </fairResources>
+        <clusterResources>
+          <memory>8192</memory>
+          <vCores>8</vCores>
+        </clusterResources>
+        <queueName>root.default</queueName>
+        <schedulingPolicy>fair</schedulingPolicy>
+        <numPendingApps>0</numPendingApps>
+        <numActiveApps>0</numActiveApps>
+      </childQueues>
+      <childQueues>
+        <maxApps>50</maxApps>
+        <minResources>
+          <memory>10000</memory>
+          <vCores>0</vCores>
+        </minResources>
+        <maxResources>
+          <memory>8192</memory>
+          <vCores>0</vCores>
+        </maxResources>
+        <usedResources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </usedResources>
+        <fairResources>
+          <memory>10000</memory>
+          <vCores>0</vCores>
+        </fairResources>
+        <clusterResources>
+          <memory>8192</memory>
+          <vCores>8</vCores>
+        </clusterResources>
+        <queueName>root.sample_queue</queueName>
+        <schedulingPolicy>fair</schedulingPolicy>
+        <childQueues xsi:type="fairSchedulerLeafQueueInfo">
+          <maxApps>2147483647</maxApps>
+          <minResources>
+            <memory>5000</memory>
+            <vCores>0</vCores>
+          </minResources>
+          <maxResources>
+            <memory>8192</memory>
+            <vCores>8</vCores>
+          </maxResources>
+          <usedResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </usedResources>
+          <fairResources>
+            <memory>10000</memory>
+            <vCores>0</vCores>
+          </fairResources>
+          <clusterResources>
+            <memory>8192</memory>
+            <vCores>8</vCores>
+          </clusterResources>
+          <queueName>root.sample_queue.sample_sub_queue</queueName>
+          <schedulingPolicy>fair</schedulingPolicy>
+          <numPendingApps>0</numPendingApps>
+          <numActiveApps>0</numActiveApps>
+        </childQueues>
+      </childQueues>
+    </rootQueue>
+  </schedulerInfo>
+</scheduler>
+```
+
 
 Cluster Applications API
 ------------------------
