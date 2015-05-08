@@ -433,6 +433,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3554. Default value for maximum nodemanager connect wait time is too
     high (Naganarasimha G R via jlowe)
 
+    YARN-3476. Nodemanager can fail to delete local logs if log aggregation
+    fails (Rohith via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
