@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -185,8 +186,8 @@ public class LeafQueue extends AbstractCSQueue {
     maxAMResourcePerQueuePercent =
         conf.getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
 
-    if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
-        this.defaultLabelExpression)) {
+    if (!SchedulerUtils.checkQueueLabelExpression(
+        this.accessibleLabels, this.defaultLabelExpression, null)) {
       throw new IOException("Invalid default label expression of "
           + " queue="
           + getQueueName()
