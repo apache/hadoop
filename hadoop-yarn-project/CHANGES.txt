@@ -202,6 +202,10 @@ Release 2.8.0 - UNRELEASED
     YARN-3593. Add label-type and Improve "DEFAULT_PARTITION" in Node Labels Page. 
     (Naganarasimha G R via wangda)
 
+    YARN-3018. Unified the default value for the configuration property
+    yarn.scheduler.capacity.node-locality-delay in code and default xml file.
+    (Nijel SF via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
