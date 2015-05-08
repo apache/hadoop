@@ -229,8 +229,9 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         "AM Container:",
         appAttempt.getAmContainerId() == null || containers == null
             || !hasAMContainer(appAttemptReport.getAMContainerId(), containers)
-            ? "N/A" : root_url("container", appAttempt.getAmContainerId()),
-        String.valueOf(appAttempt.getAmContainerId()))
+            ? null : root_url("container", appAttempt.getAmContainerId()),
+        appAttempt.getAmContainerId() == null ? "N/A" :
+          String.valueOf(appAttempt.getAmContainerId()))
       ._("Node:", node)
       ._(
         "Tracking URL:",
