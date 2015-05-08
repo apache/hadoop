@@ -23,8 +23,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -44,12 +46,13 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.*;
-
 
 import com.google.common.collect.ImmutableSet;
 
@@ -908,5 +911,36 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getBoolean(getQueuePrefix(queue) + QUEUE_PREEMPTION_DISABLED,
                    defaultVal);
     return preemptionDisabled;
+  }
+
+  /**
+   * Get configured node labels in a given queuePath
+   */
+  public Set<String> getConfiguredNodeLabels(String queuePath) {
+    Set<String> configuredNodeLabels = new HashSet<String>();
+    Entry<String, String> e = null;
+    
+    Iterator<Entry<String, String>> iter = iterator();
+    while (iter.hasNext()) {
+      e = iter.next();
+      String key = e.getKey();
+
+      if (key.startsWith(getQueuePrefix(queuePath) + ACCESSIBLE_NODE_LABELS
+          + DOT)) {
+        // Find <label-name> in
+        // <queue-path>.accessible-node-labels.<label-name>.property
+        int labelStartIdx =
+            key.indexOf(ACCESSIBLE_NODE_LABELS)
+                + ACCESSIBLE_NODE_LABELS.length() + 1;
+        int labelEndIndx = key.indexOf('.', labelStartIdx);
+        String labelName = key.substring(labelStartIdx, labelEndIndx);
+        configuredNodeLabels.add(labelName);
+      }
+    }
+    
+    // always add NO_LABEL
+    configuredNodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    
+    return configuredNodeLabels;
   }
 }

@@ -333,6 +333,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3584. Fixed attempt diagnostics format shown on the UI. (nijel via
     jianhe)
 
+    YARN-2918. RM should not fail on startup if queue's configured labels do
+    not exist in cluster-node-labels. (Wangda Tan via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

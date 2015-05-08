@@ -118,11 +118,9 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void setupConfigurableCapacities() {
     CSQueueUtils.loadUpdateAndCheckCapacities(
         getQueuePath(),
-        accessibleLabels, 
         csContext.getConfiguration(), 
         queueCapacities,
-        parent == null ? null : parent.getQueueCapacities(), 
-        csContext.getRMContext().getNodeLabelManager());
+        parent == null ? null : parent.getQueueCapacities());
   }
   
   @Override
@@ -248,8 +246,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     if (this.accessibleLabels == null && parent != null) {
       this.accessibleLabels = parent.getAccessibleNodeLabels();
     }
-    SchedulerUtils.checkIfLabelInClusterNodeLabels(labelManager,
-        this.accessibleLabels);
     
     // inherit from parent if labels not set
     if (this.defaultLabelExpression == null && parent != null

@@ -91,11 +91,12 @@ public class RMServerUtils {
    * requested memory/vcore is non-negative and not greater than max
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
-      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext)
       throws InvalidResourceRequestException {
     for (ResourceRequest resReq : ask) {
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maximumResource,
-          queueName, scheduler);
+          queueName, scheduler, rmContext);
     }
   }
 
