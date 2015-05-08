@@ -353,6 +353,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3589. RM and AH web UI display DOCTYPE wrongly. (Rohith via ozawa)
 
+    YARN-3600. AM container link is broken (Naganarasimha G R via tgraves)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
