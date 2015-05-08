@@ -393,6 +393,12 @@ Release 2.8.0 - UNRELEASED
     HDFS-8311. DataStreamer.transfer() should timeout the socket InputStream.
     (Esteban Gutierrez via Yongjun Zhang)
 
+    HDFS-8326. Documentation about when checkpoints are run is out of date.
+    (Misty Stanley-Jones via xyao)
+
+    HDFS-8097. TestFileTruncate is failing intermittently. (Rakesh R via
+    Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
