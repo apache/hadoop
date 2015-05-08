@@ -316,6 +316,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6079. Rename JobImpl#username to reporterUserName.
     (Tsuyoshi Ozawa via aajisaka)
 
+    MAPREDUCE-5981. Log levels of certain MR logs can be changed to DEBUG.
+    (Varun Saxena via devaraj)
+
   OPTIMIZATIONS
 
   BUG FIXES

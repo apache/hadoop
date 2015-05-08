@@ -448,7 +448,7 @@ class Fetcher<K,V> extends Thread {
     LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
     // verify that replyHash is HMac of encHash
     SecureShuffleUtils.verifyReply(replyHash, encHash, shuffleSecretKey);
-    LOG.info("for url="+msgToEncode+" sent hash and received reply");
+    LOG.debug("for url="+msgToEncode+" sent hash and received reply");
   }
 
   private void setupShuffleConnection(String encHash) {
