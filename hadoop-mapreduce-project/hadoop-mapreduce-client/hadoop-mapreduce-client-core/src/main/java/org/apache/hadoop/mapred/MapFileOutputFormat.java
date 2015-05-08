@@ -95,7 +95,13 @@ extends FileOutputFormat<WritableComparable, Writable> {
                                   Partitioner<K, V> partitioner,
                                   K key,
                                   V value) throws IOException {
-    int part = partitioner.getPartition(key, value, readers.length);
+    int readerLength = readers.length;
+    int part;
+    if (readerLength <= 1) {
+      part = 0;
+    } else {
+      part = partitioner.getPartition(key, value, readers.length);
+    }
     return readers[part].get(key, value);
   }
 

@@ -109,6 +109,9 @@ Trunk (Unreleased)
     MAPREDUCE-6057. Remove obsolete entries from mapred-default.xml
     (Ray Chiang via aw)
 
+    MAPREDUCE-2632. Avoid calling the partitioner when the numReduceTasks is 1.
+    (Ravi Teja Ch N V and Sunil G via kasha)
+
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization

@@ -30,6 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * is the same as the number of reduce tasks for the job. Hence this controls
  * which of the <code>m</code> reduce tasks the intermediate key (and hence the 
  * record) is sent for reduction.</p>
+ *
+ * <p>Note: A <code>Partitioner</code> is created only when there are multiple
+ * reducers.</p>
  * 
  * @see Reducer
  */
