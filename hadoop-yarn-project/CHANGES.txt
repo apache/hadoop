@@ -209,6 +209,8 @@ Release 2.8.0 - UNRELEASED
     YARN-2331. Distinguish shutdown during supervision vs. shutdown for
     rolling upgrade. (Jason Lowe via xgong)
 
+    YARN-1050. Document the Fair Scheduler REST API. (Kenji Kikushima and Roman Shaposhnik via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
