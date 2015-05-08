@@ -460,6 +460,9 @@ class DataStreamer extends Daemon {
             LOG.debug("Append to block " + block);
           }
           setupPipelineForAppendOrRecovery();
+          if (true == streamerClosed) {
+            continue;
+          }
           initDataStreaming();
         }
 
@@ -571,6 +574,7 @@ class DataStreamer extends Daemon {
           }
         }
         lastException.set(e);
+        assert !(e instanceof NullPointerException);
         hasError = true;
         if (errorIndex == -1 && restartingNodeIndex.get() == -1) {
           // Not a datanode issue
