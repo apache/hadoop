@@ -495,4 +495,22 @@ public class Hdfs extends AbstractFileSystem {
       throws InvalidToken, IOException {
     dfs.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
   }
+
+  @Override
+  public Path createSnapshot(final Path path, final String snapshotName)
+      throws IOException {
+    return new Path(dfs.createSnapshot(getUriPath(path), snapshotName));
+  }
+
+  @Override
+  public void renameSnapshot(final Path path, final String snapshotOldName,
+      final String snapshotNewName) throws IOException {
+    dfs.renameSnapshot(getUriPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
+      throws IOException {
+    dfs.deleteSnapshot(getUriPath(snapshotDir), snapshotName);
+  }
 }
