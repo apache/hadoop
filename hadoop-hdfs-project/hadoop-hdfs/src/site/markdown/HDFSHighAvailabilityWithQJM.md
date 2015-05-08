@@ -355,7 +355,7 @@ The order in which you set these configurations is unimportant, but the values y
 
 ### Deployment details
 
-After all of the necessary configuration options have been set, you must start the JournalNode daemons on the set of machines where they will run. This can be done by running the command "*hadoop-daemon.sh start journalnode*" and waiting for the daemon to start on each of the relevant machines.
+After all of the necessary configuration options have been set, you must start the JournalNode daemons on the set of machines where they will run. This can be done by running the command "*hdfs --daemon start journalnode*" and waiting for the daemon to start on each of the relevant machines.
 
 Once the JournalNodes have been started, one must initially synchronize the two HA NameNodes' on-disk metadata.
 

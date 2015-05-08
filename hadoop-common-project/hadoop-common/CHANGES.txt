@@ -212,6 +212,9 @@ Trunk (Unreleased)
     HADOOP-11813. releasedocmaker.py should use today's date instead of
     unreleased (Darrell Taylor via aw)
 
+    HADOOP-11590. Update sbin commands and documentation to use new --slaves
+    option (aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
