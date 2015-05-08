@@ -626,6 +626,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11922. Misspelling of threshold in log4j.properties for tests
     in hadoop-tools (Gabor Liptak via vinayakumarb)
 
+    HADOOP-11877. SnappyDecompressor's Logger class name is wrong
+    (surendra singh lilhore via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
