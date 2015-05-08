@@ -63,6 +63,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -87,6 +88,8 @@ public class TestFileTruncate {
   static MiniDFSCluster cluster;
   static DistributedFileSystem fs;
 
+ private Path parent;
+
   @BeforeClass
   public static void startUp() throws IOException {
     conf = new HdfsConfiguration();
@@ -110,6 +113,12 @@ public class TestFileTruncate {
     if(cluster != null) cluster.shutdown();
   }
 
+  @Before
+  public void setup() throws IOException {
+    parent = new Path("/test");
+    fs.delete(parent, true);
+  }
+
   /**
    * Truncate files of different sizes byte by byte.
    */
@@ -117,7 +126,6 @@ public class TestFileTruncate {
   public void testBasicTruncate() throws IOException {
     int startingFileSize = 3 * BLOCK_SIZE;
 
-    Path parent = new Path("/test");
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     byte[] contents = AppendTestUtil.initBuffer(startingFileSize);
@@ -257,7 +265,6 @@ public class TestFileTruncate {
    */
   void testSnapshotWithAppendTruncate(int ... deleteOrder) throws IOException {
     FSDirectory fsDir = cluster.getNamesystem().getFSDirectory();
-    Path parent = new Path("/test");
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     fs.allowSnapshot(parent);
@@ -421,7 +428,6 @@ public class TestFileTruncate {
   }
 
   void testSnapshotWithTruncates(int ... deleteOrder) throws IOException {
-    Path parent = new Path("/test");
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     fs.allowSnapshot(parent);
@@ -664,7 +670,6 @@ public class TestFileTruncate {
   public void testTruncateWithDataNodesRestart() throws Exception {
     int startingFileSize = 3 * BLOCK_SIZE;
     byte[] contents = AppendTestUtil.initBuffer(startingFileSize);
-    final Path parent = new Path("/test");
     final Path p = new Path(parent, "testTruncateWithDataNodesRestart");
 
     writeContents(contents, startingFileSize, p);
@@ -719,7 +724,6 @@ public class TestFileTruncate {
   public void testCopyOnTruncateWithDataNodesRestart() throws Exception {
     int startingFileSize = 3 * BLOCK_SIZE;
     byte[] contents = AppendTestUtil.initBuffer(startingFileSize);
-    final Path parent = new Path("/test");
     final Path p = new Path(parent, "testCopyOnTruncateWithDataNodesRestart");
 
     writeContents(contents, startingFileSize, p);
@@ -779,7 +783,6 @@ public class TestFileTruncate {
   public void testTruncateWithDataNodesRestartImmediately() throws Exception {
     int startingFileSize = 3 * BLOCK_SIZE;
     byte[] contents = AppendTestUtil.initBuffer(startingFileSize);
-    final Path parent = new Path("/test");
     final Path p = new Path(parent, "testTruncateWithDataNodesRestartImmediately");
 
     writeContents(contents, startingFileSize, p);
@@ -839,7 +842,6 @@ public class TestFileTruncate {
   public void testTruncateWithDataNodesShutdownImmediately() throws Exception {
     int startingFileSize = 3 * BLOCK_SIZE;
     byte[] contents = AppendTestUtil.initBuffer(startingFileSize);
-    final Path parent = new Path("/test");
     final Path p = new Path(parent, "testTruncateWithDataNodesShutdownImmediately");
 
     writeContents(contents, startingFileSize, p);
@@ -905,7 +907,6 @@ public class TestFileTruncate {
    */
   @Test
   public void testUpgradeAndRestart() throws IOException {
-    Path parent = new Path("/test");
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     fs.allowSnapshot(parent);
@@ -994,7 +995,6 @@ public class TestFileTruncate {
     FSNamesystem fsn = cluster.getNamesystem();
     String client = "client";
     String clientMachine = "clientMachine";
-    Path parent = new Path("/test");
     String src = "/test/testTruncateRecovery";
     Path srcPath = new Path(src);
 
@@ -1067,7 +1067,6 @@ public class TestFileTruncate {
 
   @Test
   public void testTruncateShellCommand() throws Exception {
-    final Path parent = new Path("/test");
     final Path src = new Path("/test/testTruncateShellCommand");
     final int oldLength = 2*BLOCK_SIZE + 1;
     final int newLength = BLOCK_SIZE + 1;
@@ -1084,7 +1083,6 @@ public class TestFileTruncate {
 
   @Test
   public void testTruncateShellCommandOnBlockBoundary() throws Exception {
-    final Path parent = new Path("/test");
     final Path src = new Path("/test/testTruncateShellCommandOnBoundary");
     final int oldLength = 2 * BLOCK_SIZE;
     final int newLength = BLOCK_SIZE;
@@ -1100,7 +1098,6 @@ public class TestFileTruncate {
 
   @Test
   public void testTruncateShellCommandWithWaitOption() throws Exception {
-    final Path parent = new Path("/test");
     final Path src = new Path("/test/testTruncateShellCommandWithWaitOption");
     final int oldLength = 2 * BLOCK_SIZE + 1;
     final int newLength = BLOCK_SIZE + 1;
@@ -1136,7 +1133,6 @@ public class TestFileTruncate {
   public void testTruncate4Symlink() throws IOException {
     final int fileLength = 3 * BLOCK_SIZE;
 
-    final Path parent = new Path("/test");
     fs.mkdirs(parent);
     final byte[] contents = AppendTestUtil.initBuffer(fileLength);
     final Path file = new Path(parent, "testTruncate4Symlink");
