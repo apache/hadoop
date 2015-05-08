@@ -519,6 +519,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8314. Move HdfsServerConstants#IO_FILE_BUFFER_SIZE and
     SMALL_BUFFER_SIZE to the users. (Li Lu via wheat9)
 
+    HDFS-8207. Improper log message when blockreport interval compared with
+    initial delay. (Brahma Reddy Battula and Ashish Singhi via ozawa)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
