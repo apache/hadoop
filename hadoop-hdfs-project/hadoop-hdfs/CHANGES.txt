@@ -687,6 +687,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8209. Support different number of datanode directories in MiniDFSCluster.
     (surendra singh lilhore via vinayakumarb)
 
+    HDFS-6576. Datanode log is generating at root directory in security mode
+    (surendra singh lilhore via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
