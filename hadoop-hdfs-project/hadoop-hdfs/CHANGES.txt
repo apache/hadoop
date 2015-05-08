@@ -669,6 +669,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7998. HDFS Federation : Command mentioned to add a NN to existing
     federated cluster is wrong (Ajith S via vinayakumarb)
 
+    HDFS-8222. Remove usage of "dfsadmin -upgradeProgress" from document which
+    is no longer supported. (J.Andreina via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -302,8 +302,7 @@ Upgrade and Rollback
 When Hadoop is upgraded on an existing cluster, as with any software upgrade, it is possible there are new bugs or incompatible changes that affect existing applications and were not discovered earlier. In any non-trivial HDFS installation, it is not an option to loose any data, let alone to restart HDFS from scratch. HDFS allows administrators to go back to earlier version of Hadoop and rollback the cluster to the state it was in before the upgrade. HDFS upgrade is described in more detail in [Hadoop Upgrade](http://wiki.apache.org/hadoop/Hadoop_Upgrade) Wiki page. HDFS can have one such backup at a time. Before upgrading, administrators need to remove existing backup using bin/hadoop dfsadmin `-finalizeUpgrade` command. The following briefly describes the typical upgrade procedure:
 
 *   Before upgrading Hadoop software, finalize if there an existing
-    backup. `dfsadmin -upgradeProgress` status can tell if the cluster
-    needs to be finalized.
+    backup.
 
 *   Stop the cluster and distribute new version of Hadoop.
 
