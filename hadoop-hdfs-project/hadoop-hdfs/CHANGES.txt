@@ -317,6 +317,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11377. Balancer hung due to no available mover threads. (yunjiong zhao)
 
+    HDFS-6291. FSImage may be left unclosed in BootstrapStandby#doRun()
+    (Sanghyun Yun via vinayakumarb)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

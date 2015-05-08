@@ -322,8 +322,9 @@ public class BootstrapStandby implements Tool, Configurable {
       // Write seen_txid to the formatted image directories.
       storage.writeTransactionIdFileToStorage(imageTxId, NameNodeDirType.IMAGE);
     } catch (IOException ioe) {
-      image.close();
       throw ioe;
+    } finally {
+      image.close();
     }
     return 0;
   }
