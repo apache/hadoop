@@ -40,8 +40,6 @@
 #define HADOOP_NAMENODE "org/apache/hadoop/hdfs/server/namenode/NameNode"
 #define JAVA_INETSOCKETADDRESS "java/net/InetSocketAddress"
 
-#define DFS_WEBHDFS_ENABLED_KEY "dfs.webhdfs.enabled"
-
 struct NativeMiniDfsCluster {
     /**
      * The NativeMiniDfsCluster object

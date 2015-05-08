@@ -194,7 +194,6 @@ Below are the HDFS configuration options for WebHDFS.
 
 | Property Name | Description |
 |:---- |:---- |
-| `dfs.webhdfs.enabled ` | Enable/disable WebHDFS in Namenodes and Datanodes |
 | `dfs.web.authentication.kerberos.principal` | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPNEGO specification. A value of "\*" will use all HTTP principals found in the keytab. |
 | `dfs.web.authentication.kerberos.keytab ` | The Kerberos keytab file with the credentials for the HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. |
 

@@ -22,6 +22,9 @@ Trunk (Unreleased)
 
     HDFS-7281. Missing block is marked as corrupted block (Ming Ma via
     Yongjun Zhang)
+
+    HDFS-8349. Remove .xml and documentation references to dfs.webhdfs.enabled.
+    (Ray Chiang via aajisaka)
  
   NEW FEATURES
 

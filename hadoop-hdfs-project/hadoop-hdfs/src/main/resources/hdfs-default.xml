@@ -1497,14 +1497,6 @@
 </property>
 
 <property>
-  <name>dfs.webhdfs.enabled</name>
-  <value>true</value>
-  <description>
-    Enable WebHDFS (REST API) in Namenodes and Datanodes.
-  </description>
-</property>
-
-<property>
   <name>hadoop.fuse.connection.timeout</name>
   <value>300</value>
   <description>
