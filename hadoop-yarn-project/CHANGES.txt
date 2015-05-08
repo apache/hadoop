@@ -209,7 +209,11 @@ Release 2.8.0 - UNRELEASED
     YARN-2331. Distinguish shutdown during supervision vs. shutdown for
     rolling upgrade. (Jason Lowe via xgong)
 
-    YARN-1050. Document the Fair Scheduler REST API. (Kenji Kikushima and Roman Shaposhnik via kasha)
+    YARN-1050. Document the Fair Scheduler REST API. 
+    (Kenji Kikushima and Roman Shaposhnik via kasha)
+
+    YARN-3271. FairScheduler: Move tests related to max-runnable-apps from 
+    TestFairScheduler to TestAppRunnability. (nijel via kasha)
 
   OPTIMIZATIONS
 

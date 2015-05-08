@@ -935,37 +935,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         getResourceUsage().getMemory());
   }
 
-  @Test
-  public void testUserAsDefaultQueue() throws Exception {
-    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getNumRunnableApps());
-    assertEquals("root.user1", resourceManager.getRMContext().getRMApps()
-        .get(appAttemptId.getApplicationId()).getQueue());
-  }
   
-  @Test
-  public void testNotUserAsDefaultQueue() throws Exception {
-    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId, "default", "user2", null);
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getNumRunnableApps());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
-        .getNumRunnableApps());
-  }
+
 
   @Test
   public void testEmptyQueueName() throws Exception {
@@ -1426,37 +1397,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(2 * minReqSize + 2 * minReqSize + (2 * minReqSize), scheduler
         .getQueueManager().getQueue("root.queue2").getDemand()
         .getMemory());
-  }
-
-  @Test
-  public void testAppAdditionAndRemoval() throws Exception {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    ApplicationAttemptId attemptId =createAppAttemptId(1, 1);
-    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(attemptId.getApplicationId(), "default",
-      "user1");
-    scheduler.handle(appAddedEvent);
-    AppAttemptAddedSchedulerEvent attemptAddedEvent =
-        new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), false);
-    scheduler.handle(attemptAddedEvent);
-
-    // Scheduler should have two queues (the default and the one created for user1)
-    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
-
-    // That queue should have one app
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
-
-    AppAttemptRemovedSchedulerEvent appRemovedEvent1 = new AppAttemptRemovedSchedulerEvent(
-        createAppAttemptId(1, 1), RMAppAttemptState.FINISHED, false);
-
-    // Now remove app
-    scheduler.handle(appRemovedEvent1);
-
-    // Queue should have no apps
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
   }
 
   @Test
@@ -2180,33 +2120,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         .getFairSharePreemptionTimeout());
   }
 
-  @Test
-  public void testPreemptionVariablesForQueueCreatedRuntime() throws Exception {
-    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    // Set preemption variables for the root queue
-    FSParentQueue root = scheduler.getQueueManager().getRootQueue();
-    root.setMinSharePreemptionTimeout(10000);
-    root.setFairSharePreemptionTimeout(15000);
-    root.setFairSharePreemptionThreshold(.6f);
-
-    // User1 submits one application
-    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
-
-    // The user1 queue should inherit the configurations from the root queue
-    FSLeafQueue userQueue =
-        scheduler.getQueueManager().getLeafQueue("user1", true);
-    assertEquals(1, userQueue.getNumRunnableApps());
-    assertEquals(10000, userQueue.getMinSharePreemptionTimeout());
-    assertEquals(15000, userQueue.getFairSharePreemptionTimeout());
-    assertEquals(.6f, userQueue.getFairSharePreemptionThreshold(), 0.001);
-  }
-
-  @Test (timeout = 5000)
+  @Test(timeout = 5000)
   public void testMultipleContainersWaitingForReservation() throws IOException {
     scheduler.init(conf);
     scheduler.start();
@@ -3975,48 +3889,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testDontAllowUndeclaredPools() throws Exception{
-    conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"jerry\">");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
-
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-    QueueManager queueManager = scheduler.getQueueManager();
-    
-    FSLeafQueue jerryQueue = queueManager.getLeafQueue("jerry", false);
-    FSLeafQueue defaultQueue = queueManager.getLeafQueue("default", false);
-    
-    // Should get put into jerry
-    createSchedulingRequest(1024, "jerry", "someuser");
-    assertEquals(1, jerryQueue.getNumRunnableApps());
-
-    // Should get forced into default
-    createSchedulingRequest(1024, "newqueue", "someuser");
-    assertEquals(1, jerryQueue.getNumRunnableApps());
-    assertEquals(1, defaultQueue.getNumRunnableApps());
-    
-    // Would get put into someuser because of user-as-default-queue, but should
-    // be forced into default
-    createSchedulingRequest(1024, "default", "someuser");
-    assertEquals(1, jerryQueue.getNumRunnableApps());
-    assertEquals(2, defaultQueue.getNumRunnableApps());
-    
-    // Should get put into jerry because of user-as-default-queue
-    createSchedulingRequest(1024, "default", "jerry");
-    assertEquals(2, jerryQueue.getNumRunnableApps());
-    assertEquals(2, defaultQueue.getNumRunnableApps());
-  }
-
-  @Test
   public void testDefaultRuleInitializesProperlyWhenPolicyNotConfigured()
       throws IOException {
     // This test verifies if default rule in queue placement policy
@@ -4036,8 +3908,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    List<QueuePlacementRule> rules = scheduler.allocConf.placementPolicy
-        .getRules();
+    List<QueuePlacementRule> rules =
+        scheduler.allocConf.placementPolicy.getRules();
 
     for (QueuePlacementRule rule : rules) {
       if (rule instanceof Default) {
@@ -4047,7 +3919,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
   }
     
-  @Test(timeout=5000)
+  @Test(timeout = 5000)
   public void testRecoverRequestAfterPreemption() throws Exception {
     conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10);
     
@@ -4228,92 +4100,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
           .getResourceScheduler();
     TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
       scheduler.getSchedulerApplications(), scheduler, "default");
-  }
-
-  @Test
-  public void testMoveRunnableApp() throws Exception {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    QueueManager queueMgr = scheduler.getQueueManager();
-    FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
-    FSLeafQueue targetQueue = queueMgr.getLeafQueue("queue2", true);
-
-    ApplicationAttemptId appAttId =
-        createSchedulingRequest(1024, 1, "queue1", "user1", 3);
-    ApplicationId appId = appAttId.getApplicationId();
-    RMNode node = MockNodes.newNodeInfo(1, Resources.createResource(1024));
-    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
-    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
-    scheduler.handle(nodeEvent);
-    scheduler.handle(updateEvent);
-    
-    assertEquals(Resource.newInstance(1024, 1), oldQueue.getResourceUsage());
-    scheduler.update();
-    assertEquals(Resource.newInstance(3072, 3), oldQueue.getDemand());
-    
-    scheduler.moveApplication(appId, "queue2");
-    FSAppAttempt app = scheduler.getSchedulerApp(appAttId);
-    assertSame(targetQueue, app.getQueue());
-    assertFalse(oldQueue.isRunnableApp(app));
-    assertTrue(targetQueue.isRunnableApp(app));
-    assertEquals(Resource.newInstance(0, 0), oldQueue.getResourceUsage());
-    assertEquals(Resource.newInstance(1024, 1), targetQueue.getResourceUsage());
-    assertEquals(0, oldQueue.getNumRunnableApps());
-    assertEquals(1, targetQueue.getNumRunnableApps());
-    assertEquals(1, queueMgr.getRootQueue().getNumRunnableApps());
-    
-    scheduler.update();
-    assertEquals(Resource.newInstance(0, 0), oldQueue.getDemand());
-    assertEquals(Resource.newInstance(3072, 3), targetQueue.getDemand());
-  }
-  
-  @Test
-  public void testMoveNonRunnableApp() throws Exception {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    QueueManager queueMgr = scheduler.getQueueManager();
-    FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
-    FSLeafQueue targetQueue = queueMgr.getLeafQueue("queue2", true);
-    scheduler.getAllocationConfiguration().queueMaxApps.put("root.queue1", 0);
-    scheduler.getAllocationConfiguration().queueMaxApps.put("root.queue2", 0);
-    
-    ApplicationAttemptId appAttId =
-        createSchedulingRequest(1024, 1, "queue1", "user1", 3);
-    
-    assertEquals(0, oldQueue.getNumRunnableApps());
-    scheduler.moveApplication(appAttId.getApplicationId(), "queue2");
-    assertEquals(0, oldQueue.getNumRunnableApps());
-    assertEquals(0, targetQueue.getNumRunnableApps());
-    assertEquals(0, queueMgr.getRootQueue().getNumRunnableApps());
-  }
-  
-  @Test
-  public void testMoveMakesAppRunnable() throws Exception {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    QueueManager queueMgr = scheduler.getQueueManager();
-    FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
-    FSLeafQueue targetQueue = queueMgr.getLeafQueue("queue2", true);
-    scheduler.getAllocationConfiguration().queueMaxApps.put("root.queue1", 0);
-    
-    ApplicationAttemptId appAttId =
-        createSchedulingRequest(1024, 1, "queue1", "user1", 3);
-    
-    FSAppAttempt app = scheduler.getSchedulerApp(appAttId);
-    assertTrue(oldQueue.isNonRunnableApp(app));
-    
-    scheduler.moveApplication(appAttId.getApplicationId(), "queue2");
-    assertFalse(oldQueue.isNonRunnableApp(app));
-    assertFalse(targetQueue.isNonRunnableApp(app));
-    assertTrue(targetQueue.isRunnableApp(app));
-    assertEquals(1, targetQueue.getNumRunnableApps());
-    assertEquals(1, queueMgr.getRootQueue().getNumRunnableApps());
   }
     
   @Test (expected = YarnException.class)
