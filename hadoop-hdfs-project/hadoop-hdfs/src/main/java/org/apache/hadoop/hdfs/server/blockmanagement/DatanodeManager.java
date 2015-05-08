@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
@@ -84,8 +83,8 @@ public class DatanodeManager {
    * <p>
    * Mapping: StorageID -> DatanodeDescriptor
    */
-  private final NavigableMap<String, DatanodeDescriptor> datanodeMap
-      = new TreeMap<String, DatanodeDescriptor>();
+  private final Map<String, DatanodeDescriptor> datanodeMap
+      = new HashMap<String, DatanodeDescriptor>();
 
   /** Cluster network topology */
   private final NetworkTopology networktopology;
@@ -405,11 +404,6 @@ public class DatanodeManager {
     }
   }
   
-  CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
-      final String firstkey) {
-    return new CyclicIteration<String, DatanodeDescriptor>(
-        datanodeMap, firstkey);
-  }
 
   /** @return the datanode descriptor for the host. */
   public DatanodeDescriptor getDatanodeByHost(final String host) {
@@ -526,9 +520,10 @@ public class DatanodeManager {
   /** Prints information about all datanodes. */
   void datanodeDump(final PrintWriter out) {
     synchronized (datanodeMap) {
+      Map<String,DatanodeDescriptor> sortedDatanodeMap =
+          new TreeMap<String,DatanodeDescriptor>(datanodeMap);
       out.println("Metasave: Number of datanodes: " + datanodeMap.size());
-      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();) {
-        DatanodeDescriptor node = it.next();
+      for (DatanodeDescriptor node : sortedDatanodeMap.values()) {
         out.println(node.dumpDatanode());
       }
     }
@@ -1289,6 +1284,7 @@ public class DatanodeManager {
         foundNodes.add(HostFileManager.resolvedAddressFromDatanodeID(dn));
       }
     }
+    Collections.sort(nodes);
 
     if (listDeadNodes) {
       for (InetSocketAddress addr : includedNodes) {

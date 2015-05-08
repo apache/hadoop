@@ -535,6 +535,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
     DFSOutputStream#writeChunk (cmccabe)
 
+    HDFS-7433. Optimize performance of DatanodeManager's node map.
+    (daryn via kihwal)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
