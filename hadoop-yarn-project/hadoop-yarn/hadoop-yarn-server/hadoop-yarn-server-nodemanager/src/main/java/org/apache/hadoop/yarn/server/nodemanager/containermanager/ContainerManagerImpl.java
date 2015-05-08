@@ -151,6 +151,10 @@ public class ContainerManagerImpl extends CompositeService implements
 
   private static final Log LOG = LogFactory.getLog(ContainerManagerImpl.class);
 
+  static final String INVALID_NMTOKEN_MSG = "Invalid NMToken";
+  static final String INVALID_CONTAINERTOKEN_MSG =
+      "Invalid ContainerToken";
+
   final Context context;
   private final ContainersMonitor containersMonitor;
   private Server server;
@@ -641,6 +645,9 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected void authorizeUser(UserGroupInformation remoteUgi,
       NMTokenIdentifier nmTokenIdentifier) throws YarnException {
+    if (nmTokenIdentifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
     if (!remoteUgi.getUserName().equals(
       nmTokenIdentifier.getApplicationAttemptId().toString())) {
       throw RPCUtil.getRemoteException("Expected applicationAttemptId: "
@@ -658,7 +665,12 @@ public class ContainerManagerImpl extends CompositeService implements
   @VisibleForTesting
   protected void authorizeStartRequest(NMTokenIdentifier nmTokenIdentifier,
       ContainerTokenIdentifier containerTokenIdentifier) throws YarnException {
-
+    if (nmTokenIdentifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
+    if (containerTokenIdentifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_CONTAINERTOKEN_MSG);
+    }
     ContainerId containerId = containerTokenIdentifier.getContainerID();
     String containerIDStr = containerId.toString();
     boolean unauthorized = false;
@@ -717,6 +729,10 @@ public class ContainerManagerImpl extends CompositeService implements
     for (StartContainerRequest request : requests.getStartContainerRequests()) {
       ContainerId containerId = null;
       try {
+        if (request.getContainerToken() == null ||
+            request.getContainerToken().getIdentifier() == null) {
+          throw new IOException(INVALID_CONTAINERTOKEN_MSG);
+        }
         ContainerTokenIdentifier containerTokenIdentifier =
             BuilderUtils.newContainerTokenIdentifier(request.getContainerToken());
         verifyAndGetContainerTokenIdentifier(request.getContainerToken(),
@@ -946,6 +962,9 @@ public class ContainerManagerImpl extends CompositeService implements
         new HashMap<ContainerId, SerializedException>();
     UserGroupInformation remoteUgi = getRemoteUgi();
     NMTokenIdentifier identifier = selectNMTokenIdentifier(remoteUgi);
+    if (identifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
     for (ContainerId id : requests.getContainerIds()) {
       try {
         stopContainerInternal(identifier, id);
@@ -1001,6 +1020,9 @@ public class ContainerManagerImpl extends CompositeService implements
         new HashMap<ContainerId, SerializedException>();
     UserGroupInformation remoteUgi = getRemoteUgi();
     NMTokenIdentifier identifier = selectNMTokenIdentifier(remoteUgi);
+    if (identifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
     for (ContainerId id : request.getContainerIds()) {
       try {
         ContainerStatus status = getContainerStatusInternal(id, identifier);
@@ -1041,6 +1063,9 @@ public class ContainerManagerImpl extends CompositeService implements
   protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
       Container container, boolean stopRequest, NMTokenIdentifier identifier)
       throws YarnException {
+    if (identifier == null) {
+      throw RPCUtil.getRemoteException(INVALID_NMTOKEN_MSG);
+    }
     /*
      * For get/stop container status; we need to verify that 1) User (NMToken)
      * application attempt only has started container. 2) Requested containerId

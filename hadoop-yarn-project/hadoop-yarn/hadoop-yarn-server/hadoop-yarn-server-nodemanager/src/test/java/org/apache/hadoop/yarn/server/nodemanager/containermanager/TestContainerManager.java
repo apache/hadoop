@@ -45,6 +45,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetContainerStatusesRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainersRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainersRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -83,6 +86,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -790,6 +794,89 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertTrue(response.getFailedRequests().containsKey(cId));
     Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
         .contains("The auxService:" + serviceName + " does not exist"));
+  }
+
+  /* Test added to verify fix in YARN-644 */
+  @Test
+  public void testNullTokens() throws Exception {
+    ContainerManagerImpl cMgrImpl =
+        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+        metrics, new ApplicationACLsManager(conf), dirsHandler);
+    String strExceptionMsg = "";
+    try {
+      cMgrImpl.authorizeStartRequest(null, new ContainerTokenIdentifier());
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_NMTOKEN_MSG);
+
+    strExceptionMsg = "";
+    try {
+      cMgrImpl.authorizeStartRequest(new NMTokenIdentifier(), null);
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_CONTAINERTOKEN_MSG);
+
+    strExceptionMsg = "";
+    try {
+      cMgrImpl.authorizeGetAndStopContainerRequest(null, null, true, null);
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_NMTOKEN_MSG);
+
+    strExceptionMsg = "";
+    try {
+      cMgrImpl.authorizeUser(null, null);
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_NMTOKEN_MSG);
+
+    ContainerManagerImpl spyContainerMgr = Mockito.spy(cMgrImpl);
+    UserGroupInformation ugInfo = UserGroupInformation.createRemoteUser("a");
+    Mockito.when(spyContainerMgr.getRemoteUgi()).thenReturn(ugInfo);
+    Mockito.when(spyContainerMgr.
+        selectNMTokenIdentifier(ugInfo)).thenReturn(null);
+
+    strExceptionMsg = "";
+    try {
+      spyContainerMgr.stopContainers(new StopContainersRequestPBImpl());
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_NMTOKEN_MSG);
+
+    strExceptionMsg = "";
+    try {
+      spyContainerMgr.getContainerStatuses(
+          new GetContainerStatusesRequestPBImpl());
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_NMTOKEN_MSG);
+
+    Mockito.doNothing().when(spyContainerMgr).authorizeUser(ugInfo, null);
+    List<StartContainerRequest> reqList
+        = new ArrayList<StartContainerRequest>();
+    reqList.add(StartContainerRequest.newInstance(null, null));
+    StartContainersRequest reqs = new StartContainersRequestPBImpl();
+    reqs.setStartContainerRequests(reqList);
+    strExceptionMsg = "";
+    try {
+      spyContainerMgr.startContainers(reqs);
+    } catch(YarnException ye) {
+      strExceptionMsg = ye.getCause().getMessage();
+    }
+    Assert.assertEquals(strExceptionMsg,
+        ContainerManagerImpl.INVALID_CONTAINERTOKEN_MSG);
   }
 
   public static Token createContainerToken(ContainerId cId, long rmIdentifier,

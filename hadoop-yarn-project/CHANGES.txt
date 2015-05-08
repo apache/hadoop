@@ -113,6 +113,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-644. Basic null check is not performed on passed in arguments before
+    using them in ContainerManagerImpl.startContainer (Varun Saxena via bobby)
+
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
     (ozawa via harsh)
 
