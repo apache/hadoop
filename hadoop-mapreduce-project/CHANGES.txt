@@ -394,6 +394,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6342. Make POM project names consistent. (Rohith via devaraj)
 
+    MAPREDUCE-3383. Duplicate job.getOutputValueGroupingComparator() in
+    ReduceTask (Binglin Chang via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
