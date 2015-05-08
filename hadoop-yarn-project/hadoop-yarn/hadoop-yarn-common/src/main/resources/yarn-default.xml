@@ -111,13 +111,21 @@
   </property>
 
   <property>
-    <description>The http address of the RM web application.</description>
+    <description>
+      The http address of the RM web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
     <name>yarn.resourcemanager.webapp.address</name>
     <value>${yarn.resourcemanager.hostname}:8088</value>
   </property>
 
   <property>
-    <description>The https adddress of the RM web application.</description>
+    <description>
+      The https address of the RM web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
     <name>yarn.resourcemanager.webapp.https.address</name>
     <value>${yarn.resourcemanager.hostname}:8090</value>
   </property>

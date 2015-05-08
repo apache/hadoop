@@ -196,6 +196,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-2784. Make POM project names consistent. (Rohith via devaraj)
 
+    YARN-20. More information for "yarn.resourcemanager.webapp.address" in 
+    yarn-default.xml (Bartosz Ługowski vai tgraves)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
