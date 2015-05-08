@@ -386,6 +386,8 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6356. Misspelling of threshold in log4j.properties for tests.
     (Brahma Reddy Battula via aajisaka)
 
+    MAPREDUCE-6342. Make POM project names consistent. (Rohith via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
