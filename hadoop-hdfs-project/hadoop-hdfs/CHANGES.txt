@@ -678,6 +678,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8187. Remove usage of "-setStoragePolicy" and "-getStoragePolicy" using
     dfsadmin cmd (as it is not been supported) (J.Andreina via vinayakumarb)
 
+    HDFS-8175. Provide information on snapshotDiff for supporting the comparison
+    between snapshot and current status (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -257,6 +257,10 @@
       <tr><td>fromSnapshot</td><td>The name of the starting snapshot.</td></tr>
       <tr><td>toSnapshot</td><td>The name of the ending snapshot.</td></tr>
     </table></li>
+    <p>
+      Note that snapshotDiff can be used to get the difference report between two snapshots, or between
+      a snapshot and the current status of a directory.Users can use "." to represent the current status.
+    </p>
     <li>Results:
       <table>
         <tr><td>+</td><td>The file/directory has been created.</td></tr>
