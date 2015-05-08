@@ -19,10 +19,15 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.security.AccessControlException;
+import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -30,15 +35,21 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskAttemptRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.client.MRClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -50,6 +61,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptCounterInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
@@ -59,16 +71,19 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TasksInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 @Path("/ws/v1/mapreduce")
 public class AMWebServices {
   private final AppContext appCtx;
   private final App app;
+  private final MRClientService service;
 
   private @Context HttpServletResponse response;
   
@@ -76,6 +91,7 @@ public class AMWebServices {
   public AMWebServices(final App app, final AppContext context) {
     this.appCtx = context;
     this.app = app;
+    this.service = new MRClientService(context);
   }
 
   Boolean hasAccess(Job job, HttpServletRequest request) {
@@ -396,6 +412,59 @@ public class AMWebServices {
   }
 
   @GET
+  @Path("/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public JobTaskAttemptState getJobTaskAttemptState(
+      @Context HttpServletRequest hsr,
+      @PathParam("jobid") String jid, @PathParam("taskid") String tid,
+      @PathParam("attemptid") String attId)
+          throws IOException, InterruptedException {
+    init();
+    Job job = getJobFromJobIdString(jid, appCtx);
+    checkAccess(job, hsr);
+    Task task = getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = getTaskAttemptFromTaskAttemptString(attId, task);
+    return new JobTaskAttemptState(ta.getState().toString());
+  }
+
+  @PUT
+  @Path("/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/state")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateJobTaskAttemptState(JobTaskAttemptState targetState,
+      @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
+      @PathParam("taskid") String tid, @PathParam("attemptid") String attId)
+          throws IOException, InterruptedException {
+    init();
+    Job job = getJobFromJobIdString(jid, appCtx);
+    checkAccess(job, hsr);
+
+    String remoteUser = hsr.getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+
+    Task task = getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = getTaskAttemptFromTaskAttemptString(attId, task);
+    if (!ta.getState().toString().equals(targetState.getState())) {
+      // user is attempting to change state. right we only
+      // allow users to kill the job task attempt
+      if (targetState.getState().equals(TaskAttemptState.KILLED.toString())) {
+        return killJobTaskAttempt(ta, callerUGI, hsr);
+      }
+      throw new BadRequestException("Only '"
+          + TaskAttemptState.KILLED.toString()
+          + "' is allowed as a target state.");
+    }
+
+    JobTaskAttemptState ret = new JobTaskAttemptState();
+    ret.setState(ta.getState().toString());
+
+    return Response.status(Status.OK).entity(ret).build();
+  }
+
+  @GET
   @Path("/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}/counters")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobTaskAttemptCounterInfo getJobTaskAttemptIdCounters(
@@ -408,5 +477,48 @@ public class AMWebServices {
     Task task = getTaskFromTaskIdString(tid, job);
     TaskAttempt ta = getTaskAttemptFromTaskAttemptString(attId, task);
     return new JobTaskAttemptCounterInfo(ta);
+  }
+
+  protected Response killJobTaskAttempt(TaskAttempt ta,
+      UserGroupInformation callerUGI, HttpServletRequest hsr)
+          throws IOException, InterruptedException {
+    Preconditions.checkNotNull(ta, "ta cannot be null");
+
+    String userName = callerUGI.getUserName();
+    final TaskAttemptId attemptId = ta.getID();
+    try {
+      callerUGI
+          .doAs(new PrivilegedExceptionAction<KillTaskAttemptResponse>() {
+            @Override
+            public KillTaskAttemptResponse run()
+                throws IOException, YarnException {
+              KillTaskAttemptRequest req =  new KillTaskAttemptRequestPBImpl();
+              req.setTaskAttemptId(attemptId);
+              return service.forceKillTaskAttempt(req);
+            }
+          });
+    } catch (UndeclaredThrowableException ue) {
+      // if the root cause is a permissions issue
+      // bubble that up to the user
+      if (ue.getCause() instanceof YarnException) {
+        YarnException ye = (YarnException) ue.getCause();
+        if (ye.getCause() instanceof AccessControlException) {
+          String taId = attemptId.toString();
+          String msg =
+              "Unauthorized attempt to kill task attempt " + taId
+                  + " by remote user " + userName;
+          return Response.status(Status.FORBIDDEN).entity(msg).build();
+        } else {
+          throw ue;
+        }
+      } else {
+        throw ue;
+      }
+    }
+
+    JobTaskAttemptState ret = new JobTaskAttemptState();
+    ret.setState(TaskAttemptState.KILLED.toString());
+
+    return Response.status(Status.OK).entity(ret).build();
   }
 }
