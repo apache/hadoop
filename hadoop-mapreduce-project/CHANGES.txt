@@ -322,6 +322,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5981. Log levels of certain MR logs can be changed to DEBUG.
     (Varun Saxena via devaraj)
 
+    MAPREDUCE-5248. Let NNBenchWithoutMR specify the replication factor for
+    its test (Erik Paulson via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
