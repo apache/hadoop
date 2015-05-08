@@ -635,6 +635,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10356. Corrections in winutils/chmod.c. (Rene Nyffenegger via
     Arpit Agarwal)
 
+    HADOOP-7165. listLocatedStatus(path, filter) is not redefined in FilterFs
+    (Hairong Kuang via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

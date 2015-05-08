@@ -192,7 +192,15 @@ public class FilterFileSystem extends FileSystem {
     return fs.create(f, permission,
       flags, bufferSize, replication, blockSize, progress, checksumOpt);
   }
-  
+
+  @Override
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      final PathFilter filter)
+  throws FileNotFoundException, IOException {
+    return fs.listLocatedStatus(f, filter);
+  }
+
+
   @Override
   @Deprecated
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
