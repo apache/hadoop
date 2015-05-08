@@ -656,6 +656,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8067. haadmin prints out stale help messages (Ajith S via vinayakumarb)
 
+    HDFS-8174. Update replication count to live rep count in fsck report. (J.Andreina)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
