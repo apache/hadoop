@@ -793,6 +793,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7894. Rolling upgrade readiness is not updated in jmx until query
     command is issued. (Brahma Reddy Battula  via kihwal)
 
+    HDFS-8254. Standby namenode doesn't process DELETED_BLOCK if the add block
+    request is in edit log. (Rushabh S Shah via kihwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
