@@ -530,8 +530,11 @@ public class ContainerManagerImpl extends CompositeService implements
 
     if (this.context.getNMStateStore().canRecover()
         && !this.context.getDecommissioned()) {
-      // do not cleanup apps as they can be recovered on restart
-      return;
+      if (getConfig().getBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED,
+          YarnConfiguration.DEFAULT_NM_RECOVERY_SUPERVISED)) {
+        // do not cleanup apps as they can be recovered on restart
+        return;
+      }
     }
 
     List<ApplicationId> appIds =

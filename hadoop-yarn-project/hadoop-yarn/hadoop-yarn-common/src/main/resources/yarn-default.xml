@@ -1192,6 +1192,15 @@
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
   </property>
 
+  <property>
+    <description>Whether the nodemanager is running under supervision. A
+      nodemanager that supports recovery and is running under supervision
+      will not try to cleanup containers as it exits with the assumption
+      it will be immediately be restarted and recover containers.</description>
+    <name>yarn.nodemanager.recovery.supervised</name>
+    <value>false</value>
+  </property>
+
   <!--Docker configuration-->
 
   <property>
