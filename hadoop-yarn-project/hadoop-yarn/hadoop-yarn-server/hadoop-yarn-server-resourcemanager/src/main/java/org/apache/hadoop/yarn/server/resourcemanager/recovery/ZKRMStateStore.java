@@ -827,8 +827,8 @@ public class ZKRMStateStore extends RMStateStore {
   public synchronized void removeApplication(ApplicationId removeAppId)
       throws Exception {
     String appIdRemovePath = getNodePath(rmAppRoot, removeAppId.toString());
-    if (existsWithRetries(appIdRemovePath, true) != null) {
-      deleteWithRetries(appIdRemovePath, true);
+    if (existsWithRetries(appIdRemovePath, false) != null) {
+      deleteWithRetries(appIdRemovePath, false);
     }
   }
 

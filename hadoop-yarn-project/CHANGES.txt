@@ -368,6 +368,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3600. AM container link is broken (Naganarasimha G R via tgraves)
 
+    YARN-3604. Fixed ZKRMStateStore#removeApplication to also disable watch.
+    (zhihai xu via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
