@@ -40,7 +40,7 @@ public abstract class TextView extends View {
   }
 
   /**
-   * Print strings as is (no newline, a la php echo).
+   * Print strings escaping html.
    * @param args the strings to print
    */
   public void echo(Object... args) {
@@ -53,11 +53,31 @@ public abstract class TextView extends View {
   }
 
   /**
+   * Print strings as is (no newline, a la php echo).
+   * @param args the strings to print
+   */
+  public void echoWithoutEscapeHtml(Object... args) {
+    PrintWriter out = writer();
+    for (Object s : args) {
+      out.print(s);
+    }
+  }
+
+  /**
    * Print strings as a line (new line appended at the end, a la C/Tcl puts).
    * @param args the strings to print
    */
   public void puts(Object... args) {
     echo(args);
+    writer().println();
+  }
+
+  /**
+   * Print string as a line. This does not escapes the string for html
+   * @param args the strings to print
+   */
+  public void putWithoutEscapeHtml(Object args) {
+    echoWithoutEscapeHtml(args);
     writer().println();
   }
 }
