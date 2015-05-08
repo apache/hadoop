@@ -522,6 +522,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8207. Improper log message when blockreport interval compared with
     initial delay. (Brahma Reddy Battula and Ashish Singhi via ozawa)
 
+    HDFS-7559. Create unit test to automatically compare HDFS related classes
+    and hdfs-default.xml. (Ray Chiang via asuresh)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
