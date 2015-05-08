@@ -77,7 +77,8 @@ public class BlockInfoContiguous extends Block
    * @param from BlockInfo to copy from.
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
-    this(from, from.bc.getBlockReplication());
+    super(from);
+    this.triplets = new Object[from.triplets.length];
     this.bc = from.bc;
   }
 
