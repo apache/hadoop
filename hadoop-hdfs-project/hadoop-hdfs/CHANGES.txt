@@ -708,6 +708,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8340. Fix NFS documentation of nfs.wtmax. (Ajith S via Arpit Agarwal)
 
+    HDFS-8311. DataStreamer.transfer() should timeout the socket InputStream.
+    (Esteban Gutierrez via Yongjun Zhang)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
