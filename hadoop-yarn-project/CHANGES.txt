@@ -407,6 +407,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3358. Audit log not present while refreshing Service ACLs. 
     (Varun Saxena via devaraj)
 
+    YARN-3554. Default value for maximum nodemanager connect wait time is too
+    high (Naganarasimha G R via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
