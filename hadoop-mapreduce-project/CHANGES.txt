@@ -402,6 +402,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-4750. Enable NNBenchWithoutMR in MapredTestDriver (Liang Xie
     and Jason Lowe via raviprak)
 
+    MAPREDUCE-6359. In RM HA setup, "Cluster" tab links populated with AM 
+    hostname instead of RM. (zhaoyunjiong via junping_du)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
