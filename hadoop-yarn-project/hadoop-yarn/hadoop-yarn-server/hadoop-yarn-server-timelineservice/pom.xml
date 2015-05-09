@@ -120,6 +120,23 @@
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+    <groupId>org.apache.phoenix</groupId>
+    <artifactId>phoenix-core</artifactId>
+    <version>4.3.0</version>
+    <exclusions>
+      <!-- Exclude jline from here -->
+      <exclusion>
+        <artifactId>jline</artifactId>
+        <groupId>jline</groupId>
+      </exclusion>
+    </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
