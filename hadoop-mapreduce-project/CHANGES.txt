@@ -405,6 +405,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6359. In RM HA setup, "Cluster" tab links populated with AM 
     hostname instead of RM. (zhaoyunjiong via junping_du)
 
+    MAPREDUCE-6353. Divide by zero error in MR AM when calculating available 
+    containers. (Anubhav Dhoot via kasha)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
