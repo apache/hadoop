@@ -382,6 +382,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2206. Updated document for applications REST API response examples. (Kenji
     Kikushima and Brahma Reddy Battula via zjshen)
 
+    YARN-3602. TestResourceLocalizationService.testPublicResourceInitializesLocalDir
+    fails Intermittently due to IOException from cleanup. (zhihai xu via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
