@@ -2087,12 +2087,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                                Block newBlock)
       throws IOException {
     INodeFile file = iip.getLastINode().asFile();
-    String src = iip.getPath();
     file.recordModification(iip.getLatestSnapshotId());
     file.toUnderConstruction(leaseHolder, clientMachine);
     assert file.isUnderConstruction() : "inode should be under construction.";
     leaseManager.addLease(
-        file.getFileUnderConstructionFeature().getClientName(), src);
+        file.getFileUnderConstructionFeature().getClientName(), file.getId());
     boolean shouldRecoverNow = (newBlock == null);
     BlockInfoContiguous oldBlock = file.getLastBlock();
     boolean shouldCopyOnTruncate = shouldCopyOnTruncate(file, oldBlock);
@@ -2568,13 +2567,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } else {
         if (overwrite) {
           toRemoveBlocks = new BlocksMapUpdateInfo();
-          List<INode> toRemoveINodes = new ChunkedArrayList<INode>();
-          long ret = FSDirDeleteOp.delete(dir, iip, toRemoveBlocks,
-                                          toRemoveINodes, now());
+          List<INode> toRemoveINodes = new ChunkedArrayList<>();
+          List<Long> toRemoveUCFiles = new ChunkedArrayList<>();
+          long ret = FSDirDeleteOp.delete(
+              dir, iip, toRemoveBlocks, toRemoveINodes,
+              toRemoveUCFiles, now());
           if (ret >= 0) {
             iip = INodesInPath.replace(iip, iip.length() - 1, null);
             FSDirDeleteOp.incrDeletedFileCount(ret);
-            removeLeasesAndINodes(src, toRemoveINodes, true);
+            removeLeasesAndINodes(toRemoveUCFiles, toRemoveINodes, true);
           }
         } else {
           // If lease soft limit time is expired, recover the lease
@@ -2601,7 +2602,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new IOException("Unable to add " + src +  " to namespace");
       }
       leaseManager.addLease(newNode.getFileUnderConstructionFeature()
-          .getClientName(), src);
+          .getClientName(), newNode.getId());
 
       // Set encryption attributes if necessary
       if (feInfo != null) {
@@ -2745,7 +2746,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     file.toUnderConstruction(leaseHolder, clientMachine);
 
     leaseManager.addLease(
-        file.getFileUnderConstructionFeature().getClientName(), src);
+        file.getFileUnderConstructionFeature().getClientName(), file.getId());
 
     LocatedBlock ret = null;
     if (!newBlock) {
@@ -2897,7 +2898,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Lease lease = leaseManager.getLease(holder);
 
       if (!force && lease != null) {
-        Lease leaseFile = leaseManager.getLeaseByPath(src);
+        Lease leaseFile = leaseManager.getLease(file);
         if (leaseFile != null && leaseFile.equals(lease)) {
           // We found the lease for this file but the original
           // holder is trying to obtain it again.
@@ -3758,15 +3759,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
   /**
    * Remove leases and inodes related to a given path
-   * @param src The given path
+   * @param removedUCFiles INodes whose leases need to be released
    * @param removedINodes Containing the list of inodes to be removed from
    *                      inodesMap
    * @param acquireINodeMapLock Whether to acquire the lock for inode removal
    */
-  void removeLeasesAndINodes(String src, List<INode> removedINodes,
+  void removeLeasesAndINodes(List<Long> removedUCFiles,
+      List<INode> removedINodes,
       final boolean acquireINodeMapLock) {
     assert hasWriteLock();
-    leaseManager.removeLeaseWithPrefixPath(src);
+    leaseManager.removeLeases(removedUCFiles);
     // remove inodes from inodesMap
     if (removedINodes != null) {
       if (acquireINodeMapLock) {
@@ -4156,14 +4158,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return lease;
     // The following transaction is not synced. Make sure it's sync'ed later.
     logReassignLease(lease.getHolder(), src, newHolder);
-    return reassignLeaseInternal(lease, src, newHolder, pendingFile);
+    return reassignLeaseInternal(lease, newHolder, pendingFile);
   }
   
-  Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
-      INodeFile pendingFile) {
+  Lease reassignLeaseInternal(Lease lease, String newHolder, INodeFile pendingFile) {
     assert hasWriteLock();
     pendingFile.getFileUnderConstructionFeature().setClientName(newHolder);
-    return leaseManager.reassignLease(lease, src, newHolder);
+    return leaseManager.reassignLease(lease, pendingFile, newHolder);
   }
 
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
@@ -4191,7 +4192,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     FileUnderConstructionFeature uc = pendingFile.getFileUnderConstructionFeature();
     Preconditions.checkArgument(uc != null);
-    leaseManager.removeLease(uc.getClientName(), src);
+    leaseManager.removeLease(uc.getClientName(), pendingFile);
     
     pendingFile.recordModification(latestSnapshot);
 
@@ -6399,58 +6400,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     String src = pendingFile.getFullPathName();
     persistBlocks(src, pendingFile, logRetryCache);
-  }
-
-  // rename was successful. If any part of the renamed subtree had
-  // files that were being written to, update with new filename.
-  void unprotectedChangeLease(String src, String dst) {
-    assert hasWriteLock();
-    leaseManager.changeLease(src, dst);
-  }
-
-  /**
-   * Serializes leases.
-   */
-  void saveFilesUnderConstruction(DataOutputStream out,
-      Map<Long, INodeFile> snapshotUCMap) throws IOException {
-    // This is run by an inferior thread of saveNamespace, which holds a read
-    // lock on our behalf. If we took the read lock here, we could block
-    // for fairness if a writer is waiting on the lock.
-    synchronized (leaseManager) {
-      Map<String, INodeFile> nodes = leaseManager.getINodesUnderConstruction();
-      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
-        // TODO: for HDFS-5428, because of rename operations, some
-        // under-construction files that are
-        // in the current fs directory can also be captured in the
-        // snapshotUCMap. We should remove them from the snapshotUCMap.
-        snapshotUCMap.remove(entry.getValue().getId());
-      }
-
-      out.writeInt(nodes.size() + snapshotUCMap.size()); // write the size
-      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
-        FSImageSerialization.writeINodeUnderConstruction(
-            out, entry.getValue(), entry.getKey());
-      }
-      for (Map.Entry<Long, INodeFile> entry : snapshotUCMap.entrySet()) {
-        // for those snapshot INodeFileUC, we use "/.reserved/.inodes/<inodeid>"
-        // as their paths
-        StringBuilder b = new StringBuilder();
-        b.append(FSDirectory.DOT_RESERVED_PATH_PREFIX)
-            .append(Path.SEPARATOR).append(FSDirectory.DOT_INODES_STRING)
-            .append(Path.SEPARATOR).append(entry.getValue().getId());
-        FSImageSerialization.writeINodeUnderConstruction(
-            out, entry.getValue(), b.toString());
-      }
-    }
-  }
-
-  /**
-   * @return all the under-construction files in the lease map
-   */
-  Map<String, INodeFile> getFilesUnderConstruction() {
-    synchronized (leaseManager) {
-      return leaseManager.getINodesUnderConstruction();
-    }
   }
 
   /**

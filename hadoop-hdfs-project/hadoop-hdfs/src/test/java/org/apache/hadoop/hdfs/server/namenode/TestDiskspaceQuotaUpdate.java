@@ -213,11 +213,12 @@ public class TestDiskspaceQuotaUpdate {
       // ignore
     }
 
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     // check that the file exists, isn't UC, and has no dangling lease
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem().getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -256,11 +257,11 @@ public class TestDiskspaceQuotaUpdate {
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem()
-        .getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -296,11 +297,11 @@ public class TestDiskspaceQuotaUpdate {
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
+    LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem()
-        .getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", lm.getLease(inode));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();

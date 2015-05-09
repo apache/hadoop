@@ -390,7 +390,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @param bsps
    *          block storage policy suite to calculate intended storage type usage
    * @param snapshotId
-   *          The id of the snapshot to delete. 
+   *          The id of the snapshot to delete.
    *          {@link Snapshot#CURRENT_STATE_ID} means to delete the current
    *          file/directory.
    * @param priorSnapshotId
@@ -401,14 +401,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *          blocks collected from the descents for further block
    *          deletion/update will be added to the given map.
    * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of 
+   *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    * @return quota usage delta when deleting a snapshot
    */
-  public abstract QuotaCounts cleanSubtree(final BlockStoragePolicySuite bsps,
-      final int snapshotId,
+  public abstract QuotaCounts cleanSubtree(
+      final BlockStoragePolicySuite bsps, final int snapshotId,
       int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes);
+      List<INode> removedINodes, List<Long> removedUCFiles);
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -416,7 +418,6 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * directory, the method goes down the subtree and collects blocks from the
    * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
-   *
    * @param bsps
    *          block storage policy suite to calculate intended storage type usage
    *          This is needed because INodeReference#destroyAndCollectBlocks() needs
@@ -427,10 +428,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @param removedINodes
    *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    */
   public abstract void destroyAndCollectBlocks(
-      BlockStoragePolicySuite bsps,
-      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
+      BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+      List<INode> removedINodes, List<Long> removedUCFiles);
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary(BlockStoragePolicySuite bsps) {

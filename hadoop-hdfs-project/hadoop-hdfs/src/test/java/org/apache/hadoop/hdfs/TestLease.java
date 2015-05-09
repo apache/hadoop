@@ -59,8 +59,8 @@ import org.mockito.Mockito;
 
 public class TestLease {
   static boolean hasLease(MiniDFSCluster cluster, Path src) {
-    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()
-        ).getLeaseByPath(src.toString()) != null;
+    return NameNodeAdapter.getLeaseForPath(cluster.getNameNode(),
+            src.toString()) != null;
   }
 
   static int leaseCount(MiniDFSCluster cluster) {

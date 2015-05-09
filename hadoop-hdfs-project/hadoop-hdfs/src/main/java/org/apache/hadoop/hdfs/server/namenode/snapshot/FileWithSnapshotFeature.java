@@ -213,7 +213,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      file.destroyAndCollectBlocks(bsps, info, removedINodes);
+      file.destroyAndCollectBlocks(bsps, info, removedINodes, null);
       return;
     }
     // find max file size.

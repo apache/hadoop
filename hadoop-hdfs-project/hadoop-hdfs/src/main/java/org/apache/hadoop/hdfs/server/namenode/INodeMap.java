@@ -97,8 +97,9 @@ public class INodeMap {
       }
       
       @Override
-      public void destroyAndCollectBlocks(BlockStoragePolicySuite bsps,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+      public void destroyAndCollectBlocks(
+          BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+          List<INode> removedINodes, List<Long> removedUCFiles) {
         // Nothing to do
       }
 
@@ -116,9 +117,10 @@ public class INodeMap {
       }
       
       @Override
-      public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps,
-          int snapshotId, int priorSnapshotId,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+      public QuotaCounts cleanSubtree(
+          BlockStoragePolicySuite bsps, int snapshotId, int priorSnapshotId,
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+          List<Long> removedUCFiles) {
           return null;
       }
 

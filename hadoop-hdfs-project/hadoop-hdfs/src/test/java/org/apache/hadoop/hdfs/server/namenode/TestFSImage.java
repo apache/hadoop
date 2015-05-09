@@ -109,7 +109,7 @@ public class TestFSImage {
       assertEquals(1, blks.length);
       assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
       // check lease manager
-      Lease lease = fsn.leaseManager.getLeaseByPath(file2.toString());
+      Lease lease = fsn.leaseManager.getLease(file2Node);
       Assert.assertNotNull(lease);
     } finally {
       if (cluster != null) {

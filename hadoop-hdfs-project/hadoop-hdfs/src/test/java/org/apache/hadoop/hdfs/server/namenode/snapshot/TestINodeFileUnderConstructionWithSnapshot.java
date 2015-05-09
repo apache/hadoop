@@ -40,11 +40,13 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -278,5 +280,32 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     assertEquals(BLOCKSIZE * 2, lastBlock.getStartOffset());
     assertEquals(BLOCKSIZE - 1, lastBlock.getBlockSize());
     out.close();
+  }
+
+  @Test
+  public void testLease() throws Exception {
+    try {
+      NameNodeAdapter.setLeasePeriod(fsn, 100, 200);
+      final Path foo = new Path(dir, "foo");
+      final Path bar = new Path(foo, "bar");
+      DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, 0);
+      HdfsDataOutputStream out = appendFileWithoutClosing(bar, 100);
+      out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+      SnapshotTestHelper.createSnapshot(hdfs, dir, "s0");
+
+      hdfs.delete(foo, true);
+      Thread.sleep(1000);
+      try {
+        fsn.writeLock();
+        NameNodeAdapter.getLeaseManager(fsn).runLeaseChecks();
+      } finally {
+        fsn.writeUnlock();
+      }
+    } finally {
+      NameNodeAdapter.setLeasePeriod(
+          fsn,
+          HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD,
+          HdfsServerConstants.LEASE_HARDLIMIT_PERIOD);
+    }
   }
 }
