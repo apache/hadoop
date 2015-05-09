@@ -64,6 +64,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3562. unit tests failures and issues found from findbug from earlier
     ATS checkins (Naganarasimha G R via sjlee)
 
+    YARN-3134. Implemented Phoenix timeline writer to access HBase backend. (Li
+    Lu via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
