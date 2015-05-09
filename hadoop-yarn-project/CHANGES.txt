@@ -218,6 +218,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1912. ResourceLocalizer started without any jvm memory control.
     (Masatake Iwasaki via xgong)
 
+    YARN-1287. Consolidate MockClocks. 
+    (Sebastian Wong and Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

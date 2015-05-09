@@ -31,26 +31,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.apache.hadoop.yarn.util.Clock;
+
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFSAppAttempt extends FairSchedulerTestBase {
-
-  private class MockClock implements Clock {
-    private long time = 0;
-    @Override
-    public long getTime() {
-      return time;
-    }
-
-    public void tick(int seconds) {
-      time = time + seconds * 1000;
-    }
-
-  }
 
   @Before
   public void setup() {
@@ -125,7 +113,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
 
-    MockClock clock = new MockClock();
+    ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
 
     long nodeLocalityDelayMs = 5 * 1000L;    // 5 seconds
@@ -143,13 +131,13 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // after 4 seconds should remain node local
-    clock.tick(4);
+    clock.tickSec(4);
     assertEquals(NodeType.NODE_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // after 6 seconds should switch to rack local
-    clock.tick(2);
+    clock.tickSec(2);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
@@ -162,12 +150,12 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
     // Now escalate again to rack-local, then to off-switch
-    clock.tick(6);
+    clock.tickSec(6);
     assertEquals(NodeType.RACK_LOCAL,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
 
-    clock.tick(7);
+    clock.tickSec(7);
     assertEquals(NodeType.OFF_SWITCH,
             schedulerApp.getAllowedLocalityLevelByTime(prio,
                     nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));

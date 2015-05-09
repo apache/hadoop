@@ -22,10 +22,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.TestCGroupsHandlerImpl;
+
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
 import org.junit.After;
 import org.junit.Before;
@@ -38,14 +39,6 @@ import java.util.concurrent.CountDownLatch;
 
 public class TestCgroupsLCEResourcesHandler {
   static File cgroupDir = null;
-
-  static class MockClock implements Clock {
-    long time;
-    @Override
-    public long getTime() {
-      return time;
-    }
-  }
 
   @Before
   public void setUp() throws Exception {
@@ -93,8 +86,7 @@ public class TestCgroupsLCEResourcesHandler {
   // Verify DeleteCgroup times out if "tasks" file contains data
   @Test
   public void testDeleteCgroup() throws Exception {
-    final MockClock clock = new MockClock();
-    clock.time = System.currentTimeMillis();
+    final ControlledClock clock = new ControlledClock();
     CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
     handler.setConf(new YarnConfiguration());
     handler.initConfig();
@@ -118,8 +110,8 @@ public class TestCgroupsLCEResourcesHandler {
         } catch (InterruptedException ex) {
           //NOP
         }
-        clock.time += YarnConfiguration.
-            DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT;
+        clock.tickMsec(YarnConfiguration.
+            DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT);
       }
     }.start();
     latch.await();
