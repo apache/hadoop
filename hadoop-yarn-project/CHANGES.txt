@@ -221,6 +221,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1287. Consolidate MockClocks. 
     (Sebastian Wong and Anubhav Dhoot via kasha)
 
+    YARN-3395. FairScheduler: Trim whitespaces when using username for 
+    queuename. (Zhihai Xu via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
