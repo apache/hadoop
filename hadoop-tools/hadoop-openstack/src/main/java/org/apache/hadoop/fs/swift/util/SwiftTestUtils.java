@@ -165,7 +165,7 @@ public class SwiftTestUtils extends org.junit.Assert {
   }
 
   /**
-   * Read the file and convert to a byte dataaset
+   * Read the file and convert to a byte dataset
    * @param fs filesystem
    * @param path path to read from
    * @param len length of data to read
@@ -185,7 +185,7 @@ public class SwiftTestUtils extends org.junit.Assert {
   }
 
   /**
-   * Assert that tthe array src[0..len] and dest[] are equal
+   * Assert that the array src[0..len] and dest[] are equal
    * @param src source data
    * @param dest actual
    * @param len length of bytes to compare
@@ -522,7 +522,7 @@ public class SwiftTestUtils extends org.junit.Assert {
    * @param fs filesystem
    * @param dir directory to scan
    * @param subdir full path to look for
-   * @throws IOException IO probles
+   * @throws IOException IO problems
    */
   public static void assertListStatusFinds(FileSystem fs,
                                            Path dir,

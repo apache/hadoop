@@ -83,7 +83,7 @@ import static org.apache.hadoop.fs.swift.http.SwiftProtocolConstants.*;
  * This implements the client-side of the Swift REST API
  *
  * The core actions put, get and query data in the Swift object store,
- * after authenticationg the client.
+ * after authenticating the client.
  *
  * <b>Logging:</b>
  *
@@ -1572,7 +1572,7 @@ public final class SwiftRestClient {
    * This is public for unit testing
    *
    * @param path path to object
-   * @param endpointURI damain url e.g. http://domain.com
+   * @param endpointURI domain url e.g. http://domain.com
    * @return valid URI for object
    * @throws SwiftException
    */
@@ -1653,7 +1653,7 @@ public final class SwiftRestClient {
    * Execute a method in a new HttpClient instance.
    * If the auth failed, authenticate then retry the method.
    *
-   * @param method methot to exec
+   * @param method method to exec
    * @param <M> Method type
    * @return the status code
    * @throws IOException on any failure

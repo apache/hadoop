@@ -82,7 +82,7 @@ public final class SwiftUtils {
   }
 
   /**
-   * Predicate: Is a swift object referring to the root direcory?
+   * Predicate: Is a swift object referring to the root directory?
    * @param swiftObject object to probe
    * @return true iff the object refers to the root
    */
@@ -147,7 +147,7 @@ public final class SwiftUtils {
    * @param fileSystem filesystem
    * @param path directory
    * @return a listing of the filestatuses of elements in the directory, one
-   * to a line, precedeed by the full path of the directory
+   * to a line, preceded by the full path of the directory
    * @throws IOException connectivity problems
    */
   public static String ls(FileSystem fileSystem, Path path) throws
@@ -169,7 +169,7 @@ public final class SwiftUtils {
   }
 
   /**
-   * Take an array of filestats and convert to a string (prefixed w/ a [01] counter
+   * Take an array of filestatus and convert to a string (prefixed w/ a [01] counter
    * @param stats array of stats
    * @param separator separator after every entry
    * @return a stringified set
@@ -184,7 +184,7 @@ public final class SwiftUtils {
 
   /**
    * Verify that the basic args to a read operation are valid;
-   * throws an exception if not -with meaningful text includeing
+   * throws an exception if not -with meaningful text including
    * @param buffer destination buffer
    * @param off offset
    * @param len number of bytes to read

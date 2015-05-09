@@ -457,6 +457,9 @@ Trunk (Unreleased)
     HADOOP-11865. Incorrect path mentioned in document for accessing script
     files (J.Andreina via aw)
 
+    HADOOP-11775. Fix Javadoc typos in hadoop-openstack module (Yanjun Wang
+    via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
