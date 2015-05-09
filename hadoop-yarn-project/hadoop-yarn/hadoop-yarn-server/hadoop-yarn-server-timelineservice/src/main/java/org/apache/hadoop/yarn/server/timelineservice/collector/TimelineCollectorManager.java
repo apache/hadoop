@@ -23,9 +23,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,6 +46,19 @@ import java.util.Map;
 public abstract class TimelineCollectorManager extends AbstractService {
   private static final Log LOG =
       LogFactory.getLog(TimelineCollectorManager.class);
+
+  protected TimelineWriter writer;
+
+  @Override
+  public void serviceInit(Configuration conf) throws Exception {
+    writer = ReflectionUtils.newInstance(conf.getClass(
+        YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+        FileSystemTimelineWriterImpl.class,
+        TimelineWriter.class), conf);
+    writer.init(conf);
+    super.serviceInit(conf);
+  }
+
 
   // access to this map is synchronized with the map itself
   private final Map<ApplicationId, TimelineCollector> collectors =
@@ -69,6 +87,7 @@ public abstract class TimelineCollectorManager extends AbstractService {
           // initialize, start, and add it to the collection so it can be
           // cleaned up when the parent shuts down
           collector.init(getConfig());
+          collector.setWriter(writer);
           collector.start();
           collectors.put(appId, collector);
           LOG.info("the collector for " + appId + " was added");
