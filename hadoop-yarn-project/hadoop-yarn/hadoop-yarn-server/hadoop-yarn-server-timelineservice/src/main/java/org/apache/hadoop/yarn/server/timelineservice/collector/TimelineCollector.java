@@ -27,11 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
 /**
@@ -55,11 +52,6 @@ public abstract class TimelineCollector extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    writer = ReflectionUtils.newInstance(conf.getClass(
-        YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
-        FileSystemTimelineWriterImpl.class,
-        TimelineWriter.class), conf);
-    writer.init(conf);
   }
 
   @Override
@@ -70,11 +62,10 @@ public abstract class TimelineCollector extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
-    writer.stop();
   }
 
-  public TimelineWriter getWriter() {
-    return writer;
+  protected void setWriter(TimelineWriter w) {
+    this.writer = w;
   }
 
   /**
