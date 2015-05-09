@@ -55,6 +55,7 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -312,7 +313,17 @@ public class ContainerLocalizer {
     status.addAllResources(currentResources);
     return status;
   }
-  
+
+  /**
+   * Returns the JVM options to to launch the resource localizer.
+   * @param conf the configuration properties to launch the resource localizer.
+   */
+  public static List<String> getJavaOpts(Configuration conf) {
+    String opts = conf.get(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
+        YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT);
+    return Arrays.asList(opts.split(" "));
+  }
+
   /**
    * Adds the ContainerLocalizer arguments for a @{link ShellCommandExecutor},
    * as expected by ContainerLocalizer.main

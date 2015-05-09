@@ -215,6 +215,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3271. FairScheduler: Move tests related to max-runnable-apps from 
     TestFairScheduler to TestAppRunnability. (nijel via kasha)
 
+    YARN-1912. ResourceLocalizer started without any jvm memory control.
+    (Masatake Iwasaki via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
