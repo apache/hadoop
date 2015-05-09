@@ -186,19 +186,20 @@ public class TestLinuxContainerExecutorWithMocks {
     try {
       mockExec.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", dirsHandler);
       List<String> result=readMockParams();
-      Assert.assertEquals(result.size(), 17);
+      Assert.assertEquals(result.size(), 18);
       Assert.assertEquals(result.get(0), YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
       Assert.assertEquals(result.get(1), "test");
       Assert.assertEquals(result.get(2), "0" );
       Assert.assertEquals(result.get(3),"application_0" );
       Assert.assertEquals(result.get(4), "/bin/nmPrivateCTokensPath");
       Assert.assertEquals(result.get(8), "-classpath" );
-      Assert.assertEquals(result.get(11),"org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" );
-      Assert.assertEquals(result.get(12), "test");
-      Assert.assertEquals(result.get(13), "application_0");
-      Assert.assertEquals(result.get(14),"12345" );
-      Assert.assertEquals(result.get(15),"localhost" );
-      Assert.assertEquals(result.get(16),"8040" );
+      Assert.assertEquals(result.get(11), "-Xmx256m" );
+      Assert.assertEquals(result.get(12),"org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" );
+      Assert.assertEquals(result.get(13), "test");
+      Assert.assertEquals(result.get(14), "application_0");
+      Assert.assertEquals(result.get(15),"12345" );
+      Assert.assertEquals(result.get(16),"localhost" );
+      Assert.assertEquals(result.get(17),"8040" );
 
     } catch (InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
