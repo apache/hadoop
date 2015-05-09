@@ -753,10 +753,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   /** Call cleanSubtree(..) recursively down the subtree. */
-  public QuotaCounts cleanSubtreeRecursively(final BlockStoragePolicySuite bsps,
-      final int snapshot,
-      int prior, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final Map<INode, INode> excludedNodes) {
+  public QuotaCounts cleanSubtreeRecursively(
+      final BlockStoragePolicySuite bsps, final int snapshot, int prior,
+      final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, List<Long> removedUCFiles,
+      final Map<INode, INode> excludedNodes) {
     QuotaCounts counts = new QuotaCounts.Builder().build();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
@@ -771,7 +772,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         continue;
       } else {
         QuotaCounts childCounts = child.cleanSubtree(bsps, snapshot, prior,
-            collectedBlocks, removedINodes);
+            collectedBlocks, removedINodes, removedUCFiles);
         counts.add(childCounts);
       }
     }
@@ -779,15 +780,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public void destroyAndCollectBlocks(final BlockStoragePolicySuite bsps,
+  public void destroyAndCollectBlocks(
+      final BlockStoragePolicySuite bsps,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.clear(bsps, this, collectedBlocks, removedINodes);
+      sf.clear(bsps, this, collectedBlocks, removedINodes, removedUCFiles);
     }
     for (INode child : getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-      child.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
+      child.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
+                                    removedUCFiles);
     }
     if (getAclFeature() != null) {
       AclStorage.removeAclFeature(getAclFeature());
@@ -797,15 +800,15 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
   
   @Override
-  public QuotaCounts cleanSubtree(final BlockStoragePolicySuite bsps,
-      final int snapshotId, int priorSnapshotId,
+  public QuotaCounts cleanSubtree(
+      final BlockStoragePolicySuite bsps, final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     // there is snapshot data
     if (sf != null) {
       return sf.cleanDirectory(bsps, this, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes);
+          collectedBlocks, removedINodes, removedUCFiles);
     }
     // there is no snapshot data
     if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID
@@ -813,12 +816,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
       // destroy the whole subtree and collect blocks that should be deleted
       QuotaCounts counts = new QuotaCounts.Builder().build();
       this.computeQuotaUsage(bsps, counts, true);
-      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
+      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
+                              removedUCFiles);
       return counts; 
     } else {
       // process recursively down the subtree
       QuotaCounts counts = cleanSubtreeRecursively(bsps, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, null);
+          collectedBlocks, removedINodes, removedUCFiles, null);
       if (isQuotaSet()) {
         getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(counts.negation());
       }

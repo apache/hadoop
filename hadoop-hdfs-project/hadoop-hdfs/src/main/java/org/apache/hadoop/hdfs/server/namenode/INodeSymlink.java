@@ -73,21 +73,23 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
   
   @Override
-  public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps,
-      final int snapshotId, int priorSnapshotId,
+  public QuotaCounts cleanSubtree(
+      BlockStoragePolicySuite bsps, final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
-      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
+      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
+                              removedUCFiles);
     }
     return new QuotaCounts.Builder().nameSpace(1).build();
   }
   
   @Override
-  public void destroyAndCollectBlocks(final BlockStoragePolicySuite bsps,
+  public void destroyAndCollectBlocks(
+      final BlockStoragePolicySuite bsps,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     removedINodes.add(this);
   }
 

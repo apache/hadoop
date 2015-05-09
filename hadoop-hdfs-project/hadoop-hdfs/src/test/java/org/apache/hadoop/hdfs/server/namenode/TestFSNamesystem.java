@@ -76,7 +76,7 @@ public class TestFSNamesystem {
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
     LeaseManager leaseMan = fsn.getLeaseManager();
-    leaseMan.addLease("client1", "importantFile");
+    leaseMan.addLease("client1", fsn.getFSDirectory().allocateNewInodeId());
     assertEquals(1, leaseMan.countLease());
     fsn.clear();
     leaseMan = fsn.getLeaseManager();

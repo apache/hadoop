@@ -680,8 +680,6 @@ class FSDirRenameOp {
       srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
       final INode dstParent = dstParentIIP.getLastINode();
       dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
-      // update moved lease with new filename
-      fsd.getFSNamesystem().unprotectedChangeLease(src, dst);
     }
 
     void restoreSource() throws QuotaExceededException {
@@ -731,16 +729,20 @@ class FSDirRenameOp {
         throws QuotaExceededException {
       Preconditions.checkState(oldDstChild != null);
       List<INode> removedINodes = new ChunkedArrayList<>();
+      List<Long> removedUCFiles = new ChunkedArrayList<>();
       final boolean filesDeleted;
       if (!oldDstChild.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
-        oldDstChild.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
+        oldDstChild.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
+                                            removedUCFiles);
         filesDeleted = true;
       } else {
-        filesDeleted = oldDstChild.cleanSubtree(bsps, Snapshot.CURRENT_STATE_ID,
-            dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes)
-            .getNameSpace() >= 0;
+        filesDeleted = oldDstChild.cleanSubtree(
+            bsps, Snapshot.CURRENT_STATE_ID,
+            dstIIP.getLatestSnapshotId(), collectedBlocks,
+            removedINodes, removedUCFiles).getNameSpace() >= 0;
       }
-      fsd.getFSNamesystem().removeLeasesAndINodes(src, removedINodes, false);
+      fsd.getFSNamesystem().removeLeasesAndINodes(
+          removedUCFiles, removedINodes, false);
       return filesDeleted;
     }
 

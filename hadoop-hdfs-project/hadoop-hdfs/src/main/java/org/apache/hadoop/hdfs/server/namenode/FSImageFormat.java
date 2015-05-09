@@ -966,8 +966,7 @@ public class FSImageFormat {
         }
 
         if (!inSnapshot) {
-          namesystem.leaseManager.addLease(cons
-              .getFileUnderConstructionFeature().getClientName(), path);
+          namesystem.leaseManager.addLease(uc.getClientName(), oldnode.getId());
         }
       }
     }
@@ -1297,7 +1296,7 @@ public class FSImageFormat {
         // paths, so that when loading fsimage we do not put them into the lease
         // map. In the future, we can remove this hack when we can bump the
         // layout version.
-        sourceNamesystem.saveFilesUnderConstruction(out, snapshotUCMap);
+        saveFilesUnderConstruction(sourceNamesystem, out, snapshotUCMap);
 
         context.checkCancelled();
         sourceNamesystem.saveSecretManagerStateCompat(out, sdPath);
@@ -1446,6 +1445,47 @@ public class FSImageFormat {
       // reference that counts toward quota.
       if (!(inode instanceof INodeReference)) {
         counter.increment();
+      }
+    }
+
+    /**
+     * Serializes leases.
+     */
+    void saveFilesUnderConstruction(FSNamesystem fsn, DataOutputStream out,
+                                    Map<Long, INodeFile> snapshotUCMap) throws IOException {
+      // This is run by an inferior thread of saveNamespace, which holds a read
+      // lock on our behalf. If we took the read lock here, we could block
+      // for fairness if a writer is waiting on the lock.
+      final LeaseManager leaseManager = fsn.getLeaseManager();
+      final FSDirectory dir = fsn.getFSDirectory();
+      synchronized (leaseManager) {
+        Collection<Long> filesWithUC = leaseManager.getINodeIdWithLeases();
+        for (Long id : filesWithUC) {
+          // TODO: for HDFS-5428, because of rename operations, some
+          // under-construction files that are
+          // in the current fs directory can also be captured in the
+          // snapshotUCMap. We should remove them from the snapshotUCMap.
+          snapshotUCMap.remove(id);
+        }
+        out.writeInt(filesWithUC.size() + snapshotUCMap.size()); // write the size
+
+        for (Long id : filesWithUC) {
+          INodeFile file = dir.getInode(id).asFile();
+          String path = file.getFullPathName();
+          FSImageSerialization.writeINodeUnderConstruction(
+                  out, file, path);
+        }
+
+        for (Map.Entry<Long, INodeFile> entry : snapshotUCMap.entrySet()) {
+          // for those snapshot INodeFileUC, we use "/.reserved/.inodes/<inodeid>"
+          // as their paths
+          StringBuilder b = new StringBuilder();
+          b.append(FSDirectory.DOT_RESERVED_PATH_PREFIX)
+                  .append(Path.SEPARATOR).append(FSDirectory.DOT_INODES_STRING)
+                  .append(Path.SEPARATOR).append(entry.getValue().getId());
+          FSImageSerialization.writeINodeUnderConstruction(
+                  out, entry.getValue(), b.toString());
+        }
       }
     }
   }

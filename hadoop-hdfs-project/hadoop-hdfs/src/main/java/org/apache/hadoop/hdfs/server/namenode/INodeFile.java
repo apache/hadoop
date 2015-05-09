@@ -494,28 +494,33 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps, final int snapshot,
-                                  int priorSnapshotId,
+  public QuotaCounts cleanSubtree(
+      BlockStoragePolicySuite bsps, final int snapshot, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       return sf.cleanFile(bsps, this, snapshot, priorSnapshotId, collectedBlocks,
           removedINodes);
     }
     QuotaCounts counts = new QuotaCounts.Builder().build();
+
     if (snapshot == CURRENT_STATE_ID) {
       if (priorSnapshotId == NO_SNAPSHOT_ID) {
         // this only happens when deleting the current file and the file is not
         // in any snapshot
         computeQuotaUsage(bsps, counts, false);
-        destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
+        destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
+                                removedUCFiles);
       } else {
+        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         // when deleting the current file and the file is in snapshot, we should
         // clean the 0-sized block if the file is UC
-        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         if (uc != null) {
           uc.cleanZeroSizeBlock(this, collectedBlocks);
+          if (removedUCFiles != null) {
+            removedUCFiles.add(getId());
+          }
         }
       }
     }
@@ -523,8 +528,9 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public void destroyAndCollectBlocks(BlockStoragePolicySuite bsps,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+  public void destroyAndCollectBlocks(
+      BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfoContiguous blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
@@ -541,6 +547,9 @@ public class INodeFile extends INodeWithAdditionalFields
     if (sf != null) {
       sf.getDiffs().destroyAndCollectSnapshotBlocks(collectedBlocks);
       sf.clearDiffs();
+    }
+    if (isUnderConstruction() && removedUCFiles != null) {
+      removedUCFiles.add(getId());
     }
   }
 
