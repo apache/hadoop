@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -97,9 +96,7 @@ public class INodeMap {
       }
       
       @Override
-      public void destroyAndCollectBlocks(
-          BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
-          List<INode> removedINodes, List<Long> removedUCFiles) {
+      public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
         // Nothing to do
       }
 
@@ -118,9 +115,7 @@ public class INodeMap {
       
       @Override
       public QuotaCounts cleanSubtree(
-          BlockStoragePolicySuite bsps, int snapshotId, int priorSnapshotId,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
-          List<Long> removedUCFiles) {
+          ReclaimContext reclaimContext, int snapshotId, int priorSnapshotId) {
           return null;
       }
 

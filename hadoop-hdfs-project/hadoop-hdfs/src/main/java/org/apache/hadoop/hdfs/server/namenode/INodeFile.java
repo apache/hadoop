@@ -492,13 +492,10 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public QuotaCounts cleanSubtree(
-      BlockStoragePolicySuite bsps, final int snapshot, int priorSnapshotId,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, List<Long> removedUCFiles) {
+      ReclaimContext reclaimContext, final int snapshot, int priorSnapshotId) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.cleanFile(bsps, this, snapshot, priorSnapshotId, collectedBlocks,
-          removedINodes);
+      return sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId);
     }
     QuotaCounts counts = new QuotaCounts.Builder().build();
 
@@ -506,17 +503,16 @@ public class INodeFile extends INodeWithAdditionalFields
       if (priorSnapshotId == NO_SNAPSHOT_ID) {
         // this only happens when deleting the current file and the file is not
         // in any snapshot
-        computeQuotaUsage(bsps, counts, false);
-        destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
-                                removedUCFiles);
+        computeQuotaUsage(reclaimContext.bsps, counts, false);
+        destroyAndCollectBlocks(reclaimContext);
       } else {
         FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         // when deleting the current file and the file is in snapshot, we should
         // clean the 0-sized block if the file is UC
         if (uc != null) {
-          uc.cleanZeroSizeBlock(this, collectedBlocks);
-          if (removedUCFiles != null) {
-            removedUCFiles.add(getId());
+          uc.cleanZeroSizeBlock(this, reclaimContext.collectedBlocks);
+          if (reclaimContext.removedUCFiles != null) {
+            reclaimContext.removedUCFiles.add(getId());
           }
         }
       }
@@ -525,12 +521,10 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public void destroyAndCollectBlocks(
-      BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, List<Long> removedUCFiles) {
-    if (blocks != null && collectedBlocks != null) {
+  public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
+    if (blocks != null && reclaimContext.collectedBlocks != null) {
       for (BlockInfoContiguous blk : blocks) {
-        collectedBlocks.addDeleteBlock(blk);
+        reclaimContext.collectedBlocks.addDeleteBlock(blk);
         blk.setBlockCollection(null);
       }
     }
@@ -539,14 +533,15 @@ public class INodeFile extends INodeWithAdditionalFields
       AclStorage.removeAclFeature(getAclFeature());
     }
     clear();
-    removedINodes.add(this);
+    reclaimContext.removedINodes.add(this);
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
-      sf.getDiffs().destroyAndCollectSnapshotBlocks(collectedBlocks);
+      sf.getDiffs().destroyAndCollectSnapshotBlocks(
+          reclaimContext.collectedBlocks);
       sf.clearDiffs();
     }
-    if (isUnderConstruction() && removedUCFiles != null) {
-      removedUCFiles.add(getId());
+    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
+      reclaimContext.removedUCFiles.add(getId());
     }
   }
 

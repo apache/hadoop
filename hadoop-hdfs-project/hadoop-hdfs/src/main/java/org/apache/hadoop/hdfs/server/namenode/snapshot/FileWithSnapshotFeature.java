@@ -23,10 +23,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
@@ -118,22 +116,21 @@ public class FileWithSnapshotFeature implements INode.Feature {
     return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
   }
   
-  public QuotaCounts cleanFile(final BlockStoragePolicySuite bsps,
+  public QuotaCounts cleanFile(INode.ReclaimContext reclaimContext,
       final INodeFile file, final int snapshotId,
-      int priorSnapshotId, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      int priorSnapshotId) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
-      collectBlocksAndClear(bsps, file, collectedBlocks, removedINodes);
+      collectBlocksAndClear(reclaimContext, file);
       return new QuotaCounts.Builder().build();
     } else { // delete the snapshot
       priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
-      return diffs.deleteSnapshotDiff(bsps, snapshotId, priorSnapshotId, file,
-          collectedBlocks, removedINodes);
+      return diffs.deleteSnapshotDiff(reclaimContext,
+          snapshotId, priorSnapshotId, file);
     }
   }
   
@@ -141,14 +138,12 @@ public class FileWithSnapshotFeature implements INode.Feature {
     this.diffs.clear();
   }
   
-  public QuotaCounts updateQuotaAndCollectBlocks(BlockStoragePolicySuite bsps, INodeFile file,
-      FileDiff removed, BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
-
+  public QuotaCounts updateQuotaAndCollectBlocks(
+      INode.ReclaimContext reclaimContext, INodeFile file, FileDiff removed) {
     byte storagePolicyID = file.getStoragePolicyID();
     BlockStoragePolicy bsp = null;
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
-      bsp = bsps.getPolicy(file.getStoragePolicyID());
+      bsp = reclaimContext.storagePolicySuite().getPolicy(file.getStoragePolicyID());
     }
 
 
@@ -180,8 +175,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       }
     }
 
-    getDiffs().combineAndCollectSnapshotBlocks(
-        bsps, file, removed, collectedBlocks, removedINodes);
+    getDiffs().combineAndCollectSnapshotBlocks(reclaimContext, file, removed);
 
     QuotaCounts current = file.storagespaceConsumed(bsp);
     oldCounts.subtract(current);
@@ -192,11 +186,11 @@ public class FileWithSnapshotFeature implements INode.Feature {
    * If some blocks at the end of the block list no longer belongs to
    * any inode, collect them and update the block list.
    */
-  public void collectBlocksAndClear(final BlockStoragePolicySuite bsps, final INodeFile file,
-      final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
+  public void collectBlocksAndClear(
+      INode.ReclaimContext reclaimContext, final INodeFile file) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      file.destroyAndCollectBlocks(bsps, info, removedINodes, null);
+      file.destroyAndCollectBlocks(reclaimContext);
       return;
     }
     // find max file size.
@@ -212,8 +206,9 @@ public class FileWithSnapshotFeature implements INode.Feature {
     FileDiff last = diffs.getLast();
     BlockInfoContiguous[] snapshotBlocks = last == null ? null : last.getBlocks();
     if(snapshotBlocks == null)
-      file.collectBlocksBeyondMax(max, info);
+      file.collectBlocksBeyondMax(max, reclaimContext.collectedBlocks());
     else
-      file.collectBlocksBeyondSnapshot(snapshotBlocks, info);
+      file.collectBlocksBeyondSnapshot(snapshotBlocks,
+                                       reclaimContext.collectedBlocks());
   }
 }

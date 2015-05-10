@@ -732,14 +732,16 @@ class FSDirRenameOp {
       List<Long> removedUCFiles = new ChunkedArrayList<>();
       final boolean filesDeleted;
       if (!oldDstChild.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
-        oldDstChild.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
-                                            removedUCFiles);
+        oldDstChild.destroyAndCollectBlocks(
+            new INode.ReclaimContext(bsps, collectedBlocks, removedINodes, removedUCFiles));
         filesDeleted = true;
       } else {
         filesDeleted = oldDstChild.cleanSubtree(
-            bsps, Snapshot.CURRENT_STATE_ID,
-            dstIIP.getLatestSnapshotId(), collectedBlocks,
-            removedINodes, removedUCFiles).getNameSpace() >= 0;
+            new INode.ReclaimContext(bsps, collectedBlocks, removedINodes,
+                                     removedUCFiles),
+            Snapshot.CURRENT_STATE_ID,
+            dstIIP.getLatestSnapshotId())
+            .getNameSpace() >= 0;
       }
       fsd.getFSNamesystem().removeLeasesAndINodes(
           removedUCFiles, removedINodes, false);

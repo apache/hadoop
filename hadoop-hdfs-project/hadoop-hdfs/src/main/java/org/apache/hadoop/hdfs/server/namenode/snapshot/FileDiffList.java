@@ -23,7 +23,6 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -97,16 +96,14 @@ public class FileDiffList extends
    * up to the file length of the latter.
    * Collect unused blocks of the removed snapshot.
    */
-  void combineAndCollectSnapshotBlocks(BlockStoragePolicySuite bsps, INodeFile file,
-                                       FileDiff removed,
-                                       BlocksMapUpdateInfo collectedBlocks,
-                                       List<INode> removedINodes) {
+  void combineAndCollectSnapshotBlocks(
+      INode.ReclaimContext reclaimContext, INodeFile file, FileDiff removed) {
     BlockInfoContiguous[] removedBlocks = removed.getBlocks();
     if(removedBlocks == null) {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       assert sf != null : "FileWithSnapshotFeature is null";
       if(sf.isCurrentFileDeleted())
-        sf.collectBlocksAndClear(bsps, file, collectedBlocks, removedINodes);
+        sf.collectBlocksAndClear(reclaimContext, file);
       return;
     }
     int p = getPrior(removed.getSnapshotId(), true);
@@ -139,7 +136,7 @@ public class FileDiffList extends
     // Collect the remaining blocks of the file, ignoring truncate block
     for(;i < removedBlocks.length; i++) {
       if(dontRemoveBlock == null || !removedBlocks[i].equals(dontRemoveBlock)) {
-        collectedBlocks.addDeleteBlock(removedBlocks[i]);
+        reclaimContext.collectedBlocks().addDeleteBlock(removedBlocks[i]);
       }
     }
   }

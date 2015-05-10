@@ -22,9 +22,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 
@@ -62,16 +60,14 @@ abstract class AbstractINodeDiffList<N extends INode,
    * outside. If the diff to remove is not the first one in the diff list, we 
    * need to combine the diff with its previous one.
    * 
+   * @param reclaimContext blocks and inodes that need to be reclaimed
    * @param snapshot The id of the snapshot to be deleted
    * @param prior The id of the snapshot taken before the to-be-deleted snapshot
-   * @param collectedBlocks Used to collect information for blocksMap update
    * @return delta in namespace.
    */
-  public final QuotaCounts deleteSnapshotDiff(BlockStoragePolicySuite bsps,
-      final int snapshot,
-      final int prior, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+  public final QuotaCounts deleteSnapshotDiff(
+      INode.ReclaimContext reclaimContext, final int snapshot, final int prior,
+      final N currentINode) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     
     QuotaCounts counts = new QuotaCounts.Builder().build();
@@ -82,8 +78,8 @@ abstract class AbstractINodeDiffList<N extends INode,
         diffs.get(snapshotIndex).setSnapshotId(prior);
       } else { // there is no snapshot before
         removed = diffs.remove(0);
-        counts.add(removed.destroyDiffAndCollectBlocks(bsps, currentINode,
-            collectedBlocks, removedINodes));
+        counts.add(removed.destroyDiffAndCollectBlocks(reclaimContext,
+            currentINode));
       }
     } else if (snapshotIndex > 0) {
       final AbstractINodeDiff<N, A, D> previous = diffs.get(snapshotIndex - 1);
@@ -96,8 +92,8 @@ abstract class AbstractINodeDiffList<N extends INode,
           previous.snapshotINode = removed.snapshotINode;
         }
 
-        counts.add(previous.combinePosteriorAndCollectBlocks(
-            bsps, currentINode, removed, collectedBlocks, removedINodes));
+        counts.add(previous.combinePosteriorAndCollectBlocks(reclaimContext,
+            currentINode, removed));
         previous.setPosterior(removed.getPosterior());
         removed.setPosterior(null);
       }

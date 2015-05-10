@@ -62,8 +62,9 @@ public class TestFileWithSnapshotFeature {
     INode.BlocksMapUpdateInfo collectedBlocks = mock(
         INode.BlocksMapUpdateInfo.class);
     ArrayList<INode> removedINodes = new ArrayList<>();
-    QuotaCounts counts = sf.updateQuotaAndCollectBlocks(
-        bsps, file, diff, collectedBlocks, removedINodes);
+    INode.ReclaimContext ctx = new INode.ReclaimContext(
+        bsps, collectedBlocks, removedINodes, null);
+    QuotaCounts counts = sf.updateQuotaAndCollectBlocks(ctx, file, diff);
     Assert.assertEquals(0, counts.getStorageSpace());
     Assert.assertTrue(counts.getTypeSpaces().allLessOrEqual(0));
 
@@ -78,8 +79,7 @@ public class TestFileWithSnapshotFeature {
         .thenReturn(Lists.newArrayList(SSD));
     when(bsp.chooseStorageTypes(REPL_3))
         .thenReturn(Lists.newArrayList(DISK));
-    counts = sf.updateQuotaAndCollectBlocks(
-        bsps, file, diff, collectedBlocks, removedINodes);
+    counts = sf.updateQuotaAndCollectBlocks(ctx, file, diff);
     Assert.assertEquals((REPL_3 - REPL_1) * BLOCK_SIZE,
                         counts.getStorageSpace());
     Assert.assertEquals(BLOCK_SIZE, counts.getTypeSpaces().get(DISK));
