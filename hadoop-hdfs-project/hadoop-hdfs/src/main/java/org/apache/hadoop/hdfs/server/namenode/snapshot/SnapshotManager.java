@@ -235,8 +235,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.removeSnapshot(fsdir.getBlockStoragePolicySuite(), snapshotName,
-        collectedBlocks, removedINodes);
+    srcRoot.removeSnapshot(
+        new INode.ReclaimContext(fsdir.getBlockStoragePolicySuite(),
+                                 collectedBlocks, removedINodes, null),
+        snapshotName);
     numSnapshots.getAndDecrement();
   }
 

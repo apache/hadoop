@@ -116,21 +116,18 @@ abstract class AbstractINodeDiff<N extends INode,
 
   /** Combine the posterior diff and collect blocks for deletion. */
   abstract QuotaCounts combinePosteriorAndCollectBlocks(
-      final BlockStoragePolicySuite bsps, final N currentINode,
-      final D posterior, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes);
+      INode.ReclaimContext reclaimContext, final N currentINode,
+      final D posterior);
   
   /**
    * Delete and clear self.
-   * @param bsps The block storage policy suite used to retrieve storage policy
+   * @param reclaimContext blocks and inodes that need to be reclaimed
    * @param currentINode The inode where the deletion happens.
-   * @param collectedBlocks Used to collect blocks for deletion.
-   * @param removedINodes INodes removed
-   * @return quota usage delta
+   *
+   * @return usage delta
    */
   abstract QuotaCounts destroyDiffAndCollectBlocks(
-      final BlockStoragePolicySuite bsps, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes);
+      INode.ReclaimContext reclaimContext, final N currentINode);
 
   @Override
   public String toString() {

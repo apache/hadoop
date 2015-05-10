@@ -387,30 +387,20 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * snapshot in its diff list. Recursively clean its children.
    * </pre>
    *
-   * @param bsps
-   *          block storage policy suite to calculate intended storage type usage
+   * @param reclaimContext
+   *        Record blocks and inodes that need to be reclaimed.
    * @param snapshotId
-   *          The id of the snapshot to delete.
-   *          {@link Snapshot#CURRENT_STATE_ID} means to delete the current
-   *          file/directory.
+   *        The id of the snapshot to delete.
+   *        {@link Snapshot#CURRENT_STATE_ID} means to delete the current
+   *        file/directory.
    * @param priorSnapshotId
-   *          The id of the latest snapshot before the to-be-deleted snapshot.
-   *          When deleting a current inode, this parameter captures the latest
-   *          snapshot.
-   * @param collectedBlocks
-   *          blocks collected from the descents for further block
-   *          deletion/update will be added to the given map.
-   * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of
-   *          inodeMap
-   * @param removedUCFiles
-   *          INodes whose leases need to be released
+   *        The id of the latest snapshot before the to-be-deleted snapshot.
+   *        When deleting a current inode, this parameter captures the latest
+   *        snapshot.
    * @return quota usage delta when deleting a snapshot
    */
   public abstract QuotaCounts cleanSubtree(
-      final BlockStoragePolicySuite bsps, final int snapshotId,
-      int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, List<Long> removedUCFiles);
+      ReclaimContext reclaimContext, final int snapshotId, int priorSnapshotId);
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -418,22 +408,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * directory, the method goes down the subtree and collects blocks from the
    * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
-   * @param bsps
-   *          block storage policy suite to calculate intended storage type usage
-   *          This is needed because INodeReference#destroyAndCollectBlocks() needs
-   *          to call INode#cleanSubtree(), which calls INode#computeQuotaUsage().
-   * @param collectedBlocks
-   *          blocks collected from the descents for further block
-   *          deletion/update will be added to this map.
-   * @param removedINodes
-   *          INodes collected from the descents for further cleaning up of
-   *          inodeMap
-   * @param removedUCFiles
-   *          INodes whose leases need to be released
+   *
+   * @param reclaimContext
+   *        Record blocks and inodes that need to be reclaimed.
    */
-  public abstract void destroyAndCollectBlocks(
-      BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, List<Long> removedUCFiles);
+  public abstract void destroyAndCollectBlocks(ReclaimContext reclaimContext);
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary(BlockStoragePolicySuite bsps) {
@@ -823,7 +802,45 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     out.print(getParentString());
     out.print(", " + getPermissionStatus(snapshotId));
   }
-  
+
+  /**
+   * Context object to record blocks and inodes that need to be reclaimed
+   */
+  public static class ReclaimContext {
+    protected final BlockStoragePolicySuite bsps;
+    protected final BlocksMapUpdateInfo collectedBlocks;
+    protected final List<INode> removedINodes;
+    protected final List<Long> removedUCFiles;
+    /**
+     * @param bsps
+     *          block storage policy suite to calculate intended storage type
+     *          usage
+     * @param collectedBlocks
+     *          blocks collected from the descents for further block
+     *          deletion/update will be added to the given map.
+     * @param removedINodes
+ *          INodes collected from the descents for further cleaning up of
+     * @param removedUCFiles
+     *      files that the NN need to remove the leases
+     */
+    public ReclaimContext(
+        BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
+        List<INode> removedINodes, List<Long> removedUCFiles) {
+      this.bsps = bsps;
+      this.collectedBlocks = collectedBlocks;
+      this.removedINodes = removedINodes;
+      this.removedUCFiles = removedUCFiles;
+    }
+
+    public BlockStoragePolicySuite storagePolicySuite() {
+      return bsps;
+    }
+
+    public BlocksMapUpdateInfo collectedBlocks() {
+      return collectedBlocks;
+    }
+  }
+
   /**
    * Information used for updating the blocksMap when deleting files.
    */

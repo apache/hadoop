@@ -264,11 +264,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name);
   }
 
-  public Snapshot removeSnapshot(BlockStoragePolicySuite bsps, String snapshotName,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+  public Snapshot removeSnapshot(
+      ReclaimContext reclaimContext, String snapshotName)
       throws SnapshotException {
-    return getDirectorySnapshottableFeature().removeSnapshot(bsps, this,
-        snapshotName, collectedBlocks, removedINodes);
+    return getDirectorySnapshottableFeature().removeSnapshot(
+        reclaimContext, this, snapshotName);
   }
 
   public void renameSnapshot(String path, String oldName, String newName)
@@ -754,9 +754,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   /** Call cleanSubtree(..) recursively down the subtree. */
   public QuotaCounts cleanSubtreeRecursively(
-      final BlockStoragePolicySuite bsps, final int snapshot, int prior,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, List<Long> removedUCFiles,
+      ReclaimContext reclaimContext, final int snapshot, int prior,
       final Map<INode, INode> excludedNodes) {
     QuotaCounts counts = new QuotaCounts.Builder().build();
     // in case of deletion snapshot, since this call happens after we modify
@@ -771,8 +769,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
           && excludedNodes.containsKey(child)) {
         continue;
       } else {
-        QuotaCounts childCounts = child.cleanSubtree(bsps, snapshot, prior,
-            collectedBlocks, removedINodes, removedUCFiles);
+        QuotaCounts childCounts = child.cleanSubtree(reclaimContext, snapshot, prior);
         counts.add(childCounts);
       }
     }
@@ -780,49 +777,42 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public void destroyAndCollectBlocks(
-      final BlockStoragePolicySuite bsps,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, List<Long> removedUCFiles) {
+  public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.clear(bsps, this, collectedBlocks, removedINodes, removedUCFiles);
+      sf.clear(reclaimContext, this);
     }
     for (INode child : getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-      child.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
-                                    removedUCFiles);
+      child.destroyAndCollectBlocks(reclaimContext);
     }
     if (getAclFeature() != null) {
       AclStorage.removeAclFeature(getAclFeature());
     }
     clear();
-    removedINodes.add(this);
+    reclaimContext.removedINodes.add(this);
   }
   
   @Override
   public QuotaCounts cleanSubtree(
-      final BlockStoragePolicySuite bsps, final int snapshotId, int priorSnapshotId,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, List<Long> removedUCFiles) {
+      ReclaimContext reclaimContext, final int snapshotId, int priorSnapshotId) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     // there is snapshot data
     if (sf != null) {
-      return sf.cleanDirectory(bsps, this, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, removedUCFiles);
+      return sf.cleanDirectory(reclaimContext, this, snapshotId,
+                               priorSnapshotId);
     }
     // there is no snapshot data
     if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID
         && snapshotId == Snapshot.CURRENT_STATE_ID) {
       // destroy the whole subtree and collect blocks that should be deleted
       QuotaCounts counts = new QuotaCounts.Builder().build();
-      this.computeQuotaUsage(bsps, counts, true);
-      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes,
-                              removedUCFiles);
+      this.computeQuotaUsage(reclaimContext.bsps, counts, true);
+      destroyAndCollectBlocks(reclaimContext);
       return counts; 
     } else {
       // process recursively down the subtree
-      QuotaCounts counts = cleanSubtreeRecursively(bsps, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, removedUCFiles, null);
+      QuotaCounts counts = cleanSubtreeRecursively(
+          reclaimContext, snapshotId, priorSnapshotId, null);
       if (isQuotaSet()) {
         getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(counts.negation());
       }

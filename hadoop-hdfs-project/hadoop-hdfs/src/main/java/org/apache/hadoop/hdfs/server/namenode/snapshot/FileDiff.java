@@ -20,10 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -82,13 +80,12 @@ public class FileDiff extends
 
   @Override
   QuotaCounts combinePosteriorAndCollectBlocks(
-      BlockStoragePolicySuite bsps, INodeFile currentINode,
-      FileDiff posterior, BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      INode.ReclaimContext reclaimContext, INodeFile currentINode,
+      FileDiff posterior) {
     FileWithSnapshotFeature sf = currentINode.getFileWithSnapshotFeature();
     assert sf != null : "FileWithSnapshotFeature is null";
-    return sf.updateQuotaAndCollectBlocks(
-        bsps, currentINode, posterior, collectedBlocks, removedINodes);
+    return sf.updateQuotaAndCollectBlocks(reclaimContext,
+        currentINode, posterior);
   }
   
   @Override
@@ -112,11 +109,10 @@ public class FileDiff extends
   }
 
   @Override
-  QuotaCounts destroyDiffAndCollectBlocks(BlockStoragePolicySuite bsps, INodeFile currentINode,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+  QuotaCounts destroyDiffAndCollectBlocks(
+      INode.ReclaimContext reclaimContext, INodeFile currentINode) {
     return currentINode.getFileWithSnapshotFeature()
-        .updateQuotaAndCollectBlocks(bsps, currentINode, this, collectedBlocks,
-            removedINodes);
+        .updateQuotaAndCollectBlocks(reclaimContext, currentINode, this);
   }
 
   public void destroyAndCollectSnapshotBlocks(

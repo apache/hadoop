@@ -250,13 +250,14 @@ class FSDirDeleteOp {
     }
 
     // collect block and update quota
+    INode.ReclaimContext reclaimContext = new INode.ReclaimContext(
+        fsd.getBlockStoragePolicySuite(), collectedBlocks,
+        removedINodes, removedUCFiles);
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(fsd.getBlockStoragePolicySuite(),
-        collectedBlocks, removedINodes, removedUCFiles);
+      targetNode.destroyAndCollectBlocks(reclaimContext);
     } else {
-      QuotaCounts counts = targetNode.cleanSubtree(
-        fsd.getBlockStoragePolicySuite(), CURRENT_STATE_ID,
-          latestSnapshot, collectedBlocks, removedINodes, removedUCFiles);
+      QuotaCounts counts = targetNode.cleanSubtree(reclaimContext,
+          CURRENT_STATE_ID, latestSnapshot);
       removed = counts.getNameSpace();
       fsd.updateCountNoQuotaCheck(iip, iip.length() -1, counts.negation());
     }

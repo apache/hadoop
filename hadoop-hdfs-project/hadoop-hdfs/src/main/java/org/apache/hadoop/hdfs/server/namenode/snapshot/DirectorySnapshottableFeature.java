@@ -197,15 +197,15 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * Remove the snapshot with the given name from {@link #snapshotsByNames},
    * and delete all the corresponding DirectoryDiff.
    *
+   * @param reclaimContext records blocks and inodes that need to be reclaimed
    * @param snapshotRoot The directory where we take snapshots
    * @param snapshotName The name of the snapshot to be removed
-   * @param collectedBlocks Used to collect information to update blocksMap
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
-  public Snapshot removeSnapshot(BlockStoragePolicySuite bsps, INodeDirectory snapshotRoot,
-      String snapshotName, BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) throws SnapshotException {
+  public Snapshot removeSnapshot(
+      INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
+      String snapshotName) throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -215,8 +215,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
       try {
-        QuotaCounts counts = snapshotRoot.cleanSubtree(bsps, snapshot.getId(),
-            prior, collectedBlocks, removedINodes, null);
+        QuotaCounts counts = snapshotRoot.cleanSubtree(reclaimContext,
+            snapshot.getId(), prior);
         INodeDirectory parent = snapshotRoot.getParent();
         if (parent != null) {
           // there will not be any WithName node corresponding to the deleted
