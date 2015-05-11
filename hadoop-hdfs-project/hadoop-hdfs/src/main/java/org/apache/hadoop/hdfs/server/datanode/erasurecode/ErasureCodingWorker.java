@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSPacket;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.RemoteBlockReader2;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
@@ -872,7 +873,7 @@ public final class ErasureCodingWorker {
           unbufIn = saslStreams.in;
 
           out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-              HdfsServerConstants.SMALL_BUFFER_SIZE));
+              DFSUtil.getSmallBufferSize(conf)));
           in = new DataInputStream(unbufIn);
 
           DatanodeInfo source = new DatanodeInfo(datanode.getDatanodeId());
