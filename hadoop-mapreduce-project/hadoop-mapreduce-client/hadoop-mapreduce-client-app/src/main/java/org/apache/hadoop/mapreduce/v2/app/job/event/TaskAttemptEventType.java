@@ -48,6 +48,9 @@ public enum TaskAttemptEventType {
   TA_UPDATE,
   TA_TIMED_OUT,
 
+  //Producer:Client
+  TA_FAILMSG_BY_CLIENT,
+
   //Producer:TaskCleaner
   TA_CLEANUP_DONE,
 

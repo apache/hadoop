@@ -148,4 +148,10 @@ public class MockAppContext implements AppContext {
     // bogus - Not Required
     return null;
   }
+
+  @Override
+  public TaskAttemptFinishingMonitor getTaskAttemptFinishingMonitor() {
+      return null;
+  }
+
 }

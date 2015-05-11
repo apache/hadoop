@@ -121,7 +121,11 @@ public class ContainerLauncherImpl extends AbstractService implements
     public synchronized boolean isCompletelyDone() {
       return state == ContainerState.DONE || state == ContainerState.FAILED;
     }
-    
+
+    public synchronized void done() {
+      state = ContainerState.DONE;
+    }
+
     @SuppressWarnings("unchecked")
     public synchronized void launch(ContainerRemoteLaunchEvent event) {
       LOG.info("Launching " + taskAttemptID);
@@ -378,6 +382,11 @@ public class ContainerLauncherImpl extends AbstractService implements
       case CONTAINER_REMOTE_CLEANUP:
         c.kill();
         break;
+
+      case CONTAINER_COMPLETED:
+        c.done();
+        break;
+
       }
       removeContainerIfDone(containerID);
     }
