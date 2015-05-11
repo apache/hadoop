@@ -18,7 +18,7 @@ Hadoop Auth, Java HTTP SPNEGO - Building It
 Requirements
 ------------
 
-* Java 6+
+* Java 7+
 * Maven 3+
 * Kerberos KDC (for running Kerberos test cases)
 
