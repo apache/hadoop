@@ -25,6 +25,9 @@ Trunk (Unreleased)
 
     HDFS-8349. Remove .xml and documentation references to dfs.webhdfs.enabled.
     (Ray Chiang via aajisaka)
+
+    HDFS-8241. Remove unused NameNode startup option -finalize.
+    (Brahma Reddy Battula via aajisaka)
  
   NEW FEATURES
 

@@ -262,7 +262,6 @@ public class NameNode implements NameNodeStatusMXBean {
       + StartupOption.ROLLBACK.getName() + "] | \n\t["
       + StartupOption.ROLLINGUPGRADE.getName() + " "
       + RollingUpgradeStartupOption.getAllOptionString() + " ] | \n\t["
-      + StartupOption.FINALIZE.getName() + "] | \n\t["
       + StartupOption.IMPORT.getName() + "] | \n\t["
       + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | \n\t["
       + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | \n\t["
@@ -778,8 +777,6 @@ public class NameNode implements NameNodeStatusMXBean {
    * metadata</li>
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
-   * <li>{@link StartupOption#FINALIZE FINALIZE} - finalize 
-   *            previous upgrade</li>
    * <li>{@link StartupOption#IMPORT IMPORT} - import checkpoint</li>
    * </ul>
    * The option is passed via configuration field: 
@@ -1306,8 +1303,6 @@ public class NameNode implements NameNodeStatusMXBean {
         startOpt.setRollingUpgradeStartupOption(args[i]);
       } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
-      } else if (StartupOption.FINALIZE.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.FINALIZE;
       } else if (StartupOption.IMPORT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.IMPORT;
       } else if (StartupOption.BOOTSTRAPSTANDBY.getName().equalsIgnoreCase(cmd)) {
@@ -1441,13 +1436,6 @@ public class NameNode implements NameNodeStatusMXBean {
         System.out.println(NNStorage.newClusterID());
         terminate(0);
         return null;
-      }
-      case FINALIZE: {
-        System.err.println("Use of the argument '" + StartupOption.FINALIZE +
-            "' is no longer supported. To finalize an upgrade, start the NN " +
-            " and then run `hdfs dfsadmin -finalizeUpgrade'");
-        terminate(1);
-        return null; // avoid javac warning
       }
       case ROLLBACK: {
         boolean aborted = doRollback(conf, true);

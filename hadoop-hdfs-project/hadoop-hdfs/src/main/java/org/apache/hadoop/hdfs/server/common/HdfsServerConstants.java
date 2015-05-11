@@ -155,7 +155,6 @@ public interface HdfsServerConstants {
     CHECKPOINT("-checkpoint"),
     UPGRADE ("-upgrade"),
     ROLLBACK("-rollback"),
-    FINALIZE("-finalize"),
     ROLLINGUPGRADE("-rollingUpgrade"),
     IMPORT  ("-importCheckpoint"),
     BOOTSTRAPSTANDBY("-bootstrapStandby"),
