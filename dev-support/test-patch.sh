@@ -1731,7 +1731,7 @@ function check_javac
         > "${PATCH_DIR}/diffJavacWarnings.txt"
 
         add_jira_table -1 javac "The applied patch generated "\
-        "$((patchJavacWarnings-${PATCH_BRANCH}JavacWarnings))" \
+        "$((patchJavacWarnings-branchJavacWarnings))" \
         " additional warning messages."
 
         add_jira_footer javac "@@BASE@@/diffJavacWarnings.txt"
