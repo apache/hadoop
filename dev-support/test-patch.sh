@@ -581,6 +581,7 @@ function hadoop_usage
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
+  echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
@@ -667,6 +668,9 @@ function parse_args
       --help|-help|-h|help|--h|--\?|-\?|\?)
         hadoop_usage
         exit 0
+      ;;
+      --issue-re=*)
+        ISSUE_RE=${i#*=}
       ;;
       --java-home)
         JAVA_HOME=${i#*=}
