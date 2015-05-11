@@ -74,6 +74,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3476. Nodemanager can fail to delete local logs if log aggregation
     fails (Rohith via jlowe)
 
+    YARN-3434. Interaction between reservations and userlimit can result in 
+    significant ULF violation. (Thomas Graves via wangda)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
