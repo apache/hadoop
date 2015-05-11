@@ -679,6 +679,9 @@ Release 2.7.1 - UNRELEASED
     HADOOP-9658. SnappyCodec#checkNativeCodeLoaded may unexpectedly fail when
     native code is not loaded. (Zhijie Shen via ozawa)
 
+    HADOOP-11663. Remove description about Java 6 from docs.
+    (Masatake Iwasaki via aajisaka)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
