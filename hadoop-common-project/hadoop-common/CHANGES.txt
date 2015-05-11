@@ -653,6 +653,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9729. The example code of org.apache.hadoop.util.Tool is incorrect
     (hellojinjie via jlowe)
 
+    HADOOP-11928. Test-patch check for @author tags incorrectly flags
+    removal of @author tags (Kengo Seki via aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
