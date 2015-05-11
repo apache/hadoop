@@ -224,6 +224,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3395. FairScheduler: Trim whitespaces when using username for 
     queuename. (Zhihai Xu via kasha)
 
+    YARN-3587. Fix the javadoc of DelegationTokenSecretManager in yarn, etc. 
+    projects. (Gabor Liptak via junping_du)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
