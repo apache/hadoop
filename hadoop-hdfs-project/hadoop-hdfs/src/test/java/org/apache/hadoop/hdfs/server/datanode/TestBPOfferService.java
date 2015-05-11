@@ -55,6 +55,9 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
@@ -621,4 +624,55 @@ public class TestBPOfferService {
       bpos.stop();
     }
   } 
+
+  /**
+   * This test case doesn't add the reportBadBlock request to
+   * {@link BPServiceActor#bpThreadEnqueue} when the Standby namenode throws
+   * {@link StandbyException}
+   * @throws Exception
+   */
+ @Test
+  public void testReportBadBlocksWhenNNThrowsStandbyException()
+      throws Exception {
+    BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    bpos.start();
+    try {
+      waitForInitialization(bpos);
+      // Should start with neither NN as active.
+      assertNull(bpos.getActiveNN());
+      // Have NN1 claim active at txid 1
+      mockHaStatuses[0] = new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1);
+      bpos.triggerHeartbeatForTests();
+      // Now mockNN1 is acting like active namenode and mockNN2 as Standby
+      assertSame(mockNN1, bpos.getActiveNN());
+      // Return nothing when active Active Namenode calls reportBadBlocks
+      Mockito.doNothing().when(mockNN1).reportBadBlocks
+          (Mockito.any(LocatedBlock[].class));
+
+      RemoteException re = new RemoteException(StandbyException.class.
+          getName(), "Operation category WRITE is not supported in state "
+          + "standby", RpcErrorCodeProto.ERROR_APPLICATION);
+      // Return StandbyException wrapped in RemoteException when Standby NN
+      // calls reportBadBlocks
+      Mockito.doThrow(re).when(mockNN2).reportBadBlocks
+          (Mockito.any(LocatedBlock[].class));
+
+      bpos.reportBadBlocks(FAKE_BLOCK, mockFSDataset.getVolume(FAKE_BLOCK)
+          .getStorageID(), mockFSDataset.getVolume(FAKE_BLOCK)
+          .getStorageType());
+      // Send heartbeat so that the BpServiceActor can report bad block to
+      // namenode
+      bpos.triggerHeartbeatForTests();
+      Mockito.verify(mockNN2, Mockito.times(1))
+      .reportBadBlocks(Mockito.any(LocatedBlock[].class));
+
+      // Trigger another heartbeat, this will send reportBadBlock again if it
+      // is present in the queue.
+      bpos.triggerHeartbeatForTests();
+      Mockito.verify(mockNN2, Mockito.times(1))
+          .reportBadBlocks(Mockito.any(LocatedBlock[].class));
+    } finally {
+      bpos.stop();
+    }
+  }
 }
