@@ -665,6 +665,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11951. test-patch should give better info about failures to handle
     dev-support updates without resetrepo option (Sean Busbey via aw)
 
+    HADOOP-11947. test-patch should return early from determine-issue when
+    run in jenkins mode. (Sean Busbey via aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

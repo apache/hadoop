@@ -1181,6 +1181,7 @@ function determine_issue
   # we can shortcut jenkins
   if [[ ${JENKINS} == true ]]; then
     ISSUE=${PATCH_OR_ISSUE}
+    return 0
   fi
 
   # shellcheck disable=SC2016
