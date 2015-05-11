@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.ipc.RemoteException;
 
 
 /**
@@ -43,6 +44,9 @@ public class ErrorReportAction implements BPServiceActorAction {
     DatanodeRegistration bpRegistration) throws BPServiceActorActionException {
     try {
       bpNamenode.errorReport(bpRegistration, errorCode, errorMessage);
+    } catch (RemoteException re) {
+      DataNode.LOG.info("trySendErrorReport encountered RemoteException  "
+          + "errorMessage: " + errorMessage + "  errorCode: " + errorCode, re);
     } catch(IOException e) {
       throw new BPServiceActorActionException("Error reporting "
           + "an error to namenode: ");
