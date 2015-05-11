@@ -554,6 +554,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11906. test-patch.sh should use 'file' command for patch
     determinism (Sean Busbey via aw)
 
+    HADOOP-11950. Add cli option to test-patch to set the project-under-test
+    (Sean Busbey via aw)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

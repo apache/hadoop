@@ -37,7 +37,6 @@ function setup_defaults
   PROJECT_NAME=hadoop
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
   JENKINS=false
-  PATCH_DIR=/tmp/${PROJECT_NAME}-test-patch/$$
   BASEDIR=$(pwd)
 
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
@@ -585,6 +584,7 @@ function hadoop_usage
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
+  echo "--project=<name>       The short name for project currently using test-patch (default 'hadoop')"
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
   echo "--testlist=<list>      Specify which subsystem tests to use (comma delimited)"
@@ -695,7 +695,10 @@ function parse_args
         PATCH=${i#*=}
       ;;
       --patch-dir=*)
-        PATCH_DIR=${i#*=}
+        USER_PATCH_DIR=${i#*=}
+      ;;
+      --project=*)
+        PROJECT_NAME=${i#*=}
       ;;
       --ps-cmd=*)
         PS=${i#*=}
@@ -753,6 +756,12 @@ function parse_args
       echo "Running in developer mode"
     fi
     JENKINS=false
+  fi
+
+  if [[ -n ${USER_PATCH_DIR} ]]; then
+    PATCH_DIR="${USER_PATCH_DIR}"
+  else
+    PATCH_DIR=/tmp/${PROJECT_NAME}-test-patch/$$
   fi
 
   cd "${CWD}"
