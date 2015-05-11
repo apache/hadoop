@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
@@ -77,7 +78,7 @@ public class TestTruncateQuotaUpdate {
   @Test
   public void testTruncateWithSnapshotNoDivergence() {
     INodeFile file = createMockFile(BLOCKSIZE * 2 + BLOCKSIZE / 2, REPLICATION);
-    addSnapshotFeature(file, file.getBlocks());
+    addSnapshotFeature(file, file.getContiguousBlocks());
 
     // case 4: truncate to 1.5 blocks
     // all the blocks are in snapshot. truncate need to allocate a new block

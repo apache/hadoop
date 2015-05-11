@@ -706,11 +706,7 @@ public class INodeFile extends INodeWithAdditionalFields
    */
   public final QuotaCounts computeQuotaUsageWithStriped(
       BlockStoragePolicySuite bsps, QuotaCounts counts) {
-    long nsDelta = 1;
-    final long ssDelta = storagespaceConsumed();
-    counts.addNameSpace(nsDelta);
-    counts.addStorageSpace(ssDelta);
-    return counts;
+    return null;
   }
 
   @Override
@@ -979,11 +975,11 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     long size = 0;
-    for (BlockInfoContiguous b : blocks) {
+    for (BlockInfo b : blocks) {
       size += b.getNumBytes();
     }
 
-    BlockInfoContiguous[] sblocks = null;
+    BlockInfo[] sblocks = null;
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       FileDiff diff = sf.getDiffs().getLast();

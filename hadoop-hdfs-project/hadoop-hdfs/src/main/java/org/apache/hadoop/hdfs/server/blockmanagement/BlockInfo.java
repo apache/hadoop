@@ -88,13 +88,21 @@ public abstract class BlockInfo extends Block
   BlockInfo getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    return (BlockInfo) triplets[index*3+1];
+    BlockInfo info = (BlockInfo)triplets[index*3+1];
+    assert info == null ||
+        info.getClass().getName().startsWith(BlockInfo.class.getName()) :
+        "BlockInfo is expected at " + index*3;
+    return info;
   }
 
   BlockInfo getNext(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    return (BlockInfo) triplets[index*3+2];
+    BlockInfo info = (BlockInfo)triplets[index*3+2];
+    assert info == null || info.getClass().getName().startsWith(
+        BlockInfo.class.getName()) :
+        "BlockInfo is expected at " + index*3;
+    return info;
   }
 
   void setStorageInfo(int index, DatanodeStorageInfo storage) {
