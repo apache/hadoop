@@ -235,7 +235,15 @@ public interface MRJobConfig {
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
 
   public static final String TASK_TIMEOUT_CHECK_INTERVAL_MS = "mapreduce.task.timeout.check-interval-ms";
-  
+
+  public static final String TASK_EXIT_TIMEOUT = "mapreduce.task.exit.timeout";
+
+  public static final int TASK_EXIT_TIMEOUT_DEFAULT = 60 * 1000;
+
+  public static final String TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS = "mapreduce.task.exit.timeout.check-interval-ms";
+
+  public static final int TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS_DEFAULT = 20 * 1000;
+
   public static final String TASK_ID = "mapreduce.task.id";
 
   public static final String TASK_OUTPUT_DIR = "mapreduce.task.output.dir";

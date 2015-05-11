@@ -1671,4 +1671,24 @@
     app master.
   </description>
 </property>
+
+<property>
+  <name>mapreduce.task.exit.timeout</name>
+  <value>60000</value>
+  <description>The number of milliseconds before a task will be
+  terminated if it stays in finishing state for too long.
+  After a task attempt completes from TaskUmbilicalProtocol's point of view,
+  it will be transitioned to finishing state. That will give a chance for the
+  task to exit by itself.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.task.exit.timeout.check-interval-ms</name>
+  <value>20000</value>
+  <description>The interval in milliseconds between which the MR framework
+  checks if task attempts stay in finishing state for too long.
+  </description>
+</property>
+
 </configuration>

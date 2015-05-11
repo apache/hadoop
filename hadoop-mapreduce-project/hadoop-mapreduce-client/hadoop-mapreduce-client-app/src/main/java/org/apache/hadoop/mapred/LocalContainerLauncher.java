@@ -264,7 +264,8 @@ public class LocalContainerLauncher extends AbstractService implements
           context.getEventHandler().handle(
               new TaskAttemptEvent(taId,
                   TaskAttemptEventType.TA_CONTAINER_CLEANED));
-
+        } else if (event.getType() == EventType.CONTAINER_COMPLETED) {
+          LOG.debug("Container completed " + event.toString());
         } else {
           LOG.warn("Ignoring unexpected event " + event.toString());
         }
@@ -314,7 +315,14 @@ public class LocalContainerLauncher extends AbstractService implements
         }
         runSubtask(remoteTask, ytask.getType(), attemptID, numMapTasks,
                    (numReduceTasks > 0), localMapFiles);
-        
+
+        // In non-uber mode, TA gets TA_CONTAINER_COMPLETED from MRAppMaster
+        // as part of NM -> RM -> AM notification route.
+        // In uber mode, given the task run inside the MRAppMaster container,
+        // we have to simulate the notification.
+        context.getEventHandler().handle(new TaskAttemptEvent(attemptID,
+            TaskAttemptEventType.TA_CONTAINER_COMPLETED));
+
       } catch (RuntimeException re) {
         JobCounterUpdateEvent jce = new JobCounterUpdateEvent(attemptID.getTaskId().getJobId());
         jce.addCounterUpdate(JobCounter.NUM_FAILED_UBERTASKS, 1);

@@ -408,6 +408,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6353. Divide by zero error in MR AM when calculating available 
     containers. (Anubhav Dhoot via kasha)
 
+    MAPREDUCE-5465. Tasks are often killed before they exit on their own
+    (Ming Ma via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

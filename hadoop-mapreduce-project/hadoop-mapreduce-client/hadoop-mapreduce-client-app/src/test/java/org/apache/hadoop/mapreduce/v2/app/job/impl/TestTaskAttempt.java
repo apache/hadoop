@@ -59,6 +59,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.ClusterInfo;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
+import org.apache.hadoop.mapreduce.v2.app.TaskAttemptFinishingMonitor;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -407,6 +408,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
@@ -464,6 +466,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
@@ -524,6 +527,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
@@ -546,7 +550,7 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_DONE));
     taImpl.handle(new TaskAttemptEvent(attemptId,
-        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+        TaskAttemptEventType.TA_CONTAINER_COMPLETED));
 
     assertEquals("Task attempt is not in succeeded state", taImpl.getState(),
         TaskAttemptState.SUCCEEDED);
@@ -593,6 +597,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
@@ -641,6 +646,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
       new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
@@ -663,7 +669,7 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(attemptId,
       TaskAttemptEventType.TA_DONE));
     taImpl.handle(new TaskAttemptEvent(attemptId,
-      TaskAttemptEventType.TA_CONTAINER_CLEANED));
+      TaskAttemptEventType.TA_CONTAINER_COMPLETED));
 
     assertEquals("Task attempt is not in succeeded state", taImpl.getState(),
       TaskAttemptState.SUCCEEDED);
@@ -708,6 +714,7 @@ public class TestTaskAttempt{
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
     when(resource.getMemory()).thenReturn(1024);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener,
@@ -753,6 +760,7 @@ public class TestTaskAttempt{
 	AppContext appCtx = mock(AppContext.class);
 	ClusterInfo clusterInfo = mock(ClusterInfo.class);
 	when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
+  setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
 	TaskAttemptImpl taImpl =
 	  new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
@@ -774,7 +782,7 @@ public class TestTaskAttempt{
 	taImpl.handle(new TaskAttemptEvent(attemptId,
 	    TaskAttemptEventType.TA_DONE));
 	taImpl.handle(new TaskAttemptEvent(attemptId,
-	    TaskAttemptEventType.TA_CONTAINER_CLEANED));
+	    TaskAttemptEventType.TA_CONTAINER_COMPLETED));
 	    
 	assertEquals("Task attempt is not in succeeded state", taImpl.getState(),
 		      TaskAttemptState.SUCCEEDED);
@@ -965,6 +973,255 @@ public class TestTaskAttempt{
     assertEquals("Task should be in KILLED state",
         TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
         taImpl.getInternalState());
+  }
+
+
+  @Test
+  public void testKillMapTaskWhileSuccessFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt is not in SUCCEEDED state", taImpl.getState(),
+        TaskAttemptState.SUCCEEDED);
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
+
+    // If the map task is killed when it is in SUCCESS_FINISHING_CONTAINER
+    // state, the state will move to KILL_CONTAINER_CLEANUP
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_KILL));
+    assertEquals("Task attempt is not in KILLED state", taImpl.getState(),
+        TaskAttemptState.KILLED);
+    assertEquals("Task attempt's internal state is not KILL_CONTAINER_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    assertEquals("Task attempt's internal state is not KILL_TASK_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.KILL_TASK_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CLEANUP_DONE));
+
+    assertEquals("Task attempt is not in KILLED state", taImpl.getState(),
+        TaskAttemptState.KILLED);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testKillMapTaskWhileFailFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_FAILMSG));
+
+    assertEquals("Task attempt is not in FAILED state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+    assertEquals("Task attempt's internal state is not " +
+        "FAIL_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER);
+
+    // If the map task is killed when it is in FAIL_FINISHING_CONTAINER state,
+    // the state will stay in FAIL_FINISHING_CONTAINER.
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_KILL));
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+    assertEquals("Task attempt's internal state is not " +
+        "FAIL_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_TIMED_OUT));
+    assertEquals("Task attempt's internal state is not FAIL_CONTAINER_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    assertEquals("Task attempt's internal state is not FAIL_TASK_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_TASK_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CLEANUP_DONE));
+
+    assertEquals("Task attempt is not in KILLED state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testFailMapTaskByClient() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_FAILMSG_BY_CLIENT));
+
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+    assertEquals("Task attempt's internal state is not " +
+        "FAIL_CONTAINER_CLEANUP", taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    assertEquals("Task attempt's internal state is not FAIL_TASK_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_TASK_CLEANUP);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_CLEANUP_DONE));
+
+    assertEquals("Task attempt is not in KILLED state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testTaskAttemptDiagnosticEventOnFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.SUCCEEDED);
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
+
+    // TA_DIAGNOSTICS_UPDATE doesn't change state
+    taImpl.handle(new TaskAttemptDiagnosticsUpdateEvent(taImpl.getID(),
+        "Task got updated"));
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.SUCCEEDED);
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testTimeoutWhileSuccessFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.SUCCEEDED);
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER);
+
+    // If the task stays in SUCCESS_FINISHING_CONTAINER for too long,
+    // TaskAttemptListenerImpl will time out the attempt.
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_TIMED_OUT));
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.SUCCEEDED);
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_CONTAINER_CLEANUP", taImpl.getInternalState(),
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testTimeoutWhileFailFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_FAILMSG));
+
+    assertEquals("Task attempt is not in RUNNING state", taImpl.getState(),
+        TaskAttemptState.FAILED);
+    assertEquals("Task attempt's internal state is not " +
+        "FAIL_FINISHING_CONTAINER", taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER);
+
+    // If the task stays in FAIL_FINISHING_CONTAINER for too long,
+    // TaskAttemptListenerImpl will time out the attempt.
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_TIMED_OUT));
+    assertEquals("Task attempt's internal state is not FAIL_CONTAINER_CLEANUP",
+        taImpl.getInternalState(),
+        TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP);
+
+    assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  private void setupTaskAttemptFinishingMonitor(
+      EventHandler eventHandler, JobConf jobConf, AppContext appCtx) {
+    TaskAttemptFinishingMonitor taskAttemptFinishingMonitor =
+        new TaskAttemptFinishingMonitor(eventHandler);
+    taskAttemptFinishingMonitor.init(jobConf);
+    when(appCtx.getTaskAttemptFinishingMonitor()).
+        thenReturn(taskAttemptFinishingMonitor);
+  }
+
+  private TaskAttemptImpl createTaskAttemptImpl(
+      MockEventHandler eventHandler) {
+    ApplicationId appId = ApplicationId.newInstance(1, 2);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 0);
+    JobId jobId = MRBuilderUtils.newJobId(appId, 1);
+    TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
+    TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
+    Path jobFile = mock(Path.class);
+
+    TaskAttemptListener taListener = mock(TaskAttemptListener.class);
+    when(taListener.getAddress()).thenReturn(new InetSocketAddress("localhost", 0));
+
+    JobConf jobConf = new JobConf();
+    jobConf.setClass("fs.file.impl", StubbedFS.class, FileSystem.class);
+    jobConf.setBoolean("fs.file.impl.disable.cache", true);
+    jobConf.set(JobConf.MAPRED_MAP_TASK_ENV, "");
+    jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, "10");
+
+    TaskSplitMetaInfo splits = mock(TaskSplitMetaInfo.class);
+    when(splits.getLocations()).thenReturn(new String[] {"127.0.0.1"});
+
+    AppContext appCtx = mock(AppContext.class);
+    ClusterInfo clusterInfo = mock(ClusterInfo.class);
+    when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
+    setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
+
+    TaskAttemptImpl taImpl =
+        new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
+            splits, jobConf, taListener,
+            mock(Token.class), new Credentials(),
+            new SystemClock(), appCtx);
+
+    NodeId nid = NodeId.newInstance("127.0.0.1", 0);
+    ContainerId contId = ContainerId.newInstance(appAttemptId, 3);
+    Container container = mock(Container.class);
+    when(container.getId()).thenReturn(contId);
+    when(container.getNodeId()).thenReturn(nid);
+    when(container.getNodeHttpAddress()).thenReturn("localhost:0");
+
+    taImpl.handle(new TaskAttemptEvent(attemptId,
+        TaskAttemptEventType.TA_SCHEDULE));
+    taImpl.handle(new TaskAttemptContainerAssignedEvent(attemptId,
+        container, mock(Map.class)));
+    taImpl.handle(new TaskAttemptContainerLaunchedEvent(attemptId, 0));
+    return taImpl;
   }
 
   public static class MockEventHandler implements EventHandler {
