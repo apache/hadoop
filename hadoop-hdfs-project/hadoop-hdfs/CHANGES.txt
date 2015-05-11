@@ -733,6 +733,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8097. TestFileTruncate is failing intermittently. (Rakesh R via
     Arpit Agarwal)
 
+    HDFS-8351. Remove namenode -finalize option from document. (aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
