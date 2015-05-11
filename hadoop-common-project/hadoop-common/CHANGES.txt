@@ -656,6 +656,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11928. Test-patch check for @author tags incorrectly flags
     removal of @author tags (Kengo Seki via aw)
 
+    HADOOP-11951. test-patch should give better info about failures to handle
+    dev-support updates without resetrepo option (Sean Busbey via aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

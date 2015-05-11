@@ -1446,6 +1446,14 @@ function check_reexec
   fi
 
   big_console_header "dev-support patch detected"
+
+  if [[ ${RESETREPO} == false ]]; then
+    ((RESULT = RESULT + 1))
+    hadoop_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
+    add_jira_table -1 dev-support "Couldn't test dev-support changes because we aren't configured to destructively change the working directory."
+    return
+  fi
+
   printf "\n\nRe-executing against patched versions to test.\n\n"
 
   apply_patch_file
