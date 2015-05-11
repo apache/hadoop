@@ -1495,7 +1495,7 @@ function check_author
     return 0
   fi
 
-  authorTags=$("${GREP}" -c -i '@author' "${PATCH_DIR}/patch")
+  authorTags=$("${GREP}" -c -i '^[^-].*@author' "${PATCH_DIR}/patch")
   echo "There appear to be ${authorTags} @author tags in the patch."
   if [[ ${authorTags} != 0 ]] ; then
     add_jira_table -1 @author \
