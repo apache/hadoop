@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * ReportBadBlockAction is an instruction issued by {{BPOfferService}} to
@@ -59,6 +60,9 @@ public class ReportBadBlockAction implements BPServiceActorAction {
 
     try {
       bpNamenode.reportBadBlocks(locatedBlock);
+    } catch (RemoteException re) {
+      DataNode.LOG.info("reportBadBlock encountered RemoteException for "
+          + "block:  " + block , re);
     } catch (IOException e) {
       throw new BPServiceActorActionException("Failed to report bad block "
           + block + " to namenode: ");
