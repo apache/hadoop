@@ -1448,9 +1448,6 @@ public abstract class Server {
     }
     
     private void doSaslReply(Message message) throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sending sasl message "+message);
-      }
       setupResponse(saslResponse, saslCall,
           RpcStatusProto.SUCCESS, null,
           new RpcResponseWrapper(message), null, null);
