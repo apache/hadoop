@@ -445,6 +445,21 @@ public interface MRJobConfig {
     MR_PREFIX + "client.max-retries";
   public static final int DEFAULT_MR_CLIENT_MAX_RETRIES = 3;
   
+  /**
+   * How many times to retry jobclient calls (via getjob)
+   */
+  public static final String MR_CLIENT_JOB_MAX_RETRIES =
+      MR_PREFIX + "client.job.max-retries";
+  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 0;
+
+  /**
+   * How long to wait between jobclient retries on failure
+   */
+  public static final String MR_CLIENT_JOB_RETRY_INTERVAL =
+      MR_PREFIX + "client.job.retry-interval";
+  public static final long DEFAULT_MR_CLIENT_JOB_RETRY_INTERVAL =
+      2000;
+
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";
