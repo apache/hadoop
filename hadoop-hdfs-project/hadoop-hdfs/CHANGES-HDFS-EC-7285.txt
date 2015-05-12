@@ -195,3 +195,6 @@
 
     HDFS-8355. Erasure Coding: Refactor BlockInfo and BlockInfoUnderConstruction.
     (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-7678. Erasure coding: DFSInputStream with decode functionality (pread).
+    (Zhe Zhang)

@@ -18,10 +18,13 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -319,6 +322,52 @@ public class TestWriteReadStripedFile {
       Assert.assertEquals("The length of file should be the same to write size",
           writeBytes, readLen);
       Assert.assertArrayEquals(bytes, result.array());
+    }
+  }
+
+  @Test
+  public void testWritePreadWithDNFailure() throws IOException {
+    final int failedDNIdx = 2;
+    final int length = cellSize * (dataBlocks + 2);
+    Path testPath = new Path("/foo");
+    final byte[] bytes = generateBytes(length);
+    DFSTestUtil.writeFile(fs, testPath, new String(bytes));
+
+    // shut down the DN that holds the last internal data block
+    BlockLocation[] locs = fs.getFileBlockLocations(testPath, cellSize * 5,
+        cellSize);
+    String name = (locs[0].getNames())[failedDNIdx];
+    for (DataNode dn : cluster.getDataNodes()) {
+      int port = dn.getXferPort();
+      if (name.contains(Integer.toString(port))) {
+        dn.shutdown();
+        break;
+      }
+    }
+
+    // pread
+    int startOffsetInFile = cellSize * 5;
+    try (FSDataInputStream fsdis = fs.open(testPath)) {
+      byte[] buf = new byte[length];
+      int readLen = fsdis.read(startOffsetInFile, buf, 0, buf.length);
+      Assert.assertEquals("The length of file should be the same to write size",
+          length - startOffsetInFile, readLen);
+
+      RSRawDecoder rsRawDecoder = new RSRawDecoder();
+      rsRawDecoder.initialize(dataBlocks, parityBlocks, 1);
+      byte[] expected = new byte[readLen];
+      for (int i = startOffsetInFile; i < length; i++) {
+        //TODO: workaround (filling fixed bytes), to remove after HADOOP-11938
+        if ((i / cellSize) % dataBlocks == failedDNIdx) {
+          expected[i - startOffsetInFile] = (byte)7;
+        } else {
+          expected[i - startOffsetInFile] = getByte(i);
+        }
+      }
+      for (int i = startOffsetInFile; i < length; i++) {
+        Assert.assertEquals("Byte at " + i + " should be the same",
+            expected[i - startOffsetInFile], buf[i - startOffsetInFile]);
+      }
     }
   }
 }

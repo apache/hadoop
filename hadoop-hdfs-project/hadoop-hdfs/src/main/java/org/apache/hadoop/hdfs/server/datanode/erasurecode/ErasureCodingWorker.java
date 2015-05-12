@@ -67,7 +67,7 @@ import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripedReadResult;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
@@ -462,10 +462,10 @@ public final class ErasureCodingWorker {
       int nsuccess = 0;
       while (!futures.isEmpty()) {
         try {
-          StripedReadResult result = 
+          StripingChunkReadResult result =
               StripedBlockUtil.getNextCompletedStripedRead(
                   readService, futures, STRIPED_READ_THRESHOLD_MILLIS);
-          if (result.state == StripedReadResult.SUCCESSFUL) {
+          if (result.state == StripingChunkReadResult.SUCCESSFUL) {
             success[nsuccess++] = result.index;
             if (nsuccess >= dataBlkNum) {
               // cancel remaining reads if we read successfully from minimum
@@ -474,14 +474,14 @@ public final class ErasureCodingWorker {
               futures.clear();
               break;
             }
-          } else if (result.state == StripedReadResult.FAILED) {
+          } else if (result.state == StripingChunkReadResult.FAILED) {
             // If read failed for some source, we should not use it anymore 
             // and schedule read from a new source.
             StripedReader failedReader = stripedReaders.get(result.index);
             closeBlockReader(failedReader.blockReader);
             failedReader.blockReader = null;
             scheduleNewRead(used);
-          } else if (result.state == StripedReadResult.TIMEOUT) {
+          } else if (result.state == StripingChunkReadResult.TIMEOUT) {
             // If timeout, we also schedule a new read.
             scheduleNewRead(used);
           }
