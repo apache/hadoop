@@ -40,7 +40,7 @@ import org.junit.Test;
 /**
  * This class tests the replication handling/calculation of snapshots. In
  * particular, {@link INodeFile#getFileReplication()} and
- * {@link INodeFile#getBlockReplication()} are tested to make sure
+ * {@link INodeFile#getPreferredBlockReplication()} are tested to make sure
  * the number of replication is calculated correctly with/without snapshots.
  */
 public class TestSnapshotReplication {
@@ -81,7 +81,7 @@ public class TestSnapshotReplication {
   /**
    * Check the replication of a given file. We test both
    * {@link INodeFile#getFileReplication()} and
-   * {@link INodeFile#getBlockReplication()}.
+   * {@link INodeFile#getPreferredBlockReplication()}.
    *
    * @param file The given file
    * @param replication The expected replication number
@@ -95,10 +95,11 @@ public class TestSnapshotReplication {
     // INodeFile#getFileReplication().
     short fileReplication = hdfs.getFileStatus(file1).getReplication();
     assertEquals(replication, fileReplication);
-    // Check the correctness of getBlockReplication()
+    // Check the correctness of getPreferredBlockReplication()
     INode inode = fsdir.getINode(file1.toString());
     assertTrue(inode instanceof INodeFile);
-    assertEquals(blockReplication, ((INodeFile) inode).getBlockReplication());
+    assertEquals(blockReplication,
+        ((INodeFile) inode).getPreferredBlockReplication());
   }
   
   /**
@@ -137,16 +138,19 @@ public class TestSnapshotReplication {
    */
   private void checkSnapshotFileReplication(Path currentFile,
       Map<Path, Short> snapshotRepMap, short expectedBlockRep) throws Exception {
-    // First check the getBlockReplication for the INode of the currentFile
+    // First check the getPreferredBlockReplication for the INode of
+    // the currentFile
     final INodeFile inodeOfCurrentFile = getINodeFile(currentFile);
-    assertEquals(expectedBlockRep, inodeOfCurrentFile.getBlockReplication());
+    assertEquals(expectedBlockRep,
+        inodeOfCurrentFile.getPreferredBlockReplication());
     // Then check replication for every snapshot
     for (Path ss : snapshotRepMap.keySet()) {
       final INodesInPath iip = fsdir.getINodesInPath(ss.toString(), true);
       final INodeFile ssInode = iip.getLastINode().asFile();
       // The replication number derived from the
-      // INodeFileWithLink#getBlockReplication should always == expectedBlockRep
-      assertEquals(expectedBlockRep, ssInode.getBlockReplication());
+      // INodeFileWithLink#getPreferredBlockReplication should
+      // always == expectedBlockRep
+      assertEquals(expectedBlockRep, ssInode.getPreferredBlockReplication());
       // Also check the number derived from INodeFile#getFileReplication
       assertEquals(snapshotRepMap.get(ss).shortValue(),
           ssInode.getFileReplication(iip.getPathSnapshotId()));
@@ -218,8 +222,9 @@ public class TestSnapshotReplication {
     for (Path ss : snapshotRepMap.keySet()) {
       final INodeFile ssInode = getINodeFile(ss);
       // The replication number derived from the
-      // INodeFileWithLink#getBlockReplication should always == expectedBlockRep
-      assertEquals(REPLICATION, ssInode.getBlockReplication());
+      // INodeFileWithLink#getPreferredBlockReplication should
+      // always == expectedBlockRep
+      assertEquals(REPLICATION, ssInode.getPreferredBlockReplication());
       // Also check the number derived from INodeFile#getFileReplication
       assertEquals(snapshotRepMap.get(ss).shortValue(),
           ssInode.getFileReplication());

@@ -251,7 +251,7 @@ public class DecommissionManager {
   private boolean isSufficientlyReplicated(BlockInfoContiguous block, 
       BlockCollection bc,
       NumberReplicas numberReplicas) {
-    final int numExpected = bc.getBlockReplication();
+    final int numExpected = bc.getPreferredBlockReplication();
     final int numLive = numberReplicas.liveReplicas();
     if (!blockManager.isNeededReplication(block, numExpected, numLive)) {
       // Block doesn't need replication. Skip.
@@ -288,7 +288,7 @@ public class DecommissionManager {
       DatanodeDescriptor srcNode, NumberReplicas num,
       Iterable<DatanodeStorageInfo> storages) {
     int curReplicas = num.liveReplicas();
-    int curExpectedReplicas = bc.getBlockReplication();
+    int curExpectedReplicas = bc.getPreferredBlockReplication();
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
@@ -564,8 +564,8 @@ public class DecommissionManager {
 
         // Schedule under-replicated blocks for replication if not already
         // pending
-        if (blockManager.isNeededReplication(block, bc.getBlockReplication(),
-            liveReplicas)) {
+        if (blockManager.isNeededReplication(block,
+            bc.getPreferredBlockReplication(), liveReplicas)) {
           if (!blockManager.neededReplications.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
               namesystem.isPopulatingReplQueues()) {
@@ -573,7 +573,7 @@ public class DecommissionManager {
             blockManager.neededReplications.add(block,
                 curReplicas,
                 num.decommissionedAndDecommissioning(),
-                bc.getBlockReplication());
+                bc.getPreferredBlockReplication());
           }
         }
 

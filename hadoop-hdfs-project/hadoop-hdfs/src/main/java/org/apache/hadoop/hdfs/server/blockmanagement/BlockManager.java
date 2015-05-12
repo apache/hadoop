@@ -1173,7 +1173,7 @@ public class BlockManager {
       return;
     } 
     short expectedReplicas =
-        b.corrupted.getBlockCollection().getBlockReplication();
+        b.corrupted.getBlockCollection().getPreferredBlockReplication();
 
     // Add replica to the data-node if it is not already there
     if (storageInfo != null) {
@@ -1348,7 +1348,7 @@ public class BlockManager {
               continue;
             }
 
-            requiredReplication = bc.getBlockReplication();
+            requiredReplication = bc.getPreferredBlockReplication();
 
             // get a source data-node
             containingNodes = new ArrayList<DatanodeDescriptor>();
@@ -1432,7 +1432,7 @@ public class BlockManager {
             rw.targets = null;
             continue;
           }
-          requiredReplication = bc.getBlockReplication();
+          requiredReplication = bc.getPreferredBlockReplication();
 
           // do not schedule more if enough replicas is already pending
           NumberReplicas numReplicas = countNodes(block);
@@ -2584,7 +2584,7 @@ public class BlockManager {
     }
 
     // handle underReplication/overReplication
-    short fileReplication = bc.getBlockReplication();
+    short fileReplication = bc.getPreferredBlockReplication();
     if (!isNeededReplication(storedBlock, fileReplication, numCurrentReplica)) {
       neededReplications.remove(storedBlock, numCurrentReplica,
           num.decommissionedAndDecommissioning(), fileReplication);
@@ -2815,7 +2815,7 @@ public class BlockManager {
     }
     // calculate current replication
     short expectedReplication =
-        block.getBlockCollection().getBlockReplication();
+        block.getBlockCollection().getPreferredBlockReplication();
     NumberReplicas num = countNodes(block);
     int numCurrentReplica = num.liveReplicas();
     // add to under-replicated queue if need to be
@@ -3316,7 +3316,7 @@ public class BlockManager {
     while(it.hasNext()) {
       final Block block = it.next();
       BlockCollection bc = blocksMap.getBlockCollection(block);
-      short expectedReplication = bc.getBlockReplication();
+      short expectedReplication = bc.getPreferredBlockReplication();
       NumberReplicas num = countNodes(block);
       int numCurrentReplica = num.liveReplicas();
       if (numCurrentReplica > expectedReplication) {
@@ -3430,7 +3430,7 @@ public class BlockManager {
    * process it as an over replicated block.
    */
   public void checkReplication(BlockCollection bc) {
-    final short expected = bc.getBlockReplication();
+    final short expected = bc.getPreferredBlockReplication();
     for (Block block : bc.getBlocks()) {
       final NumberReplicas n = countNodes(block);
       if (isNeededReplication(block, expected, n.liveReplicas())) { 
@@ -3469,7 +3469,7 @@ public class BlockManager {
    */
   private int getReplication(Block block) {
     final BlockCollection bc = blocksMap.getBlockCollection(block);
-    return bc == null? 0: bc.getBlockReplication();
+    return bc == null? 0: bc.getPreferredBlockReplication();
   }
 
 

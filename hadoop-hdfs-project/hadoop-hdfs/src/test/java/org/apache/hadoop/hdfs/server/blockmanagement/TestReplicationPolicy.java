@@ -1171,7 +1171,7 @@ public class TestReplicationPolicy {
     // queue.
     BlockInfoContiguousUnderConstruction info = new BlockInfoContiguousUnderConstruction(block1, (short) 1);
     BlockCollection bc = mock(BlockCollection.class);
-    when(bc.getBlockReplication()).thenReturn((short)1);
+    when(bc.getPreferredBlockReplication()).thenReturn((short)1);
     bm.addBlockCollection(info, bc);
 
     // Adding this block will increase its current replication, and that will
@@ -1215,7 +1215,7 @@ public class TestReplicationPolicy {
     final BlockCollection mbc = mock(BlockCollection.class);
     when(mbc.getLastBlock()).thenReturn(info);
     when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);
-    when(mbc.getBlockReplication()).thenReturn((short)1);
+    when(mbc.getPreferredBlockReplication()).thenReturn((short)1);
     when(mbc.isUnderConstruction()).thenReturn(true);
     ContentSummary cs = mock(ContentSummary.class);
     when(cs.getLength()).thenReturn((long)1);

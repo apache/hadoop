@@ -257,15 +257,18 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       NumberReplicas numberReplicas= bm.countNodes(block);
       out.println("Block Id: " + blockId);
       out.println("Block belongs to: "+iNode.getFullPathName());
-      out.println("No. of Expected Replica: " + bc.getBlockReplication());
+      out.println("No. of Expected Replica: " +
+          bc.getPreferredBlockReplication());
       out.println("No. of live Replica: " + numberReplicas.liveReplicas());
       out.println("No. of excess Replica: " + numberReplicas.excessReplicas());
-      out.println("No. of stale Replica: " + numberReplicas.replicasOnStaleNodes());
+      out.println("No. of stale Replica: " +
+          numberReplicas.replicasOnStaleNodes());
       out.println("No. of decommissioned Replica: "
           + numberReplicas.decommissioned());
       out.println("No. of decommissioning Replica: "
           + numberReplicas.decommissioning());
-      out.println("No. of corrupted Replica: " + numberReplicas.corruptReplicas());
+      out.println("No. of corrupted Replica: " +
+          numberReplicas.corruptReplicas());
       //record datanodes that have corrupted block replica
       Collection<DatanodeDescriptor> corruptionRecord = null;
       if (bm.getCorruptReplicas(block) != null) {

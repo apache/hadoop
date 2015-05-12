@@ -167,9 +167,9 @@ class FSDirConcatOp {
   private static QuotaCounts computeQuotaDeltas(FSDirectory fsd,
       INodeFile target, INodeFile[] srcList) {
     QuotaCounts deltas = new QuotaCounts.Builder().build();
-    final short targetRepl = target.getBlockReplication();
+    final short targetRepl = target.getPreferredBlockReplication();
     for (INodeFile src : srcList) {
-      short srcRepl = src.getBlockReplication();
+      short srcRepl = src.getPreferredBlockReplication();
       long fileSize = src.computeFileSize();
       if (targetRepl != srcRepl) {
         deltas.addStorageSpace(fileSize * (targetRepl - srcRepl));

@@ -2106,7 +2106,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Add new truncateBlock into blocksMap and
       // use oldBlock as a source for copy-on-truncate recovery
       truncatedBlockUC = new BlockInfoContiguousUnderConstruction(newBlock,
-          file.getBlockReplication());
+          file.getPreferredBlockReplication());
       truncatedBlockUC.setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
       truncatedBlockUC.setTruncateBlock(oldBlock);
       file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
@@ -2807,7 +2807,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final BlockInfoContiguous lastBlock = file.getLastBlock();
     if (lastBlock != null) {
       final long diff = file.getPreferredBlockSize() - lastBlock.getNumBytes();
-      final short repl = file.getBlockReplication();
+      final short repl = file.getPreferredBlockReplication();
       delta.addStorageSpace(diff * repl);
       final BlockStoragePolicy policy = dir.getBlockStoragePolicySuite()
           .getPolicy(file.getStoragePolicyID());

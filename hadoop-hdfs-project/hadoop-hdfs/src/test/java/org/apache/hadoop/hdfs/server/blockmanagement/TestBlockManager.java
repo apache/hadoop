@@ -433,7 +433,7 @@ public class TestBlockManager {
   
   private BlockInfoContiguous addBlockOnNodes(long blockId, List<DatanodeDescriptor> nodes) {
     BlockCollection bc = Mockito.mock(BlockCollection.class);
-    Mockito.doReturn((short)3).when(bc).getBlockReplication();
+    Mockito.doReturn((short)3).when(bc).getPreferredBlockReplication();
     BlockInfoContiguous blockInfo = blockOnNodes(blockId, nodes);
 
     bm.blocksMap.addBlockCollection(blockInfo, bc);
@@ -740,7 +740,7 @@ public class TestBlockManager {
     BlockInfoContiguous blockInfo =
         new BlockInfoContiguous(block, (short) 3);
     BlockCollection bc = Mockito.mock(BlockCollection.class);
-    Mockito.doReturn((short) 3).when(bc).getBlockReplication();
+    Mockito.doReturn((short) 3).when(bc).getPreferredBlockReplication();
     bm.blocksMap.addBlockCollection(blockInfo, bc);
     return blockInfo;
   }
@@ -750,7 +750,7 @@ public class TestBlockManager {
     BlockInfoContiguousUnderConstruction blockInfo =
         new BlockInfoContiguousUnderConstruction(block, (short) 3);
     BlockCollection bc = Mockito.mock(BlockCollection.class);
-    Mockito.doReturn((short) 3).when(bc).getBlockReplication();
+    Mockito.doReturn((short) 3).when(bc).getPreferredBlockReplication();
     bm.blocksMap.addBlockCollection(blockInfo, bc);
     return blockInfo;
   }
