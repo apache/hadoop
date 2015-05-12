@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
@@ -44,6 +45,11 @@ public class TestStripedINodeFile {
 
   private static final PermissionStatus perm = new PermissionStatus(
       "userName", null, FsPermission.getDefault());
+
+  private final BlockStoragePolicySuite defaultSuite =
+      BlockStoragePolicySuite.createDefaultSuite();
+  private final BlockStoragePolicy defaultPolicy =
+      defaultSuite.getDefaultPolicy();
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
@@ -109,8 +115,8 @@ public class TestStripedINodeFile {
     //  a. <Cell Size> * (<Num Stripes> - 1) * <Total Block Num> = 0
     //  b. <Num Bytes> % <Num Bytes per Stripes> = 1
     //  c. <Last Stripe Length> * <Parity Block Num> = 1 * 3
-    assertEquals(4, inf.storagespaceConsumedWithStriped(null));
-    assertEquals(4, inf.storagespaceConsumed(null));
+    assertEquals(4, inf.storagespaceConsumedWithStriped().getStorageSpace());
+    assertEquals(4, inf.storagespaceConsumed(defaultPolicy).getStorageSpace());
   }
 
   @Test
@@ -134,8 +140,8 @@ public class TestStripedINodeFile {
     inf.addBlock(blockInfoStriped1);
     inf.addBlock(blockInfoStriped2);
     // This is the double size of one block in above case.
-    assertEquals(4 * 2, inf.storagespaceConsumedWithStriped(null));
-    assertEquals(4 * 2, inf.storagespaceConsumed(null));
+    assertEquals(4 * 2, inf.storagespaceConsumedWithStriped().getStorageSpace());
+    assertEquals(4 * 2, inf.storagespaceConsumed(defaultPolicy).getStorageSpace());
   }
 
   @Test
@@ -188,10 +194,8 @@ public class TestStripedINodeFile {
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
 
-    BlockStoragePolicySuite suite =
-        BlockStoragePolicySuite.createDefaultSuite();
     QuotaCounts counts =
-        inf.computeQuotaUsageWithStriped(suite,
+        inf.computeQuotaUsageWithStriped(defaultPolicy,
             new QuotaCounts.Builder().build());
     assertEquals(1, counts.getNameSpace());
     // The total consumed space is the sum of
@@ -215,10 +219,8 @@ public class TestStripedINodeFile {
     bInfoStripedUC.setNumBytes(100);
     inf.addBlock(bInfoStripedUC);
 
-    BlockStoragePolicySuite suite
-        = BlockStoragePolicySuite.createDefaultSuite();
     QuotaCounts counts
-        = inf.computeQuotaUsageWithStriped(suite,
+        = inf.computeQuotaUsageWithStriped(defaultPolicy,
               new QuotaCounts.Builder().build());
     assertEquals(1024, inf.getPreferredBlockSize());
     assertEquals(1, counts.getNameSpace());

@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 
 /**
  * Feature for file with striped blocks
@@ -78,20 +79,23 @@ class FileWithStripedBlocksFeature implements INode.Feature {
     }
   }
 
-  boolean removeLastBlock(Block oldblock) {
+  BlockInfoStripedUnderConstruction removeLastBlock(
+      Block oldblock) {
     if (blocks == null || blocks.length == 0) {
-      return false;
+      return null;
     }
     int newSize = blocks.length - 1;
     if (!blocks[newSize].equals(oldblock)) {
-      return false;
+      return null;
     }
 
+    BlockInfoStripedUnderConstruction uc =
+        (BlockInfoStripedUnderConstruction) blocks[newSize];
     //copy to a new list
     BlockInfoStriped[] newlist = new BlockInfoStriped[newSize];
     System.arraycopy(blocks, 0, newlist, 0, newSize);
     setBlocks(newlist);
-    return true;
+    return uc;
   }
 
   void truncateStripedBlocks(int n) {

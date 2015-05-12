@@ -198,3 +198,6 @@
 
     HDFS-7678. Erasure coding: DFSInputStream with decode functionality (pread).
     (Zhe Zhang)
+
+    HDFS-8372. Erasure coding: compute storage type quotas for striped files,
+    to be consistent with HDFS-8327. (Zhe Zhang via jing9)
