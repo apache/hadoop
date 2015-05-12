@@ -385,9 +385,6 @@ public class SaslRpcClient {
       }
       RpcSaslProto saslMessage =
           RpcSaslProto.parseFrom(responseWrapper.getMessageBytes());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received SASL message "+saslMessage);
-      }
       // handle sasl negotiation process
       RpcSaslProto.Builder response = null;
       switch (saslMessage.getState()) {

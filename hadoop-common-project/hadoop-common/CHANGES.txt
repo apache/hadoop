@@ -668,6 +668,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11947. test-patch should return early from determine-issue when
     run in jenkins mode. (Sean Busbey via aw)
 
+    HADOOP-11962. Sasl message with MD5 challenge text shouldn't be LOG out
+    even in debug level. (Junping Du via wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
