@@ -38,6 +38,10 @@ Release 2.6.1 - UNRELEASED
     MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
     (Gera Shegalov via jlowe)
 
+    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
+    copySucceeded() in one thread and copyFailed() in another thread on the
+    same host. (Junping Du via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
