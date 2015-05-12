@@ -411,6 +411,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5465. Tasks are often killed before they exit on their own
     (Ming Ma via jlowe)
 
+    MAPREDUCE-6360. TestMapreduceConfigFields is placed in wrong dir, 
+    introducing compile error (Arshad Mohammad via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
