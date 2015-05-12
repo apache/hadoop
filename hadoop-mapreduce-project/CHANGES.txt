@@ -414,6 +414,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6360. TestMapreduceConfigFields is placed in wrong dir, 
     introducing compile error (Arshad Mohammad via vinayakumarb)
 
+    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
+    copySucceeded() in one thread and copyFailed() in another thread on the
+    same host. (Junping Du via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
