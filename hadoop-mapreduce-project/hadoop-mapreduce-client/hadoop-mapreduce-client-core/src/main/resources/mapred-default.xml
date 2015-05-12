@@ -1391,6 +1391,23 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.client.job.max-retries</name>
+  <value>0</value>
+  <description>The number of retries the client will make for getJob and
+  dependent calls.  The default is 0 as this is generally only needed for
+  non-HDFS DFS where additional, high level retries are required to avoid
+  spurious failures during the getJob call.  30 is a good value for
+  WASB</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.client.job.retry-interval</name>
+  <value>2000</value>
+  <description>The delay between getJob retries in ms for retries configured
+  with yarn.app.mapreduce.client.job.max-retries.</description>
+</property>
+
+<property>
   <description>CLASSPATH for MR applications. A comma-separated list
   of CLASSPATH entries. If mapreduce.application.framework is set then this
   must specify the appropriate classpath for that archive, and the name of

@@ -328,6 +328,7 @@ Release 2.8.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     MAPREDUCE-6314. TestPipeApplication fails on trunk.
     (Varun Vasudev via harsh)
 
@@ -449,6 +450,10 @@ Release 2.7.1 - UNRELEASED
 
     MAPREDUCE-6259. IllegalArgumentException due to missing job submit time
     (zhihai xu via jlowe)
+
+    MAPREDUCE-6251. Added a new config for JobClient to retry JobStatus calls so
+    that they don't fail on history-server backed by DFSes with not so strong
+    guarantees. (Craig Welch via vinodkv)
 
 Release 2.7.0 - 2015-04-20
 
