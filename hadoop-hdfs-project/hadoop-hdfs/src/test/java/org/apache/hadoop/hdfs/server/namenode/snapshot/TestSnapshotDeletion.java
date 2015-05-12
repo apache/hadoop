@@ -843,12 +843,17 @@ public class TestSnapshotDeletion {
     }
     
     INodeFile nodeFile13 = (INodeFile) fsdir.getINode(file13.toString());
-    assertEquals(REPLICATION_1, nodeFile13.getPreferredBlockReplication());
+    for (BlockInfoContiguous b : nodeFile13.getBlocks()) {
+      assertEquals(REPLICATION_1, b.getReplication());
+    }
+
     TestSnapshotBlocksMap.assertBlockCollection(file13.toString(), 1, fsdir,
         blockmanager);
     
     INodeFile nodeFile12 = (INodeFile) fsdir.getINode(file12_s1.toString());
-    assertEquals(REPLICATION_1, nodeFile12.getPreferredBlockReplication());
+    for (BlockInfoContiguous b : nodeFile12.getBlocks()) {
+      assertEquals(REPLICATION_1, b.getReplication());
+    }
   }
   
   /** Test deleting snapshots with modification on the metadata of directory */ 

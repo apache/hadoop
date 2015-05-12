@@ -55,12 +55,6 @@ public interface BlockCollection {
   public long getPreferredBlockSize();
 
   /**
-   * Get block replication for the collection 
-   * @return block replication value
-   */
-  public short getPreferredBlockReplication();
-
-  /** 
    * @return the storage policy ID.
    */
   public byte getStoragePolicyID();

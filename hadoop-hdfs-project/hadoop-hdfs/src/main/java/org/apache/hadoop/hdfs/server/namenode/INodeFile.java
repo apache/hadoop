@@ -354,20 +354,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileReplication(CURRENT_STATE_ID);
   }
 
-  @Override // BlockCollection
-  public short getPreferredBlockReplication() {
-    short max = getFileReplication(CURRENT_STATE_ID);
-    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
-    if (sf != null) {
-      short maxInSnapshot = sf.getMaxBlockRepInDiffs();
-      if (sf.isCurrentFileDeleted()) {
-        return maxInSnapshot;
-      }
-      max = maxInSnapshot > max ? maxInSnapshot : max;
-    }
-    return max;
-  }
-
   /** Set the replication factor of this file. */
   public final void setFileReplication(short replication) {
     header = HeaderFormat.REPLICATION.BITS.combine(replication, header);
@@ -404,7 +390,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private void setStoragePolicyID(byte storagePolicyId) {
     header = HeaderFormat.STORAGE_POLICY_ID.BITS.combine(storagePolicyId,
-        header);
+                                                         header);
   }
 
   public final void setStoragePolicyID(byte storagePolicyId,
@@ -851,8 +837,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
       delta.addStorageSpace(-truncatedBytes * bi.getReplication());
       if (bsps != null) {
-        List<StorageType> types = bsps.chooseStorageTypes(
-            getPreferredBlockReplication());
+        List<StorageType> types = bsps.chooseStorageTypes(bi.getReplication());
         for (StorageType t : types) {
           if (t.supportTypeQuota()) {
             delta.addTypeSpace(t, -truncatedBytes);

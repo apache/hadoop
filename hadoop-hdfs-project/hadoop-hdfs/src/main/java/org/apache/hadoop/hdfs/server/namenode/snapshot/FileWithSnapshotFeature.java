@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
+import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -150,23 +153,34 @@ public class FileWithSnapshotFeature implements INode.Feature {
       bsp = reclaimContext.storagePolicySuite().getPolicy(file.getStoragePolicyID());
     }
 
-    QuotaCounts oldCounts = file.storagespaceConsumed(null);
+    QuotaCounts oldCounts;
     if (removed.snapshotINode != null) {
-      short replication = removed.snapshotINode.getFileReplication();
-      short currentRepl = file.getPreferredBlockReplication();
-      if (replication > currentRepl) {
-        long oldFileSizeNoRep = currentRepl == 0
-            ? file.computeFileSize(true, true)
-            : oldCounts.getStorageSpace() /
-            file.getPreferredBlockReplication();
-        long oldStoragespace = oldFileSizeNoRep * replication;
-        oldCounts.setStorageSpace(oldStoragespace);
+      // Assuming the replication factor of blocks have been changed -- here
+      // we recompute the quota as if the old inode is around
+      INodeFile removedINode = (INodeFile) removed.getSnapshotINode();
+      HashSet<BlockInfoContiguous> oldBlocks = new HashSet<>();
+      if (removedINode.getBlocks() != null) {
+        oldBlocks.addAll(Arrays.asList(removedINode.getBlocks()));
+      }
 
+      oldCounts = new QuotaCounts.Builder().build();
+      BlockInfoContiguous[] blocks = file.getBlocks() == null ? new
+          BlockInfoContiguous[0] : file.getBlocks();
+      short oldReplication = removed.snapshotINode.getFileReplication();
+      for (BlockInfoContiguous b: blocks) {
+        short replication = b.getReplication();
+        if (oldBlocks.contains(b) && oldReplication > b.getReplication()) {
+          replication = b.getReplication();
+        }
+        long blockSize = b.isComplete() ? b.getNumBytes() : file
+            .getPreferredBlockSize();
+
+        oldCounts.addStorageSpace(blockSize * replication);
         if (bsp != null) {
           List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
           for (StorageType t : oldTypeChosen) {
             if (t.supportTypeQuota()) {
-              oldCounts.addTypeSpace(t, oldFileSizeNoRep);
+              oldCounts.addTypeSpace(t, blockSize);
             }
           }
         }
@@ -176,6 +190,8 @@ public class FileWithSnapshotFeature implements INode.Feature {
       if (aclFeature != null) {
         AclStorage.removeAclFeature(aclFeature);
       }
+    } else {
+      oldCounts = file.storagespaceConsumed(null);
     }
 
     getDiffs().combineAndCollectSnapshotBlocks(reclaimContext, file, removed);
