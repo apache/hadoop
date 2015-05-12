@@ -122,21 +122,44 @@
     </dependency>
 
     <dependency>
-    <groupId>org.apache.phoenix</groupId>
-    <artifactId>phoenix-core</artifactId>
-    <version>4.3.0</version>
-    <exclusions>
-      <!-- Exclude jline from here -->
-      <exclusion>
-        <artifactId>jline</artifactId>
-        <groupId>jline</groupId>
-      </exclusion>
-    </exclusions>
+      <groupId>org.apache.phoenix</groupId>
+      <artifactId>phoenix-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
     </dependency>
+    <!-- for unit tests only -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.phoenix</groupId>
+      <artifactId>phoenix-core</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-it</artifactId>
+      <scope>test</scope>
+      <classifier>tests</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-testing-util</artifactId>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
+
   </dependencies>
 
   <build>
