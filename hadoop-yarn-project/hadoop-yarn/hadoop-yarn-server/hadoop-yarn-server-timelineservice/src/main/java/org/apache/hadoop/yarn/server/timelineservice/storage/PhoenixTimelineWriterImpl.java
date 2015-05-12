@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 
@@ -43,12 +44,20 @@ import java.sql.Statement;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 @Private
 @Unstable
 public class PhoenixTimelineWriterImpl extends AbstractService
     implements TimelineWriter {
+
+  public static final String TIMELINE_SERVICE_PHOENIX_STORAGE_CONN_STR
+      = YarnConfiguration.TIMELINE_SERVICE_PREFIX
+          + "writer.phoenix.connectionString";
+
+  public static final String TIMELINE_SERVICE_PHEONIX_STORAGE_CONN_STR_DEFAULT
+      = "jdbc:phoenix:localhost:2181:/hbase";
 
   private static final Log LOG
       = LogFactory.getLog(PhoenixTimelineWriterImpl.class);
@@ -90,7 +99,10 @@ public class PhoenixTimelineWriterImpl extends AbstractService
   private static final String PHOENIX_STORAGE_SEPARATOR = ";";
 
   /** Connection string to the deployed Phoenix cluster */
-  static final String CONN_STRING = "jdbc:phoenix:localhost:2181:/hbase";
+  @VisibleForTesting
+  String connString = null;
+  @VisibleForTesting
+  Properties connProperties = new Properties();
 
   PhoenixTimelineWriterImpl() {
     super((PhoenixTimelineWriterImpl.class.getName()));
@@ -98,6 +110,10 @@ public class PhoenixTimelineWriterImpl extends AbstractService
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    // so check it here and only read in the config if it's not overridden.
+    connString =
+        conf.get(TIMELINE_SERVICE_PHOENIX_STORAGE_CONN_STR,
+        TIMELINE_SERVICE_PHEONIX_STORAGE_CONN_STR_DEFAULT);
     createTables();
     super.init(conf);
   }
@@ -174,11 +190,11 @@ public class PhoenixTimelineWriterImpl extends AbstractService
   // Utility functions
   @Private
   @VisibleForTesting
-  static Connection getConnection() throws IOException {
+  Connection getConnection() throws IOException {
     Connection conn;
     try {
       Class.forName(DRIVER_CLASS_NAME);
-      conn = DriverManager.getConnection(CONN_STRING);
+      conn = DriverManager.getConnection(connString, connProperties);
       conn.setAutoCommit(false);
     } catch (SQLException se) {
       LOG.error("Failed to connect to phoenix server! "
