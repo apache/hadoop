@@ -68,7 +68,7 @@ public interface LaunchableService extends Service {
    * <p>
    * The return value becomes the exit code of the launched process.
    * <p>
-   * If an exception is raised, the policy is
+   * If an exception is raised, the policy is:
    * <ol>
    *   <li>Any subset of {@link org.apache.hadoop.util.ExitUtil.ExitException}:
    *   the exception is passed up unmodified
@@ -88,5 +88,5 @@ public interface LaunchableService extends Service {
    * @throws Exception any exception to report. If it provides an exit code
    * this is used in a wrapping exception.
    */
-  int execute() throws Exception ;
+  int execute() throws Exception;
 }

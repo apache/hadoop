@@ -36,8 +36,6 @@ import java.lang.Thread.UncaughtExceptionHandler;
  * was raised; the behavior on a standard Exception, raised outside 
  * process shutdown, is simply to log it. 
  *
- *
- *
  * (Based on the class YarnUncaughtExceptionHandler)
  */
 @SuppressWarnings("UseOfSystemOutOrSystemErr")

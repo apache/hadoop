@@ -51,6 +51,9 @@ public final class IrqHandler implements SignalHandler {
    */
   public static final String SIGTERM = "TERM";
 
+  /**
+   * Signal name
+   */
   private final String name;
 
   /**
@@ -59,6 +62,10 @@ public final class IrqHandler implements SignalHandler {
   private final Interrupted handler;
 
   private final AtomicInteger signalCount = new AtomicInteger(0);
+
+  /**
+   * stored signal
+   */
   private Signal signal;
 
   /**

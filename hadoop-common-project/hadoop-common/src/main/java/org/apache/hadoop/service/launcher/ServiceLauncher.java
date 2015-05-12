@@ -29,7 +29,6 @@ import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -418,7 +417,7 @@ public class ServiceLauncher<S extends Service>
       launchableService = (LaunchableService) service;
       if (launchableService.isInState(Service.STATE.INITED)) {
         LOG.warn("LaunchedService {}"
-                 + " initialized in constructor before CLI arguments passed in",
+           + " initialized in constructor before CLI arguments passed in",
             serviceName);
       }
       Configuration newconf = launchableService.bindArgs(configuration, processedArgs);
@@ -533,7 +532,7 @@ public class ServiceLauncher<S extends Service>
       // the exception provides a status code -extract it
       exitCode = ((ExitCodeProvider) thrown).getExitCode();
       message = thrown.getMessage();
-      if (message==null) {
+      if (message == null) {
         // some exceptions do not have a message; fall back
         // to the string value.
         message = thrown.toString();
@@ -589,6 +588,7 @@ public class ServiceLauncher<S extends Service>
    */
   @Override
   public void uncaughtException(Thread thread, Throwable exception) {
+    LOG.error("Uncaught exception in thread {} -exiting", thread, exception);
     exit(convertToExitException(exception));
   }
 
@@ -633,8 +633,10 @@ public class ServiceLauncher<S extends Service>
   /**
    * Report an error. 
    * <p>
-   * This tries to log to the log's <code>error()</code> operation.
-   * If disabled the message is logged to system error along
+   * This tries to log to <code>LOG.error()</code>
+   * <p>
+   * If that log level is disabled disabled the message
+   * is logged to system error along
    * with <code>thrown.toString()</code>
    * @param message message for the user
    * @param thrown the exception thrown
@@ -703,7 +705,7 @@ public class ServiceLauncher<S extends Service>
       List<String> args) {
     int size = args.size();
     if (size <= 1) {
-      return new ArrayList<String>(0);
+      return new ArrayList<>(0);
     }
     List<String> coreArgs = args.subList(1, size);
 
@@ -715,9 +717,9 @@ public class ServiceLauncher<S extends Service>
 
     int size = args.size();
     if (size <= 1 ) {
-      return new ArrayList<String>(0);
+      return new ArrayList<>(0);
     }
-    List<String> argsList = new ArrayList<String>(size);
+    List<String> argsList = new ArrayList<>(size);
     //skip that first entry
     int index = 1;
     while (index< size) {
@@ -781,7 +783,6 @@ public class ServiceLauncher<S extends Service>
       }
     }
     return fileURL;
-
   }
 
   /**
@@ -830,7 +831,7 @@ public class ServiceLauncher<S extends Service>
   }
 
   protected void verifyConfigurationFilesExist(String[] filenames) {
-    if (filenames==null) {
+    if (filenames == null) {
       return;
     }
     for (String filename : filenames) {
@@ -910,7 +911,7 @@ public class ServiceLauncher<S extends Service>
       exitWithUsageMessage();
     } else {
       ServiceLauncher<Service> serviceLauncher =
-          new ServiceLauncher<Service>(argsList.get(0));
+          new ServiceLauncher<>(argsList.get(0));
       serviceLauncher.launchServiceAndExit(argsList);
     }
   }

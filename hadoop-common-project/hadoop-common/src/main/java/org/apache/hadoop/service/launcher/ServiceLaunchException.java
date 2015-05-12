@@ -62,7 +62,7 @@ public class ServiceLaunchException extends ExitUtil.ExitException
   /**
    * Create a formatted exception.
    * <p>
-   * This uses    * {@link String#format(String, Object...)}
+   * This uses {@link String#format(String, Object...)}
    * to build the formatted exception -in the ENGLISH locale.
    * <p>
    * If the last argument is a throwable, it becomes the cause of the exception.
@@ -77,6 +77,5 @@ public class ServiceLaunchException extends ExitUtil.ExitException
       initCause((Throwable) args[args.length - 1]);
     }
   }
-
 
 }

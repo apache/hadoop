@@ -57,7 +57,7 @@ public class ServiceShutdownHook implements Runnable {
    * @param service the service
    */
   public ServiceShutdownHook(Service service) {
-    serviceRef = new WeakReference<Service>(service);
+    serviceRef = new WeakReference<>(service);
   }
 
   /**
@@ -110,7 +110,7 @@ public class ServiceShutdownHook implements Runnable {
       service.stop();
       result = true;
     } catch (Throwable t) {
-      LOG.info("Error stopping {}: {}", service.getName(), t);
+      LOG.info("Error stopping {}", service.getName(), t);
     }
     return result;
   }

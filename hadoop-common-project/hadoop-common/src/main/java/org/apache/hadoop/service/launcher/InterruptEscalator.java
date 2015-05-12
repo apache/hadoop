@@ -68,8 +68,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   /**
    * Previous interrupt handlers. These are not queried.
    */
-  private final List<IrqHandler> interruptHandlers =
-      new ArrayList<IrqHandler>(2);
+  private final List<IrqHandler> interruptHandlers = new ArrayList<>(2);
   private boolean forcedShutdownTimedOut;
 
   public InterruptEscalator(ServiceLauncher owner, int shutdownTimeMillis) {
@@ -102,8 +101,8 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
     Service service = getService();
     if (service != null) {
       //start an async shutdown thread with a timeout
-      ServiceForcedShutdown shutdown = new ServiceForcedShutdown(service,
-          shutdownTimeMillis);
+      ServiceForcedShutdown shutdown =
+          new ServiceForcedShutdown(service, shutdownTimeMillis);
       Thread thread = new Thread(shutdown);
       thread.setDaemon(true);
       thread.setName("Service Forced Shutdown");
@@ -119,7 +118,6 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
         LOG.warn("Service did not shut down in time");
       }
     }
-
     ExitUtil.terminate(EXIT_INTERRUPTED, message);
   }
 
