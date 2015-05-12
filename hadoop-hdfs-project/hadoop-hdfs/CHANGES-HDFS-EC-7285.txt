@@ -201,3 +201,6 @@
 
     HDFS-8372. Erasure coding: compute storage type quotas for striped files,
     to be consistent with HDFS-8327. (Zhe Zhang via jing9)
+
+    HDFS-8368. Erasure Coding: DFS opening a non-existent file need to be 
+    handled properly (Rakesh R via zhz)
