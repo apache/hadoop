@@ -738,6 +738,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8351. Remove namenode -finalize option from document. (aajisaka)
 
+    HDFS-8362. Java Compilation Error in TestHdfsConfigFields.java
+    (Arshad Mohammad via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
