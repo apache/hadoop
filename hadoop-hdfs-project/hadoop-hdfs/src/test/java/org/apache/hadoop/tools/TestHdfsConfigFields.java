@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.tools;
+package org.apache.hadoop.tools;
 
 import java.util.HashSet;
 
