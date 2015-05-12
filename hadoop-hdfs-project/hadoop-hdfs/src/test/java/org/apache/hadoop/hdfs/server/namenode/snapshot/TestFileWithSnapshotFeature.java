@@ -70,7 +70,7 @@ public class TestFileWithSnapshotFeature {
 
     // INode only exists in the snapshot
     INodeFile snapshotINode = mock(INodeFile.class);
-    when(file.getBlockReplication()).thenReturn(REPL_1);
+    when(file.getPreferredBlockReplication()).thenReturn(REPL_1);
     Whitebox.setInternalState(snapshotINode, "header", (long) REPL_3 << 48);
     Whitebox.setInternalState(diff, "snapshotINode", snapshotINode);
     when(diff.getSnapshotINode()).thenReturn(snapshotINode);

@@ -151,11 +151,12 @@ public class FileWithSnapshotFeature implements INode.Feature {
     long oldStoragespace;
     if (removed.snapshotINode != null) {
       short replication = removed.snapshotINode.getFileReplication();
-      short currentRepl = file.getBlockReplication();
+      short currentRepl = file.getPreferredBlockReplication();
       if (replication > currentRepl) {
         long oldFileSizeNoRep = currentRepl == 0
             ? file.computeFileSize(true, true)
-            : oldCounts.getStorageSpace() / file.getBlockReplication();
+            : oldCounts.getStorageSpace() /
+            file.getPreferredBlockReplication();
         oldStoragespace = oldFileSizeNoRep * replication;
         oldCounts.setStorageSpace(oldStoragespace);
 
