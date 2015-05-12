@@ -77,6 +77,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3434. Interaction between reservations and userlimit can result in 
     significant ULF violation. (Thomas Graves via wangda)
 
+    YARN-3493. RM fails to come up with error "Failed to load/recover state" 
+    when mem settings are changed. (Jian He via wangda)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
