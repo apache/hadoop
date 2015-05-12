@@ -23,30 +23,37 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.apache.phoenix.hbase.index.write.IndexWriterUtils;
+import org.apache.phoenix.query.BaseTest;
+import org.apache.phoenix.query.QueryServices;
+import org.apache.phoenix.util.PropertiesUtil;
+import org.apache.phoenix.util.ReadOnlyProps;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 
-public class TestPhoenixTimelineWriterImpl {
-  private PhoenixTimelineWriterImpl writer;
+import static org.apache.phoenix.util.TestUtil.TEST_PROPERTIES;
 
-  @Before
-  public void setup() throws Exception {
-    // TODO: launch a miniphoenix cluster, or else we're directly operating on
-    // the active Phoenix cluster
+public class TestPhoenixTimelineWriterImpl extends BaseTest {
+  private static PhoenixTimelineWriterImpl writer;
+  private static final int BATCH_SIZE = 3;
+
+  @BeforeClass
+  public static void setup() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
-    writer = createPhoenixWriter(conf);
+    writer = setupPhoenixClusterAndWriterForTest(conf);
   }
 
-  @Ignore
-  @Test
+  @Test(timeout = 90000)
   public void testPhoenixWriterBasic() throws Exception {
     // Set up a list of timeline entities and write them back to Phoenix
     int numEntity = 12;
@@ -91,28 +98,48 @@ public class TestPhoenixTimelineWriterImpl {
     verifySQLWithCount(sql, (numEntity / 4), "Number of events should be ");
   }
 
-  @After
-  public void cleanup() throws Exception {
-    // Note: it is assumed that we're working on a test only cluster, or else
-    // this cleanup process will drop the entity table.
+  @AfterClass
+  public static void cleanup() throws Exception {
     writer.dropTable(PhoenixTimelineWriterImpl.ENTITY_TABLE_NAME);
     writer.dropTable(PhoenixTimelineWriterImpl.EVENT_TABLE_NAME);
     writer.dropTable(PhoenixTimelineWriterImpl.METRIC_TABLE_NAME);
     writer.serviceStop();
+    tearDownMiniCluster();
   }
 
-  private static PhoenixTimelineWriterImpl createPhoenixWriter(
+  private static PhoenixTimelineWriterImpl setupPhoenixClusterAndWriterForTest(
       YarnConfiguration conf) throws Exception{
+    Map<String, String> props = new HashMap<>();
+    // Must update config before starting server
+    props.put(QueryServices.STATS_USE_CURRENT_TIME_ATTRIB,
+        Boolean.FALSE.toString());
+    props.put("java.security.krb5.realm", "");
+    props.put("java.security.krb5.kdc", "");
+    props.put(IntegrationTestingUtility.IS_DISTRIBUTED_CLUSTER,
+        Boolean.FALSE.toString());
+    props.put(QueryServices.QUEUE_SIZE_ATTRIB, Integer.toString(5000));
+    props.put(IndexWriterUtils.HTABLE_THREAD_KEY, Integer.toString(100));
+    // Make a small batch size to test multiple calls to reserve sequences
+    props.put(QueryServices.SEQUENCE_CACHE_SIZE_ATTRIB,
+        Long.toString(BATCH_SIZE));
+    // Must update config before starting server
+    setUpTestDriver(new ReadOnlyProps(props.entrySet().iterator()));
+
     PhoenixTimelineWriterImpl myWriter = new PhoenixTimelineWriterImpl();
+    // Change connection settings for test
+    conf.set(
+        PhoenixTimelineWriterImpl.TIMELINE_SERVICE_PHOENIX_STORAGE_CONN_STR,
+        getUrl());
+    myWriter.connProperties = PropertiesUtil.deepCopy(TEST_PROPERTIES);
     myWriter.serviceInit(conf);
     return myWriter;
   }
 
   private void verifySQLWithCount(String sql, int targetCount, String message)
-      throws Exception{
+      throws Exception {
     try (
         Statement stmt =
-          PhoenixTimelineWriterImpl.getConnection().createStatement();
+          writer.getConnection().createStatement();
         ResultSet rs = stmt.executeQuery(sql)) {
       assertTrue("Result set empty on statement " + sql, rs.next());
       assertNotNull("Fail to execute query " + sql, rs);
