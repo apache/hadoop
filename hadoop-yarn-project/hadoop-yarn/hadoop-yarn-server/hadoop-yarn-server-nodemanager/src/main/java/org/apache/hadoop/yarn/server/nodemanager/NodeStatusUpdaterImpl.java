@@ -199,7 +199,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         + durationToTrackStoppedContainers);
     }
     super.serviceInit(conf);
-    LOG.info("Initialized nodemanager for " + nodeId + ":" +
+    LOG.info("Initialized nodemanager with :" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
         " virtual-cores=" + virtualCores);
 
@@ -213,6 +213,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     // NodeManager is the last service to start, so NodeId is available.
     this.nodeId = this.context.getNodeId();
+    LOG.info("Node ID assigned is : " + this.nodeId);
     this.httpPort = this.context.getHttpPort();
     this.nodeManagerVersionId = YarnVersionInfo.getVersion();
     try {

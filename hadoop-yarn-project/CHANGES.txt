@@ -394,6 +394,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3602. TestResourceLocalizationService.testPublicResourceInitializesLocalDir
     fails Intermittently due to IOException from cleanup. (zhihai xu via xgong)
 
+    YARN-3629. NodeID is always printed as "null" in node manager initialization log.
+    (nijel via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
