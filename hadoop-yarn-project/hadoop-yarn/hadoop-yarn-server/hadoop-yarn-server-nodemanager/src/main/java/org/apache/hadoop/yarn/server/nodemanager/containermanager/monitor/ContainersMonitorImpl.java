@@ -389,8 +389,10 @@ public class ContainersMonitorImpl extends AbstractService implements
 
         // Now do the monitoring for the trackingContainers
         // Check memory usage and kill any overflowing containers
-        long vmemStillInUsage = 0;
-        long pmemStillInUsage = 0;
+        long vmemUsageByAllContainers = 0;
+        long pmemByAllContainers = 0;
+        long cpuUsagePercentPerCoreByAllContainers = 0;
+        long cpuUsageTotalCoresByAllContainers = 0;
         for (Iterator<Map.Entry<ContainerId, ProcessTreeInfo>> it =
             trackingContainers.entrySet().iterator(); it.hasNext();) {
 
@@ -504,6 +506,13 @@ public class ContainersMonitorImpl extends AbstractService implements
               containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
             }
 
+            // Accounting the total memory in usage for all containers
+            vmemUsageByAllContainers += currentVmemUsage;
+            pmemByAllContainers += currentPmemUsage;
+            // Accounting the total cpu usage for all containers
+            cpuUsagePercentPerCoreByAllContainers += cpuUsagePercentPerCore;
+            cpuUsageTotalCoresByAllContainers += cpuUsagePercentPerCore;
+
             if (isMemoryOverLimit) {
               // Virtual or physical memory over limit. Fail the container and
               // remove
@@ -520,18 +529,20 @@ public class ContainersMonitorImpl extends AbstractService implements
                       containerExitStatus, msg));
               it.remove();
               LOG.info("Removed ProcessTree with root " + pId);
-            } else {
-              // Accounting the total memory in usage for all containers that
-              // are still
-              // alive and within limits.
-              vmemStillInUsage += currentVmemUsage;
-              pmemStillInUsage += currentPmemUsage;
             }
           } catch (Exception e) {
             // Log the exception and proceed to the next container.
             LOG.warn("Uncaught exception in ContainerMemoryManager "
                 + "while managing memory of " + containerId, e);
           }
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Total Resource Usage stats in NM by all containers : "
+              + "Virtual Memory= " + vmemUsageByAllContainers
+              + ", Physical Memory= " + pmemByAllContainers
+              + ", Total CPU usage= " + cpuUsageTotalCoresByAllContainers
+              + ", Total CPU(% per core) usage"
+              + cpuUsagePercentPerCoreByAllContainers);
         }
 
         try {
