@@ -213,13 +213,21 @@ public class SchedulerUtils {
       Resource maximumResource, String queueName, YarnScheduler scheduler,
       boolean isRecovery, RMContext rmContext)
       throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        isRecovery, rmContext, null);
+  }
 
-    QueueInfo queueInfo = null;
-    try {
-      queueInfo = scheduler.getQueueInfo(queueName, false, false);
-    } catch (IOException e) {
-      // it is possible queue cannot get when queue mapping is set, just ignore
-      // the queueInfo here, and move forward
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
+      throws InvalidResourceRequestException {
+    if (null == queueInfo) {
+      try {
+        queueInfo = scheduler.getQueueInfo(queueName, false, false);
+      } catch (IOException e) {
+        // it is possible queue cannot get when queue mapping is set, just ignore
+        // the queueInfo here, and move forward
+      }
     }
     SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
     if (!isRecovery) {
@@ -231,8 +239,16 @@ public class SchedulerUtils {
       Resource maximumResource, String queueName, YarnScheduler scheduler,
       RMContext rmContext)
       throws InvalidResourceRequestException {
+    normalizeAndvalidateRequest(resReq, maximumResource, queueName, scheduler,
+        rmContext, null);
+  }
+
+  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext, QueueInfo queueInfo)
+      throws InvalidResourceRequestException {
     normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
-        false, rmContext);
+        false, rmContext, queueInfo);
   }
 
   /**
