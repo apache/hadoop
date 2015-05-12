@@ -230,6 +230,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3513. Remove unused variables in ContainersMonitorImpl and add debug
     log for overall resource usage by all containers. (Naganarasimha G R via devaraj)
 
+    YARN-3613. TestContainerManagerSecurity should init and start Yarn cluster in 
+    setup instead of individual methods. (nijel via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
