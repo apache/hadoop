@@ -291,9 +291,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3110. Few issues in ApplicationHistory web ui. (Naganarasimha G R via xgong)
 
-    YARN-3457. NPE when NodeManager.serviceInit fails and stopRecoveryStore called.
-    (Bibin A Chundatt via ozawa)
-
     YARN-3459. Fix failiure of TestLog4jWarningErrorMetricsAppender.
     (Varun Vasudev via wangda)
 
@@ -319,9 +316,6 @@ Release 2.8.0 - UNRELEASED
     AM if AM and RM restarted during the same time. (sandflee via jianhe)
 
     YARN-3444. Fix typo capabililty. (Gabor Liptak via aajisaka)
-
-    YARN-3537. NPE when NodeManager.serviceInit fails and stopRecoveryStore
-    invoked (Brahma Reddy Battula via jlowe)
 
     YARN-3530. ATS throws exception on trying to filter results without otherinfo.
     (zhijie shen via xgong)
@@ -487,6 +481,12 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3626. On Windows localized resources are not moved to the front
     of the classpath when they should be. (Craig Welch via xgong)
+
+    YARN-3457. NPE when NodeManager.serviceInit fails and stopRecoveryStore called.
+    (Bibin A Chundatt via ozawa)
+
+    YARN-3537. NPE when NodeManager.serviceInit fails and stopRecoveryStore
+    invoked (Brahma Reddy Battula via jlowe)
 
 Release 2.7.0 - 2015-04-20
 
