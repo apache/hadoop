@@ -123,6 +123,24 @@
     </test>
 
     <test>
+      <description>createZone : create a zone twice</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /eczone</command>
+        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /eczone</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Directory /eczone is already in an erasure coding zone</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>createZone : default schema</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
@@ -136,6 +154,23 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>getZoneInfo : get information about the EC zone at specified path not in zone</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /noec</command>
+        <ec-admin-command>-fs NAMENODE -getZoneInfo /noec</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /noec</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Path NAMENODE/noec is not in EC zone</expected-output>
         </comparator>
       </comparators>
     </test>

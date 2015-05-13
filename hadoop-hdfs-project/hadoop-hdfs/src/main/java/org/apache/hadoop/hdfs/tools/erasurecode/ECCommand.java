@@ -135,7 +135,7 @@ public abstract class ECCommand extends Command {
         out.println("EC Zone created successfully at " + item.path);
       } catch (IOException e) {
         throw new IOException("Unable to create EC zone for the path "
-            + item.path, e);
+            + item.path + ". " + e.getMessage());
       }
     }
   }
@@ -165,10 +165,14 @@ public abstract class ECCommand extends Command {
       DistributedFileSystem dfs = (DistributedFileSystem) item.fs;
       try {
         ErasureCodingZoneInfo ecZoneInfo = dfs.getErasureCodingZoneInfo(item.path);
-        out.println(ecZoneInfo.toString());
+        if (ecZoneInfo != null) {
+          out.println(ecZoneInfo.toString());
+        } else {
+          out.println("Path " + item.path + " is not in EC zone");
+        }
       } catch (IOException e) {
-        throw new IOException("Unable to create EC zone for the path "
-            + item.path, e);
+        throw new IOException("Unable to get EC zone for the path "
+            + item.path + ". " + e.getMessage());
       }
     }
   }

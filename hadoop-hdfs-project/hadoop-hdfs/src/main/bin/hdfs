@@ -28,6 +28,7 @@ function hadoop_usage
   echo "  datanode             run a DFS datanode"
   echo "  dfs                  run a filesystem command on the file system"
   echo "  dfsadmin             run a DFS admin client"
+  echo "  erasurecode          configure HDFS erasure coding zones"
   echo "  fetchdt              fetch a delegation token from the NameNode"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  getconf              get config values from configuration"
