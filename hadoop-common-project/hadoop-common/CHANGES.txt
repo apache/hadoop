@@ -703,6 +703,9 @@ Release 2.7.1 - UNRELEASED
     HADOOP-11663. Remove description about Java 6 from docs.
     (Masatake Iwasaki via aajisaka)
 
+    HADOOP-11966. Variable cygwin is undefined in hadoop-config.sh when executed
+    through hadoop-daemon.sh. (cnauroth)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
