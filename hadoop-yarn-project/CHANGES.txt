@@ -70,6 +70,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3529. Added mini HBase cluster and Phoenix support to timeline service
     v2 unit tests. (Li Lu via zjshen)
 
+    YARN-3634. TestMRTimelineEventHandling and TestApplication are broken. (
+    Sangjin Lee via junping_du)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

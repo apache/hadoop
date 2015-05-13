@@ -81,6 +81,11 @@ public class NMCollectorService extends CompositeService implements
                 YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));
 
     server.start();
+    collectorServerAddress = conf.updateConnectAddr(
+        YarnConfiguration.NM_BIND_HOST,
+        YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS,
+        server.getListenerAddress());
     // start remaining services
     super.serviceStart();
     LOG.info("NMCollectorService started at " + collectorServerAddress);

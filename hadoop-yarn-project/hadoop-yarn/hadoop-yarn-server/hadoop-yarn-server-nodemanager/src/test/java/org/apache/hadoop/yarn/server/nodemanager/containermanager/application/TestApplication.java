@@ -519,7 +519,8 @@ public class TestApplication {
       when(context.getApplicationACLsManager()).thenReturn(
         new ApplicationACLsManager(conf));
       when(context.getNMTokenSecretManager()).thenReturn(nmTokenSecretMgr);
-      
+      when(context.getConf()).thenReturn(conf);
+
       // Setting master key
       MasterKey masterKey = new MasterKeyPBImpl();
       masterKey.setKeyId(123);
