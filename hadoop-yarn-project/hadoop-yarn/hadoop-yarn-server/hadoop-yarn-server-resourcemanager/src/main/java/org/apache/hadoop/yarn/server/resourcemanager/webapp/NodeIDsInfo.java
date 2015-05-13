@@ -23,6 +23,7 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "labelsToNodesInfo")
@@ -32,6 +33,7 @@ public class NodeIDsInfo {
   /**
    * Set doesn't support default no arg constructor which is req by JAXB
    */
+  @XmlElement(name="nodes")
   protected ArrayList<String> nodeIDsList = new ArrayList<String>();
 
   public NodeIDsInfo() {

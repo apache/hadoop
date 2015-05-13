@@ -23,19 +23,32 @@ import java.util.*;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
 
-@XmlRootElement(name = "nodeToLabelsInfo")
+@XmlRootElement(name = "nodeToLabelsEntry")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class NodeToLabelsInfo {
+public class NodeToLabelsEntry {
 
-  private HashMap<String, NodeLabelsInfo> nodeToLabels =
-      new HashMap<String, NodeLabelsInfo>();
+  @XmlElement(name = "nodeId")
+  private String nodeId;
 
-  public NodeToLabelsInfo() {
+  @XmlElement(name = "labels")
+  private ArrayList<String> labels = new ArrayList<String>();
+
+  public NodeToLabelsEntry() {
     // JAXB needs this
   }
 
-  public HashMap<String, NodeLabelsInfo> getNodeToLabels() {
-    return nodeToLabels;
+  public NodeToLabelsEntry(String nodeId, ArrayList<String> labels) {
+    this.nodeId = nodeId;
+    this.labels = labels;
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public ArrayList<String> getNodeLabels() {
+    return labels;
   }
 }

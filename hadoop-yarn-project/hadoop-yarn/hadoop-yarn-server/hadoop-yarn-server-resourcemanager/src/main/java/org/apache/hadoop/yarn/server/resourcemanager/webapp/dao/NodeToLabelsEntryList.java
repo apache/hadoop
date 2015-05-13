@@ -24,18 +24,18 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "nodeToLabelsInfo")
+@XmlRootElement(name = "nodeToLabelsName")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class NodeToLabelsInfo {
+public class NodeToLabelsEntryList {
 
-  private HashMap<String, NodeLabelsInfo> nodeToLabels =
-      new HashMap<String, NodeLabelsInfo>();
+  protected ArrayList<NodeToLabelsEntry> nodeToLabels =
+      new ArrayList<NodeToLabelsEntry>();
 
-  public NodeToLabelsInfo() {
+  public NodeToLabelsEntryList() {
     // JAXB needs this
   }
 
-  public HashMap<String, NodeLabelsInfo> getNodeToLabels() {
+  public ArrayList<NodeToLabelsEntry> getNodeToLabels() {
     return nodeToLabels;
   }
 }

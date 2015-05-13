@@ -31,13 +31,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class LabelsToNodesInfo {
 
-  protected Map<String, NodeIDsInfo> labelsToNodes =
-    new HashMap<String, NodeIDsInfo>();
+  protected Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes =
+    new HashMap<NodeLabelInfo, NodeIDsInfo>();
 
   public LabelsToNodesInfo() {
   } // JAXB needs this
 
-  public Map<String, NodeIDsInfo> getLabelsToNodes() {
+  public Map<NodeLabelInfo, NodeIDsInfo> getLabelsToNodes() {
    return labelsToNodes;
   }
 }
