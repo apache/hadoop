@@ -480,6 +480,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3493. RM fails to come up with error "Failed to load/recover state"
     when mem settings are changed. (Jian He via wangda)
 
+    YARN-3626. On Windows localized resources are not moved to the front
+    of the classpath when they should be. (Craig Welch via xgong)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

@@ -241,7 +241,12 @@ public class MRApps extends Apps {
     boolean userClassesTakesPrecedence = 
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
 
-    String classpathEnvVar = 
+    if (userClassesTakesPrecedence) {
+      conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE,
+        "true");
+    }
+
+    String classpathEnvVar =
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)
         ? Environment.APP_CLASSPATH.name() : Environment.CLASSPATH.name();
 
