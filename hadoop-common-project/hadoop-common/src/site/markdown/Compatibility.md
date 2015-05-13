@@ -169,6 +169,7 @@ REST API compatibility corresponds to both the request (URLs) and responses to e
 * [NodeManager](../../hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html)
 * [MR Application Master](../../hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html)
 * [History Server](../../hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html)
+* [Timeline Server v1 REST API](../../hadoop-yarn/hadoop-yarn-site/TimelineServer.html)
 
 #### Policy
 

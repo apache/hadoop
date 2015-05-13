@@ -33,7 +33,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
  * <p>
@@ -52,7 +52,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlRootElement(name = "entity")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
-@Unstable
+@Evolving
 public class TimelineEntity implements Comparable<TimelineEntity> {
 
   private String entityType;
