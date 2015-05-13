@@ -826,6 +826,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7916. 'reportBadBlocks' from datanodes to standby Node BPServiceActor
     goes for infinite loop (Rushabh S Shah  via kihwal)
 
+    HDFS-6300. Prevent multiple balancers from running simultaneously
+    (Rakesh R via vinayakumarb)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
