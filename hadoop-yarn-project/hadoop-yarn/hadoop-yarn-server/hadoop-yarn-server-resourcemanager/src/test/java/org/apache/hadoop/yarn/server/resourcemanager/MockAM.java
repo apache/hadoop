@@ -43,9 +43,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.log4j.Logger;
 import org.junit.Assert;
 
 public class MockAM {
+
+  private static final Logger LOG = Logger.getLogger(MockAM.class);
 
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
@@ -73,18 +76,28 @@ public class MockAM {
   public void waitForState(RMAppAttemptState finalState) throws Exception {
     RMApp app = context.getRMApps().get(attemptId.getApplicationId());
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    int timeoutSecs = 0;
+    final int timeoutMsecs = 40000;
+    final int minWaitMsecs = 1000;
+    final int waitMsPerLoop = 500;
+    int loop = 0;
     while (!finalState.equals(attempt.getAppAttemptState())
-        && timeoutSecs++ < 40) {
-      System.out
-          .println("AppAttempt : " + attemptId + " State is : " 
-              + attempt.getAppAttemptState()
-              + " Waiting for state : " + finalState);
-      Thread.sleep(1000);
+        && waitMsPerLoop * loop < timeoutMsecs) {
+      LOG.info("AppAttempt : " + attemptId + " State is : " +
+          attempt.getAppAttemptState() + " Waiting for state : " +
+          finalState);
+      Thread.yield();
+      Thread.sleep(waitMsPerLoop);
+      loop++;
     }
-    System.out.println("AppAttempt State is : " + attempt.getAppAttemptState());
-    Assert.assertEquals("AppAttempt state is not correct (timedout)",
-        finalState, attempt.getAppAttemptState());
+    int waitedMsecs = waitMsPerLoop * loop;
+    if (minWaitMsecs > waitedMsecs) {
+      Thread.sleep(minWaitMsecs - waitedMsecs);
+    }
+    LOG.info("Attempt State is : " + attempt.getAppAttemptState());
+    if (waitedMsecs >= timeoutMsecs) {
+      Assert.fail("Attempt state is not correct (timedout): expected: "
+          + finalState + " actual: " + attempt.getAppAttemptState());
+    }
   }
 
   public RegisterApplicationMasterResponse registerAppAttempt()

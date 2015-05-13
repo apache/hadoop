@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Supplier;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -53,6 +54,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -586,10 +588,19 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
             .getAppAttemptState());
     Assert.assertEquals(RMAppAttemptState.LAUNCHED,rmApp.getAppAttempts()
         .get(latestAppAttemptId).getAppAttemptState());
-    
+
     rm3.waitForState(latestAppAttemptId, RMAppAttemptState.FAILED);
     rm3.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
-    Assert.assertEquals(4, rmApp.getAppAttempts().size());
+    final int maxRetry = 10;
+    final RMApp rmAppForCheck = rmApp;
+    GenericTestUtils.waitFor(
+        new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return new Boolean(rmAppForCheck.getAppAttempts().size() == 4);
+          }
+        },
+        100, maxRetry);
     Assert.assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(latestAppAttemptId).getAppAttemptState());
     

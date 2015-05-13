@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -95,6 +96,7 @@ import org.junit.Assert;
 @SuppressWarnings("unchecked")
 public class MockRM extends ResourceManager {
 
+  static final Logger LOG = Logger.getLogger(MockRM.class);
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
 
   public MockRM() {
@@ -126,15 +128,23 @@ public class MockRM extends ResourceManager {
       throws Exception {
     RMApp app = getRMContext().getRMApps().get(appId);
     Assert.assertNotNull("app shouldn't be null", app);
-    int timeoutSecs = 0;
-    while (!finalState.equals(app.getState()) && timeoutSecs++ < 40) {
-      System.out.println("App : " + appId + " State is : " + app.getState()
-          + " Waiting for state : " + finalState);
-      Thread.sleep(2000);
+    final int timeoutMsecs = 80000;
+    final int waitMsPerLoop = 500;
+    int loop = 0;
+    while (!finalState.equals(app.getState()) &&
+        ((waitMsPerLoop * loop) < timeoutMsecs)) {
+      LOG.info("App : " + appId + " State is : " + app.getState() +
+          " Waiting for state : " + finalState);
+      Thread.yield();
+      Thread.sleep(waitMsPerLoop);
+      loop++;
     }
-    System.out.println("App State is : " + app.getState());
-    Assert.assertEquals("App state is not correct (timedout)", finalState,
-        app.getState());
+    int waitedMsecs = waitMsPerLoop * loop;
+    LOG.info("App State is : " + app.getState());
+    if (waitedMsecs >= timeoutMsecs) {
+      Assert.fail("App state is not correct (timedout): expected: " +
+          finalState + " actual: " + app.getState());
+    }
   }
   
   public void waitForState(ApplicationAttemptId attemptId, 
@@ -143,16 +153,27 @@ public class MockRM extends ResourceManager {
     RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
     Assert.assertNotNull("app shouldn't be null", app);
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    int timeoutSecs = 0;
-    while (!finalState.equals(attempt.getAppAttemptState()) && timeoutSecs++ < 40) {
-      System.out.println("AppAttempt : " + attemptId 
-          + " State is : " + attempt.getAppAttemptState()
-          + " Waiting for state : " + finalState);
-      Thread.sleep(1000);
+    final int timeoutMsecs = 40000;
+    final int minWaitMsecs = 1000;
+    final int waitMsPerLoop = 10;
+    int loop = 0;
+    while (!finalState.equals(attempt.getAppAttemptState())
+        && waitMsPerLoop * loop < timeoutMsecs) {
+      LOG.info("AppAttempt : " + attemptId + " State is : " +
+          attempt.getAppAttemptState() + " Waiting for state : " + finalState);
+      Thread.yield();
+      Thread.sleep(waitMsPerLoop);
+      loop++;
     }
-    System.out.println("Attempt State is : " + attempt.getAppAttemptState());
-    Assert.assertEquals("Attempt state is not correct (timedout)", finalState,
-        attempt.getAppAttemptState());
+    int waitedMsecs = waitMsPerLoop * loop;
+    if (minWaitMsecs > waitedMsecs) {
+      Thread.sleep(minWaitMsecs - waitedMsecs);
+    }
+    LOG.info("Attempt State is : " + attempt.getAppAttemptState());
+    if (waitedMsecs >= timeoutMsecs) {
+      Assert.fail("Attempt state is not correct (timedout): expected: "
+          + finalState + " actual: " + attempt.getAppAttemptState());
+    }
   }
 
   public void waitForContainerAllocated(MockNM nm, ContainerId containerId)

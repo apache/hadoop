@@ -592,7 +592,7 @@ public class TestAMRestart {
     rm2.stop();
   }
 
-  @Test (timeout = 50000)
+  @Test (timeout = 120000)
   public void testRMAppAttemptFailuresValidityInterval() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -612,10 +612,10 @@ public class TestAMRestart {
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    // set window size to a larger number : 20s
+    // set window size to a larger number : 60s
     // we will verify the app should be failed if
-    // two continuous attempts failed in 20s.
-    RMApp app = rm1.submitApp(200, 20000);
+    // two continuous attempts failed in 60s.
+    RMApp app = rm1.submitApp(200, 60000);
     
     MockAM am = MockRM.launchAM(app, rm1, nm1);
     // Fail current attempt normally
@@ -636,8 +636,8 @@ public class TestAMRestart {
     rm1.waitForState(app.getApplicationId(), RMAppState.FAILED);
 
     ControlledClock clock = new ControlledClock(new SystemClock());
-    // set window size to 6s
-    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 6000);;
+    // set window size to 10s
+    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000);;
     app1.setSystemClock(clock);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
@@ -655,8 +655,8 @@ public class TestAMRestart {
     MockAM am2 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     am2.waitForState(RMAppAttemptState.RUNNING);
 
-    // wait for 6 seconds
-    clock.setTime(System.currentTimeMillis() + 6*1000);
+    // wait for 10 seconds
+    clock.setTime(System.currentTimeMillis() + 10*1000);
     // Fail attempt2 normally
     nm1.nodeHeartbeat(am2.getApplicationAttemptId(),
       1, ContainerState.COMPLETE);
@@ -693,8 +693,8 @@ public class TestAMRestart {
     MockAM am4 =
         rm2.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 4, nm1);
 
-    // wait for 6 seconds
-    clock.setTime(System.currentTimeMillis() + 6*1000);
+    // wait for 10 seconds
+    clock.setTime(System.currentTimeMillis() + 10*1000);
     // Fail attempt4 normally
     nm1
       .nodeHeartbeat(am4.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
