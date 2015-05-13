@@ -1249,6 +1249,16 @@ public class YarnConfiguration extends Configuration {
       + "application.classpath";
 
   /**
+   * Whether or not entries from the distributed cache should be preferred over
+   * the rest of the YARN CLASSPATH
+   */
+  public static final String YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE =
+    YARN_PREFIX + "application.classpath.prepend.distcache";
+
+  public static final boolean
+    DEFAULT_YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE = false;
+
+  /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
    * comma-separated list of CLASSPATH entries. The parameter expansion marker
    * will be replaced with real parameter expansion marker ('%' for Windows and
