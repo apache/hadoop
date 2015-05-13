@@ -220,12 +220,20 @@ public class NameNodeConnector implements Closeable {
    */
   private OutputStream checkAndMarkRunning() throws IOException {
     try {
-      final FSDataOutputStream out = fs.create(idPath);
-      if (write2IdFile) {
-        out.writeBytes(InetAddress.getLocalHost().getHostName());
-        out.hflush();
+      if (fs.exists(idPath)) {
+        // try appending to it so that it will fail fast if another balancer is
+        // running.
+        IOUtils.closeStream(fs.append(idPath));
+        fs.delete(idPath, true);
       }
-      return out;
+      final FSDataOutputStream fsout = fs.create(idPath, false);
+      // mark balancer idPath to be deleted during filesystem closure
+      fs.deleteOnExit(idPath);
+      if (write2IdFile) {
+        fsout.writeBytes(InetAddress.getLocalHost().getHostName());
+        fsout.hflush();
+      }
+      return fsout;
     } catch(RemoteException e) {
       if(AlreadyBeingCreatedException.class.getName().equals(e.getClassName())){
         return null;
