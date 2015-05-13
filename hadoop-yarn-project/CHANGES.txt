@@ -400,6 +400,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3629. NodeID is always printed as "null" in node manager initialization log.
     (nijel via devaraj)
 
+    YARN-2921. Fix MockRM/MockAM#waitForState sleep too long. 
+    (Tsuyoshi Ozawa via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
