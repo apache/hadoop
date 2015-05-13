@@ -206,3 +206,6 @@
     handled properly (Rakesh R via zhz)
 
     HDFS-8363. Erasure Coding: DFSStripedInputStream#seekToNewSource. (yliu)
+
+    HDFS-8195. Erasure coding: Fix file quota change when we complete/commit 
+    the striped blocks. (Takuya Fukudome via zhz)
