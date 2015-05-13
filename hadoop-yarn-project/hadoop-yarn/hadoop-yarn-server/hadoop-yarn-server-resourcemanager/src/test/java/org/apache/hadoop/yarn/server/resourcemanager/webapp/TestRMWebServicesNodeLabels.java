@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 
 import javax.ws.rs.core.MediaType;
 
@@ -34,13 +35,14 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -113,15 +115,15 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     WebResource r = resource();
 
     ClientResponse response;
-    JSONObject json;
-    JSONArray jarr;
 
     // Add a label
+    NodeLabelsInfo nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("a"));
     response =
         r.path("ws").path("v1").path("cluster")
             .path("add-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"a\"}", MediaType.APPLICATION_JSON)
+            .entity(toJson(nlsifo, NodeLabelsInfo.class), MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
 
     // Verify
@@ -130,15 +132,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals("a", nlsifo.getNodeLabelsInfo().get(0).getName());
+    assertEquals(1, nlsifo.getNodeLabels().size());
     
     // Add another
+    nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("b"));
     response =
         r.path("ws").path("v1").path("cluster")
             .path("add-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"b\"}", MediaType.APPLICATION_JSON)
+            .entity(toJson(nlsifo, NodeLabelsInfo.class), MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
 
     // Verify
@@ -147,43 +152,45 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    jarr = json.getJSONArray("nodeLabels");
-    assertEquals(2, jarr.length());
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(2, nlsifo.getNodeLabels().size());
     
     // Add labels to a node
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("labels", "a");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"a\"]}",
-              MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
+    params = new MultivaluedMapImpl();
+    params.add("labels", "b");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid1:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"b\"]}",
-              MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
+    params = new MultivaluedMapImpl();
+    params.add("labels", "b");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid2:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"b\"]}",
-              MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
@@ -195,14 +202,14 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     LabelsToNodesInfo ltni = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(2, ltni.getLabelsToNodes().size());
-    NodeIDsInfo nodes = ltni.getLabelsToNodes().get("b");
+    NodeIDsInfo nodes = ltni.getLabelsToNodes().get(new NodeLabelInfo("b"));
     assertTrue(nodes.getNodeIDs().contains("nid2:0"));
     assertTrue(nodes.getNodeIDs().contains("nid1:0"));
-    nodes = ltni.getLabelsToNodes().get("a");
+    nodes = ltni.getLabelsToNodes().get(new NodeLabelInfo("a"));
     assertTrue(nodes.getNodeIDs().contains("nid:0"));
 
-    // Verify, using get-labels-to-Nodes for specifiedset of labels
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    // Verify, using get-labels-to-Nodes for specified set of labels
+    params = new MultivaluedMapImpl();
     params.add("labels", "a");
     response =
         r.path("ws").path("v1").path("cluster")
@@ -213,7 +220,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     ltni = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, ltni.getLabelsToNodes().size());
-    nodes = ltni.getLabelsToNodes().get("a");
+    nodes = ltni.getLabelsToNodes().get(new NodeLabelInfo("a"));
     assertTrue(nodes.getNodeIDs().contains("nid:0"));
 
     // Verify
@@ -223,18 +230,20 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
 
     
     // Replace
+    params = new MultivaluedMapImpl();
+    params.add("labels", "b");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"b\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
@@ -245,20 +254,21 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("b", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsName().contains("b"));
             
     // Replace labels using node-to-labels
-    NodeToLabelsInfo ntli = new NodeToLabelsInfo();
-    NodeLabelsInfo nli = new NodeLabelsInfo();
-    nli.getNodeLabels().add("a");
-    ntli.getNodeToLabels().put("nid:0", nli);
+    NodeToLabelsEntryList ntli = new NodeToLabelsEntryList();
+    ArrayList<String> labels = new ArrayList<String>();
+    labels.add("a");
+    NodeToLabelsEntry nli = new NodeToLabelsEntry("nid:0", labels);
+    ntli.getNodeToLabels().add(nli);
     response =
         r.path("ws").path("v1").path("cluster")
             .path("replace-node-to-labels")
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(ntli, NodeToLabelsInfo.class),
+            .entity(toJson(ntli, NodeToLabelsEntryList.class),
               MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
         
@@ -268,19 +278,21 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-to-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ntli = response.getEntity(NodeToLabelsInfo.class);
-    nli = ntli.getNodeToLabels().get("nid:0");
-    assertEquals(1, nli.getNodeLabels().size());
-    assertTrue(nli.getNodeLabels().contains("a"));
+    NodeToLabelsInfo ntlinfo = response.getEntity(NodeToLabelsInfo.class);
+    NodeLabelsInfo nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
+    assertEquals(1, nlinfo.getNodeLabels().size());
+    assertTrue(nlinfo.getNodeLabelsName().contains("a"));
     
     // Remove all
+    params = new MultivaluedMapImpl();
+    params.add("labels", "");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
     // Verify
@@ -290,18 +302,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsName().contains(""));
     
     // Add a label back for auth tests
+    params = new MultivaluedMapImpl();
+    params.add("labels", "a");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid:0")
             .path("replace-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": \"a\"}",
-              MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
@@ -312,18 +325,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
     
     // Auth fail replace labels on node
+    params = new MultivaluedMapImpl();
+    params.add("labels", "b");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("nodes").path("nid:0")
             .path("replace-labels")
             .queryParam("user.name", notUserName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"b\"]}",
-              MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     // Verify
     response =
@@ -332,8 +346,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
     
     // Fail to add a label with post
     response =
@@ -349,17 +363,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    jarr = json.getJSONArray("nodeLabels");
-    assertEquals(2, jarr.length());
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(2, nlsifo.getNodeLabels().size());
     
     // Remove cluster label (succeed, we no longer need it)
+    params = new MultivaluedMapImpl();
+    params.add("labels", "b");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("remove-node-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"b\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     // Verify
     response =
@@ -367,17 +382,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
-    
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals("a", nlsifo.getNodeLabelsInfo().get(0).getName());
+    assertEquals(1, nlsifo.getNodeLabels().size());
     
     // Remove cluster label with post
+    params = new MultivaluedMapImpl();
+    params.add("labels", "a");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("remove-node-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"a\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     // Verify
     response =
@@ -385,12 +402,15 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    String res = response.getEntity(String.class);
-    assertTrue(res.equals("null"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(0, nlsifo.getNodeLabels().size());
 
     // Following test cases are to test replace when distributed node label
     // configuration is on
     // Reset for testing : add cluster labels
+    nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("x"));
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("y"));
     response =
         r.path("ws")
             .path("v1")
@@ -398,14 +418,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("add-node-labels")
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":[\"x\",\"y\"]}",
+            .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
     // Reset for testing : Add labels to a node
+    nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("y"));
+    params = new MultivaluedMapImpl();
+    params.add("labels", "y");
     response =
         r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
             .path("replace-labels").queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"y\"]}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
@@ -413,10 +437,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     rmWebService.isDistributedNodeLabelConfiguration = true;
 
     // Case1 : Replace labels using node-to-labels
-    ntli = new NodeToLabelsInfo();
-    nli = new NodeLabelsInfo();
-    nli.getNodeLabels().add("x");
-    ntli.getNodeToLabels().put("nid:0", nli);
+    ntli = new NodeToLabelsEntryList();
+    labels = new ArrayList<String>();
+    labels.add("x");
+    nli = new NodeToLabelsEntry("nid:0", labels);
+    ntli.getNodeToLabels().add(nli);
     response =
         r.path("ws")
             .path("v1")
@@ -424,7 +449,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("replace-node-to-labels")
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(ntli, NodeToLabelsInfo.class),
+            .entity(toJson(ntli, NodeToLabelsEntryList.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
 
     // Verify, using node-to-labels that previous operation has failed
@@ -433,17 +458,17 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ntli = response.getEntity(NodeToLabelsInfo.class);
-    nli = ntli.getNodeToLabels().get("nid:0");
-    assertEquals(1, nli.getNodeLabels().size());
-    assertFalse(nli.getNodeLabels().contains("x"));
+    ntlinfo = response.getEntity(NodeToLabelsInfo.class);
+    nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
+    assertEquals(1, nlinfo.getNodeLabels().size());
+    assertFalse(nlinfo.getNodeLabels().contains("x"));
 
     // Case2 : failure to Replace labels using replace-labels
     response =
         r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
             .path("replace-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"x\"]}", MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabelName\": [\"x\"]}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
@@ -453,18 +478,20 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ntli = response.getEntity(NodeToLabelsInfo.class);
-    nli = ntli.getNodeToLabels().get("nid:0");
-    assertEquals(1, nli.getNodeLabels().size());
-    assertFalse(nli.getNodeLabels().contains("x"));
+    ntlinfo = response.getEntity(NodeToLabelsInfo.class);
+    nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
+    assertEquals(1, nlinfo.getNodeLabels().size());
+    assertFalse(nlinfo.getNodeLabels().contains("x"));
 
-    //  Case3 : Remove cluster label should be successfull
+    //  Case3 : Remove cluster label should be successful
+    params = new MultivaluedMapImpl();
+    params.add("labels", "x");
     response =
         r.path("ws").path("v1").path("cluster")
             .path("remove-node-labels")
             .queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"x\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     // Verify
     response =
@@ -472,8 +499,52 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("get-node-labels").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    json = response.getEntity(JSONObject.class);
-    assertEquals("y", json.getString("nodeLabels"));
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals("y", nlsifo.getNodeLabelsInfo().get(0).getName());
+
+    // Remove y
+    params = new MultivaluedMapImpl();
+    params.add("labels", "y");
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("remove-node-labels")
+            .queryParam("user.name", userName)
+            .queryParams(params)
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+
+    // Verify
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("get-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertTrue(nlsifo.getNodeLabelsInfo().isEmpty());
+
+    // add a new nodelabel with exclusity
+    nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("z", false));
+    response =
+        r.path("ws")
+            .path("v1")
+            .path("cluster")
+            .path("add-node-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(nlsifo, NodeLabelsInfo.class),
+                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+
+    // Verify
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("get-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals("z", nlsifo.getNodeLabelsInfo().get(0).getName());
+    assertEquals(false, nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
+    assertEquals(1, nlsifo.getNodeLabels().size());
   }
 
   @SuppressWarnings("rawtypes")
