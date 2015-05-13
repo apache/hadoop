@@ -749,6 +749,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8358. TestTraceAdmin fails (Masatake Iwasaki via kihwal)
 
+    HDFS-8380. Always call addStoredBlock on blocks which have been shifted
+    from one storage to another (cmccabe)
 
 Release 2.7.1 - UNRELEASED
 
