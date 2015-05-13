@@ -56,11 +56,6 @@ bin=`cd "$bin"; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 
-cygwin=false
-case "$(uname)" in
-CYGWIN*) cygwin=true;;
-esac
-
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/yarn-config.sh
 

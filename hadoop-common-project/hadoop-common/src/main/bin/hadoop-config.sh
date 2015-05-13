@@ -145,6 +145,11 @@ if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
+cygwin=false
+case "$(uname)" in
+CYGWIN*) cygwin=true;;
+esac
+
 # check if net.ipv6.bindv6only is set to 1
 bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
 if [ -n "$bindv6only" ] && [ "$bindv6only" -eq "1" ] && [ "$HADOOP_ALLOW_IPV6" != "yes" ]
