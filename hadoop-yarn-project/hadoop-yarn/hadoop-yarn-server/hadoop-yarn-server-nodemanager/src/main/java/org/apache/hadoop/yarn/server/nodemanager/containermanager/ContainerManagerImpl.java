@@ -962,7 +962,7 @@ public class ContainerManagerImpl extends CompositeService implements
             TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
         long flowRunId = 0L;
         if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
-          flowRunId = Long.valueOf(flowRunIdStr);
+          flowRunId = Long.parseLong(flowRunIdStr);
         }
         Application application = new ApplicationImpl(dispatcher, user,
             flowName, flowVersion, flowRunId, applicationID, credentials, context);
