@@ -420,6 +420,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3539. Updated timeline server documentation and marked REST APIs evolving.
     (Steve Loughran via zjshen)
 
+    YARN-3579. CommonNodeLabelsManager should support NodeLabel instead of string 
+    label name when getting node-to-label/label-to-label mappings. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES

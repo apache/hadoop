@@ -25,7 +25,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class RMNodeLabel implements Comparable<RMNodeLabel> {
@@ -34,6 +33,7 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
   private String labelName;
   private Set<NodeId> nodeIds;
   private boolean exclusive;
+  private NodeLabel nodeLabel;
 
   public RMNodeLabel(NodeLabel nodeLabel) {
     this(nodeLabel.getName(), Resource.newInstance(0, 0), 0,
@@ -52,6 +52,7 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
     this.numActiveNMs = activeNMs;
     this.nodeIds = new HashSet<NodeId>();
     this.exclusive = exclusive;
+    this.nodeLabel = NodeLabel.newInstance(labelName, exclusive);
   }
 
   public void addNodeId(NodeId node) {
@@ -100,6 +101,10 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
     return new RMNodeLabel(labelName, resource, numActiveNMs, exclusive);
   }
   
+  public NodeLabel getNodeLabel() {
+    return this.nodeLabel;
+  }
+
   @Override
   public int compareTo(RMNodeLabel o) {
     // We should always put empty label entry first after sorting

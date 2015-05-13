@@ -64,6 +64,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   private static final int MAX_LABEL_LENGTH = 255;
   public static final Set<String> EMPTY_STRING_SET = Collections
       .unmodifiableSet(new HashSet<String>(0));
+  public static final Set<NodeLabel> EMPTY_NODELABEL_SET = Collections
+      .unmodifiableSet(new HashSet<NodeLabel>(0));
   public static final String ANY = "*";
   public static final Set<String> ACCESS_ANY_LABEL_SET = ImmutableSet.of(ANY);
   private static final Pattern LABEL_PATTERN = Pattern
@@ -716,23 +718,53 @@ public class CommonNodeLabelsManager extends AbstractService {
    * @return nodes to labels map
    */
   public Map<NodeId, Set<String>> getNodeLabels() {
+    Map<NodeId, Set<String>> nodeToLabels =
+        generateNodeLabelsInfoPerNode(String.class);
+    return nodeToLabels;
+  }
+
+  /**
+   * Get mapping of nodes to label info
+   *
+   * @return nodes to labels map
+   */
+  public Map<NodeId, Set<NodeLabel>> getNodeLabelsInfo() {
+    Map<NodeId, Set<NodeLabel>> nodeToLabels =
+        generateNodeLabelsInfoPerNode(NodeLabel.class);
+    return nodeToLabels;
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> Map<NodeId, Set<T>> generateNodeLabelsInfoPerNode(Class<T> type) {
     try {
       readLock.lock();
-      Map<NodeId, Set<String>> nodeToLabels =
-          new HashMap<NodeId, Set<String>>();
+      Map<NodeId, Set<T>> nodeToLabels = new HashMap<>();
       for (Entry<String, Host> entry : nodeCollections.entrySet()) {
         String hostName = entry.getKey();
         Host host = entry.getValue();
         for (NodeId nodeId : host.nms.keySet()) {
-          Set<String> nodeLabels = getLabelsByNode(nodeId);
-          if (nodeLabels == null || nodeLabels.isEmpty()) {
-            continue;
+          if (type.isAssignableFrom(String.class)) {
+            Set<String> nodeLabels = getLabelsByNode(nodeId);
+            if (nodeLabels == null || nodeLabels.isEmpty()) {
+              continue;
+            }
+            nodeToLabels.put(nodeId, (Set<T>) nodeLabels);
+          } else {
+            Set<NodeLabel> nodeLabels = getLabelsInfoByNode(nodeId);
+            if (nodeLabels == null || nodeLabels.isEmpty()) {
+              continue;
+            }
+            nodeToLabels.put(nodeId, (Set<T>) nodeLabels);
           }
-          nodeToLabels.put(nodeId, nodeLabels);
         }
         if (!host.labels.isEmpty()) {
-          nodeToLabels
-              .put(NodeId.newInstance(hostName, WILDCARD_PORT), host.labels);
+          if (type.isAssignableFrom(String.class)) {
+            nodeToLabels.put(NodeId.newInstance(hostName, WILDCARD_PORT),
+                (Set<T>) host.labels);
+          } else {
+            nodeToLabels.put(NodeId.newInstance(hostName, WILDCARD_PORT),
+                (Set<T>) createNodeLabelFromLabelNames(host.labels));
+          }
         }
       }
       return Collections.unmodifiableMap(nodeToLabels);
@@ -740,6 +772,7 @@ public class CommonNodeLabelsManager extends AbstractService {
       readLock.unlock();
     }
   }
+
 
   /**
    * Get mapping of labels to nodes for all the labels.
@@ -765,26 +798,70 @@ public class CommonNodeLabelsManager extends AbstractService {
   public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels) {
     try {
       readLock.lock();
-      Map<String, Set<NodeId>> labelsToNodes =
-          new HashMap<String, Set<NodeId>>();
-      for (String label : labels) {
-        if(label.equals(NO_LABEL)) {
-          continue;
-        }
-        RMNodeLabel nodeLabelInfo = labelCollections.get(label);
-        if(nodeLabelInfo != null) {
-          Set<NodeId> nodeIds = nodeLabelInfo.getAssociatedNodeIds();
-          if (!nodeIds.isEmpty()) {
-            labelsToNodes.put(label, nodeIds);
-          }
-        } else {
-          LOG.warn("getLabelsToNodes : Label [" + label + "] cannot be found");
-        }
-      }      
+      Map<String, Set<NodeId>> labelsToNodes = getLabelsToNodesMapping(labels,
+          String.class);
       return Collections.unmodifiableMap(labelsToNodes);
     } finally {
       readLock.unlock();
     }
+  }
+
+
+  /**
+   * Get mapping of labels to nodes for all the labels.
+   *
+   * @return labels to nodes map
+   */
+  public Map<NodeLabel, Set<NodeId>> getLabelsInfoToNodes() {
+    try {
+      readLock.lock();
+      return getLabelsInfoToNodes(labelCollections.keySet());
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Get mapping of labels info to nodes for specified set of labels.
+   *
+   * @param nodelabels
+   *          set of nodelabels for which labels to nodes mapping will be
+   *          returned.
+   * @return labels to nodes map
+   */
+  public Map<NodeLabel, Set<NodeId>> getLabelsInfoToNodes(Set<String> labels) {
+    try {
+      readLock.lock();
+      Map<NodeLabel, Set<NodeId>> labelsToNodes = getLabelsToNodesMapping(
+          labels, NodeLabel.class);
+      return Collections.unmodifiableMap(labelsToNodes);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  private <T> Map<T, Set<NodeId>> getLabelsToNodesMapping(Set<String> labels,
+      Class<T> type) {
+    Map<T, Set<NodeId>> labelsToNodes = new HashMap<T, Set<NodeId>>();
+    for (String label : labels) {
+      if (label.equals(NO_LABEL)) {
+        continue;
+      }
+      RMNodeLabel nodeLabelInfo = labelCollections.get(label);
+      if (nodeLabelInfo != null) {
+        Set<NodeId> nodeIds = nodeLabelInfo.getAssociatedNodeIds();
+        if (!nodeIds.isEmpty()) {
+          if (type.isAssignableFrom(String.class)) {
+            labelsToNodes.put(type.cast(label), nodeIds);
+          } else {
+            labelsToNodes.put(type.cast(nodeLabelInfo.getNodeLabel()), nodeIds);
+          }
+        }
+      } else {
+        LOG.warn("getLabelsToNodes : Label [" + label + "] cannot be found");
+      }
+    }
+    return labelsToNodes;
   }
 
   /**
@@ -914,6 +991,30 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
   
+  private Set<NodeLabel> getLabelsInfoByNode(NodeId nodeId) {
+    Set<String> labels = getLabelsByNode(nodeId, nodeCollections);
+    if (labels.isEmpty()) {
+      return EMPTY_NODELABEL_SET;
+    }
+    Set<NodeLabel> nodeLabels = createNodeLabelFromLabelNames(labels);
+    return nodeLabels;
+  }
+
+  private Set<NodeLabel> createNodeLabelFromLabelNames(Set<String> labels) {
+    Set<NodeLabel> nodeLabels = new HashSet<NodeLabel>();
+    for (String label : labels) {
+      if (label.equals(NO_LABEL)) {
+        continue;
+      }
+      RMNodeLabel rmLabel = labelCollections.get(label);
+      if (rmLabel == null) {
+        continue;
+      }
+      nodeLabels.add(rmLabel.getNodeLabel());
+    }
+    return nodeLabels;
+  }
+
   protected void createNodeIfNonExisted(NodeId nodeId) throws IOException {
     Host host = nodeCollections.get(nodeId.getHost());
     if (null == host) {
