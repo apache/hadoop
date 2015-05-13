@@ -469,8 +469,13 @@ public class HadoopArchives implements Tool {
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);
     FileSystem outFs = outputPath.getFileSystem(conf);
-    if (outFs.exists(outputPath) || outFs.isFile(dest)) {
-      throw new IOException("Invalid Output: " + outputPath);
+    if (outFs.exists(outputPath)) {
+      throw new IOException("Archive path: "
+          + outputPath.toString() + " already exists");
+    }
+    if (outFs.isFile(dest)) {
+      throw new IOException("Destination " + dest.toString()
+          + " should be a directory but is a file");
     }
     conf.set(DST_DIR_LABEL, outputPath.toString());
     Path stagingArea;
@@ -846,8 +851,8 @@ public class HadoopArchives implements Tool {
           Path argPath = new Path(args[i]);
           if (argPath.isAbsolute()) {
             System.out.println(usage);
-            throw new IOException("source path " + argPath +
-                " is not relative  to "+ parentPath);
+            throw new IOException("Source path " + argPath +
+                " is not relative to "+ parentPath);
           }
           srcPaths.add(new Path(parentPath, argPath));
         }
