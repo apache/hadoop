@@ -844,12 +844,11 @@ public abstract class ZKFailoverController {
    * @return the last health state passed to the FC
    * by the HealthMonitor.
    */
-  @VisibleForTesting
-  synchronized State getLastHealthState() {
+  protected synchronized State getLastHealthState() {
     return lastHealthState;
   }
 
-  private synchronized void setLastHealthState(HealthMonitor.State newState) {
+  protected synchronized void setLastHealthState(HealthMonitor.State newState) {
     LOG.info("Local service " + localTarget +
         " entered state: " + newState);
     lastHealthState = newState;
