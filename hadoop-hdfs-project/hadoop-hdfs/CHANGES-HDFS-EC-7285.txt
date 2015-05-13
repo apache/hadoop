@@ -204,3 +204,5 @@
 
     HDFS-8368. Erasure Coding: DFS opening a non-existent file need to be 
     handled properly (Rakesh R via zhz)
+
+    HDFS-8363. Erasure Coding: DFSStripedInputStream#seekToNewSource. (yliu)
