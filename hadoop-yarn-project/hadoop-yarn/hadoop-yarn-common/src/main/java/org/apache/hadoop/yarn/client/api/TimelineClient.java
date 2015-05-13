@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
  * number of conceptual entities.
  */
 @Public
-@Unstable
+@Evolving
 public abstract class TimelineClient extends AbstractService {
 
   /**

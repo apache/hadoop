@@ -414,6 +414,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3489. RMServerUtils.validateResourceRequests should only obtain queue 
     info once. (Varun Saxena via wangda)
 
+    YARN-3539. Updated timeline server documentation and marked REST APIs evolving.
+    (Steve Loughran via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
