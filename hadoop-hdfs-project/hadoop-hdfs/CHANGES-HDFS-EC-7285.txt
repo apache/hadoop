@@ -209,3 +209,6 @@
 
     HDFS-8195. Erasure coding: Fix file quota change when we complete/commit 
     the striped blocks. (Takuya Fukudome via zhz)
+
+    HDFS-8364. Erasure coding: fix some minor bugs in EC CLI
+    (Walter Su via vinayakumarb)

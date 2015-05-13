@@ -34,6 +34,7 @@ function hadoop_usage
   hadoop_add_subcommand "debug" "run a Debug Admin to execute HDFS debug commands"
   hadoop_add_subcommand "dfs" "run a filesystem command on the file system"
   hadoop_add_subcommand "dfsadmin" "run a DFS admin client"
+  hadoop_add_subcommand "erasurecode" "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" "get config values from configuration"
