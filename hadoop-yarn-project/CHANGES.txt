@@ -11,6 +11,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3243. CapacityScheduler should pass headroom from parent to children
     to make sure ParentQueue obey its capacity limits. (Wangda Tan via jianhe)
 
+    YARN-3539. Updated timeline server documentation and marked REST APIs evolving.
+    (Steve Loughran via zjshen)
+
   OPTIMIZATIONS
 
     YARN-3006. Improve the error message when attempting manual failover with 
