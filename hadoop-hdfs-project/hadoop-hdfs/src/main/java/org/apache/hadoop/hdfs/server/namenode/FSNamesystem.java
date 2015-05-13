@@ -3189,11 +3189,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // Adjust disk space consumption if required
-    // TODO: support EC files
-    final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
+    final long diff;
+    final short replicationFactor;
+    if (fileINode.isStriped()) {
+      final ECSchema ecSchema = dir.getECSchema(iip);
+      final short numDataUnits = (short) ecSchema.getNumDataUnits();
+      final short numParityUnits = (short) ecSchema.getNumParityUnits();
+
+      final long numBlocks = numDataUnits + numParityUnits;
+      final long fullBlockGroupSize =
+          fileINode.getPreferredBlockSize() * numBlocks;
+
+      final BlockInfoStriped striped = new BlockInfoStriped(commitBlock,
+          numDataUnits, numParityUnits);
+      final long actualBlockGroupSize = striped.spaceConsumed();
+
+      diff = fullBlockGroupSize - actualBlockGroupSize;
+      replicationFactor = (short) 1;
+    } else {
+      diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();
+      replicationFactor = fileINode.getFileReplication();
+    }
     if (diff > 0) {
       try {
-        dir.updateSpaceConsumed(iip, 0, -diff, fileINode.getFileReplication());
+        dir.updateSpaceConsumed(iip, 0, -diff, replicationFactor);
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }

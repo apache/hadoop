@@ -521,7 +521,7 @@ public class FSDirectory implements Closeable {
     final INodeFile fileINode = iip.getLastINode().asFile();
     EnumCounters<StorageType> typeSpaceDeltas =
       getStorageTypeDeltas(fileINode.getStoragePolicyID(), ssDelta,
-          replication, replication);;
+          replication, replication);
     updateCount(iip, iip.length() - 1,
       new QuotaCounts.Builder().nameSpace(nsDelta).storageSpace(ssDelta * replication).
           typeSpaces(typeSpaceDeltas).build(),
