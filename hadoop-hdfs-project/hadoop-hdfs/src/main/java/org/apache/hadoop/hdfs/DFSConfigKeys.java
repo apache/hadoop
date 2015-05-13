@@ -427,6 +427,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_MOVER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;
   public static final String  DFS_MOVER_MOVERTHREADS_KEY = "dfs.mover.moverThreads";
   public static final int     DFS_MOVER_MOVERTHREADS_DEFAULT = 1000;
+  public static final String  DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY = "dfs.mover.retry.max.attempts";
+  public static final int     DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT = 10;
 
   public static final String  DFS_DATANODE_ADDRESS_KEY = "dfs.datanode.address";
   public static final int     DFS_DATANODE_DEFAULT_PORT = 50010;
