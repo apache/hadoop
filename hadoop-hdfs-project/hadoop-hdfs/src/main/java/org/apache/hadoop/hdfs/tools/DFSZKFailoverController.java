@@ -20,15 +20,20 @@ package org.apache.hadoop.hdfs.tools;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URL;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceTarget;
+import org.apache.hadoop.ha.HealthMonitor;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -37,6 +42,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -56,6 +62,9 @@ public class DFSZKFailoverController extends ZKFailoverController {
   private final AccessControlList adminAcl;
   /* the same as superclass's localTarget, but with the more specfic NN type */
   private final NNHAServiceTarget localNNTarget;
+
+  // This is used only for unit tests
+  private boolean isThreadDumpCaptured = false;
 
   @Override
   protected HAServiceTarget dataToTarget(byte[] data) {
@@ -201,4 +210,55 @@ public class DFSZKFailoverController extends ZKFailoverController {
     LOG.warn(msg);
     throw new AccessControlException(msg);
   }
+
+  /**
+   * capture local NN's thread dump and write it to ZKFC's log.
+   */
+  private void getLocalNNThreadDump() {
+    isThreadDumpCaptured = false;
+    // We use the same timeout value for both connection establishment
+    // timeout and read timeout.
+    int httpTimeOut = conf.getInt(
+        DFSConfigKeys.DFS_HA_ZKFC_NN_HTTP_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_HA_ZKFC_NN_HTTP_TIMEOUT_KEY_DEFAULT);
+    if (httpTimeOut == 0) {
+      // If timeout value is set to zero, the feature is turned off.
+      return;
+    }
+    try {
+      String stacksUrl = DFSUtil.getInfoServer(localNNTarget.getAddress(),
+          conf, DFSUtil.getHttpClientScheme(conf)) + "/stacks";
+      URL url = new URL(stacksUrl);
+      HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+      conn.setReadTimeout(httpTimeOut);
+      conn.setConnectTimeout(httpTimeOut);
+      conn.connect();
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
+      StringBuilder localNNThreadDumpContent =
+          new StringBuilder("-- Local NN thread dump -- \n");
+      localNNThreadDumpContent.append(out);
+      localNNThreadDumpContent.append("\n -- Local NN thread dump -- ");
+      LOG.info(localNNThreadDumpContent);
+      isThreadDumpCaptured = true;
+    } catch (IOException e) {
+      LOG.warn("Can't get local NN thread dump due to " + e.getMessage());
+    }
+  }
+
+  @Override
+  protected synchronized void setLastHealthState(HealthMonitor.State newState) {
+    super.setLastHealthState(newState);
+    // Capture local NN thread dump when the target NN health state changes.
+    if (getLastHealthState() == HealthMonitor.State.SERVICE_NOT_RESPONDING ||
+        getLastHealthState() == HealthMonitor.State.SERVICE_UNHEALTHY) {
+      getLocalNNThreadDump();
+    }
+  }
+
+  @VisibleForTesting
+  boolean isThreadDumpCaptured() {
+    return isThreadDumpCaptured;
+  }
+
 }
