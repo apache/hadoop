@@ -12,6 +12,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     MAPREDUCE-6335. Created MR job based performance test driver for the
     timeline service v2. (Sangjin Lee via zjshen)
 
+    MAPREDUCE-6337. Added a mode to replay MR job history files and put them
+    into the timeline service v2. (Sangjin Lee via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
