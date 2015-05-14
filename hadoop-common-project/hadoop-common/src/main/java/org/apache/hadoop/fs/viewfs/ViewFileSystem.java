@@ -726,7 +726,32 @@ public class ViewFileSystem extends FileSystem {
     }
     return result;
   }
-  
+
+  @Override
+  public Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
+    return res.targetFileSystem.createSnapshot(res.remainingPath, snapshotName);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
+    res.targetFileSystem.renameSnapshot(res.remainingPath, snapshotOldName,
+        snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
+    res.targetFileSystem.deleteSnapshot(res.remainingPath, snapshotName);
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * that is internal dir of the mount table.
@@ -1019,6 +1044,27 @@ public class ViewFileSystem extends FileSystem {
     public void removeXAttr(Path path, String name) throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("removeXAttr", path);
+    }
+
+    @Override
+    public Path createSnapshot(Path path, String snapshotName)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("createSnapshot", path);
+    }
+
+    @Override
+    public void renameSnapshot(Path path, String snapshotOldName,
+        String snapshotNewName) throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("renameSnapshot", path);
+    }
+
+    @Override
+    public void deleteSnapshot(Path path, String snapshotName)
+        throws IOException {
+      checkPathIsSlash(path);
+      throw readOnlyMountTable("deleteSnapshot", path);
     }
   }
 }

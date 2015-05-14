@@ -364,6 +364,23 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public Path createSnapshot(Path path, String name) throws IOException {
+    return super.createSnapshot(fullPath(path), name);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    super.renameSnapshot(fullPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path snapshotDir, String snapshotName)
+      throws IOException {
+    super.deleteSnapshot(fullPath(snapshotDir), snapshotName);
+  }
+
+  @Override
   public Path resolvePath(final Path p) throws IOException {
     return super.resolvePath(fullPath(p));
   }

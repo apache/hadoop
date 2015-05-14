@@ -327,4 +327,45 @@ public class TestChRootedFs {
     Assert.assertFalse(chRootedFs.isValidName("/test"));
     Mockito.verify(baseFs).isValidName("/chroot/test");
   }
+
+  @Test(timeout = 30000)
+  public void testCreateSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path(
+        Path.getPathWithoutSchemeAndAuthority(chrootedTo), "snapPath");
+    AbstractFileSystem baseFs = Mockito.spy(fc.getDefaultFileSystem());
+    ChRootedFs chRootedFs = new ChRootedFs(baseFs, chrootedTo);
+    Mockito.doReturn(snapRootPath).when(baseFs)
+        .createSnapshot(chRootedSnapRootPath, "snap1");
+    Assert.assertEquals(snapRootPath,
+        chRootedFs.createSnapshot(snapRootPath, "snap1"));
+    Mockito.verify(baseFs).createSnapshot(chRootedSnapRootPath, "snap1");
+  }
+
+  @Test(timeout = 30000)
+  public void testDeleteSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path(
+        Path.getPathWithoutSchemeAndAuthority(chrootedTo), "snapPath");
+    AbstractFileSystem baseFs = Mockito.spy(fc.getDefaultFileSystem());
+    ChRootedFs chRootedFs = new ChRootedFs(baseFs, chrootedTo);
+    Mockito.doNothing().when(baseFs)
+        .deleteSnapshot(chRootedSnapRootPath, "snap1");
+    chRootedFs.deleteSnapshot(snapRootPath, "snap1");
+    Mockito.verify(baseFs).deleteSnapshot(chRootedSnapRootPath, "snap1");
+  }
+
+  @Test(timeout = 30000)
+  public void testRenameSnapshot() throws Exception {
+    Path snapRootPath = new Path("/snapPath");
+    Path chRootedSnapRootPath = new Path(
+        Path.getPathWithoutSchemeAndAuthority(chrootedTo), "snapPath");
+    AbstractFileSystem baseFs = Mockito.spy(fc.getDefaultFileSystem());
+    ChRootedFs chRootedFs = new ChRootedFs(baseFs, chrootedTo);
+    Mockito.doNothing().when(baseFs)
+        .renameSnapshot(chRootedSnapRootPath, "snapOldName", "snapNewName");
+    chRootedFs.renameSnapshot(snapRootPath, "snapOldName", "snapNewName");
+    Mockito.verify(baseFs).renameSnapshot(chRootedSnapRootPath, "snapOldName",
+        "snapNewName");
+  }
 }

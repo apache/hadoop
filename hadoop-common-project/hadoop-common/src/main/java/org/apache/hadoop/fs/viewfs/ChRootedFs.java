@@ -361,7 +361,24 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
-  public void setVerifyChecksum(final boolean verifyChecksum) 
+  public Path createSnapshot(Path path, String name) throws IOException {
+    return myFs.createSnapshot(fullPath(path), name);
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    myFs.renameSnapshot(fullPath(path), snapshotOldName, snapshotNewName);
+  }
+
+  @Override
+  public void deleteSnapshot(Path snapshotDir, String snapshotName)
+      throws IOException {
+    myFs.deleteSnapshot(fullPath(snapshotDir), snapshotName);
+  }
+
+  @Override
+  public void setVerifyChecksum(final boolean verifyChecksum)
       throws IOException, UnresolvedLinkException {
     myFs.setVerifyChecksum(verifyChecksum);
   }
