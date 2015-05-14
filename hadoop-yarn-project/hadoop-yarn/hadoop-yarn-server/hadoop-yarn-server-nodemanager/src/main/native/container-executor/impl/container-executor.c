@@ -631,8 +631,11 @@ static int create_container_directories(const char* user, const char *app_id,
  */
 static struct passwd* get_user_info(const char* user) {
   int string_size = sysconf(_SC_GETPW_R_SIZE_MAX);
-  void* buffer = malloc(string_size + sizeof(struct passwd));
   struct passwd *result = NULL;
+  if(string_size < 1024) {
+    string_size = 1024;
+  }
+  void* buffer = malloc(string_size + sizeof(struct passwd));
   if (getpwnam_r(user, buffer, buffer + sizeof(struct passwd), string_size,
 		 &result) != 0) {
     free(buffer);
@@ -1425,7 +1428,7 @@ void chown_dir_contents(const char *dir_path, uid_t uid, gid_t gid) {
      
   dp = opendir(dir_path);
   if (dp != NULL) {
-    while (ep = readdir(dp)) {
+    while ((ep = readdir(dp)) != NULL) {
       stpncpy(buf, ep->d_name, strlen(ep->d_name));
       buf[strlen(ep->d_name)] = '\0';
       change_owner(path_tmp, uid, gid);
