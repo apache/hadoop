@@ -21,8 +21,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.TestZKRMStateStore.TestZKRMStateStoreTester;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -56,6 +62,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     Path workingDirPathURI;
     TestFileSystemRMStore store;
     MiniDFSCluster cluster;
+    boolean adminCheckEnable;
 
     class TestFileSystemRMStore extends FileSystemRMStateStore {
 
@@ -83,8 +90,9 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       }
     }
 
-    public TestFSRMStateStoreTester(MiniDFSCluster cluster) throws Exception {
-      Path workingDirPath = new Path("/Test");
+    public TestFSRMStateStoreTester(MiniDFSCluster cluster, boolean adminCheckEnable) throws Exception {
+      Path workingDirPath = new Path("/yarn/Test");
+      this.adminCheckEnable = adminCheckEnable;
       this.cluster = cluster;
       FileSystem fs = cluster.getFileSystem();
       fs.mkdirs(workingDirPath);
@@ -99,10 +107,10 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
           workingDirPathURI.toString());
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
-        "100,6000");
+              "100,6000");
       conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 8);
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
-          900L);
+              900L);
       this.store = new TestFileSystemRMStore(conf);
       Assert.assertEquals(store.getNumRetries(), 8);
       Assert.assertEquals(store.getRetryInterval(), 900L);
@@ -111,6 +119,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       store.startInternal();
       Assert.assertTrue(store.fs != previousFs);
       Assert.assertTrue(store.fs.getConf() == store.fsConf);
+      if (adminCheckEnable) {
+        store.setIsHDFS(true);
+      } else {
+        store.setIsHDFS(false);
+      }
       return store;
     }
 
@@ -123,8 +136,9 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
     @Override
     public void writeVersion(Version version) throws Exception {
-      store.updateFile(store.getVersionNode(), ((VersionPBImpl) version)
-        .getProto().toByteArray());
+      store.updateFile(store.getVersionNode(), ((VersionPBImpl)
+              version)
+              .getProto().toByteArray(), false);
     }
 
     @Override
@@ -135,7 +149,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     public boolean appExists(RMApp app) throws IOException {
       FileSystem fs = cluster.getFileSystem();
       Path nodePath =
-          store.getAppDir(app.getApplicationId().toString());
+              store.getAppDir(app.getApplicationId().toString());
       return fs.exists(nodePath);
     }
   }
@@ -144,28 +158,28 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+            new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-      fsTester = new TestFSRMStateStoreTester(cluster);
+      fsTester = new TestFSRMStateStoreTester(cluster, false);
       // If the state store is FileSystemRMStateStore then add corrupted entry.
       // It should discard the entry and remove it from file system.
       FSDataOutputStream fsOut = null;
       FileSystemRMStateStore fileSystemRMStateStore =
-          (FileSystemRMStateStore) fsTester.getRMStateStore();
+              (FileSystemRMStateStore) fsTester.getRMStateStore();
       String appAttemptIdStr3 = "appattempt_1352994193343_0001_000003";
       ApplicationAttemptId attemptId3 =
-          ConverterUtils.toApplicationAttemptId(appAttemptIdStr3);
+              ConverterUtils.toApplicationAttemptId(appAttemptIdStr3);
       Path appDir =
-          fsTester.store.getAppDir(attemptId3.getApplicationId().toString());
+              fsTester.store.getAppDir(attemptId3.getApplicationId().toString());
       Path tempAppAttemptFile =
-          new Path(appDir, attemptId3.toString() + ".tmp");
+              new Path(appDir, attemptId3.toString() + ".tmp");
       fsOut = fileSystemRMStateStore.fs.create(tempAppAttemptFile, false);
       fsOut.write("Some random data ".getBytes());
       fsOut.close();
 
       testRMAppStateStore(fsTester);
       Assert.assertFalse(fsTester.workingDirPathURI
-          .getFileSystem(conf).exists(tempAppAttemptFile));
+              .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
       testCheckVersion(fsTester);
       testEpoch(fsTester);
@@ -179,12 +193,109 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
   }
 
   @Test(timeout = 60000)
+  public void testHDFSRMStateStore() throws Exception {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    UserGroupInformation yarnAdmin =
+            UserGroupInformation.createUserForTesting("yarn",
+                    new String[]{"admin"});
+    final MiniDFSCluster cluster =
+            new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.getFileSystem().mkdir(new Path("/yarn"),
+            FsPermission.valueOf("-rwxrwxrwx"));
+    cluster.getFileSystem().setOwner(new Path("/yarn"), "yarn", "admin");
+    final UserGroupInformation hdfsAdmin = UserGroupInformation.getCurrentUser();
+    final StoreStateVerifier verifier = new StoreStateVerifier() {
+      @Override
+      void afterStoreApp(final RMStateStore store, final ApplicationId appId) {
+        try {
+          // Wait for things to settle
+          Thread.sleep(5000);
+          hdfsAdmin.doAs(
+                  new PrivilegedExceptionAction<Void>() {
+                    @Override
+                    public Void run() throws Exception {
+                      verifyFilesUnreadablebyHDFS(cluster,
+                              ((FileSystemRMStateStore) store).getAppDir
+                                      (appId));
+                      return null;
+                    }
+                  });
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      void afterStoreAppAttempt(final RMStateStore store,
+                                final ApplicationAttemptId appAttId) {
+        try {
+          // Wait for things to settle
+          Thread.sleep(5000);
+          hdfsAdmin.doAs(
+                  new PrivilegedExceptionAction<Void>() {
+                    @Override
+                    public Void run() throws Exception {
+                      verifyFilesUnreadablebyHDFS(cluster,
+                              ((FileSystemRMStateStore) store)
+                                      .getAppAttemptDir(appAttId));
+                      return null;
+                    }
+                  });
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    try {
+      yarnAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          fsTester = new TestFSRMStateStoreTester(cluster, true);
+          testRMAppStateStore(fsTester, verifier);
+          return null;
+        }
+      });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private void verifyFilesUnreadablebyHDFS(MiniDFSCluster cluster,
+                                                     Path root) throws Exception{
+    DistributedFileSystem fs = cluster.getFileSystem();
+    Queue<Path> paths = new LinkedList<>();
+    paths.add(root);
+    while (!paths.isEmpty()) {
+      Path p = paths.poll();
+      FileStatus stat = fs.getFileStatus(p);
+      if (!stat.isDirectory()) {
+        try {
+          LOG.warn("\n\n ##Testing path [" + p + "]\n\n");
+          fs.open(p);
+          Assert.fail("Super user should not be able to read ["+ UserGroupInformation.getCurrentUser() + "] [" + p.getName() + "]");
+        } catch (AccessControlException e) {
+          Assert.assertTrue(e.getMessage().contains("superuser is not allowed to perform this operation"));
+        } catch (Exception e) {
+          Assert.fail("Should get an AccessControlException here");
+        }
+      }
+      if (stat.isDirectory()) {
+        FileStatus[] ls = fs.listStatus(p);
+        for (FileStatus f : ls) {
+          paths.add(f.getPath());
+        }
+      }
+    }
+
+  }
+
+  @Test(timeout = 60000)
   public void testCheckMajorVersionChange() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-      fsTester = new TestFSRMStateStoreTester(cluster) {
+      fsTester = new TestFSRMStateStoreTester(cluster, false) {
         Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
 
         @Override
@@ -238,14 +349,14 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     ApplicationAttemptId attemptId1 =
         ConverterUtils.toApplicationAttemptId(appAttemptIdStr1);
     Path appDir =
-        fsTester.store.getAppDir(attemptId1.getApplicationId().toString());
+            fsTester.store.getAppDir(attemptId1.getApplicationId().toString());
     Path appAttemptFile1 =
         new Path(appDir, attemptId1.toString() + ".new");
     FileSystemRMStateStore fileSystemRMStateStore =
         (FileSystemRMStateStore) fsTester.getRMStateStore();
     fileSystemRMStateStore.renameFile(appAttemptFile1,
-        new Path(appAttemptFile1.getParent(),
-            appAttemptFile1.getName() + ".new"));
+            new Path(appAttemptFile1.getParent(),
+                    appAttemptFile1.getName() + ".new"));
   }
 
   @Override
@@ -268,7 +379,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
     try {
-      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
+      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster, false);
       final RMStateStore store = fsTester.getRMStateStore();
       store.setRMDispatcher(new TestDispatcher());
       final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
