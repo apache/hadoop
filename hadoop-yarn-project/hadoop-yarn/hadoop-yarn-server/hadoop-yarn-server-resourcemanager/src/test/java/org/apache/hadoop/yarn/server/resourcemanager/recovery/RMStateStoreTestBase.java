@@ -112,6 +112,12 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
   }
 
+  public static class StoreStateVerifier {
+    void afterStoreApp(RMStateStore store, ApplicationId appId) {}
+    void afterStoreAppAttempt(RMStateStore store, ApplicationAttemptId
+            appAttId) {}
+  }
+
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
     boolean isFinalStateValid() throws Exception;
@@ -173,7 +179,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     when(mockAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0,0));
+        .thenReturn(new AggregateAppResourceUsage(0, 0));
     dispatcher.attemptId = attemptId;
     store.storeNewApplicationAttempt(mockAttempt);
     waitNotify(dispatcher);
@@ -181,6 +187,12 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   }
 
   void testRMAppStateStore(RMStateStoreHelper stateStoreHelper)
+          throws Exception {
+    testRMAppStateStore(stateStoreHelper, new StoreStateVerifier());
+  }
+
+  void testRMAppStateStore(RMStateStoreHelper stateStoreHelper,
+                           StoreStateVerifier verifier)
       throws Exception {
     long submitTime = System.currentTimeMillis();
     long startTime = System.currentTimeMillis() + 1234;
@@ -205,6 +217,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
         .toApplicationAttemptId("appattempt_1352994193343_0001_000001");
     ApplicationId appId1 = attemptId1.getApplicationId();
     storeApp(store, appId1, submitTime, startTime);
+    verifier.afterStoreApp(store, appId1);
 
     // create application token and client token key for attempt1
     Token<AMRMTokenIdentifier> appAttemptToken1 =
@@ -236,6 +249,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     storeApp(store, appIdRemoved, submitTime, startTime);
     storeAttempt(store, attemptIdRemoved,
         "container_1352994193343_0002_01_000001", null, null, dispatcher);
+    verifier.afterStoreAppAttempt(store, attemptIdRemoved);
 
     RMApp mockRemovedApp = mock(RMApp.class);
     RMAppAttemptMetrics mockRmAppAttemptMetrics = 
