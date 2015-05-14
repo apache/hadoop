@@ -556,7 +556,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         queueUsage, nodePartition, cluster, schedulingMode);
   }
   
-  boolean accessibleToPartition(String nodePartition) {
+  public boolean accessibleToPartition(String nodePartition) {
     // if queue's label is *, it can access any node
     if (accessibleLabels != null
         && accessibleLabels.contains(RMNodeLabelsManager.ANY)) {

@@ -24,9 +24,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
 @XmlRootElement(name = "capacityScheduler")
 @XmlType(name = "capacityScheduler")
@@ -46,16 +49,19 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   public CapacitySchedulerInfo() {
   } // JAXB needs this
 
-  public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
+  public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs,
+      RMNodeLabel nodeLabel) {
+    String label = nodeLabel.getLabelName();
+    QueueCapacities parentQueueCapacities = parent.getQueueCapacities();
     this.queueName = parent.getQueueName();
-    this.usedCapacity = parent.getUsedCapacity() * 100;
-    this.capacity = parent.getCapacity() * 100;
-    float max = parent.getMaximumCapacity();
+    this.usedCapacity = parentQueueCapacities.getUsedCapacity(label) * 100;
+    this.capacity = parentQueueCapacities.getCapacity(label) * 100;
+    float max = parentQueueCapacities.getMaximumCapacity(label);
     if (max < EPSILON || max > 1f)
       max = 1f;
     this.maxCapacity = max * 100;
 
-    queues = getQueues(parent);
+    queues = getQueues(parent, nodeLabel);
     health = new CapacitySchedulerHealthInfo(cs);
   }
 
@@ -79,16 +85,27 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     return this.queues;
   }
 
-  protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {
+  protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent,
+      RMNodeLabel nodeLabel) {
     CSQueue parentQueue = parent;
-    CapacitySchedulerQueueInfoList queuesInfo = new CapacitySchedulerQueueInfoList();
+    CapacitySchedulerQueueInfoList queuesInfo =
+        new CapacitySchedulerQueueInfoList();
     for (CSQueue queue : parentQueue.getChildQueues()) {
+      if (nodeLabel.getIsExclusive()
+          && !((AbstractCSQueue) queue).accessibleToPartition(nodeLabel
+              .getLabelName())) {
+        // Skip displaying the hierarchy for the queues for which the exclusive
+        // labels are not accessible
+        continue;
+      }
       CapacitySchedulerQueueInfo info;
       if (queue instanceof LeafQueue) {
-        info = new CapacitySchedulerLeafQueueInfo((LeafQueue)queue);
+        info =
+            new CapacitySchedulerLeafQueueInfo((LeafQueue) queue,
+                nodeLabel.getLabelName());
       } else {
-        info = new CapacitySchedulerQueueInfo(queue);
-        info.queues = getQueues(queue);
+        info = new CapacitySchedulerQueueInfo(queue, nodeLabel.getLabelName());
+        info.queues = getQueues(queue, nodeLabel);
       }
       queuesInfo.addToQueueInfoList(info);
     }
