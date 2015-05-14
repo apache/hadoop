@@ -674,6 +674,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11962. Sasl message with MD5 challenge text shouldn't be LOG out
     even in debug level. (Junping Du via wheat9)
 
+    HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
+    (Brahma Reddy Battula via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
