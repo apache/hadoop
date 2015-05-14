@@ -758,6 +758,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7728. Avoid updating quota usage while loading edits.
     (Jing Zhao via wheat9)
 
+    HDFS-8150. Make getFileChecksum fail for blocks under construction
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

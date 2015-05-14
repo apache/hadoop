@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -32,6 +33,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -111,8 +114,16 @@ public class TestSnapshotFileLength {
     // Append to the file.
     FSDataOutputStream out = hdfs.append(file1);
     // Nothing has been appended yet. All checksums should still be equal.
-    assertThat("file and snapshot checksums (open for append) are not equal",
-        hdfs.getFileChecksum(file1), is(snapChksum1));
+    // HDFS-8150:Fetching checksum for file under construction should fail
+    try {
+      hdfs.getFileChecksum(file1);
+      fail("getFileChecksum should fail for files "
+          + "with blocks under construction");
+    } catch (IOException ie) {
+      assertTrue(ie.getMessage().contains(
+          "Fail to get checksum, since file " + file1
+              + " is under construction."));
+    }
     assertThat("snapshot checksum (post-open for append) has changed",
         hdfs.getFileChecksum(file1snap1), is(snapChksum1));
     try {
@@ -122,8 +133,6 @@ public class TestSnapshotFileLength {
       assertThat("Wrong data size in snapshot.",
           dataFromSnapshot.length, is(origLen));
       // Verify that checksum didn't change
-      assertThat("snapshot file checksum (pre-close) has changed",
-          hdfs.getFileChecksum(file1), is(snapChksum1));
       assertThat("snapshot checksum (post-append) has changed",
           hdfs.getFileChecksum(file1snap1), is(snapChksum1));
     } finally {
