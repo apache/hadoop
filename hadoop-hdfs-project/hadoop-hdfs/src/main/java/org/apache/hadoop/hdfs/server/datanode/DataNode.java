@@ -1909,6 +1909,21 @@ public class DataNode extends ReconfigurableBase
   int getXmitsInProgress() {
     return xmitsInProgress.get();
   }
+  
+  /**
+   * Increments the xmitsInProgress count. xmitsInProgress count represents the
+   * number of data replication/reconstruction tasks running currently.
+   */
+  public void incrementXmitsInProgress() {
+    xmitsInProgress.getAndIncrement();
+  }
+
+  /**
+   * Decrements the xmitsInProgress count
+   */
+  public void decrementXmitsInProgress() {
+    xmitsInProgress.getAndDecrement();
+  }
 
   private void reportBadBlock(final BPOfferService bpos,
       final ExtendedBlock block, final String msg) {
@@ -2128,7 +2143,7 @@ public class DataNode extends ReconfigurableBase
      */
     @Override
     public void run() {
-      xmitsInProgress.getAndIncrement();
+      incrementXmitsInProgress();
       Socket sock = null;
       DataOutputStream out = null;
       DataInputStream in = null;
@@ -2207,7 +2222,7 @@ public class DataNode extends ReconfigurableBase
         // check if there are any disk problem
         checkDiskErrorAsync();
       } finally {
-        xmitsInProgress.getAndDecrement();
+        decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
