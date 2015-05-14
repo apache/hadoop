@@ -82,6 +82,7 @@ public class LocalContainerLauncher extends AbstractService implements
   private final TaskUmbilicalProtocol umbilical;
   private ExecutorService taskRunner;
   private Thread eventHandler;
+  private byte[] encryptedSpillKey = new byte[] {0};
   private BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
 
@@ -156,6 +157,11 @@ public class LocalContainerLauncher extends AbstractService implements
     }
   }
 
+  public void setEncryptedSpillKey(byte[] encryptedSpillKey) {
+    if (encryptedSpillKey != null) {
+      this.encryptedSpillKey = encryptedSpillKey;
+    }
+  }
 
   /*
    * Uber-AM lifecycle/ordering ("normal" case):
@@ -353,6 +359,10 @@ public class LocalContainerLauncher extends AbstractService implements
         // will need new Job state-machine transition and JobImpl jobCounters
         // map to handle)
         conf.setBoolean("mapreduce.task.uberized", true);
+
+        // Check and handle Encrypted spill key
+        task.setEncryptedSpillKey(encryptedSpillKey);
+        YarnChild.setEncryptedSpillKeyIfRequired(task);
 
         // META-FIXME: do we want the extra sanity-checking (doneWithMaps,
         // etc.), or just assume/hope the state machine(s) and uber-AM work

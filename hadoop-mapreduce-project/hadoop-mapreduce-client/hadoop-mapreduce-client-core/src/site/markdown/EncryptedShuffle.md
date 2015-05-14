@@ -253,3 +253,11 @@ You can do this on a per-job basis, or by means of a cluster-wide setting in the
 To set this property in NodeManager, set it in the `yarn-env.sh` file:
 
       YARN_NODEMANAGER_OPTS="-Djavax.net.debug=all"
+
+Encrypted Intermediate Data Spill files
+---------------------------------------
+
+This capability allows encryption of the intermediate files generated during the merge and shuffle phases.
+It can be enabled by setting the `mapreduce.job.encrypted-intermediate-data` job property to `true`.
+
+**NOTE:** Currently, enabling encrypted intermediate data spills would restrict the number of attempts of the job to 1.
