@@ -865,4 +865,24 @@ public class ViewFileSystemBaseTest {
     fsView.removeXAttr(new Path("/internalDir"), "xattrName");
   }
 
+  @Test(expected = AccessControlException.class)
+  public void testInternalCreateSnapshot1() throws IOException {
+    fsView.createSnapshot(new Path("/internalDir"));
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalCreateSnapshot2() throws IOException {
+    fsView.createSnapshot(new Path("/internalDir"), "snap1");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalRenameSnapshot() throws IOException {
+    fsView.renameSnapshot(new Path("/internalDir"), "snapOldName",
+        "snapNewName");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalDeleteSnapshot() throws IOException {
+    fsView.deleteSnapshot(new Path("/internalDir"), "snap1");
+  }
 }
