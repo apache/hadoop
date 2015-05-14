@@ -408,6 +408,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2921. Fix MockRM/MockAM#waitForState sleep too long. 
     (Tsuyoshi Ozawa via wangda)
 
+    YARN-1519. Check in container-executor if sysconf is implemented before
+    using it (Radim Kolar and Eric Payne via raviprak)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
