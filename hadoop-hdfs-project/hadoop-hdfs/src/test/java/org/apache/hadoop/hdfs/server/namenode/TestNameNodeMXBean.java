@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.io.FileUtils;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -214,6 +215,8 @@ public class TestNameNodeMXBean {
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
     MiniDFSCluster cluster = null;
+    FileSystem localFileSys = null;
+    Path dir = null;
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
@@ -226,10 +229,9 @@ public class TestNameNodeMXBean {
         "Hadoop:service=NameNode,name=NameNodeInfo");
 
       // Define include file to generate deadNodes metrics
-      FileSystem localFileSys = FileSystem.getLocal(conf);
+      localFileSys = FileSystem.getLocal(conf);
       Path workingDir = localFileSys.getWorkingDirectory();
-      Path dir = new Path(workingDir,
-        "build/test/data/temp/TestNameNodeMXBean");
+      dir = new Path(workingDir,"build/test/data/temp/TestNameNodeMXBean");
       Path includeFile = new Path(dir, "include");
       assertTrue(localFileSys.mkdirs(dir));
       StringBuilder includeHosts = new StringBuilder();
@@ -258,8 +260,10 @@ public class TestNameNodeMXBean {
         assertTrue(deadNode.containsKey("decommissioned"));
         assertTrue(deadNode.containsKey("xferaddr"));
       }
-
     } finally {
+      if ((localFileSys != null) && localFileSys.exists(dir)) {
+        FileUtils.deleteQuietly(new File(dir.toUri().getPath()));
+      }
       if (cluster != null) {
         cluster.shutdown();
       }

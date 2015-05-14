@@ -752,6 +752,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8380. Always call addStoredBlock on blocks which have been shifted
     from one storage to another (cmccabe)
 
+    HDFS-8243. Files written by TestHostsFiles and TestNameNodeMXBean are
+    causing Release Audit Warnings. (Ruth Wisniewski via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
