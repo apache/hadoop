@@ -47,17 +47,17 @@ public class FileSystemTimelineWriterImpl extends AbstractService
 
   private String outputRoot;
 
-  /** Config param for timeline service storage tmp root for FILE YARN-3264 */
+  /** Config param for timeline service storage tmp root for FILE YARN-3264. */
   public static final String TIMELINE_SERVICE_STORAGE_DIR_ROOT
-    = YarnConfiguration.TIMELINE_SERVICE_PREFIX + "fs-writer.root-dir";
+      = YarnConfiguration.TIMELINE_SERVICE_PREFIX + "fs-writer.root-dir";
 
-  /** default value for storage location on local disk */
+  /** default value for storage location on local disk. */
   public static final String DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
-    = "/tmp/timeline_service_data";
+      = "/tmp/timeline_service_data";
 
   public static final String ENTITIES_DIR = "entities";
 
-  /** Default extension for output files */
+  /** Default extension for output files. */
   public static final String TIMELINE_SERVICE_STORAGE_EXTENSION = ".thist";
 
   FileSystemTimelineWriterImpl() {
@@ -81,9 +81,11 @@ public class FileSystemTimelineWriterImpl extends AbstractService
       TimelineWriteResponse response) throws IOException {
     PrintWriter out = null;
     try {
-      String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,flowName,
-          flowVersion, String.valueOf(flowRun), appId, entity.getType());
-      String fileName = dir + entity.getId() + TIMELINE_SERVICE_STORAGE_EXTENSION;
+      String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,
+          escape(flowName), escape(flowVersion), String.valueOf(flowRun), appId,
+          entity.getType());
+      String fileName = dir + entity.getId() +
+          TIMELINE_SERVICE_STORAGE_EXTENSION;
       out =
           new PrintWriter(new BufferedWriter(new OutputStreamWriter(
               new FileOutputStream(fileName, true), "UTF-8")));
@@ -144,5 +146,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
       }
     }
     return path.toString();
+  }
+
+  // specifically escape the separator character
+  private static String escape(String str) {
+    return str.replace(File.separatorChar, '_');
   }
 }
