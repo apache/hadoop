@@ -21,7 +21,10 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -222,7 +225,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /** Is this inode in the latest snapshot? */
   public final boolean isInLatestSnapshot(final int latestSnapshotId) {
-    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID || latestSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
+    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID ||
+        latestSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       return false;
     }
     // if parent is a reference node, parent must be a renamed node. We can 
@@ -397,11 +401,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *        The id of the latest snapshot before the to-be-deleted snapshot.
    *        When deleting a current inode, this parameter captures the latest
    *        snapshot.
-   * @return quota usage delta when deleting a snapshot
    */
-  public abstract QuotaCounts cleanSubtree(
-      ReclaimContext reclaimContext, final int snapshotId, int priorSnapshotId);
-  
+  public abstract void cleanSubtree(ReclaimContext reclaimContext,
+      final int snapshotId, int priorSnapshotId);
+
   /**
    * Destroy self and clear everything! If the INode is a file, this method
    * collects its blocks for further block deletion. If the INode is a
@@ -494,8 +497,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps) {
     final byte storagePolicyId = isSymlink() ?
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED : getStoragePolicyID();
-    return computeQuotaUsage(bsps, storagePolicyId,
-        new QuotaCounts.Builder().build(), true, Snapshot.CURRENT_STATE_ID);
+    return computeQuotaUsage(bsps, storagePolicyId, true,
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -521,25 +524,23 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *
    * @param bsps Block storage policy suite to calculate intended storage type usage
    * @param blockStoragePolicyId block storage policy id of the current INode
-   * @param counts The subtree counts for returning.
    * @param useCache Whether to use cached quota usage. Note that 
    *                 {@link WithName} node never uses cache for its subtree.
    * @param lastSnapshotId {@link Snapshot#CURRENT_STATE_ID} indicates the 
    *                       computation is in the current tree. Otherwise the id
    *                       indicates the computation range for a 
    *                       {@link WithName} node.
-   * @return The same objects as the counts parameter.
+   * @return The subtree quota counts.
    */
-  public abstract QuotaCounts computeQuotaUsage(
-    BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-    QuotaCounts counts, boolean useCache, int lastSnapshotId);
+  public abstract QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      byte blockStoragePolicyId, boolean useCache, int lastSnapshotId);
 
-  public final QuotaCounts computeQuotaUsage(
-    BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache) {
+  public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      boolean useCache) {
     final byte storagePolicyId = isSymlink() ?
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED : getStoragePolicyID();
-    return computeQuotaUsage(bsps, storagePolicyId, counts,
-        useCache, Snapshot.CURRENT_STATE_ID);
+    return computeQuotaUsage(bsps, storagePolicyId, useCache,
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -804,6 +805,90 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
+   * Information used to record quota usage delta. This data structure is
+   * usually passed along with an operation like {@link #cleanSubtree}. Note
+   * that after the operation the delta counts should be decremented from the
+   * ancestral directories' quota usage.
+   */
+  public static class QuotaDelta {
+    private final QuotaCounts counts;
+    /**
+     * The main usage of this map is to track the quota delta that should be
+     * applied to another path. This usually happens when we reclaim INodes and
+     * blocks while deleting snapshots, and hit an INodeReference. Because the
+     * quota usage for a renamed+snapshotted file/directory is counted in both
+     * the current and historical parents, any change of its quota usage may
+     * need to be propagated along its parent paths both before and after the
+     * rename.
+     */
+    private final Map<INode, QuotaCounts> updateMap;
+
+    /**
+     * When deleting a snapshot we may need to update the quota for directories
+     * with quota feature. This map is used to capture these directories and
+     * their quota usage updates.
+     */
+    private final Map<INodeDirectory, QuotaCounts> quotaDirMap;
+
+    public QuotaDelta() {
+      counts = new QuotaCounts.Builder().build();
+      updateMap = Maps.newHashMap();
+      quotaDirMap = Maps.newHashMap();
+    }
+
+    public void add(QuotaCounts update) {
+      counts.add(update);
+    }
+
+    public void addUpdatePath(INodeReference inode, QuotaCounts update) {
+      QuotaCounts c = updateMap.get(inode);
+      if (c == null) {
+        c = new QuotaCounts.Builder().build();
+        updateMap.put(inode, c);
+      }
+      c.add(update);
+    }
+
+    public void addQuotaDirUpdate(INodeDirectory dir, QuotaCounts update) {
+      Preconditions.checkState(dir.isQuotaSet());
+      QuotaCounts c = quotaDirMap.get(dir);
+      if (c == null) {
+        quotaDirMap.put(dir, update);
+      } else {
+        c.add(update);
+      }
+    }
+
+    public QuotaCounts getCountsCopy() {
+      final QuotaCounts copy = new QuotaCounts.Builder().build();
+      copy.add(counts);
+      return copy;
+    }
+
+    public void setCounts(QuotaCounts c) {
+      this.counts.setNameSpace(c.getNameSpace());
+      this.counts.setStorageSpace(c.getStorageSpace());
+      this.counts.setTypeSpaces(c.getTypeSpaces());
+    }
+
+    public long getNsDelta() {
+      long nsDelta = counts.getNameSpace();
+      for (Map.Entry<INode, QuotaCounts> entry : updateMap.entrySet()) {
+        nsDelta += entry.getValue().getNameSpace();
+      }
+      return nsDelta;
+    }
+
+    public Map<INode, QuotaCounts> getUpdateMap() {
+      return ImmutableMap.copyOf(updateMap);
+    }
+
+    public Map<INodeDirectory, QuotaCounts> getQuotaDirMap() {
+      return ImmutableMap.copyOf(quotaDirMap);
+    }
+  }
+
+  /**
    * Context object to record blocks and inodes that need to be reclaimed
    */
   public static class ReclaimContext {
@@ -811,6 +896,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     protected final BlocksMapUpdateInfo collectedBlocks;
     protected final List<INode> removedINodes;
     protected final List<Long> removedUCFiles;
+    /** Used to collect quota usage delta */
+    private final QuotaDelta quotaDelta;
+
     /**
      * @param bsps
      *          block storage policy suite to calculate intended storage type
@@ -830,6 +918,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       this.collectedBlocks = collectedBlocks;
       this.removedINodes = removedINodes;
       this.removedUCFiles = removedUCFiles;
+      this.quotaDelta = new QuotaDelta();
     }
 
     public BlockStoragePolicySuite storagePolicySuite() {
@@ -838,6 +927,19 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
     public BlocksMapUpdateInfo collectedBlocks() {
       return collectedBlocks;
+    }
+
+    public QuotaDelta quotaDelta() {
+      return quotaDelta;
+    }
+
+    /**
+     * make a copy with the same collectedBlocks, removedINodes, and
+     * removedUCFiles but a new quotaDelta.
+     */
+    public ReclaimContext getCopy() {
+      return new ReclaimContext(bsps, collectedBlocks, removedINodes,
+          removedUCFiles);
     }
   }
 
@@ -851,7 +953,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     private final List<Block> toDeleteList;
     
     public BlocksMapUpdateInfo() {
-      toDeleteList = new ChunkedArrayList<Block>();
+      toDeleteList = new ChunkedArrayList<>();
     }
     
     /**

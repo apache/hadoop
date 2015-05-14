@@ -33,14 +33,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.SnapshotAndINode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
@@ -214,18 +212,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
-      try {
-        QuotaCounts counts = snapshotRoot.cleanSubtree(reclaimContext,
-            snapshot.getId(), prior);
-        INodeDirectory parent = snapshotRoot.getParent();
-        if (parent != null) {
-          // there will not be any WithName node corresponding to the deleted
-          // snapshot, thus only update the quota usage in the current tree
-          parent.addSpaceConsumed(counts.negation(), true);
-        }
-      } catch(QuotaExceededException e) {
-        INode.LOG.error("BUG: removeSnapshot increases namespace usage.", e);
-      }
+      snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
       return snapshot;

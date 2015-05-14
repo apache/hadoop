@@ -558,7 +558,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    */
   private void addChild(final INode node, final int insertionPoint) {
     if (children == null) {
-      children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
+      children = new ArrayList<>(DEFAULT_FILES_PER_DIRECTORY);
     }
     node.setParent(this);
     children.add(-insertionPoint - 1, node);
@@ -570,10 +570,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   @Override
   public QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
-      byte blockStoragePolicyId, QuotaCounts counts, boolean useCache,
-      int lastSnapshotId) {
+      byte blockStoragePolicyId, boolean useCache, int lastSnapshotId) {
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
 
+    QuotaCounts counts = new QuotaCounts.Builder().build();
     // we are computing the quota usage for a specific snapshot here, i.e., the
     // computation only includes files/directories that exist at the time of the
     // given snapshot
@@ -581,9 +581,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
         && !(useCache && isQuotaSet())) {
       ReadOnlyList<INode> childrenList = getChildrenList(lastSnapshotId);
       for (INode child : childrenList) {
-        final byte childPolicyId = child.getStoragePolicyIDForQuota(blockStoragePolicyId);
-        child.computeQuotaUsage(bsps, childPolicyId, counts, useCache,
-            lastSnapshotId);
+        final byte childPolicyId = child.getStoragePolicyIDForQuota(
+            blockStoragePolicyId);
+        counts.add(child.computeQuotaUsage(bsps, childPolicyId, useCache,
+            lastSnapshotId));
       }
       counts.addNameSpace(1);
       return counts;
@@ -605,9 +606,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
       int lastSnapshotId) {
     if (children != null) {
       for (INode child : children) {
-        final byte childPolicyId = child.getStoragePolicyIDForQuota(blockStoragePolicyId);
-        child.computeQuotaUsage(bsps, childPolicyId, counts, useCache,
-            lastSnapshotId);
+        final byte childPolicyId = child.getStoragePolicyIDForQuota(
+            blockStoragePolicyId);
+        counts.add(child.computeQuotaUsage(bsps, childPolicyId, useCache,
+            lastSnapshotId));
       }
     }
     return computeQuotaUsage4CurrentDirectory(bsps, blockStoragePolicyId,
@@ -621,7 +623,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     // include the diff list
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.computeQuotaUsage4CurrentDirectory(bsps, storagePolicyId, counts);
+      counts.add(sf.computeQuotaUsage4CurrentDirectory(bsps, storagePolicyId));
     }
     return counts;
   }
@@ -710,8 +712,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   public void undoRename4ScrParent(final INodeReference oldChild,
       final INode newChild) throws QuotaExceededException {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
-    Preconditions.checkState(sf != null,
-        "Directory does not have snapshot feature");
+    assert sf != null : "Directory does not have snapshot feature";
     sf.getDiffs().removeChild(ListType.DELETED, oldChild);
     sf.getDiffs().replaceChild(ListType.CREATED, oldChild, newChild);
     addChild(newChild, true, Snapshot.CURRENT_STATE_ID);
@@ -726,8 +727,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
       final INode deletedChild,
       int latestSnapshotId) throws QuotaExceededException {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
-    Preconditions.checkState(sf != null,
-        "Directory does not have snapshot feature");
+    assert sf != null : "Directory does not have snapshot feature";
     boolean removeDeletedChild = sf.getDiffs().removeChild(ListType.DELETED,
         deletedChild);
     int sid = removeDeletedChild ? Snapshot.CURRENT_STATE_ID : latestSnapshotId;
@@ -753,10 +753,9 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   /** Call cleanSubtree(..) recursively down the subtree. */
-  public QuotaCounts cleanSubtreeRecursively(
+  public void cleanSubtreeRecursively(
       ReclaimContext reclaimContext, final int snapshot, int prior,
       final Map<INode, INode> excludedNodes) {
-    QuotaCounts counts = new QuotaCounts.Builder().build();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
     // to its latest previous snapshot. (besides, we also need to consider nodes
@@ -765,19 +764,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
     int s = snapshot != Snapshot.CURRENT_STATE_ID
         && prior != Snapshot.NO_SNAPSHOT_ID ? prior : snapshot;
     for (INode child : getChildrenList(s)) {
-      if (snapshot != Snapshot.CURRENT_STATE_ID && excludedNodes != null
-          && excludedNodes.containsKey(child)) {
-        continue;
-      } else {
-        QuotaCounts childCounts = child.cleanSubtree(reclaimContext, snapshot, prior);
-        counts.add(childCounts);
+      if (snapshot == Snapshot.CURRENT_STATE_ID || excludedNodes == null ||
+          !excludedNodes.containsKey(child)) {
+        child.cleanSubtree(reclaimContext, snapshot, prior);
       }
     }
-    return counts;
   }
 
   @Override
   public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
+    reclaimContext.quotaDelta().add(
+        new QuotaCounts.Builder().nameSpace(1).build());
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
       sf.clear(reclaimContext, this);
@@ -793,30 +790,30 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
   
   @Override
-  public QuotaCounts cleanSubtree(
-      ReclaimContext reclaimContext, final int snapshotId, int priorSnapshotId) {
+  public void cleanSubtree(ReclaimContext reclaimContext, final int snapshotId,
+      int priorSnapshotId) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     // there is snapshot data
     if (sf != null) {
-      return sf.cleanDirectory(reclaimContext, this, snapshotId,
-                               priorSnapshotId);
-    }
-    // there is no snapshot data
-    if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID
-        && snapshotId == Snapshot.CURRENT_STATE_ID) {
-      // destroy the whole subtree and collect blocks that should be deleted
-      QuotaCounts counts = new QuotaCounts.Builder().build();
-      this.computeQuotaUsage(reclaimContext.bsps, counts, true);
-      destroyAndCollectBlocks(reclaimContext);
-      return counts; 
+      sf.cleanDirectory(reclaimContext, this, snapshotId, priorSnapshotId);
     } else {
-      // process recursively down the subtree
-      QuotaCounts counts = cleanSubtreeRecursively(
-          reclaimContext, snapshotId, priorSnapshotId, null);
-      if (isQuotaSet()) {
-        getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(counts.negation());
+      // there is no snapshot data
+      if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID &&
+          snapshotId == Snapshot.CURRENT_STATE_ID) {
+        // destroy the whole subtree and collect blocks that should be deleted
+        destroyAndCollectBlocks(reclaimContext);
+      } else {
+        // make a copy the quota delta
+        QuotaCounts old = reclaimContext.quotaDelta().getCountsCopy();
+        // process recursively down the subtree
+        cleanSubtreeRecursively(reclaimContext, snapshotId, priorSnapshotId,
+            null);
+        QuotaCounts current = reclaimContext.quotaDelta().getCountsCopy();
+        current.subtract(old);
+        if (isQuotaSet()) {
+          reclaimContext.quotaDelta().addQuotaDirUpdate(this, current);
+        }
       }
-      return counts;
     }
   }
   

@@ -208,8 +208,7 @@ public class TestSnapshotDeletion {
         q.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
         q.getStorageSpace());
-    QuotaCounts counts = new QuotaCounts.Builder().build();
-    dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), counts, false);
+    QuotaCounts counts = dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), false);
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
         counts.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
@@ -248,8 +247,11 @@ public class TestSnapshotDeletion {
     DFSTestUtil.createFile(hdfs, metaChangeFile2, BLOCKSIZE, REPLICATION, seed);
     
     // Case 1: delete deleteDir before taking snapshots
+    hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    checkQuotaUsageComputation(dir, 10, BLOCKSIZE * REPLICATION * 4);
     hdfs.delete(deleteDir, true);
-    
+    checkQuotaUsageComputation(dir, 8, BLOCKSIZE * REPLICATION * 3);
+
     // create snapshot s0
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s0");
     
@@ -542,7 +544,7 @@ public class TestSnapshotDeletion {
     
     // check 4: no snapshot copy for toDeleteFile
     try {
-      status = hdfs.getFileStatus(toDeleteFile);
+      hdfs.getFileStatus(toDeleteFile);
       fail("should throw FileNotFoundException");
     } catch (FileNotFoundException e) {
       GenericTestUtils.assertExceptionContains("File does not exist: "
@@ -552,7 +554,7 @@ public class TestSnapshotDeletion {
     final Path toDeleteFileInSnapshot = SnapshotTestHelper.getSnapshotPath(dir,
         "s0", toDeleteFile.toString().substring(dir.toString().length()));
     try {
-      status = hdfs.getFileStatus(toDeleteFileInSnapshot);
+      hdfs.getFileStatus(toDeleteFileInSnapshot);
       fail("should throw FileNotFoundException");
     } catch (FileNotFoundException e) {
       GenericTestUtils.assertExceptionContains("File does not exist: "

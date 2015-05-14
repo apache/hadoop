@@ -23,8 +23,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import java.util.ArrayList;
-
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -75,8 +73,7 @@ public class TestSnapshotManager {
 
     // Delete a snapshot to free up a slot.
     //
-    sm.deleteSnapshot(iip, "", mock(INode.BlocksMapUpdateInfo.class),
-        new ArrayList<INode>());
+    sm.deleteSnapshot(iip, "", mock(INode.ReclaimContext.class));
 
     // Attempt to create a snapshot again. It should still fail due
     // to snapshot ID rollover.

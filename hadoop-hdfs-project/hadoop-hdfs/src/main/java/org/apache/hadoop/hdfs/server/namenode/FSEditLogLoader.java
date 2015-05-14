@@ -734,9 +734,10 @@ public class FSEditLogLoader {
           renameReservedPathsOnUpgrade(deleteSnapshotOp.snapshotRoot,
               logVersion);
       INodesInPath iip = fsDir.getINodesInPath4Write(snapshotRoot);
-      fsNamesys.getSnapshotManager().deleteSnapshot(
-          iip, deleteSnapshotOp.snapshotName,
-          collectedBlocks, removedINodes);
+      fsNamesys.getSnapshotManager().deleteSnapshot(iip,
+          deleteSnapshotOp.snapshotName,
+          new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
+              collectedBlocks, removedINodes, null));
       fsNamesys.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
       collectedBlocks.clear();
       fsNamesys.dir.removeFromInodeMap(removedINodes);
