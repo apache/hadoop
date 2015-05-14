@@ -1871,6 +1871,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (null == blockLocations) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
+    if (blockLocations.isUnderConstruction()) {
+      throw new IOException("Fail to get checksum, since file " + src
+          + " is under construction.");
+    }
     List<LocatedBlock> locatedblocks = blockLocations.getLocatedBlocks();
     final DataOutputBuffer md5out = new DataOutputBuffer();
     int bytesPerCRC = -1;
@@ -1889,6 +1893,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         blockLocations = callGetBlockLocations(namenode, src, 0, length);
         if (null == blockLocations) {
           throw new FileNotFoundException("File does not exist: " + src);
+        }
+        if (blockLocations.isUnderConstruction()) {
+          throw new IOException("Fail to get checksum, since file " + src
+              + " is under construction.");
         }
         locatedblocks = blockLocations.getLocatedBlocks();
         refetchBlocks = false;
