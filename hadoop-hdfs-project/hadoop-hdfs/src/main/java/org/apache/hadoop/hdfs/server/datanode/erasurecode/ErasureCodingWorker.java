@@ -312,6 +312,7 @@ public final class ErasureCodingWorker {
 
     @Override
     public void run() {
+      datanode.incrementXmitsInProgress();
       try {
         // Store the indices of successfully read source
         // This will be updated after doing real read.
@@ -397,8 +398,9 @@ public final class ErasureCodingWorker {
         // Currently we don't check the acks for packets, this is similar as
         // block replication.
       } catch (Throwable e) {
-        LOG.warn("Failed to recover striped block: " + blockGroup);
+        LOG.warn("Failed to recover striped block: " + blockGroup, e);
       } finally {
+        datanode.decrementXmitsInProgress();
         // close block readers
         for (StripedReader stripedReader : stripedReaders) {
           closeBlockReader(stripedReader.blockReader);

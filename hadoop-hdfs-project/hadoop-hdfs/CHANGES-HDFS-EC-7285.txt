@@ -212,3 +212,6 @@
 
     HDFS-8364. Erasure coding: fix some minor bugs in EC CLI
     (Walter Su via vinayakumarb)
+
+    HDFS-8391. NN should consider current EC tasks handling count from DN while 
+    assigning new tasks. (umamahesh)
