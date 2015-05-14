@@ -37,12 +37,12 @@ public class INodeMap {
   static INodeMap newInstance(INodeDirectory rootDir) {
     // Compute the map capacity by allocating 1% of total memory
     int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
-    GSet<INode, INodeWithAdditionalFields> map
-        = new LightWeightGSet<INode, INodeWithAdditionalFields>(capacity);
+    GSet<INode, INodeWithAdditionalFields> map =
+        new LightWeightGSet<>(capacity);
     map.put(rootDir);
     return new INodeMap(map);
   }
-  
+
   /** Synchronized by external lock. */
   private final GSet<INode, INodeWithAdditionalFields> map;
   
@@ -103,7 +103,7 @@ public class INodeMap {
       @Override
       public QuotaCounts computeQuotaUsage(
           BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-          QuotaCounts counts, boolean useCache, int lastSnapshotId) {
+          boolean useCache, int lastSnapshotId) {
         return null;
       }
 
@@ -114,9 +114,8 @@ public class INodeMap {
       }
       
       @Override
-      public QuotaCounts cleanSubtree(
+      public void cleanSubtree(
           ReclaimContext reclaimContext, int snapshotId, int priorSnapshotId) {
-          return null;
       }
 
       @Override

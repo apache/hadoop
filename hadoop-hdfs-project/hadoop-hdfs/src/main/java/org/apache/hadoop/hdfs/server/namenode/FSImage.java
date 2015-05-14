@@ -882,8 +882,8 @@ public class FSImage implements Closeable {
             child.asDirectory(), counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
-        child.computeQuotaUsage(bsps, childPolicyId, counts, false,
-            Snapshot.CURRENT_STATE_ID);
+        counts.add(child.computeQuotaUsage(bsps, childPolicyId, false,
+            Snapshot.CURRENT_STATE_ID));
       }
     }
       

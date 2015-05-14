@@ -491,37 +491,52 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public QuotaCounts cleanSubtree(
-      ReclaimContext reclaimContext, final int snapshot, int priorSnapshotId) {
+  public void cleanSubtree(ReclaimContext reclaimContext,
+      final int snapshot, int priorSnapshotId) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId);
-    }
-    QuotaCounts counts = new QuotaCounts.Builder().build();
-
-    if (snapshot == CURRENT_STATE_ID) {
-      if (priorSnapshotId == NO_SNAPSHOT_ID) {
-        // this only happens when deleting the current file and the file is not
-        // in any snapshot
-        computeQuotaUsage(reclaimContext.bsps, counts, false);
-        destroyAndCollectBlocks(reclaimContext);
-      } else {
-        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
-        // when deleting the current file and the file is in snapshot, we should
-        // clean the 0-sized block if the file is UC
-        if (uc != null) {
-          uc.cleanZeroSizeBlock(this, reclaimContext.collectedBlocks);
-          if (reclaimContext.removedUCFiles != null) {
-            reclaimContext.removedUCFiles.add(getId());
+      // TODO: avoid calling getStoragePolicyID
+      sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
+          getStoragePolicyID());
+    } else {
+      if (snapshot == CURRENT_STATE_ID) {
+        if (priorSnapshotId == NO_SNAPSHOT_ID) {
+          // this only happens when deleting the current file and it is not
+          // in any snapshot
+          destroyAndCollectBlocks(reclaimContext);
+        } else {
+          FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
+          // when deleting the current file and it is in snapshot, we should
+          // clean the 0-sized block if the file is UC
+          if (uc != null) {
+            uc.cleanZeroSizeBlock(this, reclaimContext.collectedBlocks);
+            if (reclaimContext.removedUCFiles != null) {
+              reclaimContext.removedUCFiles.add(getId());
+            }
           }
         }
       }
     }
-    return counts;
   }
 
   @Override
   public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
+    // TODO pass in the storage policy
+    reclaimContext.quotaDelta().add(computeQuotaUsage(reclaimContext.bsps,
+        false));
+    clearFile(reclaimContext);
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      sf.getDiffs().destroyAndCollectSnapshotBlocks(
+          reclaimContext.collectedBlocks);
+      sf.clearDiffs();
+    }
+    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
+      reclaimContext.removedUCFiles.add(getId());
+    }
+  }
+
+  public void clearFile(ReclaimContext reclaimContext) {
     if (blocks != null && reclaimContext.collectedBlocks != null) {
       for (BlockInfoContiguous blk : blocks) {
         reclaimContext.collectedBlocks.addDeleteBlock(blk);
@@ -534,15 +549,6 @@ public class INodeFile extends INodeWithAdditionalFields
     }
     clear();
     reclaimContext.removedINodes.add(this);
-    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    if (sf != null) {
-      sf.getDiffs().destroyAndCollectSnapshotBlocks(
-          reclaimContext.collectedBlocks);
-      sf.clearDiffs();
-    }
-    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
-      reclaimContext.removedUCFiles.add(getId());
-    }
   }
 
   @Override
@@ -554,18 +560,11 @@ public class INodeFile extends INodeWithAdditionalFields
   // This is the only place that needs to use the BlockStoragePolicySuite to
   // derive the intended storage type usage for quota by storage type
   @Override
-  public final QuotaCounts computeQuotaUsage(
-      BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-      QuotaCounts counts, boolean useCache,
-      int lastSnapshotId) {
-    long nsDelta = 1;
-    counts.addNameSpace(nsDelta);
+  public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      byte blockStoragePolicyId, boolean useCache, int lastSnapshotId) {
+    final QuotaCounts counts = new QuotaCounts.Builder().nameSpace(1).build();
 
-    BlockStoragePolicy bsp = null;
-    if (blockStoragePolicyId != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
-      bsp = bsps.getPolicy(blockStoragePolicyId);
-    }
-
+    final BlockStoragePolicy bsp = bsps.getPolicy(blockStoragePolicyId);
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf == null) {
       counts.add(storagespaceConsumed(bsp));
@@ -610,7 +609,7 @@ public class INodeFile extends INodeWithAdditionalFields
       final ContentSummaryComputationContext summary) {
     final ContentCounts counts = summary.getCounts();
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    long fileLen = 0;
+    final long fileLen;
     if (sf == null) {
       fileLen = computeFileSize();
       counts.addContent(Content.FILE, 1);

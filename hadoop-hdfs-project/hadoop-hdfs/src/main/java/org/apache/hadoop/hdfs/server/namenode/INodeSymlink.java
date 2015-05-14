@@ -72,26 +72,25 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
   
   @Override
-  public QuotaCounts cleanSubtree(
-      ReclaimContext reclaimContext, final int snapshotId, int priorSnapshotId) {
+  public void cleanSubtree(ReclaimContext reclaimContext, final int snapshotId,
+      int priorSnapshotId) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       destroyAndCollectBlocks(reclaimContext);
     }
-    return new QuotaCounts.Builder().nameSpace(1).build();
   }
   
   @Override
   public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
     reclaimContext.removedINodes.add(this);
+    reclaimContext.quotaDelta().add(
+        new QuotaCounts.Builder().nameSpace(1).build());
   }
 
   @Override
-  public QuotaCounts computeQuotaUsage(
-      BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-      QuotaCounts counts, boolean useCache, int lastSnapshotId) {
-    counts.addNameSpace(1);
-    return counts;
+  public QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      byte blockStoragePolicyId, boolean useCache, int lastSnapshotId) {
+    return new QuotaCounts.Builder().nameSpace(1).build();
   }
 
   @Override
@@ -107,15 +106,6 @@ public class INodeSymlink extends INodeWithAdditionalFields {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.println();
   }
-
-  /**
-   * getAclFeature is not overridden because it is needed for resolving
-   * symlinks.
-  @Override
-  final AclFeature getAclFeature(int snapshotId) {
-    throw new UnsupportedOperationException("ACLs are not supported on symlinks");
-  }
-  */
 
   @Override
   public void removeAclFeature() {

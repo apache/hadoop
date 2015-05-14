@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -638,6 +639,23 @@ public class FSDirectory implements Closeable {
       updateCount(iip, nsDelta, ssDelta, replication, true);
     } finally {
       writeUnlock();
+    }
+  }
+
+  public void updateCount(INodesInPath iip, INode.QuotaDelta quotaDelta,
+      boolean check) throws QuotaExceededException {
+    QuotaCounts counts = quotaDelta.getCountsCopy();
+    updateCount(iip, iip.length() - 1, counts.negation(), check);
+    Map<INode, QuotaCounts> deltaInOtherPaths = quotaDelta.getUpdateMap();
+    for (Map.Entry<INode, QuotaCounts> entry : deltaInOtherPaths.entrySet()) {
+      INodesInPath path = INodesInPath.fromINode(entry.getKey());
+      updateCount(path, path.length() - 1, entry.getValue().negation(), check);
+    }
+    for (Map.Entry<INodeDirectory, QuotaCounts> entry :
+        quotaDelta.getQuotaDirMap().entrySet()) {
+      INodeDirectory quotaDir = entry.getKey();
+      quotaDir.getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
+          entry.getValue().negation());
     }
   }
 

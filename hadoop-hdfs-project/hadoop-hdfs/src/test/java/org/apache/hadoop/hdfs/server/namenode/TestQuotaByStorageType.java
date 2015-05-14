@@ -47,7 +47,6 @@ public class TestQuotaByStorageType {
   private static final long seed = 0L;
   private static final Path dir = new Path("/TestQuotaByStorageType");
 
-  private Configuration conf;
   private MiniDFSCluster cluster;
   private FSDirectory fsdir;
   private DistributedFileSystem dfs;
@@ -57,7 +56,7 @@ public class TestQuotaByStorageType {
 
   @Before
   public void setUp() throws Exception {
-    conf = new Configuration();
+    Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
 
     // Setup a 3-node cluster and configure
@@ -194,8 +193,8 @@ public class TestQuotaByStorageType {
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(0, storageTypeConsumed);
 
-    QuotaCounts counts = new QuotaCounts.Builder().build();
-    fnode.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts, true);
+    QuotaCounts counts = fnode.computeQuotaUsage(
+        fsn.getBlockManager().getStoragePolicySuite(), true);
     assertEquals(fnode.dumpTreeRecursively().toString(), 0,
         counts.getTypeSpaces().get(StorageType.SSD));
 
@@ -453,8 +452,8 @@ public class TestQuotaByStorageType {
     assertEquals(0, cntAfterDelete.getStorageSpace());
 
     // Validate the computeQuotaUsage()
-    QuotaCounts counts = new QuotaCounts.Builder().build();
-    fnode.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts, true);
+    QuotaCounts counts = fnode.computeQuotaUsage(
+        fsn.getBlockManager().getStoragePolicySuite(), true);
     assertEquals(fnode.dumpTreeRecursively().toString(), 1,
         counts.getNameSpace());
     assertEquals(fnode.dumpTreeRecursively().toString(), 0,
@@ -565,8 +564,8 @@ public class TestQuotaByStorageType {
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(file1Len, ssdConsumed);
 
-    QuotaCounts counts1 = new QuotaCounts.Builder().build();
-    sub1Node.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts1, true);
+    QuotaCounts counts1 = sub1Node.computeQuotaUsage(
+        fsn.getBlockManager().getStoragePolicySuite(), true);
     assertEquals(sub1Node.dumpTreeRecursively().toString(), file1Len,
         counts1.getTypeSpaces().get(StorageType.SSD));
 
@@ -583,8 +582,8 @@ public class TestQuotaByStorageType {
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(0, ssdConsumed);
 
-    QuotaCounts counts2 = new QuotaCounts.Builder().build();
-    sub1Node.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts2, true);
+    QuotaCounts counts2 = sub1Node.computeQuotaUsage(
+        fsn.getBlockManager().getStoragePolicySuite(), true);
     assertEquals(sub1Node.dumpTreeRecursively().toString(), 0,
         counts2.getTypeSpaces().get(StorageType.SSD));
 
@@ -620,7 +619,7 @@ public class TestQuotaByStorageType {
     assertEquals(file1Len, ssdConsumed);
 
     // Truncate file to 1 * BLOCKSIZE
-    int newFile1Len = BLOCKSIZE * 1;
+    int newFile1Len = BLOCKSIZE;
     dfs.truncate(createdFile1, newFile1Len);
 
     // Verify SSD consumed after truncate

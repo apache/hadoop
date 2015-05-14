@@ -784,6 +784,7 @@ public class TestRenameWithSnapshots {
     
     // delete foo
     hdfs.delete(foo_dir1, true);
+    restartClusterAndCheckImage(true);
     hdfs.delete(bar2_dir1, true);
     
     // restart the cluster and check fsimage

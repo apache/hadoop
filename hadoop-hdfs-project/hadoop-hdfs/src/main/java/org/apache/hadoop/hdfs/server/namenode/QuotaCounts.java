@@ -78,14 +78,16 @@ public class QuotaCounts {
     this.tsCounts = builder.tsCounts;
   }
 
-  public void add(QuotaCounts that) {
+  public QuotaCounts add(QuotaCounts that) {
     this.nsSsCounts.add(that.nsSsCounts);
     this.tsCounts.add(that.tsCounts);
+    return this;
   }
 
-  public void subtract(QuotaCounts that) {
+  public QuotaCounts subtract(QuotaCounts that) {
     this.nsSsCounts.subtract(that.nsSsCounts);
     this.tsCounts.subtract(that.tsCounts);
+    return this;
   }
 
   /**

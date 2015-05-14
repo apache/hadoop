@@ -755,6 +755,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8243. Files written by TestHostsFiles and TestNameNodeMXBean are
     causing Release Audit Warnings. (Ruth Wisniewski via Arpit Agarwal)
 
+    HDFS-7728. Avoid updating quota usage while loading edits.
+    (Jing Zhao via wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

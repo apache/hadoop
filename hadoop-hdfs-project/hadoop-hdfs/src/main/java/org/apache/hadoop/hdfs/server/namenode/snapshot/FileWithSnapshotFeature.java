@@ -116,21 +116,25 @@ public class FileWithSnapshotFeature implements INode.Feature {
     return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
   }
   
-  public QuotaCounts cleanFile(INode.ReclaimContext reclaimContext,
-      final INodeFile file, final int snapshotId,
-      int priorSnapshotId) {
+  public void cleanFile(INode.ReclaimContext reclaimContext,
+      final INodeFile file, final int snapshotId, int priorSnapshotId,
+      byte storagePolicyId) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
+      final BlockStoragePolicy policy = reclaimContext.storagePolicySuite()
+          .getPolicy(storagePolicyId);
+      QuotaCounts old = file.storagespaceConsumed(policy);
       collectBlocksAndClear(reclaimContext, file);
-      return new QuotaCounts.Builder().build();
+      QuotaCounts current = file.storagespaceConsumed(policy);
+      reclaimContext.quotaDelta().add(old.subtract(current));
     } else { // delete the snapshot
       priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
-      return diffs.deleteSnapshotDiff(reclaimContext,
-          snapshotId, priorSnapshotId, file);
+      diffs.deleteSnapshotDiff(reclaimContext, snapshotId, priorSnapshotId,
+          file);
     }
   }
   
@@ -138,8 +142,8 @@ public class FileWithSnapshotFeature implements INode.Feature {
     this.diffs.clear();
   }
   
-  public QuotaCounts updateQuotaAndCollectBlocks(
-      INode.ReclaimContext reclaimContext, INodeFile file, FileDiff removed) {
+  public void updateQuotaAndCollectBlocks(INode.ReclaimContext reclaimContext,
+      INodeFile file, FileDiff removed) {
     byte storagePolicyID = file.getStoragePolicyID();
     BlockStoragePolicy bsp = null;
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
@@ -179,8 +183,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     getDiffs().combineAndCollectSnapshotBlocks(reclaimContext, file, removed);
 
     QuotaCounts current = file.storagespaceConsumed(bsp);
-    oldCounts.subtract(current);
-    return oldCounts;
+    reclaimContext.quotaDelta().add(oldCounts.subtract(current));
   }
 
   /**
@@ -191,7 +194,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       INode.ReclaimContext reclaimContext, final INodeFile file) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      file.destroyAndCollectBlocks(reclaimContext);
+      file.clearFile(reclaimContext);
       return;
     }
     // find max file size.
@@ -199,7 +202,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     FileDiff diff = getDiffs().getLast();
     if (isCurrentFileDeleted()) {
       max = diff == null? 0: diff.getFileSize();
-    } else { 
+    } else {
       max = file.computeFileSize();
     }
 

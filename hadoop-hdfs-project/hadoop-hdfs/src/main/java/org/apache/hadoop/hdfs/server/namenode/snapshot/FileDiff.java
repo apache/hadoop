@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
-import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 /**
@@ -79,13 +78,12 @@ public class FileDiff extends
   }
 
   @Override
-  QuotaCounts combinePosteriorAndCollectBlocks(
+  void combinePosteriorAndCollectBlocks(
       INode.ReclaimContext reclaimContext, INodeFile currentINode,
       FileDiff posterior) {
     FileWithSnapshotFeature sf = currentINode.getFileWithSnapshotFeature();
     assert sf != null : "FileWithSnapshotFeature is null";
-    return sf.updateQuotaAndCollectBlocks(reclaimContext,
-        currentINode, posterior);
+    sf.updateQuotaAndCollectBlocks(reclaimContext, currentINode, posterior);
   }
   
   @Override
@@ -109,18 +107,20 @@ public class FileDiff extends
   }
 
   @Override
-  QuotaCounts destroyDiffAndCollectBlocks(
-      INode.ReclaimContext reclaimContext, INodeFile currentINode) {
-    return currentINode.getFileWithSnapshotFeature()
-        .updateQuotaAndCollectBlocks(reclaimContext, currentINode, this);
+  void destroyDiffAndCollectBlocks(INode.ReclaimContext reclaimContext,
+      INodeFile currentINode) {
+    currentINode.getFileWithSnapshotFeature().updateQuotaAndCollectBlocks(
+        reclaimContext, currentINode, this);
   }
 
   public void destroyAndCollectSnapshotBlocks(
       BlocksMapUpdateInfo collectedBlocks) {
-    if(blocks == null || collectedBlocks == null)
+    if (blocks == null || collectedBlocks == null) {
       return;
-    for(BlockInfoContiguous blk : blocks)
+    }
+    for (BlockInfoContiguous blk : blocks) {
       collectedBlocks.addDeleteBlock(blk);
+    }
     blocks = null;
   }
 }

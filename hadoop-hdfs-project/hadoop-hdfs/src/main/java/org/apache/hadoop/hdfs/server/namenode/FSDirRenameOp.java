@@ -302,19 +302,18 @@ class FSDirRenameOp {
    * @param timestamp modification time
    * @param options   Rename options
    */
-  static boolean renameForEditLog(
+  static void renameForEditLog(
       FSDirectory fsd, String src, String dst, long timestamp,
       Options.Rename... options)
       throws IOException {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     final INodesInPath srcIIP = fsd.getINodesInPath4Write(src, false);
     final INodesInPath dstIIP = fsd.getINodesInPath4Write(dst, false);
-    boolean ret = unprotectedRenameTo(fsd, src, dst, srcIIP, dstIIP, timestamp,
+    unprotectedRenameTo(fsd, src, dst, srcIIP, dstIIP, timestamp,
         collectedBlocks, options);
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
       fsd.getFSNamesystem().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
     }
-    return ret;
   }
 
   /**
@@ -609,7 +608,7 @@ class FSDirRenameOp {
         this.srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1,
             srcChild);
         // get the counts before rename
-        withCount.getReferredINode().computeQuotaUsage(bsps, oldSrcCounts, true);
+        oldSrcCounts.add(withCount.getReferredINode().computeQuotaUsage(bsps));
       } else if (srcChildIsReference) {
         // srcChild is reference but srcChild is not in latest snapshot
         withCount = (INodeReference.WithCount) srcChild.asReference()
@@ -730,18 +729,16 @@ class FSDirRenameOp {
       Preconditions.checkState(oldDstChild != null);
       List<INode> removedINodes = new ChunkedArrayList<>();
       List<Long> removedUCFiles = new ChunkedArrayList<>();
+      INode.ReclaimContext context = new INode.ReclaimContext(bsps,
+          collectedBlocks, removedINodes, removedUCFiles);
       final boolean filesDeleted;
       if (!oldDstChild.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
-        oldDstChild.destroyAndCollectBlocks(
-            new INode.ReclaimContext(bsps, collectedBlocks, removedINodes, removedUCFiles));
+        oldDstChild.destroyAndCollectBlocks(context);
         filesDeleted = true;
       } else {
-        filesDeleted = oldDstChild.cleanSubtree(
-            new INode.ReclaimContext(bsps, collectedBlocks, removedINodes,
-                                     removedUCFiles),
-            Snapshot.CURRENT_STATE_ID,
-            dstIIP.getLatestSnapshotId())
-            .getNameSpace() >= 0;
+        oldDstChild.cleanSubtree(context, Snapshot.CURRENT_STATE_ID,
+            dstIIP.getLatestSnapshotId());
+        filesDeleted = context.quotaDelta().getNsDelta() >= 0;
       }
       fsd.getFSNamesystem().removeLeasesAndINodes(
           removedUCFiles, removedINodes, false);
@@ -752,8 +749,7 @@ class FSDirRenameOp {
       // update the quota usage in src tree
       if (isSrcInSnapshot) {
         // get the counts after rename
-        QuotaCounts newSrcCounts = srcChild.computeQuotaUsage(bsps,
-            new QuotaCounts.Builder().build(), false);
+        QuotaCounts newSrcCounts = srcChild.computeQuotaUsage(bsps, false);
         newSrcCounts.subtract(oldSrcCounts);
         srcParent.addSpaceConsumed(newSrcCounts, false);
       }

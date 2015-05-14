@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import com.google.common.collect.Lists;
-import junit.framework.Assert;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -26,6 +25,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 
@@ -64,7 +64,8 @@ public class TestFileWithSnapshotFeature {
     ArrayList<INode> removedINodes = new ArrayList<>();
     INode.ReclaimContext ctx = new INode.ReclaimContext(
         bsps, collectedBlocks, removedINodes, null);
-    QuotaCounts counts = sf.updateQuotaAndCollectBlocks(ctx, file, diff);
+    sf.updateQuotaAndCollectBlocks(ctx, file, diff);
+    QuotaCounts counts = ctx.quotaDelta().getCountsCopy();
     Assert.assertEquals(0, counts.getStorageSpace());
     Assert.assertTrue(counts.getTypeSpaces().allLessOrEqual(0));
 
@@ -79,7 +80,8 @@ public class TestFileWithSnapshotFeature {
         .thenReturn(Lists.newArrayList(SSD));
     when(bsp.chooseStorageTypes(REPL_3))
         .thenReturn(Lists.newArrayList(DISK));
-    counts = sf.updateQuotaAndCollectBlocks(ctx, file, diff);
+    sf.updateQuotaAndCollectBlocks(ctx, file, diff);
+    counts = ctx.quotaDelta().getCountsCopy();
     Assert.assertEquals((REPL_3 - REPL_1) * BLOCK_SIZE,
                         counts.getStorageSpace());
     Assert.assertEquals(BLOCK_SIZE, counts.getTypeSpaces().get(DISK));
