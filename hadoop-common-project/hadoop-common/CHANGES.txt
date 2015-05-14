@@ -215,6 +215,9 @@ Trunk (Unreleased)
     HADOOP-11590. Update sbin commands and documentation to use new --slaves
     option (aw)
 
+    HADOOP-10993. Dump java command line to *.out file
+    (Kengo Seki via vinayakumarb)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

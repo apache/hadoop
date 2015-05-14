@@ -1148,6 +1148,10 @@ function hadoop_java_exec
 
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+  hadoop_debug "Final JAVA_HOME: ${JAVA_HOME}"
+  hadoop_debug "java: ${JAVA}"
+  hadoop_debug "Class name: ${class}"
+  hadoop_debug "Command line options: $*"
 
   export CLASSPATH
   #shellcheck disable=SC2086
@@ -1174,6 +1178,10 @@ function hadoop_start_daemon
 
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+  hadoop_debug "Final JAVA_HOME: ${JAVA_HOME}"
+  hadoop_debug "java: ${JAVA}"
+  hadoop_debug "Class name: ${class}"
+  hadoop_debug "Command line options: $*"
 
   # this is for the non-daemon pid creation
   #shellcheck disable=SC2086
@@ -1300,6 +1308,10 @@ function hadoop_start_secure_daemon
 
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
+  hadoop_debug "Final JSVC_HOME: ${JSVC_HOME}"
+  hadoop_debug "jsvc: ${jsvc}"
+  hadoop_debug "Class name: ${class}"
+  hadoop_debug "Command line options: $*"
 
   #shellcheck disable=SC2086
   echo $$ > "${privpidfile}" 2>/dev/null
