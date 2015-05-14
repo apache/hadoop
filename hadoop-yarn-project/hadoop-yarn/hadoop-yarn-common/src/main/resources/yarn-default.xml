@@ -674,6 +674,14 @@
     <value>10</value>
   </property>
 
+  <property>
+    <description>Number of diagnostics/failure messages can be saved in RM for
+    log aggregation. It also defines the number of diagnostics/failure
+    messages can be shown in log aggregation web ui.</description>
+    <name>yarn.resourcemanager.max-log-aggregation-diagnostics-in-memory</name>
+    <value>10</value>
+  </property>
+
   <!-- Node Manager Configs -->
   <property>
     <description>The hostname of the NM.</description>

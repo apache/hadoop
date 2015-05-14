@@ -111,6 +111,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3448. Added a rolling time-to-live LevelDB timeline store implementation.
     (Jonathan Eagles via zjshen)
 
+    YARN-3505. Node's Log Aggregation Report with SUCCEED should not cached in 
+    RMApps. (Xuan Gong via junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

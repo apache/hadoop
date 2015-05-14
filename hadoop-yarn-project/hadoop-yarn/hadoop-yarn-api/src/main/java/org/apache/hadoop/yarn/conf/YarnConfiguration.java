@@ -718,6 +718,16 @@ public class YarnConfiguration extends Configuration {
       + "proxy-user-privileges.enabled";
   public static boolean DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED = false;
 
+  /**
+   * How many diagnostics/failure messages can be saved in RM for
+   * log aggregation. It also defines the number of diagnostics/failure
+   * messages can be shown in log aggregation web ui.
+   */
+  public static final String RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
+      RM_PREFIX + "max-log-aggregation-diagnostics-in-memory";
+  public static final int DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
+      10;
+
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";

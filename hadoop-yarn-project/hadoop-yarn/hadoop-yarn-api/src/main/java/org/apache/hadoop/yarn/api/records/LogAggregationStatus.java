@@ -34,6 +34,8 @@ public enum LogAggregationStatus {
   /** Log Aggregation is Running. */
   RUNNING,
 
+  /** Log Aggregation is Running, but has failures in previous cycles. */
+  RUNNING_WITH_FAILURE,
   /**
    * Log Aggregation is Succeeded. All of the logs have been aggregated
    * successfully.

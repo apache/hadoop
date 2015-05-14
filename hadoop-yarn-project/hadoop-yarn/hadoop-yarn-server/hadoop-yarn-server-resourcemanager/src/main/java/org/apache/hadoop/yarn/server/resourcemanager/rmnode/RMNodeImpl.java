@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -777,7 +775,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       rmNode.handleContainerStatus(statusEvent.getContainers());
 
-      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps =
+      List<LogAggregationReport> logAggregationReportsForApps =
           statusEvent.getLogAggregationReportsForApps();
       if (logAggregationReportsForApps != null
           && !logAggregationReportsForApps.isEmpty()) {
@@ -915,12 +913,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   private void handleLogAggregationStatus(
-      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps) {
-    for (Entry<ApplicationId, LogAggregationReport> report :
-        logAggregationReportsForApps.entrySet()) {
-      RMApp rmApp = this.context.getRMApps().get(report.getKey());
+      List<LogAggregationReport> logAggregationReportsForApps) {
+    for (LogAggregationReport report : logAggregationReportsForApps) {
+      RMApp rmApp = this.context.getRMApps().get(report.getApplicationId());
       if (rmApp != null) {
-        ((RMAppImpl)rmApp).aggregateLogReport(this.nodeId, report.getValue());
+        ((RMAppImpl)rmApp).aggregateLogReport(this.nodeId, report);
       }
     }
   }

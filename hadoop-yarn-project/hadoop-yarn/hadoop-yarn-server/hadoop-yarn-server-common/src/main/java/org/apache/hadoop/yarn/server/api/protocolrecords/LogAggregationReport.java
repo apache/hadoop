@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -32,7 +31,6 @@ import org.apache.hadoop.yarn.util.Records;
  * It includes details such as:
  * <ul>
  *   <li>{@link ApplicationId} of the application.</li>
- *   <li>{@link NodeId} of the NodeManager.</li>
  *   <li>{@link LogAggregationStatus}</li>
  *   <li>Diagnostic information</li>
  * </ul>
@@ -45,7 +43,7 @@ public abstract class LogAggregationReport {
   @Public
   @Unstable
   public static LogAggregationReport newInstance(ApplicationId appId,
-      NodeId nodeId, LogAggregationStatus status, String diagnosticMessage) {
+      LogAggregationStatus status, String diagnosticMessage) {
     LogAggregationReport report = Records.newRecord(LogAggregationReport.class);
     report.setApplicationId(appId);
     report.setLogAggregationStatus(status);
@@ -64,18 +62,6 @@ public abstract class LogAggregationReport {
   @Public
   @Unstable
   public abstract void setApplicationId(ApplicationId appId);
-
-  /**
-   * Get the <code>NodeId</code>.
-   * @return <code>NodeId</code>
-   */
-  @Public
-  @Unstable
-  public abstract NodeId getNodeId();
-
-  @Public
-  @Unstable
-  public abstract void setNodeId(NodeId nodeId);
 
   /**
    * Get the <code>LogAggregationStatus</code>.

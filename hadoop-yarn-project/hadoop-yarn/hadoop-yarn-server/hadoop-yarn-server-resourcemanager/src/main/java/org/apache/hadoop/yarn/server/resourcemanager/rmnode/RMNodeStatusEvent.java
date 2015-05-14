@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
-import java.util.Map;
-
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -34,7 +32,7 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   private final List<ContainerStatus> containersCollection;
   private final NodeHeartbeatResponse latestResponse;
   private final List<ApplicationId> keepAliveAppIds;
-  private Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps;
+  private List<LogAggregationReport> logAggregationReportsForApps;
 
   public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
       List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
@@ -50,7 +48,7 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
       List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
       NodeHeartbeatResponse latestResponse,
-      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps) {
+      List<LogAggregationReport> logAggregationReportsForApps) {
     super(nodeId, RMNodeEventType.STATUS_UPDATE);
     this.nodeHealthStatus = nodeHealthStatus;
     this.containersCollection = collection;
@@ -75,13 +73,12 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     return this.keepAliveAppIds;
   }
 
-  public Map<ApplicationId, LogAggregationReport>
-      getLogAggregationReportsForApps() {
+  public List<LogAggregationReport> getLogAggregationReportsForApps() {
     return this.logAggregationReportsForApps;
   }
 
   public void setLogAggregationReportsForApps(
-      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps) {
+      List<LogAggregationReport> logAggregationReportsForApps) {
     this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 }

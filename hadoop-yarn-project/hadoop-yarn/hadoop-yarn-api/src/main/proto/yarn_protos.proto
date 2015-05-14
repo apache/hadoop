@@ -204,6 +204,7 @@ enum LogAggregationStatusProto {
   LOG_SUCCEEDED = 4;
   LOG_FAILED = 5;
   LOG_TIME_OUT = 6;
+  LOG_RUNNING_WITH_FAILURE = 7;
 }
 
 message ApplicationAttemptReportProto {
