@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
@@ -93,6 +94,9 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
       .td("Log Aggregation does not Start.")._();
     table_description.tr().td(LogAggregationStatus.RUNNING.name())
       .td("Log Aggregation is Running.")._();
+    table_description.tr().td(LogAggregationStatus.RUNNING_WITH_FAILURE.name())
+      .td("Log Aggregation is Running, but has failures "
+          + "in previous cycles")._();
     table_description.tr().td(LogAggregationStatus.SUCCEEDED.name())
       .td("Log Aggregation is Succeeded. All of the logs have been "
           + "aggregated successfully.")._();
@@ -106,24 +110,29 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
     table_description._();
     div_description._();
 
-    boolean logAggregationEnabled =
-        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-          YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED);
+    RMApp rmApp = rm.getRMContext().getRMApps().get(appId);
     // Application Log aggregation status Table
     DIV<Hamlet> div = html.div(_INFO_WRAP);
     TABLE<DIV<Hamlet>> table =
         div.h3(
           "Log Aggregation: "
-              + (logAggregationEnabled ? "Enabled" : "Disabled")).table(
+              + (rmApp == null ? "N/A" : rmApp
+                .getLogAggregationStatusForAppReport() == null ? "N/A" : rmApp
+                .getLogAggregationStatusForAppReport().name())).table(
           "#LogAggregationStatus");
-    table.
-      tr().
-        th(_TH, "NodeId").
-        th(_TH, "Log Aggregation Status").
-        th(_TH, "Diagnostis Message").
-      _();
 
-    RMApp rmApp = rm.getRMContext().getRMApps().get(appId);
+    int maxLogAggregationDiagnosticsInMemory = conf.getInt(
+      YarnConfiguration.RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY,
+      YarnConfiguration.DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY);
+    table
+      .tr()
+      .th(_TH, "NodeId")
+      .th(_TH, "Log Aggregation Status")
+      .th(_TH, "Last "
+          + maxLogAggregationDiagnosticsInMemory + " Diagnostic Messages")
+      .th(_TH, "Last "
+          + maxLogAggregationDiagnosticsInMemory + " Failure Messages")._();
+
     if (rmApp != null) {
       Map<NodeId, LogAggregationReport> logAggregationReports =
           rmApp.getLogAggregationReportsForApp();
@@ -136,10 +145,14 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
           String message =
               report.getValue() == null ? null : report.getValue()
                 .getDiagnosticMessage();
+          String failureMessage =
+              report.getValue() == null ? null : ((RMAppImpl)rmApp)
+                  .getLogAggregationFailureMessagesForNM(report.getKey());
           table.tr()
             .td(report.getKey().toString())
             .td(status == null ? "N/A" : status.toString())
-            .td(message == null ? "N/A" : message)._();
+            .td(message == null ? "N/A" : message)
+            .td(failureMessage == null ? "N/A" : failureMessage)._();
         }
       }
     }

@@ -75,7 +75,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -666,7 +665,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
             if (logAggregationEnabled) {
               // pull log aggregation status for application running in this NM
-              Map<ApplicationId, LogAggregationReport> logAggregationReports =
+              List<LogAggregationReport> logAggregationReports =
                   getLogAggregationReportsForApps(context
                     .getLogAggregationStatusForApps());
               if (logAggregationReports != null
@@ -810,47 +809,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     statusUpdater.start();
   }
 
-  private Map<ApplicationId, LogAggregationReport>
-      getLogAggregationReportsForApps(
-          ConcurrentLinkedQueue<LogAggregationReport> lastestLogAggregationStatus) {
-    Map<ApplicationId, LogAggregationReport> latestLogAggregationReports =
-        new HashMap<ApplicationId, LogAggregationReport>();
+  private List<LogAggregationReport> getLogAggregationReportsForApps(
+      ConcurrentLinkedQueue<LogAggregationReport> lastestLogAggregationStatus) {
     LogAggregationReport status;
     while ((status = lastestLogAggregationStatus.poll()) != null) {
       this.logAggregationReportForAppsTempList.add(status);
     }
-    for (LogAggregationReport logAggregationReport
-        : this.logAggregationReportForAppsTempList) {
-      LogAggregationReport report = null;
-      if (latestLogAggregationReports.containsKey(logAggregationReport
-        .getApplicationId())) {
-        report =
-            latestLogAggregationReports.get(logAggregationReport
-              .getApplicationId());
-        report.setLogAggregationStatus(logAggregationReport
-          .getLogAggregationStatus());
-        String message = report.getDiagnosticMessage();
-        if (logAggregationReport.getDiagnosticMessage() != null
-            && !logAggregationReport.getDiagnosticMessage().isEmpty()) {
-          if (message != null) {
-            message += logAggregationReport.getDiagnosticMessage();
-          } else {
-            message = logAggregationReport.getDiagnosticMessage();
-          }
-          report.setDiagnosticMessage(message);
-        }
-      } else {
-        report = Records.newRecord(LogAggregationReport.class);
-        report.setApplicationId(logAggregationReport.getApplicationId());
-        report.setNodeId(this.nodeId);
-        report.setLogAggregationStatus(logAggregationReport
-          .getLogAggregationStatus());
-        report
-          .setDiagnosticMessage(logAggregationReport.getDiagnosticMessage());
-      }
-      latestLogAggregationReports.put(logAggregationReport.getApplicationId(),
-        report);
-    }
-    return latestLogAggregationReports;
+    List<LogAggregationReport> reports = new ArrayList<LogAggregationReport>();
+    reports.addAll(logAggregationReportForAppsTempList);
+    return reports;
   }
 }

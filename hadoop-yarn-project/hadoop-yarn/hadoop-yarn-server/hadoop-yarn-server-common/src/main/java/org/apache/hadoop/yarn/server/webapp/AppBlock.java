@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
@@ -192,8 +193,17 @@ public class AppBlock extends HtmlBlock {
             : "ApplicationMaster");
     if (webUiType != null
         && webUiType.equals(YarnWebParams.RM_WEB_UI)) {
-      overviewTable._("Log Aggregation Status",
-        root_url("logaggregationstatus", app.getAppId()), "Status");
+      LogAggregationStatus status = getLogAggregationStatus();
+      if (status == null) {
+        overviewTable._("Log Aggregation Status", "N/A");
+      } else if (status == LogAggregationStatus.DISABLED
+          || status == LogAggregationStatus.NOT_START
+          || status == LogAggregationStatus.SUCCEEDED) {
+        overviewTable._("Log Aggregation Status", status.name());
+      } else {
+        overviewTable._("Log Aggregation Status",
+            root_url("logaggregationstatus", app.getAppId()), status.name());
+      }
     }
     overviewTable._("Diagnostics:",
         app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
@@ -341,5 +351,10 @@ public class AppBlock extends HtmlBlock {
   // The preemption metrics only need to be shown in RM WebUI
   protected void createApplicationMetricsTable(Block html) {
 
+  }
+
+  // This will be overrided in RMAppBlock
+  protected LogAggregationStatus getLogAggregationStatus() {
+    return null;
   }
 }

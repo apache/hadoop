@@ -306,6 +306,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                     + currentTime);
 
       String diagnosticMessage = "";
+      boolean logAggregationSucceedInThisCycle = true;
       final boolean rename = uploadedLogsInThisCycle;
       try {
         userUgi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -338,20 +339,28 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                 + LogAggregationUtils.getNodeString(nodeId) + " at "
                 + Times.format(currentTime) + "\n";
         renameTemporaryLogFileFailed = true;
+        logAggregationSucceedInThisCycle = false;
       }
 
       LogAggregationReport report =
           Records.newRecord(LogAggregationReport.class);
       report.setApplicationId(appId);
-      report.setNodeId(nodeId);
       report.setDiagnosticMessage(diagnosticMessage);
-      if (appFinished) {
-        report.setLogAggregationStatus(renameTemporaryLogFileFailed
-            ? LogAggregationStatus.FAILED : LogAggregationStatus.SUCCEEDED);
-      } else {
-        report.setLogAggregationStatus(LogAggregationStatus.RUNNING);
-      }
+      report.setLogAggregationStatus(logAggregationSucceedInThisCycle
+          ? LogAggregationStatus.RUNNING
+          : LogAggregationStatus.RUNNING_WITH_FAILURE);
       this.context.getLogAggregationStatusForApps().add(report);
+      if (appFinished) {
+        // If the app is finished, one extra final report with log aggregation
+        // status SUCCEEDED/FAILED will be sent to RM to inform the RM
+        // that the log aggregation in this NM is completed.
+        LogAggregationReport finalReport =
+            Records.newRecord(LogAggregationReport.class);
+        finalReport.setApplicationId(appId);
+        finalReport.setLogAggregationStatus(renameTemporaryLogFileFailed
+            ? LogAggregationStatus.FAILED : LogAggregationStatus.SUCCEEDED);
+        this.context.getLogAggregationStatusForApps().add(report);
+      }
     } finally {
       if (writer != null) {
         writer.close();

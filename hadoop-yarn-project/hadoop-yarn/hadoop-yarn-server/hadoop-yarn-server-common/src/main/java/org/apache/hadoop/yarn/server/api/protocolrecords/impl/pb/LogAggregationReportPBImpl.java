@@ -22,13 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
@@ -45,7 +42,6 @@ public class LogAggregationReportPBImpl extends LogAggregationReport {
   boolean viaProto = false;
 
   private ApplicationId applicationId;
-  private NodeId nodeId;
 
   public LogAggregationReportPBImpl() {
     builder = LogAggregationReportProto.newBuilder();
@@ -88,12 +84,6 @@ public class LogAggregationReportPBImpl extends LogAggregationReport {
         && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
           builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
-    }
-
-    if (this.nodeId != null
-        && !((NodeIdPBImpl) this.nodeId).getProto().equals(
-          builder.getNodeId())) {
-      builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
   }
 
@@ -190,35 +180,5 @@ public class LogAggregationReportPBImpl extends LogAggregationReport {
       return;
     }
     builder.setDiagnostics(diagnosticMessage);
-  }
-
-  @Override
-  public NodeId getNodeId() {
-    if (this.nodeId != null) {
-      return this.nodeId;
-    }
-
-    LogAggregationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasNodeId()) {
-      return null;
-    }
-    this.nodeId = convertFromProtoFormat(p.getNodeId());
-    return this.nodeId;
-  }
-
-  @Override
-  public void setNodeId(NodeId nodeId) {
-    maybeInitBuilder();
-    if (nodeId == null)
-      builder.clearNodeId();
-    this.nodeId = nodeId;
-  }
-
-  private NodeIdProto convertToProtoFormat(NodeId t) {
-    return ((NodeIdPBImpl) t).getProto();
-  }
-
-  private NodeIdPBImpl convertFromProtoFormat(NodeIdProto nodeId) {
-    return new NodeIdPBImpl(nodeId);
   }
 }
