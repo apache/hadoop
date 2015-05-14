@@ -422,6 +422,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6366. mapreduce.terasort.final.sync configuration in TeraSort
     doesn't work. (Takuya Fukudome via ozawa)
 
+    MAPREDUCE-5708. Duplicate String.format in YarnOutputFiles.getSpillFileForWrite.
+    (Konstantin Weitz via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

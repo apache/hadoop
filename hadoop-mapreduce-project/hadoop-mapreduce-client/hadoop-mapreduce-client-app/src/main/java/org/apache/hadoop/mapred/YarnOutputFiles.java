@@ -157,8 +157,8 @@ public class YarnOutputFiles extends MapOutputFile {
   public Path getSpillFileForWrite(int spillNumber, long size)
       throws IOException {
     return lDirAlloc.getLocalPathForWrite(
-        String.format(String.format(SPILL_FILE_PATTERN,
-            conf.get(JobContext.TASK_ATTEMPT_ID), spillNumber)), size, conf);
+        String.format(SPILL_FILE_PATTERN,
+            conf.get(JobContext.TASK_ATTEMPT_ID), spillNumber), size, conf);
   }
 
   /**
