@@ -48,7 +48,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public abstract class TimelineCollectorManager extends AbstractService {
+public class TimelineCollectorManager extends AbstractService {
   private static final Log LOG =
       LogFactory.getLog(TimelineCollectorManager.class);
 
@@ -90,8 +90,12 @@ public abstract class TimelineCollectorManager extends AbstractService {
       Collections.synchronizedMap(
           new HashMap<ApplicationId, TimelineCollector>());
 
-  protected TimelineCollectorManager(String name) {
+  public TimelineCollectorManager(String name) {
     super(name);
+  }
+
+  protected TimelineWriter getWriter() {
+    return writer;
   }
 
   /**
