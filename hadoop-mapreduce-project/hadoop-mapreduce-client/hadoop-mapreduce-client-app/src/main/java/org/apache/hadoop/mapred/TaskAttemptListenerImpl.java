@@ -84,20 +84,30 @@ public class TaskAttemptListenerImpl extends CompositeService
     jvmIDToActiveAttemptMap
       = new ConcurrentHashMap<WrappedJvmID, org.apache.hadoop.mapred.Task>();
   private Set<WrappedJvmID> launchedJVMs = Collections
-      .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>()); 
-  
+      .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>());
+
   private JobTokenSecretManager jobTokenSecretManager = null;
   private AMPreemptionPolicy preemptionPolicy;
-  
+  private byte[] encryptedSpillKey;
+
   public TaskAttemptListenerImpl(AppContext context,
       JobTokenSecretManager jobTokenSecretManager,
       RMHeartbeatHandler rmHeartbeatHandler,
       AMPreemptionPolicy preemptionPolicy) {
+    this(context, jobTokenSecretManager, rmHeartbeatHandler,
+            preemptionPolicy, null);
+  }
+
+  public TaskAttemptListenerImpl(AppContext context,
+      JobTokenSecretManager jobTokenSecretManager,
+      RMHeartbeatHandler rmHeartbeatHandler,
+      AMPreemptionPolicy preemptionPolicy, byte[] secretShuffleKey) {
     super(TaskAttemptListenerImpl.class.getName());
     this.context = context;
     this.jobTokenSecretManager = jobTokenSecretManager;
     this.rmHeartbeatHandler = rmHeartbeatHandler;
     this.preemptionPolicy = preemptionPolicy;
+    this.encryptedSpillKey = secretShuffleKey;
   }
 
   @Override
@@ -484,6 +494,7 @@ public class TaskAttemptListenerImpl extends CompositeService
             jvmIDToActiveAttemptMap.remove(wJvmID);
         launchedJVMs.remove(wJvmID);
         LOG.info("JVM with ID: " + jvmId + " given task: " + task.getTaskID());
+        task.setEncryptedSpillKey(encryptedSpillKey);
         jvmTask = new JvmTask(task, false);
       }
     }
