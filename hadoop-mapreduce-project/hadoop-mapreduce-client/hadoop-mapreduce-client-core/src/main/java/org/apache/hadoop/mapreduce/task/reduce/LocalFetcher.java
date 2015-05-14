@@ -127,6 +127,9 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
     long compressedLength = ir.partLength;
     long decompressedLength = ir.rawLength;
 
+    compressedLength -= CryptoUtils.cryptoPadding(job);
+    decompressedLength -= CryptoUtils.cryptoPadding(job);
+
     // Get the location for the map output - either in-memory or on-disk
     MapOutput<K, V> mapOutput = merger.reserve(mapTaskId, decompressedLength,
         id);
@@ -150,8 +153,7 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
     inStream = CryptoUtils.wrapIfNecessary(job, inStream);
 
     try {
-      inStream.seek(ir.startOffset);
-
+      inStream.seek(ir.startOffset + CryptoUtils.cryptoPadding(job));
       mapOutput.shuffle(LOCALHOST, inStream, compressedLength, decompressedLength, metrics, reporter);
     } finally {
       try {

@@ -52,24 +52,31 @@ public class TestMRIntermediateDataEncryption {
 
   @Test
   public void testSingleReducer() throws Exception {
-    doEncryptionTest(3, 1, 2);
+    doEncryptionTest(3, 1, 2, false);
+  }
+
+  @Test
+  public void testUberMode() throws Exception {
+    doEncryptionTest(3, 1, 2, true);
   }
 
   @Test
   public void testMultipleMapsPerNode() throws Exception {
-    doEncryptionTest(8, 1, 2);
+    doEncryptionTest(8, 1, 2, false);
   }
 
   @Test
   public void testMultipleReducers() throws Exception {
-    doEncryptionTest(2, 4, 2);
+    doEncryptionTest(2, 4, 2, false);
   }
 
-  public void doEncryptionTest(int numMappers, int numReducers, int numNodes) throws Exception {
-    doEncryptionTest(numMappers, numReducers, numNodes, 1000);
+  public void doEncryptionTest(int numMappers, int numReducers, int numNodes,
+                               boolean isUber) throws Exception {
+    doEncryptionTest(numMappers, numReducers, numNodes, 1000, isUber);
   }
 
-  public void doEncryptionTest(int numMappers, int numReducers, int numNodes, int numLines) throws Exception {
+  public void doEncryptionTest(int numMappers, int numReducers, int numNodes,
+                               int numLines, boolean isUber) throws Exception {
     MiniDFSCluster dfsCluster = null;
     MiniMRClientCluster mrCluster = null;
     FileSystem fileSystem = null;
@@ -85,7 +92,8 @@ public class TestMRIntermediateDataEncryption {
       // Generate input.
       createInput(fileSystem, numMappers, numLines);
       // Run the test.
-      runMergeTest(new JobConf(mrCluster.getConfig()), fileSystem, numMappers, numReducers, numLines);
+      runMergeTest(new JobConf(mrCluster.getConfig()), fileSystem,
+              numMappers, numReducers, numLines, isUber);
     } finally {
       if (dfsCluster != null) {
         dfsCluster.shutdown();
@@ -111,8 +119,9 @@ public class TestMRIntermediateDataEncryption {
     }
   }
 
-  private void runMergeTest(JobConf job, FileSystem fileSystem, int numMappers, int numReducers, int numLines)
-    throws Exception {
+  private void runMergeTest(JobConf job, FileSystem fileSystem, int
+          numMappers, int numReducers, int numLines, boolean isUber)
+          throws Exception {
     fileSystem.delete(OUTPUT, true);
     job.setJobName("Test");
     JobClient client = new JobClient(job);
@@ -133,6 +142,9 @@ public class TestMRIntermediateDataEncryption {
     job.setInt("mapreduce.map.maxattempts", 1);
     job.setInt("mapreduce.reduce.maxattempts", 1);
     job.setInt("mapred.test.num_lines", numLines);
+    if (isUber) {
+      job.setBoolean("mapreduce.job.ubertask.enable", true);
+    }
     job.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
     try {
       submittedJob = client.submitJob(job);

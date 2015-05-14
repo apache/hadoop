@@ -118,12 +118,14 @@ public class TestMapProgress extends TestCase {
     throws IOException, InterruptedException {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskId);
-      buf.append(" making progress to ");
-      buf.append(taskStatus.getProgress());
-      String state = taskStatus.getStateString();
-      if (state != null) {
-        buf.append(" and state of ");
-        buf.append(state);
+      if (taskStatus != null) {
+        buf.append(" making progress to ");
+        buf.append(taskStatus.getProgress());
+        String state = taskStatus.getStateString();
+        if (state != null) {
+          buf.append(" and state of ");
+          buf.append(state);
+        }
       }
       LOG.info(buf.toString());
       // ignore phase

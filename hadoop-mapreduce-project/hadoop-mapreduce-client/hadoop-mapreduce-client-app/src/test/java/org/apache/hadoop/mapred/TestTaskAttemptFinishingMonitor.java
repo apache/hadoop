@@ -68,7 +68,7 @@ public class TestTaskAttemptFinishingMonitor {
     when(appCtx.getClock()).thenReturn(clock);
 
     TaskAttemptListenerImpl listener =
-        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler);
+        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler, null);
 
     listener.init(conf);
     listener.start();
