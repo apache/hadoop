@@ -154,31 +154,28 @@ class MetricsSourceAdapter implements DynamicMBean {
 
   private void updateJmxCache() {
     boolean getAllMetrics = false;
-    synchronized(this) {
+    synchronized (this) {
       if (Time.now() - jmxCacheTS >= jmxCacheTTL) {
         // temporarilly advance the expiry while updating the cache
         jmxCacheTS = Time.now() + jmxCacheTTL;
         if (lastRecs == null) {
           getAllMetrics = true;
         }
-      }
-      else {
+      } else {
         return;
       }
-    }
 
-    if (getAllMetrics) {
-      MetricsCollectorImpl builder = new MetricsCollectorImpl();
-      getMetrics(builder, true);
-    }
+      if (getAllMetrics) {
+        MetricsCollectorImpl builder = new MetricsCollectorImpl();
+        getMetrics(builder, true);
+      }
 
-    synchronized(this) {
       updateAttrCache();
       if (getAllMetrics) {
         updateInfoCache();
       }
       jmxCacheTS = Time.now();
-      lastRecs = null;  // in case regular interval update is not running
+      lastRecs = null; // in case regular interval update is not running
     }
   }
 
