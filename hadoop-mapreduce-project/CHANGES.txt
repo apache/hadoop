@@ -425,6 +425,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5708. Duplicate String.format in YarnOutputFiles.getSpillFileForWrite.
     (Konstantin Weitz via devaraj)
 
+    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
+    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
+    (zhihai xu via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
