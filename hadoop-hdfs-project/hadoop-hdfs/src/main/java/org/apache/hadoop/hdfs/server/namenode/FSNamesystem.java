@@ -2761,6 +2761,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
+      checkNameNodeSafeMode("Cannot add block to " + src);
       r = FSDirWriteFileOp.validateAddBlock(this, pc, src, fileId, clientName,
                                             previous, onRetryBlock);
     } finally {
@@ -2781,6 +2782,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LocatedBlock lb;
     try {
       checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot add block to " + src);
       lb = FSDirWriteFileOp.storeAllocatedBlock(
           this, src, fileId, clientName, previous, targets);
     } finally {
@@ -2919,7 +2921,35 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     return file;
   }
- 
+
+  void checkLease(String src, String holder, FlatINode inode)
+      throws LeaseExpiredException, FileNotFoundException {
+    assert hasReadLock();
+    final String ident = src;
+    if (inode == null) {
+      throw new FileNotFoundException(src);
+    } else if (!inode.isFile()) {
+      Lease lease = leaseManager.getLease(holder);
+      throw new LeaseExpiredException(
+          "No lease on " + ident + ": INode is not a regular file. "
+              + (lease != null ? lease.toString()
+              : "Holder " + holder + " does not have any open files."));
+    }
+    FlatINodeFileFeature f = inode.feature(FlatINodeFileFeature.class);
+    if (!f.inConstruction()) {
+      Lease lease = leaseManager.getLease(holder);
+      throw new LeaseExpiredException(
+          "No lease on " + ident + ": File is not open for writing. "
+              + (lease != null ? lease.toString()
+              : "Holder " + holder + " does not have any open files."));
+    }
+    String clientName = f.clientName();
+    if (holder != null && !clientName.equals(holder)) {
+      throw new LeaseExpiredException("Lease mismatch on " + ident +
+          " owned by " + clientName + " but is accessed by " + holder);
+    }
+  }
+
   /**
    * Complete in-progress write to the given file.
    * @return true if successful, false if the client should continue to retry
@@ -2973,6 +3003,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       return b == null ||
           blockManager.checkBlocksProperlyReplicated(
               src, new BlockInfoContiguous[] { b });
+    }
+  }
+
+  /**
+   * Check that the indicated file's blocks are present and
+   * replicated.  If not, return false. If checkall is true, then check
+   * all blocks, otherwise check only penultimate block.
+   */
+  boolean checkFileProgress(String src, FlatINodeFileFeature v,
+      boolean checkall) {
+    assert hasReadLock();
+    if (checkall) {
+      return blockManager.checkBlocksProperlyReplicated(src, v.blocks());
+    } else {
+      // check the penultimate block of this file
+      Block b = v.penultimateBlock();
+      return b == null ||
+          blockManager.checkBlocksProperlyReplicated(src, Lists.newArrayList
+              (b));
     }
   }
 
@@ -3535,6 +3584,28 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         LOG.warn("Unexpected exception while updating disk space.", e);
       }
     }
+  }
+
+  FlatINodeFileFeature.Builder commitOrCompleteLastBlock(
+      FlatINodeFileFeature f, Block commitBlock)
+      throws IOException {
+    assert hasWriteLock();
+    Preconditions.checkArgument(f.inConstruction());
+    if (commitBlock == null) {
+      return new FlatINodeFileFeature.Builder().mergeFrom(f);
+    }
+
+    Preconditions.checkState(f.numBlocks() > 0);
+    long newBlockLength =
+        blockManager.commitOrCompleteLastBlock(f, commitBlock);
+    FlatINodeFileFeature.Builder b = new FlatINodeFileFeature.Builder()
+        .mergeFrom(f);
+    Block newBlock = new Block(commitBlock);
+    newBlock.setNumBytes(newBlockLength);
+    b.block(f.numBlocks() - 1, newBlock);
+    return b;
+    // TODO: Update quota
+    // Adjust disk space consumption if required
   }
 
   void finalizeINodeFileUnderConstruction(

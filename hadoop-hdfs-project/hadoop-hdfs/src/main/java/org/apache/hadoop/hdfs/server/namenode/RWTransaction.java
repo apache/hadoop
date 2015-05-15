@@ -159,4 +159,8 @@ class RWTransaction extends Transaction {
       boolean overwrite, boolean logRetryCache) {
     fsd.getEditLog().logOpenFile(ugid, src, inode, overwrite, logRetryCache);
   }
+
+  public void logAddBlock(String src, FlatINodeFileFeature file) {
+    fsd.getEditLog().logAddBlock(src, file);
+  }
 }

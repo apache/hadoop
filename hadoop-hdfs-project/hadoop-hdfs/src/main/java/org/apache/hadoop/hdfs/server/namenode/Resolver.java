@@ -127,6 +127,10 @@ class Resolver {
     return resolve(tx, path);
   }
 
+  public static Result resolveById(Transaction tx, long id) {
+    throw new IllegalArgumentException("Unimplemented");
+  }
+
 //  public static Result getInodeById(Transaction tx, long id)
 //    throws IOException {
 //    byte[] inodeKey = Encoding.inodeIdKey(id);

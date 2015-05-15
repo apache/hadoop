@@ -97,16 +97,20 @@ class BlocksMap {
     }
   }
 
+  BlockInfoContiguous addBlockCollection(BlockInfoContiguous b, BlockCollection bc) {
+    return addBlockCollection(b, bc.getId());
+  }
+
   /**
    * Add block b belonging to the specified block collection to the map.
    */
-  BlockInfoContiguous addBlockCollection(BlockInfoContiguous b, BlockCollection bc) {
+  BlockInfoContiguous addBlockCollection(BlockInfoContiguous b, long bcId) {
     BlockInfoContiguous info = blocks.get(b);
     if (info != b) {
       info = b;
       blocks.put(info);
     }
-    info.setBlockCollectionId(bc.getId());
+    info.setBlockCollectionId(bcId);
     return info;
   }
 

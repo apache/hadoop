@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBloc
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.namenode.FlatINodeFileFeature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
@@ -638,17 +640,42 @@ public class BlockManager {
   }
 
   /**
-   * Convert a specified block of the file to a complete block.
-   * @param bc file
-   * @param blkIndex  block index in the file
-   * @throws IOException if the block does not have at least a minimal number
-   * of replicas reported from data-nodes.
+   * Commit or complete the last block. Return the length of the last block
    */
+  public long commitOrCompleteLastBlock(FlatINodeFileFeature file, Block
+      commitBlock) throws IOException {
+    if(commitBlock == null)
+      return 0; // not committing, this is a block allocation retry
+    BlockInfoContiguous lastBlock = getStoredBlock(file.lastBlock());
+    if(lastBlock == null)
+      return 0; // no blocks in file yet
+    if(lastBlock.isComplete())
+      return lastBlock.getNumBytes(); // already completed (e.g. by syncBlock)
+
+    commitBlock((BlockInfoContiguousUnderConstruction) lastBlock, commitBlock);
+    if(countNodes(lastBlock).liveReplicas() >= minReplication) {
+      return completeBlock(lastBlock, false).getNumBytes();
+    }
+    return lastBlock.getNumBytes();
+  }
+
   private BlockInfoContiguous completeBlock(final BlockCollection bc,
       final int blkIndex, boolean force) throws IOException {
     if(blkIndex < 0)
       return null;
-    BlockInfoContiguous curBlock = bc.getBlocks()[blkIndex];
+    BlockInfoContiguous block = completeBlock(bc.getBlocks()[blkIndex], force);
+    // replace penultimate block in file
+    bc.setBlock(blkIndex, block);
+    return block;
+  }
+
+  /**
+   * Convert a specified block of the file to a complete block.
+   * @throws IOException if the block does not have at least a minimal number
+   * of replicas reported from data-nodes.
+   */
+  private BlockInfoContiguous completeBlock(BlockInfoContiguous curBlock,
+      boolean force) throws IOException {
     if(curBlock.isComplete())
       return curBlock;
     BlockInfoContiguousUnderConstruction ucBlock =
@@ -661,9 +688,7 @@ public class BlockManager {
       throw new IOException(
           "Cannot complete block: block has not been COMMITTED by the client");
     BlockInfoContiguous completeBlock = ucBlock.convertToCompleteBlock();
-    // replace penultimate block in file
-    bc.setBlock(blkIndex, completeBlock);
-    
+
     // Since safe-mode only counts complete blocks, and we now have
     // one more complete block, we need to adjust the total up, and
     // also count it as safe, if we have at least the minimum replica
@@ -2800,10 +2825,10 @@ public class BlockManager {
       processOverReplicatedBlock(block, expectedReplication, null, null);
       return MisReplicationResult.OVER_REPLICATED;
     }
-    
+
     return MisReplicationResult.OK;
   }
-  
+
   /** Set replication for the blocks. */
   public void setReplication(final short oldRepl, final short newRepl,
       final String src, final Block b) {
@@ -2812,7 +2837,7 @@ public class BlockManager {
     }
 
     // update needReplication priority queues
-    updateNeededReplications(b, 0, newRepl-oldRepl);
+    updateNeededReplications(b, 0, newRepl - oldRepl);
 
     if (oldRepl > newRepl) {
       // old replication > the new one; need to remove copies
@@ -2845,8 +2870,7 @@ public class BlockManager {
       if (storage.areBlockContentsStale()) {
         LOG.info("BLOCK* processOverReplicatedBlock: " +
             "Postponing processing of over-replicated " +
-            block + " since storage + " + storage
-            + "datanode " + cur + " does not yet have up-to-date " +
+                     block + " since storage + " + storage + "datanode " + cur + " does not yet have up-to-date " +
             "block information.");
         postponeBlock(block);
         return;
@@ -2862,8 +2886,8 @@ public class BlockManager {
         }
       }
     }
-    chooseExcessReplicates(nonExcess, block, replication, 
-        addedNode, delNodeHint, blockplacement);
+    chooseExcessReplicates(nonExcess, block, replication, addedNode,
+                           delNodeHint, blockplacement);
   }
 
 
@@ -2969,15 +2993,17 @@ public class BlockManager {
 
   private void addToExcessReplicate(DatanodeInfo dn, Block block) {
     assert namesystem.hasWriteLock();
-    LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(dn.getDatanodeUuid());
+    LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(
+        dn.getDatanodeUuid());
     if (excessBlocks == null) {
       excessBlocks = new LightWeightLinkedSet<Block>();
       excessReplicateMap.put(dn.getDatanodeUuid(), excessBlocks);
     }
     if (excessBlocks.add(block)) {
       excessBlocksCount.incrementAndGet();
-      blockLog.debug("BLOCK* addToExcessReplicate: ({}, {}) is added to"
-          + " excessReplicateMap", dn, block);
+      blockLog.debug(
+          "BLOCK* addToExcessReplicate: ({}, {}) is added to" + " excessReplicateMap",
+          dn, block);
     }
   }
 
@@ -2985,8 +3011,7 @@ public class BlockManager {
       DatanodeDescriptor node) {
     if (shouldPostponeBlocksFromFuture &&
         namesystem.isGenStampInFuture(block)) {
-      queueReportedBlock(storageInfo, block, null,
-          QUEUE_REASON_FUTURE_GENSTAMP);
+      queueReportedBlock(storageInfo, block, null, QUEUE_REASON_FUTURE_GENSTAMP);
       return;
     }
     removeStoredBlock(block, node);
@@ -3093,7 +3118,7 @@ public class BlockManager {
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
   }
-  
+
   private void processAndHandleReportedBlock(
       DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState, DatanodeDescriptor delHintNode)
@@ -3400,21 +3425,44 @@ public class BlockManager {
     }
   }
 
+  public boolean checkBlocksProperlyReplicated(String src,
+      final BlockInfoContiguous[] blocks) {
+    return checkBlocksProperlyReplicated(src, new Iterable<Block>() {
+      @Override
+      public Iterator<Block> iterator() {
+        return new Iterator<Block>() {
+          private int index;
+          @Override
+          public boolean hasNext() {
+            return index < blocks.length;
+          }
+
+          @Override
+          public Block next() {
+            return blocks[index++];
+          }
+        };
+      }
+    });
+  }
+
   /**
    * Check that the indicated blocks are present and
    * replicated.
    */
-  public boolean checkBlocksProperlyReplicated(
-      String src, BlockInfoContiguous[] blocks) {
-    for (BlockInfoContiguous b: blocks) {
+  public boolean checkBlocksProperlyReplicated(String src, Iterable<Block>
+      blocks) {
+    for (Block bid : blocks) {
+      BlockInfoContiguous b = bid instanceof BlockInfoContiguous
+          ? (BlockInfoContiguous) bid : getStoredBlock(bid);
       if (!b.isComplete()) {
         final BlockInfoContiguousUnderConstruction uc =
             (BlockInfoContiguousUnderConstruction)b;
         final int numNodes = b.numNodes();
         LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = "
-          + uc.getBlockUCState() + ", replication# = " + numNodes
-          + (numNodes < minReplication ? " < ": " >= ")
-          + " minimum = " + minReplication + ") in file " + src);
+            + uc.getBlockUCState() + ", replication# = " + numNodes
+            + (numNodes < minReplication ? " < ": " >= ")
+            + " minimum = " + minReplication + ") in file " + src);
         return false;
       }
     }
@@ -3525,6 +3573,11 @@ public class BlockManager {
   public BlockInfoContiguous addBlockCollection(BlockInfoContiguous block,
       BlockCollection bc) {
     return blocksMap.addBlockCollection(block, bc);
+  }
+
+  public BlockInfoContiguous addBlockCollection(BlockInfoContiguous block,
+      long bcId) {
+    return blocksMap.addBlockCollection(block, bcId);
   }
 
   public long getBlockCollectionId(Block b) {
