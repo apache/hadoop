@@ -549,6 +549,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6184. Capture NN's thread dump when it fails over.
     (Ming Ma via aajisaka)
 
+    HDFS-8350. Remove old webhdfs.xml and other outdated documentation stuff.
+    (Brahma Reddy Battula via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
