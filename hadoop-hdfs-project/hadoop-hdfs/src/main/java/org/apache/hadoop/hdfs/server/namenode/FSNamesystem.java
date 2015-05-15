@@ -8149,15 +8149,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * defined in the config file. It can also be explicitly listed in the
    * config file.
    */
-  private static class DefaultAuditLogger extends HdfsAuditLogger {
+  @VisibleForTesting
+  static class DefaultAuditLogger extends HdfsAuditLogger {
 
     private boolean logTokenTrackingId;
+    private Set<String> debugCmdSet = new HashSet<String>();
 
     @Override
     public void initialize(Configuration conf) {
       logTokenTrackingId = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY,
           DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT);
+
+      debugCmdSet.addAll(Arrays.asList(conf.getTrimmedStrings(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST)));
     }
 
     @Override
@@ -8165,7 +8170,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         InetAddress addr, String cmd, String src, String dst,
         FileStatus status, UserGroupInformation ugi,
         DelegationTokenSecretManager dtSecretManager) {
-      if (auditLog.isInfoEnabled()) {
+
+      if (auditLog.isDebugEnabled() ||
+          (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = auditBuffer.get();
         sb.setLength(0);
         sb.append("allowed=").append(succeeded).append("\t");

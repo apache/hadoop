@@ -2085,6 +2085,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.debug.cmdlist</name>
+  <value></value>
+  <description>
+    A comma separated list of NameNode commands that are written to the HDFS
+    namenode audit log only if the audit log level is debug.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.use.legacy.blockreader.local</name>
   <value>false</value>
   <description>
