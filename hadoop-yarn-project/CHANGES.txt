@@ -411,6 +411,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1519. Check in container-executor if sysconf is implemented before
     using it (Radim Kolar and Eric Payne via raviprak)
 
+    YARN-2421. RM still allocates containers to an app in the FINISHING
+    state (Chang Li via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
