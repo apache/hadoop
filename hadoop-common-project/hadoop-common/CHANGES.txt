@@ -569,6 +569,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11713. ViewFileSystem should support snapshot methods.
     (Rakesh R via cnauroth)
 
+    HADOOP-11960. Enable Azure-Storage Client Side logging.
+    (Dushyanth via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
