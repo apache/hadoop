@@ -148,6 +148,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String KEY_SELF_THROTTLE_READ_FACTOR = "fs.azure.selfthrottling.read.factor";
   private static final String KEY_SELF_THROTTLE_WRITE_FACTOR = "fs.azure.selfthrottling.write.factor";
 
+  private static final String KEY_ENABLE_STORAGE_CLIENT_LOGGING = "fs.azure.storage.client.logging";
+
   private static final String PERMISSION_METADATA_KEY = "hdi_permission";
   private static final String OLD_PERMISSION_METADATA_KEY = "asv_permission";
   private static final String IS_FOLDER_METADATA_KEY = "hdi_isfolder";
@@ -680,6 +682,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     selfThrottlingWriteFactor = sessionConfiguration.getFloat(
         KEY_SELF_THROTTLE_WRITE_FACTOR, DEFAULT_SELF_THROTTLE_WRITE_FACTOR);
+
+    OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
+        getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(String
