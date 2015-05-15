@@ -761,6 +761,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8150. Make getFileChecksum fail for blocks under construction
     (J.Andreina via vinayakumarb)
 
+    HDFS-8371. Fix test failure in TestHdfsConfigFields for spanreceiver
+    properties. (Ray Chiang via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

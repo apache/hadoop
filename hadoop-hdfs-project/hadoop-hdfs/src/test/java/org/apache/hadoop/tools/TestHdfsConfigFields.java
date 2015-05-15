@@ -76,5 +76,9 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
 
     // Some properties have moved to HdfsClientConfigKeys
     xmlPropsToSkipCompare.add("dfs.client.short.circuit.replica.stale.threshold.ms");
+
+    // Ignore SpanReceiveHost properties
+    xmlPropsToSkipCompare.add("dfs.htrace.spanreceiver.classes");
+    xmlPropsToSkipCompare.add("dfs.client.htrace.spanreceiver.classes");
   }
 }
