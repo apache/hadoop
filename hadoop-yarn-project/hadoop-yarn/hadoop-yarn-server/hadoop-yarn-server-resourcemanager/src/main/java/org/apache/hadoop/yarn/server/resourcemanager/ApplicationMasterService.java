@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
@@ -95,6 +96,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -417,6 +419,11 @@ public class ApplicationMasterService extends AbstractService implements
     return hasApplicationMasterRegistered;
   }
 
+  protected final static List<Container> EMPTY_CONTAINER_LIST =
+      new ArrayList<Container>();
+  protected static final Allocation EMPTY_ALLOCATION = new Allocation(
+      EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
+
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnException, IOException {
@@ -530,9 +537,20 @@ public class ApplicationMasterService extends AbstractService implements
       }
 
       // Send new requests to appAttempt.
-      Allocation allocation =
-          this.rScheduler.allocate(appAttemptId, ask, release, 
+      Allocation allocation;
+      RMAppAttemptState state =
+          app.getRMAppAttempt(appAttemptId).getAppAttemptState();
+      if (state.equals(RMAppAttemptState.FINAL_SAVING) ||
+          state.equals(RMAppAttemptState.FINISHING) ||
+          app.isAppFinalStateStored()) {
+        LOG.warn(appAttemptId + " is in " + state +
+                 " state, ignore container allocate request.");
+        allocation = EMPTY_ALLOCATION;
+      } else {
+        allocation =
+          this.rScheduler.allocate(appAttemptId, ask, release,
               blacklistAdditions, blacklistRemovals);
+      }
 
       if (!blacklistAdditions.isEmpty() || !blacklistRemovals.isEmpty()) {
         LOG.info("blacklist are updated in Scheduler." +
