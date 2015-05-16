@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
@@ -88,6 +89,7 @@ public class RMWebAppFilter extends GuiceContainer {
   private boolean shouldRedirect(RMWebApp rmWebApp, String uri) {
     return !uri.equals("/" + rmWebApp.wsName() + "/v1/cluster/info")
         && !uri.equals("/" + rmWebApp.name() + "/cluster")
+        && !uri.startsWith(ProxyUriUtils.PROXY_BASE)
         && !NON_REDIRECTED_URIS.contains(uri);
   }
 }
