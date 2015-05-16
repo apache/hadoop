@@ -321,8 +321,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     cacheManager = new FsDatasetCache(this);
 
     // Start the lazy writer once we have built the replica maps.
-    lazyWriter = new Daemon(new LazyWriter(conf));
-    lazyWriter.start();
+    // We need to start the lazy writer even if MaxLockedMemory is set to
+    // zero because we may have un-persisted replicas in memory from before
+    // the process restart. To minimize the chances of data loss we'll
+    // ensure they get written to disk now.
+    if (ramDiskReplicaTracker.numReplicasNotPersisted() > 0 ||
+        datanode.getDnConf().getMaxLockedMemory() > 0) {
+      lazyWriter = new Daemon(new LazyWriter(conf));
+      lazyWriter.start();
+    } else {
+      lazyWriter = null;
+    }
+
     registerMBean(datanode.getDatanodeUuid());
 
     // Add a Metrics2 Source Interface. This is same
@@ -1286,26 +1296,33 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       " and thus cannot be created.");
     }
     // create a new block
-    FsVolumeReference ref;
-    while (true) {
+    FsVolumeReference ref = null;
+
+    // Use ramdisk only if block size is a multiple of OS page size.
+    // This simplifies reservation for partially used replicas
+    // significantly.
+    if (allowLazyPersist &&
+        lazyWriter != null &&
+        b.getNumBytes() % cacheManager.getOsPageSize() == 0 &&
+        (cacheManager.reserve(b.getNumBytes())) > 0) {
       try {
-        if (allowLazyPersist) {
-          // First try to place the block on a transient volume.
-          ref = volumes.getNextTransientVolume(b.getNumBytes());
-          datanode.getMetrics().incrRamDiskBlocksWrite();
-        } else {
-          ref = volumes.getNextVolume(storageType, b.getNumBytes());
+        // First try to place the block on a transient volume.
+        ref = volumes.getNextTransientVolume(b.getNumBytes());
+        datanode.getMetrics().incrRamDiskBlocksWrite();
+      } catch(DiskOutOfSpaceException de) {
+        // Ignore the exception since we just fall back to persistent storage.
+        datanode.getMetrics().incrRamDiskBlocksWriteFallback();
+      } finally {
+        if (ref == null) {
+          cacheManager.release(b.getNumBytes());
         }
-      } catch (DiskOutOfSpaceException de) {
-        if (allowLazyPersist) {
-          datanode.getMetrics().incrRamDiskBlocksWriteFallback();
-          allowLazyPersist = false;
-          continue;
-        }
-        throw de;
       }
-      break;
     }
+
+    if (ref == null) {
+      ref = volumes.getNextVolume(storageType, b.getNumBytes());
+    }
+
     FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
     // create an rbw file to hold block in the designated volume
     File f;
@@ -1566,7 +1583,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       newReplicaInfo = new FinalizedReplica(replicaInfo, v, dest.getParentFile());
 
       if (v.isTransientStorage()) {
-        ramDiskReplicaTracker.addReplica(bpid, replicaInfo.getBlockId(), v);
+        releaseLockedMemory(
+            replicaInfo.getOriginalBytesReserved() - replicaInfo.getNumBytes(),
+            false);
+        ramDiskReplicaTracker.addReplica(
+            bpid, replicaInfo.getBlockId(), v, replicaInfo.getNumBytes());
         datanode.getMetrics().addRamDiskBytesWrite(replicaInfo.getNumBytes());
       }
     }
@@ -1813,9 +1834,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * We're informed that a block is no longer valid.  We
-   * could lazily garbage-collect the block, but why bother?
-   * just get rid of it.
+   * We're informed that a block is no longer valid. Delete it.
    */
   @Override // FsDatasetSpi
   public void invalidate(String bpid, Block invalidBlks[]) throws IOException {
@@ -2066,8 +2085,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public void shutdown() {
     fsRunning = false;
 
-    ((LazyWriter) lazyWriter.getRunnable()).stop();
-    lazyWriter.interrupt();
+    if (lazyWriter != null) {
+      ((LazyWriter) lazyWriter.getRunnable()).stop();
+      lazyWriter.interrupt();
+    }
 
     if (mbeanName != null) {
       MBeans.unregister(mbeanName);
@@ -2085,11 +2106,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volumes.shutdown();
     }
 
-    try {
-      lazyWriter.join();
-    } catch (InterruptedException ie) {
-      LOG.warn("FsDatasetImpl.shutdown ignoring InterruptedException " +
-               "from LazyWriter.join");
+    if (lazyWriter != null) {
+      try {
+        lazyWriter.join();
+      } catch (InterruptedException ie) {
+        LOG.warn("FsDatasetImpl.shutdown ignoring InterruptedException " +
+                     "from LazyWriter.join");
+      }
     }
   }
 
@@ -2175,7 +2198,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             diskFile.length(), diskGS, vol, diskFile.getParentFile());
         volumeMap.add(bpid, diskBlockInfo);
         if (vol.isTransientStorage()) {
-          ramDiskReplicaTracker.addReplica(bpid, blockId, (FsVolumeImpl) vol);
+          long lockedBytesReserved =
+              cacheManager.reserve(diskBlockInfo.getNumBytes()) > 0 ?
+                  diskBlockInfo.getNumBytes() : 0;
+          ramDiskReplicaTracker.addReplica(
+              bpid, blockId, (FsVolumeImpl) vol, lockedBytesReserved);
         }
         LOG.warn("Added missing block to memory " + diskBlockInfo);
         return;
@@ -2761,12 +2788,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     boolean ramDiskConfigured = ramDiskConfigured();
     // Add thread for DISK volume if RamDisk is configured
     if (ramDiskConfigured &&
+        asyncLazyPersistService != null &&
         !asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
       asyncLazyPersistService.addVolume(v.getCurrentDir());
     }
 
     // Remove thread for DISK volume if RamDisk is not configured
     if (!ramDiskConfigured &&
+        asyncLazyPersistService != null &&
         asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
       asyncLazyPersistService.removeVolume(v.getCurrentDir());
     }
@@ -2791,9 +2820,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // Remove the old replicas
     if (blockFile.delete() || !blockFile.exists()) {
-      ((FsVolumeImpl) replicaInfo.getVolume()).decDfsUsed(bpid, blockFileUsed);
+      FsVolumeImpl volume = (FsVolumeImpl) replicaInfo.getVolume();
+      volume.onBlockFileDeletion(bpid, blockFileUsed);
       if (metaFile.delete() || !metaFile.exists()) {
-        ((FsVolumeImpl) replicaInfo.getVolume()).decDfsUsed(bpid, metaFileUsed);
+        volume.onMetaFileDeletion(bpid, metaFileUsed);
       }
     }
 
@@ -2906,8 +2936,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     /**
-     * Attempt to evict one or more transient block replicas we have at least
-     * spaceNeeded bytes free.
+     * Attempt to evict one or more transient block replicas until we
+     * have at least spaceNeeded bytes free.
      */
     private void evictBlocks() throws IOException {
       int iterations = 0;
@@ -3055,6 +3085,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         deletingBlock.put(bpid, s);
       }
       s.add(blockId);
+    }
+  }
+
+  void releaseLockedMemory(long count, boolean roundup) {
+    if (roundup) {
+      cacheManager.release(count);
+    } else {
+      cacheManager.releaseRoundDown(count);
     }
   }
 }
