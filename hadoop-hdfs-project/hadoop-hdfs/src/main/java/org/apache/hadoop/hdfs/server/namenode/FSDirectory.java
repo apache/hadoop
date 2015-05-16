@@ -55,12 +55,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
@@ -308,7 +305,7 @@ public class FSDirectory implements Closeable {
     return namesystem;
   }
 
-  private BlockManager getBlockManager() {
+  BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();
   }
 
@@ -476,79 +473,6 @@ public class FSDirectory implements Closeable {
       }
     }
     return null;
-  }
-
-  /**
-   * Add a block to the file. Returns a reference to the added block.
-   */
-  BlockInfoContiguous addBlock(String path, INodesInPath inodesInPath,
-      Block block, DatanodeStorageInfo[] targets) throws IOException {
-    writeLock();
-    try {
-      final INodeFile fileINode = inodesInPath.getLastINode().asFile();
-      Preconditions.checkState(fileINode.isUnderConstruction());
-
-      // check quota limits and updated space consumed
-      updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
-          fileINode.getPreferredBlockReplication(), true);
-
-      // associate new last block for the file
-      BlockInfoContiguousUnderConstruction blockInfo =
-        new BlockInfoContiguousUnderConstruction(
-            block,
-            fileINode.getFileReplication(),
-            BlockUCState.UNDER_CONSTRUCTION,
-            targets);
-      getBlockManager().addBlockCollection(blockInfo, fileINode);
-      fileINode.addBlock(blockInfo);
-
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
-            + path + " with " + block
-            + " block is added to the in-memory "
-            + "file system");
-      }
-      return blockInfo;
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
-   * Remove a block from the file.
-   * @return Whether the block exists in the corresponding file
-   */
-  boolean removeBlock(String path, INodesInPath iip, INodeFile fileNode,
-      Block block) throws IOException {
-    Preconditions.checkArgument(fileNode.isUnderConstruction());
-    writeLock();
-    try {
-      return unprotectedRemoveBlock(path, iip, fileNode, block);
-    } finally {
-      writeUnlock();
-    }
-  }
-  
-  boolean unprotectedRemoveBlock(String path, INodesInPath iip,
-      INodeFile fileNode, Block block) throws IOException {
-    // modify file-> block and blocksMap
-    // fileNode should be under construction
-    BlockInfoContiguousUnderConstruction uc = fileNode.removeLastBlock(block);
-    if (uc == null) {
-      return false;
-    }
-    getBlockManager().removeBlockFromMap(block);
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
-          +path+" with "+block
-          +" block is removed from the file system");
-    }
-
-    // update space consumed
-    updateCount(iip, 0, -fileNode.getPreferredBlockSize(),
-        fileNode.getPreferredBlockReplication(), true);
-    return true;
   }
 
   /**

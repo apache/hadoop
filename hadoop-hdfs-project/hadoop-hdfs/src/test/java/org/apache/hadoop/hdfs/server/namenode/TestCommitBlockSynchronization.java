@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderCon
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.IOException;
 
@@ -45,7 +46,9 @@ public class TestCommitBlockSynchronization {
   private FSNamesystem makeNameSystemSpy(Block block, INodeFile file)
       throws IOException {
     Configuration conf = new Configuration();
+    FSEditLog editlog = mock(FSEditLog.class);
     FSImage image = new FSImage(conf);
+    Whitebox.setInternalState(image, "editLog", editlog);
     final DatanodeStorageInfo[] targets = {};
 
     FSNamesystem namesystem = new FSNamesystem(conf, image);

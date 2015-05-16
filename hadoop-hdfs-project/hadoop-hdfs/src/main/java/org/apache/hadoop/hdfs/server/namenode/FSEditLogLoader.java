@@ -1041,7 +1041,8 @@ public class FSEditLogLoader {
             + path);
       }
       Block oldBlock = oldBlocks[oldBlocks.length - 1];
-      boolean removed = fsDir.unprotectedRemoveBlock(path, iip, file, oldBlock);
+      boolean removed = FSDirWriteFileOp.unprotectedRemoveBlock(
+          fsDir, path, iip, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }
