@@ -39,6 +39,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Race between two threads simultaneously calling
@@ -88,25 +89,40 @@ public class TestAddBlockRetry {
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
-    DatanodeStorageInfo targets[] = ns.getNewBlockTargets(
-        src, HdfsConstants.GRANDFATHER_INODE_ID, "clientName",
-        null, null, null, onRetryBlock);
+    ns.readLock();
+    FSDirWriteFileOp.ValidateAddBlockResult r;
+    FSPermissionChecker pc = Mockito.mock(FSPermissionChecker.class);
+    try {
+      r = FSDirWriteFileOp.validateAddBlock(ns, pc, src,
+                                            HdfsConstants.GRANDFATHER_INODE_ID,
+                                            "clientName", null, onRetryBlock);
+    } finally {
+      ns.readUnlock();;
+    }
+    DatanodeStorageInfo targets[] = FSDirWriteFileOp.chooseTargetForNewBlock(
+        ns.getBlockManager(), src, null, null, r);
     assertNotNull("Targets must be generated", targets);
 
     // run second addBlock()
     LOG.info("Starting second addBlock for " + src);
     nn.addBlock(src, "clientName", null, null,
-        HdfsConstants.GRANDFATHER_INODE_ID, null);
+                HdfsConstants.GRANDFATHER_INODE_ID, null);
     assertTrue("Penultimate block must be complete",
-        checkFileProgress(src, false));
+               checkFileProgress(src, false));
     LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
     assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
     LocatedBlock lb2 = lbs.get(0);
     assertEquals("Wrong replication", REPLICATION, lb2.getLocations().length);
 
     // continue first addBlock()
-    LocatedBlock newBlock = ns.storeAllocatedBlock(
-        src, HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets);
+    ns.writeLock();
+    LocatedBlock newBlock;
+    try {
+      newBlock = FSDirWriteFileOp.storeAllocatedBlock(ns, src,
+          HdfsConstants.GRANDFATHER_INODE_ID, "clientName", null, targets);
+    } finally {
+      ns.writeUnlock();
+    }
     assertEquals("Blocks are not equal", lb2.getBlock(), newBlock.getBlock());
 
     // check locations

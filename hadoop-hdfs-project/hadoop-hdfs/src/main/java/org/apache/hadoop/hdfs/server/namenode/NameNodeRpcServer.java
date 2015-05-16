@@ -713,23 +713,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
       String[] favoredNodes)
       throws IOException {
     checkNNStartup();
-    if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file " + src
-          + " fileId=" + fileId + " for " + clientName);
-    }
-    Set<Node> excludedNodesSet = null;
-    if (excludedNodes != null) {
-      excludedNodesSet = new HashSet<Node>(excludedNodes.length);
-      for (Node node : excludedNodes) {
-        excludedNodesSet.add(node);
-      }
-    }
-    List<String> favoredNodesList = (favoredNodes == null) ? null
-        : Arrays.asList(favoredNodes);
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
-        clientName, previous, excludedNodesSet, favoredNodesList);
-    if (locatedBlock != null)
+        clientName, previous, excludedNodes, favoredNodes);
+    if (locatedBlock != null) {
       metrics.incrAddBlockOps();
+    }
     return locatedBlock;
   }
 
@@ -770,13 +758,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void abandonBlock(ExtendedBlock b, long fileId, String src,
         String holder) throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
-          +b+" of file "+src);
-    }
-    if (!namesystem.abandonBlock(b, fileId, src, holder)) {
-      throw new IOException("Cannot abandon block during write to " + src);
-    }
+    namesystem.abandonBlock(b, fileId, src, holder);
   }
 
   @Override // ClientProtocol
@@ -784,10 +766,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
                           ExtendedBlock last,  long fileId)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.complete: "
-          + src + " fileId=" + fileId +" for " + clientName);
-    }
     return namesystem.completeFile(src, clientName, last, fileId);
   }
 
