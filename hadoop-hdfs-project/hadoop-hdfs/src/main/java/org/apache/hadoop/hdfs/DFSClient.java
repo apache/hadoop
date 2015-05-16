@@ -341,10 +341,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.namenode = rpcNamenode;
       dtService = null;
     } else {
+      boolean noRetries = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_TEST_NO_PROXY_RETRIES,
+          DFSConfigKeys.DFS_CLIENT_TEST_NO_PROXY_RETRIES_DEFAULT);
       Preconditions.checkArgument(nameNodeUri != null,
           "null URI");
       proxyInfo = NameNodeProxies.createProxy(conf, nameNodeUri,
-          ClientProtocol.class, nnFallbackToSimpleAuth);
+          ClientProtocol.class, nnFallbackToSimpleAuth, !noRetries);
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }

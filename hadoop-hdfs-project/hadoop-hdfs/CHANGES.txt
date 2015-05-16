@@ -775,6 +775,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8371. Fix test failure in TestHdfsConfigFields for spanreceiver
     properties. (Ray Chiang via aajisaka)
 
+    HDFS-8403. Eliminate retries in TestFileCreation
+    #testOverwriteOpenForWrite. (Arpit Agarwal via wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
