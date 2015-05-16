@@ -321,6 +321,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
     header = getHeader("Refresh", rm2Url + "/ws/v1/cluster/apps");
     assertTrue(header.contains("; url=" + rm1Url));
 
+    header = getHeader("Refresh", rm2Url + "/proxy/" + fakeAppId);
+    assertEquals(null, header);
+
     // Due to the limitation of MiniYARNCluster and dispatcher is a singleton,
     // we couldn't add the test case after explicitFailover();
   }

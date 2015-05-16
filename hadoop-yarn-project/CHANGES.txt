@@ -138,6 +138,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3641. NodeManager: stopRecoveryStore() shouldn't be skipped when
     exceptions happen in stopping NM's sub-services. (Junping Du via jlowe)
 
+    YARN-3526. ApplicationMaster tracking URL is incorrectly redirected
+    on a QJM cluster. (Weiwei Yang via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
