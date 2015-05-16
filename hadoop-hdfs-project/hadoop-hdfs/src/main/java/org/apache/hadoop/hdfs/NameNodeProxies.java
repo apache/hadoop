@@ -161,6 +161,31 @@ public class NameNodeProxies {
   public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
       URI nameNodeUri, Class<T> xface, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
+    return createProxy(conf, nameNodeUri, xface, fallbackToSimpleAuth, true);
+  }
+
+  /**
+   * Creates the namenode proxy with the passed protocol. This will handle
+   * creation of either HA- or non-HA-enabled proxy objects, depending upon
+   * if the provided URI is a configured logical URI.
+   *
+   * @param conf the configuration containing the required IPC
+   *        properties, client failover configurations, etc.
+   * @param nameNodeUri the URI pointing either to a specific NameNode
+   *        or to a logical nameservice.
+   * @param xface the IPC interface which should be created
+   * @param fallbackToSimpleAuth set to true or false during calls to
+   *   indicate if a secure client falls back to simple auth
+   * @param withRetries certain interfaces have a non-standard retry policy
+   * @return an object containing both the proxy and the associated
+   *         delegation token service it corresponds to
+   * @throws IOException if there is an error creating the proxy
+   **/
+  @SuppressWarnings("unchecked")
+  public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
+      URI nameNodeUri, Class<T> xface, AtomicBoolean fallbackToSimpleAuth,
+      boolean withRetries)
+      throws IOException {
     AbstractNNFailoverProxyProvider<T> failoverProxyProvider =
         createFailoverProxyProvider(conf, nameNodeUri, xface, true,
           fallbackToSimpleAuth);
@@ -168,7 +193,8 @@ public class NameNodeProxies {
     if (failoverProxyProvider == null) {
       // Non-HA case
       return createNonHAProxy(conf, NameNode.getAddress(nameNodeUri), xface,
-          UserGroupInformation.getCurrentUser(), true, fallbackToSimpleAuth);
+          UserGroupInformation.getCurrentUser(), withRetries,
+          fallbackToSimpleAuth);
     } else {
       // HA case
       DfsClientConf config = new DfsClientConf(conf);
