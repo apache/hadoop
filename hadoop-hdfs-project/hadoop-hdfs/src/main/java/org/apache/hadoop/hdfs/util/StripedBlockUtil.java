@@ -87,7 +87,7 @@ public class StripedBlockUtil {
         new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
         new String[]{bg.getStorageIDs()[idxInReturnedLocs]},
         new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
-        bg.getStartOffset() + idxInBlockGroup, bg.isCorrupt(),
+        bg.getStartOffset() + idxInBlockGroup * cellSize, bg.isCorrupt(),
         null);
   }
 

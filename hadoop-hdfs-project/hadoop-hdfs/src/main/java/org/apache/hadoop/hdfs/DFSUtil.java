@@ -1514,7 +1514,7 @@ public class DFSUtil {
   public static int getSmallBufferSize(Configuration conf) {
     return Math.min(getIoFileBufferSize(conf) / 2, 512);
   }
-  
+
   /**
    * Probe for HDFS Encryption being enabled; this uses the value of
    * the option {@link DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI},
