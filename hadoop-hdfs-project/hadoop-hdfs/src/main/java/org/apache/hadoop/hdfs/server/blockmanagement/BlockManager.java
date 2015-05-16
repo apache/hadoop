@@ -3567,6 +3567,11 @@ public class BlockManager {
     return storages;
   }
 
+  /** @return an iterator of the datanodes. */
+  public Iterable<DatanodeStorageInfo> getStorages(final Block block) {
+    return blocksMap.getStorages(block);
+  }
+
   public int getTotalBlocks() {
     return blocksMap.size();
   }
@@ -3958,7 +3963,7 @@ public class BlockManager {
         null);
   }
 
-  public LocatedBlock newLocatedBlock(ExtendedBlock eb, BlockInfo info,
+  public static LocatedBlock newLocatedBlock(ExtendedBlock eb, BlockInfo info,
       DatanodeStorageInfo[] locs, long offset) throws IOException {
     final LocatedBlock lb;
     if (info.isStriped()) {
@@ -3968,7 +3973,6 @@ public class BlockManager {
     } else {
       lb = newLocatedBlock(eb, locs, offset, false);
     }
-    setBlockToken(lb, BlockTokenIdentifier.AccessMode.WRITE);
     return lb;
   }
 

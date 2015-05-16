@@ -3073,6 +3073,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       writeUnlock();
     }
     getEditLog().logSync();
+    if (success) {
+      NameNode.stateChangeLog.info("DIR* completeFile: " + src
+          + " is closed by " + holder);
+    }
     return success;
   }
 
@@ -3080,7 +3084,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Create new block with a unique block id and a new generation stamp.
    * @param isStriped is the file under striping or contiguous layout?
    */
-  Block createNewBlock() throws IOException {
+  Block createNewBlock(boolean isStriped) throws IOException {
     assert hasWriteLock();
     Block b = new Block(nextBlockId(isStriped), 0, 0);
     // Increment the generation stamp for every new block.

@@ -905,14 +905,6 @@ public class INodeFile extends INodeWithAdditionalFields
     return counts;
   }
 
-  public final short getReplication(int lastSnapshotId) {
-    if (lastSnapshotId != CURRENT_STATE_ID) {
-      return getFileReplication(lastSnapshotId);
-    } else {
-      return getBlockReplication();
-    }
-  }
-
   /**
    * Return the penultimate allocated block for this file.
    */

@@ -1915,7 +1915,7 @@ public class DFSTestUtil {
         fileNode.getId(), null);
 
     final BlockInfo lastBlock = fileNode.getLastBlock();
-    final int groupSize = fileNode.getBlockReplication();
+    final int groupSize = fileNode.getPreferredBlockReplication();
     assert dataNodes.size() >= groupSize;
     // 1. RECEIVING_BLOCK IBR
     for (int i = 0; i < groupSize; i++) {
