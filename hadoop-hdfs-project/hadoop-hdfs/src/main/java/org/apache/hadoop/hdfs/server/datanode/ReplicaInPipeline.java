@@ -51,7 +51,8 @@ public class ReplicaInPipeline extends ReplicaInfo
    * the bytes already written to this block.
    */
   private long bytesReserved;
-  
+  private final long originalBytesReserved;
+
   /**
    * Constructor for a zero length replica
    * @param blockId block id
@@ -97,6 +98,7 @@ public class ReplicaInPipeline extends ReplicaInfo
     this.bytesOnDisk = len;
     this.writer = writer;
     this.bytesReserved = bytesToReserve;
+    this.originalBytesReserved = bytesToReserve;
   }
 
   /**
@@ -109,6 +111,7 @@ public class ReplicaInPipeline extends ReplicaInfo
     this.bytesOnDisk = from.getBytesOnDisk();
     this.writer = from.writer;
     this.bytesReserved = from.bytesReserved;
+    this.originalBytesReserved = from.originalBytesReserved;
   }
 
   @Override
@@ -149,8 +152,14 @@ public class ReplicaInPipeline extends ReplicaInfo
   }
   
   @Override
+  public long getOriginalBytesReserved() {
+    return originalBytesReserved;
+  }
+
+  @Override
   public void releaseAllBytesReserved() {  // ReplicaInPipelineInterface
     getVolume().releaseReservedSpace(bytesReserved);
+    getVolume().releaseLockedMemory(bytesReserved);
     bytesReserved = 0;
   }
 

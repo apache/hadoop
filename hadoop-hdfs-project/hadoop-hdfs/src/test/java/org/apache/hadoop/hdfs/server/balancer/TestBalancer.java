@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.server.balancer.Balancer.Parameters;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Result;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -120,13 +121,16 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
   }
 
-  static void initConfWithRamDisk(Configuration conf) {
+  static void initConfWithRamDisk(Configuration conf,
+                                  long ramDiskCapacity) {
     conf.setLong(DFS_BLOCK_SIZE_KEY, DEFAULT_RAM_DISK_BLOCK_SIZE);
+    conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, ramDiskCapacity);
     conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC, 3);
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC, 1);
     conf.setInt(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES, DEFAULT_RAM_DISK_BLOCK_SIZE);
+    LazyPersistTestCase.initCacheManipulator();
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -1245,7 +1249,6 @@ public class TestBalancer {
     final int SEED = 0xFADED;
     final short REPL_FACT = 1;
     Configuration conf = new Configuration();
-    initConfWithRamDisk(conf);
 
     final int defaultRamDiskCapacity = 10;
     final long ramDiskStorageLimit =
@@ -1254,6 +1257,8 @@ public class TestBalancer {
     final long diskStorageLimit =
       ((long) defaultRamDiskCapacity * DEFAULT_RAM_DISK_BLOCK_SIZE) +
       (DEFAULT_RAM_DISK_BLOCK_SIZE - 1);
+
+    initConfWithRamDisk(conf, ramDiskStorageLimit);
 
     cluster = new MiniDFSCluster
       .Builder(conf)

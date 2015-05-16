@@ -560,6 +560,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8394. Move getAdditionalBlock() and related functionalities into a
     separate class. (wheat9)
 
+    HDFS-8157. Writes to RAM DISK reserve locked memory for block files.
+    (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

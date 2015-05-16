@@ -274,7 +274,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return getBlockPoolSlice(bpid).getTmpDir();
   }
 
-  void decDfsUsed(String bpid, long value) {
+  void onBlockFileDeletion(String bpid, long value) {
+    decDfsUsed(bpid, value);
+    if (isTransientStorage()) {
+      dataset.releaseLockedMemory(value, true);
+    }
+  }
+
+  void onMetaFileDeletion(String bpid, long value) {
+    decDfsUsed(bpid, value);
+  }
+
+  private void decDfsUsed(String bpid, long value) {
     synchronized(dataset) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
@@ -425,6 +436,13 @@ public class FsVolumeImpl implements FsVolumeSpi {
           newReservation = 0;
         }
       } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
+    }
+  }
+
+  @Override
+  public void releaseLockedMemory(long bytesToRelease) {
+    if (isTransientStorage()) {
+      dataset.releaseLockedMemory(bytesToRelease, false);
     }
   }
 

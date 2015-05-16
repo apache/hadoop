@@ -82,6 +82,10 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public void releaseLockedMemory(long bytesToRelease) {
+  }
+
+  @Override
   public BlockIterator newBlockIterator(String bpid, String name) {
     return null;
   }

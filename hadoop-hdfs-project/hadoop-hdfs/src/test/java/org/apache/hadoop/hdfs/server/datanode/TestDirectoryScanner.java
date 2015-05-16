@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
@@ -79,6 +80,8 @@ public class TestDirectoryScanner {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_LENGTH);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    CONF.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+                 Long.MAX_VALUE);
   }
 
   /** create a file with a length of <code>fileLen</code> */
@@ -308,6 +311,7 @@ public class TestDirectoryScanner {
 
   @Test (timeout=300000)
   public void testRetainBlockOnPersistentStorage() throws Exception {
+    LazyPersistTestCase.initCacheManipulator();
     cluster = new MiniDFSCluster
         .Builder(CONF)
         .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
@@ -349,6 +353,7 @@ public class TestDirectoryScanner {
 
   @Test (timeout=300000)
   public void testDeleteBlockOnTransientStorage() throws Exception {
+    LazyPersistTestCase.initCacheManipulator();
     cluster = new MiniDFSCluster
         .Builder(CONF)
         .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
@@ -612,6 +617,10 @@ public class TestDirectoryScanner {
 
     @Override
     public void releaseReservedSpace(long bytesToRelease) {
+    }
+
+    @Override
+    public void releaseLockedMemory(long bytesToRelease) {
     }
 
     @Override

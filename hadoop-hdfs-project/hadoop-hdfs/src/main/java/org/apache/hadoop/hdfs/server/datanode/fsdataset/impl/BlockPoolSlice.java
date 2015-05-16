@@ -475,7 +475,7 @@ class BlockPoolSlice {
     // eventually.
     if (newReplica.getVolume().isTransientStorage()) {
       lazyWriteReplicaMap.addReplica(bpid, blockId,
-          (FsVolumeImpl) newReplica.getVolume());
+          (FsVolumeImpl) newReplica.getVolume(), 0);
     } else {
       lazyWriteReplicaMap.discardReplica(bpid, blockId, false);
     }

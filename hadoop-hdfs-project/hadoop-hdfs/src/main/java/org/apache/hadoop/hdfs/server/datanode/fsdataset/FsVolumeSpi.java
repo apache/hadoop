@@ -73,6 +73,14 @@ public interface FsVolumeSpi {
   public void releaseReservedSpace(long bytesToRelease);
 
   /**
+   * Release reserved memory for an RBW block written to transient storage
+   * i.e. RAM.
+   * bytesToRelease will be rounded down to the OS page size since locked
+   * memory reservation must always be a multiple of the page size.
+   */
+  public void releaseLockedMemory(long bytesToRelease);
+
+  /**
    * BlockIterator will return ExtendedBlock entries from a block pool in
    * this volume.  The entries will be returned in sorted order.<p/>
    *

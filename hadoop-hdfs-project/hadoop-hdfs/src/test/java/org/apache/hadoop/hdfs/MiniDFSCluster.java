@@ -1582,7 +1582,7 @@ public class MiniDFSCluster {
       throw new IllegalStateException("Attempting to finalize "
                                       + "Namenode but it is not running");
     }
-    ToolRunner.run(new DFSAdmin(conf), new String[] {"-finalizeUpgrade"});
+    ToolRunner.run(new DFSAdmin(conf), new String[]{"-finalizeUpgrade"});
   }
   
   /**

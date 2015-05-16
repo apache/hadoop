@@ -218,7 +218,17 @@ abstract public class ReplicaInfo extends Block implements Replica {
   public long getBytesReserved() {
     return 0;
   }
-  
+
+  /**
+   * Number of bytes originally reserved for this replica. The actual
+   * reservation is adjusted as data is written to disk.
+   *
+   * @return the number of bytes originally reserved for this replica.
+   */
+  public long getOriginalBytesReserved() {
+    return 0;
+  }
+
    /**
    * Copy specified file into a temporary file. Then rename the
    * temporary file to the original name. This will cause any
