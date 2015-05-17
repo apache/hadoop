@@ -286,9 +286,9 @@ The following primary expressions are recognised:
 
     Evaluates as true if the basename of the file matches the pattern using standard file system globbing. If -iname is used then the match is case insensitive.
 
-*   -print<br />-print0Always
+*   -print<br />-print0
 
-    evaluates to true. Causes the current pathname to be written to standard output. If the -print0 expression is used then an ASCII NULL character is appended.
+    Always evaluates to true. Causes the current pathname to be written to standard output. If the -print0 expression is used then an ASCII NULL character is appended.
 
 The following operators are recognised:
 
