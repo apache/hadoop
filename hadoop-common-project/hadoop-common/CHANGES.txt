@@ -689,6 +689,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-8174. Remove confusing comment in Path#isAbsolute()
     (Suresh Srinivas via vinayakumarb)
 
+    HADOOP-11988. Fix typo in the document for hadoop fs -find.
+    (Kengo Seki via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
