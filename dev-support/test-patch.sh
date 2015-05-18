@@ -40,6 +40,9 @@ function setup_defaults
   BASEDIR=$(pwd)
   RELOCATE_PATCH_DIR=false
 
+  USER_PLUGIN_DIR=""
+  LOAD_SYSTEM_PLUGINS=true
+
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
@@ -586,9 +589,11 @@ function hadoop_usage
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
+  echo "--plugins=<dir>        A directory of user provided plugins. see test-patch.d for examples (default empty)"
   echo "--project=<name>       The short name for project currently using test-patch (default 'hadoop')"
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
+  echo "--skip-system-plugins  Do not load plugins from ${BINDIR}/test-patch.d"
   echo "--testlist=<list>      Specify which subsystem tests to use (comma delimited)"
 
   echo "Shell binary overrides:"
@@ -706,6 +711,9 @@ function parse_args
       --patch-dir=*)
         USER_PATCH_DIR=${i#*=}
       ;;
+      --plugins=*)
+        USER_PLUGIN_DIR=${i#*=}
+      ;;
       --project=*)
         PROJECT_NAME=${i#*=}
       ;;
@@ -722,6 +730,9 @@ function parse_args
       ;;
       --run-tests)
         RUN_TESTS=true
+      ;;
+      --skip-system-plugins)
+        LOAD_SYSTEM_PLUGINS=false
       ;;
       --testlist=*)
         testlist=${i#*=}
@@ -2523,17 +2534,25 @@ function runtests
   done
 }
 
-## @description  Import content from test-patch.d
+## @description  Import content from test-patch.d and optionally
+## @description  from user provided plugin directory
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
 function importplugins
 {
   local i
-  local files
+  local files=()
 
-  if [[ -d "${BINDIR}/test-patch.d" ]]; then
-    files=(${BINDIR}/test-patch.d/*.sh)
+  if [[ ${LOAD_SYSTEM_PLUGINS} == "true" ]]; then
+    if [[ -d "${BINDIR}/test-patch.d" ]]; then
+      files=(${BINDIR}/test-patch.d/*.sh)
+    fi
+  fi
+
+  if [[ -n "${USER_PLUGIN_DIR}" && -d "${USER_PLUGIN_DIR}" ]]; then
+    hadoop_debug "Loading user provided plugins from ${USER_PLUGIN_DIR}"
+    files=("${files[@]}" ${USER_PLUGIN_DIR}/*.sh)
   fi
 
   for i in "${files[@]}"; do

@@ -486,6 +486,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11843. Make setting up the build environment easier.
     (Niels Basjes via cnauroth)
 
+    HADOOP-11949. Add user-provided plugins to test-patch (Sean Busbey via aw)
+
   IMPROVEMENTS
 
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation
