@@ -358,9 +358,17 @@ Here is a non-normative description of the API.
 
     GET /ws/v1/timeline/
 
-Returns a JSON object describing the server instance.
+Returns a JSON object describing the server instance and version information.
 
-     {"About":"Timeline API"}
+     {
+       About: "Timeline API",
+       timeline-service-version: "3.0.0-SNAPSHOT",
+       timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
+       timeline-service-version-built-on: "2015-05-13T19:45Z",
+       hadoop-version: "3.0.0-SNAPSHOT",
+       hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
+       hadoop-version-built-on: "2015-05-13T19:44Z"
+     }
 
 
 ## <a name="REST_API_DOMAINS"></a>Domains `/ws/v1/timeline/domain`
@@ -889,6 +897,92 @@ Response Body:
 Users can access the generic historic information of applications via REST
 APIs.
 
+## <a name="REST_API_ABOUT"></a>About
+
+With the about API, you can get an timeline about resource that contains
+generic history REST API description and version information.
+
+It is essentially a XML/JSON-serialized form of the YARN `TimelineAbout`
+structure.
+
+### URI:
+
+Use the following URI to obtain an timeline about object.
+
+    http(s)://<timeline server http(s) address:port>/ws/v1/applicationhistory/about
+
+### HTTP Operations Supported:
+
+    GET
+
+### Query Parameters Supported:
+
+None
+
+### Elements of the `about` (Application) Object:
+
+| Item         | Data Type   | Description                   |
+|:---- |:----  |:---- |
+| `About` | string  | The description about the service |
+| `timeline-service-version` | string  | The timeline service version |
+| `timeline-service-build-version` | string  | The timeline service build version |
+| `timeline-service-version-built-on` | string  | On what time the timeline service is built |
+| `hadoop-version` | string  | Hadoop version |
+| `hadoop-build-version` | string  | Hadoop build version |
+| `hadoop-version-built-on` | string  | On what time Hadoop is built |
+
+### Response Examples:
+
+#### JSON response
+
+HTTP Request:
+
+    http://localhost:8188/ws/v1/applicationhistory/about
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+
+Response Body:
+
+    {
+      About: "Generic History Service API",
+      timeline-service-version: "3.0.0-SNAPSHOT",
+      timeline-service-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb",
+      timeline-service-version-built-on: "2015-05-13T19:45Z",
+      hadoop-version: "3.0.0-SNAPSHOT",
+      hadoop-build-version: "3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60",
+      hadoop-version-built-on: "2015-05-13T19:44Z"
+    }
+
+#### XML response
+
+HTTP Request:
+
+    GET http://localhost:8188/ws/v1/applicationhistory/about
+    Accept: application/xml
+
+Response Header:
+
+    HTTP/1.1 200 OK
+    Content-Type: application/xml
+    Content-Length: 748
+
+Response Body:
+
+     <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+     <about>
+       <About>Generic History Service API</About>
+       <hadoop-build-version>3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum 95874b192923b43cdb96a6e483afd60</hadoop-build-version>
+       <hadoop-version>3.0.0-SNAPSHOT</hadoop-version>
+       <hadoop-version-built-on>2015-05-13T19:44Z</hadoop-version-built-on>
+       <timeline-service-build-version>3.0.0-SNAPSHOT from fcd0702c10ce574b887280476aba63d6682d5271 by zshen source checksum e9ec74ea3ff7bc9f3d35e9cac694fb</timeline-service-build-version>
+       <timeline-service-version>3.0.0-SNAPSHOT</timeline-service-version>
+       <timeline-service-version-built-on>2015-05-13T19:45Z</timeline-service-version-built-on>
+     </about>
+
 ## <a name="REST_API_LIST_APPLICATIONS"></a>Application List
 
 With the Application List API, you can obtain a collection of resources, each
@@ -1129,7 +1223,8 @@ With the Application API, you can get an application resource contains
 information about a particular application that was running on an YARN
 cluster.
 
-It is essentially a JSON-serialized form of the YARN `ApplicationReport` structure.
+It is essentially a XML/JSON-serialized form of the YARN `ApplicationReport`
+structure.
 
 ### URI:
 

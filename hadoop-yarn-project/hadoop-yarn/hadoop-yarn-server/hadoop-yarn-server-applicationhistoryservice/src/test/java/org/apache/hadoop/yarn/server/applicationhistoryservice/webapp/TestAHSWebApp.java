@@ -88,6 +88,20 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   }
 
   @Test
+  public void testAboutPage() throws Exception {
+    Injector injector =
+        WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
+            mockApplicationHistoryClientService(0, 0, 0));
+    AboutPage aboutPageInstance = injector.getInstance(AboutPage.class);
+
+    aboutPageInstance.render();
+    WebAppTests.flushOutput(injector);
+
+    aboutPageInstance.render();
+    WebAppTests.flushOutput(injector);
+  }
+
+  @Test
   public void testAppPage() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,

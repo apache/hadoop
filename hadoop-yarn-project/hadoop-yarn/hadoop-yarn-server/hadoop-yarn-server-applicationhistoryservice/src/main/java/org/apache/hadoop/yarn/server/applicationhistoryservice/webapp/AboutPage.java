@@ -18,46 +18,19 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import org.apache.hadoop.yarn.webapp.Controller;
 
-import com.google.inject.Inject;
+import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-public class AHSController extends Controller {
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-  @Inject
-  AHSController(RequestContext ctx) {
-    super(ctx);
+public class AboutPage extends AHSView {
+  @Override protected void preHead(Page.HTML<_> html) {
+    commonPreHead(html);
+    set(TITLE, "Timeline Server - Generic History Service");
   }
 
-  @Override
-  public void index() {
-    setTitle("Application History");
-  }
-
-  public void about() {
-    render(AboutPage.class);
-  }
-
-  public void app() {
-    render(AppPage.class);
-  }
-
-  public void appattempt() {
-    render(AppAttemptPage.class);
-  }
-
-  public void container() {
-    render(ContainerPage.class);
-  }
-
-  /**
-   * Render the logs page.
-   */
-  public void logs() {
-    render(AHSLogsPage.class);
-  }
-
-  public void errorsAndWarnings() {
-    render(AHSErrorsAndWarningsPage.class);
+  @Override protected Class<? extends SubView> content() {
+    return AboutBlock.class;
   }
 }

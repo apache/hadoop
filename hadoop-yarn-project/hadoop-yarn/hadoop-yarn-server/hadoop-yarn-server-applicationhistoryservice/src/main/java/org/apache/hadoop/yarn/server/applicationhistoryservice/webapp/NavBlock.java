@@ -43,6 +43,8 @@ public class NavBlock extends HtmlBlock {
         div("#nav").
             h3("Application History").
                 ul().
+                    li().a(url("about"), "About").
+                    _().
                     li().a(url("apps"), "Applications").
                         ul().
                             li().a(url("apps",
