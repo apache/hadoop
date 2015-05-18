@@ -332,6 +332,8 @@ Trunk (Unreleased)
 
     HDFS-8332. DFS client API calls should check filesystem closed (Rakesh R via umamahesh)
 
+    HDFS-8412. Fix the test failures in HTTPFS. (umamahesh)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

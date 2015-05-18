@@ -465,8 +465,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     OutputStream os = fs.create(path);
     os.write(1);
     os.close();
-    fs.close();
     fs.setReplication(path, (short) 2);
+    fs.close();
 
     fs = getHttpFSFileSystem();
     fs.setReplication(path, (short) 1);
