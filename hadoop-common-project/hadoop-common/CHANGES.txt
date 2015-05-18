@@ -572,6 +572,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11960. Enable Azure-Storage Client Side logging.
     (Dushyanth via cnauroth)
 
+    HADOOP-11939. Deprecate DistCpV1 and Logalyzer.
+    (Brahma Reddy Battula via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

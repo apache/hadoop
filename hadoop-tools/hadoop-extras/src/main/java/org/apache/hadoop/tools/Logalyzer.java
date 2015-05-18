@@ -65,7 +65,7 @@ import org.apache.hadoop.mapreduce.lib.map.RegexMapper;
  * &lt;col1, col2&gt; -separator &lt;separator&gt;
  * <p>
  */
-
+@Deprecated
 public class Logalyzer {
   // Constants
   private static Configuration fsConfig = new Configuration();
@@ -194,6 +194,7 @@ public class Logalyzer {
    * @param archiveDirectory : The directory to store archived logfiles.
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public void	
     doArchive(String logListURI, String archiveDirectory)
     throws IOException

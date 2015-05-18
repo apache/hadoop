@@ -55,7 +55,7 @@ import org.apache.log4j.Level;
 /**
  * A JUnit test for copying files recursively.
  */
-
+@SuppressWarnings("deprecation")
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
@@ -261,6 +261,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from local file system to local file system */
+  @SuppressWarnings("deprecation")
   public void testCopyFromLocalToLocal() throws Exception {
     Configuration conf = new Configuration();
     FileSystem localfs = FileSystem.get(LOCAL_FS, conf);
@@ -275,6 +276,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from dfs file system to dfs file system */
+  @SuppressWarnings("deprecation")
   public void testCopyFromDfsToDfs() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
@@ -305,6 +307,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** copy empty directory on dfs file system */
+  @SuppressWarnings("deprecation")
   public void testEmptyDir() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
@@ -336,6 +339,7 @@ public class TestCopyFiles extends TestCase {
   }
   
   /** copy files from local file system to dfs file system */
+  @SuppressWarnings("deprecation")
   public void testCopyFromLocalToDfs() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -364,6 +368,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** copy files from dfs file system to local file system */
+  @SuppressWarnings("deprecation")
   public void testCopyFromDfsToLocal() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -392,6 +397,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void testCopyDfsToDfsUpdateOverwrite() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -452,6 +458,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void testCopyDfsToDfsUpdateWithSkipCRC() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -526,7 +533,8 @@ public class TestCopyFiles extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
-    
+
+  @SuppressWarnings("deprecation")
   public void testCopyDuplication() throws Exception {
     final FileSystem localfs = FileSystem.get(LOCAL_FS, new Configuration());
     try {    
@@ -550,6 +558,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void testCopySingleFile() throws Exception {
     FileSystem fs = FileSystem.get(LOCAL_FS, new Configuration());
     Path root = new Path(TEST_ROOT_DIR+"/srcdat");
@@ -609,6 +618,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** tests basedir option copying files from dfs file system to dfs file system */
+  @SuppressWarnings("deprecation")
   public void testBasedir() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
@@ -634,7 +644,8 @@ public class TestCopyFiles extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
-  
+
+  @SuppressWarnings("deprecation")
   public void testPreserveOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
@@ -733,6 +744,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void testMapCount() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
@@ -787,6 +799,7 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public void testLimits() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
@@ -892,6 +905,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** test -delete */
+  @SuppressWarnings("deprecation")
   public void testDelete() throws Exception {
     final Configuration conf = new Configuration();
     conf.setInt("fs.trash.interval", 60);
@@ -964,6 +978,7 @@ public class TestCopyFiles extends TestCase {
   /**
    * verify that -delete option works for other {@link FileSystem}
    * implementations. See MAPREDUCE-1285 */
+  @SuppressWarnings("deprecation")
   public void testDeleteLocal() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -997,6 +1012,7 @@ public class TestCopyFiles extends TestCase {
   }
 
   /** test globbing  */
+  @SuppressWarnings("deprecation")
   public void testGlobbing() throws Exception {
     String namenode = null;
     MiniDFSCluster cluster = null;
