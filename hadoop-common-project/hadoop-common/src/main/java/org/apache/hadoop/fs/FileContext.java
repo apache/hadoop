@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -2664,5 +2665,37 @@ public class FileContext {
         return null;
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Set the storage policy for a given file or directory.
+   *
+   * @param path file or directory path.
+   * @param policyName the name of the target storage policy. The list
+   *                   of supported Storage policies can be retrieved
+   *                   via {@link #getAllStoragePolicies}.
+   */
+  public void setStoragePolicy(final Path path, final String policyName)
+      throws IOException {
+    final Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.setStoragePolicy(path, policyName);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Retrieve all the storage policies supported by this file system.
+   *
+   * @return all storage policies supported by this filesystem.
+   * @throws IOException
+   */
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return defaultFS.getAllStoragePolicies();
   }
 }

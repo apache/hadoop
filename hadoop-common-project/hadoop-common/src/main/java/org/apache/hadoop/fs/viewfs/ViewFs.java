@@ -740,6 +740,14 @@ public class ViewFs extends AbstractFileSystem {
     res.targetFileSystem.deleteSnapshot(res.remainingPath, snapshotName);
   }
 
+  @Override
+  public void setStoragePolicy(final Path path, final String policyName)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * ie internal dir of the mount table.
@@ -1069,6 +1077,12 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       checkPathIsSlash(path);
       throw readOnlyMountTable("deleteSnapshot", path);
+    }
+
+    @Override
+    public void setStoragePolicy(Path path, String policyName)
+        throws IOException {
+      throw readOnlyMountTable("setStoragePolicy", path);
     }
   }
 }

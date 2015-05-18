@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * for the replicas of a block.
  */
 @InterfaceAudience.Private
-public class BlockStoragePolicy {
+public class BlockStoragePolicy implements BlockStoragePolicySpi {
   public static final Logger LOG = LoggerFactory.getLogger(BlockStoragePolicy
       .class);
 
@@ -239,18 +240,22 @@ public class BlockStoragePolicy {
     return id;
   }
 
+  @Override
   public String getName() {
     return name;
   }
 
+  @Override
   public StorageType[] getStorageTypes() {
     return this.storageTypes;
   }
 
+  @Override
   public StorageType[] getCreationFallbacks() {
     return this.creationFallbacks;
   }
 
+  @Override
   public StorageType[] getReplicationFallbacks() {
     return this.replicationFallbacks;
   }
@@ -265,6 +270,7 @@ public class BlockStoragePolicy {
     return null;
   }
 
+  @Override
   public boolean isCopyOnCreateFile() {
     return copyOnCreateFile;
   }
