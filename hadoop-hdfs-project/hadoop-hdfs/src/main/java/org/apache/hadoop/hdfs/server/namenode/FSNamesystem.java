@@ -5347,6 +5347,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Get the number of files under construction in the system.
+   */
+  @Metric({ "NumFilesUnderConstruction",
+      "Number of files under construction" })
+  public long getNumFilesUnderConstruction() {
+    return leaseManager.countPath();
+  }
+
+  /**
+   * Get the total number of active clients holding lease in the system.
+   */
+  @Metric({ "NumActiveClients", "Number of active clients holding lease" })
+  public long getNumActiveClients() {
+    return leaseManager.countLease();
+  }
+
+  /**
    * Get the total number of COMPLETE blocks in the system.
    * For safe mode only complete blocks are counted.
    */
