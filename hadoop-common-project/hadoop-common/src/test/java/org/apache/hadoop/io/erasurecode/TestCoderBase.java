@@ -75,8 +75,8 @@ public abstract class TestCoderBase {
    */
   protected void compareAndVerify(ECChunk[] erasedChunks,
                                   ECChunk[] recoveredChunks) {
-    byte[][] erased = ECChunk.toArray(erasedChunks);
-    byte[][] recovered = ECChunk.toArray(recoveredChunks);
+    byte[][] erased = ECChunk.toArrays(erasedChunks);
+    byte[][] recovered = ECChunk.toArrays(recoveredChunks);
     boolean result = Arrays.deepEquals(erased, recovered);
     assertTrue("Decoding and comparing failed.", result);
   }

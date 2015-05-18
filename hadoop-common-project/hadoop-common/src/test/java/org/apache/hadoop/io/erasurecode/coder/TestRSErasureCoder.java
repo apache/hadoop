@@ -56,13 +56,11 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
      * This tests if the two configuration items work or not.
      */
     Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
-        RSRawErasureCoderFactory.class.getCanonicalName());
-    conf.setBoolean(
-        CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_USEXOR_KEY, false);
+    conf.set(CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY, RSRawErasureCoderFactory.class.getCanonicalName());
 
     prepare(conf, 10, 4, new int[]{0});
 
+    testCoding(true);
     testCoding(true);
   }
 

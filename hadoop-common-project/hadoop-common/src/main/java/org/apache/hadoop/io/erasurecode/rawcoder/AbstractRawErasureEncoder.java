@@ -31,23 +31,28 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
 
   @Override
   public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
-    assert (inputs.length == getNumDataUnits());
-    assert (outputs.length == getNumParityUnits());
+    checkParameters(inputs, outputs);
 
-    doEncode(inputs, outputs);
+    boolean hasArray = inputs[0].hasArray();
+    if (hasArray) {
+      byte[][] newInputs = toArrays(inputs);
+      byte[][] newOutputs = toArrays(outputs);
+      doEncode(newInputs, newOutputs);
+    } else {
+      doEncode(inputs, outputs);
+    }
   }
 
   /**
-   * Perform the real encoding work using ByteBuffer
-   * @param inputs
-   * @param outputs
+   * Perform the real encoding work using direct ByteBuffer
+   * @param inputs Direct ByteBuffers expected
+   * @param outputs Direct ByteBuffers expected
    */
   protected abstract void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs);
 
   @Override
   public void encode(byte[][] inputs, byte[][] outputs) {
-    assert (inputs.length == getNumDataUnits());
-    assert (outputs.length == getNumParityUnits());
+    checkParameters(inputs, outputs);
 
     doEncode(inputs, outputs);
   }
@@ -61,33 +66,22 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
 
   @Override
   public void encode(ECChunk[] inputs, ECChunk[] outputs) {
-    assert (inputs.length == getNumDataUnits());
-    assert (outputs.length == getNumParityUnits());
-
-    doEncode(inputs, outputs);
+    ByteBuffer[] newInputs = ECChunk.toBuffers(inputs);
+    ByteBuffer[] newOutputs = ECChunk.toBuffers(outputs);
+    encode(newInputs, newOutputs);
   }
 
   /**
-   * Perform the real encoding work using chunks.
+   * Check and validate decoding parameters, throw exception accordingly.
    * @param inputs
    * @param outputs
    */
-  protected void doEncode(ECChunk[] inputs, ECChunk[] outputs) {
-    /**
-     * Note callers may pass byte array, or ByteBuffer via ECChunk according
-     * to how ECChunk is created. Some implementations of coder use byte array
-     * (ex: pure Java), some use native ByteBuffer (ex: ISA-L), all for the
-     * better performance.
-     */
-    if (inputs[0].getBuffer().hasArray()) {
-      byte[][] inputBytesArr = ECChunk.toArray(inputs);
-      byte[][] outputBytesArr = ECChunk.toArray(outputs);
-      doEncode(inputBytesArr, outputBytesArr);
-    } else {
-      ByteBuffer[] inputBuffers = ECChunk.toBuffers(inputs);
-      ByteBuffer[] outputBuffers = ECChunk.toBuffers(outputs);
-      doEncode(inputBuffers, outputBuffers);
+  protected void checkParameters(Object[] inputs, Object[] outputs) {
+    if (inputs.length != getNumDataUnits()) {
+      throw new IllegalArgumentException("Invalid inputs length");
+    }
+    if (outputs.length != getNumParityUnits()) {
+      throw new IllegalArgumentException("Invalid outputs length");
     }
   }
-
 }

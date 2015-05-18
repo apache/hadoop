@@ -64,13 +64,13 @@ public interface RawErasureCoder extends Configurable {
   public int getChunkSize();
 
   /**
-   * Tell if native or off-heap buffer is preferred or not. It's for callers to
-   * decide how to allocate coding chunk buffers, either on heap or off heap.
-   * It will return false by default.
+   * Tell if direct buffer is preferred or not. It's for callers to
+   * decide how to allocate coding chunk buffers, using DirectByteBuffer or
+   * bytes array. It will return false by default.
    * @return true if native buffer is preferred for performance consideration,
    * otherwise false.
    */
-  public boolean preferNativeBuffer();
+  public boolean preferDirectBuffer();
 
   /**
    * Should be called when release this coder. Good chance to release encoding
