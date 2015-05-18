@@ -379,7 +379,8 @@ public class StripedBlockUtil {
     int firstCellIdxInBG = (int) (start / cellSize);
     int lastCellIdxInBG = (int) (end / cellSize);
     int firstCellSize = Math.min(cellSize - (int) (start % cellSize), len);
-    long firstCellOffsetInBlk = start % cellSize;
+    long firstCellOffsetInBlk = firstCellIdxInBG / dataBlkNum * cellSize +
+        start % cellSize;
     int lastCellSize = lastCellIdxInBG == firstCellIdxInBG ?
         firstCellSize : (int) (end % cellSize) + 1;
 
