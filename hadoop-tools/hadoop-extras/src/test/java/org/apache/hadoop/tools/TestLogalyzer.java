@@ -44,6 +44,7 @@ public class TestLogalyzer {
       + File.separator + "out");
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testLogalyzer() throws Exception {
     Path f = createLogFile();
 

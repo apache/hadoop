@@ -81,6 +81,7 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
  * A Map-reduce program to recursively copy directories between
  * different file-systems.
  */
+@Deprecated
 public class DistCpV1 implements Tool {
   public static final Log LOG = LogFactory.getLog(DistCpV1.class);
 
