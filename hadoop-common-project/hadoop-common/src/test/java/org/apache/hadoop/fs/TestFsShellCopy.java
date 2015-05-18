@@ -177,9 +177,9 @@ public class TestFsShellCopy {
       checkPut(0, srcPath, dstPath, useWindowsPath);
     }
 
-    // copy to non-existent subdir
-    prepPut(childPath, false, false);
-    checkPut(1, srcPath, dstPath, useWindowsPath);
+    // copy to non-existent dir
+    prepPut(dstPath, false, false);
+    checkPut(1, srcPath, childPath, useWindowsPath);
 
     // copy into dir, then with another name
     prepPut(dstPath, true, true);
