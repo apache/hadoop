@@ -32,8 +32,8 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   }
 
   @Test
-  public void testCodingNoDirectBuffer_10x4_erasing_d0() {
-    prepare(null, 10, 4, new int[] {0});
+  public void testCodingNoDirectBuffer_10x4_erasing_d0_p0() {
+    prepare(null, 10, 4, new int[] {0}, new int[] {0});
     /**
      * Doing twice to test if the coders can be repeatedly reused. This matters
      * as the underlying coding buffers are shared, which may have bugs.
@@ -43,22 +43,29 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   }
 
   @Test
+  public void testCodingDirectBuffer_10x4_erasing_p1() {
+    prepare(null, 10, 4, new int[] {}, new int[] {1});
+    testCoding(true);
+    testCoding(true);
+  }
+
+  @Test
   public void testCodingDirectBuffer_10x4_erasing_d2() {
-    prepare(null, 10, 4, new int[] {2});
+    prepare(null, 10, 4, new int[] {2}, new int[] {});
     testCoding(true);
     testCoding(true);
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4_erasing_d0() {
-    prepare(null, 10, 4, new int[] {0});
+  public void testCodingDirectBuffer_10x4_erasing_d0_p0() {
+    prepare(null, 10, 4, new int[] {0}, new int[] {0});
     testCoding(true);
     testCoding(true);
   }
 
   @Test
-  public void testCodingBothBuffers_10x4_erasing_d0() {
-    prepare(null, 10, 4, new int[] {0});
+  public void testCodingBothBuffers_10x4_erasing_d0_p0() {
+    prepare(null, 10, 4, new int[] {0}, new int[] {0});
 
     /**
      * Doing in mixed buffer usage model to test if the coders can be repeatedly
@@ -72,26 +79,26 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4_erasure_of_d2_d4() {
-    prepare(null, 10, 4, new int[] {2, 4});
+  public void testCodingDirectBuffer_10x4_erasure_of_d2_d4_p0() {
+    prepare(null, 10, 4, new int[] {2, 4}, new int[] {0});
     testCoding(true);
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4_erasing_d0_d1() {
-    prepare(null, 10, 4, new int[] {0, 1});
+  public void testCodingDirectBuffer_10x4_erasing_d0_d1_p0_p1() {
+    prepare(null, 10, 4, new int[] {0, 1}, new int[] {0, 1});
     testCoding(true);
   }
 
   @Test
-  public void testCodingNoDirectBuffer_3x3_erasing_d0() {
-    prepare(null, 3, 3, new int[] {0});
+  public void testCodingNoDirectBuffer_3x3_erasing_d0_p0() {
+    prepare(null, 3, 3, new int[] {0}, new int[] {0});
     testCoding(false);
   }
 
   @Test
-  public void testCodingDirectBuffer_3x3_erasing_d0() {
-    prepare(null, 3, 3, new int[] {0});
+  public void testCodingDirectBuffer_3x3_erasing_d0_p0() {
+    prepare(null, 3, 3, new int[] {0}, new int[] {0});
     testCoding(true);
   }
 }
