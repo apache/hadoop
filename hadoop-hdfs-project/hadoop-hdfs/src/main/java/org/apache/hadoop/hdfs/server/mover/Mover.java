@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -152,8 +153,8 @@ public class Mover {
   }
 
   private void initStoragePolicies() throws IOException {
-    BlockStoragePolicy[] policies = dispatcher.getDistributedFileSystem()
-        .getStoragePolicies();
+    Collection<BlockStoragePolicy> policies =
+        dispatcher.getDistributedFileSystem().getAllStoragePolicies();
     for (BlockStoragePolicy policy : policies) {
       this.blockStoragePolicies[policy.getId()] = policy;
     }

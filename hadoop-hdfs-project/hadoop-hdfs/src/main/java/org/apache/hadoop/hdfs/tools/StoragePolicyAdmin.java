@@ -30,6 +30,7 @@ import org.apache.hadoop.util.Tool;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -97,7 +98,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
     public int run(Configuration conf, List<String> args) throws IOException {
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
-        BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+        Collection<BlockStoragePolicy> policies = dfs.getAllStoragePolicies();
         System.out.println("Block Storage Policies:");
         for (BlockStoragePolicy policy : policies) {
           if (policy != null) {
@@ -155,7 +156,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
           System.out.println("The storage policy of " + path + " is unspecified");
           return 0;
         }
-        BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+        Collection<BlockStoragePolicy> policies = dfs.getAllStoragePolicies();
         for (BlockStoragePolicy p : policies) {
           if (p.getId() == storagePolicyId) {
             System.out.println("The storage policy of " + path + ":\n" + p);

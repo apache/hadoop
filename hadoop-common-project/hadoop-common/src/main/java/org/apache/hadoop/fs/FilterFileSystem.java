@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -618,5 +619,17 @@ public class FilterFileSystem extends FileSystem {
   @Override
   public void removeXAttr(Path path, String name) throws IOException {
     fs.removeXAttr(path, name);
+  }
+
+  @Override
+  public void setStoragePolicy(Path src, String policyName)
+      throws IOException {
+    fs.setStoragePolicy(src, policyName);
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return fs.getAllStoragePolicies();
   }
 }

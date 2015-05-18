@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -463,6 +465,17 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void access(Path path, final FsAction mode) throws IOException {
     dfs.checkAccess(getUriPath(path), mode);
+  }
+
+  @Override
+  public void setStoragePolicy(Path path, String policyName) throws IOException {
+    dfs.setStoragePolicy(getUriPath(path), policyName);
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return Arrays.asList(dfs.getStoragePolicies());
   }
 
   /**

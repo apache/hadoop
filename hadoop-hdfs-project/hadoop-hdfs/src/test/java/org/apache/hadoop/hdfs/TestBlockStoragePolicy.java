@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.util.*;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -1167,12 +1169,6 @@ public class TestBlockStoragePolicy {
           policies[1].toString());
       Assert.assertEquals(POLICY_SUITE.getPolicy(HOT).toString(),
           policies[2].toString());
-      Assert.assertEquals(POLICY_SUITE.getPolicy(ONESSD).toString(),
-          policies[3].toString());
-      Assert.assertEquals(POLICY_SUITE.getPolicy(ALLSSD).toString(),
-          policies[4].toString());
-      Assert.assertEquals(POLICY_SUITE.getPolicy(LAZY_PERSIST).toString(),
-          policies[5].toString());
     } finally {
       IOUtils.cleanup(null, fs);
       cluster.shutdown();
@@ -1218,6 +1214,44 @@ public class TestBlockStoragePolicy {
               status.getStoragePolicy()
               == HdfsServerConstants.HOT_STORAGE_POLICY_ID);
 
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Verify that {@link FileSystem#getAllStoragePolicies} returns all
+   * known storage policies for DFS.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetAllStoragePoliciesFromFs() throws IOException {
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(REPLICATION)
+        .storageTypes(
+            new StorageType[] {StorageType.DISK, StorageType.ARCHIVE})
+        .build();
+    try {
+      cluster.waitActive();
+
+      // Get policies via {@link FileSystem#getAllStoragePolicies}
+      Set<String> policyNamesSet1 = new HashSet<>();
+      for (BlockStoragePolicySpi policy :
+          cluster.getFileSystem().getAllStoragePolicies()) {
+        policyNamesSet1.add(policy.getName());
+      }
+
+      // Get policies from the default BlockStoragePolicySuite.
+      BlockStoragePolicySuite suite = BlockStoragePolicySuite.createDefaultSuite();
+      Set<String> policyNamesSet2 = new HashSet<>();
+      for (BlockStoragePolicy policy : suite.getAllPolicies()) {
+        policyNamesSet2.add(policy.getName());
+      }
+
+      // Ensure that we got the same set of policies in both cases.
+      Assert.assertTrue(Sets.difference(policyNamesSet1, policyNamesSet2).isEmpty());
+      Assert.assertTrue(Sets.difference(policyNamesSet2, policyNamesSet1).isEmpty());
     } finally {
       cluster.shutdown();
     }
