@@ -86,37 +86,7 @@ public class OptionsParser {
         Arrays.toString(args), e);
     }
 
-    DistCpOptions option;
-    Path targetPath;
-    List<Path> sourcePaths = new ArrayList<Path>();
-
-    String leftOverArgs[] = command.getArgs();
-    if (leftOverArgs == null || leftOverArgs.length < 1) {
-      throw new IllegalArgumentException("Target path not specified");
-    }
-
-    //Last Argument is the target path
-    targetPath = new Path(leftOverArgs[leftOverArgs.length -1].trim());
-
-    //Copy any source paths in the arguments to the list
-    for (int index = 0; index < leftOverArgs.length - 1; index++) {
-      sourcePaths.add(new Path(leftOverArgs[index].trim()));
-    }
-
-    /* If command has source file listing, use it else, fall back on source paths in args
-       If both are present, throw exception and bail */
-    if (command.hasOption(DistCpOptionSwitch.SOURCE_FILE_LISTING.getSwitch())) {
-      if (!sourcePaths.isEmpty()) {
-        throw new IllegalArgumentException("Both source file listing and source paths present");
-      }
-      option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
-              SOURCE_FILE_LISTING.getSwitch())), targetPath);
-    } else {
-      if (sourcePaths.isEmpty()) {
-        throw new IllegalArgumentException("Neither source file listing nor source paths present");
-      }
-      option = new DistCpOptions(sourcePaths, targetPath);
-    }
+    DistCpOptions option = parseSourceAndTargetPaths(command);
 
     //Process all the other option switches and set options appropriately
     if (command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch())) {
@@ -165,54 +135,95 @@ public class OptionsParser {
       option.setBlocking(false);
     }
 
-    if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
-      try {
-        Integer mapBandwidth = Integer.parseInt(
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()).trim());
-        if (mapBandwidth.intValue() <= 0) {
-          throw new IllegalArgumentException("Bandwidth specified is not positive: " +
-              mapBandwidth);
-        }
-        option.setMapBandwidth(mapBandwidth);
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Bandwidth specified is invalid: " +
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
-      }
-    }
+    parseBandwidth(command, option);
 
     if (command.hasOption(DistCpOptionSwitch.SSL_CONF.getSwitch())) {
       option.setSslConfigurationFile(command.
           getOptionValue(DistCpOptionSwitch.SSL_CONF.getSwitch()));
     }
 
-    if (command.hasOption(DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch())) {
-      try {
-        Integer numThreads = Integer.parseInt(getVal(command,
-              DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()).trim());
-        option.setNumListstatusThreads(numThreads);
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException(
-            "Number of liststatus threads is invalid: " + getVal(command,
-                DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()), e);
-      }
-    }
+    parseNumListStatusThreads(command, option);
 
-    if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
-      try {
-        Integer maps = Integer.parseInt(
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
-        option.setMaxMaps(maps);
-      } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Number of maps is invalid: " +
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
-      }
-    }
+    parseMaxMaps(command, option);
 
     if (command.hasOption(DistCpOptionSwitch.COPY_STRATEGY.getSwitch())) {
       option.setCopyStrategy(
             getVal(command, DistCpOptionSwitch.COPY_STRATEGY.getSwitch()));
     }
 
+    parsePreserveStatus(command, option);
+
+    if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
+      String[] snapshots = getVals(command, DistCpOptionSwitch.DIFF.getSwitch());
+      Preconditions.checkArgument(snapshots != null && snapshots.length == 2,
+          "Must provide both the starting and ending snapshot names");
+      option.setUseDiff(true, snapshots[0], snapshots[1]);
+    }
+
+    parseFileLimit(command);
+
+    parseSizeLimit(command);
+
+    if (command.hasOption(DistCpOptionSwitch.FILTERS.getSwitch())) {
+      option.setFiltersFile(getVal(command,
+          DistCpOptionSwitch.FILTERS.getSwitch()));
+    }
+
+    return option;
+  }
+
+  /**
+   * parseSizeLimit is a helper method for parsing the deprecated
+   * argument SIZE_LIMIT.
+   *
+   * @param command command line arguments
+   */
+  private static void parseSizeLimit(CommandLine command) {
+    if (command.hasOption(DistCpOptionSwitch.SIZE_LIMIT.getSwitch())) {
+      String sizeLimitString = getVal(command,
+                              DistCpOptionSwitch.SIZE_LIMIT.getSwitch().trim());
+      try {
+        Long.parseLong(sizeLimitString);
+      }
+      catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Size-limit is invalid: "
+                                            + sizeLimitString, e);
+      }
+      LOG.warn(DistCpOptionSwitch.SIZE_LIMIT.getSwitch() + " is a deprecated" +
+              " option. Ignoring.");
+    }
+  }
+
+  /**
+   * parseFileLimit is a helper method for parsing the deprecated
+   * argument FILE_LIMIT.
+   *
+   * @param command command line arguments
+   */
+  private static void parseFileLimit(CommandLine command) {
+    if (command.hasOption(DistCpOptionSwitch.FILE_LIMIT.getSwitch())) {
+      String fileLimitString = getVal(command,
+                              DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
+      try {
+        Integer.parseInt(fileLimitString);
+      }
+      catch (NumberFormatException e) {
+        throw new IllegalArgumentException("File-limit is invalid: "
+                                            + fileLimitString, e);
+      }
+      LOG.warn(DistCpOptionSwitch.FILE_LIMIT.getSwitch() + " is a deprecated" +
+          " option. Ignoring.");
+    }
+  }
+
+  /**
+   * parsePreserveStatus is a helper method for parsing PRESERVE_STATUS.
+   *
+   * @param command command line arguments
+   * @param option  parsed distcp options
+   */
+  private static void parsePreserveStatus(CommandLine command,
+                                          DistCpOptions option) {
     if (command.hasOption(DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
       String attributes =
           getVal(command, DistCpOptionSwitch.PRESERVE_STATUS.getSwitch());
@@ -227,42 +238,118 @@ public class OptionsParser {
         }
       }
     }
+  }
 
-    if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
-      String[] snapshots = getVals(command, DistCpOptionSwitch.DIFF.getSwitch());
-      Preconditions.checkArgument(snapshots != null && snapshots.length == 2,
-          "Must provide both the starting and ending snapshot names");
-      option.setUseDiff(true, snapshots[0], snapshots[1]);
-    }
-
-    if (command.hasOption(DistCpOptionSwitch.FILE_LIMIT.getSwitch())) {
-      String fileLimitString = getVal(command,
-                              DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
+  /**
+   * parseMaxMaps is a helper method for parsing MAX_MAPS.
+   *
+   * @param command command line arguments
+   * @param option  parsed distcp options
+   */
+  private static void parseMaxMaps(CommandLine command,
+                                   DistCpOptions option) {
+    if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
       try {
-        Integer.parseInt(fileLimitString);
+        Integer maps = Integer.parseInt(
+            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
+        option.setMaxMaps(maps);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Number of maps is invalid: " +
+            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
       }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("File-limit is invalid: "
-                                            + fileLimitString, e);
-      }
-      LOG.warn(DistCpOptionSwitch.FILE_LIMIT.getSwitch() + " is a deprecated" +
-              " option. Ignoring.");
     }
+  }
 
-    if (command.hasOption(DistCpOptionSwitch.SIZE_LIMIT.getSwitch())) {
-      String sizeLimitString = getVal(command,
-                              DistCpOptionSwitch.SIZE_LIMIT.getSwitch().trim());
+  /**
+   * parseNumListStatusThreads is a helper method for parsing
+   * NUM_LISTSTATUS_THREADS.
+   *
+   * @param command command line arguments
+   * @param option  parsed distcp options
+   */
+  private static void parseNumListStatusThreads(CommandLine command,
+                                                DistCpOptions option) {
+    if (command.hasOption(
+        DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch())) {
       try {
-        Long.parseLong(sizeLimitString);
+        Integer numThreads = Integer.parseInt(getVal(command,
+              DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()).trim());
+        option.setNumListstatusThreads(numThreads);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException(
+            "Number of liststatus threads is invalid: " + getVal(command,
+                DistCpOptionSwitch.NUM_LISTSTATUS_THREADS.getSwitch()), e);
       }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Size-limit is invalid: "
-                                            + sizeLimitString, e);
+    }
+  }
+
+  /**
+   * parseBandwidth is a helper method for parsing BANDWIDTH.
+   *
+   * @param command command line arguments
+   * @param option  parsed distcp options
+   */
+  private static void parseBandwidth(CommandLine command,
+                                     DistCpOptions option) {
+    if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
+      try {
+        Integer mapBandwidth = Integer.parseInt(
+            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()).trim());
+        if (mapBandwidth <= 0) {
+          throw new IllegalArgumentException("Bandwidth specified is not " +
+              "positive: " + mapBandwidth);
+        }
+        option.setMapBandwidth(mapBandwidth);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Bandwidth specified is invalid: " +
+            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
       }
-      LOG.warn(DistCpOptionSwitch.SIZE_LIMIT.getSwitch() + " is a deprecated" +
-              " option. Ignoring.");
+    }
+  }
+
+  /**
+   * parseSourceAndTargetPaths is a helper method for parsing the source
+   * and target paths.
+   *
+   * @param command command line arguments
+   * @return        DistCpOptions
+   */
+  private static DistCpOptions parseSourceAndTargetPaths(
+      CommandLine command) {
+    DistCpOptions option;
+    Path targetPath;
+    List<Path> sourcePaths = new ArrayList<Path>();
+
+    String[] leftOverArgs = command.getArgs();
+    if (leftOverArgs == null || leftOverArgs.length < 1) {
+      throw new IllegalArgumentException("Target path not specified");
     }
 
+    //Last Argument is the target path
+    targetPath = new Path(leftOverArgs[leftOverArgs.length - 1].trim());
+
+    //Copy any source paths in the arguments to the list
+    for (int index = 0; index < leftOverArgs.length - 1; index++) {
+      sourcePaths.add(new Path(leftOverArgs[index].trim()));
+    }
+
+    /* If command has source file listing, use it else, fall back on source
+       paths in args.  If both are present, throw exception and bail */
+    if (command.hasOption(
+        DistCpOptionSwitch.SOURCE_FILE_LISTING.getSwitch())) {
+      if (!sourcePaths.isEmpty()) {
+        throw new IllegalArgumentException("Both source file listing and " +
+            "source paths present");
+      }
+      option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
+              SOURCE_FILE_LISTING.getSwitch())), targetPath);
+    } else {
+      if (sourcePaths.isEmpty()) {
+        throw new IllegalArgumentException("Neither source file listing nor " +
+            "source paths present");
+      }
+      option = new DistCpOptions(sourcePaths, targetPath);
+    }
     return option;
   }
 

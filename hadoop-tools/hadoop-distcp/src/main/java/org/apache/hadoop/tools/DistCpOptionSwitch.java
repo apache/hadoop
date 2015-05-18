@@ -177,7 +177,16 @@ public enum DistCpOptionSwitch {
    * Specify bandwidth per map in MB
    */
   BANDWIDTH(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
-      new Option("bandwidth", true, "Specify bandwidth per map in MB"));
+      new Option("bandwidth", true, "Specify bandwidth per map in MB")),
+
+  /**
+   * Path containing a list of strings, which when found in the path of
+   * a file to be copied excludes that file from the copy job.
+   */
+  FILTERS(DistCpConstants.CONF_LABEL_FILTERS_FILE,
+      new Option("filters", true, "The path to a file containing a list of"
+          + " strings for paths to be excluded from the copy."));
+
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";
   private final String confLabel;
