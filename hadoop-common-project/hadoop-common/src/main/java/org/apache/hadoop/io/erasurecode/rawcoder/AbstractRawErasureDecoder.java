@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 import java.nio.ByteBuffer;
@@ -33,14 +34,43 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs) {
     checkParameters(inputs, erasedIndexes, outputs);
+    int dataLen = inputs[0].remaining();
+    if (dataLen == 0) {
+      return;
+    }
+    ensureLength(inputs, dataLen);
+    ensureLength(outputs, dataLen);
 
-    boolean hasArray = inputs[0].hasArray();
-    if (hasArray) {
-      byte[][] newInputs = toArrays(inputs);
-      byte[][] newOutputs = toArrays(outputs);
-      doDecode(newInputs, erasedIndexes, newOutputs);
-    } else {
+    boolean usingDirectBuffer = inputs[0].isDirect();
+    if (usingDirectBuffer) {
       doDecode(inputs, erasedIndexes, outputs);
+      return;
+    }
+
+    int[] inputOffsets = new int[inputs.length];
+    int[] outputOffsets = new int[outputs.length];
+    byte[][] newInputs = new byte[inputs.length][];
+    byte[][] newOutputs = new byte[outputs.length][];
+
+    ByteBuffer buffer;
+    for (int i = 0; i < inputs.length; ++i) {
+      buffer = inputs[i];
+      inputOffsets[i] = buffer.position();
+      newInputs[i] = buffer.array();
+    }
+
+    for (int i = 0; i < outputs.length; ++i) {
+      buffer = outputs[i];
+      outputOffsets[i] = buffer.position();
+      newOutputs[i] = buffer.array();
+    }
+
+    doDecode(newInputs, inputOffsets, dataLen,
+        erasedIndexes, newOutputs, outputOffsets);
+
+    for (int i = 0; i < inputs.length; ++i) {
+      buffer = inputs[i];
+      buffer.position(inputOffsets[i] + dataLen); // dataLen bytes consumed
     }
   }
 
@@ -56,18 +86,33 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   @Override
   public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
     checkParameters(inputs, erasedIndexes, outputs);
+    int dataLen = inputs[0].length;
+    if (dataLen == 0) {
+      return;
+    }
+    ensureLength(inputs, dataLen);
+    ensureLength(outputs, dataLen);
 
-    doDecode(inputs, erasedIndexes, outputs);
+    int[] inputOffsets = new int[inputs.length]; // ALL ZERO
+    int[] outputOffsets = new int[outputs.length]; // ALL ZERO
+
+    doDecode(inputs, inputOffsets, dataLen, erasedIndexes, outputs,
+        outputOffsets);
   }
 
   /**
-   * Perform the real decoding using bytes array
+   * Perform the real decoding using bytes array, supporting offsets and
+   * lengths.
    * @param inputs
+   * @param inputOffsets
+   * @param dataLen
    * @param erasedIndexes
    * @param outputs
+   * @param outputOffsets
    */
-  protected abstract void doDecode(byte[][] inputs, int[] erasedIndexes,
-                                   byte[][] outputs);
+  protected abstract void doDecode(byte[][] inputs, int[] inputOffsets,
+                                   int dataLen, int[] erasedIndexes,
+                                   byte[][] outputs, int[] outputOffsets);
 
   @Override
   public void decode(ECChunk[] inputs, int[] erasedIndexes,
@@ -91,12 +136,12 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     }
 
     if (erasedIndexes.length != outputs.length) {
-      throw new IllegalArgumentException(
+      throw new HadoopIllegalArgumentException(
           "erasedIndexes and outputs mismatch in length");
     }
 
     if (erasedIndexes.length > getNumParityUnits()) {
-      throw new IllegalArgumentException(
+      throw new HadoopIllegalArgumentException(
           "Too many erased, not recoverable");
     }
   }

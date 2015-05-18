@@ -44,7 +44,7 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
 
   @Test
   public void testCodingDirectBuffer_10x4_erasing_p1() {
-    prepare(null, 10, 4, new int[] {}, new int[] {1});
+    prepare(null, 10, 4, new int[0], new int[] {1});
     testCoding(true);
     testCoding(true);
   }
@@ -100,5 +100,15 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   public void testCodingDirectBuffer_3x3_erasing_d0_p0() {
     prepare(null, 3, 3, new int[] {0}, new int[] {0});
     testCoding(true);
+  }
+
+  @Test
+  public void testCodingNegative_10x4_erasing_d2_d4() {
+    prepare(null, 10, 4, new int[]{2, 4}, new int[0]);
+
+    testCodingWithBadInput(true);
+    testCodingWithBadOutput(false);
+    testCodingWithBadInput(true);
+    testCodingWithBadOutput(false);
   }
 }

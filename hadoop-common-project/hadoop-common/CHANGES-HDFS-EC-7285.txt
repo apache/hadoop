@@ -51,3 +51,6 @@
 
     HADOOP-11566. Add tests and fix for erasure coders to recover erased parity 
     units. (Kai Zheng via Zhe Zhang)
+
+    HADOOP-11938. Enhance ByteBuffer version encode/decode API of raw erasure 
+    coder. (Kai Zheng via Zhe Zhang)
