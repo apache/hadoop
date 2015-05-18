@@ -228,7 +228,6 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(bar);
       dfs.close();
 
-      dfs = dfsCluster.getFileSystem(0);
       TestRollingUpgrade.queryForPreparation(dfs);
 
       // If the query returns true, both active and the standby NN should have
