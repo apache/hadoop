@@ -63,13 +63,15 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     ECBlockGroup blockGroup = prepareBlockGroupForEncoding();
     // Backup all the source chunks for later recovering because some coders
     // may affect the source data.
-    TestBlock[] clonedDataBlocks = cloneBlocksWithData((TestBlock[]) blockGroup.getDataBlocks());
+    TestBlock[] clonedDataBlocks =
+        cloneBlocksWithData((TestBlock[]) blockGroup.getDataBlocks());
+    TestBlock[] parityBlocks = (TestBlock[]) blockGroup.getParityBlocks();
 
     ErasureCodingStep codingStep;
     codingStep = encoder.calculateCoding(blockGroup);
     performCodingStep(codingStep);
     // Erase specified sources but return copies of them for later comparing
-    TestBlock[] backupBlocks = backupAndEraseBlocks(clonedDataBlocks);
+    TestBlock[] backupBlocks = backupAndEraseBlocks(clonedDataBlocks, parityBlocks);
 
     // Decode
     blockGroup = new ECBlockGroup(clonedDataBlocks, blockGroup.getParityBlocks());
@@ -207,34 +209,27 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    * @param dataBlocks
    * @return clone of erased dataBlocks
    */
-  protected TestBlock[] backupAndEraseBlocks(TestBlock[] dataBlocks) {
-    TestBlock[] toEraseBlocks = new TestBlock[erasedDataIndexes.length];
+  protected TestBlock[] backupAndEraseBlocks(TestBlock[] dataBlocks,
+                                             TestBlock[] parityBlocks) {
+    TestBlock[] toEraseBlocks = new TestBlock[erasedDataIndexes.length +
+                                          erasedParityIndexes.length];
 
     int idx = 0;
+    TestBlock block;
+
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      block = parityBlocks[erasedParityIndexes[i]];
+      toEraseBlocks[idx ++] = cloneBlockWithData(block);
+      eraseDataFromBlock(block);
+    }
 
     for (int i = 0; i < erasedDataIndexes.length; i++) {
-      TestBlock block = dataBlocks[erasedDataIndexes[i]];
+      block = dataBlocks[erasedDataIndexes[i]];
       toEraseBlocks[idx ++] = cloneBlockWithData(block);
       eraseDataFromBlock(block);
     }
 
     return toEraseBlocks;
-  }
-
-  /**
-   * Copy those data blocks that's to be erased for later comparing and
-   * verifying.
-   * @param dataBlocks
-   * @return
-   */
-  protected TestBlock[] copyDataBlocksToErase(TestBlock[] dataBlocks) {
-    TestBlock[] copiedBlocks = new TestBlock[erasedDataIndexes.length];
-
-    for (int i = 0; i < erasedDataIndexes.length; ++i) {
-      copiedBlocks[i] = cloneBlockWithData(dataBlocks[erasedDataIndexes[i]]);
-    }
-
-    return copiedBlocks;
   }
 
   /**

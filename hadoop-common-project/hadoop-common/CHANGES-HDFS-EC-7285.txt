@@ -48,3 +48,6 @@
     HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng via Zhe Zhang)
 
     HADOOP-11920. Refactor some codes for erasure coders. (Kai Zheng via Zhe Zhang)
+
+    HADOOP-11566. Add tests and fix for erasure coders to recover erased parity 
+    units. (Kai Zheng via Zhe Zhang)

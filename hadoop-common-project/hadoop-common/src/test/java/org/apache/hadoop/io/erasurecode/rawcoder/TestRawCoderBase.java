@@ -52,7 +52,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     encoder.encode(dataChunks, parityChunks);
 
     // Backup and erase some chunks
-    ECChunk[] backupChunks = backupAndEraseChunks(clonedDataChunks);
+    ECChunk[] backupChunks = backupAndEraseChunks(clonedDataChunks, parityChunks);
 
     // Decode
     ECChunk[] inputChunks = prepareInputChunksForDecoding(
