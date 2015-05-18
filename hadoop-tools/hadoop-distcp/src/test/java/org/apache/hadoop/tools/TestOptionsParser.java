@@ -400,7 +400,7 @@ public class TestOptionsParser {
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, deleteMissing=false, " +
         "ignoreFailures=false, maxMaps=20, sslConfigurationFile='null', copyStrategy='uniformsize', " +
         "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, targetPathExists=true, " +
-        "preserveRawXattrs=false}";
+        "preserveRawXattrs=false, filtersFile='null'}";
     Assert.assertEquals(val, option.toString());
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
         DistCpOptionSwitch.ATOMIC_COMMIT.name());
@@ -717,5 +717,20 @@ public class TestOptionsParser {
       GenericTestUtils.assertExceptionContains(
           "Diff is valid only with update and delete options", e);
     }
+  }
+
+  @Test
+  public void testExclusionsOption() {
+    DistCpOptions options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertNull(options.getFiltersFile());
+
+    options = OptionsParser.parse(new String[] {
+        "-filters",
+        "/tmp/filters.txt",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(options.getFiltersFile(), "/tmp/filters.txt");
   }
 }
