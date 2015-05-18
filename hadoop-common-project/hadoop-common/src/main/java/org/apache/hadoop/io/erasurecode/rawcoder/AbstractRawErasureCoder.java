@@ -19,6 +19,9 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.conf.Configured;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 /**
  * A common class of basic facilities to be shared by encoder and decoder
  *
@@ -26,6 +29,9 @@ import org.apache.hadoop.conf.Configured;
  */
 public abstract class AbstractRawErasureCoder
     extends Configured implements RawErasureCoder {
+
+  // Hope to reset coding buffers a little faster using it
+  private byte[] zeroChunkBytes;
 
   private int numDataUnits;
   private int numParityUnits;
@@ -37,6 +43,8 @@ public abstract class AbstractRawErasureCoder
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
     this.chunkSize = chunkSize;
+
+    zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
   }
 
   @Override
@@ -55,12 +63,65 @@ public abstract class AbstractRawErasureCoder
   }
 
   @Override
-  public boolean preferNativeBuffer() {
+  public boolean preferDirectBuffer() {
     return false;
   }
 
   @Override
   public void release() {
     // Nothing to do by default
+  }
+
+  /**
+   * Convert an array of heap ByteBuffers to an array of byte array.
+   * @param buffers
+   * @return an array of byte array
+   */
+  protected static byte[][] toArrays(ByteBuffer[] buffers) {
+    byte[][] bytesArr = new byte[buffers.length][];
+
+    ByteBuffer buffer;
+    for (int i = 0; i < buffers.length; i++) {
+      buffer = buffers[i];
+      if (buffer == null) {
+        bytesArr[i] = null;
+        continue;
+      }
+
+      if (buffer.hasArray()) {
+        bytesArr[i] = buffer.array();
+      } else {
+        throw new IllegalArgumentException("Invalid ByteBuffer passed, " +
+            "expecting heap buffer");
+      }
+    }
+
+    return bytesArr;
+  }
+
+  /**
+   * Ensure the buffer (either input or output) ready to read or write with ZERO
+   * bytes fully in chunkSize.
+   * @param buffer
+   * @return the buffer itself
+   */
+  protected ByteBuffer resetBuffer(ByteBuffer buffer) {
+    buffer.clear();
+    buffer.put(zeroChunkBytes);
+    buffer.position(0);
+
+    return buffer;
+  }
+
+  /**
+   * Ensure the buffer (either input or output) ready to read or write with ZERO
+   * bytes fully in chunkSize.
+   * @param buffer bytes array buffer
+   * @return the buffer itself
+   */
+  protected byte[] resetBuffer(byte[] buffer) {
+    System.arraycopy(zeroChunkBytes, 0, buffer, 0, buffer.length);
+
+    return buffer;
   }
 }

@@ -71,7 +71,7 @@ public class ECChunk {
    * @param chunks
    * @return an array of byte array
    */
-  public static byte[][] toArray(ECChunk[] chunks) {
+  public static byte[][] toArrays(ECChunk[] chunks) {
     byte[][] bytesArr = new byte[chunks.length][];
 
     ByteBuffer buffer;

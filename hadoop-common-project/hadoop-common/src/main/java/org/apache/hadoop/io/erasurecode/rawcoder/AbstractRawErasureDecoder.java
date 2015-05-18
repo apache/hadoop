@@ -32,27 +32,30 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   @Override
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs) {
-    if (erasedIndexes.length == 0) {
-      return;
-    }
+    checkParameters(inputs, erasedIndexes, outputs);
 
-    doDecode(inputs, erasedIndexes, outputs);
+    boolean hasArray = inputs[0].hasArray();
+    if (hasArray) {
+      byte[][] newInputs = toArrays(inputs);
+      byte[][] newOutputs = toArrays(outputs);
+      doDecode(newInputs, erasedIndexes, newOutputs);
+    } else {
+      doDecode(inputs, erasedIndexes, outputs);
+    }
   }
 
   /**
-   * Perform the real decoding using ByteBuffer
-   * @param inputs
+   * Perform the real decoding using Direct ByteBuffer.
+   * @param inputs Direct ByteBuffers expected
    * @param erasedIndexes
-   * @param outputs
+   * @param outputs Direct ByteBuffers expected
    */
   protected abstract void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
                                    ByteBuffer[] outputs);
 
   @Override
   public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
-    if (erasedIndexes.length == 0) {
-      return;
-    }
+    checkParameters(inputs, erasedIndexes, outputs);
 
     doDecode(inputs, erasedIndexes, outputs);
   }
@@ -69,25 +72,32 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   @Override
   public void decode(ECChunk[] inputs, int[] erasedIndexes,
                      ECChunk[] outputs) {
-    doDecode(inputs, erasedIndexes, outputs);
+    ByteBuffer[] newInputs = ECChunk.toBuffers(inputs);
+    ByteBuffer[] newOutputs = ECChunk.toBuffers(outputs);
+    decode(newInputs, erasedIndexes, newOutputs);
   }
 
   /**
-   * Perform the real decoding using chunks
+   * Check and validate decoding parameters, throw exception accordingly. The
+   * checking assumes it's a MDS code. Other code  can override this.
    * @param inputs
    * @param erasedIndexes
    * @param outputs
    */
-  protected void doDecode(ECChunk[] inputs, int[] erasedIndexes,
-                          ECChunk[] outputs) {
-    if (inputs[0].getBuffer().hasArray()) {
-      byte[][] inputBytesArr = ECChunk.toArray(inputs);
-      byte[][] outputBytesArr = ECChunk.toArray(outputs);
-      doDecode(inputBytesArr, erasedIndexes, outputBytesArr);
-    } else {
-      ByteBuffer[] inputBuffers = ECChunk.toBuffers(inputs);
-      ByteBuffer[] outputBuffers = ECChunk.toBuffers(outputs);
-      doDecode(inputBuffers, erasedIndexes, outputBuffers);
+  protected void checkParameters(Object[] inputs, int[] erasedIndexes,
+                                 Object[] outputs) {
+    if (inputs.length != getNumParityUnits() + getNumDataUnits()) {
+      throw new IllegalArgumentException("Invalid inputs length");
+    }
+
+    if (erasedIndexes.length != outputs.length) {
+      throw new IllegalArgumentException(
+          "erasedIndexes and outputs mismatch in length");
+    }
+
+    if (erasedIndexes.length > getNumParityUnits()) {
+      throw new IllegalArgumentException(
+          "Too many erased, not recoverable");
     }
   }
 }
