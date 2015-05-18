@@ -575,6 +575,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11939. Deprecate DistCpV1 and Logalyzer.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11884. test-patch.sh should pull the real findbugs version
+    (Kengo Seki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

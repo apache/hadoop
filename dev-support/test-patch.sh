@@ -1859,8 +1859,6 @@ function check_findbugs
     return 1
   fi
 
-  findbugs_version=$("${FINDBUGS_HOME}/bin/findbugs" -version)
-
   for module in ${modules}
   do
     pushd "${module}" >/dev/null
@@ -1871,6 +1869,9 @@ function check_findbugs
     (( rc = rc + $? ))
     popd >/dev/null
   done
+
+  #shellcheck disable=SC2016
+  findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt")
 
   if [[ ${rc} -ne 0 ]]; then
     add_jira_table -1 findbugs "The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
