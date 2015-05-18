@@ -3205,7 +3205,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           fileINode.getPreferredBlockSize() * numBlocks;
 
       final BlockInfoStriped striped = new BlockInfoStriped(commitBlock,
-          numDataUnits, numParityUnits);
+          ecSchema);
       final long actualBlockGroupSize = striped.spaceConsumed();
 
       diff = fullBlockGroupSize - actualBlockGroupSize;

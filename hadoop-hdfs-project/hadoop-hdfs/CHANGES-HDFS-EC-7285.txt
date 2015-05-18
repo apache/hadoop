@@ -215,3 +215,5 @@
 
     HDFS-8391. NN should consider current EC tasks handling count from DN while 
     assigning new tasks. (umamahesh)
+
+    HDFS-8367. BlockInfoStriped uses EC schema. (Kai Sasaki via Kai Zheng)

@@ -531,8 +531,8 @@ class FSDirWriteFileOp {
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
-        blockInfo = new BlockInfoStripedUnderConstruction(block, numDataUnits,
-            numParityUnits, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
+        blockInfo = new BlockInfoStripedUnderConstruction(block, ecSchema,
+            HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
             targets);
       } else {
         // check quota limits and updated space consumed
