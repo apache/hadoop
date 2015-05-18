@@ -26,6 +26,8 @@ import org.apache.hadoop.io.erasurecode.TestCoderBase;
 public abstract class TestRawCoderBase extends TestCoderBase {
   protected Class<? extends RawErasureEncoder> encoderClass;
   protected Class<? extends RawErasureDecoder> decoderClass;
+  private RawErasureEncoder encoder;
+  private RawErasureDecoder decoder;
 
   /**
    * Generating source data, encoding, recovering and then verifying.
@@ -37,40 +39,41 @@ public abstract class TestRawCoderBase extends TestCoderBase {
    */
   protected void testCoding(boolean usingDirectBuffer) {
     this.usingDirectBuffer = usingDirectBuffer;
+    prepareCoders();
 
     // Generate data and encode
     ECChunk[] dataChunks = prepareDataChunksForEncoding();
     ECChunk[] parityChunks = prepareParityChunksForEncoding();
-    RawErasureEncoder encoder = createEncoder();
 
     // Backup all the source chunks for later recovering because some coders
     // may affect the source data.
     ECChunk[] clonedDataChunks = cloneChunksWithData(dataChunks);
-    // Make a copy of a strip for later comparing
-    ECChunk[] toEraseDataChunks = copyDataChunksToErase(clonedDataChunks);
 
-    try {
-      encoder.encode(dataChunks, parityChunks);
-    } finally {
-      encoder.release();
-    }
-    // Erase the copied sources
-    eraseSomeDataBlocks(clonedDataChunks);
+    encoder.encode(dataChunks, parityChunks);
 
-    //Decode
-    ECChunk[] inputChunks = prepareInputChunksForDecoding(clonedDataChunks,
-        parityChunks);
+    // Backup and erase some chunks
+    ECChunk[] backupChunks = backupAndEraseChunks(clonedDataChunks);
+
+    // Decode
+    ECChunk[] inputChunks = prepareInputChunksForDecoding(
+        clonedDataChunks, parityChunks);
+
     ECChunk[] recoveredChunks = prepareOutputChunksForDecoding();
-    RawErasureDecoder decoder = createDecoder();
-    try {
-      decoder.decode(inputChunks,
-          getErasedIndexesForDecoding(), recoveredChunks);
-    } finally {
-      decoder.release();
+
+    decoder.decode(inputChunks, getErasedIndexesForDecoding(), recoveredChunks);
+
+    // Compare
+    compareAndVerify(backupChunks, recoveredChunks);
+  }
+
+  private void prepareCoders() {
+    if (encoder == null) {
+      encoder = createEncoder();
     }
 
-    //Compare
-    compareAndVerify(toEraseDataChunks, recoveredChunks);
+    if (decoder == null) {
+      decoder = createDecoder();
+    }
   }
 
   /**
