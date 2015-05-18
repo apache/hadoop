@@ -785,7 +785,7 @@ public class TestFsck {
       System.out.println(outStr);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertTrue(outStr.contains("UNDER MIN REPL'D BLOCKS:\t1 (100.0 %)"));
-      assertTrue(outStr.contains("DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY:\t2"));
+      assertTrue(outStr.contains("dfs.namenode.replication.min:\t2"));
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
@@ -1052,7 +1052,7 @@ public class TestFsck {
       PrintWriter out = new PrintWriter(result, true);
       InetAddress remoteAddress = InetAddress.getLocalHost();
       NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out, 
-          NUM_REPLICAS, (short)1, remoteAddress);
+          NUM_REPLICAS, remoteAddress);
       
       // Run the fsck and check the Result
       final HdfsFileStatus file = 
@@ -1129,7 +1129,7 @@ public class TestFsck {
       PrintWriter out = new PrintWriter(result, true);
       InetAddress remoteAddress = InetAddress.getLocalHost();
       NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out, 
-          NUM_DN, REPL_FACTOR, remoteAddress);
+          NUM_DN, remoteAddress);
       
       // Run the fsck and check the Result
       final HdfsFileStatus file = 
@@ -1176,7 +1176,7 @@ public class TestFsck {
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
     NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,
-        NUM_REPLICAS, (short)1, remoteAddress);
+        NUM_REPLICAS, remoteAddress);
 
     String pathString = "/tmp/testFile";
 

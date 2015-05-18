@@ -868,6 +868,8 @@ Release 2.7.1 - UNRELEASED
     HDFS-6300. Prevent multiple balancers from running simultaneously
     (Rakesh R via vinayakumarb)
 
+    HDFS-8405. Fix a typo in NamenodeFsck.  (Takanobu Asanuma via szetszwo)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
