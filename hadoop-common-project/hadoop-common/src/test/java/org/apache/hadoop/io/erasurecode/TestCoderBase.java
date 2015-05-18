@@ -49,15 +49,15 @@ public abstract class TestCoderBase {
    * Prepare before running the case.
    * @param numDataUnits
    * @param numParityUnits
-   * @param erasedIndexes
+   * @param erasedDataIndexes
    */
   protected void prepare(Configuration conf, int numDataUnits,
-                         int numParityUnits, int[] erasedIndexes) {
+                         int numParityUnits, int[] erasedDataIndexes) {
     this.conf = conf;
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
-    this.erasedDataIndexes = erasedIndexes != null ?
-        erasedIndexes : new int[] {0};
+    this.erasedDataIndexes = erasedDataIndexes != null ?
+        erasedDataIndexes : new int[] {0};
   }
 
   /**
@@ -82,15 +82,19 @@ public abstract class TestCoderBase {
   }
 
   /**
-   * Adjust and return erased indexes based on the array of the input chunks (
-   * parity chunks + data chunks).
-   * @return
+   * Adjust and return erased indexes altogether, including erased data indexes
+   * and parity indexes.
+   * @return erased indexes altogether
    */
   protected int[] getErasedIndexesForDecoding() {
     int[] erasedIndexesForDecoding = new int[erasedDataIndexes.length];
+
+    int idx = 0;
+
     for (int i = 0; i < erasedDataIndexes.length; i++) {
-      erasedIndexesForDecoding[i] = erasedDataIndexes[i] + numParityUnits;
+      erasedIndexesForDecoding[idx ++] = erasedDataIndexes[i] + numParityUnits;
     }
+
     return erasedIndexesForDecoding;
   }
 
@@ -116,30 +120,23 @@ public abstract class TestCoderBase {
   }
 
   /**
-   * Have a copy of the data chunks that's to be erased thereafter. The copy
-   * will be used to compare and verify with the to be recovered chunks.
+   * Erase chunks to test the recovering of them. Before erasure clone them
+   * first so could return them.
    * @param dataChunks
-   * @return
+   * @return clone of erased chunks
    */
-  protected ECChunk[] copyDataChunksToErase(ECChunk[] dataChunks) {
-    ECChunk[] copiedChunks = new ECChunk[erasedDataIndexes.length];
+  protected ECChunk[] backupAndEraseChunks(ECChunk[] dataChunks) {
+    ECChunk[] toEraseChunks = new ECChunk[erasedDataIndexes.length];
 
-    int j = 0;
+    int idx = 0;
+
     for (int i = 0; i < erasedDataIndexes.length; i++) {
-      copiedChunks[j ++] = cloneChunkWithData(dataChunks[erasedDataIndexes[i]]);
+      ECChunk chunk = dataChunks[erasedDataIndexes[i]];
+      toEraseChunks[idx ++] = cloneChunkWithData(chunk);
+      eraseDataFromChunk(chunk);
     }
 
-    return copiedChunks;
-  }
-
-  /**
-   * Erase some data chunks to test the recovering of them
-   * @param dataChunks
-   */
-  protected void eraseSomeDataBlocks(ECChunk[] dataChunks) {
-    for (int i = 0; i < erasedDataIndexes.length; i++) {
-      eraseDataFromChunk(dataChunks[erasedDataIndexes[i]]);
-    }
+    return toEraseChunks;
   }
 
   /**
@@ -277,6 +274,7 @@ public abstract class TestCoderBase {
    */
   protected ECChunk[] prepareOutputChunksForDecoding() {
     ECChunk[] chunks = new ECChunk[erasedDataIndexes.length];
+
     for (int i = 0; i < chunks.length; i++) {
       chunks[i] = allocateOutputChunk();
     }

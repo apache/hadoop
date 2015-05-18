@@ -29,6 +29,9 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected Class<? extends ErasureCoder> encoderClass;
   protected Class<? extends ErasureCoder> decoderClass;
 
+  private ErasureCoder encoder;
+  private ErasureCoder decoder;
+
   protected int numChunksInBlock = 16;
 
   /**
@@ -54,39 +57,27 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    */
   protected void testCoding(boolean usingDirectBuffer) {
     this.usingDirectBuffer = usingDirectBuffer;
-
-    ErasureCoder encoder = createEncoder();
+    prepareCoders();
 
     // Generate data and encode
     ECBlockGroup blockGroup = prepareBlockGroupForEncoding();
     // Backup all the source chunks for later recovering because some coders
     // may affect the source data.
-    TestBlock[] clonedDataBlocks = cloneBlocksWithData((TestBlock[])
-        blockGroup.getDataBlocks());
-    // Make a copy of a strip for later comparing
-    TestBlock[] toEraseBlocks = copyDataBlocksToErase(clonedDataBlocks);
+    TestBlock[] clonedDataBlocks = cloneBlocksWithData((TestBlock[]) blockGroup.getDataBlocks());
 
     ErasureCodingStep codingStep;
-    try {
-      codingStep = encoder.calculateCoding(blockGroup);
-      performCodingStep(codingStep);
-    } finally {
-      encoder.release();
-    }
-    // Erase the copied sources
-    eraseSomeDataBlocks(clonedDataBlocks);
+    codingStep = encoder.calculateCoding(blockGroup);
+    performCodingStep(codingStep);
+    // Erase specified sources but return copies of them for later comparing
+    TestBlock[] backupBlocks = backupAndEraseBlocks(clonedDataBlocks);
 
-    //Decode
+    // Decode
     blockGroup = new ECBlockGroup(clonedDataBlocks, blockGroup.getParityBlocks());
-    ErasureCoder decoder = createDecoder();
-    try {
-      codingStep = decoder.calculateCoding(blockGroup);
-      performCodingStep(codingStep);
-    } finally {
-      decoder.release();
-    }
-    //Compare
-    compareAndVerify(toEraseBlocks, codingStep.getOutputBlocks());
+    codingStep = decoder.calculateCoding(blockGroup);
+    performCodingStep(codingStep);
+
+    // Compare
+    compareAndVerify(backupBlocks, codingStep.getOutputBlocks());
   }
 
   /**
@@ -129,8 +120,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected void compareAndVerify(ECBlock[] erasedBlocks,
                                   ECBlock[] recoveredBlocks) {
     for (int i = 0; i < erasedBlocks.length; ++i) {
-      compareAndVerify(((TestBlock) erasedBlocks[i]).chunks,
-          ((TestBlock) recoveredBlocks[i]).chunks);
+      compareAndVerify(((TestBlock) erasedBlocks[i]).chunks, ((TestBlock) recoveredBlocks[i]).chunks);
     }
   }
 
@@ -149,6 +139,16 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     encoder.initialize(numDataUnits, numParityUnits, chunkSize);
     encoder.setConf(getConf());
     return encoder;
+  }
+
+  private void prepareCoders() {
+    if (encoder == null) {
+      encoder = createEncoder();
+    }
+
+    if (decoder == null) {
+      decoder = createDecoder();
+    }
   }
 
   /**
@@ -199,6 +199,26 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     return new TestBlock(chunks);
+  }
+
+  /**
+   * Erase blocks to test the recovering of them. Before erasure clone them
+   * first so could return themselves.
+   * @param dataBlocks
+   * @return clone of erased dataBlocks
+   */
+  protected TestBlock[] backupAndEraseBlocks(TestBlock[] dataBlocks) {
+    TestBlock[] toEraseBlocks = new TestBlock[erasedDataIndexes.length];
+
+    int idx = 0;
+
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
+      TestBlock block = dataBlocks[erasedDataIndexes[i]];
+      toEraseBlocks[idx ++] = cloneBlockWithData(block);
+      eraseDataFromBlock(block);
+    }
+
+    return toEraseBlocks;
   }
 
   /**
@@ -255,22 +275,9 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   }
 
   /**
-   * Erase some data blocks specified by the indexes from the data blocks.
-   * @param dataBlocks
+   * Erase data from a block.
    */
-  protected void eraseSomeDataBlocks(TestBlock[] dataBlocks) {
-    for (int i = 0; i < erasedDataIndexes.length; ++i) {
-      eraseDataFromBlock(dataBlocks, erasedDataIndexes[i]);
-    }
-  }
-
-  /**
-   * Erase data from a block specified by erased index.
-   * @param blocks
-   * @param erasedIndex
-   */
-  protected void eraseDataFromBlock(TestBlock[] blocks, int erasedIndex) {
-    TestBlock theBlock = blocks[erasedIndex];
+  protected void eraseDataFromBlock(TestBlock theBlock) {
     eraseDataFromChunks(theBlock.chunks);
     theBlock.setErased(true);
   }

@@ -17,26 +17,13 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.apache.hadoop.io.erasurecode.ECChunk;
-import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-
 /**
- * Test raw Reed-solomon encoding and decoding.
+ * Test raw Reed-solomon coder implemented in Java.
  */
-public class TestRSRawCoder extends TestRawCoderBase {
-
-  private static int symbolSize = 0;
-  private static int symbolMax = 0;
-
-  static {
-    symbolSize = (int) Math.round(Math.log(
-        RSUtil.GF.getFieldSize()) / Math.log(2));
-    symbolMax = (int) Math.pow(2, symbolSize);
-  }
+public class TestRSRawCoder extends TestRSRawCoderBase {
 
   @Before
   public void setup() {
@@ -45,49 +32,66 @@ public class TestRSRawCoder extends TestRawCoderBase {
   }
 
   @Test
-  public void testCodingNoDirectBuffer_10x4() {
-    prepare(null, 10, 4, null);
+  public void testCodingNoDirectBuffer_10x4_erasing_d0() {
+    prepare(null, 10, 4, new int[] {0});
+    /**
+     * Doing twice to test if the coders can be repeatedly reused. This matters
+     * as the underlying coding buffers are shared, which may have bugs.
+     */
+    testCoding(false);
     testCoding(false);
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4() {
-    prepare(null, 10, 4, null);
+  public void testCodingDirectBuffer_10x4_erasing_d2() {
+    prepare(null, 10, 4, new int[] {2});
+    testCoding(true);
     testCoding(true);
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4_erasure_of_2_4() {
+  public void testCodingDirectBuffer_10x4_erasing_d0() {
+    prepare(null, 10, 4, new int[] {0});
+    testCoding(true);
+    testCoding(true);
+  }
+
+  @Test
+  public void testCodingBothBuffers_10x4_erasing_d0() {
+    prepare(null, 10, 4, new int[] {0});
+
+    /**
+     * Doing in mixed buffer usage model to test if the coders can be repeatedly
+     * reused with different buffer usage model. This matters as the underlying
+     * coding buffers are shared, which may have bugs.
+     */
+    testCoding(true);
+    testCoding(false);
+    testCoding(true);
+    testCoding(false);
+  }
+
+  @Test
+  public void testCodingDirectBuffer_10x4_erasure_of_d2_d4() {
     prepare(null, 10, 4, new int[] {2, 4});
     testCoding(true);
   }
 
   @Test
-  public void testCodingDirectBuffer_10x4_erasing_all() {
-    prepare(null, 10, 4, new int[] {0, 1, 2, 3});
+  public void testCodingDirectBuffer_10x4_erasing_d0_d1() {
+    prepare(null, 10, 4, new int[] {0, 1});
     testCoding(true);
   }
 
   @Test
-  public void testCodingNoDirectBuffer_3x3() {
-    prepare(null, 3, 3, null);
+  public void testCodingNoDirectBuffer_3x3_erasing_d0() {
+    prepare(null, 3, 3, new int[] {0});
     testCoding(false);
   }
 
   @Test
-  public void testCodingDirectBuffer_3x3() {
-    prepare(null, 3, 3, null);
+  public void testCodingDirectBuffer_3x3_erasing_d0() {
+    prepare(null, 3, 3, new int[] {0});
     testCoding(true);
-  }
-
-  @Override
-  protected ECChunk generateDataChunk() {
-    ByteBuffer buffer = allocateOutputBuffer();
-    for (int i = 0; i < chunkSize; i++) {
-      buffer.put((byte) RAND.nextInt(symbolMax));
-    }
-    buffer.flip();
-
-    return new ECChunk(buffer);
   }
 }

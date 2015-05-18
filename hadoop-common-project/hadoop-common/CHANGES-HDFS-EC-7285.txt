@@ -44,3 +44,5 @@
     HADOOP-11818. Minor improvements for erasurecode classes. (Rakesh R via Kai Zheng)
 
     HADOOP-11841. Remove unused ecschema-def.xml files.  (szetszwo)
+
+    HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng via Zhe Zhang)
