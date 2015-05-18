@@ -18,46 +18,30 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import org.apache.hadoop.yarn.webapp.Controller;
-
 import com.google.inject.Inject;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.apache.hadoop.yarn.webapp.View;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
-public class AHSController extends Controller {
-
+public class AboutBlock extends HtmlBlock {
   @Inject
-  AHSController(RequestContext ctx) {
+  AboutBlock(View.ViewContext ctx) {
     super(ctx);
   }
 
   @Override
-  public void index() {
-    setTitle("Application History");
-  }
-
-  public void about() {
-    render(AboutPage.class);
-  }
-
-  public void app() {
-    render(AppPage.class);
-  }
-
-  public void appattempt() {
-    render(AppAttemptPage.class);
-  }
-
-  public void container() {
-    render(ContainerPage.class);
-  }
-
-  /**
-   * Render the logs page.
-   */
-  public void logs() {
-    render(AHSLogsPage.class);
-  }
-
-  public void errorsAndWarnings() {
-    render(AHSErrorsAndWarningsPage.class);
+  protected void render(Block html) {
+    TimelineAbout tsInfo = TimelineUtils.createTimelineAbout(
+        "Timeline Server - Generic History Service UI");
+    info("Timeline Server Overview").
+        _("Timeline Server Version:", tsInfo.getTimelineServiceBuildVersion() +
+            " on " + tsInfo.getTimelineServiceVersionBuiltOn()).
+        _("Hadoop Version:", tsInfo.getHadoopBuildVersion() +
+            " on " + tsInfo.getHadoopVersionBuiltOn());
+    html._(InfoBlock.class);
   }
 }

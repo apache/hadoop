@@ -114,6 +114,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3505. Node's Log Aggregation Report with SUCCEED should not cached in 
     RMApps. (Xuan Gong via junping_du)
 
+    YARN-3541. Add version info on timeline service / generic history web UI
+    and REST API. (Zhijie Shen via xgong)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

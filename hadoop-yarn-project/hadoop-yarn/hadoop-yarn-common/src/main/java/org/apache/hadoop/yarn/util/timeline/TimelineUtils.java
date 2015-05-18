@@ -26,7 +26,10 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -81,6 +84,17 @@ public class TimelineUtils {
     } else {
       return mapper.writeValueAsString(o);
     }
+  }
+
+  public static TimelineAbout createTimelineAbout(String about) {
+    TimelineAbout tsInfo = new TimelineAbout(about);
+    tsInfo.setHadoopBuildVersion(VersionInfo.getBuildVersion());
+    tsInfo.setHadoopVersion(VersionInfo.getVersion());
+    tsInfo.setHadoopVersionBuiltOn(VersionInfo.getDate());
+    tsInfo.setTimelineServiceBuildVersion(YarnVersionInfo.getBuildVersion());
+    tsInfo.setTimelineServiceVersion(YarnVersionInfo.getVersion());
+    tsInfo.setTimelineServiceVersionBuiltOn(YarnVersionInfo.getDate());
+    return tsInfo;
   }
 
   public static InetSocketAddress getTimelineTokenServiceAddress(
