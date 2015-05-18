@@ -21,43 +21,53 @@ import java.nio.ByteBuffer;
 
 /**
  * A raw encoder in XOR code scheme in pure Java, adapted from HDFS-RAID.
+ *
+ * XOR code is an important primitive code scheme in erasure coding and often
+ * used in advanced codes, like HitchHiker and LRC, though itself is rarely
+ * deployed independently.
  */
 public class XORRawEncoder extends AbstractRawErasureEncoder {
 
-  @Override
   protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
-    resetBuffer(outputs[0]);
+    ByteBuffer output = outputs[0];
+    resetOutputBuffer(output);
 
-    int bufSize = getChunkSize();
     // Get the first buffer's data.
-    for (int j = 0; j < bufSize; j++) {
-      outputs[0].put(j, inputs[0].get(j));
+    int iIdx, oIdx;
+    for (iIdx = inputs[0].position(), oIdx = output.position();
+         iIdx < inputs[0].limit(); iIdx++, oIdx++) {
+      output.put(oIdx, inputs[0].get(iIdx));
     }
 
     // XOR with everything else.
     for (int i = 1; i < inputs.length; i++) {
-      for (int j = 0; j < bufSize; j++) {
-        outputs[0].put(j, (byte) (outputs[0].get(j) ^ inputs[i].get(j)));
+      for (iIdx = inputs[i].position(), oIdx = output.position();
+           iIdx < inputs[i].limit();
+           iIdx++, oIdx++) {
+        output.put(oIdx, (byte) (output.get(oIdx) ^ inputs[i].get(iIdx)));
       }
     }
   }
 
   @Override
-  protected void doEncode(byte[][] inputs, byte[][] outputs) {
-    resetBuffer(outputs[0]);
+  protected void doEncode(byte[][] inputs, int[] inputOffsets, int dataLen,
+                          byte[][] outputs, int[] outputOffsets) {
+    byte[] output = outputs[0];
+    resetBuffer(output, outputOffsets[0], dataLen);
 
-    int bufSize = getChunkSize();
     // Get the first buffer's data.
-    for (int j = 0; j < bufSize; j++) {
-      outputs[0][j] = inputs[0][j];
+    int iIdx, oIdx;
+    for (iIdx = inputOffsets[0], oIdx = outputOffsets[0];
+         iIdx < inputOffsets[0] + dataLen; iIdx++, oIdx++) {
+      output[oIdx] = inputs[0][iIdx];
     }
 
     // XOR with everything else.
     for (int i = 1; i < inputs.length; i++) {
-      for (int j = 0; j < bufSize; j++) {
-        outputs[0][j] ^= inputs[i][j];
+      for (iIdx = inputOffsets[i], oIdx = outputOffsets[0];
+           iIdx < inputOffsets[i] + dataLen; iIdx++, oIdx++) {
+        output[oIdx] ^= inputs[i][iIdx];
       }
     }
   }
-
 }

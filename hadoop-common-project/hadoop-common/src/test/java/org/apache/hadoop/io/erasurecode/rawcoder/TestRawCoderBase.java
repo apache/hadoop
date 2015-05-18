@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.TestCoderBase;
+import org.junit.Assert;
 
 /**
  * Raw coder test base with utilities.
@@ -41,8 +42,57 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     this.usingDirectBuffer = usingDirectBuffer;
     prepareCoders();
 
+    /**
+     * The following runs will use 3 different chunkSize for inputs and outputs,
+     * to verify the same encoder/decoder can process variable width of data.
+     */
+    performTestCoding(baseChunkSize, false, false);
+    performTestCoding(baseChunkSize - 17, false, false);
+    performTestCoding(baseChunkSize + 16, false, false);
+  }
+
+  /**
+   * Similar to above, but perform negative cases using bad input for encoding.
+   * @param usingDirectBuffer
+   */
+  protected void testCodingWithBadInput(boolean usingDirectBuffer) {
+    this.usingDirectBuffer = usingDirectBuffer;
+    prepareCoders();
+
+    try {
+      performTestCoding(baseChunkSize, true, false);
+      Assert.fail("Encoding test with bad input should fail");
+    } catch (Exception e) {
+      // Expected
+    }
+  }
+
+  /**
+   * Similar to above, but perform negative cases using bad output for decoding.
+   * @param usingDirectBuffer
+   */
+  protected void testCodingWithBadOutput(boolean usingDirectBuffer) {
+    this.usingDirectBuffer = usingDirectBuffer;
+    prepareCoders();
+
+    try {
+      performTestCoding(baseChunkSize, false, true);
+      Assert.fail("Decoding test with bad output should fail");
+    } catch (Exception e) {
+      // Expected
+    }
+  }
+
+  private void performTestCoding(int chunkSize,
+                                 boolean useBadInput, boolean useBadOutput) {
+    setChunkSize(chunkSize);
+
     // Generate data and encode
     ECChunk[] dataChunks = prepareDataChunksForEncoding();
+    if (useBadInput) {
+      corruptSomeChunk(dataChunks);
+    }
+
     ECChunk[] parityChunks = prepareParityChunksForEncoding();
 
     // Backup all the source chunks for later recovering because some coders
@@ -59,6 +109,9 @@ public abstract class TestRawCoderBase extends TestCoderBase {
         clonedDataChunks, parityChunks);
 
     ECChunk[] recoveredChunks = prepareOutputChunksForDecoding();
+    if (useBadOutput) {
+      corruptSomeChunk(recoveredChunks);
+    }
 
     decoder.decode(inputChunks, getErasedIndexesForDecoding(), recoveredChunks);
 
@@ -88,7 +141,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
       throw new RuntimeException("Failed to create encoder", e);
     }
 
-    encoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    encoder.initialize(numDataUnits, numParityUnits, getChunkSize());
     encoder.setConf(getConf());
     return encoder;
   }
@@ -105,7 +158,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
       throw new RuntimeException("Failed to create decoder", e);
     }
 
-    decoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    decoder.initialize(numDataUnits, numParityUnits, getChunkSize());
     decoder.setConf(getConf());
     return decoder;
   }

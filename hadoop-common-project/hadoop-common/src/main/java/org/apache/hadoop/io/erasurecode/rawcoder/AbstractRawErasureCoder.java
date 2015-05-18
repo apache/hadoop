@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configured;
 
 import java.nio.ByteBuffer;
@@ -30,9 +31,6 @@ import java.util.Arrays;
 public abstract class AbstractRawErasureCoder
     extends Configured implements RawErasureCoder {
 
-  // Hope to reset coding buffers a little faster using it
-  private byte[] zeroChunkBytes;
-
   private int numDataUnits;
   private int numParityUnits;
   private int chunkSize;
@@ -43,8 +41,6 @@ public abstract class AbstractRawErasureCoder
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
     this.chunkSize = chunkSize;
-
-    zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
   }
 
   @Override
@@ -73,42 +69,17 @@ public abstract class AbstractRawErasureCoder
   }
 
   /**
-   * Convert an array of heap ByteBuffers to an array of byte array.
-   * @param buffers
-   * @return an array of byte array
+   * Ensure output buffer filled with ZERO bytes fully in chunkSize.
+   * @param buffer a buffer ready to write chunk size bytes
+   * @return the buffer itself, with ZERO bytes written, the position and limit
+   *         are not changed after the call
    */
-  protected static byte[][] toArrays(ByteBuffer[] buffers) {
-    byte[][] bytesArr = new byte[buffers.length][];
-
-    ByteBuffer buffer;
-    for (int i = 0; i < buffers.length; i++) {
-      buffer = buffers[i];
-      if (buffer == null) {
-        bytesArr[i] = null;
-        continue;
-      }
-
-      if (buffer.hasArray()) {
-        bytesArr[i] = buffer.array();
-      } else {
-        throw new IllegalArgumentException("Invalid ByteBuffer passed, " +
-            "expecting heap buffer");
-      }
+  protected ByteBuffer resetOutputBuffer(ByteBuffer buffer) {
+    int pos = buffer.position();
+    for (int i = pos; i < buffer.limit(); ++i) {
+      buffer.put((byte) 0);
     }
-
-    return bytesArr;
-  }
-
-  /**
-   * Ensure the buffer (either input or output) ready to read or write with ZERO
-   * bytes fully in chunkSize.
-   * @param buffer
-   * @return the buffer itself
-   */
-  protected ByteBuffer resetBuffer(ByteBuffer buffer) {
-    buffer.clear();
-    buffer.put(zeroChunkBytes);
-    buffer.position(0);
+    buffer.position(pos);
 
     return buffer;
   }
@@ -119,9 +90,39 @@ public abstract class AbstractRawErasureCoder
    * @param buffer bytes array buffer
    * @return the buffer itself
    */
-  protected byte[] resetBuffer(byte[] buffer) {
-    System.arraycopy(zeroChunkBytes, 0, buffer, 0, buffer.length);
+  protected byte[] resetBuffer(byte[] buffer, int offset, int len) {
+    for (int i = offset; i < len; ++i) {
+      buffer[i] = (byte) 0;
+    }
 
     return buffer;
+  }
+
+  /**
+   * Check and ensure the buffers are of the length specified by dataLen.
+   * @param buffers
+   * @param dataLen
+   */
+  protected void ensureLength(ByteBuffer[] buffers, int dataLen) {
+    for (int i = 0; i < buffers.length; ++i) {
+      if (buffers[i].remaining() != dataLen) {
+        throw new HadoopIllegalArgumentException(
+            "Invalid buffer, not of length " + dataLen);
+      }
+    }
+  }
+
+  /**
+   * Check and ensure the buffers are of the length specified by dataLen.
+   * @param buffers
+   * @param dataLen
+   */
+  protected void ensureLength(byte[][] buffers, int dataLen) {
+    for (int i = 0; i < buffers.length; ++i) {
+      if (buffers[i].length != dataLen) {
+        throw new HadoopIllegalArgumentException(
+            "Invalid buffer not of length " + dataLen);
+      }
+    }
   }
 }
