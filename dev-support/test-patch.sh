@@ -38,6 +38,7 @@ function setup_defaults
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
   JENKINS=false
   BASEDIR=$(pwd)
+  RELOCATE_PATCH_DIR=false
 
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
@@ -607,6 +608,7 @@ function hadoop_usage
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--jira-cmd=<cmd>       The 'jira' command to use (default 'jira')"
   echo "--jira-password=<pw>   The password for the 'jira' command"
+  echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
   echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
 }
 
@@ -691,6 +693,9 @@ function parse_args
       ;;
       --mvn-cmd=*)
         MVN=${i#*=}
+      ;;
+      --mv-patch-dir)
+        RELOCATE_PATCH_DIR=true;
       ;;
       --offline)
         OFFLINE=true
@@ -2323,19 +2328,16 @@ function cleanup_and_exit
 {
   local result=$1
 
-  if [[ ${JENKINS} == "true" ]] ; then
-    if [[ -e "${PATCH_DIR}" ]] ; then
-      if [[ -d "${PATCH_DIR}" ]]; then
-        # if PATCH_DIR is already inside BASEDIR, then
-        # there is no need to move it since we assume that
-        # Jenkins or whatever already knows where it is at
-        # since it told us to put it there!
-        relative_patchdir >/dev/null
-        if [[ $? == 1 ]]; then
-          hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
-          mv "${PATCH_DIR}" "${BASEDIR}"
-        fi
-      fi
+  if [[ ${JENKINS} == "true" && ${RELOCATE_PATCH_DIR} == "true" && \
+      -e ${PATCH_DIR} && -d ${PATCH_DIR} ]] ; then
+    # if PATCH_DIR is already inside BASEDIR, then
+    # there is no need to move it since we assume that
+    # Jenkins or whatever already knows where it is at
+    # since it told us to put it there!
+    relative_patchdir >/dev/null
+    if [[ $? == 1 ]]; then
+      hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
+      mv "${PATCH_DIR}" "${BASEDIR}"
     fi
   fi
   big_console_header "Finished build."
