@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 @InterfaceAudience.Private
 public final class FSImageFormatPBINode {
@@ -354,10 +355,12 @@ public final class FSImageFormatPBINode {
 
       FileWithStripedBlocksFeature stripeFeature = null;
       if (f.hasStripedBlocks()) {
+        // TODO: HDFS-7859
+        ECSchema schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
         StripedBlocksFeature sb = f.getStripedBlocks();
         stripeFeature = file.addStripedBlocksFeature();
         for (StripedBlockProto sp : sb.getBlocksList()) {
-          stripeFeature.addBlock(PBHelper.convert(sp));
+          stripeFeature.addBlock(PBHelper.convert(sp, schema));
         }
       }
 
@@ -372,7 +375,7 @@ public final class FSImageFormatPBINode {
           if (stripeFeature != null) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
             ucBlk = new BlockInfoStripedUnderConstruction(striped,
-                striped.getDataBlockNum(), striped.getParityBlockNum());
+                striped.getSchema());
           } else {
             ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk,
                 replication);

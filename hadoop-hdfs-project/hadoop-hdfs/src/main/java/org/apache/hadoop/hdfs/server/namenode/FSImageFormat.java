@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -762,6 +763,9 @@ public class FSImageFormat {
             NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)
             && (in.readBoolean());
     final int numBlocks = in.readInt();
+    // TODO: ECSchema can be restored from persisted file (HDFS-7859).
+    final ECSchema schema = isStriped ?
+        ErasureCodingSchemaManager.getSystemDefaultSchema() : null;
 
     if (numBlocks >= 0) {
       // file
@@ -771,8 +775,7 @@ public class FSImageFormat {
       if (isStriped) {
         blocks = new Block[numBlocks];
         for (int j = 0; j < numBlocks; j++) {
-          blocks[j] = new BlockInfoStriped(new Block(),
-              HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS);
+          blocks[j] = new BlockInfoStriped(new Block(), schema);
           blocks[j].readFields(in);
         }
       } else {
@@ -804,8 +807,7 @@ public class FSImageFormat {
                 BlockInfoStriped lastStripedBlk = (BlockInfoStriped) lastBlk;
                 blocks[blocks.length - 1]
                         = new BlockInfoStripedUnderConstruction(lastBlk,
-                                lastStripedBlk.getDataBlockNum(),
-                                lastStripedBlk.getParityBlockNum());
+                                lastStripedBlk.getSchema());
               } else {
                 blocks[blocks.length - 1]
                         = new BlockInfoContiguousUnderConstruction(lastBlk,

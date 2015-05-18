@@ -203,6 +203,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand;
@@ -445,9 +446,8 @@ public class PBHelper {
     return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
   }
 
-  public static BlockInfoStriped convert(StripedBlockProto p) {
-    return new BlockInfoStriped(convert(p.getBlock()),
-        (short) p.getDataBlockNum(), (short) p.getParityBlockNum());
+  public static BlockInfoStriped convert(StripedBlockProto p, ECSchema schema) {
+    return new BlockInfoStriped(convert(p.getBlock()), schema);
   }
 
   public static StripedBlockProto convert(BlockInfoStriped blk) {

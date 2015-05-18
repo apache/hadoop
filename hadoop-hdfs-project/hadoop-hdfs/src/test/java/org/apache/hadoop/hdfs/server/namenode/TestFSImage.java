@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -67,6 +68,9 @@ public class TestFSImage {
 
   private static final String HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ =
       "image-with-zero-block-size.tar.gz";
+  private static final ECSchema testSchema
+      = ErasureCodingSchemaManager.getSystemDefaultSchema();
+
   @Test
   public void testPersist() throws IOException {
     Configuration conf = new Configuration();
@@ -158,7 +162,7 @@ public class TestFSImage {
     for (int i = 0; i < stripedBlks.length; i++) {
       stripedBlks[i] = new BlockInfoStriped(
               new Block(stripedBlkId + i, preferredBlockSize, timestamp),
-              HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS);
+              testSchema);
       file.getStripedBlocksFeature().addBlock(stripedBlks[i]);
     }
 

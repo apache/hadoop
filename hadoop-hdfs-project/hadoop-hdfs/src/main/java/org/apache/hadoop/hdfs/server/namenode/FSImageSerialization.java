@@ -50,6 +50,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -130,7 +131,11 @@ public class FSImageSerialization {
     final boolean isStriped = NameNodeLayoutVersion.supports(
         NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)
         && (in.readBoolean());
-  
+
+    // TODO: ECSchema can be restored from persisted file (HDFS-7859).
+    final ECSchema schema = isStriped ?
+        ErasureCodingSchemaManager.getSystemDefaultSchema() : null;
+
     int numBlocks = in.readInt();
 
     final BlockInfoContiguous[] blocksContiguous;
@@ -140,15 +145,12 @@ public class FSImageSerialization {
       blocksStriped = new BlockInfoStriped[numBlocks];
       int i = 0;
       for (; i < numBlocks - 1; i++) {
-        blocksStriped[i] = new BlockInfoStriped(new Block(),
-            HdfsConstants.NUM_DATA_BLOCKS,
-            HdfsConstants.NUM_PARITY_BLOCKS);
+        blocksStriped[i] = new BlockInfoStriped(new Block(), schema);
         blocksStriped[i].readFields(in);
       }
       if (numBlocks > 0) {
         blocksStriped[i] = new BlockInfoStripedUnderConstruction(new Block(),
-            HdfsConstants.NUM_DATA_BLOCKS, HdfsConstants.NUM_PARITY_BLOCKS,
-            BlockUCState.UNDER_CONSTRUCTION, null);
+            schema, BlockUCState.UNDER_CONSTRUCTION, null);
         blocksStriped[i].readFields(in);
       }
     } else {

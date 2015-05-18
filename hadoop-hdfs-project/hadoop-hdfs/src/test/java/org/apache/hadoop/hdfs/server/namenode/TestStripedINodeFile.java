@@ -51,6 +51,9 @@ public class TestStripedINodeFile {
   private final BlockStoragePolicy defaultPolicy =
       defaultSuite.getDefaultPolicy();
 
+  private static final ECSchema testSchema
+      = ErasureCodingSchemaManager.getSystemDefaultSchema();
+
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
         null, (short)0, 1024L, HdfsServerConstants.COLD_STORAGE_POLICY_ID);
@@ -69,9 +72,7 @@ public class TestStripedINodeFile {
     ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk, testSchema);
     assertEquals(9, blockInfoStriped.getTotalBlockNum());
   }
 
@@ -83,9 +84,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk, testSchema);
     inf.addBlock(blockInfoStriped);
     assertEquals(1, inf.getBlocks().length);
   }
@@ -98,9 +97,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk, testSchema);
     blockInfoStriped.setNumBytes(1);
     inf.addBlock(blockInfoStriped);
     //   0. Calculate the total bytes per stripes <Num Bytes per Stripes>
@@ -127,15 +124,11 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk1 = new Block(1);
     BlockInfoStriped blockInfoStriped1
-        = new BlockInfoStriped(blk1,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk1, testSchema);
     blockInfoStriped1.setNumBytes(1);
     Block blk2 = new Block(2);
     BlockInfoStriped blockInfoStriped2
-        = new BlockInfoStriped(blk2,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk2, testSchema);
     blockInfoStriped2.setNumBytes(1);
     inf.addBlock(blockInfoStriped1);
     inf.addBlock(blockInfoStriped2);
@@ -152,9 +145,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk, testSchema);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
     // Compute file size should return actual data
@@ -171,9 +162,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStripedUnderConstruction(blk, testSchema);
     bInfoStripedUC.setNumBytes(100);
     inf.addBlock(bInfoStripedUC);
     assertEquals(100, inf.computeFileSize());
@@ -188,9 +177,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStriped(blk, testSchema);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
 
@@ -213,9 +200,7 @@ public class TestStripedINodeFile {
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk,
-            (short)defaultSchema.getNumDataUnits(),
-            (short)defaultSchema.getNumParityUnits());
+        = new BlockInfoStripedUnderConstruction(blk, testSchema);
     bInfoStripedUC.setNumBytes(100);
     inf.addBlock(bInfoStripedUC);
 

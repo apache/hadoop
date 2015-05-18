@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -72,6 +73,9 @@ public class TestFSEditLogLoader {
   private static final File TEST_DIR = PathUtils.getTestDir(TestFSEditLogLoader.class);
 
   private static final int NUM_DATA_NODES = 0;
+
+  private static final ECSchema testSchema
+      = ErasureCodingSchemaManager.getSystemDefaultSchema();
   
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {
@@ -459,7 +463,7 @@ public class TestFSEditLogLoader {
 
       // Add a striped block to the file
       BlockInfoStriped stripedBlk = new BlockInfoStriped(
-          new Block(blkId, blkNumBytes, timestamp), blockNum, parityNum);
+          new Block(blkId, blkNumBytes, timestamp), testSchema);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.getStripedBlocksFeature().addBlock(stripedBlk);
@@ -525,7 +529,7 @@ public class TestFSEditLogLoader {
       Path p = new Path(testFilePath);
       DFSTestUtil.createFile(fs, p, 0, (short) 1, 1);
       BlockInfoStriped stripedBlk = new BlockInfoStriped(
-          new Block(blkId, blkNumBytes, timestamp), blockNum, parityNum);
+          new Block(blkId, blkNumBytes, timestamp), testSchema);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.getStripedBlocksFeature().addBlock(stripedBlk);

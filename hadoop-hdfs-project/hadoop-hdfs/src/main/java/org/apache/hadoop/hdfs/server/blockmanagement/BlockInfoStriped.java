@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
@@ -39,6 +41,7 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_S
 public class BlockInfoStriped extends BlockInfo {
   private final short dataBlockNum;
   private final short parityBlockNum;
+  private final ECSchema schema;
   /**
    * Always the same size with triplets. Record the block index for each triplet
    * TODO: actually this is only necessary for over-replicated block. Thus can
@@ -46,16 +49,17 @@ public class BlockInfoStriped extends BlockInfo {
    */
   private byte[] indices;
 
-  public BlockInfoStriped(Block blk, short dataBlockNum, short parityBlockNum) {
-    super(blk, (short) (dataBlockNum + parityBlockNum));
-    indices = new byte[dataBlockNum + parityBlockNum];
+  public BlockInfoStriped(Block blk, ECSchema schema) {
+    super(blk, (short) (schema.getNumDataUnits() + schema.getNumParityUnits()));
+    indices = new byte[schema.getNumDataUnits() + schema.getNumParityUnits()];
     initIndices();
-    this.dataBlockNum = dataBlockNum;
-    this.parityBlockNum = parityBlockNum;
+    this.schema = schema;
+    this.dataBlockNum = (short)schema.getNumDataUnits();
+    this.parityBlockNum = (short)schema.getNumParityUnits();
   }
 
   BlockInfoStriped(BlockInfoStriped b) {
-    this(b, b.dataBlockNum, b.parityBlockNum);
+    this(b, b.getSchema());
     this.setBlockCollection(b.getBlockCollection());
   }
 
@@ -69,6 +73,10 @@ public class BlockInfoStriped extends BlockInfo {
 
   public short getParityBlockNum() {
     return parityBlockNum;
+  }
+
+  public ECSchema getSchema() {
+    return schema;
   }
 
   private void initIndices() {
@@ -231,8 +239,8 @@ public class BlockInfoStriped extends BlockInfo {
       BlockUCState s, DatanodeStorageInfo[] targets) {
     final BlockInfoStripedUnderConstruction ucBlock;
     if(isComplete()) {
-      ucBlock = new BlockInfoStripedUnderConstruction(this, getDataBlockNum(),
-              getParityBlockNum(), s, targets);
+      ucBlock = new BlockInfoStripedUnderConstruction(this, schema,
+          s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
     } else {
       // the block is already under construction
