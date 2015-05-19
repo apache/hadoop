@@ -220,3 +220,6 @@
 
     HDFS-8417. Erasure Coding: Pread failed to read data starting from not-first stripe.
     (Walter Su via jing9)
+
+    HDFS-8418. Fix the isNeededReplication calculation for Striped block in NN.
+    (Yi Liu via jing9)
