@@ -141,6 +141,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8254. Standby namenode doesn't process DELETED_BLOCK if the add block
     request is in edit log. (Rushabh S Shah via kihwal)
 
+    HDFS-8404. Pending block replication can get stuck using older genstamp
+    (Nathan Roberts via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
