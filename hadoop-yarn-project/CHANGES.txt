@@ -420,6 +420,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3302. TestDockerContainerExecutor should run automatically if it can
     detect docker in the usual place (Ravindra Kumar Naik via raviprak)
 
+    YARN-2821. Fixed a problem that DistributedShell AM may hang if restarted.
+    (Varun Vasudev via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
