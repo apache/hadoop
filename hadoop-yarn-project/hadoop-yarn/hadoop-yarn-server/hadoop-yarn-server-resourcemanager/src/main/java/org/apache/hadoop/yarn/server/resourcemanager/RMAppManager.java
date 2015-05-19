@@ -230,6 +230,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         success = true;
         break;
       default:
+        break;
     }
     
     if (success) {
