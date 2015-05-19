@@ -38,9 +38,6 @@ Trunk (Unreleased)
 
     HADOOP-11485. Pluggable shell integration (aw)
 
-    HADOOP-8934. Shell command ls should include sort options (Jonathan Allen
-    via aw)
-
     HADOOP-11554. Expose HadoopKerberosName as a hadoop subcommand (aw)
 
     HADOOP-11565. Add --slaves shell option (aw)
@@ -487,6 +484,9 @@ Release 2.8.0 - UNRELEASED
     (Niels Basjes via cnauroth)
 
     HADOOP-11949. Add user-provided plugins to test-patch (Sean Busbey via aw)
+
+    HADOOP-8934. Shell command ls should include sort options (Jonathan Allen
+    via aw)
 
     HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
     (Kengo Seki via aajisaka)
