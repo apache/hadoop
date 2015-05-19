@@ -47,6 +47,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.curator.retry.RetryNTimes;
+import org.apache.curator.utils.EnsurePath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -297,6 +298,17 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         zkClient.start();
       } catch (Exception e) {
         throw new IOException("Could not start Curator Framework", e);
+      }
+    } else {
+      // If namespace parents are implicitly created, they won't have ACLs.
+      // So, let's explicitly create them.
+      CuratorFramework nullNsFw = zkClient.usingNamespace(null);
+      EnsurePath ensureNs =
+        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
+      try {
+        ensureNs.ensure(nullNsFw.getZookeeperClient());
+      } catch (Exception e) {
+        throw new IOException("Could not create namespace", e);
       }
     }
     listenerThreadPool = Executors.newSingleThreadExecutor();
