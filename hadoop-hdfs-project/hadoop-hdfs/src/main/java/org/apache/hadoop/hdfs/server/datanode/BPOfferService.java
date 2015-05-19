@@ -728,6 +728,7 @@ class BPOfferService {
       LOG.info("DatanodeCommand action: DNA_ERASURE_CODING_RECOVERY");
       Collection<BlockECRecoveryInfo> ecTasks = ((BlockECRecoveryCommand) cmd).getECTasks();
       dn.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }

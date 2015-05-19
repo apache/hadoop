@@ -218,6 +218,8 @@
 
     HDFS-8367. BlockInfoStriped uses EC schema. (Kai Sasaki via Kai Zheng)
 
+    HDFS-8352. Erasure Coding: test webhdfs read write stripe file. (waltersu4549)
+
     HDFS-8417. Erasure Coding: Pread failed to read data starting from not-first stripe.
     (Walter Su via jing9)
 
@@ -228,3 +230,6 @@
 	
 	HDFS-8366. Erasure Coding: Make the timeout parameter of polling blocking queue 
 	configurable in DFSStripedOutputStream. (Li Bo)
+
+    HDFS-8378. Erasure Coding: Few improvements for the erasure coding worker.
+    (Rakesh R via waltersu4549)
