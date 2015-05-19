@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -61,11 +63,14 @@ import com.google.common.base.Preconditions;
 public class DFSStripedOutputStream extends DFSOutputStream {
   /** Coordinate the communication between the streamers. */
   static class Coordinator {
+    private final DfsClientConf conf;
     private final List<BlockingQueue<ExtendedBlock>> endBlocks;
     private final List<BlockingQueue<LocatedBlock>> stripedBlocks;
     private volatile boolean shouldLocateFollowingBlock = false;
 
-    Coordinator(final int numDataBlocks, final int numAllBlocks) {
+    Coordinator(final DfsClientConf conf, final int numDataBlocks,
+                final int numAllBlocks) {
+      this.conf = conf;
       endBlocks = new ArrayList<>(numDataBlocks);
       for (int i = 0; i < numDataBlocks; i++) {
         endBlocks.add(new LinkedBlockingQueue<ExtendedBlock>(1));
@@ -91,7 +96,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
     ExtendedBlock getEndBlock(int i) throws InterruptedIOException {
       try {
-        return endBlocks.get(i).poll(30, TimeUnit.SECONDS);
+        return endBlocks.get(i).poll(
+            conf.getStripedWriteMaxSecondsGetEndedBlock(),
+            TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         throw DFSUtil.toInterruptedIOException(
             "getEndBlock interrupted, i=" + i, e);
@@ -121,7 +128,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     LocatedBlock getStripedBlock(int i) throws IOException {
       final LocatedBlock lb;
       try {
-        lb = stripedBlocks.get(i).poll(90, TimeUnit.SECONDS);
+        lb = stripedBlocks.get(i).poll(
+            conf.getStripedWriteMaxSecondsGetStripedBlock(),
+            TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         throw DFSUtil.toInterruptedIOException("getStripedBlock interrupted", e);
       }
@@ -133,7 +142,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
   }
 
-  /** Buffers for writing the data and parity cells of a strip. */
+  /** Buffers for writing the data and parity cells of a stripe. */
   class CellBuffers {
     private final ByteBuffer[] buffers;
     private final byte[][] checksumArrays;
@@ -228,7 +237,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     encoder = new RSRawEncoder();
     encoder.initialize(numDataBlocks, numParityBlocks, cellSize);
 
-    coordinator = new Coordinator(numDataBlocks, numAllBlocks);
+    coordinator = new Coordinator(dfsClient.getConf(), numDataBlocks, numAllBlocks);
     try {
       cellBuffers = new CellBuffers(numParityBlocks);
     } catch (InterruptedException ie) {

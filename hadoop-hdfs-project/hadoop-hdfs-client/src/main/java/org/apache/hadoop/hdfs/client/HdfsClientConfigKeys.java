@@ -189,6 +189,16 @@ public interface HdfsClientConfigKeys {
     int     THREADPOOL_SIZE_DEFAULT = 18;
   }
 
+  /** dfs.client.write.striped configuration properties */
+  interface StripedWrite {
+    String PREFIX = Write.PREFIX + "striped.";
+
+    String  MAX_SECONDS_GET_STRIPED_BLOCK_KEY = PREFIX + "max-seconds-get-striped-block";
+    int     MAX_SECONDS_GET_STRIPED_BLOCK_DEFAULT = 90;
+    String  MAX_SECONDS_GET_ENDED_BLOCK_KEY = PREFIX + "max-seconds-get-ended-block";
+    int     MAX_SECONDS_GET_ENDED_BLOCK_DEFAULT = 60;
+  }
+
   /** dfs.http.client configuration properties */
   interface HttpClient {
     String  PREFIX = "dfs.http.client.";
