@@ -417,6 +417,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2421. RM still allocates containers to an app in the FINISHING
     state (Chang Li via jlowe)
 
+    YARN-3302. TestDockerContainerExecutor should run automatically if it can
+    detect docker in the usual place (Ravindra Kumar Naik via raviprak)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
