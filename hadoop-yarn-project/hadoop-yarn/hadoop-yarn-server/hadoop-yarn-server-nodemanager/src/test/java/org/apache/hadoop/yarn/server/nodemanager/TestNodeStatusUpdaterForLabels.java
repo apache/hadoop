@@ -23,16 +23,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
@@ -71,7 +72,7 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
 
   private class ResourceTrackerForLabels implements ResourceTracker {
     int heartbeatID = 0;
-    Set<String> labels;
+    Set<NodeLabel> labels;
 
     private boolean receivedNMHeartbeat = false;
     private boolean receivedNMRegister = false;
@@ -185,18 +186,18 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
   public static class DummyNodeLabelsProvider extends NodeLabelsProvider {
 
     @SuppressWarnings("unchecked")
-    private Set<String> nodeLabels = Collections.EMPTY_SET;
+    private Set<NodeLabel> nodeLabels = CommonNodeLabelsManager.EMPTY_NODELABEL_SET;
 
     public DummyNodeLabelsProvider() {
       super(DummyNodeLabelsProvider.class.getName());
     }
 
     @Override
-    public synchronized Set<String> getNodeLabels() {
+    public synchronized Set<NodeLabel> getNodeLabels() {
       return nodeLabels;
     }
 
-    synchronized void setNodeLabels(Set<String> nodeLabels) {
+    synchronized void setNodeLabels(Set<NodeLabel> nodeLabels) {
       this.nodeLabels = nodeLabels;
     }
   }
@@ -245,19 +246,21 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
     resourceTracker.waitTillRegister();
-    assertCollectionEquals(resourceTracker.labels,
-        dummyLabelsProviderRef.getNodeLabels());
+    assertNLCollectionEquals(resourceTracker.labels,
+        dummyLabelsProviderRef
+            .getNodeLabels());
 
     resourceTracker.waitTillHeartbeat();// wait till the first heartbeat
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
     // heartbeat with updated labels
-    dummyLabelsProviderRef.setNodeLabels(toSet("P"));
+    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P"));
 
     nm.getNodeStatusUpdater().sendOutofBandHeartBeat();
     resourceTracker.waitTillHeartbeat();
-    assertCollectionEquals(resourceTracker.labels,
-        dummyLabelsProviderRef.getNodeLabels());
+    assertNLCollectionEquals(resourceTracker.labels,
+        dummyLabelsProviderRef
+            .getNodeLabels());
     resourceTracker.resetNMHeartbeatReceiveFlag();
 
     // heartbeat without updating labels

@@ -25,6 +25,10 @@ package hadoop.yarn;
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 
+message NodeLabelsProto {
+  repeated NodeLabelProto nodeLabels = 1;
+}
+
 message RegisterNodeManagerRequestProto {
   optional NodeIdProto node_id = 1;
   optional int32 http_port = 3;
@@ -32,7 +36,7 @@ message RegisterNodeManagerRequestProto {
   optional string nm_version = 5;
   repeated NMContainerStatusProto container_statuses = 6;
   repeated ApplicationIdProto runningApplications = 7;
-  optional StringArrayProto nodeLabels = 8;
+  optional NodeLabelsProto nodeLabels = 8;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -49,7 +53,7 @@ message NodeHeartbeatRequestProto {
   optional NodeStatusProto node_status = 1;
   optional MasterKeyProto last_known_container_token_master_key = 2;
   optional MasterKeyProto last_known_nm_token_master_key = 3;
-  optional StringArrayProto nodeLabels = 4;
+  optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
 }
 

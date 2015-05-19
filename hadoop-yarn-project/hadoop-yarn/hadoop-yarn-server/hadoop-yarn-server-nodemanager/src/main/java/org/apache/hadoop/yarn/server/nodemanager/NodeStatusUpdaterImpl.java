@@ -30,9 +30,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -279,11 +280,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   protected void registerWithRM()
       throws YarnException, IOException {
     List<NMContainerStatus> containerReports = getNMContainerStatuses();
-    Set<String> nodeLabels = null;
+    Set<NodeLabel> nodeLabels = null;
     if (hasNodeLabelsProvider) {
       nodeLabels = nodeLabelsProvider.getNodeLabels();
       nodeLabels =
-          (null == nodeLabels) ? CommonNodeLabelsManager.EMPTY_STRING_SET
+          (null == nodeLabels) ? CommonNodeLabelsManager.EMPTY_NODELABEL_SET
               : nodeLabels;
     }
     RegisterNodeManagerRequest request =
@@ -628,29 +629,29 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       @SuppressWarnings("unchecked")
       public void run() {
         int lastHeartbeatID = 0;
-        Set<String> lastUpdatedNodeLabelsToRM = null;
+        Set<NodeLabel> lastUpdatedNodeLabelsToRM = null;
         if (hasNodeLabelsProvider) {
           lastUpdatedNodeLabelsToRM = nodeLabelsProvider.getNodeLabels();
           lastUpdatedNodeLabelsToRM =
-              (null == lastUpdatedNodeLabelsToRM) ? CommonNodeLabelsManager.EMPTY_STRING_SET
+              (null == lastUpdatedNodeLabelsToRM) ? CommonNodeLabelsManager.EMPTY_NODELABEL_SET
                   : lastUpdatedNodeLabelsToRM;
         }
         while (!isStopped) {
           // Send heartbeat
           try {
             NodeHeartbeatResponse response = null;
-            Set<String> nodeLabelsForHeartbeat = null;
+            Set<NodeLabel> nodeLabelsForHeartbeat = null;
             NodeStatus nodeStatus = getNodeStatus(lastHeartbeatID);
 
             if (hasNodeLabelsProvider) {
               nodeLabelsForHeartbeat = nodeLabelsProvider.getNodeLabels();
-              //if the provider returns null then consider empty labels are set
+              // if the provider returns null then consider empty labels are set
               nodeLabelsForHeartbeat =
-                  (nodeLabelsForHeartbeat == null) ? CommonNodeLabelsManager.EMPTY_STRING_SET
+                  (nodeLabelsForHeartbeat == null) ? CommonNodeLabelsManager.EMPTY_NODELABEL_SET
                       : nodeLabelsForHeartbeat;
               if (!areNodeLabelsUpdated(nodeLabelsForHeartbeat,
                   lastUpdatedNodeLabelsToRM)) {
-                //if nodelabels have not changed then no need to send
+                // if nodelabels have not changed then no need to send
                 nodeLabelsForHeartbeat = null;
               }
             }
@@ -781,8 +782,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
        * @param nodeLabelsOld
        * @return if the New node labels are diff from the older one.
        */
-      private boolean areNodeLabelsUpdated(Set<String> nodeLabelsNew,
-          Set<String> nodeLabelsOld) {
+      private boolean areNodeLabelsUpdated(Set<NodeLabel> nodeLabelsNew,
+          Set<NodeLabel> nodeLabelsOld) {
         if (nodeLabelsNew.size() != nodeLabelsOld.size()
             || !nodeLabelsOld.containsAll(nodeLabelsNew)) {
           return true;

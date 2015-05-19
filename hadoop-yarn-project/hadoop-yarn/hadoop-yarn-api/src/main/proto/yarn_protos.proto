@@ -253,10 +253,6 @@ message NodeIdToLabelsProto {
   repeated string nodeLabels = 2;
 }
 
-message StringArrayProto {
-  repeated string elements = 1;
-}
-
 message LabelsToNodeIdsProto {
   optional string nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;

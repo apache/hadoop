@@ -247,6 +247,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3362. Add node label usage in RM CapacityScheduler web UI.
     (Naganarasimha G R via wangda)
 
+    YARN-3565. NodeHeartbeatRequest/RegisterNodeManagerRequest should use 
+    NodeLabel object instead of String. (Naganarasimha G R via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
