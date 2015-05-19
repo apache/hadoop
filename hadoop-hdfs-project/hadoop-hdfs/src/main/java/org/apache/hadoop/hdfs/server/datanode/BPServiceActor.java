@@ -28,13 +28,13 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -122,7 +122,7 @@ class BPServiceActor implements Runnable {
     this.dn = bpos.getDataNode();
     this.nnAddr = nnAddr;
     this.dnConf = dn.getDnConf();
-    prevBlockReportId = DFSUtil.getRandom().nextLong();
+    prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval, dnConf.blockReportInterval);
   }
 
@@ -409,7 +409,7 @@ class BPServiceActor implements Runnable {
     // not send a 0 value ourselves.
     prevBlockReportId++;
     while (prevBlockReportId == 0) {
-      prevBlockReportId = DFSUtil.getRandom().nextLong();
+      prevBlockReportId = ThreadLocalRandom.current().nextLong();
     }
     return prevBlockReportId;
   }
@@ -1054,7 +1054,7 @@ class BPServiceActor implements Runnable {
       if (delay > 0) { // send BR after random delay
         // Numerical overflow is possible here and is okay.
         nextBlockReportTime =
-            monotonicNow() + DFSUtil.getRandom().nextInt((int) (delay));
+            monotonicNow() + ThreadLocalRandom.current().nextInt((int) (delay));
       } else { // send at next heartbeat
         nextBlockReportTime = monotonicNow();
       }
@@ -1073,7 +1073,7 @@ class BPServiceActor implements Runnable {
       // time before we start the periodic block reports.
       if (resetBlockReportTime) {
         nextBlockReportTime = monotonicNow() +
-            DFSUtil.getRandom().nextInt((int)(blockReportIntervalMs));
+            ThreadLocalRandom.current().nextInt((int)(blockReportIntervalMs));
         resetBlockReportTime = false;
       } else {
         /* say the last block report was at 8:20:14. The current report

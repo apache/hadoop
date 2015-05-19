@@ -20,12 +20,12 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSUtil;
 
 /** A map from host names to datanode descriptors. */
 @InterfaceAudience.Private
@@ -161,7 +161,7 @@ class Host2NodesMap {
         return nodes[0];
       }
       // more than one node
-      return nodes[DFSUtil.getRandom().nextInt(nodes.length)];
+      return nodes[ThreadLocalRandom.current().nextInt(nodes.length)];
     } finally {
       hostmapLock.readLock().unlock();
     }

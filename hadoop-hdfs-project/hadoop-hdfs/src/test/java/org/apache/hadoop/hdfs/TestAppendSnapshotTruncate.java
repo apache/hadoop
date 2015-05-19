@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -214,8 +215,7 @@ public class TestAppendSnapshotTruncate {
     
     @Override
     public String call() throws Exception {
-      final Random r = DFSUtil.getRandom();
-      final int op = r.nextInt(6);
+      final int op = ThreadLocalRandom.current().nextInt(6);
       if (op <= 1) {
         pauseAllFiles();
         try {
@@ -229,7 +229,8 @@ public class TestAppendSnapshotTruncate {
         if (keys.length == 0) {
           return "NO-OP";
         }
-        final String snapshot = keys[r.nextInt(keys.length)];
+        final String snapshot = keys[ThreadLocalRandom.current()
+            .nextInt(keys.length)];
         final String s = checkSnapshot(snapshot);
         
         if (op == 2) {
@@ -292,13 +293,13 @@ public class TestAppendSnapshotTruncate {
 
     @Override
     public String call() throws IOException {
-      final Random r = DFSUtil.getRandom();
-      final int op = r.nextInt(9);
+      final int op = ThreadLocalRandom.current().nextInt(9);
       if (op == 0) {
         return checkFullFile();
       } else {
-        final int nBlocks = r.nextInt(4) + 1;
-        final int lastBlockSize = r.nextInt(BLOCK_SIZE) + 1;
+        final int nBlocks = ThreadLocalRandom.current().nextInt(4) + 1;
+        final int lastBlockSize = ThreadLocalRandom.current()
+            .nextInt(BLOCK_SIZE) + 1;
         final int nBytes = nBlocks*BLOCK_SIZE + lastBlockSize;
 
         if (op <= 4) {
@@ -316,8 +317,8 @@ public class TestAppendSnapshotTruncate {
           .append(n).append(" bytes to ").append(file.getName());
 
       final byte[] bytes = new byte[n];
-      DFSUtil.getRandom().nextBytes(bytes);
-      
+      ThreadLocalRandom.current().nextBytes(bytes);
+
       { // write to local file
         final FileOutputStream out = new FileOutputStream(localFile, true);
         out.write(bytes, 0, bytes.length);
@@ -446,7 +447,6 @@ public class TestAppendSnapshotTruncate {
         final Thread t = new Thread(null, new Runnable() {
           @Override
           public void run() {
-            final Random r = DFSUtil.getRandom();
             for(State s; !(s = checkErrorState()).isTerminated;) {
               if (s == State.RUNNING) {
                 isCalling.set(true);
@@ -458,7 +458,7 @@ public class TestAppendSnapshotTruncate {
                 }
                 isCalling.set(false);
               }
-              sleep(r.nextInt(100) + 50);
+              sleep(ThreadLocalRandom.current().nextInt(100) + 50);
             }
           }
         }, name);

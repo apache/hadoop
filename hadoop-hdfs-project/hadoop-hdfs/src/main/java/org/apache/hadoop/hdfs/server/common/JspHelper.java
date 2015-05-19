@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -150,7 +151,7 @@ public class JspHelper {
       throw new IOException("No active nodes contain this block");
     }
 
-    int index = doRandom ? DFSUtil.getRandom().nextInt(l) : 0;
+    int index = doRandom ? ThreadLocalRandom.current().nextInt(l) : 0;
     return nodes[index];
   }
 
