@@ -54,7 +54,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-ls \[-d\] \[-h\] \[-R\] \[-t\] \[-S\] \[-r\] \[-u\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
+          <expected-output>^-ls \[-C\] \[-d\] \[-h\] \[-R\] \[-t\] \[-S\] \[-r\] \[-u\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -91,6 +91,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^\s*modificationDate\(yyyy-MM-dd HH:mm\) fileName( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-C\s+Display the paths of files and directories only\.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

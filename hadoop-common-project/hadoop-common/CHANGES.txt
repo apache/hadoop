@@ -22,6 +22,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-8934. Shell command ls should include sort options (Jonathan Allen
     via aw)
 
+    HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
+    (Kengo Seki via aajisaka)
+
   IMPROVEMENTS
 
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation

@@ -43,6 +43,7 @@ class Ls extends FsCommand {
     factory.addClass(Lsr.class, "-lsr");
   }
 
+  private static final String OPTION_PATHONLY = "C";
   private static final String OPTION_DIRECTORY = "d";
   private static final String OPTION_HUMAN = "h";
   private static final String OPTION_RECURSIVE = "R";
@@ -52,10 +53,10 @@ class Ls extends FsCommand {
   private static final String OPTION_SIZE = "S";
 
   public static final String NAME = "ls";
-  public static final String USAGE = "[-" + OPTION_DIRECTORY + "] [-"
-      + OPTION_HUMAN + "] " + "[-" + OPTION_RECURSIVE + "] [-" + OPTION_MTIME
-      + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] " + "[-"
-      + OPTION_ATIME + "] [<path> ...]";
+  public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-"
+      + OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" + OPTION_RECURSIVE
+      + "] [-" + OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE
+      + "] [-" + OPTION_ATIME + "] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -67,6 +68,8 @@ class Ls extends FsCommand {
           "\tpermissions - userId groupId sizeOfDirectory(in bytes) modificationDate(yyyy-MM-dd HH:mm) directoryName\n\n" +
           "and file entries are of the form:\n" +
           "\tpermissions numberOfReplicas userId groupId sizeOfFile(in bytes) modificationDate(yyyy-MM-dd HH:mm) fileName\n\n" +
+          "  -" + OPTION_PATHONLY +
+          "  Display the paths of files and directories only.\n" +
           "  -" + OPTION_DIRECTORY +
           "  Directories are listed as plain files.\n" +
           "  -" + OPTION_HUMAN +
@@ -89,6 +92,7 @@ class Ls extends FsCommand {
 
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
   protected String lineFormat;
+  private boolean pathOnly;
   protected boolean dirRecurse;
   private boolean orderReverse;
   private boolean orderTime;
@@ -107,10 +111,11 @@ class Ls extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, OPTION_PATHONLY,
         OPTION_DIRECTORY, OPTION_HUMAN, OPTION_RECURSIVE, OPTION_REVERSE,
         OPTION_MTIME, OPTION_SIZE, OPTION_ATIME);
     cf.parse(args);
+    pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
     setRecursive(cf.getOpt(OPTION_RECURSIVE) && dirRecurse);
     humanReadable = cf.getOpt(OPTION_HUMAN);
@@ -121,6 +126,15 @@ class Ls extends FsCommand {
     if (args.isEmpty()) args.add(Path.CUR_DIR);
 
     initialiseOrderComparator();
+  }
+
+  /**
+   * Should display only paths of files and directories.
+   * @return true display paths only, false display all fields
+   */
+  @InterfaceAudience.Private
+  boolean isPathOnly() {
+    return this.pathOnly;
   }
 
   /**
@@ -191,15 +205,23 @@ class Ls extends FsCommand {
   protected void processPaths(PathData parent, PathData ... items)
   throws IOException {
     if (parent != null && !isRecursive() && items.length != 0) {
-      out.println("Found " + items.length + " items");
+      if (!pathOnly) {
+        out.println("Found " + items.length + " items");
+      }
       Arrays.sort(items, getOrderComparator());
     }
-    adjustColumnWidths(items);
+    if (!pathOnly) {
+      adjustColumnWidths(items);
+    }
     super.processPaths(parent, items);
   }
 
   @Override
   protected void processPath(PathData item) throws IOException {
+    if (pathOnly) {
+      out.println(item.toString());
+      return;
+    }
     FileStatus stat = item.stat;
     String line = String.format(lineFormat,
         (stat.isDirectory() ? "d" : "-"),
