@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9804. Allow long-running Balancer to login with keytab.
     (Xiao Chen via Zhe Zhang)
 
+    HDFS-8131. Implement a space balanced block placement policy (Liu Shaohui
+    via kihwal)
+
   IMPROVEMENTS
 
     HDFS-8721. Add a metric for number of encryption zones.
