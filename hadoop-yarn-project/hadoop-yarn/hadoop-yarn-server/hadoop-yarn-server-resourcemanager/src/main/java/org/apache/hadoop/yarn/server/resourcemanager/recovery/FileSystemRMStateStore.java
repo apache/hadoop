@@ -100,7 +100,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   private Path dtSequenceNumberPath = null;
   private int fsNumRetries;
   private long fsRetryInterval;
-  private boolean isHDFS;
+  private volatile boolean isHDFS;
 
   @VisibleForTesting
   Path fsWorkingPath;

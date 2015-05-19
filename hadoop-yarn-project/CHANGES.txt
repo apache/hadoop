@@ -523,6 +523,9 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3601. Fix UT TestRMFailover.testRMWebAppRedirect. (Weiwei Yang via xgong)
 
+    YARN-3677. Fix findbugs warnings in yarn-server-resourcemanager.
+    (Vinod Kumar Vavilapalli via ozawa)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
