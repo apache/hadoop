@@ -415,10 +415,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6360. TestMapreduceConfigFields is placed in wrong dir, 
     introducing compile error (Arshad Mohammad via vinayakumarb)
 
-    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
-    copySucceeded() in one thread and copyFailed() in another thread on the
-    same host. (Junping Du via ozawa)
-
     MAPREDUCE-6366. mapreduce.terasort.final.sync configuration in TeraSort
     doesn't work. (Takuya Fukudome via ozawa)
 
@@ -464,6 +460,10 @@ Release 2.7.1 - UNRELEASED
     MAPREDUCE-6251. Added a new config for JobClient to retry JobStatus calls so
     that they don't fail on history-server backed by DFSes with not so strong
     guarantees. (Craig Welch via vinodkv)
+
+    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
+    copySucceeded() in one thread and copyFailed() in another thread on the
+    same host. (Junping Du via ozawa)
 
 Release 2.7.0 - 2015-04-20
 
