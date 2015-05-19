@@ -345,6 +345,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7891. A block placement policy with best rack failure tolerance.
     (Walter Su via szetszwo)
 
+    HDFS-8131. Implement a space balanced block placement policy (Liu Shaohui
+    via kihwal)
+
   IMPROVEMENTS
 
     HDFS-3918. EditLogTailer shouldn't log WARN when other node
