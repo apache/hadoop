@@ -74,6 +74,24 @@ public class TestLs {
     LinkedList<String> options = new LinkedList<String>();
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
+    assertTrue(ls.isDirRecurse());
+    assertFalse(ls.isHumanReadable());
+    assertFalse(ls.isRecursive());
+    assertFalse(ls.isOrderReverse());
+    assertFalse(ls.isOrderSize());
+    assertFalse(ls.isOrderTime());
+    assertFalse(ls.isUseAtime());
+  }
+
+  // check the -C option is recognised
+  @Test
+  public void processOptionsPathOnly() throws IOException {
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-C");
+    Ls ls = new Ls();
+    ls.processOptions(options);
+    assertTrue(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -90,6 +108,7 @@ public class TestLs {
     options.add("-d");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertFalse(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -106,6 +125,7 @@ public class TestLs {
     options.add("-h");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertTrue(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -122,6 +142,7 @@ public class TestLs {
     options.add("-R");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertTrue(ls.isRecursive());
@@ -138,6 +159,7 @@ public class TestLs {
     options.add("-r");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -154,6 +176,7 @@ public class TestLs {
     options.add("-S");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -170,6 +193,7 @@ public class TestLs {
     options.add("-t");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -187,6 +211,7 @@ public class TestLs {
     options.add("-S");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -205,6 +230,7 @@ public class TestLs {
     options.add("-r");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -221,6 +247,7 @@ public class TestLs {
     options.add("-u");
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertFalse(ls.isPathOnly());
     assertTrue(ls.isDirRecurse());
     assertFalse(ls.isHumanReadable());
     assertFalse(ls.isRecursive());
@@ -234,6 +261,7 @@ public class TestLs {
   @Test
   public void processOptionsAll() throws IOException {
     LinkedList<String> options = new LinkedList<String>();
+    options.add("-C"); // show file path only
     options.add("-d"); // directory
     options.add("-h"); // human readable
     options.add("-R"); // recursive
@@ -243,6 +271,7 @@ public class TestLs {
     options.add("-u"); // show atime
     Ls ls = new Ls();
     ls.processOptions(options);
+    assertTrue(ls.isPathOnly());
     assertFalse(ls.isDirRecurse());
     assertTrue(ls.isHumanReadable());
     assertFalse(ls.isRecursive()); // -d overrules -R
@@ -978,6 +1007,44 @@ public class TestLs {
     inOrder.verify(out).println(testfile06.formatLineAtime(lineFormat));
     inOrder.verify(out).println(testfile05.formatLineAtime(lineFormat));
     inOrder.verify(out).println(testfile04.formatLineAtime(lineFormat));
+    verifyNoMoreInteractions(out);
+  }
+
+  // check path only display (-C option)
+  @Test
+  public void processPathDirectoryPathOnly() throws IOException {
+    TestFile testfile01 = new TestFile("testDirectory", "testFile01");
+    TestFile testfile02 = new TestFile("testDirectory", "testFile02");
+    TestFile testfile03 = new TestFile("testDirectory", "testFile03");
+    TestFile testfile04 = new TestFile("testDirectory", "testFile04");
+    TestFile testfile05 = new TestFile("testDirectory", "testFile05");
+    TestFile testfile06 = new TestFile("testDirectory", "testFile06");
+
+    TestFile testDir = new TestFile("", "testDirectory");
+    testDir.setIsDir(true);
+    testDir.addContents(testfile01, testfile02, testfile03, testfile04,
+        testfile05, testfile06);
+
+    LinkedList<PathData> pathData = new LinkedList<PathData>();
+    pathData.add(testDir.getPathData());
+
+    PrintStream out = mock(PrintStream.class);
+
+    Ls ls = new Ls();
+    ls.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-C");
+    ls.processOptions(options);
+
+    ls.processArguments(pathData);
+    InOrder inOrder = inOrder(out);
+    inOrder.verify(out).println(testfile01.getPath().toString());
+    inOrder.verify(out).println(testfile02.getPath().toString());
+    inOrder.verify(out).println(testfile03.getPath().toString());
+    inOrder.verify(out).println(testfile04.getPath().toString());
+    inOrder.verify(out).println(testfile05.getPath().toString());
+    inOrder.verify(out).println(testfile06.getPath().toString());
     verifyNoMoreInteractions(out);
   }
 

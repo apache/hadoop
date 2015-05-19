@@ -382,10 +382,11 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-d] [-h] [-R] [-t] [-S] [-r] [-u] <args> `
+Usage: `hadoop fs -ls [-C] [-d] [-h] [-R] [-t] [-S] [-r] [-u] <args> `
 
 Options:
 
+* -C: Display the paths of files and directories only.
 * -d: Directories are listed as plain files.
 * -h: Format file sizes in a human-readable fashion (eg 64.0m instead of 67108864).
 * -R: Recursively list subdirectories encountered.

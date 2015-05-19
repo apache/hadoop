@@ -488,6 +488,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11949. Add user-provided plugins to test-patch (Sean Busbey via aw)
 
+    HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
+    (Kengo Seki via aajisaka)
+
   IMPROVEMENTS
 
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation
