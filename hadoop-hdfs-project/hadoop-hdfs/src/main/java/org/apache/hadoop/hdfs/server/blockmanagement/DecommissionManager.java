@@ -36,7 +36,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
@@ -251,7 +250,7 @@ public class DecommissionManager {
    */
   private boolean isSufficient(BlockInfo block, BlockCollection bc,
       NumberReplicas numberReplicas) {
-    final int numExpected = bc.getPreferredBlockReplication();
+    final int numExpected = blockManager.getExpectedReplicaNum(bc, block);
     final int numLive = numberReplicas.liveReplicas();
     if (!blockManager.isNeededReplication(block, numExpected, numLive)) {
       // Block doesn't need replication. Skip.
@@ -285,11 +284,11 @@ public class DecommissionManager {
     return false;
   }
 
-  private static void logBlockReplicationInfo(Block block, BlockCollection bc,
+  private void logBlockReplicationInfo(BlockInfo block, BlockCollection bc,
       DatanodeDescriptor srcNode, NumberReplicas num,
       Iterable<DatanodeStorageInfo> storages) {
     int curReplicas = num.liveReplicas();
-    int curExpectedReplicas = bc.getPreferredBlockReplication();
+    int curExpectedReplicas = blockManager.getExpectedReplicaNum(bc, block);
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
@@ -561,7 +560,7 @@ public class DecommissionManager {
         // Schedule under-replicated blocks for replication if not already
         // pending
         if (blockManager.isNeededReplication(block,
-            bc.getPreferredBlockReplication(), liveReplicas)) {
+            blockManager.getExpectedReplicaNum(bc, block), liveReplicas)) {
           if (!blockManager.neededReplications.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
               namesystem.isPopulatingReplQueues()) {
@@ -569,7 +568,7 @@ public class DecommissionManager {
             blockManager.neededReplications.add(block,
                 liveReplicas,
                 num.decommissionedAndDecommissioning(),
-                bc.getPreferredBlockReplication());
+                blockManager.getExpectedReplicaNum(bc, block));
           }
         }
 
