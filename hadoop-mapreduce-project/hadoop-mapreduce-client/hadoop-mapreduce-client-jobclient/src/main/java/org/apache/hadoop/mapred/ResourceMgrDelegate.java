@@ -444,19 +444,19 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public Map<NodeId, Set<String>> getNodeToLabels() throws YarnException,
+  public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
       IOException {
     return client.getNodeToLabels();
   }
 
   @Override
-  public Map<String, Set<NodeId>> getLabelsToNodes() throws YarnException,
+  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes() throws YarnException,
       IOException {
     return client.getLabelsToNodes();
   }
 
   @Override
-  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+  public Map<NodeLabel, Set<NodeId>> getLabelsToNodes(Set<String> labels)
       throws YarnException, IOException {
     return client.getLabelsToNodes(labels);
   }

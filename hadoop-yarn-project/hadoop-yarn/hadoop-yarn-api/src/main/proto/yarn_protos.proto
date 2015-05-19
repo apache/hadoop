@@ -248,13 +248,13 @@ message NodeReportProto {
   repeated string node_labels = 10;
 }
 
-message NodeIdToLabelsProto {
+message NodeIdToLabelsInfoProto {
   optional NodeIdProto nodeId = 1;
-  repeated string nodeLabels = 2;
+  repeated NodeLabelProto nodeLabels = 2;
 }
 
 message LabelsToNodeIdsProto {
-  optional string nodeLabels = 1;
+  optional NodeLabelProto nodeLabels = 1;
   repeated NodeIdProto nodeId = 2;
 }
 

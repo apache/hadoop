@@ -28,7 +28,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdToLabelsProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.NodeIdToLabelsNameProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ReplaceLabelsOnNodeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ReplaceLabelsOnNodeRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
@@ -58,10 +58,10 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
       return;
     }
     ReplaceLabelsOnNodeRequestProtoOrBuilder p = viaProto ? proto : builder;
-    List<NodeIdToLabelsProto> list = p.getNodeToLabelsList();
+    List<NodeIdToLabelsNameProto> list = p.getNodeToLabelsList();
     this.nodeIdToLabels = new HashMap<NodeId, Set<String>>();
 
-    for (NodeIdToLabelsProto c : list) {
+    for (NodeIdToLabelsNameProto c : list) {
       this.nodeIdToLabels.put(new NodeIdPBImpl(c.getNodeId()),
           Sets.newHashSet(c.getNodeLabelsList()));
     }
@@ -80,11 +80,11 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
     if (nodeIdToLabels == null) {
       return;
     }
-    Iterable<NodeIdToLabelsProto> iterable =
-        new Iterable<NodeIdToLabelsProto>() {
+    Iterable<NodeIdToLabelsNameProto> iterable =
+        new Iterable<NodeIdToLabelsNameProto>() {
           @Override
-          public Iterator<NodeIdToLabelsProto> iterator() {
-            return new Iterator<NodeIdToLabelsProto>() {
+          public Iterator<NodeIdToLabelsNameProto> iterator() {
+            return new Iterator<NodeIdToLabelsNameProto>() {
 
               Iterator<Entry<NodeId, Set<String>>> iter = nodeIdToLabels
                   .entrySet().iterator();
@@ -95,9 +95,9 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
               }
 
               @Override
-              public NodeIdToLabelsProto next() {
+              public NodeIdToLabelsNameProto next() {
                 Entry<NodeId, Set<String>> now = iter.next();
-                return NodeIdToLabelsProto.newBuilder()
+                return NodeIdToLabelsNameProto.newBuilder()
                     .setNodeId(convertToProtoFormat(now.getKey())).clearNodeLabels()
                     .addAllNodeLabels(now.getValue()).build();
               }

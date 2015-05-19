@@ -619,7 +619,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<NodeId, Set<String>> getNodeToLabels()
+  public abstract Map<NodeId, Set<NodeLabel>> getNodeToLabels()
       throws YarnException, IOException;
 
   /**
@@ -634,7 +634,7 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<String, Set<NodeId>> getLabelsToNodes()
+  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
       throws YarnException, IOException;
 
   /**
@@ -650,8 +650,8 @@ public abstract class YarnClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
-      throws YarnException, IOException;
+  public abstract Map<NodeLabel, Set<NodeId>> getLabelsToNodes(
+      Set<String> labels) throws YarnException, IOException;
 
   /**
    * <p>

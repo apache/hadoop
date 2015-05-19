@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +27,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
-
-import com.google.common.collect.Sets;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdToLabelsProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdToLabelsInfoProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNodesToLabelsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNodesToLabelsResponseProtoOrBuilder;
 
@@ -42,8 +44,8 @@ public class GetNodesToLabelsResponsePBImpl extends
   GetNodesToLabelsResponseProto.Builder builder = null;
   boolean viaProto = false;
 
-  private Map<NodeId, Set<String>> nodeToLabels;
-  
+  private Map<NodeId, Set<NodeLabel>> nodeToLabels;
+
   public GetNodesToLabelsResponsePBImpl() {
     this.builder = GetNodesToLabelsResponseProto.newBuilder();
   }
@@ -58,12 +60,15 @@ public class GetNodesToLabelsResponsePBImpl extends
       return;
     }
     GetNodesToLabelsResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<NodeIdToLabelsProto> list = p.getNodeToLabelsList();
-    this.nodeToLabels = new HashMap<NodeId, Set<String>>();
+    List<NodeIdToLabelsInfoProto> list = p.getNodeToLabelsList();
+    this.nodeToLabels = new HashMap<NodeId, Set<NodeLabel>>();
 
-    for (NodeIdToLabelsProto c : list) {
-      this.nodeToLabels.put(new NodeIdPBImpl(c.getNodeId()),
-          Sets.newHashSet(c.getNodeLabelsList()));
+    for (NodeIdToLabelsInfoProto c : list) {
+      Set<NodeLabel> labels = new HashSet<NodeLabel>();
+      for (NodeLabelProto l : c.getNodeLabelsList()) {
+        labels.add(new NodeLabelPBImpl(l));
+      }
+      this.nodeToLabels.put(new NodeIdPBImpl(c.getNodeId()), labels);
     }
   }
 
@@ -80,13 +85,13 @@ public class GetNodesToLabelsResponsePBImpl extends
     if (nodeToLabels == null) {
       return;
     }
-    Iterable<NodeIdToLabelsProto> iterable =
-        new Iterable<NodeIdToLabelsProto>() {
+    Iterable<NodeIdToLabelsInfoProto> iterable =
+        new Iterable<NodeIdToLabelsInfoProto>() {
           @Override
-          public Iterator<NodeIdToLabelsProto> iterator() {
-            return new Iterator<NodeIdToLabelsProto>() {
+          public Iterator<NodeIdToLabelsInfoProto> iterator() {
+            return new Iterator<NodeIdToLabelsInfoProto>() {
 
-              Iterator<Entry<NodeId, Set<String>>> iter = nodeToLabels
+              Iterator<Entry<NodeId, Set<NodeLabel>>> iter = nodeToLabels
                   .entrySet().iterator();
 
               @Override
@@ -95,11 +100,16 @@ public class GetNodesToLabelsResponsePBImpl extends
               }
 
               @Override
-              public NodeIdToLabelsProto next() {
-                Entry<NodeId, Set<String>> now = iter.next();
-                return NodeIdToLabelsProto.newBuilder()
+              public NodeIdToLabelsInfoProto next() {
+                Entry<NodeId, Set<NodeLabel>> now = iter.next();
+                Set<NodeLabelProto> labelProtoList =
+                    new HashSet<NodeLabelProto>();
+                for (NodeLabel l : now.getValue()) {
+                  labelProtoList.add(convertToProtoFormat(l));
+                }
+                return NodeIdToLabelsInfoProto.newBuilder()
                     .setNodeId(convertToProtoFormat(now.getKey()))
-                    .addAllNodeLabels(now.getValue()).build();
+                    .addAllNodeLabels(labelProtoList).build();
               }
 
               @Override
@@ -134,13 +144,13 @@ public class GetNodesToLabelsResponsePBImpl extends
   }
 
   @Override
-  public Map<NodeId, Set<String>> getNodeToLabels() {
+  public Map<NodeId, Set<NodeLabel>> getNodeToLabels() {
     initNodeToLabels();
     return this.nodeToLabels;
   }
 
   @Override
-  public void setNodeToLabels(Map<NodeId, Set<String>> map) {
+  public void setNodeToLabels(Map<NodeId, Set<NodeLabel>> map) {
     initNodeToLabels();
     nodeToLabels.clear();
     nodeToLabels.putAll(map);
@@ -150,6 +160,10 @@ public class GetNodesToLabelsResponsePBImpl extends
     return ((NodeIdPBImpl)t).getProto();
   }
   
+  private NodeLabelProto convertToProtoFormat(NodeLabel t) {
+    return ((NodeLabelPBImpl)t).getProto();
+  }
+
   @Override
   public int hashCode() {
     assert false : "hashCode not designed";
