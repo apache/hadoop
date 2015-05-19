@@ -610,10 +610,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
       DatanodeDescriptor[] sources, DatanodeStorageInfo[] targets,
-      short[] liveBlockIndices, ECSchema ecSchema) {
+      short[] liveBlockIndices, ECSchema ecSchema, int cellSize) {
     assert (block != null && sources != null && sources.length > 0);
     BlockECRecoveryInfo task = new BlockECRecoveryInfo(block, sources, targets,
-        liveBlockIndices, ecSchema);
+        liveBlockIndices, ecSchema, cellSize);
     erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block recovery task " + task + "to "
         + getName() + ", current queue size is " + erasurecodeBlocks.size());

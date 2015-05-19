@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -1560,14 +1561,14 @@ public class BlockManager {
             assert rw instanceof ErasureCodingWork;
             assert rw.targets.length > 0;
             String src = block.getBlockCollection().getName();
-            ECSchema ecSchema = null;
+            ErasureCodingZoneInfo ecZoneInfo = null;
             try {
-              ecSchema = namesystem.getECSchemaForPath(src);
+              ecZoneInfo = namesystem.getErasureCodingZoneInfoForPath(src);
             } catch (IOException e) {
               blockLog
-                  .warn("Failed to get the EC schema for the file {} ", src);
+                  .warn("Failed to get the EC zone info for the file {} ", src);
             }
-            if (ecSchema == null) {
+            if (ecZoneInfo == null) {
               blockLog.warn("No EC schema found for the file {}. "
                   + "So cannot proceed for recovery", src);
               // TODO: we may have to revisit later for what we can do better to
@@ -1577,7 +1578,8 @@ public class BlockManager {
             rw.targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
                 new ExtendedBlock(namesystem.getBlockPoolId(), block),
                 rw.srcNodes, rw.targets,
-                ((ErasureCodingWork) rw).liveBlockIndicies, ecSchema);
+                ((ErasureCodingWork) rw).liveBlockIndicies,
+                ecZoneInfo.getSchema(), ecZoneInfo.getCellSize());
           } else {
             rw.srcNodes[0].addBlockToBeReplicated(block, targets);
           }

@@ -19,12 +19,20 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -78,17 +86,21 @@ public class ErasureCodingZoneManager {
           : inode.getXAttrFeature().getXAttrs();
       for (XAttr xAttr : xAttrs) {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
-          String schemaName = new String(xAttr.getValue());
+          ByteArrayInputStream bIn=new ByteArrayInputStream(xAttr.getValue());
+          DataInputStream dIn=new DataInputStream(bIn);
+          int cellSize = WritableUtils.readVInt(dIn);
+          String schemaName = WritableUtils.readString(dIn);
           ECSchema schema = dir.getFSNamesystem().getECSchemaManager()
               .getSchema(schemaName);
-          return new ErasureCodingZoneInfo(inode.getFullPathName(), schema);
+          return new ErasureCodingZoneInfo(inode.getFullPathName(), schema,
+              cellSize);
         }
       }
     }
     return null;
   }
 
-  XAttr createErasureCodingZone(String src, ECSchema schema)
+  XAttr createErasureCodingZone(String src, ECSchema schema, int cellSize)
       throws IOException {
     assert dir.hasWriteLock();
     final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
@@ -113,10 +125,24 @@ public class ErasureCodingZoneManager {
       schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     }
 
-    // Now persist the schema name in xattr
-    byte[] schemaBytes = schema.getSchemaName().getBytes();
-    final XAttr ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_ZONE,
-        schemaBytes);
+    if (cellSize <= 0) {
+      cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+    }
+
+    // Write the cellsize first and then schema name
+    final XAttr ecXAttr;
+    DataOutputStream dOut = null;
+    try {
+      ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+      dOut = new DataOutputStream(bOut);
+      WritableUtils.writeVInt(dOut, cellSize);
+      // Now persist the schema name in xattr
+      WritableUtils.writeString(dOut, schema.getSchemaName());
+      ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_ZONE,
+          bOut.toByteArray());
+    } finally {
+      IOUtils.closeStream(dOut);
+    }
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
     FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,

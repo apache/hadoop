@@ -1506,7 +1506,8 @@ public class PBHelper {
         fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
             : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-        fs.hasEcSchema() ? PBHelper.convertECSchema(fs.getEcSchema()) : null);
+        fs.hasEcSchema() ? PBHelper.convertECSchema(fs.getEcSchema()) : null,
+        fs.hasStripeCellSize() ? fs.getStripeCellSize() : 0);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1570,6 +1571,7 @@ public class PBHelper {
     if(fs.getECSchema() != null) {
       builder.setEcSchema(PBHelper.convertECSchema(fs.getECSchema()));
     }
+    builder.setStripeCellSize(fs.getStripeCellSize());
     return builder.build();
   }
   
@@ -3157,12 +3159,14 @@ public class PBHelper {
 
   public static ErasureCodingZoneInfoProto convertECZoneInfo(ErasureCodingZoneInfo ecZoneInfo) {
     return ErasureCodingZoneInfoProto.newBuilder().setDir(ecZoneInfo.getDir())
-        .setSchema(convertECSchema(ecZoneInfo.getSchema())).build();
+        .setSchema(convertECSchema(ecZoneInfo.getSchema()))
+        .setCellSize(ecZoneInfo.getCellSize()).build();
   }
 
   public static ErasureCodingZoneInfo convertECZoneInfo(ErasureCodingZoneInfoProto ecZoneInfoProto) {
     return new ErasureCodingZoneInfo(ecZoneInfoProto.getDir(),
-        convertECSchema(ecZoneInfoProto.getSchema()));
+        convertECSchema(ecZoneInfoProto.getSchema()),
+        ecZoneInfoProto.getCellSize());
   }
   
   public static BlockECRecoveryInfo convertBlockECRecoveryInfo(
@@ -3196,9 +3200,11 @@ public class PBHelper {
     }
 
     ECSchema ecSchema = convertECSchema(blockEcRecoveryInfoProto.getEcSchema());
+    int cellSize = blockEcRecoveryInfoProto.getCellSize();
 
     return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecSchema);
+        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecSchema,
+        cellSize);
   }
 
   public static BlockECRecoveryInfoProto convertBlockECRecoveryInfo(
@@ -3224,6 +3230,7 @@ public class PBHelper {
     builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
 
     builder.setEcSchema(convertECSchema(blockEcRecoveryInfo.getECSchema()));
+    builder.setCellSize(blockEcRecoveryInfo.getCellSize());
 
     return builder.build();
   }

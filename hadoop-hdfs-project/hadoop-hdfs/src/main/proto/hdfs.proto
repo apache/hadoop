@@ -359,7 +359,8 @@ message HdfsFileStatusProto {
 
   // Optional field for erasure coding
   optional ECSchemaProto ecSchema = 17;
-} 
+  optional uint32 stripeCellSize = 18;
+}
 
 /**
  * Checksum algorithms/types used in HDFS

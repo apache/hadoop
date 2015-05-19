@@ -2281,16 +2281,17 @@ public class DistributedFileSystem extends FileSystem {
    * 
    * @param path Directory to create the ec zone
    * @param schema ECSchema for the zone. If not specified default will be used.
+   * @param cellSize Cellsize for the striped erasure coding
    * @throws IOException
    */
-  public void createErasureCodingZone(final Path path, final ECSchema schema)
-      throws IOException {
+  public void createErasureCodingZone(final Path path, final ECSchema schema,
+      final int cellSize) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        dfs.createErasureCodingZone(getPathName(p), schema);
+        dfs.createErasureCodingZone(getPathName(p), schema, cellSize);
         return null;
       }
 
@@ -2298,7 +2299,7 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          myDfs.createErasureCodingZone(p, schema);
+          myDfs.createErasureCodingZone(p, schema, cellSize);
           return null;
         }
         throw new UnsupportedOperationException(

@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -317,7 +318,7 @@ class FSDirStatAndListingOp {
       if (fsd.getINode4DotSnapshot(srcs) != null) {
         return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
             HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null, 0);
       }
       return null;
     }
@@ -385,8 +386,10 @@ class FSDirStatAndListingOp {
     final FileEncryptionInfo feInfo = isRawPath ? null :
         fsd.getFileEncryptionInfo(node, snapshot, iip);
     
-    final ECSchema schema = fsd.getECSchema(iip);
-    
+    final ErasureCodingZoneInfo ecZoneInfo = fsd.getECZoneInfo(iip);
+    final ECSchema schema = ecZoneInfo != null ? ecZoneInfo.getSchema() : null;
+    final int cellSize = ecZoneInfo != null ? ecZoneInfo.getCellSize() : 0;
+
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
@@ -417,7 +420,8 @@ class FSDirStatAndListingOp {
         childrenNum,
         feInfo,
         storagePolicy,
-        schema);
+        schema,
+        cellSize);
   }
 
   private static INodeAttributes getINodeAttributes(
@@ -464,8 +468,10 @@ class FSDirStatAndListingOp {
     }
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
-    final ECSchema schema = fsd.getECSchema(iip);
-        
+    final ErasureCodingZoneInfo ecZoneInfo = fsd.getECZoneInfo(iip);
+    final ECSchema schema = ecZoneInfo != null ? ecZoneInfo.getSchema() : null;
+    final int cellSize = ecZoneInfo != null ? ecZoneInfo.getCellSize() : 0;
+
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
           blocksize, node.getModificationTime(snapshot),
@@ -473,7 +479,8 @@ class FSDirStatAndListingOp {
           getPermissionForFileStatus(nodeAttrs, isEncrypted),
           nodeAttrs.getUserName(), nodeAttrs.getGroupName(),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum, feInfo, storagePolicy, schema);
+          node.getId(), loc, childrenNum, feInfo, storagePolicy, schema,
+          cellSize);
     // Set caching information for the located blocks.
     if (loc != null) {
       CacheManager cacheManager = fsd.getFSNamesystem().getCacheManager();

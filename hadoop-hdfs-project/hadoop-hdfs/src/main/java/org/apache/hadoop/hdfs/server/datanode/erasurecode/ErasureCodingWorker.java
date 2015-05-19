@@ -269,7 +269,7 @@ public final class ErasureCodingWorker {
       ECSchema schema = recoveryInfo.getECSchema();
       dataBlkNum = schema.getNumDataUnits();
       parityBlkNum = schema.getNumParityUnits();
-      cellSize = schema.getChunkSize();
+      cellSize = recoveryInfo.getCellSize();
 
       blockGroup = recoveryInfo.getExtendedBlock();
 

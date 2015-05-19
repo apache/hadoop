@@ -663,7 +663,8 @@ public class TestPBHelper {
     short[] liveBlkIndices0 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo0 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0, ErasureCodingSchemaManager.getSystemDefaultSchema());
+        liveBlkIndices0, ErasureCodingSchemaManager.getSystemDefaultSchema(),
+        64 * 1024);
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -677,7 +678,8 @@ public class TestPBHelper {
     short[] liveBlkIndices1 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo1 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1, ErasureCodingSchemaManager.getSystemDefaultSchema());
+        liveBlkIndices1, ErasureCodingSchemaManager.getSystemDefaultSchema(),
+        64 * 1024);
     List<BlockECRecoveryInfo> blkRecoveryInfosList = new ArrayList<BlockECRecoveryInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);

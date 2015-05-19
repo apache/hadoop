@@ -1422,13 +1422,16 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void createErasureCodingZone(String src, ECSchema schema)
+  public void createErasureCodingZone(String src, ECSchema schema, int cellSize)
       throws IOException {
     final CreateErasureCodingZoneRequestProto.Builder builder =
         CreateErasureCodingZoneRequestProto.newBuilder();
     builder.setSrc(src);
     if (schema != null) {
       builder.setSchema(PBHelper.convertECSchema(schema));
+    }
+    if (cellSize > 0) {
+      builder.setCellSize(cellSize);
     }
     CreateErasureCodingZoneRequestProto req = builder.build();
     try {

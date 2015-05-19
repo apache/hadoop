@@ -73,7 +73,7 @@ public class TestDFSStripedInputStream {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.mkdirs(dirPath);
-    fs.getClient().createErasureCodingZone(dirPath.toString(), null);
+    fs.getClient().createErasureCodingZone(dirPath.toString(), null, CELLSIZE);
   }
 
   @After
@@ -94,7 +94,7 @@ public class TestDFSStripedInputStream {
     LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(
         filePath.toString(), 0, BLOCK_GROUP_SIZE * numBlocks);
     final DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
-        filePath.toString(), false, schema);
+        filePath.toString(), false, schema, CELLSIZE);
 
     List<LocatedBlock> lbList = lbs.getLocatedBlocks();
     for (LocatedBlock aLbList : lbList) {
@@ -146,7 +146,7 @@ public class TestDFSStripedInputStream {
       }
     }
     DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
-            filePath.toString(), false, schema);
+        filePath.toString(), false, schema, CELLSIZE);
 
     int[] startOffsets = {0, 1, CELLSIZE - 102, CELLSIZE, CELLSIZE + 102,
         CELLSIZE*DATA_BLK_NUM, CELLSIZE*DATA_BLK_NUM + 102,
@@ -188,7 +188,7 @@ public class TestDFSStripedInputStream {
     }
     DFSStripedInputStream in =
         new DFSStripedInputStream(fs.getClient(), filePath.toString(), false,
-            ErasureCodingSchemaManager.getSystemDefaultSchema());
+            ErasureCodingSchemaManager.getSystemDefaultSchema(), CELLSIZE);
     int readSize = BLOCK_GROUP_SIZE;
     byte[] readBuffer = new byte[readSize];
     byte[] expected = new byte[readSize];
@@ -284,7 +284,7 @@ public class TestDFSStripedInputStream {
 
     DFSStripedInputStream in =
         new DFSStripedInputStream(fs.getClient(), filePath.toString(),
-            false, schema);
+            false, schema, CELLSIZE);
 
     byte[] expected = new byte[fileSize];
 

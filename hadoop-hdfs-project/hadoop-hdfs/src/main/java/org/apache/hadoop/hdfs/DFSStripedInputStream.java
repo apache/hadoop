@@ -125,12 +125,12 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final CompletionService<Integer> readingService;
 
   DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum,
-      ECSchema schema) throws IOException {
+      ECSchema schema, int cellSize) throws IOException {
     super(dfsClient, src, verifyChecksum);
 
     assert schema != null;
     this.schema = schema;
-    cellSize = schema.getChunkSize();
+    this.cellSize = cellSize;
     dataBlkNum = (short) schema.getNumDataUnits();
     parityBlkNum = (short) schema.getNumParityUnits();
     groupSize = dataBlkNum;
@@ -189,7 +189,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         targetBlockGroup, cellSize, dataBlkNum, parityBlkNum);
     // The purpose is to get start offset into each block.
     long[] offsetsForInternalBlocks = getStartOffsetsForInternalBlocks(schema,
-        targetBlockGroup, offsetIntoBlockGroup);
+        cellSize, targetBlockGroup, offsetIntoBlockGroup);
     Preconditions.checkNotNull(offsetsForInternalBlocks);
 
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
@@ -514,8 +514,8 @@ public class DFSStripedInputStream extends DFSInputStream {
     // Refresh the striped block group
     LocatedStripedBlock blockGroup = getBlockGroupAt(blockStartOffset);
 
-    AlignedStripe[] stripes = divideByteRangeIntoStripes(schema, blockGroup,
-        start, end, buf, offset);
+    AlignedStripe[] stripes = divideByteRangeIntoStripes(schema, cellSize,
+        blockGroup, start, end, buf, offset);
     for (AlignedStripe stripe : stripes) {
       fetchOneStripe(blockGroup, buf, stripe, corruptedBlockMap);
     }

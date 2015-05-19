@@ -25,10 +25,12 @@ public class ErasureCodingZoneInfo {
 
   private String dir;
   private ECSchema schema;
+  private int cellSize;
 
-  public ErasureCodingZoneInfo(String dir, ECSchema schema) {
+  public ErasureCodingZoneInfo(String dir, ECSchema schema, int cellSize) {
     this.dir = dir;
     this.schema = schema;
+    this.cellSize = cellSize;
   }
 
   /**
@@ -49,8 +51,16 @@ public class ErasureCodingZoneInfo {
     return schema;
   }
 
+  /**
+   * Get cellSize for the EC Zone
+   */
+  public int getCellSize() {
+    return cellSize;
+  }
+
   @Override
   public String toString() {
-    return "Dir: " + getDir() + ", Schema: " + schema;
+    return "Dir: " + getDir() + ", Schema: " + schema + ", cellSize: "
+        + cellSize;
   }
 }

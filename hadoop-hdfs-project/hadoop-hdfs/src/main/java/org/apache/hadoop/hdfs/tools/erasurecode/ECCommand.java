@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.StringUtils;
@@ -88,14 +89,23 @@ public abstract class ECCommand extends Command {
         + "Options :\n"
         + "  -s <schemaName> : EC schema name to encode files. "
         + "If not passed default schema will be used\n"
+        + "  -c <cellSize> : cell size to use for striped encoding files."
+        + " If not passed default cellsize of "
+        + HdfsConstants.BLOCK_STRIPED_CELL_SIZE + " will be used\n"
         + "  <path>  : Path to an empty directory. Under this directory "
         + "files will be encoded using specified schema";
     private String schemaName;
+    private int cellSize = 0;
     private ECSchema schema = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       schemaName = StringUtils.popOptionWithArgument("-s", args);
+      String cellSizeStr = StringUtils.popOptionWithArgument("-c", args);
+      if (cellSizeStr != null) {
+        cellSize = (int) StringUtils.TraditionalBinaryPrefix
+            .string2long(cellSizeStr);
+      }
       if (args.isEmpty()) {
         throw new HadoopIllegalArgumentException("<path> is missing");
       }
@@ -131,7 +141,7 @@ public abstract class ECCommand extends Command {
             throw new HadoopIllegalArgumentException(sb.toString());
           }
         }
-        dfs.createErasureCodingZone(item.path, schema);
+        dfs.createErasureCodingZone(item.path, schema, cellSize);
         out.println("EC Zone created successfully at " + item.path);
       } catch (IOException e) {
         throw new IOException("Unable to create EC zone for the path "

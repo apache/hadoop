@@ -7555,14 +7555,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param srcArg  the path of a directory which will be the root of the
    *                erasure coding zone. The directory must be empty.
    * @param schema  ECSchema for the erasure coding zone
-   *
+   * @param cellSize Cell size of stripe 
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
   void createErasureCodingZone(final String srcArg, final ECSchema schema,
-      final boolean logRetryCache) throws IOException, UnresolvedLinkException,
-      SafeModeException, AccessControlException {
+      int cellSize, final boolean logRetryCache) throws IOException,
+      UnresolvedLinkException, SafeModeException, AccessControlException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = null;
@@ -7585,7 +7585,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode("Cannot create erasure coding zone on " + src);
       src = dir.resolvePath(pc, src, pathComponents);
 
-      final XAttr ecXAttr = dir.createErasureCodingZone(src, schema);
+      final XAttr ecXAttr = dir.createErasureCodingZone(src, schema, cellSize);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ecXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
@@ -7604,9 +7604,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   ErasureCodingInfo getErasureCodingInfo(String src) throws AccessControlException,
       UnresolvedLinkException, IOException {
-    ECSchema schema = getECSchemaForPath(src);
-    if (schema != null) {
-      return new ErasureCodingInfo(src, schema);
+    ErasureCodingZoneInfo zoneInfo = getErasureCodingZoneInfo(src);
+    if (zoneInfo != null) {
+      return new ErasureCodingInfo(src, zoneInfo.getSchema());
     }
     return null;
   }
@@ -7614,21 +7614,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the erasure coding zone information for specified path
    */
-  ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws AccessControlException,
-      UnresolvedLinkException, IOException {
+  ErasureCodingZoneInfo getErasureCodingZoneInfo(String src)
+      throws AccessControlException, UnresolvedLinkException, IOException {
     checkOperation(OperationCategory.READ);
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(src);
-    final FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.READ);
-      }
-      return dir.getECZoneInfo(iip);
+      return getErasureCodingZoneInfoForPath(src);
     } finally {
       readUnlock();
     }
@@ -7849,24 +7841,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override
-  public ECSchema getECSchemaForPath(String src) throws IOException {
-    checkOperation(OperationCategory.READ);
+  public ErasureCodingZoneInfo getErasureCodingZoneInfoForPath(String src)
+      throws IOException {
     final byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(src);
     final FSPermissionChecker pc = getPermissionChecker();
-    readLock();
-    try {
-      checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.READ);
-      }
-      // Get schema set for the zone
-      return dir.getECSchema(iip);
-    } finally {
-      readUnlock();
+    src = dir.resolvePath(pc, src, pathComponents);
+    final INodesInPath iip = dir.getINodesInPath(src, true);
+    if (isPermissionEnabled) {
+      dir.checkPathAccess(pc, iip, FsAction.READ);
     }
+    return dir.getECZoneInfo(iip);
   }
 
 }

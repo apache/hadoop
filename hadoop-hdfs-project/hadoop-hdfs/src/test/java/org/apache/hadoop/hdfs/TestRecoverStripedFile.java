@@ -77,7 +77,7 @@ public class TestRecoverStripedFile {
     cluster.waitActive();
     
     fs = cluster.getFileSystem();
-    fs.getClient().createErasureCodingZone("/", null);
+    fs.getClient().createErasureCodingZone("/", null, 0);
 
     List<DataNode> datanodes = cluster.getDataNodes();
     for (int i = 0; i < dnNum; i++) {

@@ -74,7 +74,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     cluster.waitActive();
     dfs = cluster.getFileSystem();
     dfs.mkdirs(dir);
-    dfs.createErasureCodingZone(dir, null);
+    dfs.createErasureCodingZone(dir, null, 0);
   }
 
   @After

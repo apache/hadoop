@@ -78,25 +78,22 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     private StorageType[] targetStorageTypes;
     private final short[] liveBlockIndices;
     private final ECSchema ecSchema;
+    private final int cellSize;
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices,
-        ECSchema ecSchema) {
-      this.block = block;
-      this.sources = sources;
-      this.targets = DatanodeStorageInfo.toDatanodeInfos(targetDnStorageInfo);
-      this.targetStorageIDs = DatanodeStorageInfo
-          .toStorageIDs(targetDnStorageInfo);
-      this.targetStorageTypes = DatanodeStorageInfo
-          .toStorageTypes(targetDnStorageInfo);
-      this.liveBlockIndices = liveBlockIndices;
-      this.ecSchema = ecSchema;
+        ECSchema ecSchema, int cellSize) {
+      this(block, sources, DatanodeStorageInfo
+          .toDatanodeInfos(targetDnStorageInfo), DatanodeStorageInfo
+          .toStorageIDs(targetDnStorageInfo), DatanodeStorageInfo
+          .toStorageTypes(targetDnStorageInfo), liveBlockIndices, ecSchema,
+          cellSize);
     }
-    
+
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeInfo[] targets, String[] targetStorageIDs,
         StorageType[] targetStorageTypes, short[] liveBlockIndices,
-        ECSchema ecSchema) {
+        ECSchema ecSchema, int cellSize) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
@@ -104,6 +101,7 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
       this.targetStorageTypes = targetStorageTypes;
       this.liveBlockIndices = liveBlockIndices;
       this.ecSchema = ecSchema;
+      this.cellSize = cellSize;
     }
 
     public ExtendedBlock getExtendedBlock() {
@@ -132,6 +130,10 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     
     public ECSchema getECSchema() {
       return ecSchema;
+    }
+
+    public int getCellSize() {
+      return cellSize;
     }
 
     @Override
