@@ -250,6 +250,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3565. NodeHeartbeatRequest/RegisterNodeManagerRequest should use 
     NodeLabel object instead of String. (Naganarasimha G R via wangda)
 
+    YARN-3583. Support of NodeLabel object instead of plain String 
+    in YarnClient side. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

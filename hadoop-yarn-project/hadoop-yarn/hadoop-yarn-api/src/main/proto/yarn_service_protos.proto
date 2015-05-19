@@ -198,7 +198,7 @@ message GetNodesToLabelsRequestProto {
 }
 
 message GetNodesToLabelsResponseProto {
-  repeated NodeIdToLabelsProto nodeToLabels = 1;
+  repeated NodeIdToLabelsInfoProto nodeToLabels = 1;
 }
 
 message GetLabelsToNodesRequestProto {

@@ -67,6 +67,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
@@ -87,6 +89,7 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -458,9 +461,9 @@ public class TestYarnClient {
     client.start();
 
     // Get labels to nodes mapping
-    Map<String, Set<NodeId>> expectedLabelsToNodes =
+    Map<NodeLabel, Set<NodeId>> expectedLabelsToNodes =
         ((MockYarnClient)client).getLabelsToNodesMap();
-    Map<String, Set<NodeId>> labelsToNodes = client.getLabelsToNodes();
+    Map<NodeLabel, Set<NodeId>> labelsToNodes = client.getLabelsToNodes();
     Assert.assertEquals(labelsToNodes, expectedLabelsToNodes);
     Assert.assertEquals(labelsToNodes.size(), 3);
 
@@ -476,7 +479,32 @@ public class TestYarnClient {
     client.close();
   }
 
+  @Test (timeout = 10000)
+  public void testGetNodesToLabels() throws YarnException, IOException {
+    Configuration conf = new Configuration();
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    // Get labels to nodes mapping
+    Map<NodeId, Set<NodeLabel>> expectedNodesToLabels = ((MockYarnClient) client)
+        .getNodeToLabelsMap();
+    Map<NodeId, Set<NodeLabel>> nodesToLabels = client.getNodeToLabels();
+    Assert.assertEquals(nodesToLabels, expectedNodesToLabels);
+    Assert.assertEquals(nodesToLabels.size(), 1);
+
+    // Verify exclusivity
+    Set<NodeLabel> labels = nodesToLabels.get(NodeId.newInstance("host", 0));
+    for (NodeLabel label : labels) {
+      Assert.assertFalse(label.isExclusive());
+    }
+
+    client.stop();
+    client.close();
+  }
+
   private static class MockYarnClient extends YarnClientImpl {
+
     private ApplicationReport mockReport;
     private List<ApplicationReport> reports;
     private HashMap<ApplicationId, List<ApplicationAttemptReport>> attempts = 
@@ -498,6 +526,8 @@ public class TestYarnClient {
       mock(GetContainerReportResponse.class);
     GetLabelsToNodesResponse mockLabelsToNodesResponse =
       mock(GetLabelsToNodesResponse.class);
+    GetNodesToLabelsResponse mockNodeToLabelsResponse =
+        mock(GetNodesToLabelsResponse.class);
 
     public MockYarnClient() {
       super();
@@ -537,6 +567,9 @@ public class TestYarnClient {
         when(rmClient.getLabelsToNodes(any(GetLabelsToNodesRequest.class)))
             .thenReturn(mockLabelsToNodesResponse);
         
+        when(rmClient.getNodeToLabels(any(GetNodesToLabelsRequest.class)))
+            .thenReturn(mockNodeToLabelsResponse);
+
         historyClient = mock(AHSClient.class);
         
       } catch (YarnException e) {
@@ -704,7 +737,7 @@ public class TestYarnClient {
     }
 
     @Override
-    public Map<String, Set<NodeId>> getLabelsToNodes()
+    public Map<NodeLabel, Set<NodeId>> getLabelsToNodes()
         throws YarnException, IOException {
       when(mockLabelsToNodesResponse.getLabelsToNodes()).thenReturn(
           getLabelsToNodesMap());
@@ -712,32 +745,49 @@ public class TestYarnClient {
     }
 
     @Override
-    public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+    public Map<NodeLabel, Set<NodeId>> getLabelsToNodes(Set<String> labels)
         throws YarnException, IOException {
       when(mockLabelsToNodesResponse.getLabelsToNodes()).thenReturn(
           getLabelsToNodesMap(labels));
       return super.getLabelsToNodes(labels);
     }
 
-    public Map<String, Set<NodeId>> getLabelsToNodesMap() {
-      Map<String, Set<NodeId>> map = new HashMap<String, Set<NodeId>>();
+    public Map<NodeLabel, Set<NodeId>> getLabelsToNodesMap() {
+      Map<NodeLabel, Set<NodeId>> map = new HashMap<NodeLabel, Set<NodeId>>();
       Set<NodeId> setNodeIds =
           new HashSet<NodeId>(Arrays.asList(
           NodeId.newInstance("host1", 0), NodeId.newInstance("host2", 0)));
-      map.put("x", setNodeIds);
-      map.put("y", setNodeIds);
-      map.put("z", setNodeIds);
+      map.put(NodeLabel.newInstance("x"), setNodeIds);
+      map.put(NodeLabel.newInstance("y"), setNodeIds);
+      map.put(NodeLabel.newInstance("z"), setNodeIds);
       return map;
     }
 
-    public Map<String, Set<NodeId>> getLabelsToNodesMap(Set<String> labels) {
-      Map<String, Set<NodeId>> map = new HashMap<String, Set<NodeId>>();
+    public Map<NodeLabel, Set<NodeId>> getLabelsToNodesMap(Set<String> labels) {
+      Map<NodeLabel, Set<NodeId>> map = new HashMap<NodeLabel, Set<NodeId>>();
       Set<NodeId> setNodeIds =
           new HashSet<NodeId>(Arrays.asList(
           NodeId.newInstance("host1", 0), NodeId.newInstance("host2", 0)));
       for(String label : labels) {
-        map.put(label, setNodeIds);
+        map.put(NodeLabel.newInstance(label), setNodeIds);
       }
+      return map;
+    }
+
+    @Override
+    public Map<NodeId, Set<NodeLabel>> getNodeToLabels() throws YarnException,
+        IOException {
+      when(mockNodeToLabelsResponse.getNodeToLabels()).thenReturn(
+          getNodeToLabelsMap());
+      return super.getNodeToLabels();
+    }
+
+    public Map<NodeId, Set<NodeLabel>> getNodeToLabelsMap() {
+      Map<NodeId, Set<NodeLabel>> map = new HashMap<NodeId, Set<NodeLabel>>();
+      Set<NodeLabel> setNodeLabels = new HashSet<NodeLabel>(Arrays.asList(
+          NodeLabel.newInstance("x", false),
+          NodeLabel.newInstance("y", false)));
+      map.put(NodeId.newInstance("host", 0), setNodeLabels);
       return map;
     }
 
