@@ -163,4 +163,8 @@ class RWTransaction extends Transaction {
   public void logAddBlock(String src, FlatINodeFileFeature file) {
     fsd.getEditLog().logAddBlock(src, file);
   }
+
+  public void logCloseFile(String path, FlatINode inode) {
+    fsd.getEditLog().logCloseFile(fsd.ugid(), path, inode);
+  }
 }

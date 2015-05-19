@@ -127,6 +127,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -2992,25 +2993,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
    */
-  boolean checkFileProgress(String src, INodeFile v, boolean checkall) {
-    assert hasReadLock();
-    if (checkall) {
-      return blockManager.checkBlocksProperlyReplicated(src, v
-          .getBlocks());
-    } else {
-      // check the penultimate block of this file
-      BlockInfoContiguous b = v.getPenultimateBlock();
-      return b == null ||
-          blockManager.checkBlocksProperlyReplicated(
-              src, new BlockInfoContiguous[] { b });
-    }
-  }
-
-  /**
-   * Check that the indicated file's blocks are present and
-   * replicated.  If not, return false. If checkall is true, then check
-   * all blocks, otherwise check only penultimate block.
-   */
   boolean checkFileProgress(String src, FlatINodeFileFeature v,
       boolean checkall) {
     assert hasReadLock();
@@ -3630,6 +3612,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     blockManager.checkReplication(pendingFile);
   }
 
+  void finalizeINodeFileUnderConstruction(RWTransaction tx,
+      String src, FlatINode.Builder inode, FlatINodeFileFeature.Builder file)
+      throws IOException {
+    assert hasWriteLock();
+
+    Preconditions.checkArgument(file != null && file.inConstruction());
+    leaseManager.removeLeases(Collections.singletonList(inode.id()));
+
+    ByteString f = file.inConstruction(false).clientName(null)
+        .clientMachine(null).build();
+    ByteString b = inode.replaceFeature(FlatINodeFileFeature.wrap(f))
+        .mtime(now()).build();
+    tx.putINode(inode.id(), b);
+
+    // close file and persist block allocations for this file
+    closeFile(tx, src, FlatINode.wrap(b));
+
+    blockManager.checkReplication(file.blocks());
+  }
+
   @VisibleForTesting
   BlockInfoContiguous getStoredBlock(Block block) {
     return blockManager.getStoredBlock(block);
@@ -4039,6 +4041,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NameNode.stateChangeLog.debug("closeFile: "
               +path+" with "+ file.getBlocks().length
               +" blocks is persisted to the file system");
+    }
+  }
+
+  /**
+   * Close file.
+   */
+  private void closeFile(RWTransaction tx, String path, FlatINode inode) {
+    assert hasWriteLock();
+    waitForLoadingFSImage();
+    FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+    tx.logCloseFile(path, inode);
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("closeFile: "
+          + path + " with " + file.numBlocks()
+          + " blocks is persisted to the file system");
     }
   }
 

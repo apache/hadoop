@@ -710,60 +710,66 @@ class FSDirWriteFileOp {
       FSNamesystem fsn, String src, String holder, Block last, long fileId)
       throws IOException {
     assert fsn.hasWriteLock();
-    final INodeFile pendingFile;
-    final INodesInPath iip;
-    INode inode = null;
-    try {
-      if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
+    FSDirectory fsd = fsn.getFSDirectory();
+    try (RWTransaction tx = fsd.newRWTransaction().begin()) {
+      final Resolver.Result paths;
+      if (true || fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
         // Older clients may not have given us an inode ID to work with.
         // In this case, we have to try to resolve the path and hope it
         // hasn't changed or been deleted since the file was opened for write.
-        iip = fsn.dir.getINodesInPath(src, true);
-        inode = iip.getLastINode();
+        paths = Resolver.resolve(tx, src);
       } else {
-        inode = fsn.dir.getInode(fileId);
-        iip = INodesInPath.fromINode(inode);
-        if (inode != null) {
-          src = iip.getPath();
-        }
+        // Newer clients pass the inode ID, so we can just get the inode
+        // directly.
+        paths = Resolver.resolveById(tx, fileId);
       }
-      pendingFile = fsn.checkLease(src, holder, inode, fileId);
-    } catch (LeaseExpiredException lee) {
-      if (inode != null && inode.isFile() &&
-          !inode.asFile().isUnderConstruction()) {
-        // This could be a retry RPC - i.e the client tried to close
-        // the file, but missed the RPC response. Thus, it is trying
-        // again to close the file. If the file still exists and
-        // the client's view of the last block matches the actual
-        // last block, then we'll treat it as a successful close.
-        // See HDFS-3031.
-        final Block realLastBlock = inode.asFile().getLastBlock();
-        if (Block.matchingIdAndGenStamp(last, realLastBlock)) {
-          NameNode.stateChangeLog.info("DIR* completeFile: " +
-              "request from " + holder + " to complete inode " + fileId +
-              "(" + src + ") which is already closed. But, it appears to be " +
-              "an RPC retry. Returning success");
-          return true;
-        }
+      if (paths.invalidPath()) {
+        throw new InvalidPathException(src);
+      } else if (paths.notFound()) {
+        throw new FileNotFoundException(src);
       }
-      throw lee;
-    }
-    // Check the state of the penultimate block. It should be completed
-    // before attempting to complete the last one.
-    if (!fsn.checkFileProgress(src, pendingFile, false)) {
-      return false;
-    }
+      FlatINode inode = paths.inodesInPath().getLastINode();
+      FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+      try {
+        fsn.checkLease(src, holder, inode);
+      } catch (LeaseExpiredException lee) {
+        if (file != null && !file.inConstruction()) {
+          // This could be a retry RPC - i.e the client tried to close
+          // the file, but missed the RPC response. Thus, it is trying
+          // again to close the file. If the file still exists and
+          // the client's view of the last block matches the actual
+          // last block, then we'll treat it as a successful close.
+          // See HDFS-3031.
+          final Block realLastBlock = file.lastBlock();
+          if (Block.matchingIdAndGenStamp(last, realLastBlock)) {
+            NameNode.stateChangeLog.info("DIR* completeFile: request from "
+                + holder + " to complete inode " + fileId + "(" + src + ") "
+                + "which is already closed. But, it appears to be an RPC "
+                + "retry. Returning success");
+            return true;
+          }
+        }
+        throw lee;
+      }
 
-    // commit the last block and complete it if it has minimum replicas
-    fsn.commitOrCompleteLastBlock(pendingFile, iip, last);
+      // Check the state of the penultimate block. It should be completed
+      // before attempting to complete the last one.
+      if (!fsn.checkFileProgress(src, file, false)) {
+        return false;
+      }
 
-    if (!fsn.checkFileProgress(src, pendingFile, true)) {
-      return false;
+      // commit the last block and complete it if it has minimum replicas
+      FlatINodeFileFeature.Builder newFile =
+          fsn.commitOrCompleteLastBlock(file, last);
+
+      if (!fsn.checkFileProgress(src, file, true)) {
+        return false;
+      }
+      FlatINode.Builder newINode = new FlatINode.Builder().mergeFrom(inode);
+      fsn.finalizeINodeFileUnderConstruction(tx, src, newINode, newFile);
+      tx.commit();
+      return true;
     }
-
-    fsn.finalizeINodeFileUnderConstruction(src, pendingFile,
-        Snapshot.CURRENT_STATE_ID);
-    return true;
   }
 
   private static INodeFile newINodeFile(

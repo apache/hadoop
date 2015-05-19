@@ -24,6 +24,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.EnumSet;
+
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -136,8 +138,12 @@ public class TestAddBlockRetry {
   boolean checkFileProgress(String src, boolean checkall) throws IOException {
     final FSNamesystem ns = cluster.getNamesystem();
     ns.readLock();
-    try {
-      return ns.checkFileProgress(src, ns.dir.getINode(src).asFile(), checkall);
+    try (ROTransaction tx = ns.dir.newROTransaction().begin()) {
+      Resolver.Result paths = Resolver.resolve(tx, src);
+      Preconditions.checkState(paths.ok());
+      FlatINode inode = paths.inodesInPath().getLastINode();
+      FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+      return ns.checkFileProgress(src, file, checkall);
     } finally {
       ns.readUnlock();
     }
