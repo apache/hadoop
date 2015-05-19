@@ -667,29 +667,28 @@ public class SecondaryNameNode implements Runnable,
       opts.usage();
       System.exit(0);
     }
-    
-    StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
-    Configuration tconf = new HdfsConfiguration();
-    SecondaryNameNode secondary = null;
+
     try {
+      StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
+      Configuration tconf = new HdfsConfiguration();
+      SecondaryNameNode secondary = null;
       secondary = new SecondaryNameNode(tconf, opts);
-    } catch (IOException ioe) {
-      LOG.fatal("Failed to start secondary namenode", ioe);
+
+      if (opts != null && opts.getCommand() != null) {
+        int ret = secondary.processStartupCommand(opts);
+        terminate(ret);
+      }
+
+      if (secondary != null) {
+        secondary.startCheckpointThread();
+        secondary.join();
+      }
+    } catch (Throwable e) {
+      LOG.fatal("Failed to start secondary namenode", e);
       terminate(1);
     }
-
-    if (opts != null && opts.getCommand() != null) {
-      int ret = secondary.processStartupCommand(opts);
-      terminate(ret);
-    }
-
-    if (secondary != null) {
-      secondary.startCheckpointThread();
-      secondary.join();
-    }
   }
-  
-  
+
   public void startCheckpointThread() {
     Preconditions.checkState(checkpointThread == null,
         "Should not already have a thread");
