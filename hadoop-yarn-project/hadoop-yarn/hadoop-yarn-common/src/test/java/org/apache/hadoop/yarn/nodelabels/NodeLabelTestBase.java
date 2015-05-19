@@ -112,6 +112,18 @@ public class NodeLabelTestBase {
     return set;
   }
   
+  @SuppressWarnings("unchecked")
+  public static Set<NodeLabel> toNodeLabelSet(String... nodeLabelsStr) {
+    if (null == nodeLabelsStr) {
+      return null;
+    }
+    Set<NodeLabel> labels = new HashSet<NodeLabel>();
+    for (String label : nodeLabelsStr) {
+      labels.add(NodeLabel.newInstance(label));
+    }
+    return labels;
+  }
+
   public NodeId toNodeId(String str) {
     if (str.contains(":")) {
       int idx = str.indexOf(':');

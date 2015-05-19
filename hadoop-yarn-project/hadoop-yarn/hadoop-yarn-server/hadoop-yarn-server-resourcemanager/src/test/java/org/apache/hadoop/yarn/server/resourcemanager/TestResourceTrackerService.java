@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -353,14 +354,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A"));
+    registerReq.setNodeLabels(toSet(NodeLabel.newInstance("A")));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
     Assert.assertEquals("Action should be normal on valid Node Labels",
         NodeAction.NORMAL, response.getNodeAction());
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
-        registerReq.getNodeLabels());
+        ResourceTrackerService.convertToStringSet(registerReq.getNodeLabels()));
     Assert.assertTrue("Valid Node Labels were not accepted by RM",
         response.getAreNodeLabelsAcceptedByRM());
     rm.stop();
@@ -402,7 +403,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A", "B", "C"));
+    registerReq.setNodeLabels(toNodeLabelSet("A", "B", "C"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
@@ -455,7 +456,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("#Y"));
+    req.setNodeLabels(toNodeLabelSet("#Y"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
 
@@ -506,7 +507,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("A"));
+    req.setNodeLabels(toNodeLabelSet("A"));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
     // registered to RM with central label config
@@ -568,14 +569,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A")); // Node register label
+    registerReq.setNodeLabels(toNodeLabelSet("A")); // Node register label
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(registerReq);
 
     // modification of labels during heartbeat
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B")); // Node heartbeat label update
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B")); // Node heartbeat label update
     NodeStatus nodeStatusObject = getNodeStatusObject(nodeId);
     heartbeatReq.setNodeStatus(nodeStatusObject);
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
@@ -588,7 +589,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals("InValid Node Labels were not accepted by RM",
         NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
-        heartbeatReq.getNodeLabels());
+        ResourceTrackerService.convertToStringSet(heartbeatReq.getNodeLabels()));
     Assert.assertTrue("Valid Node Labels were not accepted by RM",
         nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
     
@@ -652,13 +653,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
     registerReq.setNMVersion(YarnVersionInfo.getVersion());
-    registerReq.setNodeLabels(toSet("A"));
+    registerReq.setNodeLabels(toNodeLabelSet("A"));
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(registerReq);
 
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B", "#C")); // Invalid heart beat labels
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B", "#C")); // Invalid heart beat labels
     heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
         .getNMTokenMasterKey());
@@ -705,13 +706,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
-    req.setNodeLabels(toSet("A", "B", "C"));
+    req.setNodeLabels(toNodeLabelSet("A", "B", "C"));
     RegisterNodeManagerResponse registerResponse =
         resourceTrackerService.registerNodeManager(req);
 
     NodeHeartbeatRequest heartbeatReq =
         Records.newRecord(NodeHeartbeatRequest.class);
-    heartbeatReq.setNodeLabels(toSet("B")); // Valid heart beat labels
+    heartbeatReq.setNodeLabels(toNodeLabelSet("B")); // Valid heart beat labels
     heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
     heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
         .getNMTokenMasterKey());

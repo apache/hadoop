@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -247,6 +249,17 @@ public class ResourceTrackerService extends AbstractService implements
     }
   }
 
+  static Set<String> convertToStringSet(Set<NodeLabel> nodeLabels) {
+    if (null == nodeLabels) {
+      return null;
+    }
+    Set<String> labels = new HashSet<String>();
+    for (NodeLabel label : nodeLabels) {
+      labels.add(label.getName());
+    }
+    return labels;
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public RegisterNodeManagerResponse registerNodeManager(
@@ -346,7 +359,7 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Update node's labels to RM's NodeLabelManager.
-    Set<String> nodeLabels = request.getNodeLabels();
+    Set<String> nodeLabels = convertToStringSet(request.getNodeLabels());
     if (isDistributedNodeLabelsConf && nodeLabels != null) {
       try {
         updateNodeLabelsFromNMReport(nodeLabels, nodeId);
@@ -467,7 +480,8 @@ public class ResourceTrackerService extends AbstractService implements
     // 5. Update node's labels to RM's NodeLabelManager.
     if (isDistributedNodeLabelsConf && request.getNodeLabels() != null) {
       try {
-        updateNodeLabelsFromNMReport(request.getNodeLabels(), nodeId);
+        updateNodeLabelsFromNMReport(
+            convertToStringSet(request.getNodeLabels()), nodeId);
         nodeHeartBeatResponse.setAreNodeLabelsAcceptedByRM(true);
       } catch (IOException ex) {
         //ensure the error message is captured and sent across in response

@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
@@ -113,7 +114,7 @@ public class TestYarnServerApiClasses {
     Assert.assertTrue(original.getNodeLabels()
         .containsAll(copy.getNodeLabels()));
     // check for empty labels
-    original.setNodeLabels(new HashSet<String> ());
+    original.setNodeLabels(new HashSet<NodeLabel> ());
     copy = new NodeHeartbeatRequestPBImpl(
         original.getProto());
     Assert.assertNotNull(copy.getNodeLabels());
@@ -271,7 +272,7 @@ public class TestYarnServerApiClasses {
 
   @Test
   public void testRegisterNodeManagerRequestWithValidLabels() {
-    HashSet<String> nodeLabels = getValidNodeLabels();
+    HashSet<NodeLabel> nodeLabels = getValidNodeLabels();
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(
             NodeId.newInstance("host", 1234), 1234, Resource.newInstance(0, 0),
@@ -286,19 +287,19 @@ public class TestYarnServerApiClasses {
     Assert.assertEquals(true, nodeLabels.containsAll(copy.getNodeLabels()));
 
     // check for empty labels
-    request.setNodeLabels(new HashSet<String> ());
+    request.setNodeLabels(new HashSet<NodeLabel> ());
     copy = new RegisterNodeManagerRequestPBImpl(
         ((RegisterNodeManagerRequestPBImpl) request).getProto());
     Assert.assertNotNull(copy.getNodeLabels());
     Assert.assertEquals(0, copy.getNodeLabels().size());
   }
 
-  private HashSet<String> getValidNodeLabels() {
-    HashSet<String> nodeLabels = new HashSet<String>();
-    nodeLabels.add("java");
-    nodeLabels.add("windows");
-    nodeLabels.add("gpu");
-    nodeLabels.add("x86");
+  private HashSet<NodeLabel> getValidNodeLabels() {
+    HashSet<NodeLabel> nodeLabels = new HashSet<NodeLabel>();
+    nodeLabels.add(NodeLabel.newInstance("java"));
+    nodeLabels.add(NodeLabel.newInstance("windows"));
+    nodeLabels.add(NodeLabel.newInstance("gpu"));
+    nodeLabels.add(NodeLabel.newInstance("x86"));
     return nodeLabels;
   }
 
