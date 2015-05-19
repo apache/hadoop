@@ -225,7 +225,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `PendingDeletionBlocks` | Current number of blocks pending deletion |
 | `ExcessBlocks` | Current number of excess blocks |
 | `PostponedMisreplicatedBlocks` | (HA-only) Current number of blocks postponed to replicate |
-| `PendingDataNodeMessageCourt` | (HA-only) Current number of pending block-related messages for later processing in the standby NameNode |
+| `PendingDataNodeMessageCount` | (HA-only) Current number of pending block-related messages for later processing in the standby NameNode |
 | `MillisSinceLastLoadedEdits` | (HA-only) Time in milliseconds since the last time standby NameNode load edit log. In active NameNode, set to 0 |
 | `BlockCapacity` | Current number of block capacity |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
