@@ -50,8 +50,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.net.SocketFactory;
 
@@ -103,12 +103,6 @@ public class DFSUtil {
   public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
   private DFSUtil() { /* Hidden constructor */ }
-  private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
-    @Override
-    protected Random initialValue() {
-      return new Random();
-    }
-  };
   
   private static final ThreadLocal<SecureRandom> SECURE_RANDOM = new ThreadLocal<SecureRandom>() {
     @Override
@@ -117,11 +111,6 @@ public class DFSUtil {
     }
   };
 
-  /** @return a pseudo random number generator. */
-  public static Random getRandom() {
-    return RANDOM.get();
-  }
-  
   /** @return a pseudo secure random number generator. */
   public static SecureRandom getSecureRandom() {
     return SECURE_RANDOM.get();
@@ -130,9 +119,8 @@ public class DFSUtil {
   /** Shuffle the elements in the given array. */
   public static <T> T[] shuffle(final T[] array) {
     if (array != null && array.length > 0) {
-      final Random random = getRandom();
       for (int n = array.length; n > 1; ) {
-        final int randomIndex = random.nextInt(n);
+        final int randomIndex = ThreadLocalRandom.current().nextInt(n);
         n--;
         if (n != randomIndex) {
           final T tmp = array[randomIndex];

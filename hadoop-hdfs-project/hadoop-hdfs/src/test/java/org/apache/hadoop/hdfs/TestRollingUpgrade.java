@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -272,7 +273,7 @@ public class TestRollingUpgrade {
 
       final Path file = new Path(foo, "file");
       final byte[] data = new byte[1024];
-      DFSUtil.getRandom().nextBytes(data);
+      ThreadLocalRandom.current().nextBytes(data);
       final FSDataOutputStream out = cluster.getFileSystem().create(file);
       out.write(data, 0, data.length);
       out.close();
@@ -320,7 +321,8 @@ public class TestRollingUpgrade {
     Assert.assertTrue(dfs.exists(bar));
 
     //truncate a file
-    final int newLength = DFSUtil.getRandom().nextInt(data.length - 1) + 1;
+    final int newLength = ThreadLocalRandom.current().nextInt(data.length - 1)
+        + 1;
     dfs.truncate(file, newLength);
     TestFileTruncate.checkBlockRecovery(file, dfs);
     AppendTestUtil.checkFullFile(dfs, file, newLength, data);

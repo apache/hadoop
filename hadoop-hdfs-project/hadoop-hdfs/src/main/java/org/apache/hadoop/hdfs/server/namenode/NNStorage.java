@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -599,7 +600,7 @@ public class NNStorage extends Storage implements Closeable,
   private static int newNamespaceID() {
     int newID = 0;
     while(newID == 0)
-      newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
+      newID = ThreadLocalRandom.current().nextInt(0x7FFFFFFF);  // use 31 bits
     return newID;
   }
 

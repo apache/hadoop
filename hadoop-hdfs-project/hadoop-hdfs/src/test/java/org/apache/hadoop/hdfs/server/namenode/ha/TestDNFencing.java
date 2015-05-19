@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -37,7 +38,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -640,7 +640,7 @@ public class TestDNFencing {
       Collection<DatanodeStorageInfo> chooseFrom = !first.isEmpty() ? first : second;
 
       List<DatanodeStorageInfo> l = Lists.newArrayList(chooseFrom);
-      return l.get(DFSUtil.getRandom().nextInt(l.size()));
+      return l.get(ThreadLocalRandom.current().nextInt(l.size()));
     }
   }
 

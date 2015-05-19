@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -46,13 +46,6 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 public class RetryPolicies {
   
   public static final Log LOG = LogFactory.getLog(RetryPolicies.class);
-  
-  private static ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
-    @Override
-    protected Random initialValue() {
-      return new Random();
-    }
-  };
   
   /**
    * <p>
@@ -321,7 +314,8 @@ public class RetryPolicies {
       }
 
       //calculate sleep time and return.
-      final double ratio = RANDOM.get().nextDouble() + 0.5;//0.5 <= ratio <=1.5
+      // ensure 0.5 <= ratio <=1.5
+      final double ratio = ThreadLocalRandom.current().nextDouble() + 0.5;
       final long sleepTime = Math.round(p.sleepMillis * ratio);
       return new RetryAction(RetryAction.RetryDecision.RETRY, sleepTime);
     }
@@ -610,7 +604,7 @@ public class RetryPolicies {
   private static long calculateExponentialTime(long time, int retries,
       long cap) {
     long baseTime = Math.min(time * (1L << retries), cap);
-    return (long) (baseTime * (RANDOM.get().nextDouble() + 0.5));
+    return (long) (baseTime * (ThreadLocalRandom.current().nextDouble() + 0.5));
   }
 
   private static long calculateExponentialTime(long time, int retries) {

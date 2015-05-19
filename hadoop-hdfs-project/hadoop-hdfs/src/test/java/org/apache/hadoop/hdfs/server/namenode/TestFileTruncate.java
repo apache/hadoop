@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,7 +47,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -164,11 +164,11 @@ public class TestFileTruncate {
     fs.mkdirs(dir);
     final Path p = new Path(dir, "file");
     final byte[] data = new byte[100 * BLOCK_SIZE];
-    DFSUtil.getRandom().nextBytes(data);
+    ThreadLocalRandom.current().nextBytes(data);
     writeContents(data, data.length, p);
 
     for(int n = data.length; n > 0; ) {
-      final int newLength = DFSUtil.getRandom().nextInt(n);
+      final int newLength = ThreadLocalRandom.current().nextInt(n);
       final boolean isReady = fs.truncate(p, newLength);
       LOG.info("newLength=" + newLength + ", isReady=" + isReady);
       assertEquals("File must be closed for truncating at the block boundary",
@@ -193,7 +193,7 @@ public class TestFileTruncate {
     fs.allowSnapshot(dir);
     final Path p = new Path(dir, "file");
     final byte[] data = new byte[BLOCK_SIZE];
-    DFSUtil.getRandom().nextBytes(data);
+    ThreadLocalRandom.current().nextBytes(data);
     writeContents(data, data.length, p);
     final String snapshot = "s0";
     fs.createSnapshot(dir, snapshot);
@@ -226,7 +226,7 @@ public class TestFileTruncate {
     final Path p = new Path(dir, "file");
     final byte[] data = new byte[2 * BLOCK_SIZE];
 
-    DFSUtil.getRandom().nextBytes(data);
+    ThreadLocalRandom.current().nextBytes(data);
     writeContents(data, data.length, p);
 
     final int newLength = data.length - 1;

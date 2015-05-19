@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -933,7 +933,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     }
     DatanodeInfo chosenNode;
     do {
-      chosenNode = nodes[DFSUtil.getRandom().nextInt(nodes.length)];
+      chosenNode = nodes[ThreadLocalRandom.current().nextInt(nodes.length)];
     } while (deadNodes.contains(chosenNode));
     return chosenNode;
   }

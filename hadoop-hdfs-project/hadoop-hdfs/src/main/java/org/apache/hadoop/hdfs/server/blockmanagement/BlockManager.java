@@ -35,6 +35,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1027,7 +1028,8 @@ public class BlockManager {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
     Iterator<BlockInfoContiguous> iter = node.getBlockIterator();
-    int startBlock = DFSUtil.getRandom().nextInt(numBlocks); // starting from a random block
+    // starting from a random block
+    int startBlock = ThreadLocalRandom.current().nextInt(numBlocks);
     // skip blocks
     for(int i=0; i<startBlock; i++) {
       iter.next();
@@ -1669,7 +1671,7 @@ public class BlockManager {
       // switch to a different node randomly
       // this to prevent from deterministically selecting the same node even
       // if the node failed to replicate the block on previous iterations
-      if(DFSUtil.getRandom().nextBoolean())
+      if(ThreadLocalRandom.current().nextBoolean())
         srcNode = node;
     }
     if(numReplicas != null)
@@ -1920,7 +1922,7 @@ public class BlockManager {
           datanodeManager.getBlocksPerPostponedMisreplicatedBlocksRescan();
       long base = getPostponedMisreplicatedBlocksCount() - blocksPerRescan;
       if (base > 0) {
-        startIndex = DFSUtil.getRandom().nextLong() % (base+1);
+        startIndex = ThreadLocalRandom.current().nextLong() % (base+1);
         if (startIndex < 0) {
           startIndex += (base+1);
         }

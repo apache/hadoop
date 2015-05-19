@@ -51,6 +51,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Manage datanodes, include decommission and other activities.
@@ -457,7 +458,7 @@ public class DatanodeManager {
         // Try something rack local.
         if (node == null && !rackNodes.isEmpty()) {
           node = (DatanodeDescriptor) (rackNodes
-              .get(DFSUtil.getRandom().nextInt(rackNodes.size())));
+              .get(ThreadLocalRandom.current().nextInt(rackNodes.size())));
         }
       }
 
