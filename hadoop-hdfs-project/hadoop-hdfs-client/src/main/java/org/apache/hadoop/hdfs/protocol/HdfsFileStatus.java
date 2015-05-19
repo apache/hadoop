@@ -49,7 +49,8 @@ public class HdfsFileStatus {
 
   private final FileEncryptionInfo feInfo;
 
-  private final ECSchema schema;
+  private final ECSchema ecSchema;
+  private final int stripeCellSize;
   
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
@@ -76,7 +77,7 @@ public class HdfsFileStatus {
       long blocksize, long modification_time, long access_time,
       FsPermission permission, String owner, String group, byte[] symlink,
       byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo,
-      byte storagePolicy, ECSchema schema) {
+      byte storagePolicy, ECSchema ecSchema, int stripeCellSize) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -96,7 +97,8 @@ public class HdfsFileStatus {
     this.childrenNum = childrenNum;
     this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
-    this.schema = schema;
+    this.ecSchema = ecSchema;
+    this.stripeCellSize = stripeCellSize;
   }
 
   /**
@@ -255,7 +257,11 @@ public class HdfsFileStatus {
   }
 
   public ECSchema getECSchema() {
-    return schema;
+    return ecSchema;
+  }
+
+  public int getStripeCellSize() {
+    return stripeCellSize;
   }
 
   public final int getChildrenNum() {

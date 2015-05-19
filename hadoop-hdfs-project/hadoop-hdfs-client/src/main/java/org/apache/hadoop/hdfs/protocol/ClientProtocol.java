@@ -1490,7 +1490,7 @@ public interface ClientProtocol {
    * default
    */
   @AtMostOnce
-  public void createErasureCodingZone(String src, ECSchema schema)
+  public void createErasureCodingZone(String src, ECSchema schema, int cellSize)
       throws IOException;
 
   /**

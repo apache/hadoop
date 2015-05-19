@@ -50,7 +50,7 @@ public class TestFileStatusWithECschema {
 
     final ECSchema schema1 = ErasureCodingSchemaManager.getSystemDefaultSchema();
     // create EC zone on dir
-    fs.createErasureCodingZone(dir, schema1);
+    fs.createErasureCodingZone(dir, schema1, 0);
     final ECSchema schame2 = client.getFileInfo(dir.toUri().getPath()).getECSchema();
     assertNotNull(schame2);
     assertTrue(schema1.equals(schame2));

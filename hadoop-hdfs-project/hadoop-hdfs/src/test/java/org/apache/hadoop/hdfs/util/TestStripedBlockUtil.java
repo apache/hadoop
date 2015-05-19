@@ -152,7 +152,7 @@ public class TestStripedBlockUtil {
     int done = 0;
     while (done < bgSize) {
       Preconditions.checkState(done % CELLSIZE == 0);
-      StripingCell cell = new StripingCell(SCEHMA, done / CELLSIZE);
+      StripingCell cell = new StripingCell(SCEHMA, CELLSIZE, done / CELLSIZE);
       int idxInStripe = cell.idxInStripe;
       int size = Math.min(CELLSIZE, bgSize - done);
       for (int i = 0; i < size; i++) {
@@ -247,7 +247,7 @@ public class TestStripedBlockUtil {
             continue;
           }
           AlignedStripe[] stripes = divideByteRangeIntoStripes(SCEHMA,
-              blockGroup, brStart, brStart + brSize - 1, assembled, 0);
+              CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled, 0);
 
           for (AlignedStripe stripe : stripes) {
             for (int i = 0; i < DATA_BLK_NUM; i++) {

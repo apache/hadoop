@@ -230,7 +230,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
     final ECSchema schema = stat.getECSchema();
     final int numParityBlocks = schema.getNumParityUnits();
-    cellSize = schema.getChunkSize();
+    cellSize = stat.getStripeCellSize();
     numDataBlocks = schema.getNumDataUnits();
     numAllBlocks = numDataBlocks + numParityBlocks;
 

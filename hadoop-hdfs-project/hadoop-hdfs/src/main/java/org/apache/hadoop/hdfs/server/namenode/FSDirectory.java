@@ -1139,11 +1139,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  XAttr createErasureCodingZone(String src, ECSchema schema)
+  XAttr createErasureCodingZone(String src, ECSchema schema, int cellSize)
       throws IOException {
     writeLock();
     try {
-      return ecZoneManager.createErasureCodingZone(src, schema);
+      return ecZoneManager.createErasureCodingZone(src, schema, cellSize);
     } finally {
       writeUnlock();
     }

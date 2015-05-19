@@ -37,11 +37,13 @@ message ErasureCodingInfoProto {
 message ErasureCodingZoneInfoProto {
   required string dir = 1;
   required ECSchemaProto schema = 2;
+  required uint32 cellSize = 3;
 }
 
 message CreateErasureCodingZoneRequestProto {
   required string src = 1;
   optional ECSchemaProto schema = 2;
+  optional uint32 cellSize = 3;
 }
 
 message CreateErasureCodingZoneResponseProto {
@@ -81,4 +83,5 @@ message BlockECRecoveryInfoProto {
   required StorageTypesProto targetStorageTypes = 5;
   repeated uint32 liveBlockIndices = 6;
   required ECSchemaProto ecSchema = 7;
+  required uint32 cellSize = 8;
 }

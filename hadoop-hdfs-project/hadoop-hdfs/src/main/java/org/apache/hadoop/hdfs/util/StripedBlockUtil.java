@@ -306,6 +306,7 @@ public class StripedBlockUtil {
    * {@link AlignedStripe}.
    * @param ecSchema The codec schema for the file, which carries the numbers
    *                 of data / parity blocks, as well as cell size
+   * @param cellSize Cell size of stripe
    * @param blockGroup The striped block group
    * @param rangeStartInBlockGroup The byte range's start offset in block group
    * @param rangeEndInBlockGroup The byte range's end offset in block group
@@ -315,28 +316,29 @@ public class StripedBlockUtil {
    * At most 5 stripes will be generated from each logical range, as
    * demonstrated in the header of {@link AlignedStripe}.
    */
-  public static AlignedStripe[] divideByteRangeIntoStripes (
-      ECSchema ecSchema, LocatedStripedBlock blockGroup,
+  public static AlignedStripe[] divideByteRangeIntoStripes(ECSchema ecSchema,
+      int cellSize, LocatedStripedBlock blockGroup,
       long rangeStartInBlockGroup, long rangeEndInBlockGroup, byte[] buf,
       int offsetInBuf) {
     // TODO: change ECSchema naming to use cell size instead of chunk size
 
     // Step 0: analyze range and calculate basic parameters
-    int cellSize = ecSchema.getChunkSize();
     int dataBlkNum = ecSchema.getNumDataUnits();
 
     // Step 1: map the byte range to StripingCells
-    StripingCell[] cells = getStripingCellsOfByteRange(ecSchema, blockGroup,
-        rangeStartInBlockGroup, rangeEndInBlockGroup);
+    StripingCell[] cells = getStripingCellsOfByteRange(ecSchema, cellSize,
+        blockGroup, rangeStartInBlockGroup, rangeEndInBlockGroup);
 
     // Step 2: get the unmerged ranges on each internal block
-    VerticalRange[] ranges = getRangesForInternalBlocks(ecSchema, cells);
+    VerticalRange[] ranges = getRangesForInternalBlocks(ecSchema, cellSize,
+        cells);
 
     // Step 3: merge into at most 5 stripes
     AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecSchema, ranges);
 
     // Step 4: calculate each chunk's position in destination buffer
-    calcualteChunkPositionsInBuf(ecSchema, stripes, cells, buf, offsetInBuf);
+    calcualteChunkPositionsInBuf(ecSchema, cellSize, stripes, cells, buf,
+        offsetInBuf);
 
     // Step 5: prepare ALLZERO blocks
     prepareAllZeroChunks(blockGroup, buf, stripes, cellSize, dataBlkNum);
@@ -351,19 +353,18 @@ public class StripedBlockUtil {
    */
   @VisibleForTesting
   private static StripingCell[] getStripingCellsOfByteRange(ECSchema ecSchema,
-      LocatedStripedBlock blockGroup,
+      int cellSize, LocatedStripedBlock blockGroup,
       long rangeStartInBlockGroup, long rangeEndInBlockGroup) {
     Preconditions.checkArgument(
         rangeStartInBlockGroup <= rangeEndInBlockGroup &&
             rangeEndInBlockGroup < blockGroup.getBlockSize());
-    int cellSize = ecSchema.getChunkSize();
     int len = (int) (rangeEndInBlockGroup - rangeStartInBlockGroup + 1);
     int firstCellIdxInBG = (int) (rangeStartInBlockGroup / cellSize);
     int lastCellIdxInBG = (int) (rangeEndInBlockGroup / cellSize);
     int numCells = lastCellIdxInBG - firstCellIdxInBG + 1;
     StripingCell[] cells = new StripingCell[numCells];
-    cells[0] = new StripingCell(ecSchema, firstCellIdxInBG);
-    cells[numCells - 1] = new StripingCell(ecSchema, lastCellIdxInBG);
+    cells[0] = new StripingCell(ecSchema, cellSize, firstCellIdxInBG);
+    cells[numCells - 1] = new StripingCell(ecSchema, cellSize, lastCellIdxInBG);
 
     cells[0].offset = (int) (rangeStartInBlockGroup % cellSize);
     cells[0].size =
@@ -373,7 +374,7 @@ public class StripedBlockUtil {
     }
 
     for (int i = 1; i < numCells - 1; i++) {
-      cells[i] = new StripingCell(ecSchema, i + firstCellIdxInBG);
+      cells[i] = new StripingCell(ecSchema, cellSize, i + firstCellIdxInBG);
     }
 
     return cells;
@@ -383,18 +384,16 @@ public class StripedBlockUtil {
    * Given a logical start offset in a block group, calculate the physical
    * start offset into each stored internal block.
    */
-  public static long[] getStartOffsetsForInternalBlocks(
-      ECSchema ecSchema, LocatedStripedBlock blockGroup,
-      long rangeStartInBlockGroup) {
+  public static long[] getStartOffsetsForInternalBlocks(ECSchema ecSchema,
+      int cellSize, LocatedStripedBlock blockGroup, long rangeStartInBlockGroup) {
     Preconditions.checkArgument(
         rangeStartInBlockGroup < blockGroup.getBlockSize());
     int dataBlkNum = ecSchema.getNumDataUnits();
     int parityBlkNum = ecSchema.getNumParityUnits();
-    int cellSize = ecSchema.getChunkSize();
     long[] startOffsets = new long[dataBlkNum + parityBlkNum];
     Arrays.fill(startOffsets, -1L);
     int firstCellIdxInBG = (int) (rangeStartInBlockGroup / cellSize);
-    StripingCell firstCell = new StripingCell(ecSchema, firstCellIdxInBG);
+    StripingCell firstCell = new StripingCell(ecSchema, cellSize, firstCellIdxInBG);
     firstCell.offset = (int) (rangeStartInBlockGroup % cellSize);
     startOffsets[firstCell.idxInStripe] =
         firstCell.idxInInternalBlk * cellSize + firstCell.offset;
@@ -404,7 +403,7 @@ public class StripedBlockUtil {
       if (idx * cellSize >= blockGroup.getBlockSize()) {
         break;
       }
-      StripingCell cell = new StripingCell(ecSchema, idx);
+      StripingCell cell = new StripingCell(ecSchema, cellSize, idx);
       startOffsets[cell.idxInStripe] = cell.idxInInternalBlk * cellSize;
       if (startOffsets[cell.idxInStripe] < earliestStart) {
         earliestStart = startOffsets[cell.idxInStripe];
@@ -422,8 +421,7 @@ public class StripedBlockUtil {
    */
   @VisibleForTesting
   private static VerticalRange[] getRangesForInternalBlocks(ECSchema ecSchema,
-      StripingCell[] cells) {
-    int cellSize = ecSchema.getChunkSize();
+      int cellSize, StripingCell[] cells) {
     int dataBlkNum = ecSchema.getNumDataUnits();
     int parityBlkNum = ecSchema.getNumParityUnits();
 
@@ -486,7 +484,7 @@ public class StripedBlockUtil {
   }
 
   private static void calcualteChunkPositionsInBuf(ECSchema ecSchema,
-      AlignedStripe[] stripes, StripingCell[] cells, byte[] buf,
+      int cellSize, AlignedStripe[] stripes, StripingCell[] cells, byte[] buf,
       int offsetInBuf) {
     /**
      *     | <--------------- AlignedStripe --------------->|
@@ -505,7 +503,6 @@ public class StripedBlockUtil {
      *
      * Cell indexing convention defined in {@link StripingCell}
      */
-    int cellSize = ecSchema.getChunkSize();
     int done = 0;
     for (StripingCell cell : cells) {
       long cellStart = cell.idxInInternalBlk * cellSize + cell.offset;
@@ -587,17 +584,17 @@ public class StripedBlockUtil {
     int offset;
     int size;
 
-    StripingCell(ECSchema ecSchema, int idxInBlkGroup) {
+    StripingCell(ECSchema ecSchema, int cellSize, int idxInBlkGroup) {
       this.schema = ecSchema;
       this.idxInBlkGroup = idxInBlkGroup;
       this.idxInInternalBlk = idxInBlkGroup / ecSchema.getNumDataUnits();
       this.idxInStripe = idxInBlkGroup -
           this.idxInInternalBlk * ecSchema.getNumDataUnits();
       this.offset = 0;
-      this.size = ecSchema.getChunkSize();
+      this.size = cellSize;
     }
 
-    StripingCell(ECSchema ecSchema, int idxInInternalBlk,
+    StripingCell(ECSchema ecSchema, int cellSize, int idxInInternalBlk,
         int idxInStripe) {
       this.schema = ecSchema;
       this.idxInInternalBlk = idxInInternalBlk;
@@ -605,7 +602,7 @@ public class StripedBlockUtil {
       this.idxInBlkGroup =
           idxInInternalBlk * ecSchema.getNumDataUnits() + idxInStripe;
       this.offset = 0;
-      this.size = ecSchema.getChunkSize();
+      this.size = cellSize;
     }
   }
 

@@ -1411,7 +1411,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       ECSchema schema = req.hasSchema() ? PBHelper.convertECSchema(req
           .getSchema()) : null;
-      server.createErasureCodingZone(req.getSrc(), schema);
+      int cellSize = req.hasCellSize() ? req.getCellSize() : 0;
+      server.createErasureCodingZone(req.getSrc(), schema, cellSize);
       return CreateErasureCodingZoneResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -1850,7 +1850,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void createErasureCodingZone(String src, ECSchema schema)
+  public void createErasureCodingZone(String src, ECSchema schema, int cellSize)
       throws IOException {
     checkNNStartup();
     final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -1859,7 +1859,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     boolean success = false;
     try {
-      namesystem.createErasureCodingZone(src, schema, cacheEntry != null);
+      namesystem.createErasureCodingZone(src, schema, cellSize,
+          cacheEntry != null);
       success = true;
     } finally {
       RetryCache.setState(cacheEntry, success);

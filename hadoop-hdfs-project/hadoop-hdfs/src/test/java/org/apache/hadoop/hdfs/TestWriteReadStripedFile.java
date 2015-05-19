@@ -59,7 +59,7 @@ public class TestWriteReadStripedFile {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
+    cluster.getFileSystem().getClient().createErasureCodingZone("/", null, cellSize);
     fs = cluster.getFileSystem();
   }
 
