@@ -499,7 +499,17 @@ public abstract class FSEditLogOp {
       this.blocks = blocks;
       return (T)this;
     }
-    
+
+    <T extends AddCloseOp> T setBlocks(Iterable<Block> blocks) {
+      ArrayList<Block> b = Lists.newArrayList(blocks);
+      if (b.size() > MAX_BLOCKS) {
+        throw new RuntimeException("Can't have more than " + MAX_BLOCKS +
+                                       " in an AddCloseOp.");
+      }
+      this.blocks = b.toArray(new Block[b.size()]);
+      return (T)this;
+    }
+
     @Override
     public Block[] getBlocks() {
       return blocks;

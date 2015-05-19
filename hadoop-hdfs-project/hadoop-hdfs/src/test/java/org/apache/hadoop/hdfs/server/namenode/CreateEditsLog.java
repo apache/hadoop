@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 import java.io.IOException;
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -59,7 +60,7 @@ public class CreateEditsLog {
   static void addFiles(FSEditLog editLog, int numFiles, short replication, 
                          int blocksPerFile, long startingBlockId, long blockSize,
                          FileNameGenerator nameGenerator) {
-    
+    StringMap ugid = new StringMap();
     PermissionStatus p = new PermissionStatus("joeDoe", "people",
                                       new FsPermission((short)0777));
     INodeId inodeId = new INodeId();
@@ -81,11 +82,7 @@ public class CreateEditsLog {
          blocks[iB].setBlockId(currentBlockId++);
       }
 
-      final INodeFile inode = new INodeFile(inodeId.nextValue(), null,
-          p, 0L, 0L, blocks, replication, blockSize);
-      inode.toUnderConstruction("", "");
-
-     // Append path to filename with information about blockIDs 
+     // Append path to filename with information about blockIDs
       String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
                     "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
       String filePath = nameGenerator.getNextFileName("");
@@ -96,11 +93,18 @@ public class CreateEditsLog {
         dirInode = new INodeDirectory(inodeId.nextValue(), null, p, 0L);
         editLog.logMkDir(currentDir, dirInode);
       }
-      INodeFile fileUc = new INodeFile(inodeId.nextValue(), null,
-          p, 0L, 0L, BlockInfoContiguous.EMPTY_ARRAY, replication, blockSize);
-      fileUc.toUnderConstruction("", "");
-      editLog.logOpenFile(filePath, fileUc, false, false);
-      editLog.logCloseFile(filePath, inode);
+      ByteString file = new FlatINodeFileFeature.Builder()
+          .replication(replication)
+          .blockSize(blockSize)
+          .build();
+      ByteString inode = new FlatINode.Builder()
+          .id(inodeId.nextValue())
+          .userId(ugid.getId(p.getUserName()))
+          .groupId(ugid.getId(p.getGroupName()))
+          .addFeature(FlatINodeFileFeature.wrap(file))
+          .build();
+      editLog.logOpenFile(ugid, filePath, FlatINode.wrap(inode), false, false);
+      editLog.logCloseFile(ugid, filePath, FlatINode.wrap(inode));
 
       if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
         editLog.logSync();

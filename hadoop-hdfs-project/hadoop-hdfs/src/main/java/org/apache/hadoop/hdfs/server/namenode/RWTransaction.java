@@ -154,4 +154,9 @@ class RWTransaction extends Transaction {
       Options.Rename[] options) {
     fsd.getEditLog().logRename(src, dst, mtime, logRetryCache, options);
   }
+
+  public void logOpenFile(StringMap ugid, String src, FlatINode inode,
+      boolean overwrite, boolean logRetryCache) {
+    fsd.getEditLog().logOpenFile(ugid, src, inode, overwrite, logRetryCache);
+  }
 }

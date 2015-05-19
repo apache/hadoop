@@ -53,6 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -202,14 +203,24 @@ public class TestEditLog {
       PermissionStatus p = namesystem.createFsOwnerPermissions(
                                           new FsPermission((short)0777));
       FSEditLog editLog = namesystem.getEditLog();
-
+      FSDirectory fsd = namesystem.getFSDirectory();
+      StringMap ugid = namesystem.getFSDirectory().ugid();
       for (int i = 0; i < numTransactions; i++) {
-        INodeFile inode = new INodeFile(namesystem.dir.allocateNewInodeId(), null,
-            p, 0L, 0L, BlockInfoContiguous.EMPTY_ARRAY, replication, blockSize);
-        inode.toUnderConstruction("", "");
+        ByteString file = new FlatINodeFileFeature.Builder()
+            .replication(replication)
+            .blockSize(blockSize)
+            .build();
+        ByteString inodeBytes = new FlatINode.Builder()
+            .id(fsd.allocateNewInodeId())
+            .userId(ugid.getId(p.getUserName()))
+            .groupId(ugid.getId(p.getGroupName()))
+            .addFeature(FlatINodeFileFeature.wrap(file))
+            .build();
+        FlatINode inode = FlatINode.wrap(inodeBytes);
 
-        editLog.logOpenFile("/filename" + (startIndex + i), inode, false, false);
-        editLog.logCloseFile("/filename" + (startIndex + i), inode);
+        editLog.logOpenFile(ugid, "/filename" + (startIndex + i), inode, false,
+                            false);
+        editLog.logCloseFile(ugid, "/filename" + (startIndex + i), inode);
         editLog.logSync();
       }
     }

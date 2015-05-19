@@ -722,40 +722,41 @@ public class FSEditLog implements LogsPurgeable {
    * Add open lease record to edit log. 
    * Records the block locations of the last block.
    */
-  public void logOpenFile(String path, INodeFile newNode, boolean overwrite,
-      boolean toLogRpcIds) {
-    Preconditions.checkArgument(newNode.isUnderConstruction());
-    PermissionStatus permissions = newNode.getPermissionStatus();
+  public void logOpenFile(StringMap ugid, String path, FlatINode inode,
+      boolean overwrite, boolean toLogRpcIds) {
+    FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+    Preconditions.checkArgument(file != null && file.inConstruction());
+    PermissionStatus permissions = inode.permissionStatus(ugid);
     AddOp op = AddOp.getInstance(cache.get())
-      .setInodeId(newNode.getId())
+      .setInodeId(inode.id())
       .setPath(path)
-      .setReplication(newNode.getFileReplication())
-      .setModificationTime(newNode.getModificationTime())
-      .setAccessTime(newNode.getAccessTime())
-      .setBlockSize(newNode.getPreferredBlockSize())
-      .setBlocks(newNode.getBlocks())
+      .setReplication(file.replication())
+      .setModificationTime(inode.mtime())
+      .setAccessTime(inode.atime())
+      .setBlockSize(file.blockSize())
+      .setBlocks(file.blocks())
       .setPermissionStatus(permissions)
-      .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
-      .setClientMachine(
-          newNode.getFileUnderConstructionFeature().getClientMachine())
+      .setClientName(file.clientName())
+      .setClientMachine(file.clientMachine())
       .setOverwrite(overwrite)
-      .setStoragePolicyId(newNode.getLocalStoragePolicyID());
+      .setStoragePolicyId(file.storagePolicyId());
 
-    AclFeature f = newNode.getAclFeature();
-    if (f != null) {
-      op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
-    }
-
-    XAttrFeature x = newNode.getXAttrFeature();
-    if (x != null) {
-      op.setXAttrs(x.getXAttrs());
-    }
+    // TODO: Handle ACL / xattrs
+//    AclFeature f = inode.getAclFeature();
+//    if (f != null) {
+//      op.setAclEntries(AclStorage.readINodeLogicalAcl(inode));
+//    }
+//
+//    XAttrFeature x = inode.getXAttrFeature();
+//    if (x != null) {
+//      op.setXAttrs(x.getXAttrs());
+//    }
 
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
 
-  /** 
+  /**
    * Add close lease record to edit log.
    */
   public void logCloseFile(String path, INodeFile newNode) {
@@ -767,10 +768,10 @@ public class FSEditLog implements LogsPurgeable {
       .setBlockSize(newNode.getPreferredBlockSize())
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(newNode.getPermissionStatus());
-    
+
     logEdit(op);
   }
-  
+
   public void logAddBlock(String path, INodeFile file) {
     Preconditions.checkArgument(file.isUnderConstruction());
     BlockInfoContiguous[] blocks = file.getBlocks();
@@ -781,7 +782,24 @@ public class FSEditLog implements LogsPurgeable {
         .setPenultimateBlock(pBlock).setLastBlock(lastBlock);
     logEdit(op);
   }
-  
+
+  /**
+   * Add close lease record to edit log.
+   */
+  public void logCloseFile(StringMap ugid, String path, FlatINode inode) {
+    Preconditions.checkArgument(inode.isFile());
+    FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+    CloseOp op = CloseOp.getInstance(cache.get())
+        .setPath(path).setReplication(file.replication())
+        .setModificationTime(inode.mtime())
+        .setAccessTime(inode.atime())
+        .setBlockSize(file.blockSize())
+        .setBlocks(file.blocks())
+        .setPermissionStatus(inode.permissionStatus(ugid));
+
+    logEdit(op);
+  }
+
   public void logUpdateBlocks(String path, INodeFile file, boolean toLogRpcIds) {
     Preconditions.checkArgument(file.isUnderConstruction());
     UpdateBlocksOp op = UpdateBlocksOp.getInstance(cache.get())
@@ -798,8 +816,7 @@ public class FSEditLog implements LogsPurgeable {
     PermissionStatus permissions = newNode.getPermissionStatus();
     MkdirOp op = MkdirOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
-      .setPath(path)
-      .setTimestamp(newNode.getModificationTime())
+      .setPath(path).setTimestamp(newNode.getModificationTime())
       .setPermissionStatus(permissions);
 
     AclFeature f = newNode.getAclFeature();
