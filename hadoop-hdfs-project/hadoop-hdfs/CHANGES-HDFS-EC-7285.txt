@@ -225,3 +225,6 @@
     (Yi Liu via jing9)
 
     HDFS-8320. Erasure coding: consolidate striping-related terminologies. (zhz)
+	
+	HDFS-8366. Erasure Coding: Make the timeout parameter of polling blocking queue 
+	configurable in DFSStripedOutputStream. (Li Bo)

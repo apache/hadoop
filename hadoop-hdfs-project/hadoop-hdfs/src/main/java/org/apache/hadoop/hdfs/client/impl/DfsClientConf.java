@@ -103,6 +103,9 @@ public class DfsClientConf {
   private final int hedgedReadThreadpoolSize;
 
   private final int stripedReadThreadpoolSize;
+  private final int stripedWriteMaxSecondsGetStripedBlock;
+  private final int stripedWriteMaxSecondsGetEndedBlock;
+
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout 
@@ -225,6 +228,13 @@ public class DfsClientConf {
     Preconditions.checkArgument(stripedReadThreadpoolSize > 0, "The value of " +
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
         " must be greater than 0.");
+
+    stripedWriteMaxSecondsGetStripedBlock = conf.getInt(
+        HdfsClientConfigKeys.StripedWrite.MAX_SECONDS_GET_STRIPED_BLOCK_KEY,
+        HdfsClientConfigKeys.StripedWrite.MAX_SECONDS_GET_STRIPED_BLOCK_DEFAULT);
+    stripedWriteMaxSecondsGetEndedBlock = conf.getInt(
+        HdfsClientConfigKeys.StripedWrite.MAX_SECONDS_GET_ENDED_BLOCK_KEY,
+        HdfsClientConfigKeys.StripedWrite.MAX_SECONDS_GET_ENDED_BLOCK_DEFAULT);
   }
 
   private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -506,6 +516,20 @@ public class DfsClientConf {
    */
   public int getStripedReadThreadpoolSize() {
     return stripedReadThreadpoolSize;
+  }
+
+  /**
+   * @return stripedWriteMaxSecondsGetStripedBlock
+   */
+  public int getStripedWriteMaxSecondsGetStripedBlock() {
+    return stripedWriteMaxSecondsGetStripedBlock;
+  }
+
+  /**
+   * @return stripedWriteMaxSecondsGetEndedBlock
+   */
+  public int getStripedWriteMaxSecondsGetEndedBlock() {
+    return stripedWriteMaxSecondsGetEndedBlock;
   }
 
   /**
