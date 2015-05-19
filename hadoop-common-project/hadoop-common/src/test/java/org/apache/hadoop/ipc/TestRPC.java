@@ -64,6 +64,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -589,6 +590,7 @@ public class TestRPC {
       }
     } catch (RemoteException e) {
       if (expectFailure) {
+        assertEquals("RPC error code should be UNAUTHORIZED", RpcErrorCodeProto.FATAL_UNAUTHORIZED, e.getErrorCode());
         assertTrue(e.unwrapRemoteException() instanceof AuthorizationException);
       } else {
         throw e;
@@ -728,6 +730,7 @@ public class TestRPC {
       proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertEquals("RPC error code should be UNAUTHORIZED", RpcErrorCodeProto.FATAL_UNAUTHORIZED, e.getErrorCode());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
       succeeded = true;
     } finally {
@@ -757,6 +760,7 @@ public class TestRPC {
       proxy.echo("");
     } catch (RemoteException e) {
       LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertEquals("RPC error code should be UNAUTHORIZED", RpcErrorCodeProto.FATAL_UNAUTHORIZED, e.getErrorCode());
       assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
       succeeded = true;
     } finally {

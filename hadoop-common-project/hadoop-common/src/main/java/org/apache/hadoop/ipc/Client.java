@@ -1139,10 +1139,7 @@ public class Client {
           if (erCode == null) {
              LOG.warn("Detailed error code not set by server on rpc error");
           }
-          RemoteException re = 
-              ( (erCode == null) ? 
-                  new RemoteException(exceptionClassName, errorMsg) :
-              new RemoteException(exceptionClassName, errorMsg, erCode));
+          RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
           if (status == RpcStatusProto.ERROR) {
             calls.remove(callId);
             call.setException(re);
