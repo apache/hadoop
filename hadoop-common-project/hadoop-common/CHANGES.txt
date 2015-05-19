@@ -719,6 +719,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11963. Metrics documentation for FSNamesystem misspells
     PendingDataNodeMessageCount. (Anu Engineer via cnauroth)
 
+    HADOOP-12000. cannot use --java-home in test-patch (aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

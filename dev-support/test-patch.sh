@@ -679,7 +679,7 @@ function parse_args
       --issue-re=*)
         ISSUE_RE=${i#*=}
       ;;
-      --java-home)
+      --java-home=*)
         JAVA_HOME=${i#*=}
       ;;
       --jenkins)
