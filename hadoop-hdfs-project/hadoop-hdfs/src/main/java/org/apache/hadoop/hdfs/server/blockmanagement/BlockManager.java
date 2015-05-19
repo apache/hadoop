@@ -1690,13 +1690,18 @@ public class BlockManager {
       namesystem.writeLock();
       try {
         for (int i = 0; i < timedOutItems.length; i++) {
+          /*
+           * Use the blockinfo from the blocksmap to be certain we're working
+           * with the most up-to-date block information (e.g. genstamp).
+           */
+          BlockInfoContiguous bi = blocksMap.getStoredBlock(timedOutItems[i]);
+          if (bi == null) {
+            continue;
+          }
           NumberReplicas num = countNodes(timedOutItems[i]);
-          if (isNeededReplication(timedOutItems[i], getReplication(timedOutItems[i]),
-                                 num.liveReplicas())) {
-            neededReplications.add(timedOutItems[i],
-                                   num.liveReplicas(),
-                                   num.decommissionedAndDecommissioning(),
-                                   getReplication(timedOutItems[i]));
+          if (isNeededReplication(bi, getReplication(bi), num.liveReplicas())) {
+            neededReplications.add(bi, num.liveReplicas(),
+                num.decommissionedAndDecommissioning(), getReplication(bi));
           }
         }
       } finally {

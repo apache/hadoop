@@ -878,6 +878,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8405. Fix a typo in NamenodeFsck.  (Takanobu Asanuma via szetszwo)
 
+    HDFS-8404. Pending block replication can get stuck using older genstamp
+    (Nathan Roberts via kihwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
