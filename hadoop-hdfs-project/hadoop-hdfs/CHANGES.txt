@@ -1,4 +1,4 @@
-Hadoop HDFS Change Log
+ Hadoop HDFS Change Log
 
 Trunk (Unreleased)
 
@@ -787,6 +787,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8403. Eliminate retries in TestFileCreation
     #testOverwriteOpenForWrite. (Arpit Agarwal via wheat9)
+
+    HDFS-6348. SecondaryNameNode not terminating properly on runtime exceptions
+    (Rakesh R via vinayakumarb)
 
 Release 2.7.1 - UNRELEASED
 
