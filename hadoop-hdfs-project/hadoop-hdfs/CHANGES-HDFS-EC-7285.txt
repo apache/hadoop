@@ -223,3 +223,5 @@
 
     HDFS-8418. Fix the isNeededReplication calculation for Striped block in NN.
     (Yi Liu via jing9)
+
+    HDFS-8320. Erasure coding: consolidate striping-related terminologies. (zhz)

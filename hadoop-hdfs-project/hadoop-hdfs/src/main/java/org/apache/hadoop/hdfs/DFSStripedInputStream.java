@@ -23,19 +23,18 @@ import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.ByteBufferPool;
 
-import static org.apache.hadoop.hdfs.util.StripedBlockUtil.planReadPortions;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.divideByteRangeIntoStripes;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.initDecodeInputs;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.decodeAndFillBuffer;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getNextCompletedStripedRead;
-import static org.apache.hadoop.hdfs.util.StripedBlockUtil.ReadPortion;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getStartOffsetsForInternalBlocks;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.parseStripedBlockGroup;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.AlignedStripe;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunk;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
@@ -65,30 +64,9 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
-/******************************************************************************
- * DFSStripedInputStream reads from striped block groups, illustrated below:
- *
- * | <- Striped Block Group -> |
- *  blk_0      blk_1       blk_2   <- A striped block group has
- *    |          |           |          {@link #dataBlkNum} blocks
- *    v          v           v
- * +------+   +------+   +------+
- * |cell_0|   |cell_1|   |cell_2|  <- The logical read order should be
- * +------+   +------+   +------+       cell_0, cell_1, ...
- * |cell_3|   |cell_4|   |cell_5|
- * +------+   +------+   +------+
- * |cell_6|   |cell_7|   |cell_8|
- * +------+   +------+   +------+
- * |cell_9|
- * +------+  <- A cell contains {@link #cellSize} bytes of data
- *
- * Three styles of read will eventually be supported:
- *   1. Stateful read
- *   2. pread without decode support
- *     This is implemented by calculating the portion of read from each block and
- *     issuing requests to each DataNode in parallel.
- *   3. pread with decode support: TODO: will be supported after HDFS-7678
- *****************************************************************************/
+/**
+ * DFSStripedInputStream reads from striped block groups
+ */
 public class DFSStripedInputStream extends DFSInputStream {
 
   private static class ReaderRetryPolicy {
@@ -207,22 +185,24 @@ public class DFSStripedInputStream extends DFSInputStream {
     currentLocatedBlock = targetBlockGroup;
 
     final long offsetIntoBlockGroup = getOffsetInBlockGroup();
-    LocatedBlock[] targetBlocks = StripedBlockUtil.parseStripedBlockGroup(
+    LocatedBlock[] targetBlocks = parseStripedBlockGroup(
         targetBlockGroup, cellSize, dataBlkNum, parityBlkNum);
-    // The purpose is to get start offset into each block
-    ReadPortion[] readPortions = planReadPortions(groupSize, cellSize,
-        offsetIntoBlockGroup, 0, 0);
+    // The purpose is to get start offset into each block.
+    long[] offsetsForInternalBlocks = getStartOffsetsForInternalBlocks(schema,
+        targetBlockGroup, offsetIntoBlockGroup);
+    Preconditions.checkNotNull(offsetsForInternalBlocks);
 
     final ReaderRetryPolicy retry = new ReaderRetryPolicy();
     for (int i = 0; i < groupSize; i++) {
       LocatedBlock targetBlock = targetBlocks[i];
       if (targetBlock != null) {
+        long offsetInBlock = offsetsForInternalBlocks[i] < 0 ?
+            0 : offsetsForInternalBlocks[i];
         DNAddrPair retval = getBestNodeDNAddrPair(targetBlock, null);
         if (retval != null) {
           currentNodes[i] = retval.info;
           blockReaders[i] = getBlockReaderWithRetry(targetBlock,
-              readPortions[i].getStartOffsetInBlock(),
-              targetBlock.getBlockSize() - readPortions[i].getStartOffsetInBlock(),
+              offsetInBlock, targetBlock.getBlockSize() - offsetInBlock,
               retval.addr, retval.storageType, retval.info, target, retry);
         }
       }

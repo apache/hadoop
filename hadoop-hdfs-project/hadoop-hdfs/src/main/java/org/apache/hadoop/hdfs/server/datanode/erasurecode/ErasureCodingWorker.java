@@ -301,12 +301,12 @@ public final class ErasureCodingWorker {
     }
 
     private ExtendedBlock getBlock(ExtendedBlock blockGroup, int i) {
-      return StripedBlockUtil.constructStripedBlock(blockGroup, cellSize,
+      return StripedBlockUtil.constructInternalBlock(blockGroup, cellSize,
           dataBlkNum, i);
     }
 
     private long getBlockLen(ExtendedBlock blockGroup, int i) { 
-      return StripedBlockUtil.getStripedBlockLength(blockGroup.getNumBytes(),
+      return StripedBlockUtil.getInternalBlockLength(blockGroup.getNumBytes(),
           cellSize, dataBlkNum, i);
     }
 

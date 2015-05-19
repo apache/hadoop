@@ -189,13 +189,13 @@ public class TestRecoverStripedFile {
       deadDnIndices[i] = dnMap.get(dataDNs[i]);
       
       // Check the block replica file on deadDn before it dead.
-      blocks[i] = StripedBlockUtil.constructStripedBlock(
+      blocks[i] = StripedBlockUtil.constructInternalBlock(
           lastBlock.getBlock(), cellSize, dataBlkNum, indices[toDead[i]]);
       replicas[i] = cluster.getBlockFile(deadDnIndices[i], blocks[i]);
       metadatas[i] = cluster.getBlockMetadataFile(deadDnIndices[i], blocks[i]);
       // the block replica on the datanode should be the same as expected
       assertEquals(replicas[i].length(), 
-          StripedBlockUtil.getStripedBlockLength(
+          StripedBlockUtil.getInternalBlockLength(
           lastBlock.getBlockSize(), cellSize, dataBlkNum, indices[toDead[i]]));
       assertTrue(metadatas[i].getName().
           endsWith(blocks[i].getGenerationStamp() + ".meta"));
