@@ -26,6 +26,9 @@ Trunk (Unreleased)
     HADOOP-11627. Remove io.native.lib.available.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11698. Remove DistCpV1 and Logalyzer.
+    (Brahma Reddy Battula via aajisaka)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via
