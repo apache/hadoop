@@ -65,7 +65,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -98,6 +97,8 @@ public class MockRM extends ResourceManager {
 
   static final Logger LOG = Logger.getLogger(MockRM.class);
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
+  
+  final private boolean useNullRMNodeLabelsManager;
 
   public MockRM() {
     this(new YarnConfiguration());
@@ -108,20 +109,31 @@ public class MockRM extends ResourceManager {
   }
   
   public MockRM(Configuration conf, RMStateStore store) {
-    super();    
+    this(conf, store, true);
+  }
+  
+  public MockRM(Configuration conf, RMStateStore store,
+      boolean useNullRMNodeLabelsManager) {
+    super();
+    this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
     if(store != null) {
       setRMStateStore(store);
     }
     Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);    
+    rootLogger.setLevel(Level.DEBUG);
   }
   
   @Override
-  protected RMNodeLabelsManager createNodeLabelManager() {
-    RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
-    mgr.init(getConfig());
-    return mgr;
+  protected RMNodeLabelsManager createNodeLabelManager()
+      throws InstantiationException, IllegalAccessException {
+    if (useNullRMNodeLabelsManager) {
+      RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+      mgr.init(getConfig());
+      return mgr;
+    } else {
+      return super.createNodeLabelManager();
+    }
   }
 
   public void waitForState(ApplicationId appId, RMAppState finalState)
