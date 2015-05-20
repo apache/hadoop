@@ -244,3 +244,6 @@
 
     HDFS-8427. Remove dataBlockNum and parityBlockNum from BlockInfoStriped.
     (Kai Sasaki via jing9)
+
+    HDFS-8186. Erasure coding: Make block placement policy for EC file configurable.
+    (Walter Su via zhz)
