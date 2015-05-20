@@ -146,6 +146,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1289,6 +1291,8 @@ public class TestClientRMService {
         Arrays.asList(getApplicationAttemptId(103)));
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
     when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
+    ResourceCalculator rc = new DefaultResourceCalculator();
+    when(yarnScheduler.getResourceCalculator()).thenReturn(rc);
     return yarnScheduler;
   }
 

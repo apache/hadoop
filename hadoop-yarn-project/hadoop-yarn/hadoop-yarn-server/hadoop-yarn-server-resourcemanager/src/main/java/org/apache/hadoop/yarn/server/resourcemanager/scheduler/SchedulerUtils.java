@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -211,7 +212,7 @@ public class SchedulerUtils {
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
-      boolean isRecovery)
+      boolean isRecovery, RMContext rmContext)
       throws InvalidResourceRequestException {
 
     QueueInfo queueInfo = null;
@@ -223,15 +224,16 @@ public class SchedulerUtils {
     }
     SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
     if (!isRecovery) {
-      validateResourceRequest(resReq, maximumResource, queueInfo);
+      validateResourceRequest(resReq, maximumResource, queueInfo, rmContext);
     }
   }
 
   public static void normalizeAndvalidateRequest(ResourceRequest resReq,
-      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext)
       throws InvalidResourceRequestException {
     normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
-        false);
+        false, rmContext);
   }
 
   /**
@@ -240,8 +242,8 @@ public class SchedulerUtils {
    * 
    * @throws InvalidResourceRequestException when there is invalid request
    */
-  public static void validateResourceRequest(ResourceRequest resReq,
-      Resource maximumResource, QueueInfo queueInfo)
+  private static void validateResourceRequest(ResourceRequest resReq,
+      Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
     if (resReq.getCapability().getMemory() < 0 ||
         resReq.getCapability().getMemory() > maximumResource.getMemory()) {
@@ -284,7 +286,7 @@ public class SchedulerUtils {
     
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
       if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),
-          labelExp)) {
+          labelExp, rmContext)) {
         throw new InvalidResourceRequestException("Invalid resource request"
             + ", queue="
             + queueInfo.getQueueName()
@@ -357,19 +359,36 @@ public class SchedulerUtils {
     return true;
   }
 
+  /**
+   * Check queue label expression, check if node label in queue's
+   * node-label-expression existed in clusterNodeLabels if rmContext != null
+   */
   public static boolean checkQueueLabelExpression(Set<String> queueLabels,
-      String labelExpression) {
-    if (queueLabels != null && queueLabels.contains(RMNodeLabelsManager.ANY)) {
-      return true;
-    }
+      String labelExpression, RMContext rmContext) {
     // if label expression is empty, we can allocate container on any node
     if (labelExpression == null) {
       return true;
     }
     for (String str : labelExpression.split("&&")) {
-      if (!str.trim().isEmpty()
-          && (queueLabels == null || !queueLabels.contains(str.trim()))) {
-        return false;
+      str = str.trim();
+      if (!str.trim().isEmpty()) {
+        // check queue label
+        if (queueLabels == null) {
+          return false; 
+        } else {
+          if (!queueLabels.contains(str)
+              && !queueLabels.contains(RMNodeLabelsManager.ANY)) {
+            return false;
+          }
+        }
+        
+        // check node label manager contains this label
+        if (null != rmContext) {
+          RMNodeLabelsManager nlm = rmContext.getNodeLabelManager();
+          if (nlm != null && !nlm.containsNodeLabel(str)) {
+            return false;
+          }
+        }
       }
     }
     return true;
