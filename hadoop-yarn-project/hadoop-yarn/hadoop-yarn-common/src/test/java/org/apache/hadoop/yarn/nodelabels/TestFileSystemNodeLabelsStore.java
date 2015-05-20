@@ -108,6 +108,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabelNames().size());
@@ -127,6 +128,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     mgr.stop();
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabelNames().size());
@@ -165,6 +167,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     cf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
         YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
     mgr.init(cf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabels().size());
@@ -205,6 +208,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabelNames().size());
