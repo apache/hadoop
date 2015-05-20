@@ -94,34 +94,67 @@ public class StripedDataStreamer extends DataStreamer {
   protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
       throws IOException {
     if (isLeadingStreamer()) {
-      if (coordinator.shouldLocateFollowingBlock()) {
+      if (block != null) {
         // set numByte for the previous block group
         long bytes = 0;
         for (int i = 0; i < NUM_DATA_BLOCKS; i++) {
           final ExtendedBlock b = coordinator.getEndBlock(i);
-          bytes += b == null ? 0 : b.getNumBytes();
+          if (b != null) {
+            StripedBlockUtil.checkBlocks(block, i, b);
+            bytes += b.getNumBytes();
+          }
         }
         block.setNumBytes(bytes);
       }
 
-      final LocatedStripedBlock lsb
-          = (LocatedStripedBlock)super.locateFollowingBlock(excludedNodes);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Obtained block group " + lsb);
-      }
-      LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(lsb,
-          BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
-
-      assert blocks.length == (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) :
-          "Fail to get block group from namenode: blockGroupSize: " +
-              (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) + ", blocks.length: " +
-              blocks.length;
-      for (int i = 0; i < blocks.length; i++) {
-        coordinator.putStripedBlock(i, blocks[i]);
-      }
+      putLoactedBlocks(super.locateFollowingBlock(excludedNodes));
     }
 
     return coordinator.getStripedBlock(index);
+  }
+
+  void putLoactedBlocks(LocatedBlock lb) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Obtained block group " + lb);
+    }
+    LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
+        (LocatedStripedBlock)lb,
+        BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+
+    // TODO allow write to continue if blocks.length >= NUM_DATA_BLOCKS
+    assert blocks.length == (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) :
+        "Fail to get block group from namenode: blockGroupSize: " +
+            (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) + ", blocks.length: " +
+            blocks.length;
+    for (int i = 0; i < blocks.length; i++) {
+      coordinator.putStripedBlock(i, blocks[i]);
+    }
+  }
+
+  @Override
+  LocatedBlock updateBlockForPipeline() throws IOException {
+    if (isLeadingStreamer()) {
+      final LocatedBlock updated = super.updateBlockForPipeline();
+      final ExtendedBlock block = updated.getBlock();
+      for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
+        final LocatedBlock lb = new LocatedBlock(block, null, null, null,
+                -1, updated.isCorrupt(), null);
+        lb.setBlockToken(updated.getBlockToken());
+        coordinator.putStripedBlock(i, lb);
+      }
+    }
+    return coordinator.getStripedBlock(index);
+  }
+
+  @Override
+  ExtendedBlock updatePipeline(long newGS) throws IOException {
+    if (isLeadingStreamer()) {
+      final ExtendedBlock newBlock = super.updatePipeline(newGS);
+      for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
+        coordinator.putUpdateBlock(i, new ExtendedBlock(newBlock));
+      }
+    }
+    return coordinator.getUpdateBlock(index);
   }
 
   @Override

@@ -238,3 +238,6 @@
 
     HDFS-8428. Erasure Coding: Fix the NullPointerException when deleting file.
     (Yi Liu via zhz).
+
+    HDFS-8323. Bump GenerationStamp for write faliure in DFSStripedOutputStream.
+    (Tsz Wo Nicholas Sze via jing9)

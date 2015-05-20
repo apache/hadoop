@@ -34,6 +34,7 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 
 import java.util.*;
+import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -104,12 +105,17 @@ public class StripedBlockUtil {
     final ExtendedBlock blk = constructInternalBlock(
         bg.getBlock(), cellSize, dataBlkNum, idxInBlockGroup);
 
-    return new LocatedBlock(blk,
-        new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
-        new String[]{bg.getStorageIDs()[idxInReturnedLocs]},
-        new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
-        bg.getStartOffset() + idxInBlockGroup * cellSize, bg.isCorrupt(),
-        null);
+    final long offset = bg.getStartOffset() + idxInBlockGroup * cellSize;
+    if (idxInReturnedLocs < bg.getLocations().length) {
+      return new LocatedBlock(blk,
+          new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
+          new String[]{bg.getStorageIDs()[idxInReturnedLocs]},
+          new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
+          offset, bg.isCorrupt(), null);
+    } else {
+      return new LocatedBlock(blk, null, null, null,
+          offset, bg.isCorrupt(), null);
+    }
   }
 
   /**
@@ -823,4 +829,26 @@ public class StripedBlockUtil {
       return "(index=" + index + ", state =" + state + ")";
     }
   }
+
+  /**
+   * Check if the information such as IDs and generation stamps in block-i
+   * match block-0.
+   */
+  public static void checkBlocks(ExtendedBlock block0, int i,
+      ExtendedBlock blocki) throws IOException {
+
+    if (!blocki.getBlockPoolId().equals(block0.getBlockPoolId())) {
+      throw new IOException("Block pool IDs mismatched: block0="
+          + block0 + ", block" + i + "=" + blocki);
+    }
+    if (blocki.getBlockId() - i != block0.getBlockId()) {
+      throw new IOException("Block IDs mismatched: block0="
+          + block0 + ", block" + i + "=" + blocki);
+    }
+    if (blocki.getGenerationStamp() != block0.getGenerationStamp()) {
+      throw new IOException("Generation stamps mismatched: block0="
+          + block0 + ", block" + i + "=" + blocki);
+    }
+  }
+
 }

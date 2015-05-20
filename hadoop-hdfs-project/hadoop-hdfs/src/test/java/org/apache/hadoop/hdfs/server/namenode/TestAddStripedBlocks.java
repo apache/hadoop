@@ -105,6 +105,14 @@ public class TestAddStripedBlocks {
     Assert.assertEquals(firstId + HdfsServerConstants.MAX_BLOCKS_IN_GROUP, secondId);
   }
 
+  private static void writeAndFlushStripedOutputStream(
+      DFSStripedOutputStream out, int chunkSize) throws IOException {
+    // FSOutputSummer.BUFFER_NUM_CHUNKS == 9
+    byte[] toWrite = new byte[chunkSize * 9 + 1];
+    out.write(toWrite);
+    DFSTestUtil.flushInternal(out);
+  }
+
   @Test (timeout=60000)
   public void testAddStripedBlock() throws Exception {
     final Path file = new Path("/file1");
@@ -112,7 +120,7 @@ public class TestAddStripedBlocks {
     FSDataOutputStream out = null;
     try {
       out = dfs.create(file, (short) 1);
-      DFSTestUtil.writeAndFlushStripedOutputStream(
+      writeAndFlushStripedOutputStream(
           (DFSStripedOutputStream) out.getWrappedStream(),
           DFS_BYTES_PER_CHECKSUM_DEFAULT);
 
@@ -190,7 +198,7 @@ public class TestAddStripedBlocks {
     FSDataOutputStream out = null;
     try {
       out = dfs.create(file, (short) 1);
-      DFSTestUtil.writeAndFlushStripedOutputStream(
+      writeAndFlushStripedOutputStream(
           (DFSStripedOutputStream) out.getWrappedStream(),
           DFS_BYTES_PER_CHECKSUM_DEFAULT);
 
