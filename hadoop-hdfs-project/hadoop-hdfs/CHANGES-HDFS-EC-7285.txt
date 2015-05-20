@@ -59,7 +59,7 @@
 
     HDFS-8023. Erasure Coding: retrieve eraure coding schema for a file from
     NameNode (vinayakumarb)
-    
+
     HDFS-8074. Define a system-wide default EC schema. (Kai Zheng)
 
     HDFS-8077. Erasure coding: fix bugs in EC zone and symlinks.
@@ -110,7 +110,7 @@
 
     HDFS-8216. TestDFSStripedOutputStream should use BlockReaderTestUtil to 
     create BlockReader. (szetszwo via Zhe Zhang)
-    
+
     HDFS-8212. DistributedFileSystem.createErasureCodingZone should pass schema
     in FileSystemLinkResolver. (szetszwo via Zhe Zhang)
 
@@ -172,7 +172,7 @@
 
     HDFS-8324. Add trace info to DFSClient#getErasureCodingZoneInfo(..) (vinayakumarb via 
     umamahesh)
-    
+
     HDFS-7672. Handle write failure for stripping blocks and refactor the
     existing code in DFSStripedOutputStream and StripedDataStreamer.  (szetszwo)
 
@@ -235,3 +235,6 @@
     (Rakesh R via waltersu4549)
 
     HDFS-8375. Add cellSize as an XAttr to ECZone. ( Vinayakumar B via zhz).
+
+    HDFS-8428. Erasure Coding: Fix the NullPointerException when deleting file.
+    (Yi Liu via zhz).
