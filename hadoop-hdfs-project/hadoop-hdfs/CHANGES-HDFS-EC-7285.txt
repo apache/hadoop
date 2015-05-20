@@ -241,3 +241,6 @@
 
     HDFS-8323. Bump GenerationStamp for write faliure in DFSStripedOutputStream.
     (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-8427. Remove dataBlockNum and parityBlockNum from BlockInfoStriped.
+    (Kai Sasaki via jing9)
