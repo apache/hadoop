@@ -811,7 +811,7 @@ public class BlockManager {
    *
    * @throws IOException
    */
-  public LocatedBlocks createLocatedBlocks(BlockInfoContiguous[] blocks,
+  public LocatedBlocks createLocatedBlocks(Iterable<Block> blocks,
       final long start, final long length, long visibleFileLength,
       final boolean needBlockToken) throws IOException {
     assert namesystem.hasReadLock();
@@ -819,7 +819,8 @@ public class BlockManager {
     long pos = 0;
     long end = Math.min(start + length, visibleFileLength);
     BlockInfoContiguous last = null;
-    for (BlockInfoContiguous b : blocks) {
+    for (Block bid : blocks) {
+      BlockInfoContiguous b = getStoredBlock(bid);
       last = b;
       long old = pos;
       pos += b.getNumBytes();
@@ -888,8 +889,7 @@ public class BlockManager {
    * replication levels.
    */
   public short adjustReplication(short replication) {
-    return replication < minReplication? minReplication
-        : replication > maxReplication? maxReplication: replication;
+    return replication < minReplication? minReplication : replication > maxReplication? maxReplication: replication;
   }
 
   /**
@@ -974,7 +974,7 @@ public class BlockManager {
     BlockInfoContiguous curBlock;
     while(totalSize<size && iter.hasNext()) {
       curBlock = iter.next();
-      if(!curBlock.isComplete())  continue;
+      if(!curBlock.isComplete()) continue;
       totalSize += addBlock(curBlock, results);
     }
     if(totalSize<size) {
@@ -1443,8 +1443,8 @@ public class BlockManager {
   }
 
   /** Choose target for WebHDFS redirection. */
-  public DatanodeStorageInfo[] chooseTarget4WebHDFS(String src,
-      DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
+  public DatanodeStorageInfo[] chooseTarget4WebHDFS(
+      String src, DatanodeDescriptor clientnode, Set<Node> excludes, long blocksize) {
     return blockplacement.chooseTarget(src, 1, clientnode,
         Collections.<DatanodeStorageInfo>emptyList(), false, excludes,
         blocksize, storagePolicySuite.getDefaultPolicy());
@@ -3039,7 +3039,7 @@ public class BlockManager {
    */
   private long addBlock(Block block, List<BlockWithLocations> results) {
     final List<DatanodeStorageInfo> locations = getValidLocations(block);
-    if(locations.size() == 0) {
+    if (locations.size() == 0) {
       return 0;
     } else {
       final String[] datanodeUuids = new String[locations.size()];
@@ -3142,8 +3142,9 @@ public class BlockManager {
     int receiving = 0;
     final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
     if (node == null || !node.isAlive) {
-      blockLog.warn("BLOCK* processIncrementalBlockReport"
-              + " is received from dead or unregistered node {}", nodeID);
+      blockLog.warn(
+          "BLOCK* processIncrementalBlockReport" + " is received from dead or unregistered node {}",
+          nodeID);
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }

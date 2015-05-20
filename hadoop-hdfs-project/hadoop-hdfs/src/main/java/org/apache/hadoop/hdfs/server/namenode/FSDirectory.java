@@ -1617,18 +1617,19 @@ public class FSDirectory implements Closeable {
   }
 
   void checkUnreadableBySuperuser(
-      FSPermissionChecker pc, INode inode, int snapshotId)
+      FSPermissionChecker pc, FlatINodesInPath iip)
       throws IOException {
-    if (pc.isSuperUser()) {
-      for (XAttr xattr : FSDirXAttrOp.getXAttrs(this, inode, snapshotId)) {
-        if (XAttrHelper.getPrefixName(xattr).
-            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
-          throw new AccessControlException(
-              "Access is denied for " + pc.getUser() + " since the superuser "
-              + "is not allowed to perform this operation.");
-        }
-      }
-    }
+    // TODO
+//    if (pc.isSuperUser()) {
+//      for (XAttr xattr : FSDirXAttrOp.getXAttrs(this, inode, snapshotId)) {
+//        if (XAttrHelper.getPrefixName(xattr).
+//            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
+//          throw new AccessControlException(
+//              "Access is denied for " + pc.getUser() + " since the superuser "
+//              + "is not allowed to perform this operation.");
+//        }
+//      }
+//    }
   }
 
   HdfsFileStatus getAuditFileInfo(INodesInPath iip)

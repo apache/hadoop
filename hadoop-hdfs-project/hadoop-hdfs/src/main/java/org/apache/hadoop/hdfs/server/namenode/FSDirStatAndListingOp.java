@@ -155,34 +155,36 @@ class FSDirStatAndListingOp {
     BlockManager bm = fsd.getBlockManager();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     src = fsd.resolvePath(pc, src, pathComponents);
-    fsd.readLock();
-    try {
-      final INodesInPath iip = fsd.getINodesInPath(src, true);
-      final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
+    try (ROTransaction tx = fsd.newROTransaction().begin()){
+      Resolver.Result paths = Resolver.resolve(tx, src);
+      if (paths.invalidPath()) {
+        throw new InvalidPathException(src);
+      } else if (paths.notFound()) {
+        throw new FileNotFoundException(src);
+      }
+
       if (fsd.isPermissionEnabled()) {
-        fsd.checkPathAccess(pc, iip, FsAction.READ);
-        fsd.checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
+        fsd.checkPathAccess(pc, paths.inodesInPath(), FsAction.READ);
+        fsd.checkUnreadableBySuperuser(pc, paths.inodesInPath());
       }
 
-      final long fileSize = iip.isSnapshot()
-          ? inode.computeFileSize(iip.getPathSnapshotId())
-          : inode.computeFileSizeNotIncludingLastUcBlock();
-
-      boolean isUc = inode.isUnderConstruction();
-      if (iip.isSnapshot()) {
-        // if src indicates a snapshot file, we need to make sure the returned
-        // blocks do not exceed the size of the snapshot file.
-        length = Math.min(length, fileSize - offset);
-        isUc = false;
+      FlatINode inode = paths.inodesInPath().getLastINode();
+      FlatINodeFileFeature file = inode.feature(FlatINodeFileFeature.class);
+      if (file == null) {
+        throw new FileNotFoundException(src);
       }
 
-      final FileEncryptionInfo feInfo = FSDirectory.isReservedRawName(src)
-          ? null
-          : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
+      final long fileSize = file.fileSize();
+      final FileEncryptionInfo feInfo = null;
+//      final FileEncryptionInfo feInfo = FSDirectory.isReservedRawName(src)
+//          ? null
+//          : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
 
-      final LocatedBlocks blocks = bm.createLocatedBlocks(
-          inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
-          length, needBlockToken, iip.isSnapshot(), feInfo);
+      LocatedBlocks blocks = bm.createLocatedBlocks(
+          file.blocks(), offset, length, fileSize, needBlockToken);
+      // TODO: Fix snapshot
+      blocks = FSDirStatAndListingOp.attachFileInfo(
+          blocks, fileSize, file.inConstruction(), false, feInfo);
 
       // Set caching information for the located blocks.
       for (LocatedBlock lb : blocks.getLocatedBlocks()) {
@@ -191,11 +193,8 @@ class FSDirStatAndListingOp {
 
       final long now = now();
       boolean updateAccessTime = fsd.isAccessTimeSupported()
-          && !iip.isSnapshot()
-          && now > inode.getAccessTime() + fsd.getAccessTimePrecision();
+          && now > inode.atime() + fsd.getAccessTimePrecision();
       return new GetBlockLocationsResult(updateAccessTime, blocks);
-    } finally {
-      fsd.readUnlock();
     }
   }
 
@@ -328,9 +327,7 @@ class FSDirStatAndListingOp {
       byte[] localName, boolean needLocation, byte storagePolicy)
       throws IOException {
     if (needLocation) {
-      throw new IllegalStateException("Unimplemented");
-//      return createLocatedFileStatus(fsd, path, node, nodeAttrs, storagePolicy,
-//                                     snapshot, isRawPath, iip);
+      return createLocatedFileStatus(tx, fsd, node, localName, storagePolicy);
     } else {
       return createFileStatus(tx, fsd, node, localName, storagePolicy);
     }
@@ -460,47 +457,45 @@ class FSDirStatAndListingOp {
    * Create FileStatus with location info by file INode
    */
   private static HdfsLocatedFileStatus createLocatedFileStatus(
-      FSDirectory fsd, byte[] path, INode node, INodeAttributes nodeAttrs,
-      byte storagePolicy, int snapshot,
-      boolean isRawPath, INodesInPath iip) throws IOException {
+      ROTransaction tx, FSDirectory fsd, FlatINode node, byte[] path,
+      byte storagePolicy) throws IOException {
     assert fsd.hasReadLock();
     long size = 0; // length is zero for directories
     short replication = 0;
     long blocksize = 0;
     LocatedBlocks loc = null;
-    final boolean isEncrypted;
-    final FileEncryptionInfo feInfo = isRawPath ? null :
-        fsd.getFileEncryptionInfo(node, snapshot, iip);
-    if (node.isFile()) {
-      final INodeFile fileNode = node.asFile();
-      size = fileNode.computeFileSize(snapshot);
-      replication = fileNode.getFileReplication(snapshot);
-      blocksize = fileNode.getPreferredBlockSize();
 
-      final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
-      final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
-      final long fileSize = !inSnapshot && isUc ?
-          fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
+    // TODO
+    final FileEncryptionInfo feInfo = null;
+//    final FileEncryptionInfo feInfo = isRawPath ? null :
+//        fsd.getFileEncryptionInfo(node, snapshot, iip);
+
+    if (node.isFile()) {
+      FlatINodeFileFeature file = node.feature(FlatINodeFileFeature.class);
+      size = file.fileSize();
+      replication = file.replication();
+      blocksize = file.blockSize();
+
+      final boolean isUc = file.inConstruction();
+      final long fileSize = file.inConstruction()
+          ? size - file.lastBlock().getNumBytes()
+          : size;
 
       loc = fsd.getBlockManager().createLocatedBlocks(
-          fileNode.getBlocks(snapshot), 0L, size, fileSize, false);
-      loc = attachFileInfo(loc, fileSize, isUc, inSnapshot, feInfo);
-      isEncrypted = (feInfo != null) ||
-          (isRawPath && fsd.isInAnEZ(INodesInPath.fromINode(node)));
-    } else {
-      isEncrypted = fsd.isInAnEZ(INodesInPath.fromINode(node));
+          file.blocks(), 0L, size, fileSize, false);
+      // TODO: Snapsho
+      loc = attachFileInfo(loc, fileSize, isUc, false, feInfo);
     }
-    int childrenNum = node.isDirectory() ?
-        node.asDirectory().getChildrenNum(snapshot) : 0;
 
-    HdfsLocatedFileStatus status =
-        new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, node.getModificationTime(snapshot),
-          node.getAccessTime(snapshot),
-          getPermissionForFileStatus(nodeAttrs, isEncrypted),
-          nodeAttrs.getUserName(), nodeAttrs.getGroupName(),
-          node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum, feInfo, storagePolicy);
+    int childrenNum = node.isDirectory()
+        ? tx.childrenView(node.id()).size()
+        : 0;
+
+    PermissionStatus perm = node.permissionStatus(fsd.ugid());
+    HdfsLocatedFileStatus status = new HdfsLocatedFileStatus(
+        size, node.isDirectory(), replication, blocksize, node.mtime(), node.atime(),
+        perm.getPermission(), perm.getUserName(), perm.getGroupName(),
+        null, path, node.id(), loc, childrenNum, feInfo, storagePolicy);
     // Set caching information for the located blocks.
     if (loc != null) {
       CacheManager cacheManager = fsd.getFSNamesystem().getCacheManager();
