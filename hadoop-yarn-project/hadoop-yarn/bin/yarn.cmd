@@ -150,7 +150,7 @@ if "%1" == "--loglevel" (
   )
 
   set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
-     application applicationattempt cluster container node logs daemonlog historyserver ^
+     application applicationattempt cluster container node queue logs daemonlog historyserver ^
      timelineserver classpath
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
