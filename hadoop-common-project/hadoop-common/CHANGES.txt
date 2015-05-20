@@ -587,6 +587,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11103. Clean up RemoteException (Sean Busbey via vinayakumarb)
 
+    HADOOP-11995. Make jetty version configurable from the maven command line.
+    (Sriharsha Devineni via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
