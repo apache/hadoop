@@ -508,12 +508,9 @@ class FSDirStatAndListingOp {
       final long fileSize = !inSnapshot && isUc ?
           fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
 
-      loc = fsd.getFSNamesystem().getBlockManager().createLocatedBlocks(
-          fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
-          inSnapshot, feInfo);
-      if (loc == null) {
-        loc = new LocatedBlocks();
-      }
+      loc = fsd.getBlockManager().createLocatedBlocks(
+          fileNode.getBlocks(snapshot), 0L, size, fileSize, false);
+      loc = attachFileInfo(loc, fileSize, isUc, inSnapshot, feInfo);
       isEncrypted = (feInfo != null) ||
           (isRawPath && fsd.isInAnEZ(INodesInPath.fromINode(node)));
     } else {

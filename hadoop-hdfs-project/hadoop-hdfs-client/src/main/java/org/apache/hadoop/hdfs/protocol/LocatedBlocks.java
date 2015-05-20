@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Comparator;
@@ -56,6 +57,12 @@ public class LocatedBlocks {
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
     this.fileEncryptionInfo = feInfo;
+  }
+
+  public LocatedBlocks(
+      List<LocatedBlock> blks, LocatedBlock lastBlock,
+      boolean isLastBlockCompleted) {
+    this(0, false, blks, lastBlock, isLastBlockCompleted, null);
   }
 
   /**
