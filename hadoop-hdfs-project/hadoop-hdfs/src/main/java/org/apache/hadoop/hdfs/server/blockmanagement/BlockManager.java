@@ -2511,8 +2511,6 @@ public class BlockManager {
       return block;
     }
     long bcId = storedBlock.getBlockCollectionId();
-    BlockCollection bc = namesystem.getBlockCollection(bcId);
-    assert bc != null : "Block must belong to a file";
 
     // add block to the datanode
     AddBlockResult result = storageInfo.addBlock(storedBlock);
@@ -2547,7 +2545,7 @@ public class BlockManager {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
-      storedBlock = completeBlock(bc, storedBlock, false);
+      storedBlock = completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that
@@ -2556,9 +2554,9 @@ public class BlockManager {
       // handles the safe block count maintenance.
       namesystem.incrementSafeBlockCount(numCurrentReplica);
     }
-    
+
     // if file is under construction, then done for now
-    if (bc.isUnderConstruction()) {
+    if (!storedBlock.isComplete()) {
       return storedBlock;
     }
 
