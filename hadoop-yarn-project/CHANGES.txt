@@ -526,6 +526,9 @@ Release 2.7.1 - UNRELEASED
     YARN-2918. RM should not fail on startup if queue's configured labels do
     not exist in cluster-node-labels. (Wangda Tan via jianhe)
 
+    YARN-3681. yarn cmd says "could not find main class 'queue'" in windows.
+    (Craig Welch and Varun Saxena via xgong)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
