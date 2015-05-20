@@ -31,15 +31,21 @@ import java.util.Arrays;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class LocatedStripedBlock extends LocatedBlock {
+  private static final int[] EMPTY_INDICES = {};
+
   private int[] blockIndices;
 
   public LocatedStripedBlock(ExtendedBlock b, DatanodeInfo[] locs,
       String[] storageIDs, StorageType[] storageTypes, int[] indices,
       long startOffset, boolean corrupt, DatanodeInfo[] cachedLocs) {
     super(b, locs, storageIDs, storageTypes, startOffset, corrupt, cachedLocs);
-    assert indices != null && indices.length == locs.length;
-    this.blockIndices = new int[indices.length];
-    System.arraycopy(indices, 0, blockIndices, 0, indices.length);
+
+    if (indices == null) {
+      this.blockIndices = EMPTY_INDICES;
+    } else {
+      this.blockIndices = new int[indices.length];
+      System.arraycopy(indices, 0, blockIndices, 0, indices.length);
+    }
   }
 
   @Override

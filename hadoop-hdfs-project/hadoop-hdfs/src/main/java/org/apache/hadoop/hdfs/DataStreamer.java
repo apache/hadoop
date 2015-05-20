@@ -44,7 +44,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -210,6 +209,7 @@ class DataStreamer extends Daemon {
 
   static class ErrorState {
     private boolean error = false;
+    private boolean extenalError = false;
     private int badNodeIndex = -1;
     private int restartingNodeIndex = -1;
     private long restartingNodeDeadline = 0;
@@ -221,6 +221,7 @@ class DataStreamer extends Daemon {
 
     synchronized void reset() {
       error = false;
+      extenalError = false;
       badNodeIndex = -1;
       restartingNodeIndex = -1;
       restartingNodeDeadline = 0;
@@ -231,12 +232,18 @@ class DataStreamer extends Daemon {
     }
 
     synchronized boolean hasDatanodeError() {
-      return error && isNodeMarked();
+      return error && (isNodeMarked() || extenalError);
     }
 
     synchronized void setError(boolean err) {
       this.error = err;
     }
+
+    synchronized void initExtenalError() {
+      setError(true);
+      this.extenalError = true;
+    }
+
 
     synchronized void setBadNodeIndex(int index) {
       this.badNodeIndex = index;
@@ -1734,6 +1741,10 @@ class DataStreamer extends Daemon {
    */
   Token<BlockTokenIdentifier> getBlockToken() {
     return accessToken;
+  }
+
+  ErrorState getErrorState() {
+    return errorState;
   }
 
   /**
