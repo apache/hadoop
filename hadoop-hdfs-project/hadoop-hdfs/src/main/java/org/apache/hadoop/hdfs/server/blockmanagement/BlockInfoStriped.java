@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
@@ -39,8 +38,6 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_S
  * array to record the block index for each triplet.
  */
 public class BlockInfoStriped extends BlockInfo {
-  private final short dataBlockNum;
-  private final short parityBlockNum;
   private final ECSchema schema;
   /**
    * Always the same size with triplets. Record the block index for each triplet
@@ -54,8 +51,6 @@ public class BlockInfoStriped extends BlockInfo {
     indices = new byte[schema.getNumDataUnits() + schema.getNumParityUnits()];
     initIndices();
     this.schema = schema;
-    this.dataBlockNum = (short)schema.getNumDataUnits();
-    this.parityBlockNum = (short)schema.getNumParityUnits();
   }
 
   BlockInfoStriped(BlockInfoStriped b) {
@@ -64,15 +59,16 @@ public class BlockInfoStriped extends BlockInfo {
   }
 
   public short getTotalBlockNum() {
-    return (short) (dataBlockNum + parityBlockNum);
+    return (short) (this.schema.getNumDataUnits()
+        + this.schema.getNumParityUnits());
   }
 
   public short getDataBlockNum() {
-    return dataBlockNum;
+    return (short) this.schema.getNumDataUnits();
   }
 
   public short getParityBlockNum() {
-    return parityBlockNum;
+    return (short) this.schema.getNumParityUnits();
   }
 
   public ECSchema getSchema() {
@@ -210,7 +206,8 @@ public class BlockInfoStriped extends BlockInfo {
     // be the total of data blocks and parity blocks because
     // `getNumBytes` is the total of actual data block size.
     return StripedBlockUtil.spaceConsumedByStripedBlock(getNumBytes(),
-        dataBlockNum, parityBlockNum, BLOCK_STRIPED_CELL_SIZE);
+        this.schema.getNumDataUnits(), this.schema.getNumParityUnits(),
+        BLOCK_STRIPED_CELL_SIZE);
     }
 
   @Override
