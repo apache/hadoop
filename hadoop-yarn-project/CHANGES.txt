@@ -73,6 +73,8 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3634. TestMRTimelineEventHandling and TestApplication are broken. (
     Sangjin Lee via junping_du)
 
+    YARN-3411. [Storage implementation] explore the native HBase write schema
+    for storage (Vrushali C via sjlee)
   IMPROVEMENTS
 
   OPTIMIZATIONS
