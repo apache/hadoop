@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -299,9 +301,16 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       else {
         exec.activateContainer(containerID, pidFilePath);
-        ret = exec.launchContainer(container, nmPrivateContainerScriptPath,
-                nmPrivateTokensPath, user, appIdStr, containerWorkDir,
-                localDirs, logDirs);
+        ret = exec.launchContainer(new ContainerStartContext.Builder()
+            .setContainer(container)
+            .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
+            .setNmPrivateTokensPath(nmPrivateTokensPath)
+            .setUser(user)
+            .setAppId(appIdStr)
+            .setContainerWorkDir(containerWorkDir)
+            .setLocalDirs(localDirs)
+            .setLogDirs(logDirs)
+            .build());
       }
     } catch (Throwable e) {
       LOG.warn("Failed to launch container.", e);
@@ -416,7 +425,12 @@ public class ContainerLaunch implements Callable<Integer> {
           ? Signal.TERM
           : Signal.KILL;
 
-        boolean result = exec.signalContainer(user, processId, signal);
+        boolean result = exec.signalContainer(
+            new ContainerSignalContext.Builder()
+                .setUser(user)
+                .setPid(processId)
+                .setSignal(signal)
+                .build());
 
         LOG.debug("Sent signal " + signal + " to pid " + processId
           + " as user " + user

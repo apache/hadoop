@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -255,8 +256,11 @@ public abstract class BaseContainerManagerTest {
     if (containerManager != null) {
       containerManager.stop();
     }
-    createContainerExecutor().deleteAsUser(user,
-        new Path(localDir.getAbsolutePath()), new Path[] {});
+    createContainerExecutor().deleteAsUser(new DeletionAsUserContext.Builder()
+        .setUser(user)
+        .setSubDir(new Path(localDir.getAbsolutePath()))
+        .setBasedirs(new Path[] {})
+        .build());
   }
 
   public static void waitForContainerState(ContainerManagementProtocol containerManager,
