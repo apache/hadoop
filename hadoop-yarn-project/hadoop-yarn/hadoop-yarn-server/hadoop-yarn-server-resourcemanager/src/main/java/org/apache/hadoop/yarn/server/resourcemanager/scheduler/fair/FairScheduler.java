@@ -1039,10 +1039,20 @@ public class FairScheduler extends
               nodes.get(n1).getAvailableResource());
     }
   }
-  
-  private synchronized void attemptScheduling(FSSchedulerNode node) {
+
+  @VisibleForTesting
+  synchronized void attemptScheduling(FSSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
+      return;
+    }
+
+    final NodeId nodeID = node.getNodeID();
+    if (!nodes.containsKey(nodeID)) {
+      // The node might have just been removed while this thread was waiting
+      // on the synchronized lock before it entered this synchronized method
+      LOG.info("Skipping scheduling as the node " + nodeID +
+          " has been removed");
       return;
     }
 
