@@ -116,6 +116,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.Tes
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -165,8 +166,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   @Override
   public void tearDown() throws IOException, InterruptedException {
     super.tearDown();
-    createContainerExecutor().deleteAsUser(user,
-        new Path(remoteRootLogDir.getAbsolutePath()), new Path[] {});
+    createContainerExecutor().deleteAsUser(new DeletionAsUserContext.Builder()
+        .setUser(user)
+        .setSubDir(new Path(remoteRootLogDir.getAbsolutePath()))
+        .setBasedirs(new Path[] {})
+        .build());
+
     dispatcher.await();
     dispatcher.stop();
     dispatcher.close();

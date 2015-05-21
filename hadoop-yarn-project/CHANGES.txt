@@ -253,6 +253,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3583. Support of NodeLabel object instead of plain String 
     in YarnClient side. (Sunil G via wangda)
 
+    YARN-3684. Changed ContainerExecutor's primary lifecycle methods to use a more
+    extensible mechanism of context objects. (Sidharta Seethana via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

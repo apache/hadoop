@@ -57,6 +57,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -123,10 +128,14 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
-    InetSocketAddress nmAddr, String user, String appId, String locId,
-    LocalDirsHandlerService dirsHandler)
+  public synchronized void startLocalizer(LocalizerStartContext ctx)
     throws IOException, InterruptedException {
+    Path nmPrivateContainerTokensPath = ctx.getNmPrivateContainerTokens();
+    InetSocketAddress nmAddr = ctx.getNmAddr();
+    String user = ctx.getUser();
+    String appId = ctx.getAppId();
+    String locId = ctx.getLocId();
+    LocalDirsHandlerService dirsHandler = ctx.getDirsHandler();
     List<String> localDirs = dirsHandler.getLocalDirs();
     List<String> logDirs = dirsHandler.getLogDirs();
 
@@ -155,10 +164,15 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
 
   @Override
-  public int launchContainer(Container container, Path
-    nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName,
-    String appId, Path containerWorkDir, List<String> localDirs, List<String>
-    logDirs) throws IOException {
+  public int launchContainer(ContainerStartContext ctx) throws IOException {
+    Container container = ctx.getContainer();
+    Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
+    Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
+    String userName = ctx.getUser();
+    Path containerWorkDir = ctx.getContainerWorkDir();
+    List<String> localDirs = ctx.getLocalDirs();
+    List<String> logDirs = ctx.getLogDirs();
+
     //Variables for the launch environment can be injected from the command-line
     //while submitting the application
     String containerImageName = container.getLaunchContext().getEnvironment()
@@ -374,8 +388,12 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public boolean signalContainer(String user, String pid, Signal signal)
+  public boolean signalContainer(ContainerSignalContext ctx)
     throws IOException {
+    String user = ctx.getUser();
+    String pid = ctx.getPid();
+    Signal signal = ctx.getSignal();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
         + " as user " + user);
@@ -395,8 +413,10 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public boolean isContainerProcessAlive(String user, String pid)
+  public boolean isContainerProcessAlive(ContainerLivenessContext ctx)
     throws IOException {
+    String pid = ctx.getPid();
+
     return containerIsAlive(pid);
   }
 
@@ -433,9 +453,12 @@ public class DockerContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void deleteAsUser(String user, Path subDir, Path... baseDirs)
+  public void deleteAsUser(DeletionAsUserContext ctx)
     throws IOException, InterruptedException {
-    if (baseDirs == null || baseDirs.length == 0) {
+    Path subDir = ctx.getSubDir();
+    List<Path> baseDirs = ctx.getBasedirs();
+
+    if (baseDirs == null || baseDirs.size() == 0) {
       LOG.info("Deleting absolute path : " + subDir);
       if (!lfs.delete(subDir, true)) {
         //Maybe retry

@@ -60,6 +60,11 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.junit.After;
 import org.junit.Assert;
@@ -208,7 +213,10 @@ public class TestLinuxContainerExecutor {
       Path usercachedir = new Path(dir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usercachedir, user);
       Path appcachedir = new Path(userdir, ContainerLocalizer.APPCACHE);
-      exec.deleteAsUser(user, appcachedir);
+      exec.deleteAsUser(new DeletionAsUserContext.Builder()
+          .setUser(user)
+          .setSubDir(appcachedir)
+          .build());
       FileContext.getLocalFSFileContext().delete(usercachedir, true);
     }
   }
@@ -218,7 +226,10 @@ public class TestLinuxContainerExecutor {
     for (String dir : localDirs) {
       Path filecache = new Path(dir, ContainerLocalizer.FILECACHE);
       Path filedir = new Path(filecache, user);
-      exec.deleteAsUser(user, filedir);
+      exec.deleteAsUser(new DeletionAsUserContext.Builder()
+          .setUser(user)
+          .setSubDir(filedir)
+          .build());
     }
   }
 
@@ -229,7 +240,10 @@ public class TestLinuxContainerExecutor {
       String containerId = "CONTAINER_" + (id - 1);
       Path appdir = new Path(dir, appId);
       Path containerdir = new Path(appdir, containerId);
-      exec.deleteAsUser(user, containerdir);
+      exec.deleteAsUser(new DeletionAsUserContext.Builder()
+          .setUser(user)
+          .setSubDir(containerdir)
+          .build());
     }
   }
 
@@ -244,7 +258,11 @@ public class TestLinuxContainerExecutor {
     for (String file : files) {
       File f = new File(workSpace, file);
       if (f.exists()) {
-        exec.deleteAsUser(user, new Path(file), ws);
+        exec.deleteAsUser(new DeletionAsUserContext.Builder()
+            .setUser(user)
+            .setSubDir(new Path(file))
+            .setBasedirs(ws)
+            .build());
       }
     }
   }
@@ -310,9 +328,16 @@ public class TestLinuxContainerExecutor {
     Path pidFile = new Path(workDir, "pid.txt");
 
     exec.activateContainer(cId, pidFile);
-    return exec.launchContainer(container, scriptPath, tokensPath,
-      appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
-      dirsHandler.getLogDirs());
+    return exec.launchContainer(new ContainerStartContext.Builder()
+        .setContainer(container)
+        .setNmPrivateContainerScriptPath(scriptPath)
+        .setNmPrivateTokensPath(tokensPath)
+        .setUser(appSubmitter)
+        .setAppId(appId)
+        .setContainerWorkDir(workDir)
+        .setLocalDirs(dirsHandler.getLocalDirs())
+        .setLogDirs(dirsHandler.getLogDirs())
+        .build());
   }
 
   @Test
@@ -345,8 +370,14 @@ public class TestLinuxContainerExecutor {
     };
     exec.setConf(conf);
 
-    exec.startLocalizer(nmPrivateContainerTokensPath, nmAddr, appSubmitter,
-      appId, locId, dirsHandler);
+    exec.startLocalizer(new LocalizerStartContext.Builder()
+        .setNmPrivateContainerTokens(nmPrivateContainerTokensPath)
+        .setNmAddr(nmAddr)
+        .setUser(appSubmitter)
+        .setAppId(appId)
+        .setLocId(locId)
+        .setDirsHandler(dirsHandler)
+        .build());
 
     String locId2 = "container_01_02";
     Path nmPrivateContainerTokensPath2 =
@@ -355,8 +386,16 @@ public class TestLinuxContainerExecutor {
               + Path.SEPARATOR
               + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId2));
     files.create(nmPrivateContainerTokensPath2, EnumSet.of(CREATE, OVERWRITE));
-    exec.startLocalizer(nmPrivateContainerTokensPath2, nmAddr, appSubmitter,
-      appId, locId2, dirsHandler);
+    exec.startLocalizer(new LocalizerStartContext.Builder()
+            .setNmPrivateContainerTokens(nmPrivateContainerTokensPath2)
+            .setNmAddr(nmAddr)
+            .setUser(appSubmitter)
+            .setAppId(appId)
+            .setLocId(locId2)
+            .setDirsHandler(dirsHandler)
+            .build());
+
+
     cleanupUserAppCache(appSubmitter);
   }
 
@@ -429,7 +468,11 @@ public class TestLinuxContainerExecutor {
     assertNotNull(pid);
 
     LOG.info("Going to killing the process.");
-    exec.signalContainer(appSubmitter, pid, Signal.TERM);
+    exec.signalContainer(new ContainerSignalContext.Builder()
+        .setUser(appSubmitter)
+        .setPid(pid)
+        .setSignal(Signal.TERM)
+        .build());
     LOG.info("sleeping for 100ms to let the sleep be killed");
     Thread.sleep(100);
 
@@ -586,7 +629,10 @@ public class TestLinuxContainerExecutor {
     } catch (IOException e) {
       // expected if LCE isn't setup right, but not necessary for this test
     }
-    lce.reacquireContainer("foouser", cid);
+    lce.reacquireContainer(new ContainerReacquisitionContext.Builder()
+        .setUser("foouser")
+        .setContainerId(cid)
+        .build());
     assertTrue("postExec not called after reacquisition",
         TestResourceHandler.postExecContainers.contains(cid));
   }

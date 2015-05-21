@@ -124,6 +124,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
+import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredLocalizationState;
@@ -1135,13 +1136,15 @@ public class ResourceLocalizationService extends CompositeService
         writeCredentials(nmPrivateCTokensPath);
         // 2) exec initApplication and wait
         if (dirsHandler.areDisksHealthy()) {
-          exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
-              context.getUser(),
-              ConverterUtils.toString(
-                  context.getContainerId().
-                  getApplicationAttemptId().getApplicationId()),
-              localizerId,
-              dirsHandler);
+          exec.startLocalizer(new LocalizerStartContext.Builder()
+              .setNmPrivateContainerTokens(nmPrivateCTokensPath)
+              .setNmAddr(localizationServerAddress)
+              .setUser(context.getUser())
+              .setAppId(ConverterUtils.toString(context.getContainerId()
+                  .getApplicationAttemptId().getApplicationId()))
+              .setLocId(localizerId)
+              .setDirsHandler(dirsHandler)
+              .build());
         } else {
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));

@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,6 +45,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -111,61 +116,67 @@ public abstract class ContainerExecutor implements Configurable {
    * For $rsrc in job resources
    *   Copy $rsrc {@literal ->} $N/$user/$appId/filecache/idef
    * </pre>
-   * @param user user name of application owner
-   * @param appId id of the application
-   * @param nmPrivateContainerTokens path to localized credentials, rsrc by NM
-   * @param nmAddr RPC address to contact NM
-   * @param dirsHandler NM local dirs service, for nm-local-dirs and nm-log-dirs
+   * @param ctx LocalizerStartContext that encapsulates necessary information
+   *            for starting a localizer.
    * @throws IOException For most application init failures
    * @throws InterruptedException If application init thread is halted by NM
    */
-  public abstract void startLocalizer(Path nmPrivateContainerTokens,
-      InetSocketAddress nmAddr, String user, String appId, String locId,
-      LocalDirsHandlerService dirsHandler)
+  public abstract void startLocalizer(LocalizerStartContext ctx)
     throws IOException, InterruptedException;
 
 
   /**
    * Launch the container on the node. This is a blocking call and returns only
    * when the container exits.
-   * @param container the container to be launched
-   * @param nmPrivateContainerScriptPath the path for launch script
-   * @param nmPrivateTokensPath the path for tokens for the container
-   * @param user the user of the container
-   * @param appId the appId of the container
-   * @param containerWorkDir the work dir for the container
-   * @param localDirs nm-local-dirs to be used for this container
-   * @param logDirs nm-log-dirs to be used for this container
+   * @param ctx Encapsulates information necessary for launching containers.
    * @return the return status of the launch
    * @throws IOException
    */
-  public abstract int launchContainer(Container container,
-      Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
-      String user, String appId, Path containerWorkDir, 
-      List<String> localDirs, List<String> logDirs) throws IOException;
+  public abstract int launchContainer(ContainerStartContext ctx) throws
+      IOException;
 
-  public abstract boolean signalContainer(String user, String pid,
-      Signal signal)
+  /**
+   * Signal container with the specified signal.
+   * @param ctx Encapsulates information necessary for signaling containers.
+   * @return returns true if the operation succeeded
+   * @throws IOException
+   */
+  public abstract boolean signalContainer(ContainerSignalContext ctx)
       throws IOException;
 
-  public abstract void deleteAsUser(String user, Path subDir, Path... basedirs)
+  /**
+   * Delete specified directories as a given user.
+   * @param ctx Encapsulates information necessary for deletion.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public abstract void deleteAsUser(DeletionAsUserContext ctx)
       throws IOException, InterruptedException;
 
-  public abstract boolean isContainerProcessAlive(String user, String pid)
+  /**
+   * Check if a container is alive.
+   * @param ctx Encapsulates information necessary for container liveness check.
+   * @return true if container is still alive
+   * @throws IOException
+   */
+  public abstract boolean isContainerProcessAlive(ContainerLivenessContext ctx)
       throws IOException;
 
   /**
    * Recover an already existing container. This is a blocking call and returns
    * only when the container exits.  Note that the container must have been
    * activated prior to this call.
-   * @param user the user of the container
-   * @param containerId The ID of the container to reacquire
+   * @param ctx encapsulates information necessary to reacquire container
    * @return The exit code of the pre-existing container
    * @throws IOException
    * @throws InterruptedException 
    */
-  public int reacquireContainer(String user, ContainerId containerId)
+  public int reacquireContainer(ContainerReacquisitionContext ctx)
       throws IOException, InterruptedException {
+    String user = ctx.getUser();
+    ContainerId containerId = ctx.getContainerId();
+
+
     Path pidPath = getPidFilePath(containerId);
     if (pidPath == null) {
       LOG.warn(containerId + " is not active, returning terminated error");
@@ -179,7 +190,12 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     LOG.info("Reacquiring " + containerId + " with pid " + pid);
-    while(isContainerProcessAlive(user, pid)) {
+    ContainerLivenessContext livenessContext = new ContainerLivenessContext
+        .Builder()
+        .setUser(user)
+        .setPid(pid)
+        .build();
+    while(isContainerProcessAlive(livenessContext)) {
       Thread.sleep(1000);
     }
 
@@ -486,7 +502,11 @@ public abstract class ContainerExecutor implements Configurable {
     public void run() {
       try {
         Thread.sleep(delay);
-        containerExecutor.signalContainer(user, pid, signal);
+        containerExecutor.signalContainer(new ContainerSignalContext.Builder()
+            .setUser(user)
+            .setPid(pid)
+            .setSignal(signal)
+            .build());
       } catch (InterruptedException e) {
         return;
       } catch (IOException e) {

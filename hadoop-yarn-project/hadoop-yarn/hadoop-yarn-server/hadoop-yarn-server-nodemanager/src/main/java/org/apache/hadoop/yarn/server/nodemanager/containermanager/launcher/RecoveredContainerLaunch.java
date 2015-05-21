@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
@@ -80,7 +81,11 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
         String pidPathStr = pidFile.getPath();
         pidFilePath = new Path(pidPathStr);
         exec.activateContainer(containerId, pidFilePath);
-        retCode = exec.reacquireContainer(container.getUser(), containerId);
+        retCode = exec.reacquireContainer(
+            new ContainerReacquisitionContext.Builder()
+            .setUser(container.getUser())
+            .setContainerId(containerId)
+            .build());
       } else {
         LOG.warn("Unable to locate pid file for container " + containerIdStr);
       }
