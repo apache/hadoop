@@ -251,7 +251,7 @@ public final class ErasureCodingWorker {
     private final long[] blockOffset4Targets;
     private final long[] seqNo4Targets;
 
-    private final int WRITE_PACKET_SIZE = 64 * 1024;
+    private final static int WRITE_PACKET_SIZE = 64 * 1024;
     private DataChecksum checksum;
     private int maxChunksPerPacket;
     private byte[] packetBuf;
@@ -904,7 +904,7 @@ public final class ErasureCodingWorker {
     }
   }
 
-  private class StripedReader {
+  private static class StripedReader {
     private final short index;
     private BlockReader blockReader;
     private ByteBuffer buffer;

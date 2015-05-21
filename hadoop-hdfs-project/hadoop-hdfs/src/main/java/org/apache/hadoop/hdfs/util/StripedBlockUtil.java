@@ -105,7 +105,7 @@ public class StripedBlockUtil {
     final ExtendedBlock blk = constructInternalBlock(
         bg.getBlock(), cellSize, dataBlkNum, idxInBlockGroup);
 
-    final long offset = bg.getStartOffset() + idxInBlockGroup * cellSize;
+    final long offset = bg.getStartOffset() + idxInBlockGroup * (long) cellSize;
     if (idxInReturnedLocs < bg.getLocations().length) {
       return new LocatedBlock(blk,
           new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
@@ -406,11 +406,11 @@ public class StripedBlockUtil {
     long earliestStart = startOffsets[firstCell.idxInStripe];
     for (int i = 1; i < dataBlkNum; i++) {
       int idx = firstCellIdxInBG + i;
-      if (idx * cellSize >= blockGroup.getBlockSize()) {
+      if (idx * (long) cellSize >= blockGroup.getBlockSize()) {
         break;
       }
       StripingCell cell = new StripingCell(ecSchema, cellSize, idx);
-      startOffsets[cell.idxInStripe] = cell.idxInInternalBlk * cellSize;
+      startOffsets[cell.idxInStripe] = cell.idxInInternalBlk * (long) cellSize;
       if (startOffsets[cell.idxInStripe] < earliestStart) {
         earliestStart = startOffsets[cell.idxInStripe];
       }

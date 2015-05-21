@@ -92,8 +92,8 @@ public class ErasureCodingZoneManager {
           String schemaName = WritableUtils.readString(dIn);
           ECSchema schema = dir.getFSNamesystem().getECSchemaManager()
               .getSchema(schemaName);
-          return new ErasureCodingZoneInfo(inode.getFullPathName(), schema,
-              cellSize);
+          return new ErasureCodingZoneInfo(dir.getInode(inode.getId())
+              .getFullPathName(), schema, cellSize);
         }
       }
     }
