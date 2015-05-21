@@ -83,9 +83,9 @@ public class KeyProviderCache {
 
   private URI createKeyProviderURI(Configuration conf) {
     final String providerUriStr =
-        conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, null);
+        conf.getTrimmed(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
     // No provider set in conf
-    if (providerUriStr == null) {
+    if (providerUriStr.isEmpty()) {
       LOG.error("Could not find uri with key ["
           + DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI
           + "] to create a keyProvider !!");
