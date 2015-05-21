@@ -21,13 +21,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +40,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -86,7 +83,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KE
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
-import static org.apache.hadoop.util.Time.now;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -386,93 +382,6 @@ public class FSDirectory implements Closeable {
   /** Disable quota verification */
   void disableQuotaChecks() {
     skipQuotaCheck = true;
-  }
-
-  private static INodeFile newINodeFile(long id, PermissionStatus permissions,
-      long mtime, long atime, short replication, long preferredBlockSize) {
-    return newINodeFile(id, permissions, mtime, atime, replication,
-        preferredBlockSize, (byte)0);
-  }
-
-  private static INodeFile newINodeFile(long id, PermissionStatus permissions,
-      long mtime, long atime, short replication, long preferredBlockSize,
-      byte storagePolicyId) {
-    return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfoContiguous.EMPTY_ARRAY, replication, preferredBlockSize,
-        storagePolicyId);
-  }
-
-  /**
-   * Add the given filename to the fs.
-   * @return the new INodesInPath instance that contains the new INode
-   */
-  INodesInPath addFile(INodesInPath existing, String localName, PermissionStatus
-      permissions, short replication, long preferredBlockSize,
-      String clientName, String clientMachine)
-    throws FileAlreadyExistsException, QuotaExceededException,
-      UnresolvedLinkException, SnapshotAccessControlException, AclException {
-
-    long modTime = now();
-    INodeFile newNode = newINodeFile(allocateNewInodeId(), permissions, modTime,
-        modTime, replication, preferredBlockSize);
-    newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
-    newNode.toUnderConstruction(clientName, clientMachine);
-
-    INodesInPath newiip;
-    writeLock();
-    try {
-      newiip = addINode(existing, newNode);
-    } finally {
-      writeUnlock();
-    }
-    if (newiip == null) {
-      NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
-          existing.getPath() + "/" + localName);
-      return null;
-    }
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addFile: " + localName + " is added");
-    }
-    return newiip;
-  }
-
-  INodeFile addFileForEditLog(long id, INodesInPath existing, byte[] localName,
-      PermissionStatus permissions, List<AclEntry> aclEntries,
-      List<XAttr> xAttrs, short replication, long modificationTime, long atime,
-      long preferredBlockSize, boolean underConstruction, String clientName,
-      String clientMachine, byte storagePolicyId) {
-    final INodeFile newNode;
-    assert hasWriteLock();
-    if (underConstruction) {
-      newNode = newINodeFile(id, permissions, modificationTime,
-          modificationTime, replication, preferredBlockSize, storagePolicyId);
-      newNode.toUnderConstruction(clientName, clientMachine);
-    } else {
-      newNode = newINodeFile(id, permissions, modificationTime, atime,
-          replication, preferredBlockSize, storagePolicyId);
-    }
-
-    newNode.setLocalName(localName);
-    try {
-      INodesInPath iip = addINode(existing, newNode);
-      if (iip != null) {
-        if (aclEntries != null) {
-          AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
-        }
-        if (xAttrs != null) {
-          XAttrStorage.updateINodeXAttrs(newNode, xAttrs, CURRENT_STATE_ID);
-        }
-        return newNode;
-      }
-    } catch (IOException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
-            "DIR* FSDirectory.unprotectedAddFile: exception when add "
-                + existing.getPath() + " to the file system", e);
-      }
-    }
-    return null;
   }
 
   /**
