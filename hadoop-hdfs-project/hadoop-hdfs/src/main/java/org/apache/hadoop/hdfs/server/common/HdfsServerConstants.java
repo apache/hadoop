@@ -42,10 +42,27 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public interface HdfsServerConstants {
   int MIN_BLOCKS_FOR_WRITE = 1;
-  //
-  // Timeouts, constants
-  //
+  /**
+   * For a HDFS client to write to a file, a lease is granted; During the lease
+   * period, no other client can write to the file. The writing client can
+   * periodically renew the lease. When the file is closed, the lease is
+   * revoked. The lease duration is bound by this soft limit and a
+   * {@link HdfsServerConstants#LEASE_HARDLIMIT_PERIOD hard limit}. Until the
+   * soft limit expires, the writer has sole write access to the file. If the
+   * soft limit expires and the client fails to close the file or renew the
+   * lease, another client can preempt the lease.
+   */
   long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
+  /**
+   * For a HDFS client to write to a file, a lease is granted; During the lease
+   * period, no other client can write to the file. The writing client can
+   * periodically renew the lease. When the file is closed, the lease is
+   * revoked. The lease duration is bound by a
+   * {@link HdfsServerConstants#LEASE_SOFTLIMIT_PERIOD soft limit} and this hard
+   * limit. If after the hard limit expires and the client has failed to renew
+   * the lease, HDFS assumes that the client has quit and will automatically
+   * close the file on behalf of the writer, and recover the lease.
+   */
   long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
   long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms
   // We need to limit the length and depth of a path in the filesystem.
