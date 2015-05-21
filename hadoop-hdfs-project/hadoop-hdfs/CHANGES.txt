@@ -575,6 +575,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-4185. Add a metric for number of active leases (Rakesh R via raviprak)
 
+    HDFS-4383. Document the lease limits. (Arshad Mohammad via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
