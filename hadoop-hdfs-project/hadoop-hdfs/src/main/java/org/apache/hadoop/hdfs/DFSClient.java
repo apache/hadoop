@@ -3205,10 +3205,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * Probe for encryption enabled on this filesystem.
+   * See {@link DFSUtil#isHDFSEncryptionEnabled(Configuration)}
+   * @return true if encryption is enabled
+   */
   public boolean isHDFSEncryptionEnabled() {
-    return conf.get(
-        DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, null) != null;
+    return DFSUtil.isHDFSEncryptionEnabled(this.conf);
   }
+
   /**
    * Returns the SaslDataTransferClient configured for this DFSClient.
    *
