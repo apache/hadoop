@@ -538,6 +538,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3694. Fix dead link for TimelineServer REST API.
     (Jagadesh Kiran N via aajisaka)
 
+    YARN-3646. Applications are getting stuck some times in case of retry
+    policy forever. (Raju Bairishetti via devaraj)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
