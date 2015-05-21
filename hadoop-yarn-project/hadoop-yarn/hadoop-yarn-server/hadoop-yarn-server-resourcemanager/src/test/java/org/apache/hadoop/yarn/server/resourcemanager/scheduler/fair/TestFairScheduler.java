@@ -3890,6 +3890,50 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testSchedulingOnRemovedNode() throws Exception {
+    // Disable continuous scheduling, will invoke continuous scheduling manually
+    scheduler.init(conf);
+    scheduler.start();
+    Assert.assertTrue("Continuous scheduling should be disabled.",
+        !scheduler.isContinuousSchedulingEnabled());
+
+    ApplicationAttemptId id11 = createAppAttemptId(1, 1);
+    createMockRMApp(id11);
+
+    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1",
+        false);
+    scheduler.addApplicationAttempt(id11, false, false);
+
+    List<ResourceRequest> ask1 = new ArrayList<>();
+    ResourceRequest request1 =
+        createResourceRequest(1024, 8, ResourceRequest.ANY, 1, 1, true);
+
+    ask1.add(request1);
+    scheduler.allocate(id11, ask1, new ArrayList<ContainerId>(), null,
+        null);
+
+    String hostName = "127.0.0.1";
+    RMNode node1 = MockNodes.newNodeInfo(1,
+      Resources.createResource(8 * 1024, 8), 1, hostName);
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    FSSchedulerNode node = (FSSchedulerNode)scheduler.getSchedulerNode(
+      node1.getNodeID());
+
+    NodeRemovedSchedulerEvent removeNode1 =
+        new NodeRemovedSchedulerEvent(node1);
+    scheduler.handle(removeNode1);
+
+    scheduler.attemptScheduling(node);
+
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(id11,
+            RMAppAttemptState.FINISHED, false);
+    scheduler.handle(appRemovedEvent1);
+  }
+
+  @Test
   public void testDefaultRuleInitializesProperlyWhenPolicyNotConfigured()
       throws IOException {
     // This test verifies if default rule in queue placement policy

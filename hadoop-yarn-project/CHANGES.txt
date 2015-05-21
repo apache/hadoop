@@ -541,6 +541,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3646. Applications are getting stuck some times in case of retry
     policy forever. (Raju Bairishetti via devaraj)
 
+    YARN-3675. FairScheduler: RM quits when node removal races with 
+    continuous-scheduling on the same node. (Anubhav Dhoot via kasha)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
