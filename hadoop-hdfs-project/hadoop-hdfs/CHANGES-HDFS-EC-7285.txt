@@ -247,3 +247,6 @@
 
     HDFS-8186. Erasure coding: Make block placement policy for EC file configurable.
     (Walter Su via zhz)
+
+    HDFS-8294. Erasure Coding: Fix Findbug warnings present in erasure coding.
+    (Rakesh R via zhz)

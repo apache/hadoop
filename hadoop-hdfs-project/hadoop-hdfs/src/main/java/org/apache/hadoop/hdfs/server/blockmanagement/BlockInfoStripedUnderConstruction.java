@@ -189,6 +189,9 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
       NameNode.blockStateChangeLog.warn("BLOCK*" +
           " BlockInfoStripedUnderConstruction.initLeaseRecovery:" +
           " No blocks found, lease removed.");
+      // sets primary node index and return.
+      primaryNodeIndex = -1;
+      return;
     }
     boolean allLiveReplicasTriedAsPrimary = true;
     for (ReplicaUnderConstruction replica : replicas) {
