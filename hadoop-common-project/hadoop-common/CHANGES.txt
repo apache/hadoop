@@ -593,6 +593,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11995. Make jetty version configurable from the maven command line.
     (Sriharsha Devineni via wheat9)
 
+    HADOOP-10366. Add whitespaces between classes for values in
+    core-default.xml to fit better in browser.
+    (kanaka kumar avvaru via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
