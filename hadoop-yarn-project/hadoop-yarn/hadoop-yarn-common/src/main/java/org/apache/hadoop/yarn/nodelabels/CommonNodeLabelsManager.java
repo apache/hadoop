@@ -210,9 +210,6 @@ public class CommonNodeLabelsManager extends AbstractService {
     nodeLabelsEnabled =
         conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
             YarnConfiguration.DEFAULT_NODE_LABELS_ENABLED);
-    if (nodeLabelsEnabled) {
-      initNodeLabelStore(conf);
-    }
     
     labelCollections.put(NO_LABEL, new NodeLabel(NO_LABEL));
   }
@@ -232,6 +229,10 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
+    if (nodeLabelsEnabled) {
+      initNodeLabelStore(getConfig());
+    }
+    
     // init dispatcher only when service start, because recover will happen in
     // service init, we don't want to trigger any event handling at that time.
     initDispatcher(getConfig());

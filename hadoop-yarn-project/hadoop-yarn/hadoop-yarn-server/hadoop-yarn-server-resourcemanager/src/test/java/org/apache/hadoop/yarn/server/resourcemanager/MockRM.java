@@ -94,6 +94,8 @@ import org.junit.Assert;
 public class MockRM extends ResourceManager {
 
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
+  
+  final private boolean useNullRMNodeLabelsManager;
 
   public MockRM() {
     this(new YarnConfiguration());
@@ -104,20 +106,31 @@ public class MockRM extends ResourceManager {
   }
   
   public MockRM(Configuration conf, RMStateStore store) {
-    super();    
+    this(conf, store, true);
+  }
+  
+  public MockRM(Configuration conf, RMStateStore store,
+      boolean useNullRMNodeLabelsManager) {
+    super();
+    this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
     if(store != null) {
       setRMStateStore(store);
     }
     Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);    
+    rootLogger.setLevel(Level.DEBUG);
   }
   
   @Override
-  protected RMNodeLabelsManager createNodeLabelManager() {
-    RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
-    mgr.init(getConfig());
-    return mgr;
+  protected RMNodeLabelsManager createNodeLabelManager()
+      throws InstantiationException, IllegalAccessException {
+    if (useNullRMNodeLabelsManager) {
+      RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+      mgr.init(getConfig());
+      return mgr;
+    } else {
+      return super.createNodeLabelManager();
+    }
   }
 
   public void waitForState(ApplicationId appId, RMAppState finalState)

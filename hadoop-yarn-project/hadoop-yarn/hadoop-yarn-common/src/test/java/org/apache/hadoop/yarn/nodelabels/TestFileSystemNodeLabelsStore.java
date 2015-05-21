@@ -107,6 +107,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabels().size());
@@ -126,6 +127,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     mgr.stop();
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabels().size());
@@ -170,6 +172,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
     mgr = new MockNodeLabelManager();
     mgr.init(conf);
+    mgr.start();
 
     // check variables
     Assert.assertEquals(3, mgr.getClusterNodeLabels().size());

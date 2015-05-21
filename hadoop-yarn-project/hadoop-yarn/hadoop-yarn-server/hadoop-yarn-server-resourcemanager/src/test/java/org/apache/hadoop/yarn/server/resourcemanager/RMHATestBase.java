@@ -106,8 +106,8 @@ public class RMHATestBase extends ClientBaseWithFixes{
   }
 
   protected void startRMs() throws IOException {
-    rm1 = new MockRM(confForRM1);
-    rm2 = new MockRM(confForRM2);
+    rm1 = new MockRM(confForRM1, null, false);
+    rm2 = new MockRM(confForRM2, null, false);
     startRMs(rm1, confForRM1, rm2, confForRM2);
 
   }
