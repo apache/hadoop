@@ -1720,7 +1720,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       @Override
       public LocatedFileStatus next() throws IOException {
         if (!hasNext()) {
-          throw new NoSuchElementException("No more entry in " + f);
+          throw new NoSuchElementException("No more entries in " + f);
         }
         FileStatus result = stats[i++];
         BlockLocation[] locs = result.isFile() ?

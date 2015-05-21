@@ -218,6 +218,9 @@ Trunk (Unreleased)
     HADOOP-10993. Dump java command line to *.out file
     (Kengo Seki via vinayakumarb)
 
+    HADOOP-12016. Typo in FileSystem::listStatusIterator 
+    (Arthur Vigil via jghoman)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
