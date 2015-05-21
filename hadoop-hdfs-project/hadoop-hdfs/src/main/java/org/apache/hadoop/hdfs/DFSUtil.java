@@ -183,8 +183,8 @@ public class DFSUtil {
           a.isDecommissioned() ? 1 : -1;
       }
     };
-    
-      
+
+
   /**
    * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
    * Decommissioned/stale nodes are moved to the end of the array on sorting
@@ -1844,9 +1844,9 @@ public class DFSUtil {
   public static KeyProvider createKeyProvider(
       final Configuration conf) throws IOException {
     final String providerUriStr =
-        conf.get(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, null);
+        conf.getTrimmed(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
     // No provider set in conf
-    if (providerUriStr == null) {
+    if (providerUriStr.isEmpty()) {
       return null;
     }
     final URI providerUri;
@@ -1887,4 +1887,18 @@ public class DFSUtil {
         .createKeyProviderCryptoExtension(keyProvider);
     return cryptoProvider;
   }
+
+  /**
+   * Probe for HDFS Encryption being enabled; this uses the value of
+   * the option {@link DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI},
+   * returning true if that property contains a non-empty, non-whitespace
+   * string.
+   * @param conf configuration to probe
+   * @return true if encryption is considered enabled.
+   */
+  public static boolean isHDFSEncryptionEnabled(Configuration conf) {
+    return !conf.getTrimmed(
+        DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "").isEmpty();
+  }
+
 }
