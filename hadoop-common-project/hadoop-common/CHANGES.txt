@@ -604,6 +604,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11970. Replace uses of ThreadLocal<Random> with JDK7
     ThreadLocalRandom.  (Sean Busbey via Colin P. McCabe)
 
+    HADOOP-11772. RPC Invoker relies on static ClientCache which has
+    synchronized(this) blocks. (wheat9)
+
   BUG FIXES
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
