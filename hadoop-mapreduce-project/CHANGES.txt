@@ -425,6 +425,9 @@ Release 2.8.0 - UNRELEASED
     avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
     (zhihai xu via devaraj)
 
+    MAPREDUCE-6204. TestJobCounters should use new properties instead of
+    JobConf.MAPRED_TASK_JAVA_OPTS. (Sam Liu via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
