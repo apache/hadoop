@@ -749,6 +749,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11743. maven doesn't clean all the site files
     (ramtin via vinayakumarb)
 
+    HADOOP-11927.  Fix "undefined reference to dlopen" error when compiling
+    libhadooppipes (Xianyin Xin via Colin P. McCabe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -69,7 +69,16 @@ add_library(hadooputils STATIC
 add_library(hadooppipes STATIC
     main/native/pipes/impl/HadoopPipes.cc
 )
+
+INCLUDE(CheckLibraryExists)
+CHECK_LIBRARY_EXISTS(dl dlopen "" NEED_LINK_DL)
+
+if (NEED_LINK_DL)
+    set(LIB_DL dl)
+endif (NEED_LINK_DL)
+
 target_link_libraries(hadooppipes
     ${OPENSSL_LIBRARIES}
+    ${LIB_DL}
     pthread
 )
