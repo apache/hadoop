@@ -802,6 +802,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8454. Remove unnecessary throttling in TestDatanodeDeath.
     (Arpit Agarwal)
 
+    HDFS-8268. Port conflict log for data node server is not sufficient
+    (Mohammad Shahid Khan via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
