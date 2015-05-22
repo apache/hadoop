@@ -54,3 +54,5 @@
 
     HADOOP-11938. Enhance ByteBuffer version encode/decode API of raw erasure 
     coder. (Kai Zheng via Zhe Zhang)
+
+    HADOOP-12013. Generate fixed data to perform erasure coder test. (Kai Zheng)
