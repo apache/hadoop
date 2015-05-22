@@ -97,6 +97,7 @@ class SimpleEntityWriter extends EntityWriter {
         entity.addInfo("PERF_TEST", payLoad);
         // add an event
         TimelineEvent event = new TimelineEvent();
+        event.setId("foo_event_id");
         event.setTimestamp(System.currentTimeMillis());
         event.addInfo("foo_event", "test");
         entity.addEvent(event);

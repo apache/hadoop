@@ -21,6 +21,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
   BUG FIXES
 
+    MAPREDUCE-6370. Made the timeline service v2 test driver write event ID.
+    (Li Lu via zjshen)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
