@@ -501,17 +501,14 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
         
         @Override
         public void run() {
-          try
-          {
-            BufferedReader lines = new BufferedReader(
-                new InputStreamReader(stream, Charset.forName("UTF-8")));
+          try (BufferedReader lines = new BufferedReader(
+                   new InputStreamReader(stream, Charset.forName("UTF-8")))) {
             char[] buf = new char[512];
             int nRead;
             while ((nRead = lines.read(buf, 0, buf.length)) > 0) {
               output.append(buf, 0, nRead);
             }
-          }
-          catch(Throwable t) {
+          } catch (Throwable t) {
             LOG.error("Error occured reading the process stdout", t);
           }
         }
