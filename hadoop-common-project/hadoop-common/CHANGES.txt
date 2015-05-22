@@ -740,6 +740,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12014. hadoop-config.cmd displays a wrong error message.
     (Kengo Seki via aajisaka)
 
+    HADOOP-11955. Fix a typo in the cluster setup doc.
+    (Yanjun Wang via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
