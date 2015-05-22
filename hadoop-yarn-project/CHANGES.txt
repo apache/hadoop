@@ -256,6 +256,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3684. Changed ContainerExecutor's primary lifecycle methods to use a more
     extensible mechanism of context objects. (Sidharta Seethana via vinodkv)
 
+    YARN-3594. WintuilsProcessStubExecutor.startStreamReader leaks streams.
+    (Lars Francke via junping_du)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
