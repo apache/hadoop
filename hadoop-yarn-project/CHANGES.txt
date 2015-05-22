@@ -435,6 +435,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3654. ContainerLogsPage web UI should not have meta-refresh. (Xuan Gong
     via jianhe)
 
+    YARN-3707. RM Web UI queue filter doesn't work. (Wangda Tan via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
