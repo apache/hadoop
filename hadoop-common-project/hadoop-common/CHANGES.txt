@@ -737,6 +737,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12000. cannot use --java-home in test-patch (aw)
 
+    HADOOP-12014. hadoop-config.cmd displays a wrong error message.
+    (Kengo Seki via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

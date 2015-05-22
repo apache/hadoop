@@ -115,7 +115,7 @@ if not defined JAVA_HOME (
 
 if not exist %JAVA_HOME%\bin\java.exe (
   echo Error: JAVA_HOME is incorrectly set.
-  echo        Please update %HADOOP_HOME%\conf\hadoop-env.cmd
+  echo        Please update %HADOOP_CONF_DIR%\hadoop-env.cmd
   goto :eof
 )
 
