@@ -746,6 +746,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11955. Fix a typo in the cluster setup doc.
     (Yanjun Wang via aajisaka)
 
+    HADOOP-11743. maven doesn't clean all the site files
+    (ramtin via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -942,7 +942,8 @@
                 <fileset>
                   <directory>src/site/markdown/release</directory>
                     <includes>
-                      <include>${project.version}</include>
+                      <include>${project.version}/</include>
+                      <include>index.md</include>
                     </includes>
                   <followSymlinks>false</followSymlinks>
                 </fileset>
