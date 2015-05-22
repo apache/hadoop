@@ -550,6 +550,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3675. FairScheduler: RM quits when node removal races with 
     continuous-scheduling on the same node. (Anubhav Dhoot via kasha)
 
+    YARN-3701. Isolating the error of generating a single app report when 
+    getting all apps from generic history service. (Zhijie Shen via xgong)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
