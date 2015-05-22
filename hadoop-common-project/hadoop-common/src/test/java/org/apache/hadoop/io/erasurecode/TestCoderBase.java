@@ -52,6 +52,12 @@ public abstract class TestCoderBase {
   // may go to different coding implementations.
   protected boolean usingDirectBuffer = true;
 
+  protected boolean usingFixedData = true;
+  // Using this the generated data can be repeatable across multiple calls to
+  // encode(), in order for troubleshooting.
+  private static int FIXED_DATA_GENERATOR = 0;
+  protected byte[][] fixedData;
+
   protected int getChunkSize() {
     return chunkSize;
   }
@@ -63,13 +69,17 @@ public abstract class TestCoderBase {
 
   /**
    * Prepare before running the case.
+   * @param conf
    * @param numDataUnits
    * @param numParityUnits
    * @param erasedDataIndexes
+   * @param erasedParityIndexes
+   * @param usingFixedData Using fixed or pre-generated data to test instead of
+   *                       generating data
    */
   protected void prepare(Configuration conf, int numDataUnits,
                          int numParityUnits, int[] erasedDataIndexes,
-                         int[] erasedParityIndexes) {
+                         int[] erasedParityIndexes, boolean usingFixedData) {
     this.conf = conf;
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
@@ -77,6 +87,38 @@ public abstract class TestCoderBase {
         erasedDataIndexes : new int[] {0};
     this.erasedParityIndexes = erasedParityIndexes != null ?
         erasedParityIndexes : new int[] {0};
+    this.usingFixedData = usingFixedData;
+    if (usingFixedData) {
+      prepareFixedData();
+    }
+  }
+
+  /**
+   * Prepare before running the case.
+   * @param conf
+   * @param numDataUnits
+   * @param numParityUnits
+   * @param erasedDataIndexes
+   * @param erasedParityIndexes
+   */
+  protected void prepare(Configuration conf, int numDataUnits,
+                         int numParityUnits, int[] erasedDataIndexes,
+                         int[] erasedParityIndexes) {
+    prepare(conf, numDataUnits, numParityUnits, erasedDataIndexes,
+        erasedParityIndexes, false);
+  }
+
+  /**
+   * Prepare before running the case.
+   * @param numDataUnits
+   * @param numParityUnits
+   * @param erasedDataIndexes
+   * @param erasedParityIndexes
+   */
+  protected void prepare(int numDataUnits, int numParityUnits,
+                         int[] erasedDataIndexes, int[] erasedParityIndexes) {
+    prepare(null, numDataUnits, numParityUnits, erasedDataIndexes,
+        erasedParityIndexes, false);
   }
 
   /**
@@ -278,12 +320,44 @@ public abstract class TestCoderBase {
    * @return
    */
   protected ECChunk[] prepareDataChunksForEncoding() {
+    if (usingFixedData) {
+      ECChunk[] chunks = new ECChunk[numDataUnits];
+      for (int i = 0; i < chunks.length; i++) {
+        chunks[i] = makeChunkUsingData(fixedData[i]);
+      }
+      return chunks;
+    }
+
+    return generateDataChunks();
+  }
+
+  private ECChunk makeChunkUsingData(byte[] data) {
+    ECChunk chunk = allocateOutputChunk();
+    ByteBuffer buffer = chunk.getBuffer();
+    int pos = buffer.position();
+    buffer.put(data, 0, chunkSize);
+    buffer.flip();
+    buffer.position(pos);
+
+    return chunk;
+  }
+
+  private ECChunk[] generateDataChunks() {
     ECChunk[] chunks = new ECChunk[numDataUnits];
     for (int i = 0; i < chunks.length; i++) {
       chunks[i] = generateDataChunk();
     }
 
     return chunks;
+  }
+
+  private void prepareFixedData() {
+    // We may load test data from a resource, or just generate randomly.
+    // The generated data will be used across subsequent encode/decode calls.
+    this.fixedData = new byte[numDataUnits][];
+    for (int i = 0; i < numDataUnits; i++) {
+      fixedData[i] = generateFixedData(baseChunkSize * 2);
+    }
   }
 
   /**
@@ -315,6 +389,17 @@ public abstract class TestCoderBase {
     byte[] buffer = new byte[len];
     for (int i = 0; i < buffer.length; i++) {
       buffer[i] = (byte) RAND.nextInt(256);
+    }
+    return buffer;
+  }
+
+  protected byte[] generateFixedData(int len) {
+    byte[] buffer = new byte[len];
+    for (int i = 0; i < buffer.length; i++) {
+      buffer[i] = (byte) FIXED_DATA_GENERATOR++;
+      if (FIXED_DATA_GENERATOR == 256) {
+        FIXED_DATA_GENERATOR = 0;
+      }
     }
     return buffer;
   }
