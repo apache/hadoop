@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -166,5 +167,9 @@ class RWTransaction extends Transaction {
 
   public void logCloseFile(String path, FlatINode inode) {
     fsd.getEditLog().logCloseFile(fsd.ugid(), path, inode);
+  }
+
+  public void logSetPermissions(String src, FsPermission permission) {
+    fsd.getEditLog().logSetPermissions(src, permission);
   }
 }

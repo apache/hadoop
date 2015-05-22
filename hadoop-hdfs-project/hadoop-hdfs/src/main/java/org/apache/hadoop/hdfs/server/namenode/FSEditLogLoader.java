@@ -581,8 +581,13 @@ public class FSEditLogLoader {
     }
     case OP_SET_PERMISSIONS: {
       SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
-      FSDirAttrOp.unprotectedSetPermission(fsDir, renameReservedPathsOnUpgrade(
-          setPermissionsOp.src, logVersion), setPermissionsOp.permissions);
+      try (ReplayTransaction tx = fsDir.newReplayTransaction().begin()) {
+        String src = renameReservedPathsOnUpgrade(
+            setPermissionsOp.src, logVersion);
+        FSDirAttrOp.unprotectedSetPermission(tx, src, setPermissionsOp
+            .permissions);
+        tx.commit();
+      }
       break;
     }
     case OP_SET_OWNER: {

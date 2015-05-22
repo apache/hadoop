@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -49,23 +51,23 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KE
 
 public class FSDirAttrOp {
   static HdfsFileStatus setPermission(
-      FSDirectory fsd, final String srcArg, FsPermission permission)
+      FSDirectory fsd, final String src, FsPermission permission)
       throws IOException {
-    String src = srcArg;
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    INodesInPath iip;
-    fsd.writeLock();
-    try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath4Write(src);
+    try (RWTransaction tx = fsd.newRWTransaction().begin()) {
+      Resolver.Result paths = Resolver.resolve(tx, src);
+      if (paths.invalidPath()) {
+        throw new InvalidPathException(src);
+      } else if (paths.notFound()) {
+        throw new FileNotFoundException(src);
+      }
+      FlatINodesInPath iip = paths.inodesInPath();
       fsd.checkOwner(pc, iip);
-      unprotectedSetPermission(fsd, src, permission);
-    } finally {
-      fsd.writeUnlock();
+      unprotectedSetPermission(tx, src, permission);
+      tx.logSetPermissions(src, permission);
+      tx.commit();
+      return fsd.getAuditFileInfo(iip);
     }
-    fsd.getEditLog().logSetPermissions(src, permission);
-    return fsd.getAuditFileInfo(iip);
   }
 
   static HdfsFileStatus setOwner(
@@ -246,18 +248,18 @@ public class FSDirAttrOp {
     }
   }
 
-  static void unprotectedSetPermission(
-      FSDirectory fsd, String src, FsPermission permissions)
-      throws FileNotFoundException, UnresolvedLinkException,
-             QuotaExceededException, SnapshotAccessControlException {
-    assert fsd.hasWriteLock();
-    final INodesInPath inodesInPath = fsd.getINodesInPath4Write(src, true);
-    final INode inode = inodesInPath.getLastINode();
-    if (inode == null) {
-      throw new FileNotFoundException("File does not exist: " + src);
+  static void unprotectedSetPermission(RWTransaction tx, String src,
+      FsPermission permissions) throws IOException {
+    Resolver.Result paths = Resolver.resolve(tx, src);
+    if (paths.invalidPath()) {
+      throw new InvalidPathException(src);
+    } else if (paths.notFound()) {
+      throw new FileNotFoundException(src);
     }
-    int snapshotId = inodesInPath.getLatestSnapshotId();
-    inode.setPermission(permissions, snapshotId);
+    FlatINode inode = paths.inodesInPath().getLastINode();
+    ByteString b = new FlatINode.Builder().mergeFrom(inode).permission
+        (permissions.toShort()).build();
+    tx.putINode(inode.id(), b);
   }
 
   static void unprotectedSetOwner(
