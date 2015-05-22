@@ -362,7 +362,6 @@ public class TestDatanodeDeath {
 
       // these are test settings
       dfstream.setChunksPerPacket(5);
-      dfstream.setArtificialSlowdown(3000);
 
       final long myseed = AppendTestUtil.nextLong();
       byte[] buffer = AppendTestUtil.randomBytes(myseed, fileSize);

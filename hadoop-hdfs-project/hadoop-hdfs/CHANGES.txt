@@ -799,6 +799,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6348. SecondaryNameNode not terminating properly on runtime exceptions
     (Rakesh R via vinayakumarb)
 
+    HDFS-8454. Remove unnecessary throttling in TestDatanodeDeath.
+    (Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
