@@ -25,6 +25,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -67,6 +69,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     implements
     ApplicationHistoryManager {
+  private static final Log LOG = LogFactory
+      .getLog(ApplicationHistoryManagerOnTimelineStore.class);
 
   @VisibleForTesting
   static final String UNAVAILABLE = "N/A";
@@ -107,9 +111,14 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         new LinkedHashMap<ApplicationId, ApplicationReport>();
     if (entities != null && entities.getEntities() != null) {
       for (TimelineEntity entity : entities.getEntities()) {
-        ApplicationReportExt app =
-            generateApplicationReport(entity, ApplicationReportField.ALL);
-        apps.put(app.appReport.getApplicationId(), app.appReport);
+        try {
+          ApplicationReportExt app =
+              generateApplicationReport(entity, ApplicationReportField.ALL);
+          apps.put(app.appReport.getApplicationId(), app.appReport);
+        } catch (Exception e) {
+          LOG.error("Error on generating application report for " +
+              entity.getEntityId(), e);
+        }
       }
     }
     return apps;
@@ -142,9 +151,18 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
   @Override
   public ApplicationAttemptReport getApplicationAttempt(
       ApplicationAttemptId appAttemptId) throws YarnException, IOException {
-    ApplicationReportExt app = getApplication(
-        appAttemptId.getApplicationId(), ApplicationReportField.USER_AND_ACLS);
-    checkAccess(app);
+    return getApplicationAttempt(appAttemptId, true);
+  }
+
+  private ApplicationAttemptReport getApplicationAttempt(
+      ApplicationAttemptId appAttemptId, boolean checkACLs)
+      throws YarnException, IOException {
+    if (checkACLs) {
+      ApplicationReportExt app = getApplication(
+          appAttemptId.getApplicationId(),
+          ApplicationReportField.USER_AND_ACLS);
+      checkAccess(app);
+    }
     TimelineEntity entity = timelineDataManager.getEntity(
         AppAttemptMetricsConstants.ENTITY_TYPE,
         appAttemptId.toString(), EnumSet.allOf(Field.class),
@@ -182,7 +200,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
   @Override
   public ContainerReport getAMContainer(ApplicationAttemptId appAttemptId)
       throws YarnException, IOException {
-    ApplicationAttemptReport appAttempt = getApplicationAttempt(appAttemptId);
+    ApplicationAttemptReport appAttempt =
+        getApplicationAttempt(appAttemptId, false);
     return getContainer(appAttempt.getAMContainerId());
   }
 
@@ -515,8 +534,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     try {
       checkAccess(app);
       if (app.appReport.getCurrentApplicationAttemptId() != null) {
-        ApplicationAttemptReport appAttempt =
-            getApplicationAttempt(app.appReport.getCurrentApplicationAttemptId());
+        ApplicationAttemptReport appAttempt = getApplicationAttempt(
+            app.appReport.getCurrentApplicationAttemptId(), false);
         app.appReport.setHost(appAttempt.getHost());
         app.appReport.setRpcPort(appAttempt.getRpcPort());
         app.appReport.setTrackingUrl(appAttempt.getTrackingUrl());
