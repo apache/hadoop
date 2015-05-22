@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
@@ -35,6 +36,7 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.*;
 
 public class TestErasureCodingZones {
+  private Configuration conf;
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private static final int BLOCK_SIZE = 1024;
@@ -42,7 +44,7 @@ public class TestErasureCodingZones {
 
   @Before
   public void setupCluster() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(1).build();
@@ -146,6 +148,26 @@ public class TestErasureCodingZones {
     } catch (IOException e) {
       assertExceptionContains("can't be moved because the source and " +
           "destination have different erasure coding policies", e);
+    }
+  }
+
+  @Test
+  public void testReplication() throws IOException {
+    final Path testDir = new Path("/ec");
+    fs.mkdir(testDir, FsPermission.getDirDefault());
+    fs.createErasureCodingZone(testDir, null, 0);
+    final Path fooFile = new Path(testDir, "foo");
+    // create ec file with replication=0
+    fs.create(fooFile, FsPermission.getFileDefault(), true,
+        conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+        (short)0, fs.getDefaultBlockSize(fooFile), null);
+
+    try {
+      fs.setReplication(fooFile, (short) 3);
+      fail("Shouldn't allow to set replication to a file with striped blocks");
+    } catch (IOException e) {
+      assertExceptionContains(
+          "Cannot set replication to a file with striped blocks", e);
     }
   }
 

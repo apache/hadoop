@@ -250,3 +250,6 @@
 
     HDFS-8294. Erasure Coding: Fix Findbug warnings present in erasure coding.
     (Rakesh R via zhz)
+
+    HDFS-8441. Erasure Coding: make condition check earlier for setReplication.
+    (waltersu4549)

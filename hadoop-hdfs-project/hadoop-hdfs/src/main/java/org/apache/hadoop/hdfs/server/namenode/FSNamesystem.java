@@ -2404,7 +2404,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (!DFSUtil.isValidName(src)) {
       throw new InvalidPathException(src);
     }
-    blockManager.verifyReplication(src, replication, clientMachine);
+
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      if (!isInECZone(src)) {
+        blockManager.verifyReplication(src, replication, clientMachine);
+      }
+    } finally {
+      readUnlock();
+    }
+    
     checkOperation(OperationCategory.WRITE);
     if (blockSize < minBlockSize) {
       throw new IOException("Specified block size is less than configured" +
@@ -7603,6 +7614,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(success, "createErasureCodingZone", srcArg, null, resultingStat);
+  }
+
+  private boolean isInECZone(String src) throws IOException {
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    src = FSDirectory.resolvePath(src, pathComponents, dir);
+    final INodesInPath iip = dir.getINodesInPath(src, true);
+    return dir.isInECZone(iip);
   }
 
   /**

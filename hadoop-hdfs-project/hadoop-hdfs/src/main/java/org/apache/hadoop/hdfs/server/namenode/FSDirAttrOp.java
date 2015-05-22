@@ -380,7 +380,7 @@ public class FSDirAttrOp {
   static BlockInfoContiguous[] unprotectedSetReplication(
       FSDirectory fsd, String src, short replication, short[] blockRepls)
       throws QuotaExceededException, UnresolvedLinkException,
-             SnapshotAccessControlException {
+      SnapshotAccessControlException, UnsupportedActionException {
     assert fsd.hasWriteLock();
 
     final INodesInPath iip = fsd.getINodesInPath4Write(src, true);
@@ -389,6 +389,11 @@ public class FSDirAttrOp {
       return null;
     }
     INodeFile file = inode.asFile();
+    if (file.isStriped()) {
+      throw new UnsupportedActionException(
+          "Cannot set replication to a file with striped blocks");
+    }
+
     final short oldBR = file.getPreferredBlockReplication();
 
     // before setFileReplication, check for increasing block replication.
