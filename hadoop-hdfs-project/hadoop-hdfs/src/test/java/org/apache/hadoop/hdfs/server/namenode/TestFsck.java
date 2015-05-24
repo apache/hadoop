@@ -84,6 +84,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.Result;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.ReplicationResult;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.ErasureCodingResult;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
@@ -1058,13 +1060,14 @@ public class TestFsck {
       final HdfsFileStatus file = 
           namenode.getRpcServer().getFileInfo(pathString);
       assertNotNull(file);
-      Result res = new Result(conf);
-      fsck.check(pathString, file, res);
+      Result replRes = new ReplicationResult(conf);
+      Result ecRes = new ErasureCodingResult(conf);
+      fsck.check(pathString, file, replRes, ecRes);
       // Also print the output from the fsck, for ex post facto sanity checks
       System.out.println(result.toString());
-      assertEquals(res.missingReplicas, 
+      assertEquals(replRes.missingReplicas,
           (NUM_BLOCKS*REPL_FACTOR) - (NUM_BLOCKS*NUM_REPLICAS));
-      assertEquals(res.numExpectedReplicas, NUM_BLOCKS*REPL_FACTOR);
+      assertEquals(replRes.numExpectedReplicas, NUM_BLOCKS*REPL_FACTOR);
     } finally {
       if(dfs != null) {
         dfs.close();
@@ -1135,10 +1138,11 @@ public class TestFsck {
       final HdfsFileStatus file = 
           namenode.getRpcServer().getFileInfo(pathString);
       assertNotNull(file);
-      Result res = new Result(conf);
-      fsck.check(pathString, file, res);
+      Result replRes = new ReplicationResult(conf);
+      Result ecRes = new ErasureCodingResult(conf);
+      fsck.check(pathString, file, replRes, ecRes);
       // check misReplicatedBlock number.
-      assertEquals(res.numMisReplicatedBlocks, NUM_BLOCKS);
+      assertEquals(replRes.numMisReplicatedBlocks, NUM_BLOCKS);
     } finally {
       if(dfs != null) {
         dfs.close();
@@ -1199,14 +1203,15 @@ public class TestFsck {
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
         blockSize, modTime, accessTime, perms, owner, group, symlink,
         path, fileId, numChildren, null, storagePolicy, null, 0);
-    Result res = new Result(conf);
+    Result replRes = new ReplicationResult(conf);
+    Result ecRes = new ErasureCodingResult(conf);
 
     try {
-      fsck.check(pathString, file, res);
+      fsck.check(pathString, file, replRes, ecRes);
     } catch (Exception e) {
       fail("Unexpected exception " + e.getMessage());
     }
-    assertTrue(res.toString().contains("HEALTHY"));
+    assertTrue(replRes.isHealthy());
   }
 
   /** Test fsck with symlinks in the filesystem */
@@ -1627,6 +1632,54 @@ public class TestFsck {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testECFsck() throws Exception {
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      final long precision = 1L;
+      conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+      int totalSize = ErasureCodingSchemaManager.getSystemDefaultSchema().getNumDataUnits()
+                      + ErasureCodingSchemaManager.getSystemDefaultSchema().getNumParityUnits();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(totalSize).build();
+      fs = cluster.getFileSystem();
+      Path replDirPath = new Path("/replicated");
+      Path replFilePath = new Path(replDirPath, "replfile");
+      final short factor = 3;
+      DFSTestUtil.createFile(fs, replFilePath, 1024, factor, 0);
+      DFSTestUtil.waitReplication(fs, replFilePath, factor);
+      Path ecDirPath = new Path("/striped");
+      Path ecFilePath = new Path(ecDirPath, "ecfile");
+      final int numBlocks = 4;
+      DFSTestUtil.createStripedFile(cluster, ecFilePath, ecDirPath, numBlocks, 2, true);
+      long replTime = fs.getFileStatus(replFilePath).getAccessTime();
+      long ecTime = fs.getFileStatus(ecFilePath).getAccessTime();
+      Thread.sleep(precision);
+      setupAuditLogs();
+      String outStr = runFsck(conf, 0, true, "/");
+      verifyAuditLogs();
+      assertEquals(replTime, fs.getFileStatus(replFilePath).getAccessTime());
+      assertEquals(ecTime, fs.getFileStatus(ecFilePath).getAccessTime());
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
+      cluster.shutdown();
+
+      // restart the cluster; bring up namenode but not the data nodes
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0).format(false).build();
+      outStr = runFsck(conf, 1, true, "/");
+      // expect the result is corrupt
+      assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+      System.out.println(outStr);
+    } finally {
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
+      if (cluster != null) { cluster.shutdown(); }
     }
   }
 }
