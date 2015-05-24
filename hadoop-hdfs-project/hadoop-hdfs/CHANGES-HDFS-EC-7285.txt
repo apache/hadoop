@@ -253,3 +253,5 @@
 
     HDFS-8441. Erasure Coding: make condition check earlier for setReplication.
     (waltersu4549)
+
+    HDFS-7768. Change fsck to support EC files.  (Takanobu Asanuma via szetszwo)
