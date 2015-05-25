@@ -111,12 +111,12 @@ public final class ErasureCodingWorker {
         DFSConfigKeys.DFS_DATANODE_STRIPED_READ_BUFFER_SIZE_DEFAULT);
   }
 
-  private RawErasureEncoder newEncoder() {
-    return new RSRawEncoder();
+  private RawErasureEncoder newEncoder(int numDataUnits, int numParityUnits) {
+    return new RSRawEncoder(numDataUnits, numParityUnits);
   }
   
-  private RawErasureDecoder newDecoder() {
-    return new RSRawDecoder();
+  private RawErasureDecoder newDecoder(int numDataUnits, int numParityUnits) {
+    return new RSRawDecoder(numDataUnits, numParityUnits);
   }
 
   private void initializeStripedReadThreadPool(int num) {
@@ -517,16 +517,14 @@ public final class ErasureCodingWorker {
     // Initialize encoder
     private void initEncoderIfNecessary() {
       if (encoder == null) {
-        encoder = newEncoder();
-        encoder.initialize(dataBlkNum, parityBlkNum, bufferSize);
+        encoder = newEncoder(dataBlkNum, parityBlkNum);
       }
     }
     
     // Initialize decoder
     private void initDecoderIfNecessary() {
       if (decoder == null) {
-        decoder = newDecoder();
-        decoder.initialize(dataBlkNum, parityBlkNum, bufferSize);
+        decoder = newDecoder(dataBlkNum, parityBlkNum);
       }
     }
 

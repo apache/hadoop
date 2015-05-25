@@ -31,16 +31,12 @@ import java.util.Arrays;
 public abstract class AbstractRawErasureCoder
     extends Configured implements RawErasureCoder {
 
-  private int numDataUnits;
-  private int numParityUnits;
-  private int chunkSize;
+  private final int numDataUnits;
+  private final int numParityUnits;
 
-  @Override
-  public void initialize(int numDataUnits, int numParityUnits,
-                         int chunkSize) {
+  public AbstractRawErasureCoder(int numDataUnits, int numParityUnits) {
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
-    this.chunkSize = chunkSize;
   }
 
   @Override
@@ -51,11 +47,6 @@ public abstract class AbstractRawErasureCoder
   @Override
   public int getNumParityUnits() {
     return numParityUnits;
-  }
-
-  @Override
-  public int getChunkSize() {
-    return chunkSize;
   }
 
   @Override

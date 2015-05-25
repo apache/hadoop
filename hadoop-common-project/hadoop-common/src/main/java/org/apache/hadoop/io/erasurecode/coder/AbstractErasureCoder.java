@@ -33,18 +33,18 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 public abstract class AbstractErasureCoder
     extends Configured implements ErasureCoder {
 
-  private int numDataUnits;
-  private int numParityUnits;
-  private int chunkSize;
+  private final int numDataUnits;
+  private final int numParityUnits;
 
   /**
    * Create raw decoder using the factory specified by rawCoderFactoryKey
    * @param rawCoderFactoryKey
    * @return raw decoder
    */
-  protected RawErasureDecoder createRawDecoder(String rawCoderFactoryKey) {
+  protected RawErasureDecoder createRawDecoder(
+          String rawCoderFactoryKey, int dataUnitsCount, int parityUnitsCount) {
     RawErasureCoder rawCoder = createRawCoder(getConf(),
-        rawCoderFactoryKey, false);
+        rawCoderFactoryKey, false, dataUnitsCount, parityUnitsCount);
     return (RawErasureDecoder) rawCoder;
   }
 
@@ -53,9 +53,10 @@ public abstract class AbstractErasureCoder
    * @param rawCoderFactoryKey
    * @return raw encoder
    */
-  protected RawErasureEncoder createRawEncoder(String rawCoderFactoryKey) {
+  protected RawErasureEncoder createRawEncoder(
+          String rawCoderFactoryKey, int dataUnitsCount, int parityUnitsCount) {
     RawErasureCoder rawCoder = createRawCoder(getConf(),
-        rawCoderFactoryKey, true);
+        rawCoderFactoryKey, true, dataUnitsCount, parityUnitsCount);
     return (RawErasureEncoder) rawCoder;
   }
 
@@ -67,7 +68,8 @@ public abstract class AbstractErasureCoder
    * @return raw coder
    */
   public static RawErasureCoder createRawCoder(Configuration conf,
-      String rawCoderFactoryKey, boolean isEncoder) {
+      String rawCoderFactoryKey, boolean isEncoder, int numDataUnits,
+                                               int numParityUnits) {
 
     if (conf == null) {
       return null;
@@ -90,21 +92,17 @@ public abstract class AbstractErasureCoder
       throw new RuntimeException("Failed to create raw coder", e);
     }
 
-    return isEncoder ? fact.createEncoder() : fact.createDecoder();
+    return isEncoder ? fact.createEncoder(numDataUnits, numParityUnits) :
+            fact.createDecoder(numDataUnits, numParityUnits);
   }
 
-  @Override
-  public void initialize(int numDataUnits, int numParityUnits,
-                         int chunkSize) {
+  public AbstractErasureCoder(int numDataUnits, int numParityUnits) {
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
-    this.chunkSize = chunkSize;
   }
 
-  @Override
-  public void initialize(ECSchema schema) {
-      initialize(schema.getNumDataUnits(), schema.getNumParityUnits(),
-          schema.getChunkSize());
+  public AbstractErasureCoder(ECSchema schema) {
+      this(schema.getNumDataUnits(), schema.getNumParityUnits());
   }
 
   @Override
@@ -118,12 +116,7 @@ public abstract class AbstractErasureCoder
   }
 
   @Override
-  public int getChunkSize() {
-    return chunkSize;
-  }
-
-  @Override
-  public boolean preferNativeBuffer() {
+  public boolean preferDirectBuffer() {
     return false;
   }
 

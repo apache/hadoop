@@ -28,6 +28,10 @@ import java.nio.ByteBuffer;
  */
 public class XORRawDecoder extends AbstractRawErasureDecoder {
 
+  public XORRawDecoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
   @Override
   protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
                           ByteBuffer[] outputs) {

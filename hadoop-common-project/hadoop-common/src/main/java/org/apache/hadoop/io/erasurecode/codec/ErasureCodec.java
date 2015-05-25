@@ -18,7 +18,6 @@
 package org.apache.hadoop.io.erasurecode.codec;
 
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
 import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
 
@@ -28,12 +27,6 @@ import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
  * add more aspects here to make the behaviors customizable.
  */
 public interface ErasureCodec extends Configurable {
-
-  /**
-   * Set EC schema to be used by this codec.
-   * @param schema
-   */
-  public void setSchema(ECSchema schema);
 
   /**
    * Create block grouper

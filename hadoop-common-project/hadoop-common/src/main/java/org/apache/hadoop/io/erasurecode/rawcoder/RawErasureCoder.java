@@ -36,14 +36,6 @@ import org.apache.hadoop.conf.Configurable;
 public interface RawErasureCoder extends Configurable {
 
   /**
-   * Initialize with the important parameters for the code.
-   * @param numDataUnits how many data inputs for the coding
-   * @param numParityUnits how many parity outputs the coding generates
-   * @param chunkSize the size of the input/output buffer
-   */
-  public void initialize(int numDataUnits, int numParityUnits, int chunkSize);
-
-  /**
    * The number of data input units for the coding. A unit can be a byte,
    * chunk or buffer or even a block.
    * @return count of data input units
@@ -56,12 +48,6 @@ public interface RawErasureCoder extends Configurable {
    * @return count of parity output units
    */
   public int getNumParityUnits();
-
-  /**
-   * Chunk buffer size for the input/output
-   * @return chunk buffer size
-   */
-  public int getChunkSize();
 
   /**
    * Tell if direct buffer is preferred or not. It's for callers to

@@ -28,6 +28,10 @@ import java.nio.ByteBuffer;
  */
 public class XORRawEncoder extends AbstractRawErasureEncoder {
 
+  public XORRawEncoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
   protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
     ByteBuffer output = outputs[0];
     resetOutputBuffer(output);
