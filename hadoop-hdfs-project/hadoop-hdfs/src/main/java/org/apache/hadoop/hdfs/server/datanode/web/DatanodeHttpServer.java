@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import io.netty.bootstrap.ChannelFactory;
+import io.netty.channel.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -83,11 +83,8 @@ public class DatanodeHttpServer implements Closeable {
         .childHandler(new ChannelInitializer<SocketChannel>() {
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
-          ChannelPipeline p = ch.pipeline();
-          p.addLast(new HttpRequestDecoder(),
-            new HttpResponseEncoder(),
-            new ChunkedWriteHandler(),
-            new URLDispatcher(jettyAddr, conf, confForCreate));
+          ch.pipeline().addLast(new PortUnificationServerHandler(jettyAddr,
+              conf, confForCreate));
         }
       });
       if (externalHttpChannel == null) {
