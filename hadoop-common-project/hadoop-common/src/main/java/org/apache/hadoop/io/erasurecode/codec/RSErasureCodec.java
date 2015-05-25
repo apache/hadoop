@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.codec;
 
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
 import org.apache.hadoop.io.erasurecode.coder.RSErasureDecoder;
 import org.apache.hadoop.io.erasurecode.coder.RSErasureEncoder;
@@ -26,13 +27,17 @@ import org.apache.hadoop.io.erasurecode.coder.RSErasureEncoder;
  */
 public class RSErasureCodec extends AbstractErasureCodec {
 
-  @Override
-  protected ErasureCoder doCreateEncoder() {
-    return new RSErasureEncoder();
+  public RSErasureCodec(ECSchema schema) {
+    super(schema);
   }
 
   @Override
-  protected ErasureCoder doCreateDecoder() {
-    return new RSErasureDecoder();
+  public ErasureCoder createEncoder() {
+    return new RSErasureEncoder(getSchema());
+  }
+
+  @Override
+  public ErasureCoder createDecoder() {
+    return new RSErasureDecoder(getSchema());
   }
 }

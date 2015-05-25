@@ -27,19 +27,18 @@ import org.apache.hadoop.io.erasurecode.coder.XORErasureEncoder;
  */
 public class XORErasureCodec extends AbstractErasureCodec {
 
-  @Override
-  public void setSchema(ECSchema schema) {
-    super.setSchema(schema);
+  public XORErasureCodec(ECSchema schema) {
+    super(schema);
     assert(schema.getNumParityUnits() == 1);
   }
 
   @Override
-  protected ErasureCoder doCreateEncoder() {
-    return new XORErasureEncoder();
+  public ErasureCoder createEncoder() {
+    return new XORErasureEncoder(getSchema());
   }
 
   @Override
-  protected ErasureCoder doCreateDecoder() {
-    return new XORErasureDecoder();
+  public ErasureCoder createDecoder() {
+    return new XORErasureDecoder(getSchema());
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
@@ -30,6 +31,14 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  */
 public class RSErasureEncoder extends AbstractErasureEncoder {
   private RawErasureEncoder rawEncoder;
+
+  public RSErasureEncoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
+  public RSErasureEncoder(ECSchema schema) {
+    super(schema);
+  }
 
   @Override
   protected ErasureCodingStep prepareEncodingStep(final ECBlockGroup blockGroup) {
@@ -45,12 +54,11 @@ public class RSErasureEncoder extends AbstractErasureEncoder {
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rawEncoder == null) {
       rawEncoder = createRawEncoder(
-          CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY);
+          CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
+              getNumDataUnits(), getNumParityUnits());
       if (rawEncoder == null) {
-        rawEncoder = new RSRawEncoder();
+        rawEncoder = new RSRawEncoder(getNumDataUnits(), getNumParityUnits());
       }
-      rawEncoder.initialize(getNumDataUnits(),
-          getNumParityUnits(), getChunkSize());
     }
     return rawEncoder;
   }

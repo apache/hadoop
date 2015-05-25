@@ -26,13 +26,17 @@ public interface RawErasureCoderFactory {
 
   /**
    * Create raw erasure encoder.
+   * @param numDataUnits
+   * @param numParityUnits
    * @return raw erasure encoder
    */
-  public RawErasureEncoder createEncoder();
+  public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits);
 
   /**
    * Create raw erasure decoder.
+   * @param numDataUnits
+   * @param numParityUnits
    * @return raw erasure decoder
    */
-  public RawErasureDecoder createDecoder();
+  public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits);
 }

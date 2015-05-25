@@ -31,9 +31,8 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
   private int[] errSignature;
   private int[] primitivePower;
 
-  @Override
-  public void initialize(int numDataUnits, int numParityUnits, int chunkSize) {
-    super.initialize(numDataUnits, numParityUnits, chunkSize);
+  public RSRawDecoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
     assert (getNumDataUnits() + getNumParityUnits() < RSUtil.GF.getFieldSize());
 
     this.errSignature = new int[numParityUnits];

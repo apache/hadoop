@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * An abstract erasure decoder that's to be inherited by new decoders.
@@ -26,6 +27,14 @@ import org.apache.hadoop.io.erasurecode.ECBlockGroup;
  * It implements the {@link ErasureCoder} interface.
  */
 public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
+
+  public AbstractErasureDecoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
+  public AbstractErasureDecoder(ECSchema schema) {
+    super(schema);
+  }
 
   @Override
   public ErasureCodingStep calculateCoding(ECBlockGroup blockGroup) {

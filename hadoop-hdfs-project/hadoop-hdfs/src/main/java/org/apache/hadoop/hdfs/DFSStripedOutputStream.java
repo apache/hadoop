@@ -247,8 +247,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     numDataBlocks = schema.getNumDataUnits();
     numAllBlocks = numDataBlocks + numParityBlocks;
 
-    encoder = new RSRawEncoder();
-    encoder.initialize(numDataBlocks, numParityBlocks, cellSize);
+    encoder = new RSRawEncoder(numDataBlocks, numParityBlocks);
 
     coordinator = new Coordinator(dfsClient.getConf(), numDataBlocks, numAllBlocks);
     try {

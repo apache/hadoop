@@ -19,7 +19,6 @@ package org.apache.hadoop.io.erasurecode.codec;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.coder.*;
 import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
 
 /**
@@ -28,10 +27,9 @@ import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
 public abstract class AbstractErasureCodec extends Configured
     implements ErasureCodec {
 
-  private ECSchema schema;
+  private final ECSchema schema;
 
-  @Override
-  public void setSchema(ECSchema schema) {
+  public AbstractErasureCodec(ECSchema schema) {
     this.schema = schema;
   }
 
@@ -39,7 +37,7 @@ public abstract class AbstractErasureCodec extends Configured
     return schema.getCodecName();
   }
 
-  protected ECSchema getSchema() {
+  public ECSchema getSchema() {
     return schema;
   }
 
@@ -49,40 +47,5 @@ public abstract class AbstractErasureCodec extends Configured
     blockGrouper.setSchema(getSchema());
 
     return blockGrouper;
-  }
-
-  @Override
-  public ErasureCoder createEncoder() {
-    ErasureCoder encoder = doCreateEncoder();
-    prepareErasureCoder(encoder);
-    return encoder;
-  }
-
-  /**
-   * Create a new encoder instance to be initialized afterwards.
-   * @return encoder
-   */
-  protected abstract ErasureCoder doCreateEncoder();
-
-  @Override
-  public ErasureCoder createDecoder() {
-    ErasureCoder decoder = doCreateDecoder();
-    prepareErasureCoder(decoder);
-    return decoder;
-  }
-
-  /**
-   * Create a new decoder instance to be initialized afterwards.
-   * @return decoder
-   */
-  protected abstract ErasureCoder doCreateDecoder();
-
-  private void prepareErasureCoder(ErasureCoder erasureCoder) {
-    if (getSchema() == null) {
-      throw new RuntimeException("No schema been set yet");
-    }
-
-    erasureCoder.setConf(getConf());
-    erasureCoder.initialize(getSchema());
   }
 }

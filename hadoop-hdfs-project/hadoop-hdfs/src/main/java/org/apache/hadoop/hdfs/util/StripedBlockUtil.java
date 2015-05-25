@@ -287,8 +287,7 @@ public class StripedBlockUtil {
     }
 
     byte[][] outputs = new byte[parityBlkNum][(int) alignedStripe.getSpanInBlock()];
-    RSRawDecoder rsRawDecoder = new RSRawDecoder();
-    rsRawDecoder.initialize(dataBlkNum, parityBlkNum, (int) alignedStripe.getSpanInBlock());
+    RSRawDecoder rsRawDecoder = new RSRawDecoder(dataBlkNum, parityBlkNum);
     rsRawDecoder.decode(decodeInputs, decodeIndices, outputs);
 
     for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {

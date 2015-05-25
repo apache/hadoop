@@ -19,7 +19,6 @@ package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * An erasure coder to perform encoding or decoding given a group. Generally it
@@ -38,20 +37,6 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
 public interface ErasureCoder extends Configurable {
 
   /**
-   * Initialize with the important parameters for the code.
-   * @param numDataUnits how many data inputs for the coding
-   * @param numParityUnits how many parity outputs the coding generates
-   * @param chunkSize the size of the input/output buffer
-   */
-  public void initialize(int numDataUnits, int numParityUnits, int chunkSize);
-
-  /**
-   * Initialize with an EC schema.
-   * @param schema
-   */
-  public void initialize(ECSchema schema);
-
-  /**
    * The number of data input units for the coding. A unit can be a byte,
    * chunk or buffer or even a block.
    * @return count of data input units
@@ -66,12 +51,6 @@ public interface ErasureCoder extends Configurable {
   public int getNumParityUnits();
 
   /**
-   * Chunk buffer size for the input/output
-   * @return chunk buffer size
-   */
-  public int getChunkSize();
-
-  /**
    * Calculate the encoding or decoding steps given a block blockGroup.
    *
    * Note, currently only one coding step is supported. Will support complex
@@ -83,13 +62,13 @@ public interface ErasureCoder extends Configurable {
   public ErasureCodingStep calculateCoding(ECBlockGroup blockGroup);
 
   /**
-   * Tell if native or off-heap buffer is preferred or not. It's for callers to
+   * Tell if direct or off-heap buffer is preferred or not. It's for callers to
    * decide how to allocate coding chunk buffers, either on heap or off heap.
    * It will return false by default.
-   * @return true if native buffer is preferred for performance consideration,
+   * @return true if direct buffer is preferred for performance consideration,
    * otherwise false.
    */
-  public boolean preferNativeBuffer();
+  public boolean preferDirectBuffer();
 
   /**
    * Release the resources if any. Good chance to invoke RawErasureCoder#release.

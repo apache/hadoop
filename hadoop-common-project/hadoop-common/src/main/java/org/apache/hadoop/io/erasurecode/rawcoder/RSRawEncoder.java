@@ -29,9 +29,9 @@ import java.nio.ByteBuffer;
 public class RSRawEncoder extends AbstractRawErasureEncoder {
   private int[] generatingPolynomial;
 
-  @Override
-  public void initialize(int numDataUnits, int numParityUnits, int chunkSize) {
-    super.initialize(numDataUnits, numParityUnits, chunkSize);
+  public RSRawEncoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+
     assert (getNumDataUnits() + getNumParityUnits() < RSUtil.GF.getFieldSize());
 
     int[] primitivePower = RSUtil.getPrimitivePower(numDataUnits,

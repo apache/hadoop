@@ -30,6 +30,10 @@ import java.nio.ByteBuffer;
 public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     implements RawErasureDecoder {
 
+  public AbstractRawErasureDecoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
   @Override
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs) {

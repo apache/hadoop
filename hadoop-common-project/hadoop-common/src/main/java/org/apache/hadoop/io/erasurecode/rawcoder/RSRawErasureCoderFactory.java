@@ -23,12 +23,12 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
 
   @Override
-  public RawErasureEncoder createEncoder() {
-    return new RSRawEncoder();
+  public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits) {
+    return new RSRawEncoder(numDataUnits, numParityUnits);
   }
 
   @Override
-  public RawErasureDecoder createDecoder() {
-    return new RSRawDecoder();
+  public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits) {
+    return new RSRawDecoder(numDataUnits, numParityUnits);
   }
 }

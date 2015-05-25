@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
 
@@ -29,12 +30,19 @@ import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
  */
 public class XORErasureDecoder extends AbstractErasureDecoder {
 
+  public XORErasureDecoder(int numDataUnits, int numParityUnits) {
+    super(numDataUnits, numParityUnits);
+  }
+
+  public XORErasureDecoder(ECSchema schema) {
+    super(schema);
+  }
+
   @Override
   protected ErasureCodingStep prepareDecodingStep(final ECBlockGroup blockGroup) {
     // May be configured
-    RawErasureDecoder rawDecoder = new XORRawDecoder();
-    rawDecoder.initialize(getNumDataUnits(),
-        getNumParityUnits(), getChunkSize());
+    RawErasureDecoder rawDecoder = new XORRawDecoder(
+            getNumDataUnits(), getNumParityUnits());
 
     ECBlock[] inputBlocks = getInputBlocks(blockGroup);
 
