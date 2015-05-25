@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -47,8 +47,8 @@ public abstract class ECCommand extends Command {
     // Register all commands of Erasure CLI, with a '-' at the beginning in name
     // of the command.
     factory.addClass(CreateECZoneCommand.class, "-" + CreateECZoneCommand.NAME);
-    factory.addClass(GetECZoneInfoCommand.class, "-"
-        + GetECZoneInfoCommand.NAME);
+    factory.addClass(GetECZoneCommand.class, "-"
+        + GetECZoneCommand.NAME);
     factory.addClass(ListECSchemas.class, "-" + ListECSchemas.NAME);
   }
 
@@ -153,8 +153,8 @@ public abstract class ECCommand extends Command {
   /**
    * Get the information about the zone
    */
-  static class GetECZoneInfoCommand extends ECCommand {
-    public static final String NAME = "getZoneInfo";
+  static class GetECZoneCommand extends ECCommand {
+    public static final String NAME = "getZone";
     public static final String USAGE = "<path>";
     public static final String DESCRIPTION =
         "Get information about the EC zone at specified path\n";
@@ -174,9 +174,9 @@ public abstract class ECCommand extends Command {
       super.processPath(item);
       DistributedFileSystem dfs = (DistributedFileSystem) item.fs;
       try {
-        ErasureCodingZoneInfo ecZoneInfo = dfs.getErasureCodingZoneInfo(item.path);
-        if (ecZoneInfo != null) {
-          out.println(ecZoneInfo.toString());
+        ErasureCodingZone ecZone = dfs.getErasureCodingZone(item.path);
+        if (ecZone != null) {
+          out.println(ecZone.toString());
         } else {
           out.println("Path " + item.path + " is not in EC zone");
         }

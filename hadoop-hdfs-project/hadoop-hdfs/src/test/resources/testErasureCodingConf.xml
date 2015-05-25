@@ -67,9 +67,9 @@
     </test>
 
     <test>
-      <description>help: getZoneInfo command</description>
+      <description>help: getZone command</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -help getZoneInfo</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -help getZone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -80,7 +80,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getZoneInfo &lt;path&gt;(.)*</expected-output>
+          <expected-output>^-getZone &lt;path&gt;(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -145,7 +145,7 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
         <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /eczone</command>
@@ -159,10 +159,10 @@
     </test>
 
     <test>
-      <description>getZoneInfo : get information about the EC zone at specified path not in zone</description>
+      <description>getZone : get information about the EC zone at specified path not in zone</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /noec</command>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /noec</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /noec</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /noec</command>
@@ -176,11 +176,11 @@
     </test>
 
     <test>
-      <description>getZoneInfo : get information about the EC zone at specified path</description>
+      <description>getZone : get information about the EC zone at specified path</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
         <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /eczone</command>
@@ -194,12 +194,12 @@
     </test>
 
     <test>
-      <description>getZoneInfo : get EC zone at specified file path</description>
+      <description>getZone : get EC zone at specified file path</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
         <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
         <command>-fs NAMENODE -touchz /eczone/ecfile</command>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone/ecfile</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /eczone/ecfile</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm /eczone/ecfile</command>
@@ -313,24 +313,24 @@
     </test>
 
     <test>
-      <description>getZoneInfo : illegal parameters - path is missing</description>
+      <description>getZone : illegal parameters - path is missing</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo </ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone </ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getZoneInfo: &lt;path&gt; is missing(.)*</expected-output>
+          <expected-output>^-getZone: &lt;path&gt; is missing(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZoneInfo : illegal parameters - too many arguments</description>
+      <description>getZone : illegal parameters - too many arguments</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /eczone /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm /eczone</command>
@@ -338,22 +338,22 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>-getZoneInfo: Too many arguments</expected-output>
+          <expected-output>-getZone: Too many arguments</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZoneInfo : illegal parameters - no such file</description>
+      <description>getZone : illegal parameters - no such file</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZoneInfo /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^getZoneInfo: `/eczone': No such file or directory(.)*</expected-output>
+          <expected-output>^getZone: `/eczone': No such file or directory(.)*</expected-output>
         </comparator>
       </comparators>
     </test>

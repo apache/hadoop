@@ -257,3 +257,5 @@
     HDFS-7768. Change fsck to support EC files.  (Takanobu Asanuma via szetszwo)
 
     HDFS-8382. Remove chunkSize and initialize from erasure coder. (Kai Zheng)
+
+    HDFS-8408. Revisit and refactor ErasureCodingInfo (vinayakumarb)

@@ -39,7 +39,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -1162,10 +1162,10 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  ErasureCodingZoneInfo getECZoneInfo(INodesInPath iip) throws IOException {
+  ErasureCodingZone getECZone(INodesInPath iip) throws IOException {
     readLock();
     try {
-      return ecZoneManager.getECZoneInfo(iip);
+      return ecZoneManager.getECZone(iip);
     } finally {
       readUnlock();
     }

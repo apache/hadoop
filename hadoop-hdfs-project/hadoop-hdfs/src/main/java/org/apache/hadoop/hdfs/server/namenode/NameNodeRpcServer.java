@@ -84,8 +84,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
@@ -2064,20 +2063,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public ErasureCodingInfo getErasureCodingInfo(String src) throws IOException {
-    checkNNStartup();
-    return namesystem.getErasureCodingInfo(src);
-  }
-
-  @Override // ClientProtocol
   public ECSchema[] getECSchemas() throws IOException {
     checkNNStartup();
     return namesystem.getECSchemas();
   }
 
   @Override // ClientProtocol
-  public ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
+  public ErasureCodingZone getErasureCodingZone(String src) throws IOException {
     checkNNStartup();
-    return namesystem.getErasureCodingZoneInfo(src);
+    return namesystem.getErasureCodingZone(src);
   }
 }
