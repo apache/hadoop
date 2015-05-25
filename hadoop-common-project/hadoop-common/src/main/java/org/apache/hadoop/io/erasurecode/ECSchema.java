@@ -28,8 +28,6 @@ public final class ECSchema {
   public static final String NUM_DATA_UNITS_KEY = "k";
   public static final String NUM_PARITY_UNITS_KEY = "m";
   public static final String CODEC_NAME_KEY = "codec";
-  public static final String CHUNK_SIZE_KEY = "chunkSize";
-  public static final int DEFAULT_CHUNK_SIZE = 256 * 1024; // 256K
 
   /**
    * A friendly and understandable name that can mean what's it, also serves as
@@ -51,11 +49,6 @@ public final class ECSchema {
    * Number of parity units generated in a coding
    */
   private final int numParityUnits;
-
-  /**
-   * Unit data size for each chunk in a coding
-   */
-  private final int chunkSize;
 
   /*
    * An erasure code can have its own specific advanced parameters, subject to
@@ -92,17 +85,9 @@ public final class ECSchema {
     this.numDataUnits = tmpNumDataUnits;
     this.numParityUnits = tmpNumParityUnits;
 
-    int tmpChunkSize = extractIntOption(CHUNK_SIZE_KEY, allOptions);
-    if (tmpChunkSize > 0) {
-      this.chunkSize = tmpChunkSize;
-    } else {
-      this.chunkSize = DEFAULT_CHUNK_SIZE;
-    }
-
     allOptions.remove(CODEC_NAME_KEY);
     allOptions.remove(NUM_DATA_UNITS_KEY);
     allOptions.remove(NUM_PARITY_UNITS_KEY);
-    allOptions.remove(CHUNK_SIZE_KEY);
     // After some cleanup
     this.extraOptions = Collections.unmodifiableMap(allOptions);
   }
@@ -144,14 +129,6 @@ public final class ECSchema {
       extraOptions = new HashMap<>();
     }
 
-    int tmpChunkSize = extractIntOption(CHUNK_SIZE_KEY, extraOptions);
-    if (tmpChunkSize > 0) {
-      this.chunkSize = tmpChunkSize;
-    } else {
-      this.chunkSize = DEFAULT_CHUNK_SIZE;
-    }
-
-    extraOptions.remove(CHUNK_SIZE_KEY);
     // After some cleanup
     this.extraOptions = Collections.unmodifiableMap(extraOptions);
   }
@@ -217,14 +194,6 @@ public final class ECSchema {
   }
 
   /**
-   * Get chunk buffer size for the erasure encoding/decoding.
-   * @return chunk buffer size
-   */
-  public int getChunkSize() {
-    return chunkSize;
-  }
-
-  /**
    * Make a meaningful string representation for log output.
    * @return string representation
    */
@@ -235,9 +204,8 @@ public final class ECSchema {
     sb.append("Name=" + schemaName + ", ");
     sb.append("Codec=" + codecName + ", ");
     sb.append(NUM_DATA_UNITS_KEY + "=" + numDataUnits + ", ");
-    sb.append(NUM_PARITY_UNITS_KEY + "=" + numParityUnits + ", ");
-    sb.append(CHUNK_SIZE_KEY + "=" + chunkSize +
-        (extraOptions.isEmpty() ? "" : ", "));
+    sb.append(NUM_PARITY_UNITS_KEY + "=" + numParityUnits);
+    sb.append((extraOptions.isEmpty() ? "" : ", "));
 
     int i = 0;
     for (String opt : extraOptions.keySet()) {
@@ -267,9 +235,6 @@ public final class ECSchema {
     if (numParityUnits != ecSchema.numParityUnits) {
       return false;
     }
-    if (chunkSize != ecSchema.chunkSize) {
-      return false;
-    }
     if (!schemaName.equals(ecSchema.schemaName)) {
       return false;
     }
@@ -286,7 +251,6 @@ public final class ECSchema {
     result = 31 * result + extraOptions.hashCode();
     result = 31 * result + numDataUnits;
     result = 31 * result + numParityUnits;
-    result = 31 * result + chunkSize;
 
     return result;
   }
