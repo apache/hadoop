@@ -29,7 +29,6 @@ public class TestECSchema {
     String schemaName = "goodSchema";
     int numDataUnits = 6;
     int numParityUnits = 3;
-    int chunkSize = 64 * 1024 * 1024;
     String codec = "rs";
     String extraOption = "extraOption";
     String extraOptionValue = "extraOptionValue";
@@ -38,7 +37,6 @@ public class TestECSchema {
     options.put(ECSchema.NUM_DATA_UNITS_KEY, String.valueOf(numDataUnits));
     options.put(ECSchema.NUM_PARITY_UNITS_KEY, String.valueOf(numParityUnits));
     options.put(ECSchema.CODEC_NAME_KEY, codec);
-    options.put(ECSchema.CHUNK_SIZE_KEY, String.valueOf(chunkSize));
     options.put(extraOption, extraOptionValue);
 
     ECSchema schema = new ECSchema(schemaName, options);
@@ -47,7 +45,6 @@ public class TestECSchema {
     assertEquals(schemaName, schema.getSchemaName());
     assertEquals(numDataUnits, schema.getNumDataUnits());
     assertEquals(numParityUnits, schema.getNumParityUnits());
-    assertEquals(chunkSize, schema.getChunkSize());
     assertEquals(codec, schema.getCodecName());
     assertEquals(extraOptionValue, schema.getExtraOptions().get(extraOption));
   }

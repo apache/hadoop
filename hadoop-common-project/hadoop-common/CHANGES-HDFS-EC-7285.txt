@@ -56,3 +56,6 @@
     coder. (Kai Zheng via Zhe Zhang)
 
     HADOOP-12013. Generate fixed data to perform erasure coder test. (Kai Zheng)
+
+    HADOOP-12029. Remove chunkSize from ECSchema as its not required for coders
+    (vinayakumarb)
