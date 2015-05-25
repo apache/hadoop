@@ -119,8 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -3137,19 +3136,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public ErasureCodingInfo getErasureCodingInfo(String src) throws IOException {
-    checkOpen();
-    TraceScope scope = getPathTraceScope("getErasureCodingInfo", src);
-    try {
-      return namenode.getErasureCodingInfo(src);
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-          FileNotFoundException.class, UnresolvedPathException.class);
-    } finally {
-      scope.close();
-    }
-  }
-
   public ECSchema[] getECSchemas() throws IOException {
     checkOpen();
     TraceScope scope = Trace.startSpan("getECSchemas", traceSampler);
@@ -3359,11 +3345,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return Returns the zone information if path is in EC Zone, null otherwise
    * @throws IOException
    */
-  public ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
+  public ErasureCodingZone getErasureCodingZone(String src) throws IOException {
     checkOpen();
-    TraceScope scope = getPathTraceScope("getErasureCodingZoneInfo", src);
+    TraceScope scope = getPathTraceScope("getErasureCodingZone", src);
     try {
-      return namenode.getErasureCodingZoneInfo(src);
+      return namenode.getErasureCodingZone(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
           AccessControlException.class, UnresolvedPathException.class);

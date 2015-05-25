@@ -21,11 +21,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.util.RwLock;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -52,13 +51,12 @@ public interface Namesystem extends RwLock, SafeMode {
   public boolean isInSnapshot(BlockCollection bc);
 
   /**
-   * Gets the ECZone info for path
-   * 
+   * Gets the ECZone for path
    * @param src
    *          - path
-   * @return {@link ErasureCodingZoneInfo}
+   * @return {@link ErasureCodingZone}
    * @throws IOException
    */
-  public ErasureCodingZoneInfo getErasureCodingZoneInfoForPath(String src)
+  public ErasureCodingZone getErasureCodingZoneForPath(String src)
       throws IOException;
 }

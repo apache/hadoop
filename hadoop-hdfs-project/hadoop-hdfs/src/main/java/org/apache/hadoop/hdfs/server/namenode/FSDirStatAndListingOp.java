@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -386,9 +386,9 @@ class FSDirStatAndListingOp {
     final FileEncryptionInfo feInfo = isRawPath ? null :
         fsd.getFileEncryptionInfo(node, snapshot, iip);
     
-    final ErasureCodingZoneInfo ecZoneInfo = fsd.getECZoneInfo(iip);
-    final ECSchema schema = ecZoneInfo != null ? ecZoneInfo.getSchema() : null;
-    final int cellSize = ecZoneInfo != null ? ecZoneInfo.getCellSize() : 0;
+    final ErasureCodingZone ecZone = fsd.getECZone(iip);
+    final ECSchema schema = ecZone != null ? ecZone.getSchema() : null;
+    final int cellSize = ecZone != null ? ecZone.getCellSize() : 0;
 
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
@@ -468,9 +468,9 @@ class FSDirStatAndListingOp {
     }
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
-    final ErasureCodingZoneInfo ecZoneInfo = fsd.getECZoneInfo(iip);
-    final ECSchema schema = ecZoneInfo != null ? ecZoneInfo.getSchema() : null;
-    final int cellSize = ecZoneInfo != null ? ecZoneInfo.getCellSize() : 0;
+    final ErasureCodingZone ecZone = fsd.getECZone(iip);
+    final ECSchema schema = ecZone != null ? ecZone.getSchema() : null;
+    final int cellSize = ecZone != null ? ecZone.getCellSize() : 0;
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,

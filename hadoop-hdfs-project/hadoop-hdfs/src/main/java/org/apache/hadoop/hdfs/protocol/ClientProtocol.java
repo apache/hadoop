@@ -1467,16 +1467,6 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
-   * Gets the ECInfo for the specified file/directory
-   * 
-   * @param src
-   * @return Returns the ECInfo if the file/directory is erasure coded, null otherwise
-   * @throws IOException
-   */
-  @Idempotent
-  public ErasureCodingInfo getErasureCodingInfo(String src) throws IOException;
-
-  /**
    * Gets list of ECSchemas loaded in Namenode
    *
    * @return Returns the list of ECSchemas loaded at Namenode
@@ -1492,5 +1482,5 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  public ErasureCodingZoneInfo getErasureCodingZoneInfo(String src) throws IOException;
+  public ErasureCodingZone getErasureCodingZone(String src) throws IOException;
 }

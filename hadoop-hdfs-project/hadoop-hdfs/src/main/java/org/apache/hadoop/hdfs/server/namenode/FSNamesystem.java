@@ -181,8 +181,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -7624,27 +7623,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get the erasure coding information for specified src
-   */
-  ErasureCodingInfo getErasureCodingInfo(String src) throws AccessControlException,
-      UnresolvedLinkException, IOException {
-    ErasureCodingZoneInfo zoneInfo = getErasureCodingZoneInfo(src);
-    if (zoneInfo != null) {
-      return new ErasureCodingInfo(src, zoneInfo.getSchema());
-    }
-    return null;
-  }
-
-  /**
    * Get the erasure coding zone information for specified path
    */
-  ErasureCodingZoneInfo getErasureCodingZoneInfo(String src)
+  ErasureCodingZone getErasureCodingZone(String src)
       throws AccessControlException, UnresolvedLinkException, IOException {
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return getErasureCodingZoneInfoForPath(src);
+      return getErasureCodingZoneForPath(src);
     } finally {
       readUnlock();
     }
@@ -7865,7 +7852,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override
-  public ErasureCodingZoneInfo getErasureCodingZoneInfoForPath(String src)
+  public ErasureCodingZone getErasureCodingZoneForPath(String src)
       throws IOException {
     final byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(src);
@@ -7875,7 +7862,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (isPermissionEnabled) {
       dir.checkPathAccess(pc, iip, FsAction.READ);
     }
-    return dir.getECZoneInfo(iip);
+    return dir.getECZone(iip);
   }
 
 }

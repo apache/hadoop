@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -177,12 +177,12 @@ public class TestErasureCodingZones {
     final Path ecDir = new Path(src);
     fs.mkdir(ecDir, FsPermission.getDirDefault());
     // dir ECInfo before creating ec zone
-    assertNull(fs.getClient().getErasureCodingInfo(src));
+    assertNull(fs.getClient().getFileInfo(src).getECSchema());
     // dir ECInfo after creating ec zone
     fs.getClient().createErasureCodingZone(src, null, 0); //Default one will be used.
     ECSchema sysDefaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     verifyErasureCodingInfo(src, sysDefaultSchema);
-    fs.create(new Path(ecDir, "/child1")).close();
+    fs.create(new Path(ecDir, "child1")).close();
     // verify for the files in ec zone
     verifyErasureCodingInfo(src + "/child1", sysDefaultSchema);
   }
@@ -198,21 +198,19 @@ public class TestErasureCodingZones {
     final Path ecDir = new Path(src);
     fs.mkdir(ecDir, FsPermission.getDirDefault());
     // dir ECInfo before creating ec zone
-    assertNull(fs.getClient().getErasureCodingInfo(src));
+    assertNull(fs.getClient().getFileInfo(src).getECSchema());
     // dir ECInfo after creating ec zone
     fs.getClient().createErasureCodingZone(src, usingSchema, 0);
     verifyErasureCodingInfo(src, usingSchema);
-    fs.create(new Path(ecDir, "/child1")).close();
+    fs.create(new Path(ecDir, "child1")).close();
     // verify for the files in ec zone
     verifyErasureCodingInfo(src + "/child1", usingSchema);
   }
 
   private void verifyErasureCodingInfo(
       String src, ECSchema usingSchema) throws IOException {
-    ErasureCodingInfo ecInfo = fs.getClient().getErasureCodingInfo(src);
-    assertNotNull("ECInfo should have been non-null", ecInfo);
-    assertEquals(src, ecInfo.getSrc());
-    ECSchema schema = ecInfo.getSchema();
+    HdfsFileStatus hdfsFileStatus = fs.getClient().getFileInfo(src);
+    ECSchema schema = hdfsFileStatus.getECSchema();
     assertNotNull(schema);
     assertEquals("Actually used schema should be equal with target schema",
         usingSchema, schema);

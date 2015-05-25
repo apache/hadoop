@@ -75,7 +75,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZoneInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -2316,25 +2316,25 @@ public class DistributedFileSystem extends FileSystem {
    * @return Returns the zone information if path is in EC zone, null otherwise
    * @throws IOException
    */
-  public ErasureCodingZoneInfo getErasureCodingZoneInfo(final Path path)
+  public ErasureCodingZone getErasureCodingZone(final Path path)
       throws IOException {
     Path absF = fixRelativePart(path);
-    return new FileSystemLinkResolver<ErasureCodingZoneInfo>() {
+    return new FileSystemLinkResolver<ErasureCodingZone>() {
       @Override
-      public ErasureCodingZoneInfo doCall(final Path p) throws IOException,
+      public ErasureCodingZone doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        return dfs.getErasureCodingZoneInfo(getPathName(p));
+        return dfs.getErasureCodingZone(getPathName(p));
       }
 
       @Override
-      public ErasureCodingZoneInfo next(final FileSystem fs, final Path p)
+      public ErasureCodingZone next(final FileSystem fs, final Path p)
           throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          return myDfs.getErasureCodingZoneInfo(p);
+          return myDfs.getErasureCodingZone(p);
         }
         throw new UnsupportedOperationException(
-            "Cannot getErasureCodingZoneInfo through a symlink to a "
+            "Cannot getErasureCodingZone through a symlink to a "
                 + "non-DistributedFileSystem: " + path + " -> " + p);
       }
     }.resolve(this, absF);

@@ -24,17 +24,9 @@ package hadoop.hdfs;
 import "hdfs.proto";
 
 /**
- * ErasureCodingInfo
+ * ErasureCodingZone
  */
-message ErasureCodingInfoProto {
- required string src = 1;
- required ECSchemaProto schema = 2;
-}
-
-/**
- * ErasureCodingZoneInfo
- */
-message ErasureCodingZoneInfoProto {
+message ErasureCodingZoneProto {
   required string dir = 1;
   required ECSchemaProto schema = 2;
   required uint32 cellSize = 3;
@@ -49,14 +41,6 @@ message CreateErasureCodingZoneRequestProto {
 message CreateErasureCodingZoneResponseProto {
 }
 
-message GetErasureCodingInfoRequestProto {
-  required string src = 1;
-}
-
-message GetErasureCodingInfoResponseProto {
-  optional ErasureCodingInfoProto ECInfo = 1;
-}
-
 message GetECSchemasRequestProto { // void request
 }
 
@@ -64,12 +48,12 @@ message GetECSchemasResponseProto {
   repeated ECSchemaProto schemas = 1;
 }
 
-message GetErasureCodingZoneInfoRequestProto {
+message GetErasureCodingZoneRequestProto {
   required string src = 1; // path to get the zone info
 }
 
-message GetErasureCodingZoneInfoResponseProto {
-  optional ErasureCodingZoneInfoProto ECZoneInfo = 1;
+message GetErasureCodingZoneResponseProto {
+  optional ErasureCodingZoneProto ECZone = 1;
 }
 
 /**
