@@ -423,7 +423,7 @@ public class GaloisField {
       byte[] pi = p[i];
       for (iIdx = offsets[i], oIdx = offset;
            iIdx < offsets[i] + len; iIdx++, oIdx++) {
-        int pij = pi[iIdx] & 0x000000FF;
+        int pij = pi != null ? pi[iIdx] & 0x000000FF : 0;
         q[oIdx] = (byte) (q[oIdx] ^ mulTable[pij][y]);
       }
       y = mulTable[x][y];
@@ -438,13 +438,15 @@ public class GaloisField {
    * @param q store the return result
    * @param x input field
    */
-  public void substitute(ByteBuffer[] p, ByteBuffer q, int x) {
+  public void substitute(ByteBuffer[] p, int len, ByteBuffer q, int x) {
     int y = 1, iIdx, oIdx;
     for (int i = 0; i < p.length; i++) {
       ByteBuffer pi = p[i];
-      for (iIdx = pi.position(), oIdx = q.position();
-           iIdx < pi.limit(); iIdx++, oIdx++) {
-        int pij = pi.get(iIdx) & 0x000000FF;
+      int pos = pi != null ? pi.position() : 0;
+      int limit = pi != null ? pi.limit() : len;
+      for (oIdx = q.position(), iIdx = pos;
+           iIdx < limit; iIdx++, oIdx++) {
+        int pij = pi != null ? pi.get(iIdx) & 0x000000FF : 0;
         q.put(oIdx, (byte) (q.get(oIdx) ^ mulTable[pij][y]));
       }
       y = mulTable[x][y];

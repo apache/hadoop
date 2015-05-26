@@ -59,3 +59,6 @@
 
     HADOOP-12029. Remove chunkSize from ECSchema as its not required for coders
     (vinayakumarb)
+
+    HADOOP-11847. Enhance raw coder allowing to read least required inputs in decoding.
+    (Kai Zheng)

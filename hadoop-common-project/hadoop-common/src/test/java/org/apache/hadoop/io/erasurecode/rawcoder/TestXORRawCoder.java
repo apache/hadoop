@@ -29,58 +29,35 @@ public class TestXORRawCoder extends TestRawCoderBase {
   public void setup() {
     this.encoderClass = XORRawEncoder.class;
     this.decoderClass = XORRawDecoder.class;
-
-    this.numDataUnits = 10;
-    this.numParityUnits = 1;
   }
 
   @Test
-  public void testCodingNoDirectBuffer_erasing_d0() {
+  public void testCoding_10x1_erasing_d0() {
     prepare(null, 10, 1, new int[] {0}, new int[0]);
-
-    /**
-     * Doing twice to test if the coders can be repeatedly reused. This matters
-     * as the underlying coding buffers are shared, which may have bugs.
-     */
-    testCoding(false);
-    testCoding(false);
+    testCodingDoMixAndTwice();
   }
 
   @Test
-  public void testCodingDirectBuffer_erasing_p0() {
+  public void testCoding_10x1_erasing_p0() {
     prepare(null, 10, 1, new int[0], new int[] {0});
-
-    testCoding(true);
-    testCoding(true);
+    testCodingDoMixAndTwice();
   }
 
   @Test
-  public void testCodingDirectBuffer_erasing_d0() {
-    prepare(null, 10, 1, new int[] {0}, new int[0]);
-
-    testCoding(true);
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingBothBuffers_erasing_d5() {
+  public void testCoding_10x1_erasing_d5() {
     prepare(null, 10, 1, new int[]{5}, new int[0]);
-
-    /**
-     * Doing in mixed buffer usage model to test if the coders can be repeatedly
-     * reused with different buffer usage model. This matters as the underlying
-     * coding buffers are shared, which may have bugs.
-     */
-    testCoding(true);
-    testCoding(false);
-    testCoding(true);
-    testCoding(false);
+    testCodingDoMixAndTwice();
   }
 
   @Test
-  public void testCodingNegative_erasing_d5() {
-    prepare(null, 10, 1, new int[]{5}, new int[0]);
+  public void testCodingNegative_10x1_erasing_too_many() {
+    prepare(null, 10, 1, new int[]{2}, new int[]{0});
+    testCodingWithErasingTooMany();
+  }
 
+  @Test
+  public void testCodingNegative_10x1_erasing_d5() {
+    prepare(null, 10, 1, new int[]{5}, new int[0]);
     testCodingWithBadInput(true);
     testCodingWithBadOutput(false);
     testCodingWithBadInput(true);

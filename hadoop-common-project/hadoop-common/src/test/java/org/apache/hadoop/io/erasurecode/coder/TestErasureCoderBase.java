@@ -232,7 +232,6 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
                                              TestBlock[] parityBlocks) {
     TestBlock[] toEraseBlocks = new TestBlock[erasedDataIndexes.length +
                                           erasedParityIndexes.length];
-
     int idx = 0;
     TestBlock block;
 
