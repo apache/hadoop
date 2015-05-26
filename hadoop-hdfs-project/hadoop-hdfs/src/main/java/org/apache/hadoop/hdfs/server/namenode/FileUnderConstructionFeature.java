@@ -50,24 +50,6 @@ public class FileUnderConstructionFeature implements INode.Feature {
   }
 
   /**
-   * Update the length for the last block
-   *
-   * @param lastBlockLength
-   *          The length of the last block reported from client
-   * @throws IOException
-   */
-  void updateLengthOfLastBlock(INodeFile f, long lastBlockLength)
-      throws IOException {
-    BlockInfoContiguous lastBlock = f.getLastBlock();
-    assert (lastBlock != null) : "The last block for path "
-        + f.getFullPathName() + " is null when updating its length";
-    assert (lastBlock instanceof BlockInfoContiguousUnderConstruction)
-        : "The last block for path " + f.getFullPathName()
-            + " is not a BlockInfoUnderConstruction when updating its length";
-    lastBlock.setNumBytes(lastBlockLength);
-  }
-
-  /**
    * When deleting a file in the current fs directory, and the file is contained
    * in a snapshot, we should delete the last block if it's under construction
    * and its size is 0.

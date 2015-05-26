@@ -799,11 +799,11 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
-  public void logUpdateBlocks(String path, INodeFile file, boolean toLogRpcIds) {
-    Preconditions.checkArgument(file.isUnderConstruction());
+  public void logUpdateBlocks(String path, Block[] blocks, boolean
+      toLogRpcIds) {
     UpdateBlocksOp op = UpdateBlocksOp.getInstance(cache.get())
       .setPath(path)
-      .setBlocks(file.getBlocks());
+      .setBlocks(blocks);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }

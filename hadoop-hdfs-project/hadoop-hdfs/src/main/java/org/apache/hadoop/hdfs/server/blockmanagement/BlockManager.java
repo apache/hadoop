@@ -360,6 +360,18 @@ public class BlockManager {
     LOG.info("maxNumBlocksToLog          = " + maxNumBlocksToLog);
   }
 
+  public void updateLastBlockLength(Block block, long blockLength) {
+    BlockInfoContiguous lastBlock = getStoredBlock(block);
+    assert (lastBlock != null) : "The last block " + block + " is null when updating its length";
+    assert (lastBlock instanceof BlockInfoContiguousUnderConstruction)
+        : "The last block " + block
+        + " is not a BlockInfoUnderConstruction when updating its length";
+    assert !lastBlock.isComplete();
+    BlockInfoContiguousUnderConstruction uc =
+        (BlockInfoContiguousUnderConstruction) lastBlock;
+    uc.setNumBytes(blockLength);
+  }
+
   private static BlockTokenSecretManager createBlockTokenSecretManager(
       final Configuration conf) throws IOException {
     final boolean isEnabled = conf.getBoolean(

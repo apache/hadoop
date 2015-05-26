@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.Block;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -171,5 +172,14 @@ class RWTransaction extends Transaction {
 
   public void logSetPermissions(String src, FsPermission permission) {
     fsd.getEditLog().logSetPermissions(src, permission);
+  }
+
+  public void logUpdateBlocks(String path, FlatINodeFileFeature file) {
+    Block[] blocks = new Block[file.numBlocks()];
+    int i = 0;
+    for (Block b : file.blocks()) {
+      blocks[i++] = b;
+    }
+    fsd.getEditLog().logUpdateBlocks(path, blocks, false);
   }
 }

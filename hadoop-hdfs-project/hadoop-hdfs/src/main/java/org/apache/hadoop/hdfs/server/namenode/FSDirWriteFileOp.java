@@ -100,13 +100,18 @@ class FSDirWriteFileOp {
    */
   static void persistBlocks(
       FSDirectory fsd, String path, INodeFile file, boolean logRetryCache) {
-    assert fsd.getFSNamesystem().hasWriteLock();
-    Preconditions.checkArgument(file.isUnderConstruction());
-    fsd.getEditLog().logUpdateBlocks(path, file, logRetryCache);
+    throw new IllegalStateException("Unimplemented");
+  }
+
+  static void persistBlocks(
+      RWTransaction tx, String path, FlatINode inode) {
+    FlatINodeFileFeature f = inode.feature(FlatINodeFileFeature.class);
+    Preconditions.checkArgument(f != null && f.inConstruction());
+    tx.logUpdateBlocks(path, f);
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("persistBlocks: " + path
-              + " with " + file.getBlocks().length + " blocks is persisted to" +
-              " the file system");
+      NameNode.stateChangeLog.debug(
+          "persistBlocks: " + path + " with " + f.numBlocks() + " " +
+              "blocks is persisted to the file system");
     }
   }
 
@@ -528,8 +533,7 @@ class FSDirWriteFileOp {
     final INodeFile newNode;
     assert fsd.hasWriteLock();
     if (underConstruction) {
-      newNode = newINodeFile(id, permissions, modificationTime,
-                                              modificationTime, replication,
+      newNode = newINodeFile(id, permissions, modificationTime, modificationTime, replication,
                                               preferredBlockSize,
                                               storagePolicyId);
       newNode.toUnderConstruction(clientName, clientMachine);
@@ -553,7 +557,7 @@ class FSDirWriteFileOp {
         return newNode;
       }
     } catch (IOException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug(
             "DIR* FSDirectory.unprotectedAddFile: exception when add "
                 + existing.getPath() + " to the file system", e);
@@ -685,9 +689,9 @@ class FSDirWriteFileOp {
     return new FileState(inode, src);
   }
 
-  static boolean completeFile(FSNamesystem fsn, FSPermissionChecker pc,
-      final String srcArg, String holder, ExtendedBlock last, long fileId)
-      throws IOException {
+  static boolean completeFile(
+      FSNamesystem fsn, FSPermissionChecker pc, final String srcArg,
+      String holder, ExtendedBlock last, long fileId) throws IOException {
     String src = srcArg;
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " +

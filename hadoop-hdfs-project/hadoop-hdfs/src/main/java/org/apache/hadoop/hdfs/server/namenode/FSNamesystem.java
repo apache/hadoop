@@ -143,7 +143,6 @@ import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -3354,31 +3353,45 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
     FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
-    try {
+    try (RWTransaction tx = dir.newRWTransaction()) {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot fsync file " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INode inode;
-      if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
+      tx.begin();
+      Resolver.Result paths = Resolver.resolve(tx, src);
+      if (true || fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
         // Older clients may not have given us an inode ID to work with.
         // In this case, we have to try to resolve the path and hope it
         // hasn't changed or been deleted since the file was opened for write.
-        inode = dir.getINode(src);
+        paths = Resolver.resolve(tx, src);
       } else {
-        inode = dir.getInode(fileId);
-        if (inode != null) src = inode.getFullPathName();
+        // Newer clients pass the inode ID, so we can just get the inode
+        // directly.
+        paths = Resolver.resolveById(tx, fileId);
       }
-      final INodeFile pendingFile = checkLease(src, clientName, inode, fileId);
+      if (paths.invalidPath()) {
+        throw new InvalidPathException(src);
+      } else if (paths.notFound()) {
+        throw new FileNotFoundException(src);
+      }
+      FlatINode inode = paths.inodesInPath().getLastINode();
+      checkLease(src, clientName, inode);
+      FlatINodeFileFeature f = inode.feature(FlatINodeFileFeature.class);
+      FlatINodeFileFeature.Builder newFile = new FlatINodeFileFeature.Builder
+          ().mergeFrom(f);
       if (lastBlockLength > 0) {
-        pendingFile.getFileUnderConstructionFeature().updateLengthOfLastBlock(
-            pendingFile, lastBlockLength);
+        blockManager.updateLastBlockLength(f.lastBlock(), lastBlockLength);
+        Block newLastBlock = f.lastBlock();
+        newLastBlock.setNumBytes(lastBlockLength);
+        newFile.block(f.numBlocks() - 1, newLastBlock);
       }
-      FSDirWriteFileOp.persistBlocks(dir, src, pendingFile, false);
+
+      ByteString newINode = new FlatINode.Builder().mergeFrom(inode)
+          .replaceFeature(FlatINodeFileFeature.wrap(newFile.build())).build();
+      FSDirWriteFileOp.persistBlocks(tx, src, FlatINode.wrap(newINode));
     } finally {
       writeUnlock();
     }
