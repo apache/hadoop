@@ -321,10 +321,10 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | usedResources | string | A string describing the current resources used by the queue |
 | queueName | string | The name of the queue |
 | state | string of QueueState | The state of the queue |
-| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information |
+| queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no sub-queues. |
 | resourcesUsed | A single resource object | The total amount of resources used by this queue |
 
-### Elements of the queues object for a Leaf queue - contains all elements in parent plus the following:
+### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'queues' plus the following:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1005,9 +1005,9 @@ Response Body:
 | clusterResources | A single resource object | The capacity of the cluster |
 | queueName | string | The name of the queue |
 | schedulingPolicy | string | The name of the scheduling policy used by the queue |
-| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information |
+| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no childQueues. |
 
-### Elements of the queues object for a Leaf queue - contains all elements in parent plus the following
+### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'childQueues' plus the following
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1044,43 +1044,15 @@ Response Body:
     "scheduler": {
         "schedulerInfo": {
             "rootQueue": {
-                "childQueues": [
-                    {
-                        "clusterResources": {
-                            "memory": 8192,
-                            "vCores": 8
-                        },
-                        "fairResources": {
-                            "memory": 0,
-                            "vCores": 0
-                        },
-                        "maxApps": 2147483647,
-                        "maxResources": {
-                            "memory": 8192,
-                            "vCores": 8
-                        },
-                        "minResources": {
-                            "memory": 0,
-                            "vCores": 0
-                        },
-                        "numActiveApps": 0,
-                        "numPendingApps": 0,
-                        "queueName": "root.default",
-                        "schedulingPolicy": "fair",
-                        "type": "fairSchedulerLeafQueueInfo",
-                        "usedResources": {
-                            "memory": 0,
-                            "vCores": 0
-                        }
-                    },
-                    {
-                        "childQueues": {
+                "childQueues": {
+                    "queue": [
+                        {
                             "clusterResources": {
                                 "memory": 8192,
                                 "vCores": 8
                             },
                             "fairResources": {
-                                "memory": 10000,
+                                "memory": 0,
                                 "vCores": 0
                             },
                             "maxApps": 2147483647,
@@ -1089,46 +1061,78 @@ Response Body:
                                 "vCores": 8
                             },
                             "minResources": {
-                                "memory": 5000,
+                                "memory": 0,
                                 "vCores": 0
                             },
                             "numActiveApps": 0,
                             "numPendingApps": 0,
-                            "queueName": "root.sample_queue.sample_sub_queue",
+                            "queueName": "root.default",
                             "schedulingPolicy": "fair",
-                            "type": [
-                                "fairSchedulerLeafQueueInfo"
-                            ],
+                            "type": "fairSchedulerLeafQueueInfo",
                             "usedResources": {
                                 "memory": 0,
                                 "vCores": 0
                             }
                         },
-                        "clusterResources": {
-                            "memory": 8192,
-                            "vCores": 8
-                        },
-                        "fairResources": {
-                            "memory": 10000,
-                            "vCores": 0
-                        },
-                        "maxApps": 50,
-                        "maxResources": {
-                            "memory": 8192,
-                            "vCores": 0
-                        },
-                        "minResources": {
-                            "memory": 10000,
-                            "vCores": 0
-                        },
-                        "queueName": "root.sample_queue",
-                        "schedulingPolicy": "fair",
-                        "usedResources": {
-                            "memory": 0,
-                            "vCores": 0
+                        {
+                            "childQueues": {
+                                "queue": [
+                                    {
+                                        "clusterResources": {
+                                            "memory": 8192,
+                                           "vCores": 8
+                                        },
+                                        "fairResources": {
+                                            "memory": 10000,
+                                            "vCores": 0
+                                        },
+                                        "maxApps": 2147483647,
+                                        "maxResources": {
+                                            "memory": 8192,
+                                            "vCores": 8
+                                        },
+                                        "minResources": {
+                                            "memory": 5000,
+                                            "vCores": 0
+                                        },
+                                        "numActiveApps": 0,
+                                        "numPendingApps": 0,
+                                        "queueName": "root.sample_queue.sample_sub_queue",
+                                        "schedulingPolicy": "fair",
+                                        "type": "fairSchedulerLeafQueueInfo",
+                                        "usedResources": {
+                                            "memory": 0,
+                                            "vCores": 0
+                                        }
+                                    }
+                                ]
+                            },
+                            "clusterResources": {
+                                "memory": 8192,
+                                "vCores": 8
+                            },
+                            "fairResources": {
+                                "memory": 10000,
+                                "vCores": 0
+                            },
+                            "maxApps": 50,
+                            "maxResources": {
+                                "memory": 8192,
+                                "vCores": 0
+                            },
+                            "minResources": {
+                                "memory": 10000,
+                                "vCores": 0
+                            },
+                            "queueName": "root.sample_queue",
+                            "schedulingPolicy": "fair",
+                            "usedResources": {
+                                "memory": 0,
+                                "vCores": 0
+                            }
                         }
-                    }
-                ],
+                    ],
+                },
                 "clusterResources": {
                     "memory": 8192,
                     "vCores": 8
@@ -1203,66 +1207,43 @@ Response Body:
       </clusterResources>
       <queueName>root</queueName>
       <schedulingPolicy>fair</schedulingPolicy>
-      <childQueues xsi:type="fairSchedulerLeafQueueInfo">
-        <maxApps>2147483647</maxApps>
-        <minResources>
-          <memory>0</memory>
-          <vCores>0</vCores>
-        </minResources>
-        <maxResources>
-          <memory>8192</memory>
-          <vCores>8</vCores>
-        </maxResources>
-        <usedResources>
-          <memory>0</memory>
-          <vCores>0</vCores>
-        </usedResources>
-        <fairResources>
-          <memory>0</memory>
-          <vCores>0</vCores>
-        </fairResources>
-        <clusterResources>
-          <memory>8192</memory>
-          <vCores>8</vCores>
-        </clusterResources>
-        <queueName>root.default</queueName>
-        <schedulingPolicy>fair</schedulingPolicy>
-        <numPendingApps>0</numPendingApps>
-        <numActiveApps>0</numActiveApps>
-      </childQueues>
       <childQueues>
-        <maxApps>50</maxApps>
-        <minResources>
-          <memory>10000</memory>
-          <vCores>0</vCores>
-        </minResources>
-        <maxResources>
-          <memory>8192</memory>
-          <vCores>0</vCores>
-        </maxResources>
-        <usedResources>
-          <memory>0</memory>
-          <vCores>0</vCores>
-        </usedResources>
-        <fairResources>
-          <memory>10000</memory>
-          <vCores>0</vCores>
-        </fairResources>
-        <clusterResources>
-          <memory>8192</memory>
-          <vCores>8</vCores>
-        </clusterResources>
-        <queueName>root.sample_queue</queueName>
-        <schedulingPolicy>fair</schedulingPolicy>
-        <childQueues xsi:type="fairSchedulerLeafQueueInfo">
+        <queue xsi:type="fairSchedulerLeafQueueInfo">
           <maxApps>2147483647</maxApps>
           <minResources>
-            <memory>5000</memory>
+            <memory>0</memory>
             <vCores>0</vCores>
           </minResources>
           <maxResources>
             <memory>8192</memory>
             <vCores>8</vCores>
+          </maxResources>
+          <usedResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </usedResources>
+          <fairResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </fairResources>
+          <clusterResources>
+            <memory>8192</memory>
+            <vCores>8</vCores>
+          </clusterResources>
+          <queueName>root.default</queueName>
+          <schedulingPolicy>fair</schedulingPolicy>
+          <numPendingApps>0</numPendingApps>
+          <numActiveApps>0</numActiveApps>
+        </queue>
+        <queue>
+          <maxApps>50</maxApps>
+          <minResources>
+            <memory>10000</memory>
+            <vCores>0</vCores>
+          </minResources>
+          <maxResources>
+            <memory>8192</memory>
+            <vCores>0</vCores>
           </maxResources>
           <usedResources>
             <memory>0</memory>
@@ -1276,11 +1257,38 @@ Response Body:
             <memory>8192</memory>
             <vCores>8</vCores>
           </clusterResources>
-          <queueName>root.sample_queue.sample_sub_queue</queueName>
+          <queueName>root.sample_queue</queueName>
           <schedulingPolicy>fair</schedulingPolicy>
-          <numPendingApps>0</numPendingApps>
-          <numActiveApps>0</numActiveApps>
-        </childQueues>
+          <childQueues>
+            <queue xsi:type="fairSchedulerLeafQueueInfo">
+              <maxApps>2147483647</maxApps>
+              <minResources>
+                <memory>5000</memory>
+                <vCores>0</vCores>
+              </minResources>
+              <maxResources>
+                <memory>8192</memory>
+                <vCores>8</vCores>
+              </maxResources>
+              <usedResources>
+                <memory>0</memory>
+                <vCores>0</vCores>
+              </usedResources>
+              <fairResources>
+                <memory>10000</memory>
+                <vCores>0</vCores>
+              </fairResources>
+              <clusterResources>
+                <memory>8192</memory>
+                <vCores>8</vCores>
+              </clusterResources>
+              <queueName>root.sample_queue.sample_sub_queue</queueName>
+              <schedulingPolicy>fair</schedulingPolicy>
+              <numPendingApps>0</numPendingApps>
+              <numActiveApps>0</numActiveApps>
+            </queue>
+          </childQueues>
+        </queue>
       </childQueues>
     </rootQueue>
   </schedulerInfo>

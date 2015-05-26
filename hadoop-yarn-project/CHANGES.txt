@@ -52,6 +52,9 @@ Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    YARN-2336. Fair scheduler's REST API returns a missing '[' bracket JSON for
+    deep queue tree. (Kenji Kikushima and Akira Ajisaka via ozawa)
+
   NEW FEATURES
 
     YARN-3345. Add non-exclusive node label API. (Wangda Tan via jianhe)
