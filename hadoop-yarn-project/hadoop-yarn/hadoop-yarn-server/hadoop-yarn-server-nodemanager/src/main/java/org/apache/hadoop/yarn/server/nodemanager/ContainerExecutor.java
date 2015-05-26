@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
@@ -372,28 +373,16 @@ public abstract class ContainerExecutor implements Configurable {
             YarnConfiguration.NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED,
             YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED)) {
           int containerVCores = resource.getVirtualCores();
-          int nodeVCores = conf.getInt(YarnConfiguration.NM_VCORES,
-              YarnConfiguration.DEFAULT_NM_VCORES);
-          // cap overall usage to the number of cores allocated to YARN
-          int nodeCpuPercentage = Math
-              .min(
-                  conf.getInt(
-                      YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
-                      YarnConfiguration.DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT),
-                  100);
-          nodeCpuPercentage = Math.max(0, nodeCpuPercentage);
-          if (nodeCpuPercentage == 0) {
-            String message = "Illegal value for "
-                + YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT
-                + ". Value cannot be less than or equal to 0.";
-            throw new IllegalArgumentException(message);
-          }
-          float yarnVCores = (nodeCpuPercentage * nodeVCores) / 100.0f;
+          int nodeVCores = NodeManagerHardwareUtils.getVCores(conf);
+          int nodeCpuPercentage =
+              NodeManagerHardwareUtils.getNodeCpuPercentage(conf);
+
+          float containerCpuPercentage =
+              (float) (nodeCpuPercentage * containerVCores) / nodeVCores;
+
           // CPU should be set to a percentage * 100, e.g. 20% cpu rate limit
-          // should be set as 20 * 100. The following setting is equal to:
-          // 100 * (100 * (vcores / Total # of cores allocated to YARN))
-          cpuRate = Math.min(10000,
-              (int) ((containerVCores * 10000) / yarnVCores));
+          // should be set as 20 * 100.
+          cpuRate = Math.min(10000, (int) (containerCpuPercentage * 100));
         }
       }
       return new String[] { Shell.WINUTILS, "task", "create", "-m",

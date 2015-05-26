@@ -90,6 +90,12 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
+  public int getNumCores() {
+    return getNumProcessors();
+  }
+
+  /** {@inheritDoc} */
+  @Override
   public long getCpuFrequency() {
     return getConf().getLong(CPU_FREQUENCY, -1);
   }

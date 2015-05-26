@@ -890,9 +890,25 @@
 
   <property>
     <description>Amount of physical memory, in MB, that can be allocated 
-    for containers.</description>
+    for containers. If set to -1 and
+    yarn.nodemanager.resource.detect-hardware-capabilities is true, it is
+    automatically calculated(in case of Windows and Linux).
+    In other cases, the default is 8192MB.
+    </description>
     <name>yarn.nodemanager.resource.memory-mb</name>
-    <value>8192</value>
+    <value>-1</value>
+  </property>
+
+  <property>
+    <description>Amount of physical memory, in MB, that is reserved
+    for non-YARN processes. This configuration is only used if
+    yarn.nodemanager.resource.detect-hardware-capabilities is set
+    to true and yarn.nodemanager.resource.memory-mb is -1. If set
+    to -1, this amount is calculated as
+    20% of (system memory - 2*HADOOP_HEAPSIZE)
+    </description>
+    <name>yarn.nodemanager.resource.system-reserved-memory-mb</name>
+    <value>-1</value>
   </property>
 
   <property>
@@ -923,9 +939,34 @@
     <description>Number of vcores that can be allocated
     for containers. This is used by the RM scheduler when allocating
     resources for containers. This is not used to limit the number of
-    physical cores used by YARN containers.</description>
+    CPUs used by YARN containers. If it is set to -1 and
+    yarn.nodemanager.resource.detect-hardware-capabilities is true, it is
+    automatically determined from the hardware in case of Windows and Linux.
+    In other cases, number of vcores is 8 by default.</description>
     <name>yarn.nodemanager.resource.cpu-vcores</name>
-    <value>8</value>
+    <value>-1</value>
+  </property>
+
+  <property>
+    <description>Flag to determine if logical processors(such as
+    hyperthreads) should be counted as cores. Only applicable on Linux
+    when yarn.nodemanager.resource.cpu-vcores is set to -1 and
+    yarn.nodemanager.resource.detect-hardware-capabilities is true.
+    </description>
+    <name>yarn.nodemanager.resource.count-logical-processors-as-cores</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Multiplier to determine how to convert phyiscal cores to
+    vcores. This value is used if yarn.nodemanager.resource.cpu-vcores
+    is set to -1(which implies auto-calculate vcores) and
+    yarn.nodemanager.resource.detect-hardware-capabilities is set to true. The
+    number of vcores will be calculated as
+    number of CPUs * multiplier.
+    </description>
+    <name>yarn.nodemanager.resource.pcores-vcores-multiplier</name>
+    <value>1.0</value>
   </property>
 
   <property>
@@ -936,6 +977,14 @@
     </description>
     <name>yarn.nodemanager.resource.percentage-physical-cpu-limit</name>
     <value>100</value>
+  </property>
+
+  <property>
+    <description>Enable auto-detection of node capabilities such as
+    memory and CPU.
+    </description>
+    <name>yarn.nodemanager.resource.detect-hardware-capabilities</name>
+    <value>false</value>
   </property>
 
   <property>

@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.util;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Random;
 
-
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -51,7 +53,7 @@ public class TestLinuxResourceCalculatorPlugin {
 	    return currentTime;
 	  }
 	  public void advanceTime(long adv) {
-	    currentTime += adv * jiffyLengthInMillis;
+	    currentTime += adv * this.getJiffyLengthInMillis();
 	  }
   }
   private static final FakeLinuxResourceCalculatorPlugin plugin;
@@ -109,9 +111,9 @@ public class TestLinuxResourceCalculatorPlugin {
     "stepping  : 2\n" +
     "cpu MHz   : %f\n" +
     "cache size  : 1024 KB\n" +
-    "physical id : 0\n" +
+    "physical id : %s\n" +
     "siblings  : 2\n" +
-    "core id   : 0\n" +
+    "core id   : %s\n" +
     "cpu cores : 2\n" +
     "fpu   : yes\n" +
     "fpu_exception : yes\n" +
@@ -151,8 +153,9 @@ public class TestLinuxResourceCalculatorPlugin {
     long cpuFrequencyKHz = 2392781;
     String fileContent = "";
     for (int i = 0; i < numProcessors; i++) {
-      fileContent += String.format(CPUINFO_FORMAT, i, cpuFrequencyKHz / 1000D) +
-                     "\n";
+      fileContent +=
+          String.format(CPUINFO_FORMAT, i, cpuFrequencyKHz / 1000D, 0, 0)
+              + "\n";
     }
     File tempFile = new File(FAKE_CPUFILE);
     tempFile.deleteOnExit();
@@ -231,5 +234,91 @@ public class TestLinuxResourceCalculatorPlugin {
                  1024L * (memFree + inactive + swapFree));
     assertEquals(plugin.getPhysicalMemorySize(), 1024L * memTotal);
     assertEquals(plugin.getVirtualMemorySize(), 1024L * (memTotal + swapTotal));
+  }
+
+  @Test
+  public void testCoreCounts() throws IOException {
+
+    String fileContent = "";
+    // single core, hyper threading
+    long numProcessors = 2;
+    long cpuFrequencyKHz = 2392781;
+    for (int i = 0; i < numProcessors; i++) {
+      fileContent =
+          fileContent.concat(String.format(CPUINFO_FORMAT, i,
+            cpuFrequencyKHz / 1000D, 0, 0));
+      fileContent = fileContent.concat("\n");
+    }
+    writeFakeCPUInfoFile(fileContent);
+    plugin.setReadCpuInfoFile(false);
+    assertEquals(numProcessors, plugin.getNumProcessors());
+    assertEquals(1, plugin.getNumCores());
+
+    // single socket quad core, no hyper threading
+    fileContent = "";
+    numProcessors = 4;
+    for (int i = 0; i < numProcessors; i++) {
+      fileContent =
+          fileContent.concat(String.format(CPUINFO_FORMAT, i,
+            cpuFrequencyKHz / 1000D, 0, i));
+      fileContent = fileContent.concat("\n");
+    }
+    writeFakeCPUInfoFile(fileContent);
+    plugin.setReadCpuInfoFile(false);
+    assertEquals(numProcessors, plugin.getNumProcessors());
+    assertEquals(4, plugin.getNumCores());
+
+    // dual socket single core, hyper threading
+    fileContent = "";
+    numProcessors = 4;
+    for (int i = 0; i < numProcessors; i++) {
+      fileContent =
+          fileContent.concat(String.format(CPUINFO_FORMAT, i,
+            cpuFrequencyKHz / 1000D, i / 2, 0));
+      fileContent = fileContent.concat("\n");
+    }
+    writeFakeCPUInfoFile(fileContent);
+    plugin.setReadCpuInfoFile(false);
+    assertEquals(numProcessors, plugin.getNumProcessors());
+    assertEquals(2, plugin.getNumCores());
+
+    // dual socket, dual core, no hyper threading
+    fileContent = "";
+    numProcessors = 4;
+    for (int i = 0; i < numProcessors; i++) {
+      fileContent =
+          fileContent.concat(String.format(CPUINFO_FORMAT, i,
+            cpuFrequencyKHz / 1000D, i / 2, i % 2));
+      fileContent = fileContent.concat("\n");
+    }
+    writeFakeCPUInfoFile(fileContent);
+    plugin.setReadCpuInfoFile(false);
+    assertEquals(numProcessors, plugin.getNumProcessors());
+    assertEquals(4, plugin.getNumCores());
+
+    // dual socket, dual core, hyper threading
+    fileContent = "";
+    numProcessors = 8;
+    for (int i = 0; i < numProcessors; i++) {
+      fileContent =
+          fileContent.concat(String.format(CPUINFO_FORMAT, i,
+            cpuFrequencyKHz / 1000D, i / 4, (i % 4) / 2));
+      fileContent = fileContent.concat("\n");
+    }
+    writeFakeCPUInfoFile(fileContent);
+    plugin.setReadCpuInfoFile(false);
+    assertEquals(numProcessors, plugin.getNumProcessors());
+    assertEquals(4, plugin.getNumCores());
+  }
+
+  private void writeFakeCPUInfoFile(String content) throws IOException {
+    File tempFile = new File(FAKE_CPUFILE);
+    FileWriter fWriter = new FileWriter(FAKE_CPUFILE);
+    tempFile.deleteOnExit();
+    try {
+      fWriter.write(content);
+    } finally {
+      IOUtils.closeQuietly(fWriter);
+    }
   }
 }
