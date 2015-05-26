@@ -494,6 +494,10 @@ class FSDirWriteFileOp {
     try {
       INodesInPath iip = fsd.addINode(existing, newNode);
       if (iip != null) {
+        // check if the file is in an EC zone
+        if (fsd.isInECZone(iip)) {
+          newNode.addStripedBlocksFeature();
+        }
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
         }
@@ -582,6 +586,9 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       newiip = fsd.addINode(existing, newNode);
+      if (newiip != null && fsd.isInECZone(newiip)) {
+        newNode.addStripedBlocksFeature();
+      }
     } finally {
       fsd.writeUnlock();
     }
