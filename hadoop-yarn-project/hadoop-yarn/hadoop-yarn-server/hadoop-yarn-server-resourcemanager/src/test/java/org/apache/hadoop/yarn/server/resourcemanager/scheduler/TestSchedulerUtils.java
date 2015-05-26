@@ -694,6 +694,53 @@ public class TestSchedulerUtils {
           ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
     Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
   }
+  
+  @Test (timeout = 30000)
+  public void testNormalizeNodeLabelExpression()
+      throws IOException {
+    // mock queue and scheduler
+    YarnScheduler scheduler = mock(YarnScheduler.class);
+    Set<String> queueAccessibleNodeLabels = Sets.newHashSet();
+    QueueInfo queueInfo = mock(QueueInfo.class);
+    when(queueInfo.getQueueName()).thenReturn("queue");
+    when(queueInfo.getAccessibleNodeLabels()).thenReturn(queueAccessibleNodeLabels);
+    when(queueInfo.getDefaultNodeLabelExpression()).thenReturn(" x ");
+    when(scheduler.getQueueInfo(any(String.class), anyBoolean(), anyBoolean()))
+        .thenReturn(queueInfo);
+    
+    Resource maxResource = Resources.createResource(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+
+    // queue has labels, success cases
+    try {
+      // set queue accessible node labels to [x, y]
+      queueAccessibleNodeLabels.clear();
+      queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
+      rmContext.getNodeLabelManager().addToCluserNodeLabels(
+          ImmutableSet.of(NodeLabel.newInstance("x"),
+              NodeLabel.newInstance("y")));
+      Resource resource = Resources.createResource(
+          0,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      Assert.assertTrue(resReq.getNodeLabelExpression().equals("x"));
+      
+      resReq.setNodeLabelExpression(" y ");
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler, rmContext);
+      Assert.assertTrue(resReq.getNodeLabelExpression().equals("y"));
+    } catch (InvalidResourceRequestException e) {
+      e.printStackTrace();
+      fail("Should be valid when request labels is a subset of queue labels");
+    } finally {
+      rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
+          Arrays.asList("x", "y"));
+    }
+  }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>
       verifyAppAddedAndRemovedFromScheduler(
