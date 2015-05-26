@@ -32,89 +32,86 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   }
 
   @Test
-  public void testCodingNoDirectBuffer_10x4_erasing_d0_p0() {
+  public void testCoding_6x3_erasing_all_d() {
+    prepare(null, 6, 3, new int[]{0, 1, 2}, new int[0], true);
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d0_d2() {
+    prepare(null, 6, 3, new int[] {0, 2}, new int[]{});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d0() {
+    prepare(null, 6, 3, new int[]{0}, new int[0]);
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d2() {
+    prepare(null, 6, 3, new int[]{2}, new int[]{});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d0_p0() {
+    prepare(null, 6, 3, new int[]{0}, new int[]{0});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_all_p() {
+    prepare(null, 6, 3, new int[0], new int[]{0, 1, 2});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_p0() {
+    prepare(null, 6, 3, new int[0], new int[]{0});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_p2() {
+    prepare(null, 6, 3, new int[0], new int[]{2});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasure_p0_p2() {
+    prepare(null, 6, 3, new int[0], new int[]{0, 2});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d0_p0_p1() {
+    prepare(null, 6, 3, new int[]{0}, new int[]{0, 1});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCoding_6x3_erasing_d0_d2_p2() {
+    prepare(null, 6, 3, new int[]{0, 2}, new int[]{2});
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCodingNegative_6x3_erasing_d2_d4() {
+    prepare(null, 6, 3, new int[]{2, 4}, new int[0]);
+    testCodingDoMixAndTwice();
+  }
+
+  @Test
+  public void testCodingNegative_6x3_erasing_too_many() {
+    prepare(null, 6, 3, new int[]{2, 4}, new int[]{0, 1});
+    testCodingWithErasingTooMany();
+  }
+
+  @Test
+  public void testCoding_10x4_erasing_d0_p0() {
     prepare(null, 10, 4, new int[] {0}, new int[] {0});
-    /**
-     * Doing twice to test if the coders can be repeatedly reused. This matters
-     * as the underlying coding buffers are shared, which may have bugs.
-     */
-    testCoding(false);
-    testCoding(false);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_10x4_erasing_p1() {
-    prepare(null, 10, 4, new int[0], new int[] {1});
-    testCoding(true);
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_10x4_erasing_d2() {
-    prepare(null, 10, 4, new int[] {2}, new int[] {});
-    testCoding(true);
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_10x4_erasing_d0_p0() {
-    prepare(null, 10, 4, new int[] {0}, new int[] {0});
-    testCoding(true);
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingBothBuffers_10x4_erasing_d0_p0() {
-    prepare(null, 10, 4, new int[] {0}, new int[] {0});
-
-    /**
-     * Doing in mixed buffer usage model to test if the coders can be repeatedly
-     * reused with different buffer usage model. This matters as the underlying
-     * coding buffers are shared, which may have bugs.
-     */
-    testCoding(true);
-    testCoding(false);
-    testCoding(true);
-    testCoding(false);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_10x4_erasure_of_d2_d4_p0() {
-    prepare(null, 10, 4, new int[]{2, 4}, new int[]{0});
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_usingFixedData_10x4_erasure_of_d2_d4_p0() {
-    prepare(null, 10, 4, new int[] {2, 4}, new int[] {0}, true);
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_10x4_erasing_d0_d1_p0_p1() {
-    prepare(null, 10, 4, new int[] {0, 1}, new int[] {0, 1});
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingNoDirectBuffer_3x3_erasing_d0_p0() {
-    prepare(null, 3, 3, new int[] {0}, new int[] {0});
-    testCoding(false);
-  }
-
-  @Test
-  public void testCodingDirectBuffer_3x3_erasing_d0_p0() {
-    prepare(null, 3, 3, new int[] {0}, new int[] {0});
-    testCoding(true);
-  }
-
-  @Test
-  public void testCodingNegative_10x4_erasing_d2_d4() {
-    prepare(null, 10, 4, new int[]{2, 4}, new int[0]);
-
-    testCodingWithBadInput(true);
-    testCodingWithBadOutput(false);
-    testCodingWithBadInput(true);
-    testCodingWithBadOutput(false);
+    testCodingDoMixAndTwice();
   }
 }

@@ -35,7 +35,7 @@ public abstract class TestCoderBase {
   private Configuration conf;
   protected int numDataUnits;
   protected int numParityUnits;
-  protected int baseChunkSize = 16 * 1024;
+  protected int baseChunkSize = 513;
   private int chunkSize = baseChunkSize;
 
   private byte[] zeroChunkBytes;
@@ -186,8 +186,9 @@ public abstract class TestCoderBase {
   }
 
   /**
-   * Erase chunks to test the recovering of them. Before erasure clone them
-   * first so could return them.
+   * Erase some data chunks to test the recovering of them. As they're erased,
+   * we don't need to read them and will not have the buffers at all, so just
+   * set them as null.
    * @param dataChunks
    * @param parityChunks
    * @return clone of erased chunks
@@ -198,48 +199,28 @@ public abstract class TestCoderBase {
         erasedDataIndexes.length];
 
     int idx = 0;
-    ECChunk chunk;
 
     for (int i = 0; i < erasedParityIndexes.length; i++) {
-      chunk = parityChunks[erasedParityIndexes[i]];
-      toEraseChunks[idx ++] = cloneChunkWithData(chunk);
-      eraseDataFromChunk(chunk);
+      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
+      parityChunks[erasedParityIndexes[i]] = null;
     }
 
     for (int i = 0; i < erasedDataIndexes.length; i++) {
-      chunk = dataChunks[erasedDataIndexes[i]];
-      toEraseChunks[idx ++] = cloneChunkWithData(chunk);
-      eraseDataFromChunk(chunk);
+      toEraseChunks[idx ++] = dataChunks[erasedDataIndexes[i]];
+      dataChunks[erasedDataIndexes[i]] = null;
     }
 
     return toEraseChunks;
   }
 
   /**
-   * Erase data from the specified chunks, putting ZERO bytes to the buffers.
+   * Erase data from the specified chunks, just setting them as null.
    * @param chunks
    */
   protected void eraseDataFromChunks(ECChunk[] chunks) {
     for (int i = 0; i < chunks.length; i++) {
-      eraseDataFromChunk(chunks[i]);
+      chunks[i] = null;
     }
-  }
-
-  /**
-   * Erase data from the specified chunk, putting ZERO bytes to the buffer.
-   * @param chunk with a buffer ready to read at the current position
-   */
-  protected void eraseDataFromChunk(ECChunk chunk) {
-    ByteBuffer chunkBuffer = chunk.getBuffer();
-    // Erase the data at the position, and restore the buffer ready for reading
-    // same many bytes but all ZERO.
-    int pos = chunkBuffer.position();
-    int len = chunkBuffer.remaining();
-    chunkBuffer.put(zeroChunkBytes, 0, len);
-    // Back to readable again after data erased
-    chunkBuffer.flip();
-    chunkBuffer.position(pos);
-    chunkBuffer.limit(pos + len);
   }
 
   /**

@@ -41,8 +41,8 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
     if (dataLen == 0) {
       return;
     }
-    ensureLength(inputs, dataLen);
-    ensureLength(outputs, dataLen);
+    ensureLength(inputs, false, dataLen);
+    ensureLength(outputs, false, dataLen);
 
     boolean usingDirectBuffer = inputs[0].isDirect();
     if (usingDirectBuffer) {
@@ -90,8 +90,8 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
     if (dataLen == 0) {
       return;
     }
-    ensureLength(inputs, dataLen);
-    ensureLength(outputs, dataLen);
+    ensureLength(inputs, false, dataLen);
+    ensureLength(outputs, false, dataLen);
 
     int[] inputOffsets = new int[inputs.length]; // ALL ZERO
     int[] outputOffsets = new int[outputs.length]; // ALL ZERO

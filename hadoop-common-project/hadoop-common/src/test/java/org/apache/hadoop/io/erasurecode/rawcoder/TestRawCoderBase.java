@@ -20,6 +20,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.TestCoderBase;
 import org.junit.Assert;
+import org.junit.Test;
 
 import java.lang.reflect.Constructor;
 
@@ -31,6 +32,25 @@ public abstract class TestRawCoderBase extends TestCoderBase {
   protected Class<? extends RawErasureDecoder> decoderClass;
   private RawErasureEncoder encoder;
   private RawErasureDecoder decoder;
+
+  /**
+   * Doing twice to test if the coders can be repeatedly reused. This matters
+   * as the underlying coding buffers are shared, which may have bugs.
+   */
+  protected void testCodingDoMixAndTwice() {
+    testCodingDoMixed();
+    testCodingDoMixed();
+  }
+
+  /**
+   * Doing in mixed buffer usage model to test if the coders can be repeatedly
+   * reused with different buffer usage model. This matters as the underlying
+   * coding buffers are shared, which may have bugs.
+   */
+  protected void testCodingDoMixed() {
+    testCoding(true);
+    testCoding(false);
+  }
 
   /**
    * Generating source data, encoding, recovering and then verifying.
@@ -85,6 +105,23 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     }
   }
 
+  @Test
+  public void testCodingWithErasingTooMany() {
+    try {
+      testCoding(true);
+      Assert.fail("Decoding test erasing too many should fail");
+    } catch (Exception e) {
+      // Expected
+    }
+
+    try {
+      testCoding(false);
+      Assert.fail("Decoding test erasing too many should fail");
+    } catch (Exception e) {
+      // Expected
+    }
+  }
+
   private void performTestCoding(int chunkSize,
                                  boolean useBadInput, boolean useBadOutput) {
     setChunkSize(chunkSize);
@@ -110,6 +147,9 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     ECChunk[] inputChunks = prepareInputChunksForDecoding(
         clonedDataChunks, parityChunks);
 
+    // Remove unnecessary chunks, allowing only least required chunks to be read.
+    ensureOnlyLeastRequiredChunks(inputChunks);
+
     ECChunk[] recoveredChunks = prepareOutputChunksForDecoding();
     if (useBadOutput) {
       corruptSomeChunk(recoveredChunks);
@@ -128,6 +168,20 @@ public abstract class TestRawCoderBase extends TestCoderBase {
 
     if (decoder == null) {
       decoder = createDecoder();
+    }
+  }
+
+  private void ensureOnlyLeastRequiredChunks(ECChunk[] inputChunks) {
+    int leastRequiredNum = numDataUnits;
+    int erasedNum = erasedDataIndexes.length + erasedParityIndexes.length;
+    int goodNum = inputChunks.length - erasedNum;
+    int redundantNum = goodNum - leastRequiredNum;
+
+    for (int i = 0; i < inputChunks.length && redundantNum > 0; i++) {
+      if (inputChunks[i] != null) {
+        inputChunks[i] = null; // Setting it null, not needing it actually
+        redundantNum--;
+      }
     }
   }
 
