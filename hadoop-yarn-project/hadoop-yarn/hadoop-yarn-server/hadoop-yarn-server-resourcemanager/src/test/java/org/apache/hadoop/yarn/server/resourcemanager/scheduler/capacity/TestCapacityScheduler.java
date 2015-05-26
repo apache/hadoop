@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
@@ -126,6 +128,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -676,6 +679,118 @@ public class TestCapacityScheduler {
     rm.stop();
   }
   
+  @Test
+  public void testAllocateReorder() throws Exception {
+
+    //Confirm that allocation (resource request) alone will trigger a change in
+    //application ordering where appropriate
+
+    Configuration conf = new Configuration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    LeafQueue q = (LeafQueue) cs.getQueue("default");
+    Assert.assertNotNull(q);
+
+    FairOrderingPolicy fop = new FairOrderingPolicy();
+    fop.setSizeBasedWeight(true);
+    q.setOrderingPolicy(fop);
+
+    String host = "127.0.0.1";
+    RMNode node =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, host);
+    cs.handle(new NodeAddedSchedulerEvent(node));
+
+    //add app begin
+    ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
+    ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
+        appId1, 1);
+
+    RMAppAttemptMetrics attemptMetric1 =
+        new RMAppAttemptMetrics(appAttemptId1, rm.getRMContext());
+    RMAppImpl app1 = mock(RMAppImpl.class);
+    when(app1.getApplicationId()).thenReturn(appId1);
+    RMAppAttemptImpl attempt1 = mock(RMAppAttemptImpl.class);
+    when(attempt1.getAppAttemptId()).thenReturn(appAttemptId1);
+    when(attempt1.getRMAppAttemptMetrics()).thenReturn(attemptMetric1);
+    when(app1.getCurrentAppAttempt()).thenReturn(attempt1);
+
+    rm.getRMContext().getRMApps().put(appId1, app1);
+
+    SchedulerEvent addAppEvent1 =
+        new AppAddedSchedulerEvent(appId1, "default", "user");
+    cs.handle(addAppEvent1);
+    SchedulerEvent addAttemptEvent1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
+    cs.handle(addAttemptEvent1);
+    //add app end
+
+    //add app begin
+    ApplicationId appId2 = BuilderUtils.newApplicationId(100, 2);
+    ApplicationAttemptId appAttemptId2 = BuilderUtils.newApplicationAttemptId(
+        appId2, 1);
+
+    RMAppAttemptMetrics attemptMetric2 =
+        new RMAppAttemptMetrics(appAttemptId2, rm.getRMContext());
+    RMAppImpl app2 = mock(RMAppImpl.class);
+    when(app2.getApplicationId()).thenReturn(appId2);
+    RMAppAttemptImpl attempt2 = mock(RMAppAttemptImpl.class);
+    when(attempt2.getAppAttemptId()).thenReturn(appAttemptId2);
+    when(attempt2.getRMAppAttemptMetrics()).thenReturn(attemptMetric2);
+    when(app2.getCurrentAppAttempt()).thenReturn(attempt2);
+
+    rm.getRMContext().getRMApps().put(appId2, app2);
+
+    SchedulerEvent addAppEvent2 =
+        new AppAddedSchedulerEvent(appId2, "default", "user");
+    cs.handle(addAppEvent2);
+    SchedulerEvent addAttemptEvent2 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId2, false);
+    cs.handle(addAttemptEvent2);
+    //add app end
+
+    RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
+
+    Priority priority = TestUtils.createMockPriority(1);
+    ResourceRequest r1 = TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true, priority, recordFactory);
+
+    //This will allocate for app1
+    cs.allocate(appAttemptId1,
+        Collections.<ResourceRequest>singletonList(r1),
+        Collections.<ContainerId>emptyList(),
+        null, null);
+
+    //And this will result in container assignment for app1
+    CapacityScheduler.schedule(cs);
+
+    //Verify that app1 is still first in assignment order
+    //This happens because app2 has no demand/a magnitude of NaN, which
+    //results in app1 and app2 being equal in the fairness comparison and
+    //failling back to fifo (start) ordering
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
+      appId1.toString());
+
+    //Now, allocate for app2 (this would be the first/AM allocation)
+    ResourceRequest r2 = TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true, priority, recordFactory);
+    cs.allocate(appAttemptId2,
+        Collections.<ResourceRequest>singletonList(r2),
+        Collections.<ContainerId>emptyList(),
+        null, null);
+
+    //In this case we do not perform container assignment because we want to
+    //verify re-ordering based on the allocation alone
+
+    //Now, the first app for assignment is app2
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
+      appId2.toString());
+
+    rm.stop();
+  }
+
   @Test
   public void testResourceOverCommit() throws Exception {
     Configuration conf = new Configuration();

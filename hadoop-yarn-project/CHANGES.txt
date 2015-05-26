@@ -443,6 +443,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3707. RM Web UI queue filter doesn't work. (Wangda Tan via jianhe)
 
+    YARN-3632. Ordering policy should be allowed to reorder an application when
+    demand changes. (Craig Welch via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

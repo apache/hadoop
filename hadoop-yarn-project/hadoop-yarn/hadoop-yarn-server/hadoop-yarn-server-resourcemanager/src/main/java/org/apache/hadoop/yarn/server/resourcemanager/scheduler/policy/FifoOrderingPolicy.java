@@ -46,7 +46,11 @@ public class FifoOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
   public void containerReleased(S schedulableEntity, 
     RMContainer r) {
     }
-  
+
+  @Override
+  public void demandUpdated(S schedulableEntity) {
+  }
+
   @Override
   public String getInfo() {
     return "FifoOrderingPolicy";
