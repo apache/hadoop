@@ -49,7 +49,7 @@ public class KMSMDCFilter implements Filter {
     }
   }
 
-  private static ThreadLocal<Data> DATA_TL = new ThreadLocal<Data>();
+  private static final ThreadLocal<Data> DATA_TL = new ThreadLocal<Data>();
 
   public static UserGroupInformation getUgi() {
     return DATA_TL.get().ugi;

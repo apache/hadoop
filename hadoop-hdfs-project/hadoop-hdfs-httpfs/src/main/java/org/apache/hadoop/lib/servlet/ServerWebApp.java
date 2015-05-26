@@ -46,7 +46,8 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   private static final String HTTP_PORT = ".http.port";
   public static final String SSL_ENABLED = ".ssl.enabled";
 
-  private static ThreadLocal<String> HOME_DIR_TL = new ThreadLocal<String>();
+  private static final ThreadLocal<String> HOME_DIR_TL =
+      new ThreadLocal<String>();
 
   private InetSocketAddress authority;
 
