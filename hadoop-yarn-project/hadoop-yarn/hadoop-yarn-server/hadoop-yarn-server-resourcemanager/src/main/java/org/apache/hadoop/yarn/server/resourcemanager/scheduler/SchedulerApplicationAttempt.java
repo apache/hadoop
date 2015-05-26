@@ -284,11 +284,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return queue;
   }
   
-  public synchronized void updateResourceRequests(
+  public synchronized boolean updateResourceRequests(
       List<ResourceRequest> requests) {
     if (!isStopped) {
-      appSchedulingInfo.updateResourceRequests(requests, false);
+      return appSchedulingInfo.updateResourceRequests(requests, false);
     }
+    return false;
   }
   
   public synchronized void recoverResourceRequests(

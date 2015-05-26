@@ -895,6 +895,10 @@ public class CapacityScheduler extends
     // Release containers
     releaseContainers(release, application);
 
+    Allocation allocation;
+
+    LeafQueue updateDemandForQueue = null;
+
     synchronized (application) {
 
       // make sure we aren't stopping/removing the application
@@ -915,8 +919,10 @@ public class CapacityScheduler extends
         application.showRequests();
   
         // Update application requests
-        application.updateResourceRequests(ask);
-  
+        if (application.updateResourceRequests(ask)) {
+          updateDemandForQueue = (LeafQueue) application.getQueue();
+        }
+
         LOG.debug("allocate: post-update");
         application.showRequests();
       }
@@ -929,9 +935,16 @@ public class CapacityScheduler extends
 
       application.updateBlacklist(blacklistAdditions, blacklistRemovals);
 
-      return application.getAllocation(getResourceCalculator(),
+      allocation = application.getAllocation(getResourceCalculator(),
                    clusterResource, getMinimumResourceCapability());
     }
+
+    if (updateDemandForQueue != null) {
+      updateDemandForQueue.getOrderingPolicy().demandUpdated(application);
+    }
+
+    return allocation;
+
   }
 
   @Override
