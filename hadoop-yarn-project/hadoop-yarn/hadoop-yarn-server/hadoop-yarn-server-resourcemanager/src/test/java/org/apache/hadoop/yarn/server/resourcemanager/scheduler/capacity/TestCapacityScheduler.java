@@ -2930,6 +2930,27 @@ public class TestCapacityScheduler {
 
     rm.stop();
   }
+  
+  @Test
+  public void testDefaultNodeLabelExpressionQueueConfig() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    conf.setDefaultNodeLabelExpression("root.a", " x");
+    conf.setDefaultNodeLabelExpression("root.b", " y ");
+    cs.setConf(new YarnConfiguration());
+    cs.setRMContext(resourceManager.getRMContext());
+    cs.init(conf);
+    cs.start();
+
+    QueueInfo queueInfoA = cs.getQueueInfo("a", true, false);
+    Assert.assertEquals(queueInfoA.getQueueName(), "a");
+    Assert.assertEquals(queueInfoA.getDefaultNodeLabelExpression(), "x");
+
+    QueueInfo queueInfoB = cs.getQueueInfo("b", true, false);
+    Assert.assertEquals(queueInfoB.getQueueName(), "b");
+    Assert.assertEquals(queueInfoB.getDefaultNodeLabelExpression(), "y");
+  }
 
   private void setMaxAllocMb(Configuration conf, int maxAllocMb) {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,

@@ -567,6 +567,9 @@ Release 2.7.1 - UNRELEASED
     YARN-2238. filtering on UI sticks even if I move away from the page.
     (Jian He via xgong)
 
+    YARN-3686. CapacityScheduler should trim default_node_label_expression. 
+    (Sunil G via wangda)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
