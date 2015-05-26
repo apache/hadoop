@@ -259,3 +259,6 @@
     HDFS-8382. Remove chunkSize and initialize from erasure coder. (Kai Zheng)
 
     HDFS-8408. Revisit and refactor ErasureCodingInfo (vinayakumarb)
+
+    HDFS-8479. Erasure coding: fix striping related logic in FSDirWriteFileOp to
+    sync with HDFS-8421. (Zhe Zhang via jing9)
