@@ -630,9 +630,12 @@ public class FSEditLogLoader {
 
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
-      FSDirAttrOp.unprotectedSetTimes(
-          fsDir, renameReservedPathsOnUpgrade(timesOp.path, logVersion),
-          timesOp.mtime, timesOp.atime, true);
+      try (ReplayTransaction tx = fsDir.newReplayTransaction().begin()) {
+        FSDirAttrOp.unprotectedSetTimes(fsDir, tx, renameReservedPathsOnUpgrade(
+                                            timesOp.path, logVersion),
+                                        timesOp.mtime, timesOp.atime);
+        tx.commit();
+      }
       break;
     }
     case OP_SYMLINK: {

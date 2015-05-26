@@ -174,6 +174,10 @@ class RWTransaction extends Transaction {
     fsd.getEditLog().logSetPermissions(src, permission);
   }
 
+  public void logTimes(String src, long mtime, long atime) {
+    fsd.getEditLog().logTimes(src, mtime, atime);
+  }
+
   public void logUpdateBlocks(String path, FlatINodeFileFeature file) {
     Block[] blocks = new Block[file.numBlocks()];
     int i = 0;

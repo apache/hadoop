@@ -1722,9 +1722,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
           srcArg);
       String src = srcArg;
-      writeLock();
       final long now = now();
-      try {
+      try (RWTransaction tx = dir.newRWTransaction().begin()) {
         checkOperation(OperationCategory.WRITE);
         /**
          * Resolve the path again and update the atime only when the file
@@ -1744,22 +1743,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          * HDFS-7463. A better fix is to change the edit log of SetTime to
          * use inode id instead of a path.
          */
-        src = dir.resolvePath(pc, srcArg, pathComponents);
-        final INodesInPath iip = dir.getINodesInPath(src, true);
-        INode inode = iip.getLastINode();
-        boolean updateAccessTime = inode != null &&
-            now > inode.getAccessTime() + dir.getAccessTimePrecision();
-        if (!isInSafeMode() && updateAccessTime) {
-          boolean changed = FSDirAttrOp.setTimes(dir,
-              inode, -1, now, false, iip.getLatestSnapshotId());
-          if (changed) {
-            getEditLog().logTimes(src, -1, now);
+        Resolver.Result paths = Resolver.resolve(tx, srcArg);
+        if (paths.ok()) {
+          FlatINode inode = paths.inodesInPath().getLastINode();
+          boolean updateAccessTime = now > inode.atime()
+              + dir.getAccessTimePrecision();
+          if (!isInSafeMode() && updateAccessTime) {
+            FSDirAttrOp.unprotectedSetTimes(dir, tx, src, -1, now);
           }
+          tx.commit();
         }
       } catch (Throwable e) {
         LOG.warn("Failed to update the access time of " + src, e);
-      } finally {
-        writeUnlock();
       }
     }
 

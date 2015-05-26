@@ -108,31 +108,27 @@ public class FSDirAttrOp {
     }
 
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-
-    INodesInPath iip;
-    fsd.writeLock();
-    try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath4Write(src);
-      // Write access is required to set access and modification times
+    try (RWTransaction tx = fsd.newRWTransaction().begin()) {
+      Resolver.Result paths = Resolver.resolve(tx, src);
+      if (paths.invalidPath()) {
+        throw new InvalidPathException(src);
+      } else if (paths.notFound()) {
+        throw new FileNotFoundException(src);
+      }
+      FlatINodesInPath iip = paths.inodesInPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
-      final INode inode = iip.getLastINode();
-      if (inode == null) {
-        throw new FileNotFoundException("File/Directory " + src +
-                                            " does not exist.");
-      }
-      boolean changed = unprotectedSetTimes(fsd, inode, mtime, atime, true,
-                                            iip.getLatestSnapshotId());
+      FlatINode.Builder b = new FlatINode.Builder()
+          .mergeFrom(iip.getLastINode());
+      boolean changed = unprotectedSetTimes(fsd, b, mtime, atime, true);
       if (changed) {
-        fsd.getEditLog().logTimes(src, mtime, atime);
+        tx.putINode(b.id(), b.build());
+        tx.logTimes(src, mtime, atime);
+        tx.commit();
       }
-    } finally {
-      fsd.writeUnlock();
+      return fsd.getAuditFileInfo(iip);
     }
-    return fsd.getAuditFileInfo(iip);
   }
 
   static boolean setReplication(
@@ -280,25 +276,23 @@ public class FSDirAttrOp {
     }
   }
 
-  static boolean setTimes(
-      FSDirectory fsd, INode inode, long mtime, long atime, boolean force,
-      int latestSnapshotId) throws QuotaExceededException {
-    fsd.writeLock();
-    try {
-      return unprotectedSetTimes(fsd, inode, mtime, atime, force,
-                                 latestSnapshotId);
-    } finally {
-      fsd.writeUnlock();
-    }
-  }
-
-  static boolean unprotectedSetTimes(
-      FSDirectory fsd, String src, long mtime, long atime, boolean force)
-      throws UnresolvedLinkException, QuotaExceededException {
+  static void unprotectedSetTimes(
+      FSDirectory fsd, RWTransaction tx, String src, long mtime, long atime)
+      throws IOException {
     assert fsd.hasWriteLock();
-    final INodesInPath i = fsd.getINodesInPath(src, true);
-    return unprotectedSetTimes(fsd, i.getLastINode(), mtime, atime,
-                               force, i.getLatestSnapshotId());
+    Resolver.Result paths = Resolver.resolve(tx, src);
+    if (paths.invalidPath()) {
+      throw new InvalidPathException(src);
+    } else if (paths.notFound()) {
+      throw new FileNotFoundException(src);
+    }
+    FlatINodesInPath iip = paths.inodesInPath();
+    FlatINode.Builder b = new FlatINode.Builder()
+        .mergeFrom(iip.getLastINode());
+    boolean changed = unprotectedSetTimes(fsd, b, mtime, atime, true);
+    if (changed) {
+      tx.putINode(b.id(), b.build());
+    }
   }
 
   /**
@@ -450,26 +444,23 @@ public class FSDirAttrOp {
   }
 
   private static boolean unprotectedSetTimes(
-      FSDirectory fsd, INode inode, long mtime, long atime, boolean force,
-      int latest) throws QuotaExceededException {
-    assert fsd.hasWriteLock();
-    boolean status = false;
+      FSDirectory fsd, FlatINode.Builder builder, long mtime, long atime,
+      boolean force) {
+    boolean changed = false;
     if (mtime != -1) {
-      inode = inode.setModificationTime(mtime, latest);
-      status = true;
+      builder.mtime(mtime);
+      changed = true;
     }
-    if (atime != -1) {
-      long inodeTime = inode.getAccessTime();
 
-      // if the last access time update was within the last precision interval, then
-      // no need to store access time
-      if (atime <= inodeTime + fsd.getAccessTimePrecision() && !force) {
-        status =  false;
-      } else {
-        inode.setAccessTime(atime, latest);
-        status = true;
+    if (atime != -1) {
+      long inodeTime = builder.atime();
+      // if the last access time update was within the last precision
+      // interval, then no need to store access time
+      if (force || atime > inodeTime + fsd.getAccessTimePrecision()) {
+        builder.atime(atime);
+        changed = true;
       }
     }
-    return status;
+    return changed;
   }
 }
