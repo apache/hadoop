@@ -120,6 +120,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3541. Add version info on timeline service / generic history web UI
     and REST API. (Zhijie Shen via xgong)
 
+    YARN-160. Enhanced NodeManager to automatically obtain cpu/memory values from
+    underlying OS when configured to do so. (Varun Vasudev via vinodkv)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
