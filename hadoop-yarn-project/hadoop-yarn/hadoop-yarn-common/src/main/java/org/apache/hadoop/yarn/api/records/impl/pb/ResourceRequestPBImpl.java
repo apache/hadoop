@@ -193,7 +193,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     if (!p.hasNodeLabelExpression()) {
       return null;
     }
-    return (p.getNodeLabelExpression());
+    return (p.getNodeLabelExpression().trim());
   }
 
   @Override
