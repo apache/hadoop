@@ -752,6 +752,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11927.  Fix "undefined reference to dlopen" error when compiling
     libhadooppipes (Xianyin Xin via Colin P. McCabe)
 
+    HADOOP-8751. NPE in Token.toString() when Token is constructed using null
+    identifier. (kanaka kumar avvaru via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

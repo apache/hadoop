@@ -44,6 +44,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
@@ -538,5 +539,19 @@ public class TestDelegationToken {
     DelegationKey key3 = new DelegationKey(3333, 2222, "keyBytes".getBytes());
     Assert.assertEquals(key1, key2);
     Assert.assertFalse(key2.equals(key3));
+  }
+
+  @Test
+  public void testEmptyToken() throws IOException {
+    Token<?> token1 = new Token<TokenIdentifier>();
+
+    Token<?> token2 = new Token<TokenIdentifier>(new byte[0], new byte[0],
+        new Text(), new Text());
+    assertEquals(token1, token2);
+    assertEquals(token1.encodeToUrlString(), token2.encodeToUrlString());
+
+    token2 = new Token<TokenIdentifier>(null, null, null, null);
+    assertEquals(token1, token2);
+    assertEquals(token1.encodeToUrlString(), token2.encodeToUrlString());
   }
 }
