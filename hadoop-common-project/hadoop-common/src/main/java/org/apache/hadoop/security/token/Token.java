@@ -70,10 +70,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param service the service for this token
    */
   public Token(byte[] identifier, byte[] password, Text kind, Text service) {
-    this.identifier = identifier;
-    this.password = password;
-    this.kind = kind;
-    this.service = service;
+    this.identifier = (identifier == null)? new byte[0] : identifier;
+    this.password = (password == null)? new byte[0] : password;
+    this.kind = (kind == null)? new Text() : kind;
+    this.service = (service == null)? new Text() : service;
   }
 
   /**
