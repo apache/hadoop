@@ -38,8 +38,10 @@ public class TypedBytesRecordInput implements RecordInput {
     this.in = in;
   }
 
-  private static ThreadLocal tbIn = new ThreadLocal() {
-    protected synchronized Object initialValue() {
+  private static final ThreadLocal<TypedBytesRecordInput> TB_IN =
+      new ThreadLocal<TypedBytesRecordInput>() {
+    @Override
+    protected TypedBytesRecordInput initialValue() {
       return new TypedBytesRecordInput();
     }
   };
@@ -53,7 +55,7 @@ public class TypedBytesRecordInput implements RecordInput {
    *         {@link TypedBytesInput}.
    */
   public static TypedBytesRecordInput get(TypedBytesInput in) {
-    TypedBytesRecordInput bin = (TypedBytesRecordInput) tbIn.get();
+    TypedBytesRecordInput bin = TB_IN.get();
     bin.setTypedBytesInput(in);
     return bin;
   }

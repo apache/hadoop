@@ -406,7 +406,7 @@ public class DistCpUtils {
   /**
    * String utility to convert a number-of-bytes to human readable format.
    */
-  private static ThreadLocal<DecimalFormat> FORMATTER
+  private static final ThreadLocal<DecimalFormat> FORMATTER
                         = new ThreadLocal<DecimalFormat>() {
     @Override
     protected DecimalFormat initialValue() {
