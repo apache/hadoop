@@ -50,6 +50,7 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestRecoverStripedFile {
   public static final Log LOG = LogFactory.getLog(TestRecoverStripedFile.class);
@@ -340,7 +341,7 @@ public class TestRecoverStripedFile {
   private void testCreateStripedFile(Path file, int dataLen)
       throws IOException {
     final byte[] data = new byte[dataLen];
-    DFSUtil.getRandom().nextBytes(data);
+    ThreadLocalRandom.current().nextBytes(data);
     writeContents(file, data);
   }
   
