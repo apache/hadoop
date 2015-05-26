@@ -27,6 +27,8 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 import java.util.Collection;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
@@ -35,6 +37,8 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -43,10 +47,15 @@ public class TaskPage extends AppView {
 
   static class AttemptsBlock extends HtmlBlock {
     final App app;
+    final boolean enableUIActions;
+    private String stateURLFormat;
 
     @Inject
-    AttemptsBlock(App ctx) {
+    AttemptsBlock(App ctx, Configuration conf) {
       app = ctx;
+      this.enableUIActions =
+          conf.getBoolean(MRConfig.MASTER_WEBAPP_UI_ACTIONS_ENABLED,
+              MRConfig.DEFAULT_MASTER_WEBAPP_UI_ACTIONS_ENABLED);
     }
 
     @Override
@@ -56,21 +65,58 @@ public class TaskPage extends AppView {
           h2($(TITLE));
         return;
       }
-      TBODY<TABLE<Hamlet>> tbody = html.
-      table("#attempts").
-        thead().
-          tr().
-            th(".id", "Attempt").
-            th(".progress", "Progress").
-            th(".state", "State").
-            th(".status", "Status").
-            th(".node", "Node").
-            th(".logs", "Logs").
-            th(".tsh", "Started").
-            th(".tsh", "Finished").
-            th(".tsh", "Elapsed").
-            th(".note", "Note")._()._().
-      tbody();
+
+      if (enableUIActions) {
+        // Kill task attempt
+        String appID = app.getJob().getID().getAppId().toString();
+        String jobID = app.getJob().getID().toString();
+        String taskID = app.getTask().getID().toString();
+        stateURLFormat =
+            String.format("/proxy/%s/ws/v1/mapreduce/jobs/%s/tasks/%s/"
+                + "attempts", appID, jobID, taskID) + "/%s/state";
+
+        String current =
+            String.format("/proxy/%s/mapreduce/task/%s", appID, taskID);
+
+        StringBuilder script = new StringBuilder();
+        script.append("function confirmAction(stateURL) {")
+            .append(" b = confirm(\"Are you sure?\");")
+            .append(" if (b == true) {")
+            .append(" $.ajax({")
+            .append(" type: 'PUT',")
+            .append(" url: stateURL,")
+            .append(" contentType: 'application/json',")
+            .append(" data: '{\"state\":\"KILLED\"}',")
+            .append(" dataType: 'json'")
+            .append(" }).done(function(data){")
+            .append(" setTimeout(function(){")
+            .append(" location.href = '").append(current).append("';")
+            .append(" }, 1000);")
+            .append(" }).fail(function(data){")
+            .append(" console.log(data);")
+            .append(" });")
+            .append(" }")
+            .append("}");
+
+        html.script().$type("text/javascript")._(script.toString())._();
+      }
+
+      TR<THEAD<TABLE<Hamlet>>> tr = html.table("#attempts").thead().tr();
+      tr.th(".id", "Attempt").
+      th(".progress", "Progress").
+      th(".state", "State").
+      th(".status", "Status").
+      th(".node", "Node").
+      th(".logs", "Logs").
+      th(".tsh", "Started").
+      th(".tsh", "Finished").
+      th(".tsh", "Elapsed").
+      th(".note", "Note");
+      if (enableUIActions) {
+        tr.th(".actions", "Actions");
+      }
+
+      TBODY<TABLE<Hamlet>> tbody = tr._()._().tbody();
       // Write all the data into a JavaScript array of arrays for JQuery
       // DataTables to display
       StringBuilder attemptsTableData = new StringBuilder("[\n");
@@ -103,7 +149,16 @@ public class TaskPage extends AppView {
         .append(ta.getFinishTime()).append("\",\"")
         .append(ta.getElapsedTime()).append("\",\"")
         .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-          diag))).append("\"],\n");
+          diag)));
+        if (enableUIActions) {
+          attemptsTableData.append("\",\"")
+          .append("<a href=javascript:void(0) onclick=confirmAction('")
+          .append(String.format(stateURLFormat, ta.getId()))
+          .append("');>Kill</a>")
+          .append("\"],\n");
+        } else {
+          attemptsTableData.append("\"],\n");
+        }
       }
       //Remove the last comma and close off the array of arrays
       if(attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {

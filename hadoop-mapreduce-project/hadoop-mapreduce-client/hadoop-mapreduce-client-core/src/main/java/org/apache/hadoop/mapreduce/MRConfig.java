@@ -124,5 +124,12 @@ public interface MRConfig {
   @Unstable
   public static final boolean DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM =
       false;
+
+  /**
+   * Enable application master webapp ui actions.
+   */
+  String MASTER_WEBAPP_UI_ACTIONS_ENABLED =
+      "mapreduce.webapp.ui-actions.enabled";
+  boolean DEFAULT_MASTER_WEBAPP_UI_ACTIONS_ENABLED = true;
 }
   

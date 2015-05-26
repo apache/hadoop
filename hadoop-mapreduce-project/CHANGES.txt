@@ -267,6 +267,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6284. Add Task Attempt State API to MapReduce Application
    Master REST API. (Ryu Kobayashi via ozawa)
 
+   MAPREDUCE-6364. Add a "Kill" link to Task Attempts page. (Ryu Kobayashi
+   via ozawa)
+
   IMPROVEMENTS
 
     MAPREDUCE-6291. Correct mapred queue usage command.
