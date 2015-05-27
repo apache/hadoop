@@ -186,7 +186,7 @@ public class ApplicationHistoryClientService extends AbstractService implements
           IOException {
     GetApplicationsResponse response =
         GetApplicationsResponse.newInstance(new ArrayList<ApplicationReport>(
-          history.getAllApplications().values()));
+          history.getApplications(request.getLimit()).values()));
     return response;
   }
 

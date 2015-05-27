@@ -53,6 +53,7 @@ import org.junit.Test;
 public class TestApplicationHistoryClientService {
 
   private static ApplicationHistoryClientService clientService;
+  private static TimelineDataManager dataManager;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -60,7 +61,7 @@ public class TestApplicationHistoryClientService {
     TimelineStore store =
         TestApplicationHistoryManagerOnTimelineStore.createStore(2);
     TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
-    TimelineDataManager dataManager =
+    dataManager =
         new TimelineDataManager(store, aclsManager);
     ApplicationACLsManager appAclsManager = new ApplicationACLsManager(conf);
     ApplicationHistoryManagerOnTimelineStore historyManager =
@@ -101,8 +102,27 @@ public class TestApplicationHistoryClientService {
         clientService.getApplications(request);
     List<ApplicationReport> appReport = response.getApplicationList();
     Assert.assertNotNull(appReport);
-    Assert.assertEquals(appId, appReport.get(0).getApplicationId());
-    Assert.assertEquals(appId1, appReport.get(1).getApplicationId());
+    Assert.assertEquals(appId, appReport.get(1).getApplicationId());
+    Assert.assertEquals(appId1, appReport.get(0).getApplicationId());
+
+    // Create a historyManager, and set the max_apps can be loaded
+    // as 1.
+    Configuration conf = new YarnConfiguration();
+    conf.setLong(YarnConfiguration.APPLICATION_HISTORY_PREFIX_MAX_APPS, 1);
+    ApplicationHistoryManagerOnTimelineStore historyManager2 =
+        new ApplicationHistoryManagerOnTimelineStore(dataManager,
+          new ApplicationACLsManager(conf));
+    historyManager2.init(conf);
+    historyManager2.start();
+    @SuppressWarnings("resource")
+    ApplicationHistoryClientService clientService2 =
+        new ApplicationHistoryClientService(historyManager2);
+    response = clientService2.getApplications(request);
+    appReport = response.getApplicationList();
+    Assert.assertNotNull(appReport);
+    Assert.assertTrue(appReport.size() == 1);
+    // Expected to get the appReport for application with appId1
+    Assert.assertEquals(appId1, appReport.get(0).getApplicationId());
   }
 
   @Test

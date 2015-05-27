@@ -183,6 +183,7 @@ selected if this policy is either of `HTTPS_ONLY` or `HTTP_AND_HTTPS`.
 | `yarn.timeline-service.handler-thread-count` | Handler thread count to serve the client RPC requests. Defaults to `10`. |
 | `yarn.timeline-service.client.max-retries` | The maximum number of retries for attempts to publish data to the timeline service.Defaults to `30`. |
 | `yarn.timeline-service.client.retry-interval-ms` | The interval in milliseconds between retries for the timeline service client. Defaults to `1000`. |
+| `yarn.timeline-service.generic-application-history.max-applications` | The max number of applications could be fetched by using REST API or application history protocol and shown in timeline server web ui. Defaults to `10000`. |
 
 
 
