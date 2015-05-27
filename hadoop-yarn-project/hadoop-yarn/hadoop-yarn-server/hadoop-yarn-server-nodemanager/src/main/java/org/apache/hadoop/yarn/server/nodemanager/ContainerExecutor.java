@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
@@ -486,7 +487,16 @@ public abstract class ContainerExecutor implements Configurable {
     public void run() {
       try {
         Thread.sleep(delay);
-        containerExecutor.signalContainer(user, pid, signal);
+        ContainerId containerId = container.getContainerId();
+        String containerIdStr = ConverterUtils.toString(containerId);
+        if(null != containerIdStr && shouldDoSignal(containerIdStr, pid))
+        {
+        	containerExecutor.signalContainer(user, pid, signal);
+        }
+        else
+        {
+        	LOG.info("should not do kill, other process uses this pid");
+        }
       } catch (InterruptedException e) {
         return;
       } catch (IOException e) {
@@ -496,6 +506,34 @@ public abstract class ContainerExecutor implements Configurable {
         container.handle(new ContainerDiagnosticsUpdateEvent(container
           .getContainerId(), message));
       }
+    }
+    
+    
+    private boolean shouldDoSignal(String containerIdStr, String processId)
+    {
+
+        try {
+
+	       LOG.debug("here will do ps for " + containerIdStr);
+
+	       String ret = Shell.execCommand("/bin/sh", "-c", "ps -ef | grep " + processId);
+
+	       LOG.debug(ret);
+
+	       boolean match = ret.contains(containerIdStr);
+
+	       LOG.debug("match " + match);
+
+	       return match;
+
+        } catch (IOException e) {
+
+	    LOG.warn("not able to execute command /bin/sh -c 'ps'" );
+
+        }
+
+        return false;
+
     }
   }
 }
