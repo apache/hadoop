@@ -21,7 +21,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -125,7 +125,7 @@ public class TestGetBlockLocations {
         FsPermission.createImmutable((short) 0x1ff));
     final INodeFile file = new INodeFile(
         MOCK_INODE_ID, FILE_NAME.getBytes(Charsets.UTF_8),
-        perm, 1, 1, new BlockInfoContiguous[] {}, (short) 1,
+        perm, 1, 1, new BlockInfo[] {}, (short) 1,
         DFS_BLOCK_SIZE_DEFAULT);
     fsn.getFSDirectory().addINode(iip, file);
     return fsn;

@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
@@ -100,7 +100,7 @@ public class TestTruncateQuotaUpdate {
   @Test
   public void testTruncateWithSnapshotAndDivergence() {
     INodeFile file = createMockFile(BLOCKSIZE * 2 + BLOCKSIZE / 2, REPLICATION);
-    BlockInfoContiguous[] blocks = new BlockInfoContiguous
+    BlockInfo[] blocks = new BlockInfo
         [file.getBlocks().length];
     System.arraycopy(file.getBlocks(), 0, blocks, 0, blocks.length);
     addSnapshotFeature(file, blocks);
@@ -130,11 +130,11 @@ public class TestTruncateQuotaUpdate {
   }
 
   private INodeFile createMockFile(long size, short replication) {
-    ArrayList<BlockInfoContiguous> blocks = new ArrayList<>();
+    ArrayList<BlockInfo> blocks = new ArrayList<>();
     long createdSize = 0;
     while (createdSize < size) {
       long blockSize = Math.min(BLOCKSIZE, size - createdSize);
-      BlockInfoContiguous bi = newBlock(blockSize, replication);
+      BlockInfo bi = newBlock(blockSize, replication);
       blocks.add(bi);
       createdSize += BLOCKSIZE;
     }
@@ -142,16 +142,16 @@ public class TestTruncateQuotaUpdate {
         .createImmutable((short) 0x1ff));
     return new INodeFile(
         ++nextMockINodeId, new byte[0], perm, 0, 0,
-        blocks.toArray(new BlockInfoContiguous[blocks.size()]), replication,
+        blocks.toArray(new BlockInfo[blocks.size()]), replication,
         BLOCKSIZE);
   }
 
-  private BlockInfoContiguous newBlock(long size, short replication) {
+  private BlockInfo newBlock(long size, short replication) {
     Block b = new Block(++nextMockBlockId, size, ++nextMockGenstamp);
-    return new BlockInfoContiguous(b, replication);
+    return new BlockInfo(b, replication);
   }
 
-  private static void addSnapshotFeature(INodeFile file, BlockInfoContiguous[] blocks) {
+  private static void addSnapshotFeature(INodeFile file, BlockInfo[] blocks) {
     FileDiff diff = mock(FileDiff.class);
     when(diff.getBlocks()).thenReturn(blocks);
     FileDiffList diffList = new FileDiffList();

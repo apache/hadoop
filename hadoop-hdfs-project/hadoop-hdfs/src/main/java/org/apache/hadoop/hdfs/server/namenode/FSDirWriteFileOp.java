@@ -42,7 +42,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -235,7 +235,7 @@ class FSDirWriteFileOp {
         return onRetryBlock[0];
       } else {
         // add new chosen targets to already allocated block and return
-        BlockInfoContiguous lastBlockInFile = pendingFile.getLastBlock();
+        BlockInfo lastBlockInFile = pendingFile.getLastBlock();
         ((BlockInfoContiguousUnderConstruction) lastBlockInFile)
             .setExpectedLocations(targets);
         offset = pendingFile.computeFileSize();
@@ -507,7 +507,7 @@ class FSDirWriteFileOp {
   /**
    * Add a block to the file. Returns a reference to the added block.
    */
-  private static BlockInfoContiguous addBlock(
+  private static BlockInfo addBlock(
       FSDirectory fsd, String path, INodesInPath inodesInPath, Block block,
       DatanodeStorageInfo[] targets) throws IOException {
     fsd.writeLock();
@@ -608,7 +608,7 @@ class FSDirWriteFileOp {
       }
     }
     final INodeFile file = fsn.checkLease(src, clientName, inode, fileId);
-    BlockInfoContiguous lastBlockInFile = file.getLastBlock();
+    BlockInfo lastBlockInFile = file.getLastBlock();
     if (!Block.matchingIdAndGenStamp(previousBlock, lastBlockInFile)) {
       // The block that the client claims is the current last block
       // doesn't match up with what we think is the last block. There are
@@ -636,7 +636,7 @@ class FSDirWriteFileOp {
       //    changed the namesystem state yet.
       //    We run this analysis again in Part II where case 4 is impossible.
 
-      BlockInfoContiguous penultimateBlock = file.getPenultimateBlock();
+      BlockInfo penultimateBlock = file.getPenultimateBlock();
       if (previous == null &&
           lastBlockInFile != null &&
           lastBlockInFile.getNumBytes() >= file.getPreferredBlockSize() &&
@@ -762,7 +762,7 @@ class FSDirWriteFileOp {
       long id, PermissionStatus permissions, long mtime, long atime,
       short replication, long preferredBlockSize, byte storagePolicyId) {
     return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfoContiguous.EMPTY_ARRAY, replication, preferredBlockSize,
+        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
         storagePolicyId);
   }
 
@@ -802,7 +802,7 @@ class FSDirWriteFileOp {
       DatanodeStorageInfo[] targets)
       throws IOException {
     assert fsn.hasWriteLock();
-    BlockInfoContiguous b = addBlock(fsn.dir, src, inodesInPath, newBlock,
+    BlockInfo b = addBlock(fsn.dir, src, inodesInPath, newBlock,
                                      targets);
     NameNode.stateChangeLog.info("BLOCK* allocate " + b + " for " + src);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
