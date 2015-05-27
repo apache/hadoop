@@ -120,6 +120,13 @@ public class TestTracing {
         Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
       }
     }
+
+    // test for timeline annotation added by HADOOP-11242
+    Assert.assertEquals("called",
+        map.get("org.apache.hadoop.hdfs.protocol.ClientProtocol.create")
+           .get(0).getTimelineAnnotations()
+           .get(0).getMessage());
+
     SetSpanReceiver.SetHolder.spans.clear();
   }
 

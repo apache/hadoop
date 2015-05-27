@@ -617,6 +617,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11772. RPC Invoker relies on static ClientCache which has
     synchronized(this) blocks. (wheat9)
 
+    HADOOP-11242. Record the time of calling in tracing span of
+    IPC server. (Masatake Iwasaki via aajisaka)
+
   BUG FIXES
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
