@@ -1113,6 +1113,41 @@
 <!-- MR YARN Application properties -->
 
 <property>
+ <name>mapreduce.job.node-label-expression</name>
+  <description>All the containers of the Map Reduce job will be run with this
+  node label expression. If the node-label-expression for job is not set, then
+  it will use queue's default-node-label-expression for all job's containers.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.am.node-label-expression</name>
+  <description>This is node-label configuration for Map Reduce Application Master
+  container. If not configured it will make use of
+  mapreduce.job.node-label-expression and if job's node-label expression is not
+  configured then it will use queue's default-node-label-expression.
+  </description>
+</property>
+
+<property>
+ <name>mapreduce.map.node-label-expression</name>
+  <description>This is node-label configuration for Map task containers. If not
+  configured it will use mapreduce.job.node-label-expression and if job's
+  node-label expression is not configured then it will use queue's
+  default-node-label-expression.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.node-label-expression</name>
+  <description>This is node-label configuration for Reduce task containers. If
+  not configured it will use mapreduce.job.node-label-expression and if job's
+  node-label expression is not configured then it will use queue's
+  default-node-label-expression.
+  </description>
+</property>
+
+<property>
  <name>mapreduce.job.counters.limit</name>
   <value>120</value>
   <description>Limit on the number of user counters allowed per job.

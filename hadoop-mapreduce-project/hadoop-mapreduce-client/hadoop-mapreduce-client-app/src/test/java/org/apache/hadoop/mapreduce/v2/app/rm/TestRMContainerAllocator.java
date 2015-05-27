@@ -79,6 +79,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -491,7 +492,7 @@ public class TestRMContainerAllocator {
     ContainerRequestEvent event1 =
         createReq(jobId, 1, 2048, new String[] { "h1" }, false, false);
     scheduledRequests.maps.put(mock(TaskAttemptId.class),
-        new RMContainerRequestor.ContainerRequest(event1, null));
+        new RMContainerRequestor.ContainerRequest(event1, null,null));
     assignedRequests.reduces.put(mock(TaskAttemptId.class),
         mock(Container.class));
 
@@ -559,6 +560,91 @@ public class TestRMContainerAllocator {
     allocator.preemptReducesIfNeeded();
     Assert.assertEquals("The reducer is not preeempted", 1,
         assignedRequests.preemptionWaitingReduces.size());
+  }
+
+  @Test
+  public void testMapReduceAllocationWithNodeLabelExpression() throws Exception {
+
+    LOG.info("Running testMapReduceAllocationWithNodeLabelExpression");
+    Configuration conf = new Configuration();
+    /*
+     * final int MAP_LIMIT = 3; final int REDUCE_LIMIT = 1;
+     * conf.setInt(MRJobConfig.JOB_RUNNING_MAP_LIMIT, MAP_LIMIT);
+     * conf.setInt(MRJobConfig.JOB_RUNNING_REDUCE_LIMIT, REDUCE_LIMIT);
+     */
+    conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 1.0f);
+    conf.set(MRJobConfig.MAP_NODE_LABEL_EXP, "MapNodes");
+    conf.set(MRJobConfig.REDUCE_NODE_LABEL_EXP, "ReduceNodes");
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
+    MyContainerAllocator allocator =
+        new MyContainerAllocator(null, conf, appAttemptId, mockJob) {
+          @Override
+          protected void register() {
+          }
+
+          @Override
+          protected ApplicationMasterProtocol createSchedulerProxy() {
+            return mockScheduler;
+          }
+        };
+
+    // create some map requests
+    ContainerRequestEvent reqMapEvents;
+    reqMapEvents = createReq(jobId, 0, 1024, new String[] { "map" });
+    allocator.sendRequests(Arrays.asList(reqMapEvents));
+
+    // create some reduce requests
+    ContainerRequestEvent reqReduceEvents;
+    reqReduceEvents =
+        createReq(jobId, 0, 2048, new String[] { "reduce" }, false, true);
+    allocator.sendRequests(Arrays.asList(reqReduceEvents));
+    allocator.schedule();
+    // verify all of the host-specific asks were sent plus one for the
+    // default rack and one for the ANY request
+    Assert.assertEquals(3, mockScheduler.lastAsk.size());
+    // verify ResourceRequest sent for MAP have appropriate node
+    // label expression as per the configuration
+    validateLabelsRequests(mockScheduler.lastAsk.get(0), false);
+    validateLabelsRequests(mockScheduler.lastAsk.get(1), false);
+    validateLabelsRequests(mockScheduler.lastAsk.get(2), false);
+
+    // assign a map task and verify we do not ask for any more maps
+    ContainerId cid0 = mockScheduler.assignContainer("map", false);
+    allocator.schedule();
+    // default rack and one for the ANY request
+    Assert.assertEquals(3, mockScheduler.lastAsk.size());
+    validateLabelsRequests(mockScheduler.lastAsk.get(0), true);
+    validateLabelsRequests(mockScheduler.lastAsk.get(1), true);
+    validateLabelsRequests(mockScheduler.lastAsk.get(2), true);
+
+    // complete the map task and verify that we ask for one more
+    allocator.close();
+  }
+
+  private void validateLabelsRequests(ResourceRequest resourceRequest,
+      boolean isReduce) {
+    switch (resourceRequest.getResourceName()) {
+    case "map":
+    case "reduce":
+    case NetworkTopology.DEFAULT_RACK:
+      Assert.assertNull(resourceRequest.getNodeLabelExpression());
+      break;
+    case "*":
+      Assert.assertEquals(isReduce ? "ReduceNodes" : "MapNodes",
+          resourceRequest.getNodeLabelExpression());
+      break;
+    default:
+      Assert.fail("Invalid resource location "
+          + resourceRequest.getResourceName());
+    }
   }
 
   @Test
@@ -1498,6 +1584,7 @@ public class TestRMContainerAllocator {
             .getNumContainers(), req.getRelaxLocality());
         askCopy.add(reqCopy);
       }
+      SecurityUtil.setTokenServiceUseIp(false);
       lastAsk = ask;
       lastRelease = release;
       lastBlacklistAdditions = blacklistAdditions;

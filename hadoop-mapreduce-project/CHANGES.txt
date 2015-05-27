@@ -270,6 +270,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6364. Add a "Kill" link to Task Attempts page. (Ryu Kobayashi
    via ozawa)
 
+   MAPREDUCE-6304. Specifying node labels when submitting MR jobs.
+   (Naganarasimha G R via wangda)
+
   IMPROVEMENTS
 
     MAPREDUCE-6291. Correct mapred queue usage command.
