@@ -810,12 +810,12 @@ public class RMWebServices {
 
     NodeToLabelsInfo ntl = new NodeToLabelsInfo();
     HashMap<String, NodeLabelsInfo> ntlMap = ntl.getNodeToLabels();
-    Map<NodeId, Set<String>> nodeIdToLabels = rm.getRMContext()
-        .getNodeLabelManager().getNodeLabels();
+    Map<NodeId, Set<NodeLabel>> nodeIdToLabels = rm.getRMContext()
+        .getNodeLabelManager().getNodeLabelsInfo();
 
-    for (Map.Entry<NodeId, Set<String>> nitle : nodeIdToLabels.entrySet()) {
-      ntlMap.put(nitle.getKey().toString(),
-          new NodeLabelsInfo(nitle.getValue()));
+    for (Map.Entry<NodeId, Set<NodeLabel>> nitle : nodeIdToLabels.entrySet()) {
+      List<NodeLabel> labels = new ArrayList<NodeLabel>(nitle.getValue());
+      ntlMap.put(nitle.getKey().toString(), new NodeLabelsInfo(labels));
     }
 
     return ntl;
@@ -830,16 +830,16 @@ public class RMWebServices {
 
     LabelsToNodesInfo lts = new LabelsToNodesInfo();
     Map<NodeLabelInfo, NodeIDsInfo> ltsMap = lts.getLabelsToNodes();
-    Map<String, Set<NodeId>> labelsToNodeId = null;
+    Map<NodeLabel, Set<NodeId>> labelsToNodeId = null;
     if (labels == null || labels.size() == 0) {
       labelsToNodeId =
-          rm.getRMContext().getNodeLabelManager().getLabelsToNodes();
+          rm.getRMContext().getNodeLabelManager().getLabelsInfoToNodes();
     } else {
       labelsToNodeId =
-          rm.getRMContext().getNodeLabelManager().getLabelsToNodes(labels);
+          rm.getRMContext().getNodeLabelManager().getLabelsInfoToNodes(labels);
     }
 
-    for (Entry<String, Set<NodeId>> entry : labelsToNodeId.entrySet()) {
+    for (Entry<NodeLabel, Set<NodeId>> entry : labelsToNodeId.entrySet()) {
       List<String> nodeIdStrList = new ArrayList<String>();
       for (NodeId nodeId : entry.getValue()) {
         nodeIdStrList.add(nodeId.toString());
@@ -985,14 +985,13 @@ public class RMWebServices {
   @Path("/nodes/{nodeId}/get-labels")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public NodeLabelsInfo getLabelsOnNode(@Context HttpServletRequest hsr,
-                                  @PathParam("nodeId") String nodeId) 
-    throws IOException {
+      @PathParam("nodeId") String nodeId) throws IOException {
     init();
 
     NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
-    return new NodeLabelsInfo(
-      rm.getRMContext().getNodeLabelManager().getLabelsOnNode(nid));
-
+    List<NodeLabel> labels = new ArrayList<NodeLabel>(rm.getRMContext()
+        .getNodeLabelManager().getLabelsInfoByNode(nid));
+    return new NodeLabelsInfo(labels);
   }
 
   protected Response killApp(RMApp app, UserGroupInformation callerUGI,

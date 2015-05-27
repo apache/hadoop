@@ -993,13 +993,18 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
   
-  private Set<NodeLabel> getLabelsInfoByNode(NodeId nodeId) {
-    Set<String> labels = getLabelsByNode(nodeId, nodeCollections);
-    if (labels.isEmpty()) {
-      return EMPTY_NODELABEL_SET;
+  public Set<NodeLabel> getLabelsInfoByNode(NodeId nodeId) {
+    try {
+      readLock.lock();
+      Set<String> labels = getLabelsByNode(nodeId, nodeCollections);
+      if (labels.isEmpty()) {
+        return EMPTY_NODELABEL_SET;
+      }
+      Set<NodeLabel> nodeLabels = createNodeLabelFromLabelNames(labels);
+      return nodeLabels;
+    } finally {
+      readLock.unlock();
     }
-    Set<NodeLabel> nodeLabels = createNodeLabelFromLabelNames(labels);
-    return nodeLabels;
   }
 
   private Set<NodeLabel> createNodeLabelFromLabelNames(Set<String> labels) {
