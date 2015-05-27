@@ -26,13 +26,13 @@ import org.apache.hadoop.util.LightWeightGSet;
 
 /**
  * BlockInfo class maintains for a given block
- * the {@link BlockCollection} it is part of and datanodes where the replicas of 
+ * the {@link BlockCollection} it is part of and datanodes where the replicas of
  * the block are stored.
  */
 @InterfaceAudience.Private
-public class BlockInfoContiguous extends Block
+public class BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
-  public static final BlockInfoContiguous[] EMPTY_ARRAY = {};
+  public static final BlockInfo[] EMPTY_ARRAY = {};
 
   private BlockCollection bc;
 
@@ -45,7 +45,7 @@ public class BlockInfoContiguous extends Block
    * {@link DatanodeStorageInfo} and triplets[3*i+1] and triplets[3*i+2] are
    * references to the previous and the next blocks, respectively, in the list
    * of blocks belonging to this storage.
-   * 
+   *
    * Using previous and next in Object triplets is done instead of a
    * {@link LinkedList} list to efficiently use memory. With LinkedList the cost
    * per replica is 42 bytes (LinkedList#Entry object per replica) versus 16
@@ -57,12 +57,12 @@ public class BlockInfoContiguous extends Block
    * Construct an entry for blocksmap
    * @param replication the block's replication factor
    */
-  public BlockInfoContiguous(short replication) {
+  public BlockInfo(short replication) {
     this.triplets = new Object[3*replication];
     this.bc = null;
   }
-  
-  public BlockInfoContiguous(Block blk, short replication) {
+
+  public BlockInfo(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.bc = null;
@@ -73,7 +73,7 @@ public class BlockInfoContiguous extends Block
    * This is used to convert BlockInfoUnderConstruction
    * @param from BlockInfo to copy from.
    */
-  protected BlockInfoContiguous(BlockInfoContiguous from) {
+  protected BlockInfo(BlockInfo from) {
     super(from);
     this.triplets = new Object[from.triplets.length];
     this.bc = from.bc;
@@ -102,22 +102,22 @@ public class BlockInfoContiguous extends Block
     return (DatanodeStorageInfo)triplets[index*3];
   }
 
-  private BlockInfoContiguous getPrevious(int index) {
+  private BlockInfo getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+1];
-    assert info == null || 
-        info.getClass().getName().startsWith(BlockInfoContiguous.class.getName()) :
+    BlockInfo info = (BlockInfo)triplets[index*3+1];
+    assert info == null ||
+        info.getClass().getName().startsWith(BlockInfo.class.getName()) :
               "BlockInfo is expected at " + index*3;
     return info;
   }
 
-  BlockInfoContiguous getNext(int index) {
+  BlockInfo getNext(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+2];
+    BlockInfo info = (BlockInfo)triplets[index*3+2];
     assert info == null || info.getClass().getName().startsWith(
-        BlockInfoContiguous.class.getName()) :
+        BlockInfo.class.getName()) :
         "BlockInfo is expected at " + index*3;
     return info;
   }
@@ -136,10 +136,10 @@ public class BlockInfoContiguous extends Block
    * @param to - block to be set to previous on the list of blocks
    * @return current previous block on the list of blocks
    */
-  private BlockInfoContiguous setPrevious(int index, BlockInfoContiguous to) {
+  private BlockInfo setPrevious(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+1];
+    BlockInfo info = (BlockInfo)triplets[index*3+1];
     triplets[index*3+1] = to;
     return info;
   }
@@ -152,10 +152,10 @@ public class BlockInfoContiguous extends Block
    * @param to - block to be set to next on the list of blocks
    *    * @return current next block on the list of blocks
    */
-  private BlockInfoContiguous setNext(int index, BlockInfoContiguous to) {
+  private BlockInfo setNext(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+2];
+    BlockInfo info = (BlockInfo)triplets[index*3+2];
     triplets[index*3+2] = to;
     return info;
   }
@@ -175,7 +175,7 @@ public class BlockInfoContiguous extends Block
     int last = numNodes();
     if(triplets.length >= (last+num)*3)
       return last;
-    /* Not enough space left. Create a new array. Should normally 
+    /* Not enough space left. Create a new array. Should normally
      * happen only when replication is manually increased by the user. */
     Object[] old = triplets;
     triplets = new Object[(last+num)*3];
@@ -215,18 +215,18 @@ public class BlockInfoContiguous extends Block
     int dnIndex = findStorageInfo(storage);
     if(dnIndex < 0) // the node is not found
       return false;
-    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
+    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null :
       "Block is still in the list and must be removed first.";
     // find the last not null node
-    int lastNode = numNodes()-1; 
-    // replace current node triplet by the lastNode one 
+    int lastNode = numNodes()-1;
+    // replace current node triplet by the lastNode one
     setStorageInfo(dnIndex, getStorageInfo(lastNode));
-    setNext(dnIndex, getNext(lastNode)); 
-    setPrevious(dnIndex, getPrevious(lastNode)); 
+    setNext(dnIndex, getNext(lastNode));
+    setPrevious(dnIndex, getPrevious(lastNode));
     // set the last triplet to null
     setStorageInfo(lastNode, null);
-    setNext(lastNode, null); 
-    setPrevious(lastNode, null); 
+    setNext(lastNode, null);
+    setPrevious(lastNode, null);
     return true;
   }
 
@@ -245,7 +245,7 @@ public class BlockInfoContiguous extends Block
     }
     return null;
   }
-  
+
   /**
    * Find specified DatanodeStorageInfo.
    * @return index or -1 if not found.
@@ -265,16 +265,16 @@ public class BlockInfoContiguous extends Block
   }
 
   /**
-   * Insert this block into the head of the list of blocks 
+   * Insert this block into the head of the list of blocks
    * related to the specified DatanodeStorageInfo.
    * If the head is null then form a new list.
    * @return current block as the new head of the list.
    */
-  BlockInfoContiguous listInsert(BlockInfoContiguous head,
+  BlockInfo listInsert(BlockInfo head,
       DatanodeStorageInfo storage) {
     int dnIndex = this.findStorageInfo(storage);
     assert dnIndex >= 0 : "Data node is not found: current";
-    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
+    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null :
             "Block is already in the list and cannot be inserted.";
     this.setPrevious(dnIndex, null);
     this.setNext(dnIndex, head);
@@ -284,14 +284,14 @@ public class BlockInfoContiguous extends Block
   }
 
   /**
-   * Remove this block from the list of blocks 
+   * Remove this block from the list of blocks
    * related to the specified DatanodeStorageInfo.
-   * If this block is the head of the list then return the next block as 
+   * If this block is the head of the list then return the next block as
    * the new head.
    * @return the new head of the list or null if the list becomes
    * empy after deletion.
    */
-  BlockInfoContiguous listRemove(BlockInfoContiguous head,
+  BlockInfo listRemove(BlockInfo head,
       DatanodeStorageInfo storage) {
     if(head == null)
       return null;
@@ -299,8 +299,8 @@ public class BlockInfoContiguous extends Block
     if(dnIndex < 0) // this block is not on the data-node list
       return head;
 
-    BlockInfoContiguous next = this.getNext(dnIndex);
-    BlockInfoContiguous prev = this.getPrevious(dnIndex);
+    BlockInfo next = this.getNext(dnIndex);
+    BlockInfo prev = this.getPrevious(dnIndex);
     this.setNext(dnIndex, null);
     this.setPrevious(dnIndex, null);
     if(prev != null)
@@ -318,13 +318,13 @@ public class BlockInfoContiguous extends Block
    *
    * @return the new head of the list.
    */
-  public BlockInfoContiguous moveBlockToHead(BlockInfoContiguous head,
+  public BlockInfo moveBlockToHead(BlockInfo head,
       DatanodeStorageInfo storage, int curIndex, int headIndex) {
     if (head == this) {
       return this;
     }
-    BlockInfoContiguous next = this.setNext(curIndex, head);
-    BlockInfoContiguous prev = this.setPrevious(curIndex, null);
+    BlockInfo next = this.setNext(curIndex, head);
+    BlockInfo prev = this.setPrevious(curIndex, null);
 
     head.setPrevious(headIndex, this);
     prev.setNext(prev.findStorageInfo(storage), next);
@@ -346,7 +346,7 @@ public class BlockInfoContiguous extends Block
 
   /**
    * Is this block complete?
-   * 
+   *
    * @return true if the state of the block is {@link BlockUCState#COMPLETE}
    */
   public boolean isComplete() {
