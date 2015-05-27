@@ -333,9 +333,9 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
-              " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
-              "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] " +
+              " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),label2(exclusive=false),label3\">]" +
+              " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode " +
+              "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] " +
               "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -413,9 +413,10 @@ public class TestRMAdminCLI {
           "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper"
               + "UserGroupsConfiguration] [-refreshUserToGroupsMappings] "
               + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"
-              + " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]"
-              + " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode "
-              + "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] "
+              + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
+                  + "label2(exclusive=false),label3\">]"
+              + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
+              + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
