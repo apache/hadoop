@@ -931,10 +931,16 @@ public abstract class TaskAttemptImpl implements
     // Fill in the fields needed per-container that are missing in the common
     // spec.
 
+    boolean userClassesTakesPrecedence =
+      conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
+
     // Setup environment by cloning from common env.
     Map<String, String> env = commonContainerSpec.getEnvironment();
     Map<String, String> myEnv = new HashMap<String, String>(env.size());
     myEnv.putAll(env);
+    if (userClassesTakesPrecedence) {
+      myEnv.put(Environment.CLASSPATH_PREPEND_DISTCACHE.name(), "true");
+    }
     MapReduceChildJVM.setVMEnv(myEnv, remoteTask);
 
     // Set up the launch command

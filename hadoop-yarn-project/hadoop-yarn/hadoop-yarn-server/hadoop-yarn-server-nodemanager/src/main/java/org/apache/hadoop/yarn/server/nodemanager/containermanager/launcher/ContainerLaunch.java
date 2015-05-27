@@ -749,11 +749,12 @@ public class ContainerLaunch implements Callable<Integer> {
         //jar is created and so they "are lost" and have to be explicitly
         //added to the classpath instead.  This also means that their position
         //is lost relative to other non-distcache classpath entries which will
-        //break things like mapreduce.job.user.classpath.first.
+        //break things like mapreduce.job.user.classpath.first.  An environment
+        //variable can be set to indicate that distcache entries should come
+        //first
 
-        boolean preferLocalizedJars = conf.getBoolean(
-          YarnConfiguration.YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE,
-          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE
+        boolean preferLocalizedJars = Boolean.valueOf(
+          environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
           );
 
         boolean needsSeparator = false;
