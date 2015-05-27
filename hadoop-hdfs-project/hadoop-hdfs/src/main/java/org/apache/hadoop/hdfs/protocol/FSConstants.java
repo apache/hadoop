@@ -23,5 +23,5 @@ package org.apache.hadoop.hdfs.protocol;
  * it for SafemodeAction and DatanodeReport types.
  */
 @Deprecated
-public abstract class FSConstants extends HdfsConstants {
+public final class FSConstants extends HdfsConstants {
 }
