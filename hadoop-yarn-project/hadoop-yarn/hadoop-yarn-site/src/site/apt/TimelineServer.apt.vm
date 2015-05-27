@@ -104,6 +104,14 @@ YARN Timeline Server
 </property>
 
 <property>
+  <description>The max number of applications could be fetched by using REST API
+   or application history protocol and shown in timeline server web ui. Defaults
+   to `10000`.</description>
+  <name>yarn.timeline-service.generic-application-history.max-applications</name>
+  <value>10000</value>
+</property>
+
+<property>
   <description>Enables cross-origin support (CORS) for web services where
   cross-origin web response headers are needed. For example, javascript making
   a web services request to the timeline server.</description>

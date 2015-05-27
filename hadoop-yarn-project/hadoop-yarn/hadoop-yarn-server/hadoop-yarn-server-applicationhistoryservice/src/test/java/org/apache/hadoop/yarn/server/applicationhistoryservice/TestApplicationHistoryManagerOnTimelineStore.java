@@ -175,8 +175,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertEquals("test app type", app.getApplicationType());
       Assert.assertEquals("user1", app.getUser());
       Assert.assertEquals("test queue", app.getQueue());
-      Assert.assertEquals(Integer.MAX_VALUE + 2L, app.getStartTime());
-      Assert.assertEquals(Integer.MAX_VALUE + 3L, app.getFinishTime());
+      Assert.assertEquals(Integer.MAX_VALUE + 2L
+          + app.getApplicationId().getId(), app.getStartTime());
+      Assert.assertEquals(Integer.MAX_VALUE + 3L
+          + +app.getApplicationId().getId(), app.getFinishTime());
       Assert.assertTrue(Math.abs(app.getProgress() - 1.0F) < 0.0001);
       // App 2 doesn't have the ACLs, such that the default ACLs " " will be used.
       // Nobody except admin and owner has access to the details of the app.
@@ -324,7 +326,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   @Test
   public void testGetApplications() throws Exception {
     Collection<ApplicationReport> apps =
-        historyManager.getAllApplications().values();
+        historyManager.getApplications(Long.MAX_VALUE).values();
     Assert.assertNotNull(apps);
     Assert.assertEquals(SCALE + 1, apps.size());
   }
@@ -450,12 +452,12 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    tEvent.setTimestamp(Integer.MAX_VALUE + 2L);
+    tEvent.setTimestamp(Integer.MAX_VALUE + 2L + appId.getId());
     entity.addEvent(tEvent);
     tEvent = new TimelineEvent();
     tEvent.setEventType(
         ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-    tEvent.setTimestamp(Integer.MAX_VALUE + 3L);
+    tEvent.setTimestamp(Integer.MAX_VALUE + 3L + appId.getId());
     Map<String, Object> eventInfo = new HashMap<String, Object>();
     eventInfo.put(ApplicationMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO,
         "test diagnostics info");
