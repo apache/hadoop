@@ -160,6 +160,9 @@ Trunk (Unreleased)
 
     HDFS-6353. Check and make checkpoint before stopping the NameNode. (jing9)
 
+    HDFS-5033. Bad error message for fs -put/copyFromLocal if user
+    doesn't have permissions to read the source (Darrell Taylor via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
