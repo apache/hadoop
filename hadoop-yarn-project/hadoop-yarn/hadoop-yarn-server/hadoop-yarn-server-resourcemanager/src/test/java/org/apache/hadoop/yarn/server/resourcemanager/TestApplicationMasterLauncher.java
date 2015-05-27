@@ -107,8 +107,7 @@ public class TestApplicationMasterLauncher {
       nmHostAtContainerManager = tokenId.getNmHostAddress();
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
-      maxAppAttempts =
-          Integer.parseInt(env.get(ApplicationConstants.MAX_APP_ATTEMPTS_ENV));
+      maxAppAttempts = YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS;
       return StartContainersResponse.newInstance(
         new HashMap<String, ByteBuffer>(), new ArrayList<ContainerId>(),
         new HashMap<ContainerId, SerializedException>());
@@ -184,8 +183,8 @@ public class TestApplicationMasterLauncher {
     am.waitForState(RMAppAttemptState.FINISHED);
     rm.stop();
   }
-  
-    
+
+
   @SuppressWarnings("unused")
   @Test(timeout = 100000)
   public void testallocateBeforeAMRegistration() throws Exception {

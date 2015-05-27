@@ -48,6 +48,9 @@ Trunk - Unreleased
     YARN-2428. LCE default banned user list should have yarn (Varun
     Saxena via aw)
 
+    YARN-2355. MAX_APP_ATTEMPTS_ENV may no longer be a useful env var
+    for a container (Darrell Taylor via aw)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
