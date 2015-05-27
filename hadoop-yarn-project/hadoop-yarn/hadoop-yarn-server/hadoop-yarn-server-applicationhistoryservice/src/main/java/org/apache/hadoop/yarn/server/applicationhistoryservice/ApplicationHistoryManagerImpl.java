@@ -98,7 +98,7 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   }
 
   @Override
-  public Map<ApplicationId, ApplicationReport> getAllApplications()
+  public Map<ApplicationId, ApplicationReport> getApplications(long appsNum)
       throws IOException {
     Map<ApplicationId, ApplicationHistoryData> histData =
         historyStore.getAllApplications();

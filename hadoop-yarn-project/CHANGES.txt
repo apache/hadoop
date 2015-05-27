@@ -26,6 +26,9 @@ Release 2.7.2 - UNRELEASED
     YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
     G R  via ozawa)
 
+    YARN-3700. Made generic history service load a number of latest applications
+    according to the parameter or the configuration. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

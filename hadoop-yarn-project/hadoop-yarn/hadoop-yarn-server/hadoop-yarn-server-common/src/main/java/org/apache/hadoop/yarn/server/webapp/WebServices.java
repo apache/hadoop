@@ -75,13 +75,11 @@ public class WebServices {
       String startedEnd, String finishBegin, String finishEnd,
       Set<String> applicationTypes) {
     UserGroupInformation callerUGI = getUser(req);
-    long num = 0;
-    boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
     boolean checkAppTypes = false;
     boolean checkAppStates = false;
-    long countNum = 0;
+    long countNum = Long.MAX_VALUE;
 
     // set values suitable in case both of begin/end not specified
     long sBegin = 0;
@@ -90,7 +88,6 @@ public class WebServices {
     long fEnd = Long.MAX_VALUE;
 
     if (count != null && !count.isEmpty()) {
-      checkCount = true;
       countNum = Long.parseLong(count);
       if (countNum <= 0) {
         throw new BadRequestException("limit value must be greater then 0");
@@ -151,19 +148,20 @@ public class WebServices {
 
     AppsInfo allApps = new AppsInfo();
     Collection<ApplicationReport> appReports = null;
+    final GetApplicationsRequest request =
+        GetApplicationsRequest.newInstance();
+    request.setLimit(countNum);
     try {
       if (callerUGI == null) {
         // TODO: the request should take the params like what RMWebServices does
         // in YARN-1819.
-        GetApplicationsRequest request = GetApplicationsRequest.newInstance();
         appReports = appBaseProt.getApplications(request).getApplicationList();
       } else {
         appReports = callerUGI.doAs(
             new PrivilegedExceptionAction<Collection<ApplicationReport>> () {
           @Override
           public Collection<ApplicationReport> run() throws Exception {
-            return appBaseProt.getApplications(
-                GetApplicationsRequest.newInstance()).getApplicationList();
+            return appBaseProt.getApplications(request).getApplicationList();
           }
         });
       }
@@ -171,10 +169,6 @@ public class WebServices {
       rewrapAndThrowException(e);
     }
     for (ApplicationReport appReport : appReports) {
-
-      if (checkCount && num == countNum) {
-        break;
-      }
 
       if (checkAppStates &&
           !appStates.contains(StringUtils.toLowerCase(
@@ -215,7 +209,6 @@ public class WebServices {
       AppInfo app = new AppInfo(appReport);
 
       allApps.add(app);
-      num++;
     }
     return allApps;
   }

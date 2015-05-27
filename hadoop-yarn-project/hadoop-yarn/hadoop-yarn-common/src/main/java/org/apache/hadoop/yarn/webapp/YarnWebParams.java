@@ -33,6 +33,7 @@ public interface YarnWebParams {
   String ENTITY_STRING = "entity.string";
   String APP_OWNER = "app.owner";
   String APP_STATE = "app.state";
+  String APPS_NUM = "apps.num";
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
   String NODE_LABEL = "node.label";
