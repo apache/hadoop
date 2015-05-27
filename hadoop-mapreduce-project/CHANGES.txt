@@ -13,6 +13,9 @@ Trunk (Unreleased)
     MAPREDUCE-4424. 'mapred job -list' command should show the job name
     as well. (Avinash Kujur via aajisaka)
 
+    MAPREDUCE-6336. Enable v2 FileOutputCommitter by default.
+    (Siqi Li via gera)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
