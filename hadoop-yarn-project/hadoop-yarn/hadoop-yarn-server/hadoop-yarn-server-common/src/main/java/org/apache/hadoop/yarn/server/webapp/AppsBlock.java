@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPS_NUM;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
@@ -70,10 +71,14 @@ public class AppsBlock extends HtmlBlock {
         reqAppStates.add(YarnApplicationState.valueOf(stateString.trim()));
       }
     }
-
     callerUGI = getCallerUGI();
     final GetApplicationsRequest request =
         GetApplicationsRequest.newInstance(reqAppStates);
+    String appsNumStr = $(APPS_NUM);
+    if (appsNumStr != null && !appsNumStr.isEmpty()) {
+      long appsNum = Long.parseLong(appsNumStr);
+      request.setLimit(appsNum);
+    }
     if (callerUGI == null) {
       appReports = appBaseProt.getApplications(request).getApplicationList();
     } else {

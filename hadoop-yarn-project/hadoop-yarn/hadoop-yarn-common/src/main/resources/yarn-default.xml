@@ -1382,6 +1382,15 @@
   </property>
 
   <property>
+    <description>
+      Defines the max number of applications could be fetched using REST API or
+      application history protocol and shown in timeline server web ui.
+    </description>
+    <name>yarn.timeline-service.generic-application-history.max-applications</name>
+    <value>10000</value>
+  </property>
+
+  <property>
     <description>Store class name for timeline store.</description>
     <name>yarn.timeline-service.store-class</name>
     <value>org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore</value>

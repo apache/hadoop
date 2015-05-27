@@ -274,6 +274,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3581. Deprecate -directlyAccessNodeLabelStore in RMAdminCLI. 
     (Naganarasimha G R via wangda)
 
+    YARN-3700. Made generic history service load a number of latest applications
+    according to the parameter or the configuration. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
