@@ -237,7 +237,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12318. Expose underlying LDAP exceptions in SaslPlainServer. (Mike
     Yoder via atm)
 
-  OPTIMIZATIONS
+    HADOOP-9891. CLIMiniCluster instructions fail with MiniYarnCluster
+    ClassNotFoundException (Darrell Taylor via aw)
+
+ OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
     buildListing (Zoran Dimitrijevic via Colin P. McCabe)
