@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -189,6 +190,13 @@ public interface ApplicationConstants {
      * $HADOOP_YARN_HOME
      */
     HADOOP_YARN_HOME("HADOOP_YARN_HOME"),
+
+    /**
+     * $CLASSPATH_PREPEND_DISTCACHE
+     * Private, Windows specific
+     */
+    @Private
+    CLASSPATH_PREPEND_DISTCACHE("CLASSPATH_PREPEND_DISTCACHE"),
 
     /**
      * $CONTAINER_ID
