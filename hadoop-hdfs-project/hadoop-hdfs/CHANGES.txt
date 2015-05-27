@@ -29,6 +29,8 @@ Trunk (Unreleased)
     HDFS-8241. Remove unused NameNode startup option -finalize.
     (Brahma Reddy Battula via aajisaka)
  
+    HDFS-8135. Remove the deprecated FSConstants class. (Li Lu via wheat9)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -335,10 +337,6 @@ Trunk (Unreleased)
     HDFS-8412. Fix the test failures in HTTPFS. (umamahesh)
 
 Release 2.8.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-    HDFS-8135. Remove the deprecated FSConstants class. (Li Lu via wheat9)
 
   NEW FEATURES
 
