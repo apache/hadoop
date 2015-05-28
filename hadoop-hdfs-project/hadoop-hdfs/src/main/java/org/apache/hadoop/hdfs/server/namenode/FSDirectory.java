@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.hdfsdb.Options;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -100,7 +101,6 @@ import static org.apache.hadoop.util.Time.now;
 @InterfaceAudience.Private
 public class FSDirectory implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
-
   private static INodeDirectory createRoot(FSNamesystem namesystem) {
     final INodeDirectory r = new INodeDirectory(
         ROOT_INODE_ID,
@@ -184,6 +184,12 @@ public class FSDirectory implements Closeable {
   private final FSEditLog editLog;
 
   private INodeAttributeProvider attributeProvider;
+  private final boolean enableLevelDb;
+  private final org.apache.hadoop.hdfs.hdfsdb.DB levelDb;
+
+  org.apache.hadoop.hdfs.hdfsdb.DB getLevelDb() {
+    return levelDb;
+  }
 
   public void setINodeAttributeProvider(INodeAttributeProvider provider) {
     attributeProvider = provider;
@@ -244,11 +250,12 @@ public class FSDirectory implements Closeable {
   }
 
   RWTransaction newRWTransaction() {
-    return new RWTransaction(this);
+    return enableLevelDb ? new LevelDBRWTransaction(this) : new RWTransaction(this);
   }
 
   public ROTransaction newROTransaction() {
-    return new ROTransaction(db());
+    return enableLevelDb ? new LevelDBROTransaction(this, levelDb)
+        : new ROTransaction(this);
   }
 
   public ReplayTransaction newReplayTransaction() {
@@ -338,9 +345,22 @@ public class FSDirectory implements Closeable {
     namesystem = ns;
     this.editLog = ns.getEditLog();
     ezManager = new EncryptionZoneManager(this, conf);
-    this.db = new DB(dirLock);
-    // TODO: Load fsimage
-    db.addRoot(createRootForFlatNS(ns));
+    this.enableLevelDb = conf.getBoolean("dfs.partialns", false);
+    if (enableLevelDb) {
+      String dbPath = conf.get("dfs.partialns.path");
+      Options options = new Options().createIfMissing(true);
+      this.levelDb = org.apache.hadoop.hdfs.hdfsdb.DB.open(options, dbPath);
+      try (RWTransaction tx = newRWTransaction().begin()) {
+        tx.putINode(ROOT_INODE_ID, createRootForFlatNS(ns));
+        tx.commit();
+      }
+      this.db = null;
+    } else {
+      this.db = new DB(dirLock);
+      // TODO: Load fsimage
+      db.addRoot(createRootForFlatNS(ns));
+      this.levelDb = null;
+    }
   }
     
   FSNamesystem getFSNamesystem() {
