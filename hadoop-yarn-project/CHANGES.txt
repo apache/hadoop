@@ -75,6 +75,10 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
     YARN-3411. [Storage implementation] explore the native HBase write schema
     for storage (Vrushali C via sjlee)
+
+    YARN-3726. Fix TestHBaseTimelineWriterImpl unit test failure by fixing its
+    test data (Vrushali C via sjlee)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
