@@ -478,6 +478,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3539. Updated timeline server documentation and marked REST APIs evolving.
     (Steve Loughran via zjshen)
 
+    YARN-3723. Need to clearly document primaryFilter and otherInfo value type.
+    (Zhijie Shen via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
