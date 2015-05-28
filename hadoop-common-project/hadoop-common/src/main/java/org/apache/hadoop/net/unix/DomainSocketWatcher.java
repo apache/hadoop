@@ -470,6 +470,7 @@ public final class DomainSocketWatcher implements Closeable {
               // Handle pending additions (before pending removes).
               for (Iterator<Entry> iter = toAdd.iterator(); iter.hasNext(); ) {
                 Entry entry = iter.next();
+                iter.remove();
                 DomainSocket sock = entry.getDomainSocket();
                 Entry prevEntry = entries.put(sock.fd, entry);
                 Preconditions.checkState(prevEntry == null,
@@ -479,7 +480,6 @@ public final class DomainSocketWatcher implements Closeable {
                   LOG.trace(this + ": adding fd " + sock.fd);
                 }
                 fdSet.add(sock.fd);
-                iter.remove();
               }
               // Handle pending removals
               while (true) {
@@ -525,6 +525,25 @@ public final class DomainSocketWatcher implements Closeable {
           }
           entries.clear();
           fdSet.close();
+          closed = true;
+          if (!(toAdd.isEmpty() && toRemove.isEmpty())) {
+            // Items in toAdd might not be added to entries, handle it here
+            for (Iterator<Entry> iter = toAdd.iterator(); iter.hasNext();) {
+              Entry entry = iter.next();
+              entry.getDomainSocket().refCount.unreference();
+              entry.getHandler().handle(entry.getDomainSocket());
+              IOUtils.cleanup(LOG, entry.getDomainSocket());
+              iter.remove();
+            }
+            // Items in toRemove might not be really removed, handle it here
+            while (true) {
+              Map.Entry<Integer, DomainSocket> entry = toRemove.firstEntry();
+              if (entry == null)
+                break;
+              sendCallback("close", entries, fdSet, entry.getValue().fd);
+            }
+          }
+          processedCond.signalAll();
         } finally {
           lock.unlock();
         }
