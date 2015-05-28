@@ -648,11 +648,20 @@ Use the following URI to obtain all the entity objects of a given
   the set of fields contains `LAST_EVENT_ONLY` and not `EVENTS`, the most recent
   event for each entity is retrieved. If null, retrieves all fields.
 
+Note that the value of the key/value pair for `primaryFilter` and
+`secondaryFilters` parameters can be of different data types, and matching is
+data type sensitive. Users need to format the value properly. For example, `123`
+and `"123"` means an integer and a string respectively. If the entity has a
+string `"123"` for `primaryFilter`, but the parameter is set to the integer
+`123`, the entity will not be matched. Similarly, `true` means a boolean while
+`"true"` means a string. In general, the value will be casted as a certain Java
+type in consistent with `jackson` library parsing a JSON clip.
+
 ### Elements of the `entities` (Timeline Entity List) Object
 
 When you make a request for the list of timeline entities, the information
 will be returned as a collection of container objects. See also
-{{Timeline Entity}} for syntax of the timeline entity object.
+`Timeline Entity` for syntax of the timeline entity object.
 
 | Item | Data Type | Description|
 |:---- |:---- |:---- |
@@ -751,7 +760,9 @@ Use the following URI to obtain the entity object identified by the
 
 ### Elements of the `entity` (Timeline Entity) Object:
 
-See also {{Timeline Event List}} for syntax of the timeline event object.
+See also `Timeline Event List` for syntax of the timeline event object. Note
+that `value` of `primaryfilters` and `otherinfo` is an Object instead of a
+String.
 
 
 | Item | Data Type | Description|
@@ -841,7 +852,8 @@ will be returned as a collection of event objects.
 |:---- |:---- |:---- |
 | `events` | array of timeline event objects(JSON) | The collection of timeline event objects |
 
-Below is the elements of a single event object.
+Below is the elements of a single event object.  Note that `value` of
+`eventinfo` and `otherinfo` is an Object instead of a String.
 
 
 | Item | Data Type | Description|
@@ -1547,7 +1559,7 @@ None
 ### Elements of the `containers` (Container List) Object
 
 When you make a request for the list of containers, the information will be
-returned as a collection of container objects. See also {{Container}} for
+returned as a collection of container objects. See also `Container` for
 syntax of the container object.
 
 | Item | Data Type   | Description |
