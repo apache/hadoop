@@ -624,6 +624,7 @@ Release 2.8.0 - UNRELEASED
     IPC server. (Masatake Iwasaki via aajisaka)
 
   BUG FIXES
+
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
 
@@ -760,6 +761,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-8751. NPE in Token.toString() when Token is constructed using null
     identifier. (kanaka kumar avvaru via aajisaka)
+
+    HADOOP-12004. test-patch breaks with reexec in certain situations (Sean
+    Busbey via aw)
 
 Release 2.7.1 - UNRELEASED
 
