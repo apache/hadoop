@@ -185,7 +185,7 @@ Example:
 * `hadoop fs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2`
 * `hadoop fs -count -q hdfs://nn1.example.com/file1`
 * `hadoop fs -count -q -h hdfs://nn1.example.com/file1`
-* `hdfs dfs -count -q -h -v hdfs://nn1.example.com/file1`
+* `hadoop fs -count -q -h -v hdfs://nn1.example.com/file1`
 
 Exit Code:
 
