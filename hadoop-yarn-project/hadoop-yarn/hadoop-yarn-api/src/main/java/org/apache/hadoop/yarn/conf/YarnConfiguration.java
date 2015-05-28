@@ -268,6 +268,18 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
+  /**
+   * Enable/disable intermediate-data encryption at YARN level. For now, this
+   * only is used by the FileSystemRMStateStore to setup right file-system
+   * security attributes.
+   */
+  @Private
+  public static final String YARN_INTERMEDIATE_DATA_ENCRYPTION = YARN_PREFIX
+      + "intermediate-data-encryption.enable";
+
+  @Private
+  public static final Boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
+
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 
     RM_PREFIX + "admin.address";
