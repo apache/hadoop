@@ -75,6 +75,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11932. MetricsSinkAdapter may hang  when being stopped.
     (Brahma Reddy Battula via jianhe)
 
+    HADOOP-11934. Use of JavaKeyStoreProvider in LdapGroupsMapping causes
+    infinite loop. (Larry McCay via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
