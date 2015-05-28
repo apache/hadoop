@@ -620,6 +620,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12030. test-patch should only report on newly introduced
     findbugs warnings. (Sean Busbey via aw)
 
+    HADOOP-11894. Bump the version of Apache HTrace to 3.2.0-incubating
+    (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
