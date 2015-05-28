@@ -782,6 +782,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12035. shellcheck plugin displays a wrong version potentially
     (Kengo Seki via aw)
 
+    HDFS-8429. Avoid stuck threads if there is an error in DomainSocketWatcher
+    that stops the thread.  (zhouyingchao via cmccabe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
