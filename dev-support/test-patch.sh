@@ -1509,7 +1509,7 @@ function check_reexec
 
   exec "${PATCH_DIR}/dev-support-test/test-patch.sh" \
     --reexec \
-    --branch "${PATCH_BRANCH}" \
+    --branch="${PATCH_BRANCH}" \
     --patch-dir="${PATCH_DIR}" \
       "${USER_PARAMS[@]}"
 }
