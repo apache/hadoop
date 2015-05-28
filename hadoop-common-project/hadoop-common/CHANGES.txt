@@ -791,6 +791,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11930. test-patch in offline mode should tell maven to be in
     offline mode (Sean Busbey via aw)
 
+    HADOOP-11959. WASB should configure client side socket timeout in storage
+    client blob request options. (Ivan Mitic via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

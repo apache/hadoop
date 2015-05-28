@@ -381,8 +381,8 @@ abstract class StorageInterface {
      * Copies an existing blob's contents, properties, and metadata to this instance of the <code>CloudBlob</code>
      * class, using the specified operation context.
      *
-     * @param source
-     *            A <code>java.net.URI</code> The URI of a source blob.
+     * @param sourceBlob
+     *            A <code>CloudBlob</code> object that represents the source blob to copy.
      * @param options
      *            A {@link BlobRequestOptions} object that specifies any additional options for the request. Specifying
      *            <code>null</code> will use the default request options from the associated service client (
@@ -397,7 +397,7 @@ abstract class StorageInterface {
      * @throws URISyntaxException
      *
      */
-    public abstract void startCopyFromBlob(URI source,
+    public abstract void startCopyFromBlob(CloudBlobWrapper sourceBlob,
         BlobRequestOptions options, OperationContext opContext)
         throws StorageException, URISyntaxException;
     
