@@ -17,33 +17,23 @@
  */
 package org.apache.hadoop.tracing;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
-import org.apache.hadoop.tracing.TraceUtils;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.SpanReceiverBuilder;
 import org.apache.htrace.Trace;
+import org.apache.htrace.impl.LocalFileSpanReceiver;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -54,7 +44,7 @@ import org.apache.htrace.Trace;
 @InterfaceAudience.Private
 public class SpanReceiverHost implements TraceAdminProtocol {
   public static final String SPAN_RECEIVERS_CONF_SUFFIX =
-    "spanreceiver.classes";
+      "spanreceiver.classes";
   private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
   private static final HashMap<String, SpanReceiverHost> hosts =
       new HashMap<String, SpanReceiverHost>(1);
@@ -88,33 +78,6 @@ public class SpanReceiverHost implements TraceAdminProtocol {
 
   private static List<ConfigurationPair> EMPTY = Collections.emptyList();
 
-  private static String getUniqueLocalTraceFileName() {
-    String tmp = System.getProperty("java.io.tmpdir", "/tmp");
-    String nonce = null;
-    BufferedReader reader = null;
-    try {
-      // On Linux we can get a unique local file name by reading the process id
-      // out of /proc/self/stat.  (There isn't any portable way to get the
-      // process ID from Java.)
-      reader = new BufferedReader(
-          new InputStreamReader(new FileInputStream("/proc/self/stat"),
-                                Charsets.UTF_8));
-      String line = reader.readLine();
-      if (line == null) {
-        throw new EOFException();
-      }
-      nonce = line.split(" ")[0];
-    } catch (IOException e) {
-    } finally {
-      IOUtils.cleanup(LOG, reader);
-    }
-    if (nonce == null) {
-      // If we can't use the process ID, use a random nonce.
-      nonce = UUID.randomUUID().toString();
-    }
-    return new File(tmp, nonce).getAbsolutePath();
-  }
-
   private SpanReceiverHost(String confPrefix) {
     this.confPrefix = confPrefix;
   }
@@ -143,7 +106,7 @@ public class SpanReceiverHost implements TraceAdminProtocol {
     // testing.
     String pathKey = confPrefix + LOCAL_FILE_SPAN_RECEIVER_PATH_SUFFIX;
     if (config.get(pathKey) == null) {
-      String uniqueFile = getUniqueLocalTraceFileName();
+      String uniqueFile = LocalFileSpanReceiver.getUniqueLocalTraceFileName();
       config.set(pathKey, uniqueFile);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Set " + pathKey + " to " + uniqueFile);
@@ -191,7 +154,7 @@ public class SpanReceiverHost implements TraceAdminProtocol {
 
   public synchronized SpanReceiverInfo[] listSpanReceivers()
       throws IOException {
-    SpanReceiverInfo info[] = new SpanReceiverInfo[receivers.size()];
+    SpanReceiverInfo[] info = new SpanReceiverInfo[receivers.size()];
     int i = 0;
 
     for(Map.Entry<Long, SpanReceiver> entry : receivers.entrySet()) {

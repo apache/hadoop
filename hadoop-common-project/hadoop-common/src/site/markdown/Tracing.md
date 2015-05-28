@@ -78,6 +78,10 @@ You also need to add the jar bundling SpanReceiver to the classpath of Hadoop
 on each node. (LocalFileSpanReceiver in the example above is included in the
 jar of htrace-core which is bundled with Hadoop.)
 
+```
+    $ cp htrace-htraced/target/htrace-htraced-3.2.0-incubating.jar $HADOOP_HOME/share/hadoop/common/lib/
+```
+
 ### Dynamic update of tracing configuration
 
 You can use `hadoop trace` command to see and update the tracing configuration of each servers.
@@ -149,6 +153,7 @@ which start tracing span before invoking HDFS shell command.
     import org.apache.hadoop.conf.Configuration;
     import org.apache.hadoop.fs.FsShell;
     import org.apache.hadoop.hdfs.DFSConfigKeys;
+    import org.apache.hadoop.hdfs.HdfsConfiguration;
     import org.apache.hadoop.tracing.SpanReceiverHost;
     import org.apache.hadoop.util.ToolRunner;
     import org.apache.htrace.Sampler;
@@ -157,19 +162,16 @@ which start tracing span before invoking HDFS shell command.
 
     public class TracingFsShell {
       public static void main(String argv[]) throws Exception {
-        Configuration conf = new Configuration();
+        Configuration conf = new HdfsConfiguration();
         FsShell shell = new FsShell();
         conf.setQuietMode(false);
         shell.setConf(conf);
         SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
         int res = 0;
-        TraceScope ts = null;
-        try {
-          ts = Trace.startSpan("FsShell", Sampler.ALWAYS);
+        try (TraceScope ts = Trace.startSpan("FsShell", Sampler.ALWAYS)) {
           res = ToolRunner.run(shell, argv);
         } finally {
           shell.close();
-          if (ts != null) ts.close();
         }
         System.exit(res);
       }
