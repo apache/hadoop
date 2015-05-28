@@ -474,6 +474,9 @@ Trunk (Unreleased)
 
     HADOOP-11406. xargs -P is not portable (Kengo Seki via aw)
 
+    HADOOP-11983. HADOOP_USER_CLASSPATH_FIRST works the opposite of what it is
+    supposed to do (Sangjin Lee via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
