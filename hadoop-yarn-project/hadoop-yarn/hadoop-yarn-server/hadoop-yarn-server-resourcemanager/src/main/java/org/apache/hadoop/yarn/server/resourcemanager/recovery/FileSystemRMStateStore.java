@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AM
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
+
 import com.google.common.annotations.VisibleForTesting;
 
 @Private
@@ -98,7 +99,8 @@ public class FileSystemRMStateStore extends RMStateStore {
   private Path dtSequenceNumberPath = null;
   private int fsNumRetries;
   private long fsRetryInterval;
-  private volatile boolean isHDFS;
+  private boolean intermediateEncryptionEnabled =
+      YarnConfiguration.DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION;
 
   @VisibleForTesting
   Path fsWorkingPath;
@@ -119,6 +121,9 @@ public class FileSystemRMStateStore extends RMStateStore {
     fsRetryInterval =
         conf.getLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
                 YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_RETRY_INTERVAL_MS);
+    intermediateEncryptionEnabled =
+        conf.getBoolean(YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION,
+          YarnConfiguration.DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION);
   }
 
   @Override
@@ -134,15 +139,9 @@ public class FileSystemRMStateStore extends RMStateStore {
     conf.set("dfs.client.retry.policy.spec", retryPolicy);
 
     fs = fsWorkingPath.getFileSystem(conf);
-    isHDFS = fs.getScheme().toLowerCase().contains("hdfs");
     mkdirsWithRetries(rmDTSecretManagerRoot);
     mkdirsWithRetries(rmAppRoot);
     mkdirsWithRetries(amrmTokenSecretManagerRoot);
-  }
-
-  @VisibleForTesting
-  void setIsHDFS(boolean isHDFS) {
-    this.isHDFS = isHDFS;
   }
 
   @Override
@@ -836,10 +835,11 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   private void setUnreadableBySuperuserXattrib(Path p)
           throws IOException {
-    if (isHDFS &&
-            !fs.getXAttrs(p).containsKey(UNREADABLE_BY_SUPERUSER_XATTRIB)) {
+    if (fs.getScheme().toLowerCase().contains("hdfs")
+        && intermediateEncryptionEnabled
+        && !fs.getXAttrs(p).containsKey(UNREADABLE_BY_SUPERUSER_XATTRIB)) {
       fs.setXAttr(p, UNREADABLE_BY_SUPERUSER_XATTRIB, null,
-              EnumSet.of(XAttrSetFlag.CREATE));
+        EnumSet.of(XAttrSetFlag.CREATE));
     }
   }
 }
