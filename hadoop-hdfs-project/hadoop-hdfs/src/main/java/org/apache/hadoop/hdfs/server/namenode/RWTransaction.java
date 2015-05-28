@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NavigableMap;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 
@@ -65,12 +64,12 @@ class RWTransaction extends Transaction {
   }
 
   @Override
-  NavigableMap<ByteBuffer, Long> childrenView(long parent) {
+  DBChildrenView childrenView(long parent) {
     // TODO: This function only provides a read-only view for the content in
     // the DB. It needs to consider the modification in this transaction to
     // implement transactional semantic.
     DB.INodeContainer c = fsd.db().getINode(parent);
-    return c.readOnlyChildren();
+    return new MemDBChildrenView(c.readOnlyChildren());
   }
 
   @Override

@@ -26,7 +26,9 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.util.Time.now;
 
@@ -165,7 +167,8 @@ class FSDirDeleteOp {
 
     long mtime = now();
     // Unlink the target directory from directory tree
-    long filesRemoved = delete(tx, paths, collectedBlocks, removedUCFiles, mtime);
+    long filesRemoved = delete(tx, paths, collectedBlocks, removedUCFiles,
+                               mtime);
     if (filesRemoved < 0) {
       return null;
     }
@@ -216,7 +219,8 @@ class FSDirDeleteOp {
    */
   private static long unprotectedDelete(
       RWTransaction tx, Resolver.Result paths,
-      BlocksMapUpdateInfo collectedBlocks, List<Long> removedUCFiles, long mtime) {
+      BlocksMapUpdateInfo collectedBlocks, List<Long> removedUCFiles, long mtime)
+      throws IOException {
     // TODO: Update quota
     FlatINode parent = paths.inodesInPath().getLastINode(-2);
     FlatINode inode = paths.inodesInPath().getLastINode();
@@ -236,21 +240,24 @@ class FSDirDeleteOp {
 
   private static long deleteSubtree(
       RWTransaction tx, long parentId, BlocksMapUpdateInfo collectedBlocks,
-      List<Long> removedUCFiles) {
+      List<Long> removedUCFiles) throws IOException {
     long deleted = 0;
-    for (long child : tx.childrenView(parentId).values()) {
-      FlatINode node = tx.getINode(child);
-      if (node.isFile()) {
-        FlatINodeFileFeature f = node.feature(FlatINodeFileFeature.class);
-        assert f != null;
-        if (f.inConstruction()) {
-          removedUCFiles.add(child);
+    try (DBChildrenView children = tx.childrenView(parentId)) {
+      for (Map.Entry<ByteBuffer, Long> e : children) {
+        long child = e.getValue();
+        FlatINode node = tx.getINode(child);
+        if (node.isFile()) {
+          FlatINodeFileFeature f = node.feature(FlatINodeFileFeature.class);
+          assert f != null;
+          if (f.inConstruction()) {
+            removedUCFiles.add(child);
+          }
+          for (Block b : f.blocks()) {
+            collectedBlocks.addDeleteBlock(b);
+          }
+        } else if (node.isDirectory()) {
+          deleted += deleteSubtree(tx, child, collectedBlocks, removedUCFiles);
         }
-        for (Block b : f.blocks()) {
-          collectedBlocks.addDeleteBlock(b);
-        }
-      } else if (node.isDirectory()) {
-        deleted += deleteSubtree(tx, child, collectedBlocks, removedUCFiles);
       }
     }
     return deleted;

@@ -466,8 +466,8 @@ class FSDirRenameOp {
       }
       error = "Rename destination " + dst
           + " is a directory or file under source " + src;
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                       + error);
+      NameNode.stateChangeLog.warn(
+          "DIR* FSDirectory.unprotectedRenameTo: " + error);
       throw new IOException(error);
     }
   }
@@ -491,12 +491,14 @@ class FSDirRenameOp {
       throw new FileAlreadyExistsException(error);
     }
     if (dstInode.isDirectory()) {
-      boolean hasChildren = !tx.childrenView(dstInode.id()).isEmpty();
-      if (hasChildren) {
-        error = "rename destination directory is not empty: " + dst;
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                         + error);
-        throw new IOException(error);
+      try (DBChildrenView children = tx.childrenView(dstInode.id())) {
+        boolean hasChildren = !children.isEmpty();
+        if (hasChildren) {
+          error = "rename destination directory is not empty: " + dst;
+          NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                                           + error);
+          throw new IOException(error);
+        }
       }
     }
   }

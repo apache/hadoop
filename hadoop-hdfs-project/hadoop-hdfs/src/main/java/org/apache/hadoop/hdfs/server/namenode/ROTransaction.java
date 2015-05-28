@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.NavigableMap;
 
 class ROTransaction extends Transaction {
   ROTransaction(FSDirectory fsd) {
@@ -43,9 +41,9 @@ class ROTransaction extends Transaction {
   }
 
   @Override
-  NavigableMap<ByteBuffer, Long> childrenView(long parent) {
+  DBChildrenView childrenView(long parent) {
     DB.INodeContainer c = fsd.db().getINode(parent);
-    return c.readOnlyChildren();
+    return new MemDBChildrenView(c.readOnlyChildren());
   }
 
   @Override

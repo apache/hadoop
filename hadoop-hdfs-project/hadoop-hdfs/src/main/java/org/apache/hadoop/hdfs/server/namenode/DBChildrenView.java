@@ -17,36 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import io.netty.buffer.ByteBuf;
-
 import java.io.Closeable;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.NavigableMap;
 
-import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
-
-abstract class Transaction implements Closeable {
-  protected final FSDirectory fsd;
-  protected Transaction(FSDirectory fsd) {
-    this.fsd = fsd;
+abstract class DBChildrenView implements Closeable, Iterable<Map
+    .Entry<ByteBuffer, Long> > {
+  abstract int size();
+  abstract void seekTo(ByteBuffer start);
+  boolean isEmpty() {
+    return size() == 0;
   }
-
-  abstract FlatINode getINode(long id);
-  abstract long getChild(long parentId, ByteBuffer localName);
-
-  abstract DBChildrenView childrenView(long parent);
-
-  protected FlatINode getINodeFromDB(long id) {
-    DB.INodeContainer c = fsd.db().getINode(id);
-    return c == null ? null : FlatINode.wrap(c.inode());
-  }
-
-  protected long getChildFromDB(long parentId, ByteBuffer localName) {
-    DB.INodeContainer c = fsd.db().getINode(parentId);
-    return c == null ? INVALID_INODE_ID : c.getChild(localName);
-  }
-
-
 }

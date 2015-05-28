@@ -477,7 +477,11 @@ public class FSDirectory implements Closeable {
   static boolean isNonEmptyDirectory(
       Transaction tx, FlatINodesInPath iip) {
     FlatINode inode = iip.getLastINode();
-    return inode.isDirectory() && !tx.childrenView(inode.id()).isEmpty();
+    try (DBChildrenView children = tx.childrenView(inode.id())) {
+      return inode.isDirectory() && !children.isEmpty();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
