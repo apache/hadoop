@@ -27,6 +27,7 @@ function hadoop_usage()
   echo "                         libraries availability"
   echo "  classpath            prints the class path needed to get the"
   echo "                         Hadoop jar and the required libraries"
+  echo "  conftest             validate configuration XML files"
   echo "  credential           interact with credential providers"
   echo "  daemonlog            get/set the log level for each daemon"
   echo "  distch path:owner:group:permisson"
@@ -126,6 +127,9 @@ case ${COMMAND} in
   ;;
   classpath)
     hadoop_do_classpath_subcommand CLASS "$@"
+  ;;
+  conftest)
+    CLASS=org.apache.hadoop.util.ConfTest
   ;;
   credential)
     CLASS=org.apache.hadoop.security.alias.CredentialShell

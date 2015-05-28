@@ -48,6 +48,9 @@ Trunk (Unreleased)
     HADOOP-9642. Configuration to resolve environment variables via
     ${env.VARIABLE} references (Kengo Seki via aw)
 
+    HADOOP-7947. Validate XMLs if a relevant tool is available, when using
+    scripts (Kengo Seki via aw)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
