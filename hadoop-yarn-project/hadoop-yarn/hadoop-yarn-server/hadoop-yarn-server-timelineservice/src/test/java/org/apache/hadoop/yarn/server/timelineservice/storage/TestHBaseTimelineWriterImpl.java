@@ -121,12 +121,13 @@ public class TestHBaseTimelineWriterImpl {
     TimelineMetric m1 = new TimelineMetric();
     m1.setId("MAP_SLOT_MILLIS");
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
-    metricValues.put(1429741609000L, 100000000);
-    metricValues.put(1429742609000L, 200000000);
-    metricValues.put(1429743609000L, 300000000);
-    metricValues.put(1429744609000L, 400000000);
-    metricValues.put(1429745609000L, 50000000000L);
-    metricValues.put(1429746609000L, 60000000000L);
+    long ts = System.currentTimeMillis();
+    metricValues.put(ts - 120000, 100000000);
+    metricValues.put(ts - 100000, 200000000);
+    metricValues.put(ts - 80000, 300000000);
+    metricValues.put(ts - 60000, 400000000);
+    metricValues.put(ts - 40000, 50000000000L);
+    metricValues.put(ts - 20000, 60000000000L);
     m1.setType(Type.TIME_SERIES);
     m1.setValues(metricValues);
     metrics.add(m1);
@@ -216,7 +217,7 @@ public class TestHBaseTimelineWriterImpl {
   private void checkMetricsTimeseries(List<Cell> metricCells,
       TimelineMetric m1) throws IOException {
     Map<Long, Number> timeseries = m1.getValues();
-    assertEquals(metricCells.size(), timeseries.size());
+    assertEquals(timeseries.size(), metricCells.size());
     for (Cell c1 : metricCells) {
       assertTrue(timeseries.containsKey(c1.getTimestamp()));
       assertEquals(GenericObjectMapper.read(CellUtil.cloneValue(c1)),
