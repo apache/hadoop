@@ -44,6 +44,7 @@ function setup_defaults
   LOAD_SYSTEM_PLUGINS=true
 
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
+  FINDBUGS_WARNINGS_FAIL_PRECHECK=false
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
@@ -585,6 +586,7 @@ function hadoop_usage
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
+  echo "--findbugs-strict-precheck If there are Findbugs warnings during precheck, fail"
   echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
@@ -665,6 +667,9 @@ function parse_args
       ;;
       --findbugs-home=*)
         FINDBUGS_HOME=${i#*=}
+      ;;
+      --findbugs-strict-precheck)
+        FINDBUGS_WARNINGS_FAIL_PRECHECK=true
       ;;
       --git-cmd=*)
         GIT=${i#*=}
@@ -1058,6 +1063,12 @@ function precheck_without_patch
     fi
   else
     echo "Patch does not appear to need site tests."
+  fi
+
+  precheck_findbugs
+
+  if [[ $? != 0 ]] ; then
+    return 1
   fi
 
   add_jira_table 0 pre-patch "Pre-patch ${PATCH_BRANCH} compilation is healthy."
@@ -1838,40 +1849,84 @@ function check_mvn_install
   return ${retval}
 }
 
-## @description  Verify patch does not trigger any findbugs warnings
+## @description  are the needed bits for findbugs present?
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 findbugs will work for our use
+## @return       1 findbugs is missing some component
+function findbugs_is_installed
+{
+  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
+    printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
+    add_jira_table -1 findbugs "Findbugs is not installed."
+    return 1
+  fi
+  return 0
+}
+
+## @description  Run the maven findbugs plugin and record found issues in a bug database
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
 ## @return       0 on success
 ## @return       1 on failure
-function check_findbugs
+function findbugs_mvnrunner
 {
-  local findbugs_version
-  local modules=${CHANGED_MODULES}
-  local rc=0
+  local name=$1
+  local logfile=$2
+  local warnings_file=$3
+
+  echo_and_redirect "${logfile}" "${MVN}" clean test findbugs:findbugs -DskipTests \
+    "-D${PROJECT_NAME}PatchProcess" < /dev/null
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+  cp target/findbugsXml.xml "${warnings_file}.xml"
+
+  "${FINDBUGS_HOME}/bin/setBugDatabaseInfo" -name "${name}" \
+      "${warnings_file}.xml" "${warnings_file}.xml"
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${warnings_file}.xml" \
+      "${warnings_file}.html"
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  return 0
+}
+
+## @description  Track pre-existing findbugs warnings
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_findbugs
+{
+  local -r mypwd=$(pwd)
   local module_suffix
-  local findbugsWarnings=0
-  local relative_file
-  local newFindbugsWarnings
-  local findbugsWarnings
-  local line
-  local firstpart
-  local secondpart
-
-  big_console_header "Determining number of patched Findbugs warnings."
-
+  local modules=${CHANGED_MODULES}
+  local module
+  local findbugs_version
+  local rc=0
+  local module_findbugs_warnings
+  local findbugs_warnings=0
 
   verify_needed_test findbugs
+
   if [[ $? == 0 ]]; then
-    echo "Patch does not touch any java files. Skipping findbugs."
+    echo "Patch does not appear to need findbugs tests."
     return 0
   fi
 
-  start_clock
+  echo "findbugs baseline for ${mypwd}"
 
-  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
-    printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
-    add_jira_table -1 findbugs "Findbugs is not installed."
+  findbugs_is_installed
+  if [[ $? != 0 ]]; then
     return 1
   fi
 
@@ -1880,67 +1935,170 @@ function check_findbugs
     pushd "${module}" >/dev/null
     echo "  Running findbugs in ${module}"
     module_suffix=$(basename "${module}")
-    echo_and_redirect "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt" "${MVN}" clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess \
-      < /dev/null
+    findbugs_mvnrunner "${PATCH_BRANCH}" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}"
     (( rc = rc + $? ))
+
+    if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" ]]; then
+      #shellcheck disable=SC2016
+      module_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first \
+          "${PATCH_BRANCH}" \
+          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
+          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
+          | ${AWK} '{print $1}')
+      if [[ $? != 0 ]]; then
+        popd >/dev/null
+        return 1
+      fi
+
+      findbugs_warnings=$((findbugs_warnings+module_findbugs_warnings))
+
+      if [[ ${module_findbugs_warnings} -gt 0 ]] ; then
+        add_jira_footer "Pre-patch Findbugs warnings" "@@BASE@@/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.html"
+      fi
+    fi
+    popd >/dev/null
+  done
+
+  #shellcheck disable=SC2016
+  findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt")
+
+  if [[ ${rc} -ne 0 ]]; then
+    echo "Pre-patch ${PATCH_BRANCH} findbugs is broken?"
+    add_jira_table -1 pre-patch "Findbugs (version ${findbugs_version}) appears to be broken on ${PATCH_BRANCH}."
+    return 1
+  fi
+
+  if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" && \
+        ${findbugs_warnings} -gt 0 ]] ; then
+    echo "Pre-patch ${PATCH_BRANCH} findbugs has ${findbugs_warnings} warnings."
+    add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} has ${findbugs_warnings} extant Findbugs (version ${findbugs_version}) warnings."
+    return 1
+  fi
+
+  return 0
+}
+
+## @description  Verify patch does not trigger any findbugs warnings
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function check_findbugs
+{
+  local rc=0
+  local module
+  local modules=${CHANGED_MODULES}
+  local module_suffix
+  local combined_xml
+  local newBugs
+  local new_findbugs_warnings
+  local new_findbugs_fixed_warnings
+  local findbugs_warnings=0
+  local findbugs_fixed_warnings=0
+  local line
+  local firstpart
+  local secondpart
+  local findbugs_version
+
+  verify_needed_test findbugs
+
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
+
+  big_console_header "Determining number of patched Findbugs warnings."
+
+  start_clock
+
+  findbugs_is_installed
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  for module in ${modules}
+  do
+    pushd "${module}" >/dev/null
+    echo "  Running findbugs in ${module}"
+    module_suffix=$(basename "${module}")
+
+    findbugs_mvnrunner patch \
+        "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt" \
+        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}"
+
+    if [[ $? != 0 ]] ; then
+      ((rc = rc +1))
+      echo "Post-patch findbugs compilation is broken."
+      add_jira_table -1 findbugs "Post-patch findbugs ${module} compilation is broken."
+      continue
+    fi
+
+    combined_xml="$PATCH_DIR/combinedFindbugsWarnings${module_suffix}.xml"
+    newBugs="${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}"
+    "${FINDBUGS_HOME}/bin/computeBugHistory" -useAnalysisTimes -withMessages \
+        -output "${combined_xml}" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.xml" \
+        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    #shellcheck disable=SC2016
+    new_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first patch \
+        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+    #shellcheck disable=SC2016
+    new_findbugs_fixed_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -fixed patch \
+        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    echo "Found ${new_findbugs_warnings} new Findbugs warnings and ${new_findbugs_fixed_warnings} newly fixed warnings."
+    findbugs_warnings=$((findbugs_warnings+new_findbugs_warnings))
+    findbugs_fixed_warnings=$((findbugs_fixed_warnings+new_findbugs_fixed_warnings))
+
+    "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${newBugs}.xml" \
+        "${newBugs}.html"
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    if [[ ${new_findbugs_warnings} -gt 0 ]] ; then
+      populate_test_table FindBugs "module:${module_suffix}"
+      while read line; do
+        firstpart=$(echo "${line}" | cut -f2 -d:)
+        secondpart=$(echo "${line}" | cut -f9- -d' ')
+        add_jira_test_table "" "${firstpart}:${secondpart}"
+      done < <("${FINDBUGS_HOME}/bin/convertXmlToText" "${newBugs}.xml")
+
+      add_jira_footer "Findbugs warnings" "@@BASE@@/newPatchFindbugsWarnings${module_suffix}.html"
+    fi
+
     popd >/dev/null
   done
 
   #shellcheck disable=SC2016
   findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt")
 
-  if [[ ${rc} -ne 0 ]]; then
-    add_jira_table -1 findbugs "The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
+  if [[ ${findbugs_warnings} -gt 0 ]] ; then
+    add_jira_table -1 findbugs "The patch appears to introduce ${findbugs_warnings} new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
 
-  while read file
-  do
-    relative_file=${file#${BASEDIR}/} # strip leading ${BASEDIR} prefix
-    if [[ ${relative_file} != "target/findbugsXml.xml" ]]; then
-      module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
-      module_suffix=$(basename "${module_suffix}")
-    fi
-
-    cp "${file}" "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
-
-    "${FINDBUGS_HOME}/bin/setBugDatabaseInfo" -timestamp "01/01/2000" \
-      "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
-
-    #shellcheck disable=SC2016
-    newFindbugsWarnings=$("${FINDBUGS_HOME}/bin/filterBugs" \
-      -first "01/01/2000" "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml" \
-      | ${AWK} '{print $1}')
-
-    echo "Found $newFindbugsWarnings Findbugs warnings ($file)"
-
-    findbugsWarnings=$((findbugsWarnings+newFindbugsWarnings))
-
-    "${FINDBUGS_HOME}/bin/convertXmlToText" -html \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.html"
-
-    if [[ ${newFindbugsWarnings} -gt 0 ]] ; then
-      populate_test_table FindBugs "module:${module_suffix}"
-      while read line; do
-        firstpart=$(echo "${line}" | cut -f2 -d:)
-        secondpart=$(echo "${line}" | cut -f9- -d' ')
-        add_jira_test_table "" "${firstpart}:${secondpart}"
-      done < <("${FINDBUGS_HOME}/bin/convertXmlToText" \
-        "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml")
-
-      add_jira_footer "Findbugs warnings" "@@BASE@@/newPatchFindbugsWarnings${module_suffix}.html"
-    fi
-  done < <(find "${BASEDIR}" -name findbugsXml.xml)
-
-  if [[ ${findbugsWarnings} -gt 0 ]] ; then
-    add_jira_table -1 findbugs "The patch appears to introduce ${findbugsWarnings} new Findbugs (version ${findbugs_version}) warnings."
-    return 1
+  if [[ ${findbugs_fixed_warnings} -gt 0 ]] ; then
+    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings, and fixes ${findbugs_fixed_warnings} pre-existing warnings."
+  else
+    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   fi
-
-  add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
