@@ -79,6 +79,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3726. Fix TestHBaseTimelineWriterImpl unit test failure by fixing its
     test data (Vrushali C via sjlee)
 
+    YARN-3721. build is broken on YARN-2928 branch due to possible dependency
+    cycle (Li Lu via sjlee)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
