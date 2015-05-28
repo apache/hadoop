@@ -461,25 +461,31 @@ function hadoop_connect_to_hosts
     if [[ -z "${SLAVE_NAMES}" ]]; then
       SLAVE_NAMES=$(sed 's/#.*$//;/^$/d' "${SLAVE_FILE}")
     fi
-
-    # quoting here gets tricky. it's easier to push it into a function
-    # so that we don't have to deal with it. However...
-    # xargs can't use a function so instead we'll export it out
-    # and force it into a subshell
-    # moral of the story: just use pdsh.
-    export -f hadoop_actual_ssh
-    export HADOOP_SSH_OPTS
-
-    # xargs is used with option -I to replace the placeholder in arguments
-    # list with each hostname read from stdin/pipe. But it consider one
-    # line as one argument while reading from stdin/pipe. So place each
-    # hostname in different lines while passing via pipe.
-    SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
-    echo "${SLAVE_NAMES}" | \
-    xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
-    -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
-    wait
+    hadoop_connect_to_hosts_without_pdsh "${params}"
   fi
+}
+
+## @description  Connect to ${SLAVE_NAMES} and execute command
+## @description  under the environment which does not support pdsh.
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+## @param        command
+## @param        [...]
+function hadoop_connect_to_hosts_without_pdsh
+{
+  # shellcheck disable=SC2124
+  local params="$@"
+  local slaves=(${SLAVE_NAMES})
+  for (( i = 0; i < ${#slaves[@]}; i++ ))
+  do
+    if (( i != 0 && i % HADOOP_SSH_PARALLEL == 0 )); then
+      wait
+    fi
+    # shellcheck disable=SC2086
+    hadoop_actual_ssh "${slaves[$i]}" ${params} &
+  done
+  wait
 }
 
 ## @description  Utility routine to handle --slaves mode

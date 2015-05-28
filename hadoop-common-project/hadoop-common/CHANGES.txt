@@ -466,6 +466,8 @@ Trunk (Unreleased)
     HADOOP-9891. CLIMiniCluster instructions fail with MiniYarnCluster
     ClassNotFoundException (Darrell Taylor via aw)
 
+    HADOOP-11406. xargs -P is not portable (Kengo Seki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
