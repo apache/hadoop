@@ -307,6 +307,15 @@ int main(int argc, char **argv) {
         }
 
         fileList = 0;
+        fileList = hdfsListDirectory(fs, newDirectory, &numEntries);
+        if (!(fileList == NULL && numEntries == 0 && !errno)) {
+            fprintf(stderr, "waah! hdfsListDirectory for empty %s - FAILED!\n", newDirectory);
+            totalResult++;
+        } else {
+            fprintf(stderr, "hdfsListDirectory for empty %s - SUCCESS!\n", newDirectory);
+        }
+
+        fileList = 0;
         if((fileList = hdfsListDirectory(fs, slashTmp, &numEntries)) != NULL) {
             for(i=0; i < numEntries; ++i) {
                 fprintf(stderr, "Name: %s, ", fileList[i].mName);

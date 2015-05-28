@@ -3257,6 +3257,7 @@ done:
         return NULL;
     }
     *numEntries = jPathListSize;
+    errno = 0;
     return pathList;
 }
 

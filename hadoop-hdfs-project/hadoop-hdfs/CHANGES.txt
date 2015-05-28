@@ -813,6 +813,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8431. hdfs crypto class not found in Windows.
     (Anu Engineer via cnauroth)
 
+    HDFS-8407. hdfsListDirectory must set errno to 0 on success (Masatake
+    Iwasaki via Colin P. McCabe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
