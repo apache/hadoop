@@ -489,13 +489,8 @@ public abstract class ContainerExecutor implements Configurable {
         Thread.sleep(delay);
         ContainerId containerId = container.getContainerId();
         String containerIdStr = ConverterUtils.toString(containerId);
-        if(null != containerIdStr && shouldDoSignal(containerIdStr, pid))
-        {
-        	containerExecutor.signalContainer(user, pid, signal);
-        }
-        else
-        {
-        	LOG.info("should not do kill, other process uses this pid");
+        if(null != containerIdStr && shouldDoSignal(containerIdStr, pid)){
+          containerExecutor.signalContainer(user, pid, signal);
         }
       } catch (InterruptedException e) {
         return;
@@ -508,32 +503,25 @@ public abstract class ContainerExecutor implements Configurable {
       }
     }
     
-    
+    /**
+     * to check if the process is the container process
+     * @param containerIdStr
+     * @param processId
+     * @return
+     */
     private boolean shouldDoSignal(String containerIdStr, String processId)
     {
-
-        try {
-
-	       LOG.debug("here will do ps for " + containerIdStr);
-
-	       String ret = Shell.execCommand("/bin/sh", "-c", "ps -ef | grep " + processId);
-
-	       LOG.debug(ret);
-
-	       boolean match = ret.contains(containerIdStr);
-
-	       LOG.debug("match " + match);
-
-	       return match;
-
-        } catch (IOException e) {
-
+      try {
+	    LOG.debug("here will do ps for " + containerIdStr);
+	    String ret = Shell.execCommand("/bin/sh", "-c", "ps -ef | grep " + processId);
+	    LOG.debug(ret);
+	    boolean match = ret.contains(containerIdStr);
+	    LOG.debug("match " + match);
+	    return match;
+      } catch (IOException e) {
 	    LOG.warn("not able to execute command /bin/sh -c 'ps'" );
-
-        }
-
-        return false;
-
+      }
+      return false;
     }
   }
 }
