@@ -765,6 +765,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12004. test-patch breaks with reexec in certain situations (Sean
     Busbey via aw)
 
+    HADOOP-12035. shellcheck plugin displays a wrong version potentially
+    (Kengo Seki via aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
