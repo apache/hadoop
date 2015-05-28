@@ -33,6 +33,8 @@ function setup_defaults
   else
     MVN=${MAVEN_HOME}/bin/mvn
   fi
+  # This parameter needs to be kept as an array
+  MAVEN_ARGS=()
 
   PROJECT_NAME=hadoop
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
@@ -756,6 +758,11 @@ function parse_args
     esac
   done
 
+  # if we requested offline, pass that to mvn
+  if [[ ${OFFLINE} == "true" ]] ; then
+    MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
+  fi
+
   # we need absolute dir for ${BASEDIR}
   cd "${CWD}"
   BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
@@ -1027,7 +1034,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "Compiling ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" "${MVN}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch
     if [[ $? != 0 ]] ; then
       echo "${PATCH_BRANCH} compilation is broken?"
       add_jira_table -1 pre-patch "${PATCH_BRANCH} compilation may be broken."
@@ -1041,7 +1048,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "Javadoc'ing ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" "${MVN}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
     if [[ $? != 0 ]] ; then
       echo "Pre-patch ${PATCH_BRANCH} javadoc compilation is broken?"
       add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} JavaDoc compilation may be broken."
@@ -1055,7 +1062,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "site creation for ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}SiteWarnings.txt" "${MVN}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}SiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
     if [[ $? != 0 ]] ; then
       echo "Pre-patch ${PATCH_BRANCH} site compilation is broken?"
       add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} site compilation may be broken."
@@ -1633,12 +1640,12 @@ function check_javadoc
   start_clock
 
   if [[ -d hadoop-project ]]; then
-    (cd hadoop-project; "${MVN}" install > /dev/null 2>&1)
+    (cd hadoop-project; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
   fi
   if [[ -d hadoop-common-project/hadoop-annotations ]]; then
-    (cd hadoop-common-project/hadoop-annotations; "${MVN}" install > /dev/null 2>&1)
+    (cd hadoop-common-project/hadoop-annotations; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
   fi
-  echo_and_redirect "${PATCH_DIR}/patchJavadocWarnings.txt"  "${MVN}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchJavadocWarnings.txt"  "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
   count_javadoc_warns "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt"
   numBranchJavadocWarnings=$?
   count_javadoc_warns "${PATCH_DIR}/patchJavadocWarnings.txt"
@@ -1688,7 +1695,7 @@ function check_site
   start_clock
 
   echo "site creation for ${mypwd}"
-  echo_and_redirect "${PATCH_DIR}/patchSiteWarnings.txt" "${MVN}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchSiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
     echo "Site compilation is broken"
     add_jira_table -1 site "Site compilation is broken."
@@ -1734,7 +1741,7 @@ function check_javac
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchJavacWarnings.txt" "${MVN}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess ${NATIVE_PROFILE} -Ptest-patch
+  echo_and_redirect "${PATCH_DIR}/patchJavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess ${NATIVE_PROFILE} -Ptest-patch
   if [[ $? != 0 ]] ; then
     add_jira_table -1 javac "The patch appears to cause the build to fail."
     return 2
@@ -1784,7 +1791,7 @@ function check_apachelicense
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchReleaseAuditOutput.txt" "${MVN}" apache-rat:check -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchReleaseAuditOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" apache-rat:check -D${PROJECT_NAME}PatchProcess
   #shellcheck disable=SC2038
   find "${BASEDIR}" -name rat.txt | xargs cat > "${PATCH_DIR}/patchReleaseAuditWarnings.txt"
 
@@ -1839,7 +1846,7 @@ function check_mvn_install
   big_console_header "Installing all of the jars"
 
   start_clock
-  echo_and_redirect "${PATCH_DIR}/jarinstall.txt" "${MVN}" install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/jarinstall.txt" "${MVN}" "${MAVEN_ARGS[@]}" install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
   retval=$?
   if [[ ${retval} != 0 ]]; then
     add_jira_table -1 install "The patch causes mvn install to fail."
@@ -1877,7 +1884,7 @@ function findbugs_mvnrunner
   local logfile=$2
   local warnings_file=$3
 
-  echo_and_redirect "${logfile}" "${MVN}" clean test findbugs:findbugs -DskipTests \
+  echo_and_redirect "${logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean test findbugs:findbugs -DskipTests \
     "-D${PROJECT_NAME}PatchProcess" < /dev/null
   if [[ $? != 0 ]]; then
     return 1
@@ -2120,7 +2127,7 @@ function check_mvn_eclipse
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchEclipseOutput.txt" "${MVN}" eclipse:eclipse -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchEclipseOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" eclipse:eclipse -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
     add_jira_table -1 eclipse:eclipse "The patch failed to build with eclipse:eclipse."
     return 1
@@ -2211,7 +2218,7 @@ function check_unittests
     ordered_modules="${ordered_modules} ${hdfs_modules}"
     if [[ ${building_common} -eq 0 ]]; then
       echo "  Building hadoop-common with -Pnative in order to provide libhadoop.so to the hadoop-hdfs unit tests."
-      echo_and_redirect "${PATCH_DIR}/testrun_native.txt" "${MVN}" compile ${NATIVE_PROFILE} "-D${PROJECT_NAME}PatchProcess"
+      echo_and_redirect "${PATCH_DIR}/testrun_native.txt" "${MVN}" "${MAVEN_ARGS[@]}" compile ${NATIVE_PROFILE} "-D${PROJECT_NAME}PatchProcess"
       if [[ $? != 0 ]]; then
         add_jira_table -1 "native" "Failed to build the native portion " \
           "of hadoop-common prior to running the unit tests in ${ordered_modules}"
@@ -2231,7 +2238,7 @@ function check_unittests
 
     test_logfile=${PATCH_DIR}/testrun_${module_suffix}.txt
     echo "  Running tests in ${module_suffix}"
-    echo_and_redirect "${test_logfile}" "${MVN}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${test_logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} -D${PROJECT_NAME}PatchProcess
     test_build_result=$?
 
     add_jira_footer "${module_suffix} test log" "@@BASE@@/testrun_${module_suffix}.txt"

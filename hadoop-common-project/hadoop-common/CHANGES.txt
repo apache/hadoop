@@ -788,6 +788,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8429. Avoid stuck threads if there is an error in DomainSocketWatcher
     that stops the thread.  (zhouyingchao via cmccabe)
 
+    HADOOP-11930. test-patch in offline mode should tell maven to be in
+    offline mode (Sean Busbey via aw)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
