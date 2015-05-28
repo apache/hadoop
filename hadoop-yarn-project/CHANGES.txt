@@ -461,6 +461,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3632. Ordering policy should be allowed to reorder an application when
     demand changes. (Craig Welch via jianhe)
 
+    YARN-3716. Node-label-expression should be included by 
+    ResourceRequestPBImpl.toString. (Xianyin Xin via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
