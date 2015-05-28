@@ -277,6 +277,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3700. Made generic history service load a number of latest applications
     according to the parameter or the configuration. (Xuan Gong via zjshen)
 
+    YARN-3722. Merge multiple TestWebAppUtils into o.a.h.yarn.webapp.util.TestWebAppUtils.
+    (Masatake Iwasaki via devaraj)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
