@@ -477,6 +477,9 @@ Trunk (Unreleased)
     HADOOP-11983. HADOOP_USER_CLASSPATH_FIRST works the opposite of what it is
     supposed to do (Sangjin Lee via aw)
 
+    HADOOP-12022. fix site -Pdocs -Pdist in hadoop-project-dist; cleanout
+    remaining forrest bits (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
