@@ -810,6 +810,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8268. Port conflict log for data node server is not sufficient
     (Mohammad Shahid Khan via vinayakumarb)
 
+    HDFS-8431. hdfs crypto class not found in Windows.
+    (Anu Engineer via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
