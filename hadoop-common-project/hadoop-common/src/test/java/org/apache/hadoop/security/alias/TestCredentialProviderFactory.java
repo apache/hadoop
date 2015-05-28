@@ -207,7 +207,29 @@ public class TestCredentialProviderFactory {
     checkPermissionRetention(conf, ourUrl, path);
   }
 
-  public void checkPermissionRetention(Configuration conf, String ourUrl, 
+  @Test
+  public void testLocalJksProvider() throws Exception {
+    Configuration conf = new Configuration();
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final String ourUrl =
+        LocalJavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
+
+    File file = new File(tmpDir, "test.jks");
+    file.delete();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+    checkSpecificProvider(conf, ourUrl);
+    Path path = ProviderUtils.unnestUri(new URI(ourUrl));
+    FileSystem fs = path.getFileSystem(conf);
+    FileStatus s = fs.getFileStatus(path);
+    assertTrue("Unexpected permissions: " + s.getPermission().toString(), s.getPermission().toString().equals("rwx------"));
+    assertTrue(file + " should exist", file.isFile());
+
+    // check permission retention after explicit change
+    fs.setPermission(path, new FsPermission("777"));
+    checkPermissionRetention(conf, ourUrl, path);
+  }
+
+  public void checkPermissionRetention(Configuration conf, String ourUrl,
       Path path) throws Exception {
     CredentialProvider provider = CredentialProviderFactory.getProviders(conf).get(0);
     // let's add a new credential and flush and check that permissions are still set to 777
@@ -233,3 +255,4 @@ public class TestCredentialProviderFactory {
     		"keystore.", s.getPermission().toString().equals("rwxrwxrwx"));
   }
 }
+
