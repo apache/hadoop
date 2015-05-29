@@ -797,6 +797,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11959. WASB should configure client side socket timeout in storage
     client blob request options. (Ivan Mitic via cnauroth)
 
+    HADOOP-12042. Users may see TrashPolicy if hdfs dfs -rm is run
+    (Andreina J via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
