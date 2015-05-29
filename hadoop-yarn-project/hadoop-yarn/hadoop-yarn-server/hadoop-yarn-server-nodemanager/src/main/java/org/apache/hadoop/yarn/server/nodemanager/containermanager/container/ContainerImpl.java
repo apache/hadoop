@@ -1105,13 +1105,6 @@ public class ContainerImpl implements Container {
       ContainerDiagnosticsUpdateEvent updateEvent =
           (ContainerDiagnosticsUpdateEvent) event;
       container.addDiagnostics(updateEvent.getDiagnosticsUpdate(), "\n");
-      try {
-        container.stateStore.storeContainerDiagnostics(container.containerId,
-            container.diagnostics);
-      } catch (IOException e) {
-        LOG.warn("Unable to update state store diagnostics for "
-            + container.containerId, e);
-      }
     }
   }
 
