@@ -105,6 +105,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <maven-checkstyle-plugin.version>2.15</maven-checkstyle-plugin.version>
     <checkstyle.version>6.6</checkstyle.version>
+
+    <shell-executable>bash</shell-executable>
   </properties>
 
   <modules>

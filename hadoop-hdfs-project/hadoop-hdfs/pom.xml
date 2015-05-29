@@ -674,7 +674,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <phase>test-compile</phase>
                 <configuration>
                   <target>
-                    <exec executable="sh">
+                    <exec executable="${shell-executable}">
                       <arg value="-c"/>
                       <arg value="for i in {1..${testsThreadCount}}; do mkdir -p ${test.build.data}/$i; mkdir -p ${hadoop.tmp.dir}/$i; done"/>
                     </exec>

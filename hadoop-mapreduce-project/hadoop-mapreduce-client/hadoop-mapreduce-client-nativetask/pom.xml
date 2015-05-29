@@ -197,7 +197,7 @@
                 <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/test">
+                    <exec executable="${shell-executable}" failonerror="true" dir="${project.build.directory}/native/test">
                       <arg value="-c"/>
                       <arg value="[ x$SKIPTESTS = xtrue ] || sh test.sh"/>
                       <env key="SKIPTESTS" value="${skipTests}"/>

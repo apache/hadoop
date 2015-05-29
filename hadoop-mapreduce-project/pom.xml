@@ -170,7 +170,7 @@
                   cd "${project.build.directory}"
                   tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                 </echo>
-                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                   <arg line="./dist-maketar.sh"/>
                 </exec>
               </target>
@@ -254,7 +254,7 @@
                         cp -R $${LIB_DIR}/lib* $${TARGET_DIR}
                       fi
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-copynativelibs.sh"/>
                     </exec>
                   </target>

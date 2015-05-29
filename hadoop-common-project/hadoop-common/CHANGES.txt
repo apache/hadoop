@@ -643,6 +643,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11242. Record the time of calling in tracing span of
     IPC server. (Masatake Iwasaki via aajisaka)
 
+    HADOOP-11885. hadoop-dist dist-layout-stitching.sh does not work with dash.
+    (wang)
+
   BUG FIXES
 
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
