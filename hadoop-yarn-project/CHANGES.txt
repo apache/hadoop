@@ -280,6 +280,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3722. Merge multiple TestWebAppUtils into o.a.h.yarn.webapp.util.TestWebAppUtils.
     (Masatake Iwasaki via devaraj)
 
+    YARN-3713. Remove duplicate function call storeContainerDiagnostics in
+    ContainerDiagnosticsUpdateTransition (zxu via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
