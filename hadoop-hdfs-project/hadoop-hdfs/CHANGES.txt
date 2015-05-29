@@ -53,6 +53,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8431. hdfs crypto class not found in Windows.
     (Anu Engineer via cnauroth)
 
+    HDFS-7609. Avoid retry cache collision when Standby NameNode loading edits.
+    (Ming Ma via jing9)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
