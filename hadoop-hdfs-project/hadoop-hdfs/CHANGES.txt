@@ -819,6 +819,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8407. hdfsListDirectory must set errno to 0 on success (Masatake
     Iwasaki via Colin P. McCabe)
 
+    HDFS-7401. Add block info to DFSInputStream' WARN message when it adds
+    node to deadNodes (Arshad Mohammad via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
