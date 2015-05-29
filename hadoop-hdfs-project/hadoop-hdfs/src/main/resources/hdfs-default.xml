@@ -602,7 +602,21 @@
 <property>
   <name>dfs.namenode.handler.count</name>
   <value>10</value>
-  <description>The number of server threads for the namenode.</description>
+  <description>The number of Namenode RPC server threads that listen to
+  requests from clients.
+  If dfs.namenode.servicerpc-address is not configured then
+  Namenode RPC server threads listen to requests from all nodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.service.handler.count</name>
+  <value>10</value>
+  <description>The number of Namenode RPC server threads that listen to
+  requests from DataNodes and from all other non-client nodes.
+  dfs.namenode.service.handler.count will be valid only if
+  dfs.namenode.servicerpc-address is configured.
+  </description>
 </property>
 
 <property>
