@@ -822,6 +822,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7401. Add block info to DFSInputStream' WARN message when it adds
     node to deadNodes (Arshad Mohammad via vinayakumarb)
 
+    HDFS-7609. Avoid retry cache collision when Standby NameNode loading edits.
+    (Ming Ma via jing9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
