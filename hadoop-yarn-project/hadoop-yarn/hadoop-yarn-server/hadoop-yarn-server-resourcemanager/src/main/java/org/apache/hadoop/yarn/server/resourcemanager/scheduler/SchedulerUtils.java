@@ -212,28 +212,46 @@ public class SchedulerUtils {
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
-      boolean isRecovery, RMContext rmContext)
+      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
       throws InvalidResourceRequestException {
 
-    QueueInfo queueInfo = null;
-    try {
-      queueInfo = scheduler.getQueueInfo(queueName, false, false);
-    } catch (IOException e) {
-      // it is possible queue cannot get when queue mapping is set, just ignore
-      // the queueInfo here, and move forward
+    if (queueInfo == null) {
+      try {
+        queueInfo = scheduler.getQueueInfo(queueName, false, false);
+      } catch (IOException e) {
+        // it is possible queue cannot get when queue mapping is set, just ignore
+        // the queueInfo here, and move forward
+      }
     }
     SchedulerUtils.normalizeNodeLabelExpressionInRequest(resReq, queueInfo);
     if (!isRecovery) {
       validateResourceRequest(resReq, maximumResource, queueInfo, rmContext);
     }
   }
+  
+  public static void normalizeAndValidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      boolean isRecovery, RMContext rmContext)
+      throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        isRecovery, rmContext, null);
+  }
 
+  public static void normalizeAndvalidateRequest(ResourceRequest resReq,
+      Resource maximumResource, String queueName, YarnScheduler scheduler,
+      RMContext rmContext, QueueInfo queueInfo)
+      throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
+        false, rmContext, queueInfo);
+  }
+
+  
   public static void normalizeAndvalidateRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler,
       RMContext rmContext)
       throws InvalidResourceRequestException {
     normalizeAndValidateRequest(resReq, maximumResource, queueName, scheduler,
-        false, rmContext);
+        false, rmContext, null);
   }
 
   /**
