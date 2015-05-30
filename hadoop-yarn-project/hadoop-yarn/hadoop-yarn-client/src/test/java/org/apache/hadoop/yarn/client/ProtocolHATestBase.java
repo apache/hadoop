@@ -647,7 +647,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
               "fakeQueue", "fakeApplicationName", "localhost", 0, null,
               YarnApplicationState.FINISHED, "fake an application report", "",
               1000l, 1200l, FinalApplicationStatus.FAILED, null, "", 50f,
-              "fakeApplicationType", null);
+              "fakeApplicationType", null, null);
       return report;
     }
 
