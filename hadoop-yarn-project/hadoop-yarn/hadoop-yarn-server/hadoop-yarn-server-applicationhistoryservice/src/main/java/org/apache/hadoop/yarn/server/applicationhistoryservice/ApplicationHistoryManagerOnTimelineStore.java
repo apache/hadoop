@@ -94,8 +94,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     serverHttpAddress = WebAppUtils.getHttpSchemePrefix(conf) +
         WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
     maxLoadedApplications =
-        conf.getLong(YarnConfiguration.APPLICATION_HISTORY_PREFIX_MAX_APPS,
-          YarnConfiguration.DEFAULT_APPLICATION_HISTORY_PREFIX_MAX_APPS);
+        conf.getLong(YarnConfiguration.APPLICATION_HISTORY_MAX_APPS,
+          YarnConfiguration.DEFAULT_APPLICATION_HISTORY_MAX_APPS);
     super.serviceInit(conf);
   }
 

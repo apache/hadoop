@@ -1386,9 +1386,9 @@ public class YarnConfiguration extends Configuration {
    * REST API or application history protocol and shown in timeline
    * server web ui.
    */
-  public static final String APPLICATION_HISTORY_PREFIX_MAX_APPS =
+  public static final String APPLICATION_HISTORY_MAX_APPS =
       APPLICATION_HISTORY_PREFIX + "max-applications";
-  public static final long DEFAULT_APPLICATION_HISTORY_PREFIX_MAX_APPS = 10000;
+  public static final long DEFAULT_APPLICATION_HISTORY_MAX_APPS = 10000;
 
   /** Timeline service store class */
   public static final String TIMELINE_SERVICE_STORE =
