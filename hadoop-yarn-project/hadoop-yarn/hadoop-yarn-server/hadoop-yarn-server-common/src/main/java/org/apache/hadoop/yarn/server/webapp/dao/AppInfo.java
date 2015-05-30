@@ -58,6 +58,8 @@ public class AppInfo {
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
+  private int allocatedCpuVcores;
+  private int allocatedMemoryMB;
 
   public AppInfo() {
     // JAXB needs this
@@ -86,6 +88,10 @@ public class AppInfo {
     if (app.getApplicationResourceUsageReport() != null) {
       runningContainers =
           app.getApplicationResourceUsageReport().getNumUsedContainers();
+      allocatedCpuVcores = app.getApplicationResourceUsageReport()
+          .getUsedResources().getVirtualCores();
+      allocatedMemoryMB = app.getApplicationResourceUsageReport()
+          .getUsedResources().getMemory();
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
@@ -131,6 +137,14 @@ public class AppInfo {
 
   public int getRunningContainers() {
     return runningContainers;
+  }
+
+  public int getAllocatedCpuVcores() {
+    return allocatedCpuVcores;
+  }
+
+  public int getAllocatedMemoryMB() {
+    return allocatedMemoryMB;
   }
 
   public float getProgress() {
