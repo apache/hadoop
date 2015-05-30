@@ -1899,4 +1899,12 @@ for ldap providers in the same way as above does.
     <value>Client</value>
   </property>
 
+  <property>
+    <description>
+      Enable hdfs shell commands to display warnings if (fs.defaultFS) property
+      is not set.
+    </description>
+    <name>hadoop.shell.missing.defaultFs.warning</name>
+    <value>false</value>
+  </property>
 </configuration>

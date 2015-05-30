@@ -626,6 +626,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11894. Bump the version of Apache HTrace to 3.2.0-incubating
     (Masatake Iwasaki via Colin P. McCabe)
 
+    HADOOP-12043. Display warning if defaultFs is not set when running fs
+    commands. (Lei Xu via wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
