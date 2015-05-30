@@ -470,6 +470,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3716. Node-label-expression should be included by 
     ResourceRequestPBImpl.toString. (Xianyin Xin via wangda)
 
+    YARN-3740. Fixed the typo in the configuration name:
+    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -108,7 +108,7 @@ public class TestApplicationHistoryClientService {
     // Create a historyManager, and set the max_apps can be loaded
     // as 1.
     Configuration conf = new YarnConfiguration();
-    conf.setLong(YarnConfiguration.APPLICATION_HISTORY_PREFIX_MAX_APPS, 1);
+    conf.setLong(YarnConfiguration.APPLICATION_HISTORY_MAX_APPS, 1);
     ApplicationHistoryManagerOnTimelineStore historyManager2 =
         new ApplicationHistoryManagerOnTimelineStore(dataManager,
           new ApplicationACLsManager(conf));
