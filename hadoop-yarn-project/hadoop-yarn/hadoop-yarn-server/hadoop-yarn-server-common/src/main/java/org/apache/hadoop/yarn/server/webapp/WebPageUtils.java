@@ -52,9 +52,9 @@ public class WebPageUtils {
       .append(", 'mRender': renderHadoopDate }")
       .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
     if (isFairSchedulerPage) {
-      sb.append("[11]");
+      sb.append("[13]");
     } else if (isResourceManager) {
-      sb.append("[10]");
+      sb.append("[12]");
     } else {
       sb.append("[9]");
     }
