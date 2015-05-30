@@ -496,6 +496,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3723. Need to clearly document primaryFilter and otherInfo value type.
     (Zhijie Shen via xgong)
 
+    YARN-1462. Made RM write application tags to timeline server and exposed them
+    to users via generic history web UI and REST API. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

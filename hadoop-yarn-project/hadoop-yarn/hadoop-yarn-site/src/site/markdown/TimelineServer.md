@@ -1125,7 +1125,27 @@ Response Body:
           "submittedTime":1430424769395,
           "startedTime":1430424769395,
           "finishedTime":1430424776594,
-          "elapsedTime":7199
+          "elapsedTime":7199},
+          {
+          "appId":"application_1430424020775_0001",
+          "currentAppAttemptId":"appattempt_1430424020775_0001_000001",
+          "user":"zshen",
+          "name":"QuasiMonteCarlo",
+          "queue":"default",
+          "type":"MAPREDUCE",
+          "host":"localhost",
+          "rpcPort":56264,
+          "appState":"FINISHED",
+          "progress":100.0,
+          "diagnosticsInfo":"",
+          "originalTrackingUrl":"http://d-69-91-129-173.dhcp4.washington.edu:19888/jobhistory/job/job_1430424020775_0001",
+          "trackingUrl":"http://d-69-91-129-173.dhcp4.washington.edu:8088/proxy/application_1430424020775_0001/",
+          "finalAppStatus":"SUCCEEDED",
+          "submittedTime":1430424053809,
+          "startedTime":1430424072153,
+          "finishedTime":1430424776594,
+          "elapsedTime":18344,
+          "applicationTags":"mrapplication,ta-example"
           }
       ]
     }
@@ -1227,6 +1247,7 @@ Response Body:
         <startedTime>1430424053809</startedTime>
         <finishedTime>1430424072153</finishedTime>
         <elapsedTime>18344</elapsedTime>
+        <applicationTags>mrapplication,ta-example</applicationTags>
       </app>
     </apps>
 
@@ -1275,7 +1296,8 @@ None
 | `allocatedVCores` | int | The sum of virtual cores allocated to the application's running containers |
 | `currentAppAttemptId` | string | The latest application attempt ID |
 | `host` | string | The host of the ApplicationMaster |
-| `rpcPort` | int | The RPC port of the ApplicationMaster; zero if no IPC service declared. |
+| `rpcPort` | int | The RPC port of the ApplicationMaster; zero if no IPC service declared |
+| `applicationTags` | string | The application tags. |
 
 ### Response Examples:
 
@@ -1311,7 +1333,8 @@ Response Body:
       "submittedTime": 1430424053809,
       "startedTime": 1430424053809,
       "finishedTime": 1430424072153,
-      "elapsedTime": 18344
+      "elapsedTime": 18344,
+      "applicationTags": mrapplication,tag-example
     }
 
 #### XML response
@@ -1349,6 +1372,7 @@ Response Body:
        <startedTime>1430424053809</startedTime>
        <finishedTime>1430424072153</finishedTime>
        <elapsedTime>18344</elapsedTime>
+       <applicationTags>mrapplication,ta-example</applicationTags>
      </app>
 
 ## <a name="REST_API_APPLICATION_ATTEMPT_LIST"></a>Application Attempt List

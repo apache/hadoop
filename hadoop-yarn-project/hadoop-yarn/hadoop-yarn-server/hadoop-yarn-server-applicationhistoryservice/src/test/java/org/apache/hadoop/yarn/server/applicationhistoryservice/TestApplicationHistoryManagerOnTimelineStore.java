@@ -22,7 +22,9 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -185,6 +187,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertEquals(Integer.MAX_VALUE + 3L
           + +app.getApplicationId().getId(), app.getFinishTime());
       Assert.assertTrue(Math.abs(app.getProgress() - 1.0F) < 0.0001);
+      Assert.assertEquals(2, app.getApplicationTags().size());
+      Assert.assertTrue(app.getApplicationTags().contains("Test_APP_TAGS_1"));
+      Assert.assertTrue(app.getApplicationTags().contains("Test_APP_TAGS_2"));
       // App 2 doesn't have the ACLs, such that the default ACLs " " will be used.
       // Nobody except admin and owner has access to the details of the app.
       if ((i ==  1 && callerUGI != null &&
@@ -471,6 +476,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO,
           "user2");
     }
+    Set<String> appTags = new HashSet<String>();
+    appTags.add("Test_APP_TAGS_1");
+    appTags.add("Test_APP_TAGS_2");
+    entityInfo.put(ApplicationMetricsConstants.APP_TAGS_INFO, appTags);
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
