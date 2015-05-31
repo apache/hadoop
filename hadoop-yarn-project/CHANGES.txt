@@ -609,6 +609,9 @@ Release 2.7.1 - UNRELEASED
     YARN-2900. Application (Attempt and Container) Not Found in AHS results
     in Internal Server Error (500). (Zhijie Shen and Mit Desai via xgong)
 
+    YARN-3725. App submission via REST API is broken in secure mode due to 
+    Timeline DT service address is empty. (Zhijie Shen via wangda)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
