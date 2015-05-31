@@ -41,6 +41,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
@@ -53,12 +56,13 @@ import org.junit.Test;
 public class TestApplicationHistoryClientService {
 
   private static ApplicationHistoryClientService clientService;
+  private final static int MAX_APPS = 2;
 
   @BeforeClass
   public static void setup() throws Exception {
     Configuration conf = new YarnConfiguration();
     TimelineStore store =
-        TestApplicationHistoryManagerOnTimelineStore.createStore(2);
+        TestApplicationHistoryManagerOnTimelineStore.createStore(MAX_APPS);
     TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
     TimelineDataManager dataManager =
         new TimelineDataManager(store, aclsManager);
@@ -69,6 +73,70 @@ public class TestApplicationHistoryClientService {
     historyManager.start();
     clientService = new ApplicationHistoryClientService(historyManager);
   }
+
+  @Test
+  public void testApplicationNotFound() throws IOException, YarnException {
+    ApplicationId appId = null;
+    appId = ApplicationId.newInstance(0, MAX_APPS + 1);
+    GetApplicationReportRequest request =
+        GetApplicationReportRequest.newInstance(appId);
+    try {
+      @SuppressWarnings("unused")
+      GetApplicationReportResponse response =
+          clientService.getApplicationReport(request);
+      Assert.fail("Exception should have been thrown before we reach here.");
+    } catch (ApplicationNotFoundException e) {
+      //This exception is expected.
+      Assert.assertTrue(e.getMessage().contains(
+          "doesn't exist in the timeline store"));
+    } catch (Exception e) {
+      Assert.fail("Undesired exception caught");
+    }
+  }
+
+  @Test
+  public void testApplicationAttemptNotFound() throws IOException, YarnException {
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, MAX_APPS + 1);
+    GetApplicationAttemptReportRequest request =
+        GetApplicationAttemptReportRequest.newInstance(appAttemptId);
+    try {
+      @SuppressWarnings("unused")
+      GetApplicationAttemptReportResponse response =
+          clientService.getApplicationAttemptReport(request);
+      Assert.fail("Exception should have been thrown before we reach here.");
+    } catch (ApplicationAttemptNotFoundException e) {
+      //This Exception is expected
+      System.out.println(e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(
+          "doesn't exist in the timeline store"));
+    } catch (Exception e) {
+      Assert.fail("Undesired exception caught");
+    }
+  }
+
+  @Test
+  public void testContainerNotFound() throws IOException, YarnException {
+   ApplicationId appId = ApplicationId.newInstance(0, 1);
+   ApplicationAttemptId appAttemptId =
+       ApplicationAttemptId.newInstance(appId, 1);
+   ContainerId containerId = ContainerId.newContainerId(appAttemptId,
+       MAX_APPS + 1);
+   GetContainerReportRequest request =
+       GetContainerReportRequest.newInstance(containerId);
+   try {
+   @SuppressWarnings("unused")
+   GetContainerReportResponse response =
+       clientService.getContainerReport(request);
+   } catch (ContainerNotFoundException e) {
+     //This exception is expected
+     Assert.assertTrue(e.getMessage().contains(
+         "doesn't exist in the timeline store"));
+   }  catch (Exception e) {
+      Assert.fail("Undesired exception caught");
+   }
+ }
 
   @Test
   public void testApplicationReport() throws IOException, YarnException {
