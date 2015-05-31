@@ -46,6 +46,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
@@ -475,17 +478,21 @@ public class WebServices {
 
   private static void rewrapAndThrowException(Exception e) {
     if (e instanceof UndeclaredThrowableException) {
-      if (e.getCause() instanceof AuthorizationException) {
-        throw new ForbiddenException(e.getCause());
-      } else {
-        throw new WebApplicationException(e.getCause());
-      }
+      rewrapAndThrowThrowable(e.getCause());
     } else {
-      if (e instanceof AuthorizationException) {
-        throw new ForbiddenException(e);
-      } else {
-        throw new WebApplicationException(e);
-      }
+      rewrapAndThrowThrowable(e);
+    }
+  }
+
+  private static void rewrapAndThrowThrowable(Throwable t) {
+    if (t instanceof AuthorizationException) {
+      throw new ForbiddenException(t);
+    } if (t instanceof ApplicationNotFoundException ||
+        t instanceof ApplicationAttemptNotFoundException ||
+        t instanceof ContainerNotFoundException) {
+      throw new NotFoundException(t);
+    } else {
+      throw new WebApplicationException(t);
     }
   }
 

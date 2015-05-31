@@ -147,6 +147,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3700. Made generic history service load a number of latest applications
     according to the parameter or the configuration. (Xuan Gong via zjshen)
 
+    YARN-2900. Application (Attempt and Container) Not Found in AHS results
+    in InternalServer Error (500). (Zhijie Shen and Mit Desai via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
