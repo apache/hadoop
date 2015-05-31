@@ -50,7 +50,7 @@ class ExceptionHandler {
     Exception e = cause instanceof Exception ? (Exception) cause : new Exception(cause);
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("GOT EXCEPITION", e);
+      LOG.trace("GOT EXCEPTION", e);
     }
 
     //Convert exception

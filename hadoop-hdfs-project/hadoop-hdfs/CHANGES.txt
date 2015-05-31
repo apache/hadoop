@@ -825,6 +825,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7609. Avoid retry cache collision when Standby NameNode loading edits.
     (Ming Ma via jing9)
 
+    HDFS-8490. Typo in trace enabled log in ExceptionHandler of WebHDFS.
+    (Archana T via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
