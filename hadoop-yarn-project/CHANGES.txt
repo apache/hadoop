@@ -606,6 +606,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3686. CapacityScheduler should trim default_node_label_expression. 
     (Sunil G via wangda)
 
+    YARN-2900. Application (Attempt and Container) Not Found in AHS results
+    in Internal Server Error (500). (Zhijie Shen and Mit Desai via xgong)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
