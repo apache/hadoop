@@ -480,6 +480,8 @@ Trunk (Unreleased)
     HADOOP-12022. fix site -Pdocs -Pdist in hadoop-project-dist; cleanout
     remaining forrest bits (aw)
 
+    HADOOP-9905. remove dependency of zookeeper for hadoop-client (vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
