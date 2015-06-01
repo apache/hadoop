@@ -31,6 +31,7 @@ import org.apache.hadoop.io.ByteBufferPool;
 
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.divideByteRangeIntoStripes;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.initDecodeInputs;
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.finalizeDecodeInputs;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.decodeAndFillBuffer;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getNextCompletedStripedRead;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getStartOffsetsForInternalBlocks;
@@ -41,6 +42,8 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResu
 
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
@@ -117,6 +120,8 @@ public class DFSStripedInputStream extends DFSInputStream {
   /** the buffer for a complete stripe */
   private ByteBuffer curStripeBuf;
   private final ECSchema schema;
+  private final RawErasureDecoder decoder;
+
   /**
    * indicate the start/end offset of the current buffered stripe in the
    * block group
@@ -139,6 +144,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     curStripeRange = new StripeRange(0, 0);
     readingService =
         new ExecutorCompletionService<>(dfsClient.getStripedReadsThreadPool());
+    decoder = new RSRawDecoder(dataBlkNum, parityBlkNum);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Creating an striped input stream for file " + src);
     }
@@ -591,8 +597,9 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
 
     if (alignedStripe.missingChunksNum > 0) {
-      decodeAndFillBuffer(decodeInputs, buf, alignedStripe,
-          dataBlkNum, parityBlkNum);
+      finalizeDecodeInputs(decodeInputs, alignedStripe);
+      decodeAndFillBuffer(decodeInputs, buf, alignedStripe, parityBlkNum,
+          decoder);
     }
   }
 

@@ -382,15 +382,9 @@ public class TestWriteReadStripedFile {
       Assert.assertEquals("The length of file should be the same to write size",
           length - startOffsetInFile, readLen);
 
-      RSRawDecoder rsRawDecoder = new RSRawDecoder(dataBlocks, parityBlocks);
       byte[] expected = new byte[readLen];
       for (int i = startOffsetInFile; i < length; i++) {
-        //TODO: workaround (filling fixed bytes), to remove after HADOOP-11938
-        if ((i / cellSize) % dataBlocks == failedDNIdx) {
-          expected[i - startOffsetInFile] = (byte)7;
-        } else {
-          expected[i - startOffsetInFile] = getByte(i);
-        }
+        expected[i - startOffsetInFile] = getByte(i);
       }
       for (int i = startOffsetInFile; i < length; i++) {
         Assert.assertEquals("Byte at " + i + " should be the same",
