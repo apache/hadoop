@@ -221,13 +221,13 @@ public class TestDFSStripedInputStream {
         decodeInputs[DATA_BLK_NUM][k] = SimulatedFSDataset.simulatedByte(
             new Block(bg.getBlock().getBlockId() + DATA_BLK_NUM), posInBlk);
       }
-//      RSRawDecoder rsRawDecoder = new RSRawDecoder();
-//      rsRawDecoder.initialize(DATA_BLK_NUM, PARITY_BLK_NUM, CELLSIZE);
-//      rsRawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
+      for (int m : missingBlkIdx) {
+        decodeInputs[m] = null;
+      }
+      RSRawDecoder rsRawDecoder = new RSRawDecoder(DATA_BLK_NUM, PARITY_BLK_NUM);
+      rsRawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
       int posInBuf = i * CELLSIZE * DATA_BLK_NUM + failedDNIdx * CELLSIZE;
-//      System.arraycopy(decodeOutputs[0], 0, expected, posInBuf, CELLSIZE);
-      //TODO: workaround (filling fixed bytes), to remove after HADOOP-11938
-      Arrays.fill(expected, posInBuf, posInBuf + CELLSIZE, (byte)7);
+      System.arraycopy(decodeOutputs[0], 0, expected, posInBuf, CELLSIZE);
     }
     int delta = 10;
     int done = 0;

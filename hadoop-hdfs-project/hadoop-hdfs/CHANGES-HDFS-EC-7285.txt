@@ -262,3 +262,6 @@
 
     HDFS-8479. Erasure coding: fix striping related logic in FSDirWriteFileOp to
     sync with HDFS-8421. (Zhe Zhang via jing9)
+
+    HDFS-8481. Erasure coding: remove workarounds in client side stripped blocks 
+    recovering. (zhz)

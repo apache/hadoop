@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 
 import java.util.*;
 import java.io.IOException;
@@ -246,19 +247,36 @@ public class StripedBlockUtil {
 
   /**
    * Initialize the decoding input buffers based on the chunk states in an
-   * AlignedStripe
+   * {@link AlignedStripe}. For each chunk that was not initially requested,
+   * schedule a new fetch request with the decoding input buffer as transfer
+   * destination.
    */
   public static byte[][] initDecodeInputs(AlignedStripe alignedStripe,
       int dataBlkNum, int parityBlkNum) {
     byte[][] decodeInputs =
         new byte[dataBlkNum + parityBlkNum][(int) alignedStripe.getSpanInBlock()];
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
-      StripingChunk chunk = alignedStripe.chunks[i];
-      if (chunk == null) {
+      if (alignedStripe.chunks[i] == null) {
         alignedStripe.chunks[i] = new StripingChunk(decodeInputs[i]);
         alignedStripe.chunks[i].offsetsInBuf.add(0);
         alignedStripe.chunks[i].lengthsInBuf.add((int) alignedStripe.getSpanInBlock());
-      } else if (chunk.state == StripingChunk.FETCHED) {
+      }
+    }
+    return decodeInputs;
+  }
+
+  /**
+   * Some fetched {@link StripingChunk} might be stored in original application
+   * buffer instead of prepared decode input buffers. Some others are beyond
+   * the range of the internal blocks and should correspond to all zero bytes.
+   * When all pending requests have returned, this method should be called to
+   * finalize decode input buffers.
+   */
+  public static void finalizeDecodeInputs(final byte[][] decodeInputs,
+      AlignedStripe alignedStripe) {
+    for (int i = 0; i < alignedStripe.chunks.length; i++) {
+      StripingChunk chunk = alignedStripe.chunks[i];
+      if (chunk.state == StripingChunk.FETCHED) {
         int posInBuf = 0;
         for (int j = 0; j < chunk.offsetsInBuf.size(); j++) {
           System.arraycopy(chunk.buf, chunk.offsetsInBuf.get(j),
@@ -267,39 +285,41 @@ public class StripedBlockUtil {
         }
       } else if (chunk.state == StripingChunk.ALLZERO) {
         Arrays.fill(decodeInputs[i], (byte)0);
+      } else {
+        decodeInputs[i] = null;
       }
     }
-    return decodeInputs;
   }
-
   /**
-   * Decode based on the given input buffers and schema
+   * Decode based on the given input buffers and schema.
    */
-  public static void decodeAndFillBuffer(final byte[][] decodeInputs, byte[] buf,
-      AlignedStripe alignedStripe, int dataBlkNum, int parityBlkNum) {
+  public static void decodeAndFillBuffer(final byte[][] decodeInputs,
+      byte[] buf, AlignedStripe alignedStripe, int parityBlkNum,
+      RawErasureDecoder decoder) {
+    // Step 1: prepare indices and output buffers for missing data units
     int[] decodeIndices = new int[parityBlkNum];
     int pos = 0;
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
-      if (alignedStripe.chunks[i].state != StripingChunk.FETCHED &&
-          alignedStripe.chunks[i].state != StripingChunk.ALLZERO) {
+      if (alignedStripe.chunks[i].state == StripingChunk.MISSING){
         decodeIndices[pos++] = i;
       }
     }
+    decodeIndices = Arrays.copyOf(decodeIndices, pos);
+    byte[][] decodeOutputs =
+        new byte[decodeIndices.length][(int) alignedStripe.getSpanInBlock()];
 
-    byte[][] outputs = new byte[parityBlkNum][(int) alignedStripe.getSpanInBlock()];
-    RSRawDecoder rsRawDecoder = new RSRawDecoder(dataBlkNum, parityBlkNum);
-    rsRawDecoder.decode(decodeInputs, decodeIndices, outputs);
+    // Step 2: decode into prepared output buffers
+    decoder.decode(decodeInputs, decodeIndices, decodeOutputs);
 
-    for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
-      StripingChunk chunk = alignedStripe.chunks[i];
+    // Step 3: fill original application buffer with decoded data
+    for (int i = 0; i < decodeIndices.length; i++) {
+      int missingBlkIdx = decodeIndices[i];
+      StripingChunk chunk = alignedStripe.chunks[missingBlkIdx];
       if (chunk.state == StripingChunk.MISSING) {
         int srcPos = 0;
         for (int j = 0; j < chunk.offsetsInBuf.size(); j++) {
-          //TODO: workaround (filling fixed bytes), to remove after HADOOP-11938
-//          System.arraycopy(outputs[i], srcPos, buf, chunk.offsetsInBuf.get(j),
-//              chunk.lengthsInBuf.get(j));
-          Arrays.fill(buf, chunk.offsetsInBuf.get(j),
-              chunk.offsetsInBuf.get(j) + chunk.lengthsInBuf.get(j), (byte)7);
+          System.arraycopy(decodeOutputs[i], srcPos, buf, chunk.offsetsInBuf.get(j),
+              chunk.lengthsInBuf.get(j));
           srcPos += chunk.lengthsInBuf.get(j);
         }
       }
