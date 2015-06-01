@@ -178,7 +178,7 @@ public class TestPendingReplication {
       //
 
       block = new Block(1, 1, 0);
-      blockInfo = new BlockInfo(block, (short) 3);
+      blockInfo = new BlockInfoContiguous(block, (short) 3);
 
       pendingReplications.increment(block,
           DatanodeStorageInfo.toDatanodeDescriptors(

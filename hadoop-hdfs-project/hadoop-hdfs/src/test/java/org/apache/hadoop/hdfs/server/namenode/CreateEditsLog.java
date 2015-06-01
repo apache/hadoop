@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
 
@@ -69,8 +70,8 @@ public class CreateEditsLog {
     BlockInfo[] blocks = new BlockInfo[blocksPerFile];
     for (int iB = 0; iB < blocksPerFile; ++iB) {
       blocks[iB] = 
-       new BlockInfo(new Block(0, blockSize, BLOCK_GENERATION_STAMP),
-                               replication);
+       new BlockInfoContiguous(new Block(0, blockSize, BLOCK_GENERATION_STAMP),
+           replication);
     }
     
     long currentBlockId = startingBlockId;

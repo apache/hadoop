@@ -30,7 +30,7 @@ import org.apache.hadoop.util.LightWeightGSet;
  * the block are stored.
  */
 @InterfaceAudience.Private
-public class BlockInfo extends Block
+public abstract class  BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
   public static final BlockInfo[] EMPTY_ARRAY = {};
 
@@ -51,7 +51,7 @@ public class BlockInfo extends Block
    * per replica is 42 bytes (LinkedList#Entry object per replica) versus 16
    * bytes using the triplets.
    */
-  private Object[] triplets;
+  protected Object[] triplets;
 
   /**
    * Construct an entry for blocksmap
@@ -102,7 +102,7 @@ public class BlockInfo extends Block
     return (DatanodeStorageInfo)triplets[index*3];
   }
 
-  private BlockInfo getPrevious(int index) {
+  BlockInfo getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+1];
@@ -122,7 +122,7 @@ public class BlockInfo extends Block
     return info;
   }
 
-  private void setStorageInfo(int index, DatanodeStorageInfo storage) {
+  void setStorageInfo(int index, DatanodeStorageInfo storage) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
     triplets[index*3] = storage;
@@ -136,7 +136,7 @@ public class BlockInfo extends Block
    * @param to - block to be set to previous on the list of blocks
    * @return current previous block on the list of blocks
    */
-  private BlockInfo setPrevious(int index, BlockInfo to) {
+  BlockInfo setPrevious(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+1];
@@ -152,7 +152,7 @@ public class BlockInfo extends Block
    * @param to - block to be set to next on the list of blocks
    *    * @return current next block on the list of blocks
    */
-  private BlockInfo setNext(int index, BlockInfo to) {
+  BlockInfo setNext(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+2];
@@ -167,68 +167,26 @@ public class BlockInfo extends Block
   }
 
   /**
-   * Ensure that there is enough  space to include num more triplets.
-   * @return first free triplet index.
-   */
-  private int ensureCapacity(int num) {
-    assert this.triplets != null : "BlockInfo is not initialized";
-    int last = numNodes();
-    if(triplets.length >= (last+num)*3)
-      return last;
-    /* Not enough space left. Create a new array. Should normally
-     * happen only when replication is manually increased by the user. */
-    Object[] old = triplets;
-    triplets = new Object[(last+num)*3];
-    System.arraycopy(old, 0, triplets, 0, last*3);
-    return last;
-  }
-
-  /**
    * Count the number of data-nodes the block belongs to.
    */
-  public int numNodes() {
-    assert this.triplets != null : "BlockInfo is not initialized";
-    assert triplets.length % 3 == 0 : "Malformed BlockInfo";
-    for(int idx = getCapacity()-1; idx >= 0; idx--) {
-      if(getDatanode(idx) != null)
-        return idx+1;
-    }
-    return 0;
-  }
+  public abstract int numNodes();
 
   /**
-   * Add a {@link DatanodeStorageInfo} location for a block
+   * Add a {@link DatanodeStorageInfo} location for a block.
    */
-  boolean addStorage(DatanodeStorageInfo storage) {
-    // find the last null node
-    int lastNode = ensureCapacity(1);
-    setStorageInfo(lastNode, storage);
-    setNext(lastNode, null);
-    setPrevious(lastNode, null);
-    return true;
-  }
+  abstract boolean addStorage(DatanodeStorageInfo storage);
 
   /**
    * Remove {@link DatanodeStorageInfo} location for a block
    */
-  boolean removeStorage(DatanodeStorageInfo storage) {
-    int dnIndex = findStorageInfo(storage);
-    if(dnIndex < 0) // the node is not found
-      return false;
-    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null :
-      "Block is still in the list and must be removed first.";
-    // find the last not null node
-    int lastNode = numNodes()-1;
-    // replace current node triplet by the lastNode one
-    setStorageInfo(dnIndex, getStorageInfo(lastNode));
-    setNext(dnIndex, getNext(lastNode));
-    setPrevious(dnIndex, getPrevious(lastNode));
-    // set the last triplet to null
-    setStorageInfo(lastNode, null);
-    setNext(lastNode, null);
-    setPrevious(lastNode, null);
-    return true;
-  }
+  abstract boolean removeStorage(DatanodeStorageInfo storage);
+
+
+  /**
+   * Replace the current BlockInfo with the new one in corresponding
+   * DatanodeStorageInfo's linked list
+   */
+  abstract void replaceBlock(BlockInfo newBlock);
 
   /**
    * Find specified DatanodeStorageInfo.

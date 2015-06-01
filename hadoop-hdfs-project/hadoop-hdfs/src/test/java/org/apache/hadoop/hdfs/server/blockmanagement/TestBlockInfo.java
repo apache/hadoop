@@ -49,7 +49,7 @@ public class TestBlockInfo {
 
   @Test
   public void testIsDeleted() {
-    BlockInfo blockInfo = new BlockInfo((short) 3);
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
     BlockCollection bc = Mockito.mock(BlockCollection.class);
     blockInfo.setBlockCollection(bc);
     Assert.assertFalse(blockInfo.isDeleted());
@@ -59,7 +59,7 @@ public class TestBlockInfo {
 
   @Test
   public void testAddStorage() throws Exception {
-    BlockInfo blockInfo = new BlockInfo((short) 3);
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
 
     final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo("storageID", "127.0.0.1");
 
@@ -71,9 +71,9 @@ public class TestBlockInfo {
 
   @Test
   public void testCopyConstructor() {
-    BlockInfo old = new BlockInfo((short) 3);
+    BlockInfo old = new BlockInfoContiguous((short) 3);
     try {
-      BlockInfo copy = new BlockInfo(old);
+      BlockInfo copy = new BlockInfoContiguous((BlockInfoContiguous)old);
       assertEquals(old.getBlockCollection(), copy.getBlockCollection());
       assertEquals(old.getCapacity(), copy.getCapacity());
     } catch (Exception e) {
@@ -92,7 +92,7 @@ public class TestBlockInfo {
 
     // Create a few dummy blocks and add them to the first storage.
     for (int i = 0; i < NUM_BLOCKS; ++i) {
-      blockInfos[i] = new BlockInfo((short) 3);
+      blockInfos[i] = new BlockInfoContiguous((short) 3);
       storage1.addBlock(blockInfos[i]);
     }
 
@@ -118,7 +118,7 @@ public class TestBlockInfo {
     LOG.info("Building block list...");
     for (int i = 0; i < MAX_BLOCKS; i++) {
       blockList.add(new Block(i, 0, GenerationStamp.LAST_RESERVED_STAMP));
-      blockInfoList.add(new BlockInfo(blockList.get(i), (short) 3));
+      blockInfoList.add(new BlockInfoContiguous(blockList.get(i), (short) 3));
       dd.addBlock(blockInfoList.get(i));
 
       // index of the datanode should be 0
