@@ -19,14 +19,11 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -246,7 +243,6 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     FinalApplicationStatus finalStatus = FinalApplicationStatus.UNDEFINED;
     YarnApplicationState state = null;
     ApplicationResourceUsageReport appResources = null;
-    Set<String> appTags = null;
     Map<ApplicationAccessType, String> appViewACLs =
         new HashMap<ApplicationAccessType, String>();
     Map<String, Object> entityInfo = entity.getOtherInfo();
@@ -268,7 +264,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             ConverterUtils.toApplicationId(entity.getEntityId()),
             latestApplicationAttemptId, user, queue, name, null, -1, null, state,
             diagnosticsInfo, null, createdTime, finishedTime, finalStatus, null,
-            null, 1.0F, type, null, appTags), appViewACLs);
+            null, 1.0F, type, null), appViewACLs);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)) {
         queue =
@@ -292,17 +288,6 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                 ApplicationMetricsConstants.APP_MEM_METRICS).toString());
         appResources=ApplicationResourceUsageReport
             .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds);
-      }
-      if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
-        appTags = new HashSet<String>();
-        Object obj = entityInfo.get(ApplicationMetricsConstants.APP_TAGS_INFO);
-        if (obj != null && obj instanceof Collection<?>) {
-          for(Object o : (Collection<?>)obj) {
-            if (o != null) {
-              appTags.add(o.toString());
-            }
-          }
-        }
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -355,7 +340,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         ConverterUtils.toApplicationId(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
         diagnosticsInfo, null, createdTime, finishedTime, finalStatus, appResources,
-        null, 1.0F, type, null, appTags), appViewACLs);
+        null, 1.0F, type, null), appViewACLs);
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(

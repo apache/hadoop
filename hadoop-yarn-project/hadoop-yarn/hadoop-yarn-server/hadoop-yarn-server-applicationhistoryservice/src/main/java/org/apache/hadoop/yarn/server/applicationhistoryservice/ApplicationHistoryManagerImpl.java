@@ -139,7 +139,7 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
       appHistory.getYarnApplicationState(), appHistory.getDiagnosticsInfo(),
       trackingUrl, appHistory.getStartTime(), appHistory.getFinishTime(),
       appHistory.getFinalApplicationStatus(), null, "", 100,
-      appHistory.getApplicationType(), null, null);
+      appHistory.getApplicationType(), null);
   }
 
   private ApplicationAttemptHistoryData getLastAttempt(ApplicationId appId)

@@ -253,7 +253,7 @@ public class TestRMWebApp {
               app.getStartTime(), app.getFinishTime(),
               app.getFinalApplicationStatus(),
               (ApplicationResourceUsageReport) null, app.getTrackingUrl(),
-              app.getProgress(), app.getApplicationType(), (Token) null, null);
+              app.getProgress(), app.getApplicationType(), (Token) null);
       appReports.add(appReport);
     }
     GetApplicationsResponse response = mock(GetApplicationsResponse.class);

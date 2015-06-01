@@ -59,8 +59,7 @@ public abstract class ApplicationReport {
       YarnApplicationState state, String diagnostics, String url,
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress, String applicationType, Token amRmToken,
-      Set<String> tags) {
+      float progress, String applicationType, Token amRmToken) {
     ApplicationReport report = Records.newRecord(ApplicationReport.class);
     report.setApplicationId(applicationId);
     report.setCurrentApplicationAttemptId(applicationAttemptId);
@@ -81,7 +80,6 @@ public abstract class ApplicationReport {
     report.setProgress(progress);
     report.setApplicationType(applicationType);
     report.setAMRMToken(amRmToken);
-    report.setApplicationTags(tags);
     return report;
   }
 
