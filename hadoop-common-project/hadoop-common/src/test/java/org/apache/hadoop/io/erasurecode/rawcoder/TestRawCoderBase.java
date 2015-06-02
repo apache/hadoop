@@ -126,11 +126,14 @@ public abstract class TestRawCoderBase extends TestCoderBase {
                                  boolean useBadInput, boolean useBadOutput) {
     setChunkSize(chunkSize);
 
+    dumpSetting();
+
     // Generate data and encode
     ECChunk[] dataChunks = prepareDataChunksForEncoding();
     if (useBadInput) {
       corruptSomeChunk(dataChunks);
     }
+    dumpChunks("Testing data chunks", dataChunks);
 
     ECChunk[] parityChunks = prepareParityChunksForEncoding();
 
@@ -139,6 +142,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     ECChunk[] clonedDataChunks = cloneChunksWithData(dataChunks);
 
     encoder.encode(dataChunks, parityChunks);
+    dumpChunks("Encoded parity chunks", parityChunks);
 
     // Backup and erase some chunks
     ECChunk[] backupChunks = backupAndEraseChunks(clonedDataChunks, parityChunks);
@@ -155,7 +159,9 @@ public abstract class TestRawCoderBase extends TestCoderBase {
       corruptSomeChunk(recoveredChunks);
     }
 
+    dumpChunks("Decoding input chunks", inputChunks);
     decoder.decode(inputChunks, getErasedIndexesForDecoding(), recoveredChunks);
+    dumpChunks("Decoded/recovered chunks", recoveredChunks);
 
     // Compare
     compareAndVerify(backupChunks, recoveredChunks);

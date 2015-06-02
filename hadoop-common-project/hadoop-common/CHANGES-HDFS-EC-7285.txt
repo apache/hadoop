@@ -62,3 +62,6 @@
 
     HADOOP-11847. Enhance raw coder allowing to read least required inputs in decoding.
     (Kai Zheng)
+
+    HADOOP-12011. Allow to dump verbose information to ease debugging in raw erasure coders
+    (Kai Zheng)
