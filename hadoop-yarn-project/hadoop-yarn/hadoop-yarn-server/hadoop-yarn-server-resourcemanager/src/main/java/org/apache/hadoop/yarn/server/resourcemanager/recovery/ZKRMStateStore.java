@@ -104,6 +104,8 @@ public class ZKRMStateStore extends RMStateStore {
 
   private String zkHostPort = null;
   private int zkSessionTimeout;
+  // wait time for zkClient to re-establish connection with zk-server.
+  private long zkResyncWaitTime;
 
   @VisibleForTesting
   long zkRetryInterval;
@@ -234,6 +236,7 @@ public class ZKRMStateStore extends RMStateStore {
           conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
               YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
     }
+    zkResyncWaitTime = zkRetryInterval * numRetries;
 
     zkAcl = RMZKUtils.getZKAcls(conf);
     zkAuths = RMZKUtils.getZKAuths(conf);
@@ -1081,11 +1084,11 @@ public class ZKRMStateStore extends RMStateStore {
       long startTime = System.currentTimeMillis();
       synchronized (ZKRMStateStore.this) {
         while (zkClient == null) {
-          ZKRMStateStore.this.wait(zkSessionTimeout);
+          ZKRMStateStore.this.wait(zkResyncWaitTime);
           if (zkClient != null) {
             break;
           }
-          if (System.currentTimeMillis() - startTime > zkSessionTimeout) {
+          if (System.currentTimeMillis() - startTime > zkResyncWaitTime) {
             throw new IOException("Wait for ZKClient creation timed out");
           }
         }
