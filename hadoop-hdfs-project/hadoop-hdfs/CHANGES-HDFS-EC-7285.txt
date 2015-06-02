@@ -265,3 +265,6 @@
 
     HDFS-8481. Erasure coding: remove workarounds in client side stripped blocks 
     recovering. (zhz)
+
+    HDFS-8336. Expose some administrative erasure coding operations to HdfsAdmin
+    (Uma Maheswara Rao G via vinayakumarb)

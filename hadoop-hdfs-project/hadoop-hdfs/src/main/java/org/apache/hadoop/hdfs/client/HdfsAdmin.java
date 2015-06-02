@@ -37,9 +37,11 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * The public API for performing administrative functions on HDFS. Those writing
@@ -362,5 +364,43 @@ public class HdfsAdmin {
   public void setStoragePolicy(final Path src, final String policyName)
       throws IOException {
     dfs.setStoragePolicy(src, policyName);
+  }
+
+  /**
+   * Create the ErasureCoding zone
+   *
+   * @param path
+   *          Directory to create the ErasureCoding zone
+   * @param schema
+   *          ECSchema for the zone. If not specified default will be used.
+   * @param cellSize
+   *          Cellsize for the striped ErasureCoding
+   * @throws IOException
+   */
+  public void createErasureCodingZone(final Path path, final ECSchema schema,
+      final int cellSize) throws IOException {
+    dfs.createErasureCodingZone(path, schema, cellSize);
+  }
+
+  /**
+   * Get the ErasureCoding zone information for the specified path
+   *
+   * @param path
+   * @return Returns the zone information if path is in EC zone, null otherwise
+   * @throws IOException
+   */
+  public ErasureCodingZone getErasureCodingZone(final Path path)
+      throws IOException {
+    return dfs.getErasureCodingZone(path);
+  }
+
+  /**
+   * Get the ErasureCoding schemas supported.
+   *
+   * @return ECSchemas
+   * @throws IOException
+   */
+  public ECSchema[] getECSchemas() throws IOException {
+    return dfs.getClient().getECSchemas();
   }
 }
