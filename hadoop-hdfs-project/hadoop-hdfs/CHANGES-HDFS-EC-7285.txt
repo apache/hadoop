@@ -271,3 +271,6 @@
 
     HDFS-8444. Erasure Coding: fix cannot rename a zone dir
     (Walter Su via vinayakumarb)
+
+    HDFS-8517. Fix a decoding issue in stripped block recovering in client side.
+    (Kai Zheng via jing9)

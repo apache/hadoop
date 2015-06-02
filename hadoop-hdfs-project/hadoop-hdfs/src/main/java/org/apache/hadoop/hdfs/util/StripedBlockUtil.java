@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 
 import java.util.*;
@@ -257,7 +256,8 @@ public class StripedBlockUtil {
         new byte[dataBlkNum + parityBlkNum][(int) alignedStripe.getSpanInBlock()];
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
       if (alignedStripe.chunks[i] == null) {
-        alignedStripe.chunks[i] = new StripingChunk(decodeInputs[i]);
+        final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
+        alignedStripe.chunks[i] = new StripingChunk(decodeInputs[decodeIndex]);
         alignedStripe.chunks[i].offsetsInBuf.add(0);
         alignedStripe.chunks[i].lengthsInBuf.add((int) alignedStripe.getSpanInBlock());
       }
@@ -273,35 +273,57 @@ public class StripedBlockUtil {
    * finalize decode input buffers.
    */
   public static void finalizeDecodeInputs(final byte[][] decodeInputs,
-      AlignedStripe alignedStripe) {
+      int dataBlkNum, int parityBlkNum, AlignedStripe alignedStripe) {
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
-      StripingChunk chunk = alignedStripe.chunks[i];
+      final StripingChunk chunk = alignedStripe.chunks[i];
+      final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
       if (chunk.state == StripingChunk.FETCHED) {
         int posInBuf = 0;
         for (int j = 0; j < chunk.offsetsInBuf.size(); j++) {
           System.arraycopy(chunk.buf, chunk.offsetsInBuf.get(j),
-              decodeInputs[i], posInBuf, chunk.lengthsInBuf.get(j));
+              decodeInputs[decodeIndex], posInBuf, chunk.lengthsInBuf.get(j));
           posInBuf += chunk.lengthsInBuf.get(j);
         }
       } else if (chunk.state == StripingChunk.ALLZERO) {
-        Arrays.fill(decodeInputs[i], (byte)0);
+        Arrays.fill(decodeInputs[decodeIndex], (byte) 0);
       } else {
-        decodeInputs[i] = null;
+        decodeInputs[decodeIndex] = null;
       }
     }
   }
+
+  /**
+   * Currently decoding requires parity chunks are before data chunks.
+   * The indices are opposite to what we store in NN. In future we may
+   * improve the decoding to make the indices order the same as in NN.
+   *
+   * @param index The index to convert
+   * @param dataBlkNum The number of data blocks
+   * @param parityBlkNum The number of parity blocks
+   * @return converted index
+   */
+  public static int convertIndex4Decode(int index, int dataBlkNum,
+      int parityBlkNum) {
+    return index < dataBlkNum ? index + parityBlkNum : index - dataBlkNum;
+  }
+
+  public static int convertDecodeIndexBack(int index, int dataBlkNum,
+      int parityBlkNum) {
+    return index < parityBlkNum ? index + dataBlkNum : index - parityBlkNum;
+  }
+
   /**
    * Decode based on the given input buffers and schema.
    */
   public static void decodeAndFillBuffer(final byte[][] decodeInputs,
-      byte[] buf, AlignedStripe alignedStripe, int parityBlkNum,
+      byte[] buf, AlignedStripe alignedStripe, int dataBlkNum, int parityBlkNum,
       RawErasureDecoder decoder) {
     // Step 1: prepare indices and output buffers for missing data units
     int[] decodeIndices = new int[parityBlkNum];
     int pos = 0;
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
       if (alignedStripe.chunks[i].state == StripingChunk.MISSING){
-        decodeIndices[pos++] = i;
+        decodeIndices[pos++] = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
       }
     }
     decodeIndices = Arrays.copyOf(decodeIndices, pos);
@@ -313,13 +335,14 @@ public class StripedBlockUtil {
 
     // Step 3: fill original application buffer with decoded data
     for (int i = 0; i < decodeIndices.length; i++) {
-      int missingBlkIdx = decodeIndices[i];
+      int missingBlkIdx = convertDecodeIndexBack(decodeIndices[i],
+          dataBlkNum, parityBlkNum);
       StripingChunk chunk = alignedStripe.chunks[missingBlkIdx];
       if (chunk.state == StripingChunk.MISSING) {
         int srcPos = 0;
         for (int j = 0; j < chunk.offsetsInBuf.size(); j++) {
-          System.arraycopy(decodeOutputs[i], srcPos, buf, chunk.offsetsInBuf.get(j),
-              chunk.lengthsInBuf.get(j));
+          System.arraycopy(decodeOutputs[i], srcPos, buf,
+              chunk.offsetsInBuf.get(j), chunk.lengthsInBuf.get(j));
           srcPos += chunk.lengthsInBuf.get(j);
         }
       }
@@ -330,7 +353,7 @@ public class StripedBlockUtil {
    * This method divides a requested byte range into an array of inclusive
    * {@link AlignedStripe}.
    * @param ecSchema The codec schema for the file, which carries the numbers
-   *                 of data / parity blocks, as well as cell size
+   *                 of data / parity blocks
    * @param cellSize Cell size of stripe
    * @param blockGroup The striped block group
    * @param rangeStartInBlockGroup The byte range's start offset in block group
@@ -345,7 +368,6 @@ public class StripedBlockUtil {
       int cellSize, LocatedStripedBlock blockGroup,
       long rangeStartInBlockGroup, long rangeEndInBlockGroup, byte[] buf,
       int offsetInBuf) {
-    // TODO: change ECSchema naming to use cell size instead of chunk size
 
     // Step 0: analyze range and calculate basic parameters
     int dataBlkNum = ecSchema.getNumDataUnits();
@@ -362,8 +384,7 @@ public class StripedBlockUtil {
     AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecSchema, ranges);
 
     // Step 4: calculate each chunk's position in destination buffer
-    calcualteChunkPositionsInBuf(ecSchema, cellSize, stripes, cells, buf,
-        offsetInBuf);
+    calcualteChunkPositionsInBuf(cellSize, stripes, cells, buf, offsetInBuf);
 
     // Step 5: prepare ALLZERO blocks
     prepareAllZeroChunks(blockGroup, buf, stripes, cellSize, dataBlkNum);
@@ -508,8 +529,8 @@ public class StripedBlockUtil {
     return stripes.toArray(new AlignedStripe[stripes.size()]);
   }
 
-  private static void calcualteChunkPositionsInBuf(ECSchema ecSchema,
-      int cellSize, AlignedStripe[] stripes, StripingCell[] cells, byte[] buf,
+  private static void calcualteChunkPositionsInBuf(int cellSize,
+      AlignedStripe[] stripes, StripingCell[] cells, byte[] buf,
       int offsetInBuf) {
     /**
      *     | <--------------- AlignedStripe --------------->|

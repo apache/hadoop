@@ -208,17 +208,18 @@ public class TestDFSStripedInputStream {
     // Update the expected content for decoded data
     for (int i = 0; i < NUM_STRIPE_PER_BLOCK; i++) {
       byte[][] decodeInputs = new byte[DATA_BLK_NUM + PARITY_BLK_NUM][CELLSIZE];
-      int[] missingBlkIdx = new int[]{failedDNIdx, DATA_BLK_NUM+1, DATA_BLK_NUM+2};
+      int[] missingBlkIdx = new int[]{failedDNIdx + PARITY_BLK_NUM, 1, 2};
       byte[][] decodeOutputs = new byte[PARITY_BLK_NUM][CELLSIZE];
       for (int j = 0; j < DATA_BLK_NUM; j++) {
         int posInBuf = i * CELLSIZE * DATA_BLK_NUM + j * CELLSIZE;
         if (j != failedDNIdx) {
-          System.arraycopy(expected, posInBuf, decodeInputs[j], 0, CELLSIZE);
+          System.arraycopy(expected, posInBuf, decodeInputs[j + PARITY_BLK_NUM],
+              0, CELLSIZE);
         }
       }
       for (int k = 0; k < CELLSIZE; k++) {
         int posInBlk = i * CELLSIZE + k;
-        decodeInputs[DATA_BLK_NUM][k] = SimulatedFSDataset.simulatedByte(
+        decodeInputs[0][k] = SimulatedFSDataset.simulatedByte(
             new Block(bg.getBlock().getBlockId() + DATA_BLK_NUM), posInBlk);
       }
       for (int m : missingBlkIdx) {
