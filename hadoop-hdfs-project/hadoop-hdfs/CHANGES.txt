@@ -594,6 +594,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8386. Improve synchronization of 'streamer' reference in
     DFSOutputStream. (Rakesh R via wang)
 
+    HDFS-8513. Rename BlockPlacementPolicyRackFaultTolarent to
+    BlockPlacementPolicyRackFaultTolerant. (wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

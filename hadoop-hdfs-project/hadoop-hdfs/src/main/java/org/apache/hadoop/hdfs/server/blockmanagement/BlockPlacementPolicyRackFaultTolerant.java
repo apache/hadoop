@@ -30,7 +30,7 @@ import java.util.*;
  * The strategy is that it tries its best to place the replicas to most racks.
  */
 @InterfaceAudience.Private
-public class BlockPlacementPolicyRackFaultTolarent extends BlockPlacementPolicyDefault {
+public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyDefault {
 
   @Override
   protected int[] getMaxNodesPerRack(int numOfChosen, int numOfReplicas) {

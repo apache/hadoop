@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolarent;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.StaticMapping;
 import org.junit.After;
@@ -42,7 +42,7 @@ import java.util.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TestBlockPlacementPolicyRackFaultTolarent {
+public class TestBlockPlacementPolicyRackFaultTolerant {
 
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private MiniDFSCluster cluster = null;
@@ -63,7 +63,7 @@ public class TestBlockPlacementPolicyRackFaultTolarent {
       }
     }
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
-        BlockPlacementPolicyRackFaultTolarent.class,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE / 2);
