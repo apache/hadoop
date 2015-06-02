@@ -597,9 +597,10 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
 
     if (alignedStripe.missingChunksNum > 0) {
-      finalizeDecodeInputs(decodeInputs, alignedStripe);
-      decodeAndFillBuffer(decodeInputs, buf, alignedStripe, parityBlkNum,
-          decoder);
+      finalizeDecodeInputs(decodeInputs, dataBlkNum, parityBlkNum,
+          alignedStripe);
+      decodeAndFillBuffer(decodeInputs, buf, alignedStripe, dataBlkNum,
+          parityBlkNum, decoder);
     }
   }
 
