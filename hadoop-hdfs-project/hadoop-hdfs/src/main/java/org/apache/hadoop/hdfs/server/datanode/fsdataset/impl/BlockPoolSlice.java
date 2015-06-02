@@ -533,10 +533,28 @@ class BlockPoolSlice {
       // Leave both block replicas in place.
       return replica1;
     }
+    final ReplicaInfo replicaToDelete =
+        selectReplicaToDelete(replica1, replica2);
+    final ReplicaInfo replicaToKeep =
+        (replicaToDelete != replica1) ? replica1 : replica2;
+    // Update volumeMap and delete the replica
+    volumeMap.add(bpid, replicaToKeep);
+    if (replicaToDelete != null) {
+      deleteReplica(replicaToDelete);
+    }
+    return replicaToKeep;
+  }
 
+  static ReplicaInfo selectReplicaToDelete(final ReplicaInfo replica1,
+      final ReplicaInfo replica2) {
     ReplicaInfo replicaToKeep;
     ReplicaInfo replicaToDelete;
 
+    // it's the same block so don't ever delete it, even if GS or size
+    // differs.  caller should keep the one it just discovered on disk
+    if (replica1.getBlockFile().equals(replica2.getBlockFile())) {
+      return null;
+    }
     if (replica1.getGenerationStamp() != replica2.getGenerationStamp()) {
       replicaToKeep = replica1.getGenerationStamp() > replica2.getGenerationStamp()
           ? replica1 : replica2;
@@ -556,10 +574,10 @@ class BlockPoolSlice {
       LOG.debug("resolveDuplicateReplicas decide to keep " + replicaToKeep
           + ".  Will try to delete " + replicaToDelete);
     }
+    return replicaToDelete;
+  }
 
-    // Update volumeMap.
-    volumeMap.add(bpid, replicaToKeep);
-
+  private void deleteReplica(final ReplicaInfo replicaToDelete) {
     // Delete the files on disk. Failure here is okay.
     final File blockFile = replicaToDelete.getBlockFile();
     if (!blockFile.delete()) {
@@ -569,10 +587,8 @@ class BlockPoolSlice {
     if (!metaFile.delete()) {
       LOG.warn("Failed to delete meta file " + metaFile);
     }
-
-    return replicaToKeep;
   }
-  
+
   /**
    * Find out the number of bytes in the block that match its crc.
    * 

@@ -93,6 +93,8 @@ Release 2.7.1 - UNRELEASED
     HDFS-5215. dfs.datanode.du.reserved is not considered while computing
     available space ( Brahma Reddy Battula via Yongjun Zhang)
 
+    HDFS-8486. DN startup may cause severe data loss (Daryn Sharp via Colin P.
+    McCabe)
 
 Release 2.7.0 - 2015-04-20
 
