@@ -87,7 +87,7 @@ public class TestDFSStripedInputStream {
    * Test {@link DFSStripedInputStream#getBlockAt(long)}
    */
   @Test
-  public void testGetBlock() throws Exception {
+  public void testRefreshBlock() throws Exception {
     final int numBlocks = 4;
     DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
         NUM_STRIPE_PER_BLOCK, false);
@@ -102,7 +102,7 @@ public class TestDFSStripedInputStream {
       LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(lsb,
           CELLSIZE, DATA_BLK_NUM, PARITY_BLK_NUM);
       for (int j = 0; j < DATA_BLK_NUM; j++) {
-        LocatedBlock refreshed = in.getBlockAt(blks[j].getStartOffset());
+        LocatedBlock refreshed = in.refreshLocatedBlock(blks[j]);
         assertEquals(blks[j].getBlock(), refreshed.getBlock());
         assertEquals(blks[j].getStartOffset(), refreshed.getStartOffset());
         assertArrayEquals(blks[j].getLocations(), refreshed.getLocations());

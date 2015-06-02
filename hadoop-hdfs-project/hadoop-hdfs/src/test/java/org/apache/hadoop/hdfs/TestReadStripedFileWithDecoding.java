@@ -59,20 +59,24 @@ public class TestReadStripedFileWithDecoding {
 
   @Test
   public void testWritePreadWithDNFailure1() throws IOException {
-    testWritePreadWithDNFailure("/foo", 0);
+    testWritePreadWithDNFailure("/foo", cellSize * (dataBlocks + 2), 0);
   }
 
   @Test
   public void testWritePreadWithDNFailure2() throws IOException {
-    testWritePreadWithDNFailure("/foo", cellSize * 5);
+    testWritePreadWithDNFailure("/foo", cellSize * (dataBlocks + 2), cellSize * 5);
   }
 
-  private void testWritePreadWithDNFailure(String file, int startOffsetInFile)
+  @Test
+  public void testWritePreadWithDNFailure3() throws IOException {
+    testWritePreadWithDNFailure("/foo", cellSize * dataBlocks, 0);
+  }
+
+  private void testWritePreadWithDNFailure(String file, int fileSize, int startOffsetInFile)
       throws IOException {
     final int failedDNIdx = 2;
-    final int length = cellSize * (dataBlocks + 2);
     Path testPath = new Path(file);
-    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    final byte[] bytes = StripedFileTestUtil.generateBytes(fileSize);
     DFSTestUtil.writeFile(fs, testPath, bytes);
 
     // shut down the DN that holds the last internal data block
@@ -89,17 +93,17 @@ public class TestReadStripedFileWithDecoding {
 
     // pread
     try (FSDataInputStream fsdis = fs.open(testPath)) {
-      byte[] buf = new byte[length];
+      byte[] buf = new byte[fileSize];
       int readLen = fsdis.read(startOffsetInFile, buf, 0, buf.length);
-      Assert.assertEquals("The length of file should be the same to write size",
-          length - startOffsetInFile, readLen);
+      Assert.assertEquals("The fileSize of file should be the same to write size",
+          fileSize - startOffsetInFile, readLen);
 
       byte[] expected = new byte[readLen];
-      for (int i = startOffsetInFile; i < length; i++) {
+      for (int i = startOffsetInFile; i < fileSize; i++) {
         expected[i - startOffsetInFile] = StripedFileTestUtil.getByte(i);
       }
 
-      for (int i = startOffsetInFile; i < length; i++) {
+      for (int i = startOffsetInFile; i < fileSize; i++) {
         Assert.assertEquals("Byte at " + i + " should be the same",
             expected[i - startOffsetInFile], buf[i - startOffsetInFile]);
       }
