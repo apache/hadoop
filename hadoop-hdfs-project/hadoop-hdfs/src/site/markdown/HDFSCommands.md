@@ -99,8 +99,9 @@ Usage:
        hdfs fsck <path>
               [-list-corruptfileblocks |
               [-move | -delete | -openforwrite]
-              [-files [-blocks [-locations | -racks]]]
+              [-files [-blocks [-locations | -racks | -replicaDetails]]]
               [-includeSnapshots] [-showprogress]
+              [-storagepolicies] [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -110,11 +111,14 @@ Usage:
 | `-files` `-blocks` | Print out the block report |
 | `-files` `-blocks` `-locations` | Print out locations for every block. |
 | `-files` `-blocks` `-racks` | Print out network topology for data-node locations. |
+| `-files` `-blocks` `-replicaDetails` | Print out each replica details. |
 | `-includeSnapshots` | Include snapshot data if the given path indicates a snapshottable directory or there are snapshottable directories under it. |
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
 | `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
+| `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
