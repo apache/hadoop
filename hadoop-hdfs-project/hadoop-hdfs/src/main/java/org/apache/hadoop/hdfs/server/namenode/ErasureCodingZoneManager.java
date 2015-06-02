@@ -153,8 +153,13 @@ public class ErasureCodingZoneManager {
   void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
       throws IOException {
     assert dir.hasReadLock();
-    final ECSchema srcSchema = getECSchema(srcIIP);
-    final ECSchema dstSchema = getECSchema(dstIIP);
+    final ErasureCodingZone srcZone = getECZone(srcIIP);
+    final ErasureCodingZone dstZone = getECZone(dstIIP);
+    if (srcZone != null && srcZone.getDir().equals(src) && dstZone == null) {
+      return;
+    }
+    final ECSchema srcSchema = (srcZone != null) ? srcZone.getSchema() : null;
+    final ECSchema dstSchema = (dstZone != null) ? dstZone.getSchema() : null;
     if ((srcSchema != null && !srcSchema.equals(dstSchema)) ||
         (dstSchema != null && !dstSchema.equals(srcSchema))) {
       throw new IOException(

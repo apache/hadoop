@@ -268,3 +268,6 @@
 
     HDFS-8336. Expose some administrative erasure coding operations to HdfsAdmin
     (Uma Maheswara Rao G via vinayakumarb)
+
+    HDFS-8444. Erasure Coding: fix cannot rename a zone dir
+    (Walter Su via vinayakumarb)
