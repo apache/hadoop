@@ -119,15 +119,20 @@ public class TestErasureCodingZones {
     final Path srcFile = new Path(srcECDir, "foo");
     fs.create(srcFile);
 
-    /* Verify that a file can be moved between 2 EC zones */
-    try {
-      fs.rename(srcFile, dstECDir);
-    } catch (IOException e) {
-      fail("A file should be able to move between 2 EC zones " + e);
-    }
+    // Test move dir
+    // Move EC dir under non-EC dir
+    final Path newDir = new Path("/srcEC_new");
+    fs.rename(srcECDir, newDir);
+    fs.rename(newDir, srcECDir); // move back
 
-    // Move the file back
-    fs.rename(new Path(dstECDir, "foo"), srcECDir);
+    // Move EC dir under another EC dir
+    fs.rename(srcECDir, dstECDir);
+    fs.rename(new Path("/dstEC/srcEC"), srcECDir); // move back
+
+    // Test move file
+    /* Verify that a file can be moved between 2 EC zones */
+    fs.rename(srcFile, dstECDir);
+    fs.rename(new Path(dstECDir, "foo"), srcECDir); // move back
 
     /* Verify that a file cannot be moved from a non-EC dir to an EC zone */
     final Path nonECDir = new Path("/nonEC");
