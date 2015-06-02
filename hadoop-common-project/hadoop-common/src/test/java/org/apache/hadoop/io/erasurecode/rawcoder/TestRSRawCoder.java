@@ -29,6 +29,7 @@ public class TestRSRawCoder extends TestRSRawCoderBase {
   public void setup() {
     this.encoderClass = RSRawEncoder.class;
     this.decoderClass = RSRawDecoder.class;
+    setAllowDump(false); // Change to true to allow verbose dump for debugging
   }
 
   @Test

@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -31,6 +32,8 @@ import static org.junit.Assert.assertTrue;
  */
 public abstract class TestCoderBase {
   protected static Random RAND = new Random();
+
+  private boolean allowDump = true;
 
   private Configuration conf;
   protected int numDataUnits;
@@ -65,6 +68,15 @@ public abstract class TestCoderBase {
   protected void setChunkSize(int chunkSize) {
     this.chunkSize = chunkSize;
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
+  }
+
+  /**
+   * Set true during setup if want to dump test settings and coding data,
+   * useful in debugging.
+   * @param allowDump
+   */
+  protected void setAllowDump(boolean allowDump) {
+    this.allowDump = allowDump;
   }
 
   /**
@@ -430,6 +442,36 @@ public abstract class TestCoderBase {
     return bytesArr;
   }
 
+  /**
+   * Dump all the settings used in the test case if allowDump is enabled.
+   */
+  protected void dumpSetting() {
+    if (allowDump) {
+      StringBuilder sb = new StringBuilder("Erasure coder test settings:\n");
+      sb.append(" numDataUnits=").append(numDataUnits);
+      sb.append(" numParityUnits=").append(numParityUnits);
+      sb.append(" chunkSize=").append(chunkSize).append("\n");
+
+      sb.append(" erasedDataIndexes=").
+              append(Arrays.toString(erasedDataIndexes));
+      sb.append(" erasedParityIndexes=").
+              append(Arrays.toString(erasedParityIndexes));
+      sb.append(" usingDirectBuffer=").append(usingDirectBuffer).append("\n");
+
+      System.out.println(sb.toString());
+    }
+  }
+
+  /**
+   * Dump chunks prefixed with a header if allowDump is enabled.
+   * @param header
+   * @param chunks
+   */
+  protected void dumpChunks(String header, ECChunk[] chunks) {
+    if (allowDump) {
+      DumpUtil.dumpChunks(header, chunks);
+    }
+  }
 
   /**
    * Make some chunk messy or not correct any more
