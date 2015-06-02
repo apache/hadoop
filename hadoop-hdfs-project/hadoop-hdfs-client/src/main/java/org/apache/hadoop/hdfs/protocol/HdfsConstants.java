@@ -84,7 +84,7 @@ public final class HdfsConstants {
   public static final byte NUM_DATA_BLOCKS = 6;
   public static final byte NUM_PARITY_BLOCKS = 3;
   // The chunk size for striped block which is used by erasure coding
-  public static final int BLOCK_STRIPED_CELL_SIZE = 256 * 1024;
+  public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
 
   // SafeMode actions
   public enum SafeModeAction {

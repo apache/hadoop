@@ -274,3 +274,6 @@
 
     HDFS-8517. Fix a decoding issue in stripped block recovering in client side.
     (Kai Zheng via jing9)
+
+    HDFS-8453. Erasure coding: properly handle start offset for internal blocks
+    in a block group. (Zhe Zhang via jing9)

@@ -105,16 +105,15 @@ public class StripedBlockUtil {
     final ExtendedBlock blk = constructInternalBlock(
         bg.getBlock(), cellSize, dataBlkNum, idxInBlockGroup);
 
-    final long offset = bg.getStartOffset() + idxInBlockGroup * (long) cellSize;
     if (idxInReturnedLocs < bg.getLocations().length) {
       return new LocatedBlock(blk,
           new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
           new String[]{bg.getStorageIDs()[idxInReturnedLocs]},
           new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
-          offset, bg.isCorrupt(), null);
+          bg.getStartOffset(), bg.isCorrupt(), null);
     } else {
       return new LocatedBlock(blk, null, null, null,
-          offset, bg.isCorrupt(), null);
+          bg.getStartOffset(), bg.isCorrupt(), null);
     }
   }
 

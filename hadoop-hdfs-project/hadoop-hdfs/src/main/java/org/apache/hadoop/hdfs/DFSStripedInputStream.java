@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.ByteBufferPool;
 
@@ -470,22 +471,17 @@ public class DFSStripedInputStream extends DFSInputStream {
   }
 
   /**
-   * | <--------- LocatedStripedBlock (ID = 0) ---------> |
-   * LocatedBlock (0) | LocatedBlock (1) | LocatedBlock (2)
-   *                      ^
-   *                    offset
-   * On a striped file, the super method {@link DFSInputStream#getBlockAt}
-   * treats a striped block group as a single {@link LocatedBlock} object,
-   * which includes target in its range. This method adds the logic of:
-   *   1. Analyzing the index of required block based on offset
-   *   2. Parsing the block group to obtain the block location on that index
+   * The super method {@link DFSInputStream#refreshLocatedBlock} refreshes
+   * cached LocatedBlock by executing {@link DFSInputStream#getBlockAt} again.
+   * This method extends the logic by first remembering the index of the
+   * internal block, and re-parsing the refreshed block group with the same
+   * index.
    */
   @Override
-  protected LocatedBlock getBlockAt(long blkStartOffset) throws IOException {
-    LocatedBlock lb = getBlockGroupAt(blkStartOffset);
-
-    int idx = (int) ((blkStartOffset - lb.getStartOffset())
-        % (dataBlkNum + parityBlkNum));
+  protected LocatedBlock refreshLocatedBlock(LocatedBlock block)
+      throws IOException {
+    int idx = BlockIdManager.getBlockIndex(block.getBlock().getLocalBlock());
+    LocatedBlock lb = getBlockGroupAt(block.getStartOffset());
     // If indexing information is returned, iterate through the index array
     // to find the entry for position idx in the group
     LocatedStripedBlock lsb = (LocatedStripedBlock) lb;
@@ -496,10 +492,11 @@ public class DFSStripedInputStream extends DFSInputStream {
       }
     }
     if (DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("getBlockAt for striped blocks, offset="
-          + blkStartOffset + ". Obtained block " + lb + ", idx=" + idx);
+      DFSClient.LOG.debug("refreshLocatedBlock for striped blocks, offset="
+          + block.getStartOffset() + ". Obtained block " + lb + ", idx=" + idx);
     }
-    return StripedBlockUtil.constructInternalBlock(lsb, i, cellSize, dataBlkNum, idx);
+    return StripedBlockUtil.constructInternalBlock(
+        lsb, i, cellSize, dataBlkNum, idx);
   }
 
   private LocatedStripedBlock getBlockGroupAt(long offset) throws IOException {
@@ -513,12 +510,12 @@ public class DFSStripedInputStream extends DFSInputStream {
    * Real implementation of pread.
    */
   @Override
-  protected void fetchBlockByteRange(long blockStartOffset, long start,
+  protected void fetchBlockByteRange(LocatedBlock block, long start,
       long end, byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
     // Refresh the striped block group
-    LocatedStripedBlock blockGroup = getBlockGroupAt(blockStartOffset);
+    LocatedStripedBlock blockGroup = getBlockGroupAt(block.getStartOffset());
 
     AlignedStripe[] stripes = divideByteRangeIntoStripes(schema, cellSize,
         blockGroup, start, end, buf, offset);
@@ -622,9 +619,9 @@ public class DFSStripedInputStream extends DFSInputStream {
     StripingChunk chunk = alignedStripe.chunks[index];
     chunk.state = StripingChunk.PENDING;
     Callable<Void> readCallable = getFromOneDataNode(dnAddr,
-        block.getStartOffset(), alignedStripe.getOffsetInBlock(),
-        alignedStripe.getOffsetInBlock() + alignedStripe.getSpanInBlock() - 1, chunk.buf,
-        chunk.getOffsets(), chunk.getLengths(),
+        block, alignedStripe.getOffsetInBlock(),
+        alignedStripe.getOffsetInBlock() + alignedStripe.getSpanInBlock() - 1,
+        chunk.buf, chunk.getOffsets(), chunk.getLengths(),
         corruptedBlockMap, index);
     Future<Void> getFromDNRequest = service.submit(readCallable);
     if (DFSClient.LOG.isDebugEnabled()) {
@@ -637,7 +634,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   }
 
   private Callable<Void> getFromOneDataNode(final DNAddrPair datanode,
-      final long blockStartOffset, final long start, final long end,
+      final LocatedBlock block, final long start, final long end,
       final byte[] buf, final int[] offsets, final int[] lengths,
       final Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap,
       final int hedgedReadId) {
@@ -648,7 +645,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         TraceScope scope =
             Trace.startSpan("Parallel reading " + hedgedReadId, parentSpan);
         try {
-          actualGetFromOneDataNode(datanode, blockStartOffset, start,
+          actualGetFromOneDataNode(datanode, block, start,
               end, buf, offsets, lengths, corruptedBlockMap);
         } finally {
           scope.close();
