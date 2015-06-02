@@ -90,6 +90,10 @@ Release 2.7.1 - UNRELEASED
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
+    HDFS-5215. dfs.datanode.du.reserved is not considered while computing
+    available space ( Brahma Reddy Battula via Yongjun Zhang)
+
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

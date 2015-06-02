@@ -305,9 +305,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
   
   /**
-   * Calculate the capacity of the filesystem, after removing any
-   * reserved capacity.
-   * @return the unreserved number of bytes left in this filesystem. May be zero.
+   * Return either the configured capacity of the file system if configured; or
+   * the capacity of the file system excluding space reserved for non-HDFS.
+   * 
+   * @return the unreserved number of bytes left in this filesystem. May be
+   *         zero.
    */
   @VisibleForTesting
   public long getCapacity() {
@@ -329,10 +331,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.configuredCapacity = capacity;
   }
 
+  /*
+   * Calculate the available space of the filesystem, excluding space reserved
+   * for non-HDFS and space reserved for RBW
+   * 
+   * @return the available number of bytes left in this filesystem. May be zero.
+   */
   @Override
   public long getAvailable() throws IOException {
     long remaining = getCapacity() - getDfsUsed() - reservedForRbw.get();
-    long available = usage.getAvailable();
+    long available = usage.getAvailable() - reserved - reservedForRbw.get();
     if (remaining > available) {
       remaining = available;
     }
