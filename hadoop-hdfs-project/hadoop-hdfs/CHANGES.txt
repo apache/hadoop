@@ -924,6 +924,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
+    HDFS-8486. DN startup may cause severe data loss (Daryn Sharp via Colin P.
+    McCabe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
