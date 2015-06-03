@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 /**
  * The class that contains the information of an event that is related to some
@@ -135,11 +136,8 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
    *          a map of of the information of the event
    */
   public void setEventInfo(Map<String, Object> eventInfo) {
-    if (eventInfo != null && !(eventInfo instanceof HashMap)) {
-      this.eventInfo = new HashMap<String, Object>(eventInfo);
-    } else {
-      this.eventInfo = (HashMap<String, Object>) eventInfo;
-    }
+    this.eventInfo = TimelineServiceHelper.mapCastToHashMap(
+        eventInfo);
   }
 
   @Override

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -61,11 +62,7 @@ public class TimelineEvent {
   }
 
   public void setInfo(Map<String, Object> info) {
-    if (info != null && !(info instanceof HashMap)) {
-      this.info = new HashMap<String, Object>(info);
-    } else {
-      this.info = (HashMap<String, Object>) info;
-    }
+    this.info = TimelineServiceHelper.mapCastToHashMap(info);
   }
 
   public void addInfo(Map<String, Object> info) {
