@@ -57,7 +57,9 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Files;
+
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.  
  * Taken together, all BlockPoolSlices sharing a block pool ID across a 
@@ -562,6 +564,7 @@ class BlockPoolSlice {
     return replicaToKeep;
   }
 
+  @VisibleForTesting
   static ReplicaInfo selectReplicaToDelete(final ReplicaInfo replica1,
       final ReplicaInfo replica2) {
     ReplicaInfo replicaToKeep;

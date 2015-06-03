@@ -862,6 +862,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8213. DFSClient should use hdfs.client.htrace HTrace configuration
     prefix rather than hadoop.htrace (cmccabe)
 
+    HDFS-8521. Add VisibleForTesting annotation to
+    BlockPoolSlice#selectReplicaToDelete. (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
