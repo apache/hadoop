@@ -615,6 +615,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3725. App submission via REST API is broken in secure mode due to 
     Timeline DT service address is empty. (Zhijie Shen via wangda)
 
+    YARN-3585. NodeManager cannot exit on SHUTDOWN event triggered and NM
+    recovery is enabled (Rohith Sharmaks via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
