@@ -1209,6 +1209,7 @@ public class FSImage implements Closeable {
       // Since we now have a new checkpoint, we can clean up some
       // old edit logs and checkpoints.
       purgeOldStorage(nnf);
+      archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_NEW);
     } finally {
       // Notify any threads waiting on the checkpoint to be canceled
       // that it is complete.

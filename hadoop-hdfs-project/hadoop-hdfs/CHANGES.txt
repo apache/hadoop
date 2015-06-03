@@ -843,6 +843,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8470. fsimage loading progress should update inode, delegation token and
     cache pool count. (surendra singh lilhore via vinayakumarb)
 
+    HDFS-3716. Purger should remove stale fsimage ckpt files
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
