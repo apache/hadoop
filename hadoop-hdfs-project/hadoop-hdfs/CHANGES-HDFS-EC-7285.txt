@@ -277,3 +277,6 @@
 
     HDFS-8453. Erasure coding: properly handle start offset for internal blocks
     in a block group. (Zhe Zhang via jing9)
+
+    HDFS-7621. Erasure Coding: update the Balancer/Mover data migration logic.
+    (Walter Su via zhz)

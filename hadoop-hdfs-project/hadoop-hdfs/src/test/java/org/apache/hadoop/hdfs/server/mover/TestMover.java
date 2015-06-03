@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -34,10 +35,16 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.balancer.Dispatcher;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DBlock;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -83,7 +90,7 @@ public class TestMover {
       final LocatedBlock lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
       final List<MLocation> locations = MLocation.toLocations(lb);
       final MLocation ml = locations.get(0);
-      final DBlock db = mover.newDBlock(lb.getBlock().getLocalBlock(), locations);
+      final DBlock db = mover.newDBlock(lb, locations, null);
 
       final List<StorageType> storageTypes = new ArrayList<StorageType>(
           Arrays.asList(StorageType.DEFAULT, StorageType.DEFAULT));
@@ -358,6 +365,121 @@ public class TestMover {
       Assert.assertEquals("Movement should fail after some retry",
           ExitStatus.IO_EXCEPTION.getExitCode(), rc);
     } finally {
+      cluster.shutdown();
+    }
+  }
+
+  int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
+  int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
+  private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final static int stripesPerBlock = 4;
+  static int DEFAULT_STRIPE_BLOCK_SIZE = cellSize * stripesPerBlock;
+
+  static void initConfWithStripe(Configuration conf) {
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_STRIPE_BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
+    Dispatcher.setBlockMoveWaitTime(3000L);
+  }
+
+  @Test(timeout = 300000)
+  public void testMoverWithStripedFile() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConfWithStripe(conf);
+
+    // start 10 datanodes
+    int numOfDatanodes =10;
+    int storagesPerDatanode=2;
+    long capacity = 10 * DEFAULT_STRIPE_BLOCK_SIZE;
+    long[][] capacities = new long[numOfDatanodes][storagesPerDatanode];
+    for (int i = 0; i < numOfDatanodes; i++) {
+      for(int j=0;j<storagesPerDatanode;j++){
+        capacities[i][j]=capacity;
+      }
+    }
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numOfDatanodes)
+        .storagesPerDatanode(storagesPerDatanode)
+        .storageTypes(new StorageType[][]{
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.DISK},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE},
+            {StorageType.DISK, StorageType.ARCHIVE}})
+        .storageCapacities(capacities)
+        .build();
+
+    try {
+      cluster.waitActive();
+
+      // set "/bar" directory with HOT storage policy.
+      ClientProtocol client = NameNodeProxies.createProxy(conf,
+          cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();
+      String barDir = "/bar";
+      client.mkdirs(barDir, new FsPermission((short) 777), true);
+      client.setStoragePolicy(barDir,
+          HdfsServerConstants.HOT_STORAGE_POLICY_NAME);
+      // set "/bar" directory with EC zone.
+      client.createErasureCodingZone(barDir, null, 0);
+
+      // write file to barDir
+      final String fooFile = "/bar/foo";
+      long fileLen = 20 * DEFAULT_STRIPE_BLOCK_SIZE ;
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path(fooFile),
+          fileLen,(short) 3, 0);
+
+      // verify storage types and locations
+      LocatedBlocks locatedBlocks =
+          client.getBlockLocations(fooFile, 0, fileLen);
+      for(LocatedBlock lb : locatedBlocks.getLocatedBlocks()){
+        for( StorageType type : lb.getStorageTypes()){
+          Assert.assertEquals(StorageType.DISK, type);
+        }
+      }
+      DFSTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
+          dataBlocks + parityBlocks);
+
+      // start 5 more datanodes
+      numOfDatanodes +=5;
+      capacities = new long[5][storagesPerDatanode];
+      for (int i = 0; i < 5; i++) {
+        for(int j=0;j<storagesPerDatanode;j++){
+          capacities[i][j]=capacity;
+        }
+      }
+      cluster.startDataNodes(conf, 5,
+          new StorageType[][]{
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE},
+              {StorageType.ARCHIVE, StorageType.ARCHIVE}},
+          true, null, null, null,capacities, null, false, false, false, null);
+      cluster.triggerHeartbeats();
+
+      // move file to ARCHIVE
+      client.setStoragePolicy(barDir, "COLD");
+      // run Mover
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] { "-p", barDir });
+      Assert.assertEquals("Movement to ARCHIVE should be successfull", 0, rc);
+
+      // verify storage types and locations
+      locatedBlocks = client.getBlockLocations(fooFile, 0, fileLen);
+      for(LocatedBlock lb : locatedBlocks.getLocatedBlocks()){
+        for( StorageType type : lb.getStorageTypes()){
+          Assert.assertEquals(StorageType.ARCHIVE, type);
+        }
+      }
+      DFSTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
+          dataBlocks + parityBlocks);
+
+    }finally{
       cluster.shutdown();
     }
   }

@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
@@ -131,6 +132,21 @@ public class TestBalancer {
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC, 1);
     conf.setInt(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES, DEFAULT_RAM_DISK_BLOCK_SIZE);
     LazyPersistTestCase.initCacheManipulator();
+  }
+
+  int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
+  int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
+  int groupSize = dataBlocks + parityBlocks;
+  private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final static int stripesPerBlock = 4;
+  static int DEFAULT_STRIPE_BLOCK_SIZE = cellSize * stripesPerBlock;
+
+  static void initConfWithStripe(Configuration conf) {
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_STRIPE_BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    SimulatedFSDataset.setFactory(conf);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -1447,6 +1463,66 @@ public class TestBalancer {
       exitCode = tool.run(args); // start balancing
       assertEquals("Exit status code mismatches",
           ExitStatus.SUCCESS.getExitCode(), exitCode);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 100000)
+  public void testBalancerWithStripedFile() throws Exception {
+    Configuration conf = new Configuration();
+    initConfWithStripe(conf);
+    int numOfDatanodes = dataBlocks + parityBlocks + 2;
+    int numOfRacks = dataBlocks;
+    long capacity = 20 * DEFAULT_STRIPE_BLOCK_SIZE;
+    long[] capacities = new long[numOfDatanodes];
+    for (int i = 0; i < capacities.length; i++) {
+      capacities[i] = capacity;
+    }
+    String[] racks = new String[numOfDatanodes];
+    for (int i = 0; i < numOfDatanodes; i++) {
+      racks[i] = "/rack" + (i % numOfRacks);
+    }
+    cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numOfDatanodes)
+        .racks(racks)
+        .simulatedCapacities(capacities)
+        .build();
+
+    try {
+      cluster.waitActive();
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
+      client.createErasureCodingZone("/", null, 0);
+
+      long totalCapacity = sum(capacities);
+
+      // fill up the cluster with 30% data. It'll be 45% full plus parity.
+      long fileLen = totalCapacity * 3 / 10;
+      long totalUsedSpace = fileLen * (dataBlocks + parityBlocks) / dataBlocks;
+      FileSystem fs = cluster.getFileSystem(0);
+      DFSTestUtil.createFile(fs, filePath, fileLen, (short) 3, r.nextLong());
+
+      // verify locations of striped blocks
+      LocatedBlocks locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
+      DFSTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);
+
+      // add one datanode
+      String newRack = "/rack" + (++numOfRacks);
+      cluster.startDataNodes(conf, 1, true, null,
+          new String[]{newRack}, null, new long[]{capacity});
+      totalCapacity += capacity;
+      cluster.triggerHeartbeats();
+
+      // run balancer and validate results
+      Balancer.Parameters p = Balancer.Parameters.DEFAULT;
+      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      runBalancer(conf, totalUsedSpace, totalCapacity, p, 0);
+
+      // verify locations of striped blocks
+      locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
+      DFSTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);
+
     } finally {
       cluster.shutdown();
     }

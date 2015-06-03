@@ -211,6 +211,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -458,22 +459,32 @@ public class PBHelper {
   }
 
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {
-    return BlockWithLocationsProto.newBuilder()
-        .setBlock(convert(blk.getBlock()))
+    BlockWithLocationsProto.Builder builder = BlockWithLocationsProto
+        .newBuilder().setBlock(convert(blk.getBlock()))
         .addAllDatanodeUuids(Arrays.asList(blk.getDatanodeUuids()))
         .addAllStorageUuids(Arrays.asList(blk.getStorageIDs()))
-        .addAllStorageTypes(convertStorageTypes(blk.getStorageTypes()))
-        .build();
+        .addAllStorageTypes(convertStorageTypes(blk.getStorageTypes()));
+    if (blk instanceof StripedBlockWithLocations) {
+      StripedBlockWithLocations sblk = (StripedBlockWithLocations) blk;
+      builder.setIndices(getByteString(sblk.getIndices()));
+      builder.setDataBlockNum(sblk.getDataBlockNum());
+    }
+    return builder.build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
     final List<String> datanodeUuids = b.getDatanodeUuidsList();
     final List<String> storageUuids = b.getStorageUuidsList();
     final List<StorageTypeProto> storageTypes = b.getStorageTypesList();
-    return new BlockWithLocations(convert(b.getBlock()),
+    BlockWithLocations blk = new BlockWithLocations(convert(b.getBlock()),
         datanodeUuids.toArray(new String[datanodeUuids.size()]),
         storageUuids.toArray(new String[storageUuids.size()]),
         convertStorageTypes(storageTypes, storageUuids.size()));
+    if (b.hasIndices()) {
+      blk = new StripedBlockWithLocations(blk, b.getIndices().toByteArray(),
+          (short) b.getDataBlockNum());
+    }
+    return blk;
   }
 
   public static BlocksWithLocationsProto convert(BlocksWithLocations blks) {

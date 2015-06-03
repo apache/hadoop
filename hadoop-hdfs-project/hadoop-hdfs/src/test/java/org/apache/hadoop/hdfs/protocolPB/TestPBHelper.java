@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -189,40 +190,58 @@ public class TestPBHelper {
     assertEquals(b, b2);
   }
 
-  private static BlockWithLocations getBlockWithLocations(int bid) {
+  private static BlockWithLocations getBlockWithLocations(
+      int bid, boolean isStriped) {
     final String[] datanodeUuids = {"dn1", "dn2", "dn3"};
     final String[] storageIDs = {"s1", "s2", "s3"};
     final StorageType[] storageTypes = {
         StorageType.DISK, StorageType.DISK, StorageType.DISK};
-    return new BlockWithLocations(new Block(bid, 0, 1),
+    final byte[] indices = {0, 1, 2};
+    final short dataBlkNum = 6;
+    BlockWithLocations blkLocs = new BlockWithLocations(new Block(bid, 0, 1),
         datanodeUuids, storageIDs, storageTypes);
+    if (isStriped) {
+      blkLocs = new StripedBlockWithLocations(blkLocs, indices, dataBlkNum);
+    }
+    return blkLocs;
   }
 
   private void compare(BlockWithLocations locs1, BlockWithLocations locs2) {
     assertEquals(locs1.getBlock(), locs2.getBlock());
     assertTrue(Arrays.equals(locs1.getStorageIDs(), locs2.getStorageIDs()));
+    if (locs1 instanceof StripedBlockWithLocations) {
+      assertTrue(Arrays.equals(((StripedBlockWithLocations) locs1).getIndices(),
+          ((StripedBlockWithLocations) locs2).getIndices()));
+    }
   }
 
   @Test
   public void testConvertBlockWithLocations() {
-    BlockWithLocations locs = getBlockWithLocations(1);
-    BlockWithLocationsProto locsProto = PBHelper.convert(locs);
-    BlockWithLocations locs2 = PBHelper.convert(locsProto);
-    compare(locs, locs2);
+    boolean[] testSuite = new boolean[]{false, true};
+    for (int i = 0; i < testSuite.length; i++) {
+      BlockWithLocations locs = getBlockWithLocations(1, testSuite[i]);
+      BlockWithLocationsProto locsProto = PBHelper.convert(locs);
+      BlockWithLocations locs2 = PBHelper.convert(locsProto);
+      compare(locs, locs2);
+    }
   }
 
   @Test
   public void testConvertBlocksWithLocations() {
-    BlockWithLocations[] list = new BlockWithLocations[] {
-        getBlockWithLocations(1), getBlockWithLocations(2) };
-    BlocksWithLocations locs = new BlocksWithLocations(list);
-    BlocksWithLocationsProto locsProto = PBHelper.convert(locs);
-    BlocksWithLocations locs2 = PBHelper.convert(locsProto);
-    BlockWithLocations[] blocks = locs.getBlocks();
-    BlockWithLocations[] blocks2 = locs2.getBlocks();
-    assertEquals(blocks.length, blocks2.length);
-    for (int i = 0; i < blocks.length; i++) {
-      compare(blocks[i], blocks2[i]);
+    boolean[] testSuite = new boolean[]{false, true};
+    for (int i = 0; i < testSuite.length; i++) {
+      BlockWithLocations[] list = new BlockWithLocations[]{
+          getBlockWithLocations(1, testSuite[i]),
+          getBlockWithLocations(2, testSuite[i])};
+      BlocksWithLocations locs = new BlocksWithLocations(list);
+      BlocksWithLocationsProto locsProto = PBHelper.convert(locs);
+      BlocksWithLocations locs2 = PBHelper.convert(locsProto);
+      BlockWithLocations[] blocks = locs.getBlocks();
+      BlockWithLocations[] blocks2 = locs2.getBlocks();
+      assertEquals(blocks.length, blocks2.length);
+      for (int j = 0; j < blocks.length; j++) {
+        compare(blocks[j], blocks2[j]);
+      }
     }
   }
 

@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
@@ -3265,9 +3266,10 @@ public class BlockManager {
 
   /**
    * Get all valid locations of the block & add the block to results
-   * return the length of the added block; 0 if the block is not added
+   * @return the length of the added block; 0 if the block is not added. If the
+   * added block is a block group, return its approximate internal block size
    */
-  private long addBlock(Block block, List<BlockWithLocations> results) {
+  private long addBlock(BlockInfo block, List<BlockWithLocations> results) {
     final List<DatanodeStorageInfo> locations = getValidLocations(block);
     if(locations.size() == 0) {
       return 0;
@@ -3281,9 +3283,23 @@ public class BlockManager {
         storageIDs[i] = s.getStorageID();
         storageTypes[i] = s.getStorageType();
       }
-      results.add(new BlockWithLocations(block, datanodeUuids, storageIDs,
-          storageTypes));
-      return block.getNumBytes();
+      BlockWithLocations blkWithLocs = new BlockWithLocations(block,
+          datanodeUuids, storageIDs, storageTypes);
+      if(block.isStriped()) {
+        BlockInfoStriped blockStriped = (BlockInfoStriped) block;
+        byte[] indices = new byte[locations.size()];
+        for (int i = 0; i < locations.size(); i++) {
+          indices[i] =
+              (byte) blockStriped.getStorageBlockIndex(locations.get(i));
+        }
+        results.add(new StripedBlockWithLocations(blkWithLocs, indices,
+            blockStriped.getDataBlockNum()));
+        // approximate size
+        return block.getNumBytes() / blockStriped.getDataBlockNum();
+      }else{
+        results.add(blkWithLocs);
+        return block.getNumBytes();
+      }
     }
   }
 

@@ -46,11 +46,14 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLength;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -176,8 +179,20 @@ public class Mover {
     }
   }
 
-  DBlock newDBlock(Block block, List<MLocation> locations) {
-    final DBlock db = new DBlock(block);
+  DBlock newDBlock(LocatedBlock lb, List<MLocation> locations,
+                   ECSchema ecSchema) {
+    Block blk = lb.getBlock().getLocalBlock();
+    DBlock db;
+    if (lb.isStriped()) {
+      LocatedStripedBlock lsb = (LocatedStripedBlock) lb;
+      byte[] indices = new byte[lsb.getBlockIndices().length];
+      for (int i = 0; i < indices.length; i++) {
+        indices[i] = (byte) lsb.getBlockIndices()[i];
+      }
+      db = new DBlockStriped(blk, indices, (short) ecSchema.getNumDataUnits());
+    } else {
+      db = new DBlock(blk);
+    }
     for(MLocation ml : locations) {
       StorageGroup source = storages.getSource(ml);
       if (source != null) {
@@ -358,9 +373,10 @@ public class Mover {
         LOG.warn("Failed to get the storage policy of file " + fullPath);
         return false;
       }
-      final List<StorageType> types = policy.chooseStorageTypes(
+      List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
 
+      final ECSchema ecSchema = status.getECSchema();
       final LocatedBlocks locatedBlocks = status.getBlockLocations();
       boolean hasRemaining = false;
       final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
@@ -371,10 +387,13 @@ public class Mover {
           continue;
         }
         LocatedBlock lb = lbs.get(i);
+        if (lb.isStriped()) {
+          types = policy.chooseStorageTypes((short) lb.getLocations().length);
+        }
         final StorageTypeDiff diff = new StorageTypeDiff(types,
             lb.getStorageTypes());
         if (!diff.removeOverlap(true)) {
-          if (scheduleMoves4Block(diff, lb)) {
+          if (scheduleMoves4Block(diff, lb, ecSchema)) {
             hasRemaining |= (diff.existing.size() > 1 &&
                 diff.expected.size() > 1);
           }
@@ -383,10 +402,13 @@ public class Mover {
       return hasRemaining;
     }
 
-    boolean scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb) {
+    boolean scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb,
+                                ECSchema ecSchema) {
       final List<MLocation> locations = MLocation.toLocations(lb);
-      Collections.shuffle(locations);
-      final DBlock db = newDBlock(lb.getBlock().getLocalBlock(), locations);
+      if (!(lb instanceof LocatedStripedBlock)) {
+        Collections.shuffle(locations);
+      }
+      final DBlock db = newDBlock(lb, locations, ecSchema);
 
       for (final StorageType t : diff.existing) {
         for (final MLocation ml : locations) {

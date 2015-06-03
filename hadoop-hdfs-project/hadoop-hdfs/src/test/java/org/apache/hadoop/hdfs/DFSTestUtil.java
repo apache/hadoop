@@ -1964,4 +1964,19 @@ public class DFSTestUtil {
     out.flushInternal();
     return out.getBlock();
   }
+
+  /**
+   * Verify that blocks in striped block group are on different nodes.
+   */
+  public static void verifyLocatedStripedBlocks(LocatedBlocks lbs,
+       int groupSize) {
+    for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+      HashSet<DatanodeInfo> locs = new HashSet<>();
+      for (DatanodeInfo datanodeInfo : lb.getLocations()) {
+        locs.add(datanodeInfo);
+      }
+      assertEquals(groupSize, lb.getLocations().length);
+      assertEquals(groupSize, locs.size());
+    }
+  }
 }
