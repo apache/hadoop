@@ -936,6 +936,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8486. DN startup may cause severe data loss (Daryn Sharp via Colin P.
     McCabe)
 
+    HDFS-8270. create() always retried with hardcoded timeout when file already
+    exists with open lease (J.Andreina via vinayakumarb)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

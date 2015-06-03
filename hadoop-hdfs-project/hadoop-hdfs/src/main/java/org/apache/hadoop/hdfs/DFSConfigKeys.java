@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -998,13 +997,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // For testing NN retry cache, we can set this property with positive value.
   public static final String  DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY = "dfs.client.test.drop.namenode.response.number";
   public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT = 0;
-
-  // Create a NN proxy without retries for testing.
-  @VisibleForTesting
-  public static final String  DFS_CLIENT_TEST_NO_PROXY_RETRIES =
-      "dfs.client.test.no.proxy.retries";
-  @VisibleForTesting
-  public static final boolean DFS_CLIENT_TEST_NO_PROXY_RETRIES_DEFAULT = false;
 
   public static final String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
