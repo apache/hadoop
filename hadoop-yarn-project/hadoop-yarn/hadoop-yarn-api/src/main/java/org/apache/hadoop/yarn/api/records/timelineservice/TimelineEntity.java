@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -184,11 +185,7 @@ public class TimelineEntity {
 
   public void setInfo(Map<String, Object> info) {
     if (real == null) {
-      if (info != null && !(info instanceof HashMap)) {
-        this.info = new HashMap<String, Object>(info);
-      } else {
-        this.info = (HashMap<String, Object>) info;
-      }
+      this.info = TimelineServiceHelper.mapCastToHashMap(info);
     } else {
       real.setInfo(info);
     }
@@ -231,11 +228,7 @@ public class TimelineEntity {
 
   public void setConfigs(Map<String, String> configs) {
     if (real == null) {
-      if (configs != null && !(configs instanceof HashMap)) {
-        this.configs = new HashMap<String, String>(configs);
-      } else {
-        this.configs = (HashMap<String, String>) configs;
-      }
+      this.configs = TimelineServiceHelper.mapCastToHashMap(configs);
     } else {
       real.setConfigs(configs);
     }
@@ -345,14 +338,8 @@ public class TimelineEntity {
   public void setIsRelatedToEntities(
       Map<String, Set<String>> isRelatedToEntities) {
     if (real == null) {
-      if (isRelatedToEntities != null &&
-          !(isRelatedToEntities instanceof HashMap)) {
-        this.isRelatedToEntities =
-            new HashMap<String, Set<String>>(isRelatedToEntities);
-      } else {
-        this.isRelatedToEntities =
-            (HashMap<String, Set<String>>) isRelatedToEntities;
-      }
+      this.isRelatedToEntities =
+          TimelineServiceHelper.mapCastToHashMap(isRelatedToEntities);
     } else {
       real.setIsRelatedToEntities(isRelatedToEntities);
     }
@@ -438,14 +425,8 @@ public class TimelineEntity {
 
   public void setRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
     if (real == null) {
-      if (relatesToEntities != null &&
-          !(relatesToEntities instanceof HashMap)) {
-        this.relatesToEntities =
-            new HashMap<String, Set<String>>(relatesToEntities);
-      } else {
-        this.relatesToEntities =
-            (HashMap<String, Set<String>>) relatesToEntities;
-      }
+      this.relatesToEntities =
+          TimelineServiceHelper.mapCastToHashMap(relatesToEntities);
     } else {
       real.setRelatesToEntities(relatesToEntities);
     }

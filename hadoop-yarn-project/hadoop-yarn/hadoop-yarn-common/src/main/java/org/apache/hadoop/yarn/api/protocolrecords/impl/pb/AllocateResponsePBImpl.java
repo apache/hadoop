@@ -387,13 +387,13 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
 
   @Override
-  public String getCollectorAddr() {
+  public synchronized String getCollectorAddr() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
     return p.getCollectorAddr();
   }
 
   @Override
-  public void setCollectorAddr(String collectorAddr) {
+  public synchronized void setCollectorAddr(String collectorAddr) {
     maybeInitBuilder();
     if (collectorAddr == null) {
       builder.clearCollectorAddr();

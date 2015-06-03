@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 /**
  * <p>
@@ -231,11 +232,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    */
   public void setRelatedEntities(
       Map<String, Set<String>> relatedEntities) {
-    if (relatedEntities != null && !(relatedEntities instanceof HashMap)) {
-      this.relatedEntities = new HashMap<String, Set<String>>(relatedEntities);
-    } else {
-      this.relatedEntities = (HashMap<String, Set<String>>) relatedEntities;
-    }
+    this.relatedEntities = TimelineServiceHelper.mapCastToHashMap(
+        relatedEntities);
   }
 
   /**
@@ -297,11 +295,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    *          a map of primary filters
    */
   public void setPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
-    if (primaryFilters != null && !(primaryFilters instanceof HashMap)) {
-      this.primaryFilters = new HashMap<String, Set<Object>>(primaryFilters);
-    } else {
-      this.primaryFilters = (HashMap<String, Set<Object>>) primaryFilters;
-    }
+    this.primaryFilters =
+        TimelineServiceHelper.mapCastToHashMap(primaryFilters);
   }
 
   /**
@@ -350,11 +345,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    *          a map of other information
    */
   public void setOtherInfo(Map<String, Object> otherInfo) {
-    if (otherInfo != null && !(otherInfo instanceof HashMap)) {
-      this.otherInfo = new HashMap<String, Object>(otherInfo);
-    } else {
-      this.otherInfo = (HashMap<String, Object>) otherInfo;
-    }
+    this.otherInfo = TimelineServiceHelper.mapCastToHashMap(otherInfo);
   }
 
   /**
