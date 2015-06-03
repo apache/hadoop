@@ -1,4 +1,4 @@
-<!---
+﻿<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -100,7 +100,7 @@ Usage:
               [-list-corruptfileblocks |
               [-move | -delete | -openforwrite]
               [-files [-blocks [-locations | -racks]]]
-              [-includeSnapshots] [-showprogress]
+              [-includeSnapshots]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -114,7 +114,6 @@ Usage:
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
-| `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
