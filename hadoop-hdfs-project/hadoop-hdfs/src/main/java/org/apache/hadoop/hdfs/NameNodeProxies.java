@@ -42,7 +42,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
@@ -68,7 +67,6 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
@@ -425,22 +423,9 @@ public class NameNodeProxies {
 
     if (withRetries) { // create the proxy with retries
 
-      RetryPolicy createPolicy = RetryPolicies
-          .retryUpToMaximumCountWithFixedSleep(5,
-              HdfsConstants.LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
-    
-      Map<Class<? extends Exception>, RetryPolicy> remoteExceptionToPolicyMap 
-                 = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
-          createPolicy);
-
-      RetryPolicy methodPolicy = RetryPolicies.retryByRemoteException(
-          defaultPolicy, remoteExceptionToPolicyMap);
       Map<String, RetryPolicy> methodNameToPolicyMap 
                  = new HashMap<String, RetryPolicy>();
     
-      methodNameToPolicyMap.put("create", methodPolicy);
-
       ClientProtocol translatorProxy =
         new ClientNamenodeProtocolTranslatorPB(proxy);
       return (ClientProtocol) RetryProxy.create(
