@@ -613,8 +613,7 @@ public class TestYarnClient {
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
-          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null,
-          null);
+          FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
       List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
       applicationReports.add(newApplicationReport);
       List<ApplicationAttemptReport> appAttempts = new ArrayList<ApplicationAttemptReport>();
@@ -690,7 +689,7 @@ public class TestYarnClient {
           "user2", "queue2", "appname2", "host2", 125, null,
           YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2,
           FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f, "NON-YARN", 
-          null, null);
+        null);
       applicationReports.add(newApplicationReport2);
 
       ApplicationId applicationId3 = ApplicationId.newInstance(1234, 7);
@@ -699,7 +698,7 @@ public class TestYarnClient {
           "user3", "queue3", "appname3", "host3", 126, null,
           YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3,
           FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f, "MAPREDUCE",
-          null, null);
+        null);
       applicationReports.add(newApplicationReport3);
 
       ApplicationId applicationId4 = ApplicationId.newInstance(1234, 8);
@@ -710,7 +709,7 @@ public class TestYarnClient {
               "user4", "queue4", "appname4", "host4", 127, null,
               YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4,
               FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f,
-              "NON-MAPREDUCE", null, null);
+              "NON-MAPREDUCE", null);
       applicationReports.add(newApplicationReport4);
       return applicationReports;
     }

@@ -21,11 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -147,8 +143,6 @@ public class TestSystemMetricsPublisher {
       Assert.assertEquals(app.getSubmitTime(),
           entity.getOtherInfo().get(
               ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO));
-      Assert.assertTrue(verifyAppTags(app.getApplicationTags(),
-          entity.getOtherInfo()));
       if (i == 1) {
         Assert.assertEquals("uers1,user2",
             entity.getOtherInfo().get(
@@ -358,10 +352,6 @@ public class TestSystemMetricsPublisher {
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
-    Set<String> appTags = new HashSet<String>();
-    appTags.add("test");
-    appTags.add("tags");
-    when(app.getApplicationTags()).thenReturn(appTags);
     return app;
   }
 
@@ -402,31 +392,4 @@ public class TestSystemMetricsPublisher {
     return container;
   }
 
-  private static boolean verifyAppTags(Set<String> appTags,
-      Map<String, Object> entityInfo) {
-    if (!entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
-      return false;
-    }
-    Object obj = entityInfo.get(ApplicationMetricsConstants.APP_TAGS_INFO);
-    if (obj instanceof Collection<?>) {
-      Collection<?> collection = (Collection<?>) obj;
-      if (collection.size() != appTags.size()) {
-        return false;
-      }
-      for (String appTag : appTags) {
-        boolean match = false;
-        for (Object o : collection) {
-          if (o.toString().equals(appTag)) {
-            match = true;
-            break;
-          }
-        }
-        if (!match) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
-  }
 }
