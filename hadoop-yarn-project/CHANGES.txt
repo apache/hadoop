@@ -479,6 +479,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3740. Fixed the typo in the configuration name:
     APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
 
+    YARN-3751. Fixed AppInfo to check if used resources are null. (Sunil G via
+    zjshen)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
