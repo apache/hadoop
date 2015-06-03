@@ -86,12 +86,14 @@ public class AppInfo {
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
     if (app.getApplicationResourceUsageReport() != null) {
-      runningContainers =
-          app.getApplicationResourceUsageReport().getNumUsedContainers();
-      allocatedCpuVcores = app.getApplicationResourceUsageReport()
-          .getUsedResources().getVirtualCores();
-      allocatedMemoryMB = app.getApplicationResourceUsageReport()
-          .getUsedResources().getMemory();
+      runningContainers = app.getApplicationResourceUsageReport()
+          .getNumUsedContainers();
+      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
+        allocatedCpuVcores = app.getApplicationResourceUsageReport()
+            .getUsedResources().getVirtualCores();
+        allocatedMemoryMB = app.getApplicationResourceUsageReport()
+            .getUsedResources().getMemory();
+      }
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
