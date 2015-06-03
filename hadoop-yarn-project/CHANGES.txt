@@ -286,9 +286,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3467. Expose allocatedMB, allocatedVCores, and runningContainers metrics on 
     running Applications in RM Web UI. (Anubhav Dhoot via kasha)
 
-    YARN-1462. Made RM write application tags to timeline server and exposed them
-    to users via generic history web UI and REST API. (Xuan Gong via zjshen)
-
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -503,6 +500,9 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3723. Need to clearly document primaryFilter and otherInfo value type.
     (Zhijie Shen via xgong)
+
+    YARN-1462. Made RM write application tags to timeline server and exposed them
+    to users via generic history web UI and REST API. (Xuan Gong via zjshen)
 
   OPTIMIZATIONS
 
