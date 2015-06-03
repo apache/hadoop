@@ -1473,7 +1473,8 @@ function apply_patch_file
 }
 
 
-## @description  If this patches actually patches test-patch.sh, then
+## @description  If this actually patches the files used for the QA process
+## @description  under dev-support and its subdirectories, then
 ## @description  run with the patched version for the test.
 ## @audience     private
 ## @stability    evolving
@@ -1489,7 +1490,7 @@ function check_reexec
   fi
 
   if [[ ! ${CHANGED_FILES} =~ dev-support/test-patch
-      || ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
+     && ! ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
     return
   fi
 
@@ -1510,7 +1511,7 @@ function check_reexec
 
     rm "${commentfile}" 2>/dev/null
 
-    echo "(!) A patch to test-patch or smart-apply-patch has been detected. " > "${commentfile}"
+    echo "(!) A patch to the files used for the QA process has been detected. " > "${commentfile}"
     echo "Re-executing against the patched versions to perform further tests. " >> "${commentfile}"
     echo "The console is at ${BUILD_URL}console in case of problems." >> "${commentfile}"
 
