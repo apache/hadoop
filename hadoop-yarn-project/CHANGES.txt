@@ -482,6 +482,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3751. Fixed AppInfo to check if used resources are null. (Sunil G via
     zjshen)
 
+    YARN-3762. FairScheduler: CME on FSParentQueue#getQueueUserAclInfo. (kasha)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
