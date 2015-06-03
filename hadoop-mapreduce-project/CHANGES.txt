@@ -437,6 +437,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6204. TestJobCounters should use new properties instead of
     JobConf.MAPRED_TASK_JAVA_OPTS. (Sam Liu via ozawa)
 
+    MAPREDUCE-6374. Distributed Cache File visibility should check permission
+    of full path (Chang Li via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
