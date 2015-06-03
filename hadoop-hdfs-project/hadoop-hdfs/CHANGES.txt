@@ -942,6 +942,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8270. create() always retried with hardcoded timeout when file already
     exists with open lease (J.Andreina via vinayakumarb)
 
+    HDFS-8523. Remove usage information on unsupported operation
+    "fsck -showprogress" from branch-2 (J.Andreina via vinayakumarb)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
