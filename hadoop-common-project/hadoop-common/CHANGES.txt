@@ -811,6 +811,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12042. Users may see TrashPolicy if hdfs dfs -rm is run
     (Andreina J via vinayakumarb)
 
+    HADOOP-11991. test-patch.sh isn't re-executed even if smart-apply-patch.sh
+    is modified. (Kengo Seki via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
