@@ -34,7 +34,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
@@ -161,31 +159,6 @@ public class NameNodeProxies {
   public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
       URI nameNodeUri, Class<T> xface, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
-    return createProxy(conf, nameNodeUri, xface, fallbackToSimpleAuth, true);
-  }
-
-  /**
-   * Creates the namenode proxy with the passed protocol. This will handle
-   * creation of either HA- or non-HA-enabled proxy objects, depending upon
-   * if the provided URI is a configured logical URI.
-   *
-   * @param conf the configuration containing the required IPC
-   *        properties, client failover configurations, etc.
-   * @param nameNodeUri the URI pointing either to a specific NameNode
-   *        or to a logical nameservice.
-   * @param xface the IPC interface which should be created
-   * @param fallbackToSimpleAuth set to true or false during calls to
-   *   indicate if a secure client falls back to simple auth
-   * @param withRetries certain interfaces have a non-standard retry policy
-   * @return an object containing both the proxy and the associated
-   *         delegation token service it corresponds to
-   * @throws IOException if there is an error creating the proxy
-   **/
-  @SuppressWarnings("unchecked")
-  public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
-      URI nameNodeUri, Class<T> xface, AtomicBoolean fallbackToSimpleAuth,
-      boolean withRetries)
-      throws IOException {
     AbstractNNFailoverProxyProvider<T> failoverProxyProvider =
         createFailoverProxyProvider(conf, nameNodeUri, xface, true,
           fallbackToSimpleAuth);
@@ -193,7 +166,7 @@ public class NameNodeProxies {
     if (failoverProxyProvider == null) {
       // Non-HA case
       return createNonHAProxy(conf, NameNode.getAddress(nameNodeUri), xface,
-          UserGroupInformation.getCurrentUser(), withRetries,
+          UserGroupInformation.getCurrentUser(), true,
           fallbackToSimpleAuth);
     } else {
       // HA case
@@ -442,22 +415,8 @@ public class NameNodeProxies {
 
     if (withRetries) { // create the proxy with retries
 
-      RetryPolicy createPolicy = RetryPolicies
-          .retryUpToMaximumCountWithFixedSleep(5,
-              HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
-    
-      Map<Class<? extends Exception>, RetryPolicy> remoteExceptionToPolicyMap 
-                 = new HashMap<Class<? extends Exception>, RetryPolicy>();
-      remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
-          createPolicy);
-
-      RetryPolicy methodPolicy = RetryPolicies.retryByRemoteException(
-          defaultPolicy, remoteExceptionToPolicyMap);
       Map<String, RetryPolicy> methodNameToPolicyMap 
                  = new HashMap<String, RetryPolicy>();
-    
-      methodNameToPolicyMap.put("create", methodPolicy);
-
       ClientProtocol translatorProxy =
         new ClientNamenodeProtocolTranslatorPB(proxy);
       return (ClientProtocol) RetryProxy.create(
