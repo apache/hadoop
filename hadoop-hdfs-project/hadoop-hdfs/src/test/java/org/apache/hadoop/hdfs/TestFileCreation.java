@@ -408,9 +408,8 @@ public class TestFileCreation {
         GenericTestUtils.assertExceptionContains("already being created by",
             abce);
       }
-      // NameNodeProxies' createNNProxyWithClientProtocol has 5 retries.
       assertCounter("AlreadyBeingCreatedExceptionNumOps",
-          6L, getMetrics(metricsName));
+          1L, getMetrics(metricsName));
       FSDataOutputStream stm2 = fs2.create(p, true);
       stm2.write(2);
       stm2.close();
