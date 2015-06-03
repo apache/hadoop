@@ -30,7 +30,6 @@ import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 class LevelDBROTransaction extends ROTransaction {
   private final org.apache.hadoop.hdfs.hdfsdb.DB hdfsdb;
 
-  private Snapshot snapshot;
   private final ReadOptions options = new ReadOptions();
   public static final ReadOptions OPTIONS = new ReadOptions();
 
@@ -40,8 +39,8 @@ class LevelDBROTransaction extends ROTransaction {
   }
 
   LevelDBROTransaction begin() {
-    snapshot = hdfsdb.snapshot();
-    options.snapshot(snapshot);
+    fsd.readLock();
+    options.snapshot(fsd.currentLevelDbSnapshot());
     return this;
   }
 
@@ -137,10 +136,6 @@ class LevelDBROTransaction extends ROTransaction {
 
   @Override
   public void close() throws IOException {
-    try {
-      snapshot.close();
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    fsd.readUnlock();
   }
 }

@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.hdfsdb.Options;
+import org.apache.hadoop.hdfs.hdfsdb.Snapshot;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -74,6 +75,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -186,11 +188,36 @@ public class FSDirectory implements Closeable {
   private INodeAttributeProvider attributeProvider;
   private final boolean enableLevelDb;
   private final org.apache.hadoop.hdfs.hdfsdb.DB levelDb;
+  private AtomicReference<Snapshot> currentSnapshot = new AtomicReference<>();
 
   org.apache.hadoop.hdfs.hdfsdb.DB getLevelDb() {
     return levelDb;
   }
 
+  Snapshot currentLevelDbSnapshot() {
+    assert hasReadLock();
+    if (currentSnapshot.get() == null) {
+      synchronized (currentSnapshot) {
+        if (currentSnapshot.get() == null) {
+          currentSnapshot.set(levelDb.snapshot());
+        }
+      }
+    }
+    return currentSnapshot.get();
+  }
+
+  void clearCurrentLevelDBSnapshot() {
+    assert hasWriteLock();
+    Snapshot s = currentSnapshot.get();
+    if (s != null) {
+      try {
+        s.close();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      currentSnapshot.set(null);
+    }
+  }
   public void setINodeAttributeProvider(INodeAttributeProvider provider) {
     attributeProvider = provider;
   }
@@ -438,7 +465,23 @@ public class FSDirectory implements Closeable {
    * Shutdown the filestore
    */
   @Override
-  public void close() throws IOException {}
+  public void close() throws IOException {
+    if (enableLevelDb) {
+      writeLock();
+      try {
+        if (currentSnapshot.get() != null) {
+          try {
+            currentSnapshot.get().close();
+          } catch (Exception e) {
+            throw new IOException(e);
+          }
+        }
+        levelDb.close();
+      } finally {
+        writeUnlock();
+      }
+    }
+  }
 
   void markNameCacheInitialized() {
     writeLock();

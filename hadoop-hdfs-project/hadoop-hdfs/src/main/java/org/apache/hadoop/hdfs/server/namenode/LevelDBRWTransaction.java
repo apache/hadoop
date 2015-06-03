@@ -80,6 +80,7 @@ class LevelDBRWTransaction extends RWTransaction {
   void commit() {
     try {
       hdfsdb.write(WRITE_OPTIONS, batch);
+      fsd.clearCurrentLevelDBSnapshot();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
