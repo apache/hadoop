@@ -840,6 +840,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8256. "-storagepolicies , -blockId ,-replicaDetails " options are missed
     out in usage and from documentation (J.Andreina via vinayakumarb)
 
+    HDFS-8470. fsimage loading progress should update inode, delegation token and
+    cache pool count. (surendra singh lilhore via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
