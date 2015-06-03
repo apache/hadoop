@@ -44,7 +44,7 @@ public class TimelineMetric {
   private Comparator<Long> reverseComparator = new Comparator<Long>() {
     @Override
     public int compare(Long l1, Long l2) {
-      return -l1.compareTo(l2);
+      return l2.compareTo(l1);
     }
   };
   private TreeMap<Long, Number> values = new TreeMap<>(reverseComparator);
