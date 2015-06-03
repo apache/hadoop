@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <functional>
+
 #include "leveldb/iterator.h"
 #include "leveldb/options.h"
 
@@ -82,6 +84,15 @@ class DB {
   // May return some other Status on an error.
   virtual Status Get(const ReadOptions& options,
                      const Slice& key, std::string* value) = 0;
+
+  // Get the value from a particular snapshot. The call only blocks if
+  // the value resides in the block cache or on the disk.
+  //
+  // May return some other Status on an error.
+  virtual Status SnapshotGet(const ReadOptions& options,
+                             const Slice& key,
+                             const std::function<void(const Slice&)>
+                             &get_value) = 0;
 
   // Return a heap-allocated iterator over the contents of the database.
   // The result of NewIterator() is initially invalid (caller must

@@ -56,6 +56,11 @@ public class Options extends NativeObject {
     return this;
   }
 
+  public Options blockCacheSize(long capacity) {
+    blockCacheSize(nativeHandle, capacity);
+    return this;
+  }
+
   @Override
   public void close() {
     if (nativeHandle != 0) {
@@ -70,4 +75,5 @@ public class Options extends NativeObject {
   private static native void compressionType(long handle, int value);
   private static native void writeBufferSize(long handle, int value);
   private static native void blockSize(long handle, int value);
+  private static native void blockCacheSize(long handle, long capacity);
 }

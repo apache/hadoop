@@ -37,17 +37,20 @@ class LevelDBRWTransaction extends RWTransaction {
 
   @Override
   FlatINode getINode(long id) {
-    return LevelDBROTransaction.getFlatINode(id, hdfsdb);
+    return LevelDBROTransaction.getFlatINode(id, hdfsdb,
+                                             LevelDBROTransaction.OPTIONS);
   }
 
   @Override
   long getChild(long parentId, ByteBuffer localName) {
-    return LevelDBROTransaction.getChild(parentId, localName, hdfsdb);
+    return LevelDBROTransaction.getChild(parentId, localName, hdfsdb,
+                                         LevelDBROTransaction.OPTIONS);
   }
 
   @Override
   DBChildrenView childrenView(long parent) {
-    return LevelDBROTransaction.getChildrenView(parent, hdfsdb);
+    return LevelDBROTransaction.getChildrenView(parent, hdfsdb,
+                                                LevelDBROTransaction.OPTIONS);
   }
 
   @Override

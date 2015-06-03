@@ -35,6 +35,10 @@ class DBImpl : public DB {
   virtual Status Get(const ReadOptions& options,
                      const Slice& key,
                      std::string* value);
+  virtual Status SnapshotGet(const ReadOptions& options,
+                             const Slice& key,
+                             const std::function<void(const Slice&)>
+                             &get_value);
   virtual Iterator* NewIterator(const ReadOptions&);
   virtual const Snapshot* GetSnapshot();
   virtual void ReleaseSnapshot(const Snapshot* snapshot);

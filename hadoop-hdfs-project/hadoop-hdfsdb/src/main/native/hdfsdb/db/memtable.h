@@ -6,6 +6,9 @@
 #define STORAGE_LEVELDB_DB_MEMTABLE_H_
 
 #include <string>
+#include <functional>
+#include <atomic>
+
 #include "leveldb/db.h"
 #include "db/dbformat.h"
 #include "db/skiplist.h"
@@ -28,9 +31,9 @@ class MemTable {
 
   // Drop reference count.  Delete if no more references exist.
   void Unref() {
-    --refs_;
-    assert(refs_ >= 0);
-    if (refs_ <= 0) {
+    int v = std::atomic_fetch_sub(&refs_, 1);
+    assert(v >= 0);
+    if (v <= 0) {
       delete this;
     }
   }
@@ -62,6 +65,8 @@ class MemTable {
   // in *status and return true.
   // Else, return false.
   bool Get(const LookupKey& key, std::string* value, Status* s);
+  bool Get(const LookupKey& key, const std::function<void(const Slice&)>
+  &get_value, Status* s);
 
  private:
   ~MemTable();  // Private since only Unref() should be used to delete it
@@ -77,7 +82,7 @@ class MemTable {
   typedef SkipList<const char*, KeyComparator> Table;
 
   KeyComparator comparator_;
-  int refs_;
+  std::atomic_int refs_;
   Arena arena_;
   Table table_;
 

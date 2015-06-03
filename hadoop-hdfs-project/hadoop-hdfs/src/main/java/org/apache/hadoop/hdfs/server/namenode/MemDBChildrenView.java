@@ -31,6 +31,10 @@ class MemDBChildrenView extends DBChildrenView {
 
   @Override
   public Iterator<Map.Entry<ByteBuffer, Long>> iterator() {
-    return childrenMap.tailMap(start).entrySet().iterator();
+    if (start == null) {
+      return childrenMap.entrySet().iterator();
+    } else {
+      return childrenMap.tailMap(start).entrySet().iterator();
+    }
   }
 }

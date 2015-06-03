@@ -21,7 +21,8 @@ import java.io.IOException;
 
 public class DB extends NativeObject {
   public static DB open(Options options, String path) throws IOException {
-    return new DB(open(options.nativeHandle(), path));
+    long handle = open(options.nativeHandle(), path);
+    return new DB(handle);
   }
 
   @Override
@@ -34,6 +35,11 @@ public class DB extends NativeObject {
 
   public byte[] get(ReadOptions options, byte[] key) throws IOException {
     return get(nativeHandle, options.nativeHandle(), key);
+  }
+
+  public byte[] snapshotGet(ReadOptions options, byte[] key) throws
+                                                             IOException {
+    return snapshotGet(nativeHandle, options.nativeHandle(), key);
   }
 
   public void write(WriteOptions options, WriteBatch batch) throws IOException {
@@ -52,6 +58,14 @@ public class DB extends NativeObject {
     return new Iterator(newIterator(nativeHandle, options.nativeHandle()));
   }
 
+  public Snapshot snapshot() {
+    return new Snapshot(nativeHandle, newSnapshot(nativeHandle));
+  }
+
+  public byte[] dbGetTest(byte[] key) throws IOException {
+    return getTest(nativeHandle, key);
+  }
+
   private DB(long handle) {
     super(handle);
   }
@@ -60,6 +74,8 @@ public class DB extends NativeObject {
   private static native void close(long handle);
   private static native byte[] get(long handle, long options,
                                    byte[] key) throws IOException;
+  private static native byte[] snapshotGet(long handle, long options,
+      byte[] key) throws IOException;
   private static native void write(long handle, long options,
                                    long batch) throws IOException;
   private static native void put(long handle, long options,
@@ -67,4 +83,9 @@ public class DB extends NativeObject {
   private static native void delete(long handle, long options,
                                     byte[] key);
   private static native long newIterator(long handle, long readOptions);
+  private static native long newSnapshot(long handle);
+  static native void releaseSnapshot(long handle, long snapshotHandle);
+
+  private static native byte[] getTest(long handle, byte[] key) throws IOException;
+
 }

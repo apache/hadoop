@@ -17,25 +17,18 @@
  */
 package org.apache.hadoop.hdfs.hdfsdb;
 
-public class ReadOptions extends NativeObject {
-  public ReadOptions() {
-    super(construct());
-  }
-
-  public ReadOptions snapshot(Snapshot snapshot) {
-    snapshot(nativeHandle, snapshot.nativeHandle);
-    return this;
+public class Snapshot extends NativeObject {
+  private final long dbHandle;
+  Snapshot(long dbHandle, long nativeHandle) {
+    super(nativeHandle);
+    this.dbHandle = dbHandle;
   }
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     if (nativeHandle != 0) {
-      destruct(nativeHandle);
+      DB.releaseSnapshot(dbHandle, nativeHandle);
       nativeHandle = 0;
     }
   }
-
-  private static native long construct();
-  private static native void destruct(long handle);
-  private static native void snapshot(long handle, long snapshot);
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 #include <jni.h>
-
+#include <mutex>
 #undef JNIEXPORT
 #if _WIN32
 #define JNIEXPORT __declspec(dllexport)
@@ -33,11 +33,12 @@
 #include "org_apache_hadoop_hdfs_hdfsdb_WriteOptions.h"
 
 #include <leveldb/db.h>
+#include <leveldb/cache.h>
 #include <leveldb/options.h>
 #include <leveldb/write_batch.h>
 #include <leveldb/cache.h>
 
-static inline uintptr_t uintptr(void *ptr) {
+static inline uintptr_t uintptr(const void *ptr) {
   return reinterpret_cast<uintptr_t>(ptr);
 }
 
@@ -130,6 +131,29 @@ jbyteArray JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_get(JNIEnv *env, jclass
   return ToJByteArray(env, leveldb::Slice(result));
 }
 
+jbyteArray JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_snapshotGet(JNIEnv *env, jclass, jlong handle, jlong jread_options, jbyteArray jkey) {
+  leveldb::DB *db = reinterpret_cast<leveldb::DB*>(handle);
+  leveldb::ReadOptions *options = reinterpret_cast<leveldb::ReadOptions*>(jread_options);
+  jbyteArray res = NULL;
+  leveldb::Status status;
+  {
+    JNIByteArrayHolder<GetByteArrayCritical> key(env, jkey);
+    status = db->SnapshotGet(*options, key.slice(),
+     [env,&res](const leveldb::Slice &v) {
+      res = ToJByteArray(env, v);
+     });
+  }
+
+  if (status.IsNotFound()) {
+    return NULL;
+  } else if (!status.ok()) {
+    env->ThrowNew(env->FindClass("java/io/IOException"), status.ToString().c_str());
+    return NULL;
+  }
+
+  return res;
+}
+
 void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_write(JNIEnv *env, jclass, jlong handle, jlong jwrite_options, jlong jbatch) {
   leveldb::DB *db = reinterpret_cast<leveldb::DB*>(handle);
   leveldb::WriteOptions *options = reinterpret_cast<leveldb::WriteOptions*>(jwrite_options);
@@ -150,8 +174,31 @@ void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_delete(JNIEnv *env, jclass, j
 jlong JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_newIterator(JNIEnv *, jclass, jlong handle, jlong jread_options) {
   leveldb::DB *db = reinterpret_cast<leveldb::DB*>(handle);
   leveldb::ReadOptions *options = reinterpret_cast<leveldb::ReadOptions*>(jread_options);
-  auto res = uintptr(db->NewIterator(*options));
+  uintptr_t res = uintptr(db->NewIterator(*options));
   return res;
+}
+
+jlong JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_newSnapshot(JNIEnv *, jclass, jlong handle) {
+  leveldb::DB *db = reinterpret_cast<leveldb::DB*>(handle);
+  uintptr_t res = uintptr(db->GetSnapshot());
+  return res;
+}
+
+void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_releaseSnapshot(JNIEnv *, jclass, jlong handle, jlong snapshot) {
+  leveldb::DB *db = reinterpret_cast<leveldb::DB*>(handle);
+  leveldb::Snapshot *s = reinterpret_cast<leveldb::Snapshot*>(snapshot);
+  db->ReleaseSnapshot(s);
+}
+
+static std::mutex mutex;
+jbyteArray JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_DB_getTest(JNIEnv *env,
+jclass, jlong handle, jbyteArray jkey) {
+  mutex.lock();
+  JNIByteArrayHolder<GetByteArrayElements> key(env, jkey);
+  std::string result;
+  result.resize(100);
+  mutex.unlock();
+  return ToJByteArray(env, leveldb::Slice(result));
 }
 
 void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_Iterator_destruct(JNIEnv *, jclass, jlong handle) {
@@ -212,12 +259,25 @@ void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_Options_blockSize(JNIEnv *, jcla
   options->block_size = value;
 }
 
+void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_Options_blockCacheSize(JNIEnv *, jclass, jlong handle, jlong value) {
+  leveldb::Options *options = reinterpret_cast<leveldb::Options*>(handle);
+  if (options->block_cache) {
+    delete options->block_cache;
+  }
+  options->block_cache = leveldb::NewLRUCache(value);
+}
+
 jlong JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_ReadOptions_construct(JNIEnv *, jclass) {
   return uintptr(new leveldb::ReadOptions());
 }
 
 void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_ReadOptions_destruct(JNIEnv *, jclass, jlong handle) {
   delete reinterpret_cast<leveldb::ReadOptions*>(handle);
+}
+
+void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_ReadOptions_snapshot(JNIEnv *, jclass, jlong handle, jlong snapshot) {
+  leveldb::ReadOptions *o = reinterpret_cast<leveldb::ReadOptions*>(handle);
+  o->snapshot = reinterpret_cast<leveldb::Snapshot*>(snapshot);
 }
 
 jlong JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_construct(JNIEnv *, jclass) {

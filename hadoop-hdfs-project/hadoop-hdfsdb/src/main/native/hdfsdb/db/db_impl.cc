@@ -1121,6 +1121,52 @@ Status DBImpl::Get(const ReadOptions& options,
   return s;
 }
 
+Status DBImpl::SnapshotGet(const ReadOptions& options,
+                           const Slice& key,
+                           const std::function<void(const Slice&)> &get_value) {
+  Status s;
+  assert(options.snapshot);
+  SequenceNumber snapshot = reinterpret_cast<const SnapshotImpl*>(options.snapshot)->number_;
+  LookupKey lkey(key, snapshot);
+
+  //mutex_.Lock();
+  MemTable* mem = mem_;
+  MemTable* imm = imm_;
+  //mutex_.Unlock();
+  mem->Ref();
+  if (imm != NULL) imm->Ref();
+
+  // First look in the memtable, then in the immutable memtable (if any).
+  if (mem->Get(lkey, get_value, &s)) {
+    // Done
+  } else if (imm != NULL && imm->Get(lkey, get_value, &s)) {
+    // Done
+  } else {
+    assert (false);
+    mutex_.Lock();
+    Version* current = versions_->current();
+    current->Ref();
+    // Unlock while reading from files and memtables
+    mutex_.Unlock();
+    Version::GetStats stats;
+    std::string value;
+    s = current->Get(options, lkey, &value, &stats);
+    if (value.size()) {
+      get_value(Slice(value));
+    }
+    mutex_.Lock();
+    if (current->UpdateStats(stats)) {
+      MaybeScheduleCompaction();
+    }
+    current->Unref();
+    mutex_.Unlock();
+  }
+
+  mem->Unref();
+  if (imm != NULL) imm->Unref();
+  return s;
+}
+
 Iterator* DBImpl::NewIterator(const ReadOptions& options) {
   SequenceNumber latest_snapshot;
   uint32_t seed;

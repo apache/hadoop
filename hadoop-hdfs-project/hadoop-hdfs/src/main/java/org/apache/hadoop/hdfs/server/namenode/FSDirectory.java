@@ -348,7 +348,17 @@ public class FSDirectory implements Closeable {
     this.enableLevelDb = conf.getBoolean("dfs.partialns", false);
     if (enableLevelDb) {
       String dbPath = conf.get("dfs.partialns.path");
-      Options options = new Options().createIfMissing(true);
+      int writeBufferSize = conf.getInt("dfs.partialns.writebuffer",
+                                        4096 * 1024);
+      long blockCacheSize = conf.getLong(
+          "dfs.partialns.blockcache", 0);
+      Options options = new Options().createIfMissing(true)
+          .writeBufferSize(writeBufferSize);
+
+      if (blockCacheSize != 0) {
+        options.blockCacheSize(blockCacheSize);
+      }
+
       this.levelDb = org.apache.hadoop.hdfs.hdfsdb.DB.open(options, dbPath);
       try (RWTransaction tx = newRWTransaction().begin()) {
         tx.putINode(ROOT_INODE_ID, createRootForFlatNS(ns));

@@ -106,6 +106,12 @@ void MemTable::Add(SequenceNumber s, ValueType type,
 }
 
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
+  return Get(key, [value](const Slice &v) {
+          value->assign(v.data(), v.size()); }, s);
+}
+
+bool MemTable::Get(const LookupKey& key,
+ const std::function<void(const Slice&)> &get_value, Status* s) {
   Slice memkey = key.memtable_key();
   Table::Iterator iter(&table_);
   iter.Seek(memkey.data());
@@ -130,7 +136,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
       switch (static_cast<ValueType>(tag & 0xff)) {
         case kTypeValue: {
           Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
-          value->assign(v.data(), v.size());
+          get_value(v);
           return true;
         }
         case kTypeDeletion:

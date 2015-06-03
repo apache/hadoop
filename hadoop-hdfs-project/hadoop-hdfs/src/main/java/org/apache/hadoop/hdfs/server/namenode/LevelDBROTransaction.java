@@ -29,37 +29,43 @@ import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 
 class LevelDBROTransaction extends ROTransaction {
   private final org.apache.hadoop.hdfs.hdfsdb.DB hdfsdb;
-  private static final ReadOptions OPTIONS = new ReadOptions();
+
+  private Snapshot snapshot;
+  private final ReadOptions options = new ReadOptions();
+  public static final ReadOptions OPTIONS = new ReadOptions();
+
   LevelDBROTransaction(FSDirectory fsd, org.apache.hadoop.hdfs.hdfsdb.DB db) {
     super(fsd);
     this.hdfsdb = db;
   }
 
   LevelDBROTransaction begin() {
-    fsd.readLock();
+    snapshot = hdfsdb.snapshot();
+    options.snapshot(snapshot);
     return this;
   }
 
   @Override
   FlatINode getINode(long id) {
-    return getFlatINode(id, hdfsdb);
+    return getFlatINode(id, hdfsdb, options);
   }
 
   @Override
   long getChild(long parentId, ByteBuffer localName) {
-    return getChild(parentId, localName, hdfsdb);
+    return getChild(parentId, localName, hdfsdb, options);
   }
 
   @Override
   DBChildrenView childrenView(long parent) {
-    return getChildrenView(parent, hdfsdb);
+    return getChildrenView(parent, hdfsdb, options);
   }
 
   static FlatINode getFlatINode(
-      long id, org.apache.hadoop.hdfs.hdfsdb.DB hdfsdb) {
+      long id, DB hdfsdb, ReadOptions options) {
     byte[] key = inodeKey(id);
     try {
-      byte[] bytes = hdfsdb.get(OPTIONS, key);
+      byte[] bytes = options == OPTIONS ? hdfsdb.get(options, key) : hdfsdb
+          .snapshotGet(options, key);
       if (bytes == null) {
         return null;
       }
@@ -83,11 +89,13 @@ class LevelDBROTransaction extends ROTransaction {
       };
   }
 
-  static long getChild(long parentId, ByteBuffer localName, DB hdfsdb) {
+  static long getChild(
+      long parentId, ByteBuffer localName, DB hdfsdb, ReadOptions options) {
     Preconditions.checkArgument(localName.hasRemaining());
     byte[] key = inodeChildKey(parentId, localName);
     try {
-      byte[] bytes = hdfsdb.get(OPTIONS, key);
+      byte[] bytes = options == OPTIONS ? hdfsdb.get(options, key) : hdfsdb
+          .snapshotGet(options, key);
       if (bytes == null) {
         return INVALID_INODE_ID;
       }
@@ -109,7 +117,8 @@ class LevelDBROTransaction extends ROTransaction {
     return key;
   }
 
-  static DBChildrenView getChildrenView(long parent, DB hdfsdb) {
+  static DBChildrenView getChildrenView(
+      long parent, DB hdfsdb, ReadOptions options) {
     byte[] key = new byte[]{'I',
         (byte) ((parent >> 56) & 0xff),
         (byte) ((parent >> 48) & 0xff),
@@ -121,9 +130,17 @@ class LevelDBROTransaction extends ROTransaction {
         (byte) (parent & 0xff),
         1
     };
-    Iterator it = hdfsdb.iterator(OPTIONS);
+    Iterator it = hdfsdb.iterator(options);
     it.seek(key);
     return new LevelDBChildrenView(parent, it);
   }
 
+  @Override
+  public void close() throws IOException {
+    try {
+      snapshot.close();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
 }

@@ -1848,6 +1848,14 @@ class ModelDB: public DB {
     assert(false);      // Not implemented
     return Status::NotFound(key);
   }
+
+  virtual Status SnapshotGet(const ReadOptions& options,
+                             const Slice& key, const
+                             std::function<void(const Slice&)> &) {
+    assert(false);      // Not implemented
+    return Status::NotFound(key);
+  }
+
   virtual Iterator* NewIterator(const ReadOptions& options) {
     if (options.snapshot == NULL) {
       KVMap* saved = new KVMap;
