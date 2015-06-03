@@ -334,6 +334,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5248. Let NNBenchWithoutMR specify the replication factor for
     its test (Erik Paulson via jlowe)
 
+    MAPREDUCE-6174. Combine common stream code into parent class for
+    InMemoryMapOutput and OnDiskMapOutput. (Eric Payne via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
