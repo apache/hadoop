@@ -858,6 +858,9 @@ Release 2.7.1 - UNRELEASED
     HADOOP-11934. Use of JavaKeyStoreProvider in LdapGroupsMapping causes
     infinite loop. (Larry McCay via cnauroth)
 
+    HADOOP-12058. Fix dead links to DistCp and Hadoop Archives pages.
+    (Kazuho Fujii via aajisaka)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
