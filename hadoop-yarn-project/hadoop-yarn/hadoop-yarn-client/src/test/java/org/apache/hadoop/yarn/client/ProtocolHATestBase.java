@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -101,7 +102,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -161,26 +161,6 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
   protected Thread failoverThread = null;
   private volatile boolean keepRunning;
 
-  private void setConfForRM(String rmId, String prefix, String value) {
-    conf.set(HAUtil.addSuffix(prefix, rmId), value);
-  }
-
-  private void setRpcAddressForRM(String rmId, int base) {
-    setConfForRM(rmId, YarnConfiguration.RM_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_SCHEDULER_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_ADMIN_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_ADMIN_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-        "0.0.0.0:" + (base + YarnConfiguration
-            .DEFAULT_RM_RESOURCE_TRACKER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT));
-  }
-
   @Before
   public void setup() throws IOException {
     failoverThread = null;
@@ -189,8 +169,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.setInt(YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS, 5);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
-    setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE);
-    setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE);
+    HATestUtil.setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE, conf);
+    HATestUtil.setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE, conf);
 
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
 

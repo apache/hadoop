@@ -481,6 +481,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3762. FairScheduler: CME on FSParentQueue#getQueueUserAclInfo. (kasha)
 
+    YARN-3749. We should make a copy of configuration when init MiniYARNCluster
+    with multiple RMs. (Chun Chen via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
