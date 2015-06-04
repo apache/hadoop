@@ -53,6 +53,21 @@ public class DominantResourceCalculator extends ResourceCalculator {
       return 0;
     }
     
+    if (isInvalidDivisor(clusterResource)) {
+      if ((lhs.getMemory() < rhs.getMemory() && lhs.getVirtualCores() > rhs
+          .getVirtualCores())
+          || (lhs.getMemory() > rhs.getMemory() && lhs.getVirtualCores() < rhs
+              .getVirtualCores())) {
+        return 0;
+      } else if (lhs.getMemory() > rhs.getMemory()
+          || lhs.getVirtualCores() > rhs.getVirtualCores()) {
+        return 1;
+      } else if (lhs.getMemory() < rhs.getMemory()
+          || lhs.getVirtualCores() < rhs.getVirtualCores()) {
+        return -1;
+      }
+    }
+
     float l = getResourceAsValue(clusterResource, lhs, true);
     float r = getResourceAsValue(clusterResource, rhs, true);
     

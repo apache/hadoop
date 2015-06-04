@@ -623,6 +623,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3585. NodeManager cannot exit on SHUTDOWN event triggered and NM
     recovery is enabled (Rohith Sharmaks via jlowe)
 
+    YARN-3733. Fix DominantRC#compare() does not work as expected if 
+    cluster resource is empty. (Rohith Sharmaks via wangda)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
