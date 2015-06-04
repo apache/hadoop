@@ -417,9 +417,6 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
 
   @Test
   public void testLowerAndUpperStrings() {
-    // Due to java bug http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8047340,
-    // The test will fail with Turkish locality on Mac OS.
-    Assume.assumeTrue(Shell.LINUX);
     Locale defaultLocale = Locale.getDefault();
     try {
       Locale.setDefault(new Locale("tr", "TR"));

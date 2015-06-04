@@ -823,6 +823,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11994. smart-apply-patch wrongly assumes that git is infallible.
     (Kengo Seki via Arpit Agarwal)
 
+    HADOOP-11924. Tolerate JDK-8047340-related exceptions in
+    Shell#isSetSidAvailable preventing class init. (Tsuyoshi Ozawa via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
