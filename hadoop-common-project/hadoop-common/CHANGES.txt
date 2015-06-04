@@ -814,6 +814,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11991. test-patch.sh isn't re-executed even if smart-apply-patch.sh
     is modified. (Kengo Seki via aajisaka)
 
+    HADOOP-12018. smart-apply-patch.sh fails if the patch edits CR+LF files
+    and is created by 'git diff --no-prefix'. (Kengo Seki via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
