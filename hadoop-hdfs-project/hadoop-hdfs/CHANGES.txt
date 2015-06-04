@@ -846,6 +846,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-3716. Purger should remove stale fsimage ckpt files
     (J.Andreina via vinayakumarb)
 
+    HDFS-8463. Calling DFSInputStream.seekToNewSource just after stream creation
+    causes NullPointerException (Masatake Iwasaki via kihwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
