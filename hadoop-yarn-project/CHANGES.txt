@@ -626,6 +626,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3733. Fix DominantRC#compare() does not work as expected if 
     cluster resource is empty. (Rohith Sharmaks via wangda)
 
+    YARN-3764. CapacityScheduler should forbid moving LeafQueue from one parent
+    to another. (Wangda Tan via jianhe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
