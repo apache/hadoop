@@ -282,6 +282,7 @@ Requirements:
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * Unix command-line tools from GnuWin32: sh, mkdir, rm, cp, tar, gzip. These
   tools must be present on your PATH.
+* Python ( for generation of docs using 'mvn site')
 
 Unix command-line tools are also included with the Windows Git package which
 can be downloaded from http://git-scm.com/download/win.
