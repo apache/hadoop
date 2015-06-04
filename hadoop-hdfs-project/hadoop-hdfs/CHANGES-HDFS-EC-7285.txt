@@ -280,3 +280,6 @@
 
     HDFS-7621. Erasure Coding: update the Balancer/Mover data migration logic.
     (Walter Su via zhz)
+
+    HDFS-8328. Follow-on to update decode for DataNode striped blocks
+    reconstruction. (yliu)

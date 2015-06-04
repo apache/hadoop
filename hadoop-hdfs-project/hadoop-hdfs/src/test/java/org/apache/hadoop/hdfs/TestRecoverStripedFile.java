@@ -100,29 +100,69 @@ public class TestRecoverStripedFile {
   }
   
   @Test(timeout = 120000)
-  public void testRecoverThreeParityBlocks() throws Exception {
+  public void testRecoverOneParityBlock1() throws Exception {
+    int fileLen = cellSize + cellSize/10;
+    assertFileBlocksRecovery("/testRecoverOneParityBlock1", fileLen, 0, 1);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverOneParityBlock2() throws Exception {
+    int fileLen = 1;
+    assertFileBlocksRecovery("/testRecoverOneParityBlock2", fileLen, 0, 1);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverOneParityBlock3() throws Exception {
     int fileLen = 3 * blockSize + blockSize/10;
+    assertFileBlocksRecovery("/testRecoverOneParityBlock3", fileLen, 0, 1);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverThreeParityBlocks() throws Exception {
+    int fileLen = 10 * blockSize + blockSize/10;
     assertFileBlocksRecovery("/testRecoverThreeParityBlocks", fileLen, 0, 3);
   }
   
   @Test(timeout = 120000)
   public void testRecoverThreeDataBlocks() throws Exception {
-    int fileLen = 3 * blockSize + blockSize/10;
+    int fileLen = 10 * blockSize + blockSize/10;
     assertFileBlocksRecovery("/testRecoverThreeDataBlocks", fileLen, 1, 3);
   }
   
   @Test(timeout = 120000)
+  public void testRecoverThreeDataBlocks1() throws Exception {
+    int fileLen = 3 * blockSize + blockSize/10;
+    assertFileBlocksRecovery("/testRecoverThreeDataBlocks1", fileLen, 1, 3);
+  }
+  
+  @Test(timeout = 120000)
   public void testRecoverOneDataBlock() throws Exception {
-    ////TODO: TODO: wait for HADOOP-11847
-    //int fileLen = 10 * blockSize + blockSize/10;
-    //assertFileBlocksRecovery("/testRecoverOneDataBlock", fileLen, 1, 1);
+    int fileLen = 10 * blockSize + blockSize/10;
+    assertFileBlocksRecovery("/testRecoverOneDataBlock", fileLen, 1, 1);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverOneDataBlock1() throws Exception {
+    int fileLen = cellSize + cellSize/10;
+    assertFileBlocksRecovery("/testRecoverOneDataBlock1", fileLen, 1, 1);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverOneDataBlock2() throws Exception {
+    int fileLen = 1;
+    assertFileBlocksRecovery("/testRecoverOneDataBlock2", fileLen, 1, 1);
   }
   
   @Test(timeout = 120000)
   public void testRecoverAnyBlocks() throws Exception {
-    ////TODO: TODO: wait for HADOOP-11847
-    //int fileLen = 3 * blockSize + blockSize/10;
-    //assertFileBlocksRecovery("/testRecoverAnyBlocks", fileLen, 2, 2);
+    int fileLen = 3 * blockSize + blockSize/10;
+    assertFileBlocksRecovery("/testRecoverAnyBlocks", fileLen, 2, 2);
+  }
+  
+  @Test(timeout = 120000)
+  public void testRecoverAnyBlocks1() throws Exception {
+    int fileLen = 10 * blockSize + blockSize/10;
+    assertFileBlocksRecovery("/testRecoverAnyBlocks1", fileLen, 2, 3);
   }
   
   /**
@@ -203,6 +243,9 @@ public class TestRecoverStripedFile {
       replicaContents[i] = readReplica(replicas[i]);
     }
     
+    int cellsNum = (fileLen - 1) / cellSize + 1;
+    int groupSize = Math.min(cellsNum, dataBlkNum) + parityBlkNum;
+
     try {
       DatanodeID[] dnIDs = new DatanodeID[toRecoverBlockNum];
       for (int i = 0; i < toRecoverBlockNum; i++) {
@@ -216,7 +259,6 @@ public class TestRecoverStripedFile {
         dnIDs[i] = dn.getDatanodeId();
       }
       setDataNodesDead(dnIDs);
-       
       
       // Check the locatedBlocks of the file again
       locatedBlocks = getLocatedBlocks(file);
@@ -232,7 +274,7 @@ public class TestRecoverStripedFile {
         }
       }
       
-      waitForRecoveryFinished(file);
+      waitForRecoveryFinished(file, groupSize);
       
       targetDNs = sortTargetsByReplicas(blocks, targetDNs);
       
@@ -319,7 +361,8 @@ public class TestRecoverStripedFile {
     }
   }
   
-  private LocatedBlocks waitForRecoveryFinished(Path file) throws Exception {
+  private LocatedBlocks waitForRecoveryFinished(Path file, int groupSize) 
+      throws Exception {
     final int ATTEMPTS = 60;
     for (int i = 0; i < ATTEMPTS; i++) {
       LocatedBlocks locatedBlocks = getLocatedBlocks(file);
