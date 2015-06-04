@@ -101,7 +101,10 @@ if grep -q "^diff --git" "${PATCH_FILE}"; then
   fi
   # shellcheck disable=SC2086
   git apply ${GIT_FLAGS} "${PATCH_FILE}"
-  exit $?
+  if [[ $? == 0 ]]; then
+    cleanup 0
+  fi
+  echo "git apply failed. Going to apply the patch with: ${PATCH}"
 fi
 
 # Come up with a list of changed files into $TMP

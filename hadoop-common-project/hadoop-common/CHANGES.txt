@@ -820,6 +820,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12019. update BUILDING.txt to include python for 'mvn site'
     in windows (vinayakumarb)
 
+    HADOOP-11994. smart-apply-patch wrongly assumes that git is infallible.
+    (Kengo Seki via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
