@@ -336,7 +336,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-report` `[-live]` `[-dead]` `[-decommissioning]` | Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes. |
+| `-report` `[-live]` `[-dead]` `[-decommissioning]` | Reports basic filesystem information and statistics, The dfs usage can be different from "du" usage, because it measures raw space used by replication, checksums, snapshots and etc. on all the DNs. Optional flags may be used to filter the list of displayed DataNodes. |
 | `-safemode` enter\|leave\|get\|wait | Safe mode maintenance command. Safe mode is a Namenode state in which it <br/>1. does not accept changes to the name space (read-only) <br/>2. does not replicate or delete blocks. <br/>Safe mode is entered automatically at Namenode startup, and leaves safe mode automatically when the configured minimum percentage of blocks satisfies the minimum replication condition. Safe mode can also be entered manually, but then it can only be turned off manually as well. |
 | `-saveNamespace` | Save current namespace into storage directories and reset edits log. Requires safe mode. |
 | `-rollEdits` | Rolls the edit log on the active NameNode. |

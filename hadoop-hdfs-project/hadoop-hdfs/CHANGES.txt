@@ -600,6 +600,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8532. Make the visibility of DFSOutputStream#streamer member variable
     to private. (Rakesh R via wang)
 
+    HDFS-8535. Clarify that dfs usage in dfsadmin -report output includes all
+    block replicas. (Eddy Xu via wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
