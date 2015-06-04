@@ -490,6 +490,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3749. We should make a copy of configuration when init MiniYARNCluster
     with multiple RMs. (Chun Chen via xgong)
 
+    YARN-3766. Fixed the apps table column error of generic history web UI.
+    (Xuan Gong via zjshen)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
