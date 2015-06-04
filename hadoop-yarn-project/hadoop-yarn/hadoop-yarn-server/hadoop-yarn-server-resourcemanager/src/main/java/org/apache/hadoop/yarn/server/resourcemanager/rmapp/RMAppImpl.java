@@ -1014,9 +1014,19 @@ public class RMAppImpl implements RMApp, Recoverable {
               + " failed due to " + failedEvent.getDiagnostics()
               + ". Failing the application.";
     } else if (this.isNumAttemptsBeyondThreshold) {
-      msg = "Application " + this.getApplicationId() + " failed "
-              + this.maxAppAttempts + " times due to "
-              + failedEvent.getDiagnostics() + ". Failing the application.";
+      int globalLimit = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+      msg = String.format(
+        "Application %s failed %d times%s%s due to %s. Failing the application.",
+          getApplicationId(),
+          maxAppAttempts,
+          (attemptFailuresValidityInterval <= 0 ? ""
+               : (" in previous " + attemptFailuresValidityInterval
+                  + " milliseconds")),
+          (globalLimit == maxAppAttempts) ? ""
+              : (" (global limit =" + globalLimit
+                 + "; local limit is =" + maxAppAttempts + ")"),
+          failedEvent.getDiagnostics());
     }
     return msg;
   }
