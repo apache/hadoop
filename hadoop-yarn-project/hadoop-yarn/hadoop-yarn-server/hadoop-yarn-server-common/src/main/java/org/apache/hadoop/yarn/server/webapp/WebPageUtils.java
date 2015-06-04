@@ -27,6 +27,10 @@ public class WebPageUtils {
     return appsTableInit(false, true);
   }
 
+  public static String appsTableInit(boolean isResourceManager) {
+    return appsTableInit(false, isResourceManager);
+  }
+
   public static String appsTableInit(
       boolean isFairSchedulerPage, boolean isResourceManager) {
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
