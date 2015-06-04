@@ -168,6 +168,9 @@ Release 2.6.1 - UNRELEASED
     YARN-2637. Fixed max-am-resource-percent calculation in CapacityScheduler
     when activating applications. (Craig Welch via jianhe)
 
+    YARN-3733. Fix DominantRC#compare() does not work as expected if
+    cluster resource is empty. (Rohith Sharmaks via wangda)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
