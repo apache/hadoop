@@ -75,7 +75,7 @@ Commands useful for users of a hadoop cluster.
 
 ### `archive`
 
-Creates a hadoop archive. More information can be found at [Hadoop Archives Guide](../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html).
+Creates a hadoop archive. More information can be found at [Hadoop Archives Guide](../../hadoop-archives/HadoopArchives.html).
 
 ### `checknative`
 
@@ -122,7 +122,7 @@ Example: `hadoop credential list -provider jceks://file/tmp/test.jceks`
 
 ### `distcp`
 
-Copy file or directories recursively. More information can be found at [Hadoop DistCp Guide](../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html).
+Copy file or directories recursively. More information can be found at [Hadoop DistCp Guide](../../hadoop-distcp/DistCp.html).
 
 ### `fs`
 
