@@ -1967,7 +1967,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress updateConnectAddr(String name,
                                              InetSocketAddress addr) {
     String prefix = name;
-    if (HAUtil.isHAEnabled(this)) {
+    if (HAUtil.isHAEnabled(this) && getServiceAddressConfKeys(this).contains(name)) {
       prefix = HAUtil.addSuffix(prefix, HAUtil.getRMHAId(this));
     }
     return super.updateConnectAddr(prefix, addr);
