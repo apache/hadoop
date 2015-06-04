@@ -447,6 +447,9 @@ Release 2.8.0 - UNRELEASED
     high. Error is: "error=7, Argument list too long at if number of input
     file is high" (wilfreds via rkanter)
 
+    MAPREDUCE-6382. Don't escape HTML links in Diagnostics in JHS job overview.
+    (Siqi Li via gera)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
