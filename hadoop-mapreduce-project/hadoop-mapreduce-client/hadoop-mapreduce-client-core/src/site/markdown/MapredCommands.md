@@ -51,7 +51,7 @@ Commands useful for users of a hadoop cluster.
 ### `archive`
 
 Creates a hadoop archive. More information can be found at
-[Hadoop Archives Guide](./HadoopArchives.html).
+[Hadoop Archives Guide](../../hadoop-archives/HadoopArchives.html).
 
 ### `classpath`
 
@@ -62,7 +62,7 @@ Usage: `mapred classpath`
 ### `distcp`
 
 Copy file or directories recursively. More information can be found at
-[Hadoop DistCp Guide](./DistCp.html).
+[Hadoop DistCp Guide](../../hadoop-distcp/DistCp.html).
 
 ### `job`
 
