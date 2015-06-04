@@ -443,6 +443,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6374. Distributed Cache File visibility should check permission
     of full path (Chang Li via jlowe)
 
+    MAPREDUCE-5965. Hadoop streaming throws error if list of input files is
+    high. Error is: "error=7, Argument list too long at if number of input
+    file is high" (wilfreds via rkanter)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

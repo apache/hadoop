@@ -55,6 +55,7 @@ Hadoop Streaming
         * [How do I update counters in streaming applications?](#How_do_I_update_counters_in_streaming_applications)
         * [How do I update status in streaming applications?](#How_do_I_update_status_in_streaming_applications)
         * [How do I get the Job variables in a streaming job's mapper/reducer?](#How_do_I_get_the_Job_variables_in_a_streaming_jobs_mapperreducer)
+        * [What do I do if I get a "error=7, Argument list too long"](#What_do_I_do_if_I_get_a_error_Argument_list_too_long)
 
 Hadoop Streaming
 ----------------
@@ -564,3 +565,11 @@ A streaming process can use the stderr to emit status information. To set a stat
 $H3 How do I get the Job variables in a streaming job's mapper/reducer?
 
 See [Configured Parameters](../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html#Configured_Parameters). During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( \_ ). For example, mapreduce.job.id becomes mapreduce\_job\_id and mapreduce.job.jar becomes mapreduce\_job\_jar. In your code, use the parameter names with the underscores.
+
+$H3 What do I do if I get a "error=7, Argument list too long"
+
+The job copies the whole configuration to the environment. If the job is processing a large number of input files adding the job configuration to the environment could cause an overrun of the environment. The job configuration copy in the environment is not essential for running the job and can be truncated by setting:
+
+  -D stream.jobconf.truncate.limit=20000
+
+By default the values are not truncated (-1). Zero (0) will only copy the names and not values. For almost all cases 20000 is a safe value that will prevent the overrun of the environment.
