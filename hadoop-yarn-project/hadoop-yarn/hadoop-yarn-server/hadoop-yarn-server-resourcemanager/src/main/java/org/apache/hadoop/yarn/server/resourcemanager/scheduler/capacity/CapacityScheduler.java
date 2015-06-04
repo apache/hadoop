@@ -551,8 +551,15 @@ public class CapacityScheduler extends
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
       if (!(e.getValue() instanceof ReservationQueue)) {
-        if (!newQueues.containsKey(e.getKey())) {
-          throw new IOException(e.getKey() + " cannot be found during refresh!");
+        String queueName = e.getKey();
+        CSQueue oldQueue = e.getValue();
+        CSQueue newQueue = newQueues.get(queueName); 
+        if (null == newQueue) {
+          throw new IOException(queueName + " cannot be found during refresh!");
+        } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
+          throw new IOException(queueName + " is moved from:"
+              + oldQueue.getQueuePath() + " to:" + newQueue.getQueuePath()
+              + " after refresh, which is not allowed.");
         }
       }
     }
