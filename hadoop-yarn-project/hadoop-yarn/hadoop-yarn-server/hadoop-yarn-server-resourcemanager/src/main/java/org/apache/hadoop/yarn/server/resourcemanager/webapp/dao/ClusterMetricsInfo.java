@@ -57,6 +57,7 @@ public class ClusterMetricsInfo {
   protected int decommissionedNodes;
   protected int rebootedNodes;
   protected int activeNodes;
+  protected int shutdownNodes;
 
   public ClusterMetricsInfo() {
   } // JAXB needs this
@@ -92,8 +93,9 @@ public class ClusterMetricsInfo {
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
     this.decommissionedNodes = clusterMetrics.getNumDecommisionedNMs();
     this.rebootedNodes = clusterMetrics.getNumRebootedNMs();
+    this.shutdownNodes = clusterMetrics.getNumShutdownNMs();
     this.totalNodes = activeNodes + lostNodes + decommissionedNodes
-        + rebootedNodes + unhealthyNodes;
+        + rebootedNodes + unhealthyNodes + shutdownNodes;
   }
 
   public int getAppsSubmitted() {
@@ -186,6 +188,10 @@ public class ClusterMetricsInfo {
 
   public int getDecommissionedNodes() {
     return this.decommissionedNodes;
+  }
+
+  public int getShutdownNodes() {
+    return this.shutdownNodes;
   }
 
 }

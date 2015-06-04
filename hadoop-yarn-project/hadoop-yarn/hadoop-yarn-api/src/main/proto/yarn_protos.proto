@@ -228,6 +228,7 @@ enum NodeStateProto {
   NS_LOST = 5;
   NS_REBOOTED = 6;
   NS_DECOMMISSIONING = 7;
+  NS_SHUTDOWN = 8;
 }
 
 message NodeIdProto {
