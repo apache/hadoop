@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRe
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UnRegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -292,6 +293,17 @@ public class TestYarnServerApiClasses {
         ((RegisterNodeManagerRequestPBImpl) request).getProto());
     Assert.assertNotNull(copy.getNodeLabels());
     Assert.assertEquals(0, copy.getNodeLabels().size());
+  }
+
+  @Test
+  public void testUnRegisterNodeManagerRequestPBImpl() throws Exception {
+    UnRegisterNodeManagerRequestPBImpl request = new UnRegisterNodeManagerRequestPBImpl();
+    NodeId nodeId = NodeId.newInstance("host", 1234);
+    request.setNodeId(nodeId);
+
+    UnRegisterNodeManagerRequestPBImpl copy = new UnRegisterNodeManagerRequestPBImpl(
+        request.getProto());
+    Assert.assertEquals(nodeId, copy.getNodeId());
   }
 
   private HashSet<NodeLabel> getValidNodeLabels() {

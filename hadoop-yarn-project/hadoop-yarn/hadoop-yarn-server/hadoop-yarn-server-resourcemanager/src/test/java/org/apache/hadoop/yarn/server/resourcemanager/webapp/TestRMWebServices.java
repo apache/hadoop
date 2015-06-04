@@ -416,7 +416,8 @@ public class TestRMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "unhealthyNodes"),
           WebServicesTestUtils.getXmlInt(element, "decommissionedNodes"),
           WebServicesTestUtils.getXmlInt(element, "rebootedNodes"),
-          WebServicesTestUtils.getXmlInt(element, "activeNodes"));
+          WebServicesTestUtils.getXmlInt(element, "activeNodes"),
+          WebServicesTestUtils.getXmlInt(element, "shutdownNodes"));
     }
   }
 
@@ -424,7 +425,7 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 23, clusterinfo.length());
+    assertEquals("incorrect number of elements", 24, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
@@ -435,16 +436,16 @@ public class TestRMWebServices extends JerseyTestBase {
         clusterinfo.getInt("totalMB"), clusterinfo.getInt("totalNodes"),
         clusterinfo.getInt("lostNodes"), clusterinfo.getInt("unhealthyNodes"),
         clusterinfo.getInt("decommissionedNodes"),
-        clusterinfo.getInt("rebootedNodes"),clusterinfo.getInt("activeNodes"));
+        clusterinfo.getInt("rebootedNodes"),clusterinfo.getInt("activeNodes"),
+        clusterinfo.getInt("shutdownNodes"));
   }
 
   public void verifyClusterMetrics(int submittedApps, int completedApps,
-      int reservedMB, int availableMB,
-      int allocMB, int reservedVirtualCores, int availableVirtualCores, 
-      int allocVirtualCores, int totalVirtualCores,
-      int containersAlloc, int totalMB, int totalNodes,
-      int lostNodes, int unhealthyNodes, int decommissionedNodes,
-      int rebootedNodes, int activeNodes) throws JSONException, Exception {
+      int reservedMB, int availableMB, int allocMB, int reservedVirtualCores,
+      int availableVirtualCores, int allocVirtualCores, int totalVirtualCores,
+      int containersAlloc, int totalMB, int totalNodes, int lostNodes,
+      int unhealthyNodes, int decommissionedNodes, int rebootedNodes,
+      int activeNodes, int shutdownNodes) throws JSONException, Exception {
 
     ResourceScheduler rs = rm.getResourceScheduler();
     QueueMetrics metrics = rs.getRootQueueMetrics();
@@ -488,6 +489,8 @@ public class TestRMWebServices extends JerseyTestBase {
         clusterMetrics.getNumRebootedNMs(), rebootedNodes);
     assertEquals("activeNodes doesn't match", clusterMetrics.getNumActiveNMs(),
         activeNodes);
+    assertEquals("shutdownNodes doesn't match",
+        clusterMetrics.getNumShutdownNMs(), shutdownNodes);
   }
 
   @Test

@@ -40,7 +40,7 @@ import com.google.inject.Module;
 public class TestNodesPage {
   
   final int numberOfRacks = 2;
-  final int numberOfNodesPerRack = 7;
+  final int numberOfNodesPerRack = 8;
   // The following is because of the way TestRMWebApp.mockRMContext creates
   // nodes.
   final int numberOfLostNodesPerRack = numberOfNodesPerRack
@@ -48,7 +48,7 @@ public class TestNodesPage {
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
-  final int numberOfThInMetricsTable = 20;
+  final int numberOfThInMetricsTable = 21;
   final int numberOfActualTableHeaders = 13;
 
   private Injector injector;

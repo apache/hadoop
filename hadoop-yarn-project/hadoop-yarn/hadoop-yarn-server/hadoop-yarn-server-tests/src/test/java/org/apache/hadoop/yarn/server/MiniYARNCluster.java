@@ -54,6 +54,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
@@ -641,6 +643,14 @@ public class MiniYARNCluster extends CompositeService {
                 throw e;
               }
               return response;
+            }
+
+            @Override
+            public UnRegisterNodeManagerResponse unRegisterNodeManager(
+                UnRegisterNodeManagerRequest request) throws YarnException,
+                IOException {
+              return recordFactory
+                  .newRecordInstance(UnRegisterNodeManagerResponse.class);
             }
           };
         }

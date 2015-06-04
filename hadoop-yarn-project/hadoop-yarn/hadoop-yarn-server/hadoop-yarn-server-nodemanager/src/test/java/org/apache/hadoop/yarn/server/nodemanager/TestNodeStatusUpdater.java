@@ -85,6 +85,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -294,6 +296,13 @@ public class TestNodeStatusUpdater {
           newNodeHeartbeatResponse(heartBeatID, null, null, null, null, null,
             1000L);
       return nhResponse;
+    }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
     }
   }
 
@@ -515,6 +524,13 @@ public class TestNodeStatusUpdater {
       nhResponse.setDiagnosticsMessage(shutDownMessage);
       return nhResponse;
     }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    }
   }
 
   private class MyResourceTracker3 implements ResourceTracker {
@@ -569,6 +585,13 @@ public class TestNodeStatusUpdater {
         nhResponse.addAllApplicationsToCleanup(Collections.singletonList(appId));
       }
       return nhResponse;
+    }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
     }
   }
 
@@ -738,6 +761,13 @@ public class TestNodeStatusUpdater {
       nhResponse.setSystemCredentialsForApps(appCredentials);
       return nhResponse;
     }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    }
   }
 
   private class MyResourceTracker5 implements ResourceTracker {
@@ -767,6 +797,13 @@ public class TestNodeStatusUpdater {
       throw new java.net.ConnectException(
           "NodeHeartbeat exception");
       }
+    }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
     }
   }
 
@@ -819,6 +856,13 @@ public class TestNodeStatusUpdater {
           newNodeHeartbeatResponse(heartBeatID, NodeAction.NORMAL, null,
               null, null, null, 1000L);
       return nhResponse;
+    }
+
+    @Override
+    public UnRegisterNodeManagerResponse unRegisterNodeManager(
+        UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+      return recordFactory
+          .newRecordInstance(UnRegisterNodeManagerResponse.class);
     }
   }
 

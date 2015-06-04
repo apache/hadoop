@@ -465,6 +465,20 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
   }
 
+  @Test
+  public void testNMShutdown() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
+    Assert.assertEquals(NodeState.SHUTDOWN, node.getState());
+  }
+
+  @Test
+  public void testUnhealthyNMShutdown() {
+    RMNodeImpl node = getUnhealthyNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
+    Assert.assertEquals(NodeState.SHUTDOWN, node.getState());
+  }
+
   @Test(timeout=20000)
   public void testUpdateHeartbeatResponseForCleanup() {
     RMNodeImpl node = getRunningNode();

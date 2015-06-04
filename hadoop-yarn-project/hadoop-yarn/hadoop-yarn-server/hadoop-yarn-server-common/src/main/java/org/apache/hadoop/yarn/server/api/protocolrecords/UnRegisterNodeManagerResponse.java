@@ -16,36 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-public enum RMNodeEventType {
-  
-  STARTED,
-  
-  // Source: AdminService
-  DECOMMISSION,
-  DECOMMISSION_WITH_TIMEOUT,
-  RECOMMISSION,
-  
-  // Source: AdminService, ResourceTrackerService
-  RESOURCE_UPDATE,
+import org.apache.hadoop.yarn.util.Records;
 
-  // ResourceTrackerService
-  STATUS_UPDATE,
-  REBOOTING,
-  RECONNECTED,
-  SHUTDOWN,
-
-  // Source: Application
-  CLEANUP_APP,
-
-  // Source: Container
-  CONTAINER_ALLOCATED,
-  CLEANUP_CONTAINER,
-
-  // Source: RMAppAttempt
-  FINISHED_CONTAINERS_PULLED_BY_AM,
-
-  // Source: NMLivelinessMonitor
-  EXPIRE
+/**
+ * Node Manager's unregister response.
+ */
+public abstract class UnRegisterNodeManagerResponse {
+  public static UnRegisterNodeManagerResponse newInstance() {
+    return Records.newRecord(UnRegisterNodeManagerResponse.class);
+  }
 }
