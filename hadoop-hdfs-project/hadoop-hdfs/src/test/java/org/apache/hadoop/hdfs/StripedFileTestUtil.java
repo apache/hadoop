@@ -32,7 +32,7 @@ public class StripedFileTestUtil {
   static final int blockSize = cellSize * stripesPerBlock;
   static final int numDNs = dataBlocks + parityBlocks + 2;
 
-  static final Random r = new Random();
+  static final Random random = new Random();
 
   static byte[] generateBytes(int cnt) {
     byte[] bytes = new byte[cnt];

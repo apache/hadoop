@@ -283,3 +283,6 @@
 
     HDFS-8328. Follow-on to update decode for DataNode striped blocks
     reconstruction. (yliu)
+
+    HDFS-8319. Erasure Coding: support decoding for stateful read.
+    (Jing Zhao via zhz)
