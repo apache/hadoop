@@ -340,6 +340,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6383. Pi job (QuasiMonteCarlo) should not try to read the 
     results file if its job fails. (Harsh J via devaraj)
 
+    MAPREDUCE-6354. ShuffleHandler should be able to log shuffle connections
+    (Chang Li via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
