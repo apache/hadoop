@@ -103,9 +103,9 @@ import com.google.common.base.Preconditions;
  * of the root queue in the typical fair scheduling fashion. Then, the children
  * distribute the resources assigned to them to their children in the same
  * fashion.  Applications may only be scheduled on leaf queues. Queues can be
- * specified as children of other queues by placing them as sub-elements of their
- * parents in the fair scheduler configuration file.
- * 
+ * specified as children of other queues by placing them as sub-elements of
+ * their parents in the fair scheduler configuration file.
+ *
  * A queue's name starts with the names of its parents, with periods as
  * separators.  So a queue named "queue1" under the root named, would be 
  * referred to as "root.queue1", and a queue named "queue2" under a queue
@@ -141,6 +141,8 @@ public class FairScheduler extends
 
   @VisibleForTesting
   Thread updateThread;
+
+  private final Object updateThreadMonitor = new Object();
 
   @VisibleForTesting
   Thread schedulingThread;
@@ -246,6 +248,13 @@ public class FairScheduler extends
     return queueMgr;
   }
 
+  // Allows UpdateThread to start processing without waiting till updateInterval
+  void triggerUpdate() {
+    synchronized (updateThreadMonitor) {
+      updateThreadMonitor.notify();
+    }
+  }
+
   /**
    * Thread which calls {@link FairScheduler#update()} every
    * <code>updateInterval</code> milliseconds.
@@ -256,7 +265,9 @@ public class FairScheduler extends
     public void run() {
       while (!Thread.currentThread().isInterrupted()) {
         try {
-          Thread.sleep(updateInterval);
+          synchronized (updateThreadMonitor) {
+            updateThreadMonitor.wait(updateInterval);
+          }
           long start = getClock().getTime();
           update();
           preemptTasksIfNecessary();
@@ -838,6 +849,8 @@ public class FairScheduler extends
     updateRootQueueMetrics();
     updateMaximumAllocation(schedulerNode, true);
 
+    triggerUpdate();
+
     queueMgr.getRootQueue().setSteadyFairShare(clusterResource);
     queueMgr.getRootQueue().recomputeSteadyShares();
     LOG.info("Added node " + node.getNodeAddress() +
@@ -852,6 +865,8 @@ public class FairScheduler extends
     }
     Resources.subtractFrom(clusterResource, rmNode.getTotalCapability());
     updateRootQueueMetrics();
+
+    triggerUpdate();
 
     // Remove running containers
     List<RMContainer> runningContainers = node.getRunningContainers();
