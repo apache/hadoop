@@ -19,8 +19,11 @@
 package org.apache.hadoop.security;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
+import org.apache.hadoop.security.alias.LocalJavaKeyStoreProvider;
 
 public class ProviderUtils {
   /**
@@ -49,4 +52,31 @@ public class ProviderUtils {
     }
     return new Path(result.toString());
   }
+
+  /**
+   * Mangle given local java keystore file URI to allow use as a
+   * LocalJavaKeyStoreProvider.
+   * @param localFile absolute URI with file scheme and no authority component.
+   *                  i.e. return of File.toURI,
+   *                  e.g. file:///home/larry/creds.jceks
+   * @return URI of the form localjceks://file/home/larry/creds.jceks
+   * @throws IllegalArgumentException if localFile isn't not a file uri or if it
+   *                                  has an authority component.
+   * @throws URISyntaxException if the wrapping process violates RFC 2396
+   */
+  public static URI nestURIForLocalJavaKeyStoreProvider(final URI localFile)
+      throws URISyntaxException {
+    if (!("file".equals(localFile.getScheme()))) {
+      throw new IllegalArgumentException("passed URI had a scheme other than " +
+          "file.");
+    }
+    if (localFile.getAuthority() != null) {
+      throw new IllegalArgumentException("passed URI must not have an " +
+          "authority component. For non-local keystores, please use " +
+          JavaKeyStoreProvider.class.getName());
+    }
+    return new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
+        "//file" + localFile.getSchemeSpecificPart(), localFile.getFragment());
+  }
+
 }

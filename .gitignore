@@ -22,5 +22,6 @@ hadoop-common-project/hadoop-common/src/test/resources/contract-test-options.xml
 hadoop-tools/hadoop-openstack/src/test/resources/contract-test-options.xml
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-registry/src/main/tla/yarnregistry.toolbox
 yarnregistry.pdf
+hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml
 hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml
 patchprocess/
