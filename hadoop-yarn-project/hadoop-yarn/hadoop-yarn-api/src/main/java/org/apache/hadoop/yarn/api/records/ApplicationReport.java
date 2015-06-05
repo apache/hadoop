@@ -83,6 +83,25 @@ public abstract class ApplicationReport {
     return report;
   }
 
+  @Private
+  @Unstable
+  public static ApplicationReport newInstance(ApplicationId applicationId,
+      ApplicationAttemptId applicationAttemptId, String user, String queue,
+      String name, String host, int rpcPort, Token clientToAMToken,
+      YarnApplicationState state, String diagnostics, String url,
+      long startTime, long finishTime, FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl,
+      float progress, String applicationType, Token amRmToken,
+      Set<String> tags) {
+    ApplicationReport report =
+        newInstance(applicationId, applicationAttemptId, user, queue, name,
+          host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
+          finishTime, finalStatus, appResources, origTrackingUrl, progress,
+          applicationType, amRmToken);
+    report.setApplicationTags(tags);
+    return report;
+  }
+
   /**
    * Get the <code>ApplicationId</code> of the application.
    * @return <code>ApplicationId</code> of the application
