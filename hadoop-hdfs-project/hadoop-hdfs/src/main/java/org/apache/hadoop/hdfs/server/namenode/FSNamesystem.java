@@ -1956,10 +1956,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                       long mtime)
       throws IOException, UnresolvedLinkException {
     String src = srcArg;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.truncate: src="
-          + src + " newLength=" + newLength);
-    }
+    NameNode.stateChangeLog.debug(
+        "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
     if (newLength < 0) {
       throw new HadoopIllegalArgumentException(
           "Cannot truncate to a negative file size: " + newLength + ".");
@@ -2108,10 +2106,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
       getBlockManager().addBlockCollection(truncatedBlockUC, file);
 
-      NameNode.stateChangeLog.info("BLOCK* prepareFileForTruncate: "
-          + "Scheduling copy-on-truncate to new size "
-          + truncatedBlockUC.getNumBytes() + " new block " + newBlock
-          + " old block " + truncatedBlockUC.getTruncateBlock());
+      NameNode.stateChangeLog.debug(
+          "BLOCK* prepareFileForTruncate: Scheduling copy-on-truncate to new" +
+          " size {}  new block {} old block {}", truncatedBlockUC.getNumBytes(),
+          newBlock, truncatedBlockUC.getTruncateBlock());
     } else {
       // Use new generation stamp for in-place truncate recovery
       blockManager.convertLastBlockToUnderConstruction(file, lastBlockDelta);
@@ -2124,10 +2122,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       truncatedBlockUC.getTruncateBlock().setGenerationStamp(
           newBlock.getGenerationStamp());
 
-      NameNode.stateChangeLog.debug("BLOCK* prepareFileForTruncate: "
-          + "Scheduling in-place block truncate to new size "
-          + truncatedBlockUC.getTruncateBlock().getNumBytes()
-          + " block=" + truncatedBlockUC);
+      NameNode.stateChangeLog.debug(
+          "BLOCK* prepareFileForTruncate: {} Scheduling in-place block " +
+          "truncate to new size {}",
+          truncatedBlockUC.getTruncateBlock().getNumBytes(), truncatedBlockUC);
     }
     if (shouldRecoverNow) {
       truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp());
@@ -2774,11 +2772,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String clientMachine, boolean newBlock, boolean logRetryCache)
       throws IOException {
     String src = srcArg;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: src=" + src
-          + ", holder=" + holder
-          + ", clientMachine=" + clientMachine);
-    }
+    NameNode.stateChangeLog.debug(
+        "DIR* NameSystem.appendFile: src={}, holder={}, clientMachine={}",
+        src, holder, clientMachine);
     boolean skipSync = false;
     LocatedBlock lb = null;
     HdfsFileStatus stat = null;
@@ -2806,12 +2802,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
     if (lb != null) {
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
-            +src+" for "+holder+" at "+clientMachine
-            +" block " + lb.getBlock()
-            +" block size " + lb.getBlock().getNumBytes());
-      }
+      NameNode.stateChangeLog.debug(
+          "DIR* NameSystem.appendFile: file {} for {} at {} block {} block" +
+          " size {}", src, holder, clientMachine, lb.getBlock(),
+          lb.getBlock().getNumBytes());
     }
     logAuditEvent(true, "append", srcArg);
     return new LastBlockWithStatus(lb, stat);
@@ -2840,10 +2834,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   LocatedBlock getAdditionalBlock(
       String src, long fileId, String clientName, ExtendedBlock previous,
       DatanodeInfo[] excludedNodes, String[] favoredNodes) throws IOException {
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: "
-          + src + " inodeId " +  fileId  + " for " + clientName);
-    }
+    NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {}  inodeId {}" +
+        " for {}", src, fileId, clientName);
 
     waitForLoadingFSImage();
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
@@ -2950,10 +2942,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: " + b
-          + "of file " + src);
-    }
+    NameNode.stateChangeLog.debug(
+        "BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     waitForLoadingFSImage();
     checkOperation(OperationCategory.WRITE);
     FSPermissionChecker pc = getPermissionChecker();
@@ -2962,10 +2952,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
       FSDirWriteFileOp.abandonBlock(dir, pc, b, fileId, src, holder);
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
-                                      + b + " is removed from pendingCreates");
-      }
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} is " +
+          "removed from pendingCreates", b);
     } finally {
       writeUnlock();
     }
@@ -2973,7 +2961,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   INodeFile checkLease(
-      String src, String holder, INode inode, long fileId) throws LeaseExpiredException, FileNotFoundException {
+      String src, String holder, INode inode, long fileId)
+      throws LeaseExpiredException, FileNotFoundException {
     assert hasReadLock();
     final String ident = src + " (inode " + fileId + ")";
     if (inode == null) {
@@ -4039,11 +4028,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     waitForLoadingFSImage();
     // file is closed
     getEditLog().logCloseFile(path, file);
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("closeFile: "
-              +path+" with "+ file.getBlocks().length
-              +" blocks is persisted to the file system");
-    }
+    NameNode.stateChangeLog.debug("closeFile: {} with {} blocks is persisted" +
+        " to the file system", path, file.getBlocks().length);
   }
 
   /**
@@ -5903,7 +5889,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (cookieTab[0] == null) {
         cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
       }
-      LOG.info("there are no corrupt file blocks.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("there are no corrupt file blocks.");
+      }
       return corruptFiles;
     }
 
@@ -5938,7 +5926,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
       cookieTab[0] = String.valueOf(skip);
-      LOG.info("list corrupt file blocks returned: " + count);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("list corrupt file blocks returned: " + count);
+      }
       return corruptFiles;
     } finally {
       readUnlock();
