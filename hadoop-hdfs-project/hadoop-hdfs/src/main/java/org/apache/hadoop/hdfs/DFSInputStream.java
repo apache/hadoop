@@ -1639,7 +1639,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   /**
    */
   @Override
-  public synchronized long getPos() throws IOException {
+  public synchronized long getPos() {
     return pos;
   }
 

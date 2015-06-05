@@ -29,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.cellSize;
@@ -58,28 +59,28 @@ public class TestReadStripedFileWithDecoding {
   }
 
   @Test
-  public void testWritePreadWithDNFailure1() throws IOException {
-    testWritePreadWithDNFailure("/foo", cellSize * (dataBlocks + 2), 0);
+  public void testReadWithDNFailure1() throws IOException {
+    testReadWithDNFailure("/foo", cellSize * (dataBlocks + 2), 0);
   }
 
   @Test
-  public void testWritePreadWithDNFailure2() throws IOException {
-    testWritePreadWithDNFailure("/foo", cellSize * (dataBlocks + 2), cellSize * 5);
+  public void testReadWithDNFailure2() throws IOException {
+    testReadWithDNFailure("/foo", cellSize * (dataBlocks + 2), cellSize * 5);
   }
 
   @Test
-  public void testWritePreadWithDNFailure3() throws IOException {
-    testWritePreadWithDNFailure("/foo", cellSize * dataBlocks, 0);
+  public void testReadWithDNFailure3() throws IOException {
+    testReadWithDNFailure("/foo", cellSize * dataBlocks, 0);
   }
 
-  private void testWritePreadWithDNFailure(String file, int fileSize, int startOffsetInFile)
-      throws IOException {
+  private void testReadWithDNFailure(String file, int fileSize,
+      int startOffsetInFile) throws IOException {
     final int failedDNIdx = 2;
     Path testPath = new Path(file);
     final byte[] bytes = StripedFileTestUtil.generateBytes(fileSize);
     DFSTestUtil.writeFile(fs, testPath, bytes);
 
-    // shut down the DN that holds the last internal data block
+    // shut down the DN that holds an internal data block
     BlockLocation[] locs = fs.getFileBlockLocations(testPath, cellSize * 5,
         cellSize);
     String name = (locs[0].getNames())[failedDNIdx];
@@ -99,14 +100,30 @@ public class TestReadStripedFileWithDecoding {
           fileSize - startOffsetInFile, readLen);
 
       byte[] expected = new byte[readLen];
-      for (int i = startOffsetInFile; i < fileSize; i++) {
-        expected[i - startOffsetInFile] = StripedFileTestUtil.getByte(i);
-      }
+      System.arraycopy(bytes, startOffsetInFile, expected, 0,
+          fileSize - startOffsetInFile);
 
       for (int i = startOffsetInFile; i < fileSize; i++) {
         Assert.assertEquals("Byte at " + i + " should be the same",
             expected[i - startOffsetInFile], buf[i - startOffsetInFile]);
       }
     }
+
+    // stateful read
+    ByteBuffer result = ByteBuffer.allocate(fileSize);
+    ByteBuffer buf = ByteBuffer.allocate(1024);
+    int readLen = 0;
+    int ret;
+    try (FSDataInputStream in = fs.open(testPath)) {
+      while ((ret = in.read(buf)) >= 0) {
+        readLen += ret;
+        buf.flip();
+        result.put(buf);
+        buf.clear();
+      }
+    }
+    Assert.assertEquals("The length of file should be the same to write size",
+        fileSize, readLen);
+    Assert.assertArrayEquals(bytes, result.array());
   }
 }

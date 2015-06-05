@@ -152,7 +152,7 @@ public class TestStripedBlockUtil {
     int done = 0;
     while (done < bgSize) {
       Preconditions.checkState(done % CELLSIZE == 0);
-      StripingCell cell = new StripingCell(SCEHMA, CELLSIZE, done / CELLSIZE);
+      StripingCell cell = new StripingCell(SCEHMA, CELLSIZE, done / CELLSIZE, 0);
       int idxInStripe = cell.idxInStripe;
       int size = Math.min(CELLSIZE, bgSize - done);
       for (int i = 0; i < size; i++) {
@@ -176,8 +176,7 @@ public class TestStripedBlockUtil {
       assertFalse(blocks[i].isStriped());
       assertEquals(i,
           BlockIdManager.getBlockIndex(blocks[i].getBlock().getLocalBlock()));
-      assertEquals(i * CELLSIZE, blocks[i].getStartOffset());
-      /** TODO: properly define {@link LocatedBlock#offset} for internal blocks */
+      assertEquals(0, blocks[i].getStartOffset());
       assertEquals(1, blocks[i].getLocations().length);
       assertEquals(i, blocks[i].getLocations()[0].getIpcPort());
       assertEquals(i, blocks[i].getLocations()[0].getXferPort());
@@ -256,11 +255,12 @@ public class TestStripedBlockUtil {
                 continue;
               }
               int done = 0;
-              for (int j = 0; j < chunk.getLengths().length; j++) {
+              for (int j = 0; j < chunk.byteArray.getLengths().length; j++) {
                 System.arraycopy(internalBlkBufs[i],
                     (int) stripe.getOffsetInBlock() + done, assembled,
-                    chunk.getOffsets()[j], chunk.getLengths()[j]);
-                done += chunk.getLengths()[j];
+                    chunk.byteArray.getOffsets()[j],
+                    chunk.byteArray.getLengths()[j]);
+                done += chunk.byteArray.getLengths()[j];
               }
             }
           }
