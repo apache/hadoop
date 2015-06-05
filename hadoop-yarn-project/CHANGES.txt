@@ -292,6 +292,8 @@ Release 2.8.0 - UNRELEASED
     YARN-2392. Add more diags about app retry limits on AM failures. (Steve
     Loughran via jianhe)
 
+    YARN-1462. AHS API and other AHS changes to handle tags for completed MR jobs. (xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

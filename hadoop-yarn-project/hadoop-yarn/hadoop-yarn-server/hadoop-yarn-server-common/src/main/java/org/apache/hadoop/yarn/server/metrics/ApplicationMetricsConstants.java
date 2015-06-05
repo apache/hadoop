@@ -73,4 +73,5 @@ public class ApplicationMetricsConstants {
   public static final String LATEST_APP_ATTEMPT_EVENT_INFO =
       "YARN_APPLICATION_LATEST_APP_ATTEMPT";
 
+  public static final String APP_TAGS_INFO = "YARN_APPLICATION_TAGS";
 }
