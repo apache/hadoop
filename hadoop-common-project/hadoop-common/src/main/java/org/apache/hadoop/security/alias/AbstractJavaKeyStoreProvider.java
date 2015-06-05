@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.security.alias;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -60,6 +62,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @InterfaceAudience.Private
 public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
+  public static final Log LOG = LogFactory.getLog(
+      AbstractJavaKeyStoreProvider.class);
   public static final String CREDENTIAL_PASSWORD_NAME =
       "HADOOP_CREDSTORE_PASSWORD";
   public static final String KEYSTORE_PASSWORD_FILE_KEY =
@@ -197,6 +201,9 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
   protected void initFileSystem(URI keystoreUri, Configuration conf)
       throws IOException {
     path = ProviderUtils.unnestUri(keystoreUri);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("backing jks path initialized to " + path);
+    }
   }
 
   @Override
@@ -318,9 +325,10 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     writeLock.lock();
     try {
       if (!changed) {
+        LOG.debug("Keystore hasn't changed, returning.");
         return;
       }
-      // write out the keystore
+      LOG.debug("Writing out keystore.");
       try (OutputStream out = getOutputStreamForKeystore()) {
         keyStore.store(out, password);
       } catch (KeyStoreException e) {

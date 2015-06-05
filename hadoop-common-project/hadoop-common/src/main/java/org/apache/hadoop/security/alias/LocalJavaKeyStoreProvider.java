@@ -65,13 +65,17 @@ public final class LocalJavaKeyStoreProvider extends
 
   @Override
   protected OutputStream getOutputStreamForKeystore() throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("using '" + file + "' for output stream.");
+    }
     FileOutputStream out = new FileOutputStream(file);
     return out;
   }
 
   @Override
   protected boolean keystoreExists() throws IOException {
-    return file.exists();
+    /* The keystore loader doesn't handle zero length files. */
+    return file.exists() && (file.length() > 0);
   }
 
   @Override
@@ -122,6 +126,22 @@ public final class LocalJavaKeyStoreProvider extends
     super.initFileSystem(uri, conf);
     try {
       file = new File(new URI(getPath().toString()));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("initialized local file as '" + file + "'.");
+        if (file.exists()) {
+          LOG.debug("the local file exists and is size " + file.length());
+          if (LOG.isTraceEnabled()) {
+            if (file.canRead()) {
+              LOG.trace("we can read the local file.");
+            }
+            if (file.canWrite()) {
+              LOG.trace("we can write the local file.");
+            }
+          }
+        } else {
+          LOG.debug("the local file does not exist.");
+        }
+      }
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -130,6 +150,9 @@ public final class LocalJavaKeyStoreProvider extends
   @Override
   public void flush() throws IOException {
     super.flush();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Reseting permissions to '" + permissions + "'");
+    }
     if (!Shell.WINDOWS) {
       Files.setPosixFilePermissions(Paths.get(file.getCanonicalPath()),
           permissions);
