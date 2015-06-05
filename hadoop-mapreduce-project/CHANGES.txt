@@ -496,6 +496,9 @@ Release 2.7.1 - UNRELEASED
     copySucceeded() in one thread and copyFailed() in another thread on the
     same host. (Junping Du via ozawa)
 
+    MAPREDUCE-6387. Serialize the recently added Task#encryptedSpillKey field at 
+    the end. (Arun Suresh via kasha)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
