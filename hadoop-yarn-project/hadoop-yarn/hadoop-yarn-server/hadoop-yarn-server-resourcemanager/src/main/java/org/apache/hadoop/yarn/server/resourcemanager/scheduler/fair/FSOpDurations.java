@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -115,5 +116,10 @@ public class FSOpDurations implements MetricsSource {
 
   public void addPreemptCallDuration(long value) {
     preemptCall.add(value);
+  }
+
+  @VisibleForTesting
+  public boolean hasUpdateThreadRunChanged() {
+    return updateThreadRun.changed();
   }
 }
