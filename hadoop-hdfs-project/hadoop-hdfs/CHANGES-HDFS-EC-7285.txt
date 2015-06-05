@@ -286,3 +286,6 @@
 
     HDFS-8319. Erasure Coding: support decoding for stateful read.
     (Jing Zhao via zhz)
+
+    HDFS-8460. Erasure Coding: stateful read result doesn't match data 
+    occasionally because of flawed test. (Walter Su via zhz)
