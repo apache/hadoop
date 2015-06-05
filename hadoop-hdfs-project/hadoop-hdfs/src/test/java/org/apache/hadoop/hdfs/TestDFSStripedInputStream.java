@@ -32,6 +32,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
@@ -71,6 +73,9 @@ public class TestDFSStripedInputStream {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         DATA_BLK_NUM + PARITY_BLK_NUM).build();
     cluster.waitActive();
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    }
     fs = cluster.getFileSystem();
     fs.mkdirs(dirPath);
     fs.getClient().createErasureCodingZone(dirPath.toString(), null, CELLSIZE);

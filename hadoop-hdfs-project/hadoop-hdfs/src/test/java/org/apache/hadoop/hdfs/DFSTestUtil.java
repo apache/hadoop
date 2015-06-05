@@ -1884,6 +1884,7 @@ public class DFSTestUtil {
   /**
    * Creates the metadata of a file in striped layout. This method only
    * manipulates the NameNode state without injecting data to DataNode.
+   * You should disable periodical heartbeat before use this.
    *  @param file Path of the file to create
    * @param dir Parent path of the file
    * @param numBlocks Number of striped block groups to add to the file
@@ -1933,6 +1934,7 @@ public class DFSTestUtil {
    * Adds a striped block group to a file. This method only manipulates NameNode
    * states of the file and the block without injecting data to DataNode.
    * It does mimic block reports.
+   * You should disable periodical heartbeat before use this.
    * @param dataNodes List DataNodes to host the striped block group
    * @param previous Previous block in the file
    * @param numStripes Number of stripes in each block group
