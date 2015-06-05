@@ -337,6 +337,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6174. Combine common stream code into parent class for
     InMemoryMapOutput and OnDiskMapOutput. (Eric Payne via gera)
 
+    MAPREDUCE-6383. Pi job (QuasiMonteCarlo) should not try to read the 
+    results file if its job fails. (Harsh J via devaraj)
+
   OPTIMIZATIONS
 
   BUG FIXES
