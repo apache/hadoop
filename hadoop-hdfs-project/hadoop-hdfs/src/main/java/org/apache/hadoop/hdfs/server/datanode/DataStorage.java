@@ -1044,7 +1044,7 @@ public class DataStorage extends Storage {
               idBasedLayoutSingleLinks.size());
           for (int j = iCopy; j < upperBound; j++) {
             LinkArgs cur = idBasedLayoutSingleLinks.get(j);
-            NativeIO.link(cur.src, cur.dst);
+            HardLink.createHardLink(cur.src, cur.dst);
           }
           return null;
         }

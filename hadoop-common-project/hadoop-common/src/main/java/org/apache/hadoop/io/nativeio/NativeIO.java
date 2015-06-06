@@ -881,6 +881,17 @@ public class NativeIO {
     }
   }
 
+  /**
+   * Creates a hardlink "dst" that points to "src".
+   *
+   * This is deprecated since JDK7 NIO can create hardlinks via the
+   * {@link java.nio.file.Files} API.
+   *
+   * @param src source file
+   * @param dst hardlink location
+   * @throws IOException
+   */
+  @Deprecated
   public static void link(File src, File dst) throws IOException {
     if (!nativeLoaded) {
       HardLink.createHardLink(src, dst);
