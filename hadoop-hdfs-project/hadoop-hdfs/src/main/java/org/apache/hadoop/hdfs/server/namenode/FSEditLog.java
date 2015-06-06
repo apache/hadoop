@@ -302,7 +302,7 @@ public class FSEditLog implements LogsPurgeable {
    * Initialize the output stream for logging, opening the first
    * log segment.
    */
-  synchronized void openForWrite() throws IOException {
+  synchronized void openForWrite(int layoutVersion) throws IOException {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
 
@@ -319,7 +319,7 @@ public class FSEditLog implements LogsPurgeable {
       throw new IllegalStateException(error);
     }
     
-    startLogSegment(segmentTxId, true);
+    startLogSegment(segmentTxId, true, layoutVersion);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
@@ -1198,12 +1198,12 @@ public class FSEditLog implements LogsPurgeable {
    * @return the transaction id of the BEGIN_LOG_SEGMENT transaction
    * in the new log.
    */
-  synchronized long rollEditLog() throws IOException {
+  synchronized long rollEditLog(int layoutVersion) throws IOException {
     LOG.info("Rolling edit logs");
     endCurrentLogSegment(true);
     
     long nextTxId = getLastWrittenTxId() + 1;
-    startLogSegment(nextTxId, true);
+    startLogSegment(nextTxId, true, layoutVersion);
     
     assert curSegmentTxId == nextTxId;
     return nextTxId;
@@ -1214,7 +1214,7 @@ public class FSEditLog implements LogsPurgeable {
    * Transitions from BETWEEN_LOG_SEGMENTS state to IN_LOG_SEGMENT state. 
    */
   synchronized void startLogSegment(final long segmentTxId,
-      boolean writeHeaderTxn) throws IOException {
+      boolean writeHeaderTxn, int layoutVersion) throws IOException {
     LOG.info("Starting log segment at " + segmentTxId);
     Preconditions.checkArgument(segmentTxId > 0,
         "Bad txid: %s", segmentTxId);
@@ -1234,8 +1234,7 @@ public class FSEditLog implements LogsPurgeable {
     storage.attemptRestoreRemovedStorage();
     
     try {
-      editLogStream = journalSet.startLogSegment(segmentTxId,
-          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+      editLogStream = journalSet.startLogSegment(segmentTxId, layoutVersion);
     } catch (IOException ex) {
       throw new IOException("Unable to start log segment " +
           segmentTxId + ": too few journals successfully started.", ex);

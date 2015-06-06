@@ -572,9 +572,9 @@ public class FSImage implements Closeable {
     return editLog;
   }
 
-  void openEditLogForWrite() throws IOException {
+  void openEditLogForWrite(int layoutVersion) throws IOException {
     assert editLog != null : "editLog must be initialized";
-    editLog.openForWrite();
+    editLog.openForWrite(layoutVersion);
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
   }
   
@@ -1107,10 +1107,13 @@ public class FSImage implements Closeable {
     try {
       try {
         saveFSImageInAllDirs(source, nnf, imageTxId, canceler);
-        storage.writeAll();
+        if (!source.isRollingUpgrade()) {
+          storage.writeAll();
+        }
       } finally {
         if (editLogWasOpen) {
-          editLog.startLogSegment(imageTxId + 1, true);
+          editLog.startLogSegment(imageTxId + 1, true,
+              source.getEffectiveLayoutVersion());
           // Take this opportunity to note the current transaction.
           // Even if the namespace save was cancelled, this marker
           // is only used to determine what transaction ID is required
@@ -1295,8 +1298,8 @@ public class FSImage implements Closeable {
     }
   }
 
-  CheckpointSignature rollEditLog() throws IOException {
-    getEditLog().rollEditLog();
+  CheckpointSignature rollEditLog(int layoutVersion) throws IOException {
+    getEditLog().rollEditLog(layoutVersion);
     // Record this log segment ID in all of the storage directories, so
     // we won't miss this log segment on a restart if the edits directories
     // go missing.
@@ -1321,7 +1324,8 @@ public class FSImage implements Closeable {
    * @throws IOException
    */
   NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
-                                  NamenodeRegistration nnReg) // active name-node
+                                  NamenodeRegistration nnReg,
+                                  int layoutVersion) // active name-node
   throws IOException {
     LOG.info("Start checkpoint at txid " + getEditLog().getLastWrittenTxId());
     String msg = null;
@@ -1350,7 +1354,7 @@ public class FSImage implements Closeable {
     if(storage.getNumStorageDirs(NameNodeDirType.IMAGE) == 0)
       // do not return image if there are no image directories
       needToReturnImg = false;
-    CheckpointSignature sig = rollEditLog();
+    CheckpointSignature sig = rollEditLog(layoutVersion);
     return new CheckpointCommand(sig, needToReturnImg);
   }
 
