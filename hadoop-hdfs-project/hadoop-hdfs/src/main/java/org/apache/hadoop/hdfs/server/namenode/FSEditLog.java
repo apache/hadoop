@@ -301,7 +301,7 @@ public class FSEditLog implements LogsPurgeable {
    * Initialize the output stream for logging, opening the first
    * log segment.
    */
-  synchronized void openForWrite() throws IOException {
+  synchronized void openForWrite(int layoutVersion) throws IOException {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
 
@@ -318,7 +318,7 @@ public class FSEditLog implements LogsPurgeable {
       throw new IllegalStateException(error);
     }
     
-    startLogSegmentAndWriteHeaderTxn(segmentTxId);
+    startLogSegmentAndWriteHeaderTxn(segmentTxId, layoutVersion);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
@@ -1197,12 +1197,12 @@ public class FSEditLog implements LogsPurgeable {
    * @return the transaction id of the BEGIN_LOG_SEGMENT transaction
    * in the new log.
    */
-  synchronized long rollEditLog() throws IOException {
+  synchronized long rollEditLog(int layoutVersion) throws IOException {
     LOG.info("Rolling edit logs");
     endCurrentLogSegment(true);
     
     long nextTxId = getLastWrittenTxId() + 1;
-    startLogSegmentAndWriteHeaderTxn(nextTxId);
+    startLogSegmentAndWriteHeaderTxn(nextTxId, layoutVersion);
     
     assert curSegmentTxId == nextTxId;
     return nextTxId;
@@ -1212,7 +1212,7 @@ public class FSEditLog implements LogsPurgeable {
    * Remote namenode just has started a log segment, start log segment locally.
    */
   public synchronized void startLogSegment(long txid, 
-      boolean abortCurrentLogSegment) throws IOException {
+      boolean abortCurrentLogSegment, int layoutVersion) throws IOException {
     LOG.info("Started a new log segment at txid " + txid);
     if (isSegmentOpen()) {
       if (getLastWrittenTxId() == txid - 1) {
@@ -1234,14 +1234,15 @@ public class FSEditLog implements LogsPurgeable {
       }
     }
     setNextTxId(txid);
-    startLogSegment(txid);
+    startLogSegment(txid, layoutVersion);
   }
   
   /**
    * Start writing to the log segment with the given txid.
    * Transitions from BETWEEN_LOG_SEGMENTS state to IN_LOG_SEGMENT state. 
    */
-  private void startLogSegment(final long segmentTxId) throws IOException {
+  private void startLogSegment(final long segmentTxId, int layoutVersion)
+      throws IOException {
     assert Thread.holdsLock(this);
 
     LOG.info("Starting log segment at " + segmentTxId);
@@ -1263,8 +1264,7 @@ public class FSEditLog implements LogsPurgeable {
     storage.attemptRestoreRemovedStorage();
     
     try {
-      editLogStream = journalSet.startLogSegment(segmentTxId,
-          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+      editLogStream = journalSet.startLogSegment(segmentTxId, layoutVersion);
     } catch (IOException ex) {
       throw new IOException("Unable to start log segment " +
           segmentTxId + ": too few journals successfully started.", ex);
@@ -1274,9 +1274,9 @@ public class FSEditLog implements LogsPurgeable {
     state = State.IN_SEGMENT;
   }
 
-  synchronized void startLogSegmentAndWriteHeaderTxn(final long segmentTxId
-      ) throws IOException {
-    startLogSegment(segmentTxId);
+  synchronized void startLogSegmentAndWriteHeaderTxn(final long segmentTxId,
+      int layoutVersion) throws IOException {
+    startLogSegment(segmentTxId, layoutVersion);
 
     logEdit(LogSegmentOp.getInstance(cache.get(),
         FSEditLogOpCodes.OP_START_LOG_SEGMENT));

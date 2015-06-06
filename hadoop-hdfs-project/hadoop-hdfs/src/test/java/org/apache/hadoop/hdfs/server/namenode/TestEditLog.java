@@ -297,7 +297,7 @@ public class TestEditLog {
       editLog.logSetReplication("fakefile", (short) 1);
       editLog.logSync();
       
-      editLog.rollEditLog();
+      editLog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
       assertExistsInStorageDirs(
           cluster, NameNodeDirType.EDITS,
@@ -370,7 +370,7 @@ public class TestEditLog {
       
       // Roll log so new output buffer size takes effect
       // we should now be writing to edits_inprogress_3
-      fsimage.rollEditLog();
+      fsimage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     
       // Remember the current lastInodeId and will reset it back to test
       // loading editlog segments.The transactions in the following allocate new
@@ -401,7 +401,7 @@ public class TestEditLog {
       trans.run();
 
       // Roll another time to finalize edits_inprogress_3
-      fsimage.rollEditLog();
+      fsimage.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
       long expectedTxns = ((NUM_THREADS+1) * 2 * NUM_TRANSACTIONS) + 2; // +2 for start/end txns
    
@@ -940,7 +940,7 @@ public class TestEditLog {
     FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
       FileUtil.setWritable(logDir, false);
-      log.openForWrite();
+      log.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Did no throw exception on only having a bad dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -965,7 +965,7 @@ public class TestEditLog {
         new byte[500]);
     
     try {
-      log.openForWrite();
+      log.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       NameNodeMetrics mockMetrics = Mockito.mock(NameNodeMetrics.class);
       log.setMetricsForTests(mockMetrics);
 
@@ -1139,7 +1139,7 @@ public class TestEditLog {
     // logGenerationStamp is used, simply because it doesn't 
     // require complex arguments.
     editlog.initJournalsForWrite();
-    editlog.openForWrite();
+    editlog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (int i = 2; i < TXNS_PER_ROLL; i++) {
       editlog.logGenerationStampV2((long) 0);
     }
@@ -1151,7 +1151,7 @@ public class TestEditLog {
     // the specified journal is aborted. It will be brought
     // back into rotation automatically by rollEditLog
     for (int i = 0; i < numrolls; i++) {
-      editlog.rollEditLog();
+      editlog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
       editlog.logGenerationStampV2((long) i);
       editlog.logSync();
@@ -1485,7 +1485,7 @@ public class TestEditLog {
             cluster, NameNodeDirType.EDITS,
             NNStorage.getInProgressEditsFileName((i * 3) + 1));
         editLog.logSync();
-        editLog.rollEditLog();
+        editLog.rollEditLog(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
         assertExistsInStorageDirs(
             cluster, NameNodeDirType.EDITS,
             NNStorage.getFinalizedEditsFileName((i * 3) + 1, (i * 3) + 3));

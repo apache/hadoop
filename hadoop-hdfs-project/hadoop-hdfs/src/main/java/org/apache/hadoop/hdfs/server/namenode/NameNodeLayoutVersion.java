@@ -35,6 +35,8 @@ public class NameNodeLayoutVersion {
 
   public static final int CURRENT_LAYOUT_VERSION
       = LayoutVersion.getCurrentLayoutVersion(Feature.values());
+  public static final int MINIMUM_COMPATIBLE_LAYOUT_VERSION
+      = LayoutVersion.getMinimumCompatibleLayoutVersion(Feature.values());
 
   static {
     LayoutVersion.updateMap(FEATURES, LayoutVersion.Feature.values());
@@ -60,43 +62,59 @@ public class NameNodeLayoutVersion {
    * its immediate predecessor, use the constructor where a specific ancestor
    * can be passed.
    * </li>
+   * <li>Specify a minimum compatible layout version.  The minimum compatible
+   * layout version is the earliest prior version to which a downgrade is
+   * possible after initiating rolling upgrade.  If the feature cannot satisfy
+   * compatibility with any prior version, then set its minimum compatible
+   * lqyout version to itself to indicate that downgrade is impossible.
+   * Satisfying compatibility might require adding logic to the new feature to
+   * reject operations or handle them differently while rolling upgrade is in
+   * progress.  In general, it's possible to satisfy compatiblity for downgrade
+   * if the new feature just involves adding new edit log ops.  Deeper
+   * structural changes, such as changing the way we place files in the metadata
+   * directories, might be incompatible.  Feature implementations should strive
+   * for compatibility, because it's in the best interest of our users to
+   * support downgrade.
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false),
-    EDITLOG_LENGTH(-56, "Add length field to every edit log op"),
-    XATTRS(-57, "Extended attributes"),
-    CREATE_OVERWRITE(-58, "Use single editlog record for " +
+    ROLLING_UPGRADE(-55, -53, -55, "Support rolling upgrade", false),
+    EDITLOG_LENGTH(-56, -56, "Add length field to every edit log op"),
+    XATTRS(-57, -57, "Extended attributes"),
+    CREATE_OVERWRITE(-58, -58, "Use single editlog record for " +
       "creating file with overwrite"),
-    XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
-    BLOCK_STORAGE_POLICY(-60, "Block Storage policy"),
-    TRUNCATE(-61, "Truncate"),
-    APPEND_NEW_BLOCK(-62, "Support appending to new block"),
-    QUOTA_BY_STORAGE_TYPE(-63, "Support quota for specific storage types");
+    XATTRS_NAMESPACE_EXT(-59, -59, "Increase number of xattr namespaces"),
+    BLOCK_STORAGE_POLICY(-60, -60, "Block Storage policy"),
+    TRUNCATE(-61, -61, "Truncate"),
+    APPEND_NEW_BLOCK(-62, -61, "Support appending to new block"),
+    QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types");
 
     private final FeatureInfo info;
 
     /**
      * Feature that is added at layout version {@code lv} - 1. 
      * @param lv new layout version with the addition of this feature
+     * @param minCompatLV minimium compatible layout version
      * @param description description of the feature
      */
-    Feature(final int lv, final String description) {
-      this(lv, lv + 1, description, false);
+    Feature(final int lv, int minCompatLV, final String description) {
+      this(lv, lv + 1, minCompatLV, description, false);
     }
 
     /**
      * NameNode feature that is added at layout version {@code ancestoryLV}.
      * @param lv new layout version with the addition of this feature
      * @param ancestorLV layout version from which the new lv is derived from.
+     * @param minCompatLV minimum compatible layout version
      * @param description description of the feature
      * @param reserved true when this is a layout version reserved for previous
      *        versions
      * @param features set of features that are to be enabled for this version
      */
-    Feature(final int lv, final int ancestorLV, final String description,
-        boolean reserved, Feature... features) {
-      info = new FeatureInfo(lv, ancestorLV, description, reserved, features);
+    Feature(final int lv, final int ancestorLV, int minCompatLV,
+        final String description, boolean reserved, Feature... features) {
+      info = new FeatureInfo(lv, ancestorLV, minCompatLV, description, reserved,
+          features);
     }
     
     @Override
