@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -1075,31 +1074,12 @@ public class FairScheduler extends
     // 1. Check for reserved applications
     // 2. Schedule if there are no reservations
 
+    boolean validReservation = false;
     FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
     if (reservedAppSchedulable != null) {
-      Priority reservedPriority = node.getReservedContainer().getReservedPriority();
-      FSQueue queue = reservedAppSchedulable.getQueue();
-
-      if (!reservedAppSchedulable.hasContainerForNode(reservedPriority, node)
-          || !fitsInMaxShare(queue,
-          node.getReservedContainer().getReservedResource())) {
-        // Don't hold the reservation if app can no longer use it
-        LOG.info("Releasing reservation that cannot be satisfied for application "
-            + reservedAppSchedulable.getApplicationAttemptId()
-            + " on node " + node);
-        reservedAppSchedulable.unreserve(reservedPriority, node);
-        reservedAppSchedulable = null;
-      } else {
-        // Reservation exists; try to fulfill the reservation
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Trying to fulfill reservation for application "
-              + reservedAppSchedulable.getApplicationAttemptId()
-              + " on node: " + node);
-        }
-        node.getReservedAppSchedulable().assignReservedContainer(node);
-      }
+      validReservation = reservedAppSchedulable.assignReservedContainer(node);
     }
-    if (reservedAppSchedulable == null) {
+    if (!validReservation) {
       // No reservation, schedule at queue which is farthest below fair share
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
@@ -1115,22 +1095,6 @@ public class FairScheduler extends
       }
     }
     updateRootQueueMetrics();
-  }
-
-  static boolean fitsInMaxShare(FSQueue queue, Resource
-      additionalResource) {
-    Resource usagePlusAddition =
-        Resources.add(queue.getResourceUsage(), additionalResource);
-
-    if (!Resources.fitsIn(usagePlusAddition, queue.getMaxShare())) {
-      return false;
-    }
-    
-    FSQueue parentQueue = queue.getParent();
-    if (parentQueue != null) {
-      return fitsInMaxShare(parentQueue, additionalResource);
-    }
-    return true;
   }
 
   public FSAppAttempt getSchedulerApp(ApplicationAttemptId appAttemptId) {
