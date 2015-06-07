@@ -861,6 +861,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8463. Calling DFSInputStream.seekToNewSource just after stream creation
     causes NullPointerException (Masatake Iwasaki via kihwal)
 
+    HDFS-8539. Hdfs doesnt have class 'debug' in windows.
+    (Anu Engineer via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
