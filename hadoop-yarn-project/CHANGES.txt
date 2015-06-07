@@ -498,6 +498,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3766. Fixed the apps table column error of generic history web UI.
     (Xuan Gong via zjshen)
 
+    YARN-3655. FairScheduler: potential livelock due to maxAMShare limitation
+    and container reservation. (Zhihai Xu via kasha)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
