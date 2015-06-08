@@ -837,6 +837,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12052 IPC client downgrades all exception types to IOE, breaks
     callers trying to use them. (Brahma Reddy Battula via stevel)
 
+    HADOOP-12054. RPC client should not retry for InvalidToken exceptions.
+    (Varun Saxena via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

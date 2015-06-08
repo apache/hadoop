@@ -37,6 +37,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 /**
  * <p>
@@ -575,6 +576,9 @@ public class RetryPolicies {
         // RetriableException or RetriableException wrapped 
         return new RetryAction(RetryAction.RetryDecision.RETRY,
               getFailoverOrRetrySleepTime(retries));
+      } else if (e instanceof InvalidToken) {
+        return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
+            "Invalid or Cancelled Token");
       } else if (e instanceof SocketException
           || (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isIdempotentOrAtMostOnce) {
