@@ -65,3 +65,5 @@
 
     HADOOP-12011. Allow to dump verbose information to ease debugging in raw erasure coders
     (Kai Zheng)
+
+    HADOOP-12065. Using more meaningful keys in EC schema. (Kai Zheng)

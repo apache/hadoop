@@ -25,8 +25,8 @@ import java.util.Map;
  * Erasure coding schema to housekeeper relevant information.
  */
 public final class ECSchema {
-  public static final String NUM_DATA_UNITS_KEY = "k";
-  public static final String NUM_PARITY_UNITS_KEY = "m";
+  public static final String NUM_DATA_UNITS_KEY = "numDataUnits";
+  public static final String NUM_PARITY_UNITS_KEY = "numParityUnits";
   public static final String CODEC_NAME_KEY = "codec";
 
   /**

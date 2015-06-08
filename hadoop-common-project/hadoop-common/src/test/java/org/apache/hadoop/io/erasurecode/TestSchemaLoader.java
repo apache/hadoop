@@ -40,13 +40,13 @@ public class TestSchemaLoader {
     out.println("<?xml version=\"1.0\"?>");
     out.println("<schemas>");
     out.println("  <schema name=\"RSk6m3\">");
-    out.println("    <k>6</k>");
-    out.println("    <m>3</m>");
+    out.println("    <numDataUnits>6</numDataUnits>");
+    out.println("    <numParityUnits>3</numParityUnits>");
     out.println("    <codec>RS</codec>");
     out.println("  </schema>");
     out.println("  <schema name=\"RSk10m4\">");
-    out.println("    <k>10</k>");
-    out.println("    <m>4</m>");
+    out.println("    <numDataUnits>10</numDataUnits>");
+    out.println("    <numParityUnits>4</numParityUnits>");
     out.println("    <codec>RS</codec>");
     out.println("  </schema>");
     out.println("</schemas>");
