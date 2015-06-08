@@ -1303,7 +1303,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   private static void printUsage(PrintStream out) {
-    out.println("Usage: java ResourceManager [-format-state-store]");
+    out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
         + "[-remove-application-from-state-store <appId>]" + "\n");
   }
