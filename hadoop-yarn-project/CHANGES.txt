@@ -504,6 +504,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
     (zhihai xu via devaraj)
 
+    YARN-3747. TestLocalDirsHandlerService should delete the created test directory logDir2.
+    (David Moore via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
