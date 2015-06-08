@@ -144,7 +144,7 @@ public class TestLocalDirsHandlerService {
     FileUtils.deleteDirectory(new File(localDir1));
     FileUtils.deleteDirectory(new File(localDir2));
     FileUtils.deleteDirectory(new File(logDir1));
-    FileUtils.deleteDirectory(new File(logDir1));
+    FileUtils.deleteDirectory(new File(logDir2));
     dirSvc.close();
   }
 }
