@@ -82,12 +82,12 @@ public class AMStartedEvent implements HistoryEvent {
       ContainerId containerId, String nodeManagerHost, int nodeManagerPort,
       int nodeManagerHttpPort, String forcedJobStateOnShutDown,
       long submitTime) {
-    datum.applicationAttemptId = new Utf8(appAttemptId.toString());
-    datum.startTime = startTime;
-    datum.containerId = new Utf8(containerId.toString());
-    datum.nodeManagerHost = new Utf8(nodeManagerHost);
-    datum.nodeManagerPort = nodeManagerPort;
-    datum.nodeManagerHttpPort = nodeManagerHttpPort;
+    datum.setApplicationAttemptId(new Utf8(appAttemptId.toString()));
+    datum.setStartTime(startTime);
+    datum.setContainerId(new Utf8(containerId.toString()));
+    datum.setNodeManagerHost(new Utf8(nodeManagerHost));
+    datum.setNodeManagerPort(nodeManagerPort);
+    datum.setNodeManagerHttpPort(nodeManagerHttpPort);
     this.forcedJobStateOnShutDown = forcedJobStateOnShutDown;
     this.submitTime = submitTime;
   }
@@ -107,7 +107,7 @@ public class AMStartedEvent implements HistoryEvent {
    * @return the ApplicationAttemptId
    */
   public ApplicationAttemptId getAppAttemptId() {
-    return ConverterUtils.toApplicationAttemptId(datum.applicationAttemptId
+    return ConverterUtils.toApplicationAttemptId(datum.getApplicationAttemptId()
         .toString());
   }
 
@@ -115,35 +115,35 @@ public class AMStartedEvent implements HistoryEvent {
    * @return the start time for the MRAppMaster
    */
   public long getStartTime() {
-    return datum.startTime;
+    return datum.getStartTime();
   }
 
   /**
    * @return the ContainerId for the MRAppMaster.
    */
   public ContainerId getContainerId() {
-    return ConverterUtils.toContainerId(datum.containerId.toString());
+    return ConverterUtils.toContainerId(datum.getContainerId().toString());
   }
 
   /**
    * @return the node manager host.
    */
   public String getNodeManagerHost() {
-    return datum.nodeManagerHost.toString();
+    return datum.getNodeManagerHost().toString();
   }
 
   /**
    * @return the node manager port.
    */
   public int getNodeManagerPort() {
-    return datum.nodeManagerPort;
+    return datum.getNodeManagerPort();
   }
   
   /**
    * @return the http port for the tracker.
    */
   public int getNodeManagerHttpPort() {
-    return datum.nodeManagerHttpPort;
+    return datum.getNodeManagerHttpPort();
   }
 
   /**

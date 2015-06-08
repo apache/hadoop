@@ -89,7 +89,9 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
   }
 
   /** Get the Job ID */
-  public JobID getJobId() { return JobID.forName(datum.jobid.toString()); }
+  public JobID getJobId() {
+    return JobID.forName(datum.getJobid().toString());
+  }
   /** Get the job finish time */
   public long getFinishTime() { return datum.getFinishTime(); }
   /** Get the number of finished maps */
