@@ -864,6 +864,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8539. Hdfs doesnt have class 'debug' in windows.
     (Anu Engineer via cnauroth)
 
+    HDFS-8554. TestDatanodeLayoutUpgrade fails on Windows. (cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
