@@ -343,6 +343,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6354. ShuffleHandler should be able to log shuffle connections
     (Chang Li via jlowe)
 
+    MAPREDUCE-6392. Document mapred class path options.
+    (Brahma Reddy Battula via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
