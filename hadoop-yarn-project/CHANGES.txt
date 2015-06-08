@@ -297,6 +297,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2716. Refactor ZKRMStateStore retry code with Apache Curator. 
     (Karthik Kambatla via jianhe)
 
+    YARN-3786. Document yarn class path options.
+    (Brahma Reddy Battula via cnauroth)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
