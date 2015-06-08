@@ -294,6 +294,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-1462. AHS API and other AHS changes to handle tags for completed MR jobs. (xgong)
 
+    YARN-2716. Refactor ZKRMStateStore retry code with Apache Curator. 
+    (Karthik Kambatla via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
