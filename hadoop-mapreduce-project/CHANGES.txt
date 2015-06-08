@@ -459,6 +459,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6377. JHS sorting on state column not working in webUi.
     (zhihai xu via devaraj)
 
+    MAPREDUCE-6388. Remove deprecation warnings from JobHistoryServer classes
+    (Ray Chiang via ozawa).
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

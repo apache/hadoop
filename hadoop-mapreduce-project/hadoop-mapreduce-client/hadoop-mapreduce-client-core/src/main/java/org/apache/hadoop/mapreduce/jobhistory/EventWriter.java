@@ -61,8 +61,8 @@ class EventWriter {
   
   synchronized void write(HistoryEvent event) throws IOException { 
     Event wrapper = new Event();
-    wrapper.type = event.getEventType();
-    wrapper.event = event.getDatum();
+    wrapper.setType(event.getEventType());
+    wrapper.setEvent(event.getDatum());
     writer.write(wrapper, encoder);
     encoder.flush();
     out.writeBytes("\n");
@@ -95,22 +95,22 @@ class EventWriter {
   }
   static JhCounters toAvro(Counters counters, String name) {
     JhCounters result = new JhCounters();
-    result.name = new Utf8(name);
-    result.groups = new ArrayList<JhCounterGroup>(0);
+    result.setName(new Utf8(name));
+    result.setGroups(new ArrayList<JhCounterGroup>(0));
     if (counters == null) return result;
     for (CounterGroup group : counters) {
       JhCounterGroup g = new JhCounterGroup();
-      g.name = new Utf8(group.getName());
-      g.displayName = new Utf8(group.getDisplayName());
-      g.counts = new ArrayList<JhCounter>(group.size());
+      g.setName(new Utf8(group.getName()));
+      g.setDisplayName(new Utf8(group.getDisplayName()));
+      g.setCounts(new ArrayList<JhCounter>(group.size()));
       for (Counter counter : group) {
         JhCounter c = new JhCounter();
-        c.name = new Utf8(counter.getName());
-        c.displayName = new Utf8(counter.getDisplayName());
-        c.value = counter.getValue();
-        g.counts.add(c);
+        c.setName(new Utf8(counter.getName()));
+        c.setDisplayName(new Utf8(counter.getDisplayName()));
+        c.setValue(counter.getValue());
+        g.getCounts().add(c);
       }
-      result.groups.add(g);
+      result.getGroups().add(g);
     }
     return result;
   }
