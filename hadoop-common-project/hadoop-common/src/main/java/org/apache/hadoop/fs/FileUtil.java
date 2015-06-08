@@ -727,6 +727,12 @@ public class FileUtil {
       }
     }
 
+    if (entry.isLink()) {
+      File src = new File(outputDir, entry.getLinkName());
+      HardLink.createHardLink(src, outputFile);
+      return;
+    }
+
     int count;
     byte data[] = new byte[2048];
     BufferedOutputStream outputStream = new BufferedOutputStream(
