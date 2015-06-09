@@ -41,7 +41,6 @@ import java.util.TimeZone;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -54,7 +53,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 
@@ -470,6 +468,83 @@ public abstract class NativeAzureFileSystemBaseTest {
       assertEquals("Cannot create file /x; already exists as a directory.",
           ex.getMessage());
     }
+  }
+
+  @Test
+  public void testInputStreamReadWithZeroSizeBuffer() throws Exception {
+    Path newFile = new Path("zeroSizeRead");
+    OutputStream output = fs.create(newFile);
+    output.write(10);
+    output.close();
+
+    InputStream input = fs.open(newFile);
+    int result = input.read(new byte[2], 0, 0);
+    assertEquals(0, result);
+  }
+
+  @Test
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEof() throws Exception {
+    Path newFile = new Path("eofRead");
+    OutputStream output = fs.create(newFile);
+    output.write(10);
+    output.close();
+
+    // Read first byte back
+    InputStream input = fs.open(newFile);
+    byte[] buff = new byte[1];
+    int result = input.read(buff, 0, 1);
+    assertEquals(1, result);
+    assertEquals(10, buff[0]);
+
+    // Issue another read and make sure it returns -1
+    buff[0] = 2;
+    result = input.read(buff, 0, 1);
+    assertEquals(-1, result);
+    // Buffer is intact
+    assertEquals(2, buff[0]);
+  }
+
+  @Test
+  public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer() throws Exception {
+    Path newFile = new Path("eofRead2");
+    OutputStream output = fs.create(newFile);
+    byte[] outputBuff = new byte[97331];
+    for(int i = 0; i < outputBuff.length; ++i) {
+      outputBuff[i] = (byte)(Math.random() * 255);
+    }
+    output.write(outputBuff);
+    output.close();
+
+    // Read the content of the file
+    InputStream input = fs.open(newFile);
+    byte[] buff = new byte[131072];
+    int result = input.read(buff, 0, buff.length);
+    assertEquals(outputBuff.length, result);
+    for(int i = 0; i < outputBuff.length; ++i) {
+      assertEquals(outputBuff[i], buff[i]);
+    }
+
+    // Issue another read and make sure it returns -1
+    buff = new byte[131072];
+    result = input.read(buff, 0, buff.length);
+    assertEquals(-1, result);
+  }
+
+  @Test
+  public void testInputStreamReadIntReturnsMinusOneOnEof() throws Exception {
+    Path newFile = new Path("eofRead3");
+    OutputStream output = fs.create(newFile);
+    output.write(10);
+    output.close();
+
+    // Read first byte back
+    InputStream input = fs.open(newFile);
+    int value = input.read();
+    assertEquals(10, value);
+
+    // Issue another read and make sure it returns -1
+    value = input.read();
+    assertEquals(-1, value);
   }
 
   @Test

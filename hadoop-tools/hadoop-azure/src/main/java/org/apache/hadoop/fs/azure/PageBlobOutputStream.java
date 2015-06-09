@@ -117,6 +117,8 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
   // The last task given to the ioThreadPool to execute, to allow
   // waiting until it's done.
   private WriteRequest lastQueuedTask;
+  // Whether the stream has been closed.
+  private boolean closed = false;
 
   public static final Log LOG = LogFactory.getLog(AzureNativeFileSystemStore.class);
 
@@ -201,7 +203,11 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
    * service.
    */
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
+    if (closed) {
+      return;
+    }
+
     LOG.debug("Closing page blob output stream.");
     flush();
     checkStreamState();
@@ -221,7 +227,7 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
       Thread.currentThread().interrupt();
     }
 
-    this.lastError = new IOException("Stream is already closed.");
+    closed = true;
   }
 
   // Log the stacks of all threads.
