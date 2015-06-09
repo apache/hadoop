@@ -246,7 +246,7 @@ public class NameNode implements NameNodeStatusMXBean {
     DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
   
-  private static final String USAGE = "Usage: java NameNode ["
+  private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
       + StartupOption.CHECKPOINT.getName() + "] | \n\t["
       + StartupOption.FORMAT.getName() + " ["
