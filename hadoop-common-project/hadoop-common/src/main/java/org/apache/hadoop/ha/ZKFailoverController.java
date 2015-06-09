@@ -84,7 +84,7 @@ public abstract class ZKFailoverController {
   };
   
   protected static final String USAGE = 
-      "Usage: java zkfc [ -formatZK [-force] [-nonInteractive] ]";
+      "Usage: hdfs zkfc [ -formatZK [-force] [-nonInteractive] ]";
 
   /** Unable to format the parent znode in ZK */
   static final int ERR_CODE_FORMAT_DENIED = 2;
