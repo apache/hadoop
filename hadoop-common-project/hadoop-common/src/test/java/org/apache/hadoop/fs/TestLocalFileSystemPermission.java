@@ -54,10 +54,73 @@ public class TestLocalFileSystemPermission extends TestCase {
     return f;
   }
 
-  private void cleanupFile(FileSystem fs, Path name) throws IOException {
+  private Path writeFile(FileSystem fs, String name, FsPermission perm) throws IOException {
+    Path f = new Path(TEST_PATH_PREFIX + name);
+    FSDataOutputStream stm = fs.create(f, perm, true, 2048, (short)1, 32 * 1024 * 1024, null);
+    stm.writeBytes("42\n");
+    stm.close();
+    return f;
+  }
+
+  private void cleanup(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
     fs.delete(name, true);
     assertTrue(!fs.exists(name));
+  }
+
+  public void testLocalFSDirsetPermission() throws IOException {
+    if (Path.WINDOWS) {
+      System.out.println("Cannot run test for Windows");
+      return;
+    }
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
+    LocalFileSystem localfs = FileSystem.getLocal(conf);
+    Path dir = new Path(TEST_PATH_PREFIX + "dir");
+    localfs.mkdirs(dir);
+    try {
+      FsPermission initialPermission = getPermission(localfs, dir);
+      assertEquals(
+          FsPermission.getDirDefault().applyUMask(FsPermission.getUMask(conf)),
+          initialPermission);
+    } catch(Exception e) {
+      System.out.println(StringUtils.stringifyException(e));
+      System.out.println("Cannot run test");
+      return;
+    }
+
+    FsPermission perm = new FsPermission((short)0755);
+    Path dir1 = new Path(TEST_PATH_PREFIX + "dir1");
+    localfs.mkdirs(dir1, perm);
+    try {
+      FsPermission initialPermission = getPermission(localfs, dir1);
+      assertEquals(perm.applyUMask(FsPermission.getUMask(conf)), initialPermission);
+    } catch(Exception e) {
+      System.out.println(StringUtils.stringifyException(e));
+      System.out.println("Cannot run test");
+      return;
+    }
+
+    Path dir2 = new Path(TEST_PATH_PREFIX + "dir2");
+    localfs.mkdirs(dir2);
+    try {
+      FsPermission initialPermission = getPermission(localfs, dir2);
+      Path copyPath = new Path(TEST_PATH_PREFIX + "dir_copy");
+      localfs.rename(dir2, copyPath);
+      FsPermission copyPermission = getPermission(localfs, copyPath);
+      assertEquals(copyPermission, initialPermission);
+      dir2 = copyPath;
+    } catch (Exception e) {
+      System.out.println(StringUtils.stringifyException(e));
+      System.out.println("Cannot run test");
+      return;
+    } finally {
+      cleanup(localfs, dir);
+      cleanup(localfs, dir1);
+      if (localfs.exists(dir2)) {
+        localfs.delete(dir2, true);
+      }
+    }
   }
 
   /** Test LocalFileSystem.setPermission */
@@ -67,15 +130,44 @@ public class TestLocalFileSystemPermission extends TestCase {
       return;
     }
     Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
     LocalFileSystem localfs = FileSystem.getLocal(conf);
     String filename = "foo";
     Path f = writeFile(localfs, filename);
     try {
       FsPermission initialPermission = getPermission(localfs, f);
-      System.out.println(filename + ": " + initialPermission);
-      assertEquals(FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), initialPermission);
+      assertEquals(
+          FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)),
+          initialPermission);
+    } catch(Exception e) {
+      System.out.println(StringUtils.stringifyException(e));
+      System.out.println("Cannot run test");
+      return;
     }
-    catch(Exception e) {
+
+    String filename1 = "foo1";
+    FsPermission perm = new FsPermission((short)0755);
+    Path f1 = writeFile(localfs, filename1, perm);
+    try {
+      FsPermission initialPermission = getPermission(localfs, f1);
+      assertEquals(
+          perm.applyUMask(FsPermission.getUMask(conf)), initialPermission);
+    } catch(Exception e) {
+      System.out.println(StringUtils.stringifyException(e));
+      System.out.println("Cannot run test");
+      return;
+    }
+
+    String filename2 = "foo2";
+    Path f2 = writeFile(localfs, filename2);
+    try {
+      FsPermission initialPermission = getPermission(localfs, f2);
+      Path copyPath = new Path(TEST_PATH_PREFIX + "/foo_copy");
+      localfs.rename(f2, copyPath);
+      FsPermission copyPermission = getPermission(localfs, copyPath);
+      assertEquals(copyPermission, initialPermission);
+      f2 = copyPath;
+    } catch (Exception e) {
       System.out.println(StringUtils.stringifyException(e));
       System.out.println("Cannot run test");
       return;
@@ -92,7 +184,13 @@ public class TestLocalFileSystemPermission extends TestCase {
       localfs.setPermission(f, all);
       assertEquals(all, getPermission(localfs, f));
     }
-    finally {cleanupFile(localfs, f);}
+    finally {
+      cleanup(localfs, f);
+      cleanup(localfs, f1);
+      if (localfs.exists(f2)) {
+        localfs.delete(f2, true);
+      }
+    }
   }
 
   FsPermission getPermission(LocalFileSystem fs, Path p) throws IOException {
@@ -107,6 +205,7 @@ public class TestLocalFileSystemPermission extends TestCase {
     }
 
     Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
     LocalFileSystem localfs = FileSystem.getLocal(conf);
     String filename = "bar";
     Path f = writeFile(localfs, filename);
@@ -141,7 +240,7 @@ public class TestLocalFileSystemPermission extends TestCase {
                            "belongs to only one group.");
       }
     } 
-    finally {cleanupFile(localfs, f);}
+    finally {cleanup(localfs, f);}
   }
 
   static List<String> getGroups() throws IOException {

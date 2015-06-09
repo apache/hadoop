@@ -59,6 +59,8 @@ public class RawLocalFileSystem extends FileSystem {
   // Temporary workaround for HADOOP-9652.
   private static boolean useDeprecatedFileStatus = true;
 
+  private FsPermission umask;
+
   @VisibleForTesting
   public static void useStatIfAvailable() {
     useDeprecatedFileStatus = !Stat.isAvailable();
@@ -92,6 +94,7 @@ public class RawLocalFileSystem extends FileSystem {
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    umask = FsPermission.getUMask(conf);
   }
   
   /*******************************************************
@@ -211,9 +214,13 @@ public class RawLocalFileSystem extends FileSystem {
     private LocalFSFileOutputStream(Path f, boolean append,
         FsPermission permission) throws IOException {
       File file = pathToFile(f);
+      if (!append && permission == null) {
+        permission = FsPermission.getFileDefault();
+      }
       if (permission == null) {
         this.fos = new FileOutputStream(file, append);
       } else {
+        permission = permission.applyUMask(umask);
         if (Shell.WINDOWS && NativeIO.isAvailable()) {
           this.fos = NativeIO.Windows.createFileOutputStreamWithMode(file,
               append, permission.toShort());
@@ -484,27 +491,27 @@ public class RawLocalFileSystem extends FileSystem {
   protected boolean mkOneDirWithMode(Path p, File p2f, FsPermission permission)
       throws IOException {
     if (permission == null) {
-      return p2f.mkdir();
-    } else {
-      if (Shell.WINDOWS && NativeIO.isAvailable()) {
-        try {
-          NativeIO.Windows.createDirectoryWithMode(p2f, permission.toShort());
-          return true;
-        } catch (IOException e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format(
-                "NativeIO.createDirectoryWithMode error, path = %s, mode = %o",
-                p2f, permission.toShort()), e);
-          }
-          return false;
+      permission = FsPermission.getDirDefault();
+    }
+    permission = permission.applyUMask(umask);
+    if (Shell.WINDOWS && NativeIO.isAvailable()) {
+      try {
+        NativeIO.Windows.createDirectoryWithMode(p2f, permission.toShort());
+        return true;
+      } catch (IOException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format(
+              "NativeIO.createDirectoryWithMode error, path = %s, mode = %o",
+              p2f, permission.toShort()), e);
         }
-      } else {
-        boolean b = p2f.mkdir();
-        if (b) {
-          setPermission(p, permission);
-        }
-        return b;
+        return false;
       }
+    } else {
+      boolean b = p2f.mkdir();
+      if (b) {
+        setPermission(p, permission);
+      }
+      return b;
     }
   }
 

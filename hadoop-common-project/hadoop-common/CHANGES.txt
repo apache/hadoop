@@ -482,6 +482,9 @@ Trunk (Unreleased)
 
     HADOOP-9905. remove dependency of zookeeper for hadoop-client (vinayakumarb)
 
+    HADOOP-11347. RawLocalFileSystem#mkdir and create should honor umask (Varun
+    Saxena via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
