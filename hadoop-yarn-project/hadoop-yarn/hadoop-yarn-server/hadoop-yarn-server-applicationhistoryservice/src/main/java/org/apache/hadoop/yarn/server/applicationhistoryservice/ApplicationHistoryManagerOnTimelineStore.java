@@ -109,12 +109,15 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
   }
 
   @Override
-  public Map<ApplicationId, ApplicationReport> getApplications(long appsNum)
-      throws YarnException, IOException {
-    TimelineEntities entities = timelineDataManager.getEntities(
-        ApplicationMetricsConstants.ENTITY_TYPE, null, null, null, null, null,
-        null, appsNum == Long.MAX_VALUE ? this.maxLoadedApplications : appsNum,
-        EnumSet.allOf(Field.class), UserGroupInformation.getLoginUser());
+  public Map<ApplicationId, ApplicationReport> getApplications(long appsNum,
+      long appStartedTimeBegin, long appStartedTimeEnd) throws YarnException,
+      IOException {
+    TimelineEntities entities =
+        timelineDataManager.getEntities(
+          ApplicationMetricsConstants.ENTITY_TYPE, null, null,
+          appStartedTimeBegin, appStartedTimeEnd, null, null,
+          appsNum == Long.MAX_VALUE ? this.maxLoadedApplications : appsNum,
+          EnumSet.allOf(Field.class), UserGroupInformation.getLoginUser());
     Map<ApplicationId, ApplicationReport> apps =
         new LinkedHashMap<ApplicationId, ApplicationReport>();
     if (entities != null && entities.getEntities() != null) {

@@ -300,6 +300,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3786. Document yarn class path options.
     (Brahma Reddy Battula via cnauroth)
 
+    YARN-3787. Allowed generic history service to load a number of applications whose
+    started time is within the given range. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
