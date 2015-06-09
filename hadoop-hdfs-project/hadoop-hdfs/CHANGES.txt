@@ -615,6 +615,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8552. Fix hdfs CLI usage message for namenode and zkfc.
     (Brahma Reddy Battula via xyao)
 
+    HDFS-8568. TestClusterId#testFormatWithEmptyClusterIdOption is failing.
+    (Rakesh R. via xyao)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
