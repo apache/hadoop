@@ -2301,7 +2301,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     throws AzureException {
     if (blob instanceof CloudPageBlobWrapper) {
       try {
-        return PageBlobInputStream.getPageBlobSize((CloudPageBlobWrapper) blob,
+        return PageBlobInputStream.getPageBlobDataSize((CloudPageBlobWrapper) blob,
             getInstrumentedContext(
                 isConcurrentOOBAppendAllowed()));
       } catch (Exception e) {
