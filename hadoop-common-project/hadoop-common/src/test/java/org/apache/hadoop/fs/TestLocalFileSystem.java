@@ -561,4 +561,39 @@ public class TestLocalFileSystem {
     assertEquals("resolvePath did not strip fragment from Path", pathQualified,
         resolved);
   }
+
+  @Test
+  public void testAppendSetsPosCorrectly() throws Exception {
+    FileSystem fs = fileSys.getRawFileSystem();
+    Path file = new Path(TEST_ROOT_DIR, "test-append");
+
+    fs.delete(file, true);
+    FSDataOutputStream out = fs.create(file);
+
+    try {
+      out.write("text1".getBytes());
+    } finally {
+      out.close();
+    }
+
+    // Verify the position
+    out = fs.append(file);
+    try {
+      assertEquals(5, out.getPos());
+      out.write("text2".getBytes());
+    } finally {
+      out.close();
+    }
+
+    // Verify the content
+    FSDataInputStream in = fs.open(file);
+    try {
+      byte[] buf = new byte[in.available()];
+      in.readFully(buf);
+      assertEquals("text1text2", new String(buf));
+    } finally {
+      in.close();
+    }
+  }
+
 }
