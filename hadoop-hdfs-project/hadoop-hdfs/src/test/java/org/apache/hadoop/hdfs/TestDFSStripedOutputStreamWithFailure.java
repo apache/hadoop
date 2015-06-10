@@ -335,7 +335,7 @@ public class TestDFSStripedOutputStreamWithFailure {
       }
 
       // check parity
-      TestDFSStripedOutputStream.verifyParity(
+      TestDFSStripedOutputStream.verifyParity(dfs.getConf(),
           lbs.getLocatedBlocks().get(group).getBlockSize(),
           CELL_SIZE, dataBlockBytes, parityBlockBytes,
           killedDnIndex - dataBlockBytes.length);

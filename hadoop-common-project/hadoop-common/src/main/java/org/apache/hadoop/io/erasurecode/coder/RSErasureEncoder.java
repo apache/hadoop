@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
-import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
@@ -53,12 +52,8 @@ public class RSErasureEncoder extends AbstractErasureEncoder {
 
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rawEncoder == null) {
-      rawEncoder = createRawEncoder(
-          CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
+      rawEncoder = CodecUtil.createRSRawEncoder(getConf(),
               getNumDataUnits(), getNumParityUnits());
-      if (rawEncoder == null) {
-        rawEncoder = new RSRawEncoder(getNumDataUnits(), getNumParityUnits());
-      }
     }
     return rawEncoder;
   }

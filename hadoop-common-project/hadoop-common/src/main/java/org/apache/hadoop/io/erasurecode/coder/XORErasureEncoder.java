@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
-import org.apache.hadoop.io.erasurecode.rawcoder.XORRawEncoder;
 
 /**
  * Xor erasure encoder that encodes a block group.
@@ -39,10 +39,10 @@ public class XORErasureEncoder extends AbstractErasureEncoder {
   }
 
   @Override
-  protected ErasureCodingStep prepareEncodingStep(final ECBlockGroup blockGroup) {
-    // May be configured
-    RawErasureEncoder rawEncoder = new XORRawEncoder(
-            getNumDataUnits(), getNumParityUnits());
+  protected ErasureCodingStep prepareEncodingStep(
+      final ECBlockGroup blockGroup) {
+    RawErasureEncoder rawEncoder = CodecUtil.createXORRawEncoder(getConf(),
+        getNumDataUnits(), getNumParityUnits());
 
     ECBlock[] inputBlocks = getInputBlocks(blockGroup);
 

@@ -37,8 +37,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -230,8 +232,9 @@ public class TestDFSStripedInputStream {
       for (int m : missingBlkIdx) {
         decodeInputs[m] = null;
       }
-      RSRawDecoder rsRawDecoder = new RSRawDecoder(DATA_BLK_NUM, PARITY_BLK_NUM);
-      rsRawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
+      RawErasureDecoder rawDecoder = CodecUtil.createRSRawDecoder(conf,
+          DATA_BLK_NUM, PARITY_BLK_NUM);
+      rawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
       int posInBuf = i * CELLSIZE * DATA_BLK_NUM + failedDNIdx * CELLSIZE;
       System.arraycopy(decodeOutputs[0], 0, expected, posInBuf, CELLSIZE);
     }
