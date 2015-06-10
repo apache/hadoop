@@ -289,3 +289,5 @@
 
     HDFS-8460. Erasure Coding: stateful read result doesn't match data 
     occasionally because of flawed test. (Walter Su via zhz)
+
+    HDFS-8556. Erasure Coding: Fix usage of 'createZone' (vinayakumarb)
