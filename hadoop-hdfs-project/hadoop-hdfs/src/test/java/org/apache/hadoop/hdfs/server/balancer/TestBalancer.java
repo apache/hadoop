@@ -740,7 +740,8 @@ public class TestBalancer {
             Balancer.Parameters.DEFAULT.policy,
             Balancer.Parameters.DEFAULT.threshold,
             Balancer.Parameters.DEFAULT.maxIdleIteration,
-            nodes.getNodesToBeExcluded(), nodes.getNodesToBeIncluded());
+            nodes.getNodesToBeExcluded(), nodes.getNodesToBeIncluded(),
+            false);
       }
 
       int expectedExcludedNodes = 0;
@@ -986,7 +987,8 @@ public class TestBalancer {
           Balancer.Parameters.DEFAULT.policy,
           Balancer.Parameters.DEFAULT.threshold,
           Balancer.Parameters.DEFAULT.maxIdleIteration,
-          datanodes, Balancer.Parameters.DEFAULT.nodesToBeIncluded);
+          datanodes, Balancer.Parameters.DEFAULT.nodesToBeIncluded,
+          false);
       final int r = Balancer.run(namenodes, p, conf);
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
     } finally {
@@ -1417,12 +1419,7 @@ public class TestBalancer {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
 
       // Run Balancer
-      Balancer.Parameters p = new Balancer.Parameters(
-        Parameters.DEFAULT.policy,
-        Parameters.DEFAULT.threshold,
-        Balancer.Parameters.DEFAULT.maxIdleIteration,
-        Parameters.DEFAULT.nodesToBeExcluded,
-        Parameters.DEFAULT.nodesToBeIncluded);
+      final Balancer.Parameters p = Parameters.DEFAULT;
       final int r = Balancer.run(namenodes, p, conf);
 
       // Validate no RAM_DISK block should be moved
@@ -1437,7 +1434,76 @@ public class TestBalancer {
   }
 
   /**
+   * Check that the balancer exits when there is an unfinalized upgrade.
+   */
+  @Test(timeout=300000)
+  public void testBalancerDuringUpgrade() throws Exception {
+    final int SEED = 0xFADED;
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
 
+    final int BLOCK_SIZE = 1024*1024;
+    cluster = new MiniDFSCluster
+        .Builder(conf)
+        .numDataNodes(1)
+        .storageCapacities(new long[] { BLOCK_SIZE * 10 })
+        .storageTypes(new StorageType[] { DEFAULT })
+        .storagesPerDatanode(1)
+        .build();
+
+    try {
+      cluster.waitActive();
+      // Create a file on the single DN
+      final String METHOD_NAME = GenericTestUtils.getMethodName();
+      final Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.createFile(fs, path1, BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE,
+          (short) 1, SEED);
+
+      // Add another DN with the same capacity, cluster is now unbalanced
+      cluster.startDataNodes(conf, 1, true, null, null);
+      cluster.triggerHeartbeats();
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+
+      // Run balancer
+      final Balancer.Parameters p = Parameters.DEFAULT;
+
+      fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fs.rollingUpgrade(HdfsConstants.RollingUpgradeAction.PREPARE);
+      fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+
+      // Rolling upgrade should abort the balancer
+      assertEquals(ExitStatus.UNFINALIZED_UPGRADE.getExitCode(),
+          Balancer.run(namenodes, p, conf));
+
+      // Should work with the -runDuringUpgrade flag.
+      final Balancer.Parameters runDuringUpgrade =
+          new Balancer.Parameters(Parameters.DEFAULT.policy,
+              Parameters.DEFAULT.threshold,
+              Parameters.DEFAULT.maxIdleIteration,
+              Parameters.DEFAULT.nodesToBeExcluded,
+              Parameters.DEFAULT.nodesToBeIncluded,
+              true);
+      assertEquals(ExitStatus.SUCCESS.getExitCode(),
+          Balancer.run(namenodes, runDuringUpgrade, conf));
+
+      // Finalize the rolling upgrade
+      fs.rollingUpgrade(HdfsConstants.RollingUpgradeAction.FINALIZE);
+
+      // Should also work after finalization.
+      assertEquals(ExitStatus.SUCCESS.getExitCode(),
+          Balancer.run(namenodes, p, conf));
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
    * Test special case. Two replicas belong to same block should not in same node.
    * We have 2 nodes.
    * We have a block in (DN0,SSD) and (DN1,DISK).

@@ -102,6 +102,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11648. Lazy construct the IIP pathname.
     (daryn via kihwal, backported by zhz)
 
+    HDFS-8549. Abort the balancer if an upgrade is in progress. (wang)
+    Backport HDFS-11808 by Akira Ajisaka.
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
