@@ -265,11 +265,13 @@ public class RawLocalFileSystem extends FileSystem {
     if (!exists(f)) {
       throw new FileNotFoundException("File " + f + " not found");
     }
-    if (getFileStatus(f).isDirectory()) {
+    FileStatus status = getFileStatus(f);
+    if (status.isDirectory()) {
       throw new IOException("Cannot append to a diretory (=" + f + " )");
     }
     return new FSDataOutputStream(new BufferedOutputStream(
-        createOutputStreamWithMode(f, true, null), bufferSize), statistics);
+        createOutputStreamWithMode(f, true, null), bufferSize), statistics,
+        status.getLen());
   }
 
   @Override
