@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.ipc.RetriableException;
 
 public class RetryUtils {
   public static final Log LOG = LogFactory.getLog(RetryUtils.class);
@@ -92,7 +93,11 @@ public class RetryUtils {
 
           //see (1) and (2) in the javadoc of this method.
           final RetryPolicy p;
-          if (e instanceof RemoteException) {
+          if (e instanceof RetriableException
+              || RetryPolicies.getWrappedRetriableException(e) != null) {
+            // RetriableException or RetriableException wrapped
+            p = multipleLinearRandomRetry;
+          } else if (e instanceof RemoteException) {
             final RemoteException re = (RemoteException)e;
             p = remoteExceptionToRetry.getName().equals(re.getClassName())?
                 multipleLinearRandomRetry: RetryPolicies.TRY_ONCE_THEN_FAIL;

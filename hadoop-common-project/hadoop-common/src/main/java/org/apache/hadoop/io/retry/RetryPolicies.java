@@ -626,7 +626,7 @@ public class RetryPolicies {
     return unwrapped instanceof StandbyException;
   }
   
-  private static RetriableException getWrappedRetriableException(Exception e) {
+  static RetriableException getWrappedRetriableException(Exception e) {
     if (!(e instanceof RemoteException)) {
       return null;
     }
