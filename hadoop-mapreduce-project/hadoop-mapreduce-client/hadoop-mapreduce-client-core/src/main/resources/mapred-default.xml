@@ -2160,6 +2160,14 @@
 </property>
 
 <property>
+  <name>mapreduce.jobhistory.jobname.limit</name>
+  <value>50</value>
+  <description>
+     Number of characters allowed for job name in Job History Server web page.
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.containerlauncher.threadpool-initial-size</name>
   <value>10</value>
   <description>The initial size of thread pool to launch containers in the

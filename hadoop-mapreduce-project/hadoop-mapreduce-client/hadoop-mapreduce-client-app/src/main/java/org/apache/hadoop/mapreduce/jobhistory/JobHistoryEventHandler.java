@@ -55,6 +55,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1107,9 +1108,12 @@ public class JobHistoryEventHandler extends AbstractService
       if (mi.getHistoryFile() != null) {
         Path historyFile = mi.getHistoryFile();
         Path qualifiedLogFile = stagingDirFS.makeQualified(historyFile);
+        int jobNameLimit =
+            getConfig().getInt(JHAdminConfig.MR_HS_JOBNAME_LIMIT,
+            JHAdminConfig.DEFAULT_MR_HS_JOBNAME_LIMIT);
         String doneJobHistoryFileName =
             getTempFileName(FileNameIndexUtils.getDoneFileName(mi
-                .getJobIndexInfo()));
+                .getJobIndexInfo(), jobNameLimit));
         qualifiedDoneFile =
             doneDirFS.makeQualified(new Path(doneDirPrefixPath,
                 doneJobHistoryFileName));
