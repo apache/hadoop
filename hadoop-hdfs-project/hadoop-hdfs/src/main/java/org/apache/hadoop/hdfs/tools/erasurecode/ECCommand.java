@@ -83,7 +83,7 @@ public abstract class ECCommand extends Command {
    */
   static class CreateECZoneCommand extends ECCommand {
     public static final String NAME = "createZone";
-    public static final String USAGE = "[-s <schemaName>] <path>";
+    public static final String USAGE = "[-s <schemaName>] [-c <cellSize>] <path>";
     public static final String DESCRIPTION = 
         "Create a zone to encode files using a specified schema\n"
         + "Options :\n"
