@@ -67,3 +67,5 @@
     (Kai Zheng)
 
     HADOOP-12065. Using more meaningful keys in EC schema. (Kai Zheng)
+
+    HDFS-8557. Allow to configure RS and XOR raw coders (Kai Zheng)

@@ -42,6 +42,7 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.AlignedStripe;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunk;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
@@ -155,7 +156,8 @@ public class DFSStripedInputStream extends DFSInputStream {
     curStripeRange = new StripeRange(0, 0);
     readingService =
         new ExecutorCompletionService<>(dfsClient.getStripedReadsThreadPool());
-    decoder = new RSRawDecoder(dataBlkNum, parityBlkNum);
+    decoder = CodecUtil.createRSRawDecoder(dfsClient.getConfiguration(),
+        dataBlkNum, parityBlkNum);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Creating an striped input stream for file " + src);
     }
@@ -207,8 +209,8 @@ public class DFSStripedInputStream extends DFSInputStream {
     // The purpose is to get start offset into each block.
     long[] offsetsForInternalBlocks = getStartOffsetsForInternalBlocks(schema,
         cellSize, targetBlockGroup, offsetIntoBlockGroup);
-    Preconditions.checkState(
-        offsetsForInternalBlocks.length == dataBlkNum + parityBlkNum);
+    Preconditions.checkState(offsetsForInternalBlocks.length ==
+        dataBlkNum + parityBlkNum);
     long minOffset = offsetsForInternalBlocks[dataBlkNum];
 
     retry = new ReaderRetryPolicy();
@@ -726,8 +728,10 @@ public class DFSStripedInputStream extends DFSInputStream {
     void prepareParityChunk() {
       for (int i = dataBlkNum; i < dataBlkNum + parityBlkNum; i++) {
         if (alignedStripe.chunks[i] == null) {
-          final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
-          alignedStripe.chunks[i] = new StripingChunk(decodeInputs[decodeIndex]);
+          final int decodeIndex = convertIndex4Decode(i,
+              dataBlkNum, parityBlkNum);
+          alignedStripe.chunks[i] =
+              new StripingChunk(decodeInputs[decodeIndex]);
           alignedStripe.chunks[i].addByteArraySlice(0,
               (int) alignedStripe.getSpanInBlock());
           break;
@@ -807,7 +811,8 @@ public class DFSStripedInputStream extends DFSInputStream {
               parityBlkNum);
           decodeInputs[decodeIndex] = ByteBuffer.allocateDirect(
               (int) alignedStripe.range.spanInBlock);
-          alignedStripe.chunks[i] = new StripingChunk(decodeInputs[decodeIndex]);
+          alignedStripe.chunks[i] =
+              new StripingChunk(decodeInputs[decodeIndex]);
           if (blockReaders[i] == null) {
             prepareParityBlockReader(i);
           }
@@ -839,7 +844,8 @@ public class DFSStripedInputStream extends DFSInputStream {
       // decoders to work
       final int span = (int) alignedStripe.getSpanInBlock();
       for (int i = 0; i < alignedStripe.chunks.length; i++) {
-        final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
+        final int decodeIndex = convertIndex4Decode(i,
+            dataBlkNum, parityBlkNum);
         if (alignedStripe.chunks[i] != null &&
             alignedStripe.chunks[i].state == StripingChunk.ALLZERO) {
           for (int j = 0; j < span; j++) {
@@ -857,7 +863,8 @@ public class DFSStripedInputStream extends DFSInputStream {
       for (int i = 0; i < alignedStripe.chunks.length; i++) {
         if (alignedStripe.chunks[i] != null &&
             alignedStripe.chunks[i].state == StripingChunk.MISSING) {
-          decodeIndices[pos++] = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
+          decodeIndices[pos++] = convertIndex4Decode(i,
+              dataBlkNum, parityBlkNum);
         }
       }
       decodeIndices = Arrays.copyOf(decodeIndices, pos);

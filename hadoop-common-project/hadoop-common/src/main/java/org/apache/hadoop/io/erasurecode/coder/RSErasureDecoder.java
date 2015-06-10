@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
-import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 
 /**
@@ -53,12 +52,8 @@ public class RSErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
-      rsRawDecoder = createRawDecoder(
-          CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY,
-              getNumDataUnits(), getNumParityUnits());
-      if (rsRawDecoder == null) {
-        rsRawDecoder = new RSRawDecoder(getNumDataUnits(), getNumParityUnits());
-      }
+      rsRawDecoder = CodecUtil.createRSRawDecoder(getConf(),
+          getNumDataUnits(), getNumParityUnits());
     }
     return rsRawDecoder;
   }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
@@ -247,13 +248,16 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     numDataBlocks = schema.getNumDataUnits();
     numAllBlocks = numDataBlocks + numParityBlocks;
 
-    encoder = new RSRawEncoder(numDataBlocks, numParityBlocks);
+    encoder = CodecUtil.createRSRawEncoder(dfsClient.getConfiguration(),
+        numDataBlocks, numParityBlocks);
 
-    coordinator = new Coordinator(dfsClient.getConf(), numDataBlocks, numAllBlocks);
+    coordinator = new Coordinator(dfsClient.getConf(),
+        numDataBlocks, numAllBlocks);
     try {
       cellBuffers = new CellBuffers(numParityBlocks);
     } catch (InterruptedException ie) {
-      throw DFSUtil.toInterruptedIOException("Failed to create cell buffers", ie);
+      throw DFSUtil.toInterruptedIOException(
+          "Failed to create cell buffers", ie);
     }
 
     List<StripedDataStreamer> s = new ArrayList<>(numAllBlocks);
@@ -318,7 +322,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
   }
 
-  private void handleStreamerFailure(String err, Exception e) throws IOException {
+  private void handleStreamerFailure(String err,
+                                     Exception e) throws IOException {
     LOG.warn("Failed: " + err + ", " + this, e);
     getCurrentStreamer().setIsFailed(true);
     checkStreamers();
@@ -487,7 +492,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       return;
     }
 
-    final int firstCellSize = (int)(getStripedDataStreamer(0).getBytesCurBlock() % cellSize);
+    final int firstCellSize =
+        (int)(getStripedDataStreamer(0).getBytesCurBlock() % cellSize);
     final int parityCellSize = firstCellSize > 0 && firstCellSize < cellSize?
         firstCellSize : cellSize;
     final ByteBuffer[] buffers = cellBuffers.getBuffers();

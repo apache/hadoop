@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -43,7 +44,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestDFSStripedOutputStream {
-  public static final Log LOG = LogFactory.getLog(TestDFSStripedOutputStream.class);
+  public static final Log LOG = LogFactory.getLog(
+      TestDFSStripedOutputStream.class);
 
   static {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
@@ -55,6 +57,7 @@ public class TestDFSStripedOutputStream {
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
+  private Configuration conf;
   private final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   private final int stripesPerBlock = 4;
   private final int blockSize = cellSize * stripesPerBlock;
@@ -62,7 +65,7 @@ public class TestDFSStripedOutputStream {
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null, 0);
@@ -140,7 +143,8 @@ public class TestDFSStripedOutputStream {
 
   @Test
   public void testFileMoreThanABlockGroup2() throws IOException {
-    testOneFile("/MoreThanABlockGroup2", blockSize * dataBlocks + cellSize+ 123);
+    testOneFile("/MoreThanABlockGroup2",
+        blockSize * dataBlocks + cellSize+ 123);
   }
 
 
@@ -251,13 +255,14 @@ public class TestDFSStripedOutputStream {
     }
   }
 
-  static void verifyParity(final long size, final int cellSize,
+  void verifyParity(final long size, final int cellSize,
       byte[][] dataBytes, byte[][] parityBytes) {
-    verifyParity(size, cellSize, dataBytes, parityBytes, -1);
+    verifyParity(conf, size, cellSize, dataBytes, parityBytes, -1);
   }
 
-  static void verifyParity(final long size, final int cellSize,
-      byte[][] dataBytes, byte[][] parityBytes, int killedDnIndex) {
+  static void verifyParity(Configuration conf, final long size,
+                           final int cellSize, byte[][] dataBytes,
+                           byte[][] parityBytes, int killedDnIndex) {
     // verify the parity blocks
     int parityBlkSize = (int) StripedBlockUtil.getInternalBlockLength(
         size, cellSize, dataBytes.length, dataBytes.length);
@@ -275,7 +280,8 @@ public class TestDFSStripedOutputStream {
       }
     }
     final RawErasureEncoder encoder =
-            new RSRawEncoder(dataBytes.length, parityBytes.length);
+            CodecUtil.createRSRawEncoder(conf,
+                dataBytes.length, parityBytes.length);
     encoder.encode(dataBytes, expectedParityBytes);
     for (int i = 0; i < parityBytes.length; i++) {
       if (i != killedDnIndex) {
