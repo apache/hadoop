@@ -468,6 +468,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6350. JobHistory doesn't support fully-functional search. 
     (Siqi Li via devaraj)
 
+    MAPREDUCE-6389. Fix BaileyBorweinPlouffe CLI usage message. (Brahma Reddy Battula
+    via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
