@@ -144,6 +144,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
@@ -1886,7 +1887,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   private void checkNNStartup() throws IOException {
     if (!this.nn.isStarted()) {
-      throw new IOException(this.nn.getRole() + " still not started");
+      throw new RetriableException(this.nn.getRole() + " still not started");
     }
   }
 
