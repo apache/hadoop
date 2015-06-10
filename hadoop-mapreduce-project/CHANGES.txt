@@ -465,6 +465,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6388. Remove deprecation warnings from JobHistoryServer classes
     (Ray Chiang via ozawa).
 
+    MAPREDUCE-6350. JobHistory doesn't support fully-functional search. 
+    (Siqi Li via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

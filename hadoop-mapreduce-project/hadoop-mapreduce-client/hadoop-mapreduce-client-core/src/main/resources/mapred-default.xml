@@ -1706,6 +1706,14 @@
 </property>
 
 <property>
+  <name>mapreduce.jobhistory.jobname.limit</name>
+  <value>50</value>
+  <description>
+     Number of characters allowed for job name in Job History Server web page.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.heap.memory-mb.ratio</name>
   <value>0.8</value>
   <description>The ratio of heap-size to container-size. If no -Xmx is
