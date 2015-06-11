@@ -61,7 +61,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-createZone \[-s &lt;schemaName&gt;\] &lt;path&gt;(.)*</expected-output>
+          <expected-output>^-createZone \[-s &lt;schemaName&gt;\] \[-c &lt;cellSize&gt;\] &lt;path&gt;(.)*</expected-output>
         </comparator>
       </comparators>
     </test>

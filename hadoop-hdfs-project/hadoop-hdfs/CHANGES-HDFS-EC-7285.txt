@@ -291,3 +291,5 @@
     occasionally because of flawed test. (Walter Su via zhz)
 
     HDFS-8556. Erasure Coding: Fix usage of 'createZone' (vinayakumarb)
+
+    HDFS-8571. Fix TestErasureCodingCli test (Vinayakumar B via waltersu4549)
