@@ -198,7 +198,7 @@ It's strongly recommended for the users to update a few configuration properties
 Start and stop NFS gateway service
 ----------------------------------
 
-Three daemons are required to provide NFS service: rpcbind (or portmap), mountd and nfsd. The NFS gateway process has both nfsd and mountd. It shares the HDFS root "/" as the only export. It is recommended to use the portmap included in NFS gateway package. Even though NFS gateway works with portmap/rpcbind provide by most Linux distributions, the package included portmap is needed on some Linux systems such as REHL6.2 due to an [rpcbind bug](https://bugzilla.redhat.com/show_bug.cgi?id=731542). More detailed discussions can be found in [HDFS-4763](https://issues.apache.org/jira/browse/HDFS-4763).
+Three daemons are required to provide NFS service: rpcbind (or portmap), mountd and nfsd. The NFS gateway process has both nfsd and mountd. It shares the HDFS root "/" as the only export. It is recommended to use the portmap included in NFS gateway package. Even though NFS gateway works with portmap/rpcbind provide by most Linux distributions, the package included portmap is needed on some Linux systems such as RHEL 6.2 and SLES 11, the former due to an [rpcbind bug](https://bugzilla.redhat.com/show_bug.cgi?id=731542). More detailed discussions can be found in [HDFS-4763](https://issues.apache.org/jira/browse/HDFS-4763).
 
 1.  Stop nfsv3 and rpcbind/portmap services provided by the platform (commands can be different on various Unix platforms):
 
