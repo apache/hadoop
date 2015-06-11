@@ -987,6 +987,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8566. HDFS documentation about debug commands wrongly identifies them
     as "hdfs dfs" commands (Surendra Singh Lilhore via Colin P. McCabe)
 
+    HDFS-8583. Document that NFS gateway does not work with rpcbind
+    on SLES 11. (Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
