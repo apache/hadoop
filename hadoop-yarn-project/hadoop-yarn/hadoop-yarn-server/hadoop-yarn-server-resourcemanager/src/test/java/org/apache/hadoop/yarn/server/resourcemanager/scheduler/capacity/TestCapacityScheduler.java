@@ -2986,13 +2986,16 @@ public class TestCapacityScheduler {
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue(queueName);
     Resource amResourceLimit = queueA.getAMResourceLimit();
 
-    Resource amResource =
-        Resource.newInstance(amResourceLimit.getMemory() + 1,
+    Resource amResource1 =
+        Resource.newInstance(amResourceLimit.getMemory() + 1024,
+            amResourceLimit.getVirtualCores() + 1);
+    Resource amResource2 =
+        Resource.newInstance(amResourceLimit.getMemory() + 2048,
             amResourceLimit.getVirtualCores() + 1);
 
-    rm.submitApp(amResource.getMemory(), "app-1", userName, null, queueName);
+    rm.submitApp(amResource1, "app-1", userName, null, queueName);
 
-    rm.submitApp(amResource.getMemory(), "app-1", userName, null, queueName);
+    rm.submitApp(amResource2, "app-2", userName, null, queueName);
 
     // When AM limit is exceeded, 1 applications will be activated.Rest all
     // applications will be in pending
