@@ -984,6 +984,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8522. Change heavily recorded NN logs from INFO to DEBUG level. (xyao)
 
+    HDFS-8566. HDFS documentation about debug commands wrongly identifies them
+    as "hdfs dfs" commands (Surendra Singh Lilhore via Colin P. McCabe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
