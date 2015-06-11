@@ -263,6 +263,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     @Override
+    public OutputStream createRestartMetaStream() throws IOException {
+      return new SimulatedOutputStream();
+    }
+
+    @Override
     synchronized public long getBlockId() {
       return theBlock.getBlockId();
     }

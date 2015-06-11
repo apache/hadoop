@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.util.DataChecksum;
@@ -73,4 +74,13 @@ public interface ReplicaInPipelineInterface extends Replica {
    */
   public ReplicaOutputStreams createStreams(boolean isCreate,
       DataChecksum requestedChecksum) throws IOException;
+
+  /**
+   * Create an output stream to write restart metadata in case of datanode
+   * shutting down for quick restart.
+   *
+   * @return output stream for writing.
+   * @throws IOException if any error occurs
+   */
+  public OutputStream createRestartMetaStream() throws IOException;
 }
