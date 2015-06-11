@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
@@ -554,7 +555,9 @@ abstract public class Shell {
         throw new ExitCodeException(exitCode, errMsg.toString());
       }
     } catch (InterruptedException ie) {
-      throw new IOException(ie.toString());
+      InterruptedIOException iie = new InterruptedIOException(ie.toString());
+      iie.initCause(ie);
+      throw iie;
     } finally {
       if (timeOutTimer != null) {
         timeOutTimer.cancel();
