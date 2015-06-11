@@ -23,7 +23,6 @@ import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -839,15 +838,8 @@ class BlockReceiver implements Closeable {
           // In case this datanode is shutting down for quick restart,
           // send a special ack upstream.
           if (datanode.isRestarting() && isClient && !isTransfer) {
-            File blockFile = ((ReplicaInPipeline)replicaInfo).getBlockFile();
-            File restartMeta = new File(blockFile.getParent()  + 
-                File.pathSeparator + "." + blockFile.getName() + ".restart");
-            if (restartMeta.exists() && !restartMeta.delete()) {
-              LOG.warn("Failed to delete restart meta file: " +
-                  restartMeta.getPath());
-            }
             try (Writer out = new OutputStreamWriter(
-                new FileOutputStream(restartMeta), "UTF-8")) {
+                replicaInfo.createRestartMetaStream(), "UTF-8")) {
               // write out the current time.
               out.write(Long.toString(Time.now() + restartBudget));
               out.flush();
