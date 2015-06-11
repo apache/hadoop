@@ -60,14 +60,14 @@ public class ErasureCodingZoneManager {
     this.dir = dir;
   }
 
-  ECSchema getECSchema(INodesInPath iip) throws IOException {
-    ErasureCodingZone ecZone = getECZone(iip);
+  ECSchema getErasureCodingSchema(INodesInPath iip) throws IOException {
+    ErasureCodingZone ecZone = getErasureCodingZone(iip);
     return ecZone == null ? null : ecZone.getSchema();
   }
 
-  ErasureCodingZone getECZone(INodesInPath iip) throws IOException {
+  ErasureCodingZone getErasureCodingZone(INodesInPath iip) throws IOException {
     assert dir.hasReadLock();
-    Preconditions.checkNotNull(iip);
+    Preconditions.checkNotNull(iip, "INodes cannot be null");
     List<INode> inodes = iip.getReadOnlyINodes();
     for (int i = inodes.size() - 1; i >= 0; i--) {
       final INode inode = inodes.get(i);
@@ -90,8 +90,8 @@ public class ErasureCodingZoneManager {
           DataInputStream dIn=new DataInputStream(bIn);
           int cellSize = WritableUtils.readVInt(dIn);
           String schemaName = WritableUtils.readString(dIn);
-          ECSchema schema = dir.getFSNamesystem().getECSchemaManager()
-              .getSchema(schemaName);
+          ECSchema schema = dir.getFSNamesystem()
+              .getErasureCodingSchemaManager().getSchema(schemaName);
           return new ErasureCodingZone(dir.getInode(inode.getId())
               .getFullPathName(), schema, cellSize);
         }
@@ -100,22 +100,22 @@ public class ErasureCodingZoneManager {
     return null;
   }
 
-  XAttr createErasureCodingZone(String src, ECSchema schema, int cellSize)
-      throws IOException {
+  List<XAttr> createErasureCodingZone(final INodesInPath srcIIP,
+      ECSchema schema, int cellSize) throws IOException {
     assert dir.hasWriteLock();
-    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    Preconditions.checkNotNull(srcIIP, "INodes cannot be null");
+    String src = srcIIP.getPath();
     if (dir.isNonEmptyDirectory(srcIIP)) {
       throw new IOException(
           "Attempt to create an erasure coding zone for a " +
-              "non-empty directory.");
+              "non-empty directory " + src);
     }
-    if (srcIIP != null &&
-        srcIIP.getLastINode() != null &&
+    if (srcIIP.getLastINode() != null &&
         !srcIIP.getLastINode().isDirectory()) {
       throw new IOException("Attempt to create an erasure coding zone " +
-          "for a file.");
+          "for a file " + src);
     }
-    if (getECSchema(srcIIP) != null) {
+    if (getErasureCodingSchema(srcIIP) != null) {
       throw new IOException("Directory " + src + " is already in an " +
           "erasure coding zone.");
     }
@@ -147,14 +147,14 @@ public class ErasureCodingZoneManager {
     xattrs.add(ecXAttr);
     FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,
         EnumSet.of(XAttrSetFlag.CREATE));
-    return ecXAttr;
+    return xattrs;
   }
 
   void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
       throws IOException {
     assert dir.hasReadLock();
-    final ErasureCodingZone srcZone = getECZone(srcIIP);
-    final ErasureCodingZone dstZone = getECZone(dstIIP);
+    final ErasureCodingZone srcZone = getErasureCodingZone(srcIIP);
+    final ErasureCodingZone dstZone = getErasureCodingZone(dstIIP);
     if (srcZone != null && srcZone.getDir().equals(src) && dstZone == null) {
       return;
     }

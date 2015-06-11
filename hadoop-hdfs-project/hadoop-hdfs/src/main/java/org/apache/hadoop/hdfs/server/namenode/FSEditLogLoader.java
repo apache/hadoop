@@ -417,8 +417,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      updateBlocks(fsDir, addCloseOp, iip, newFile,
-          fsDir.getECSchema(iip), fsDir.isInECZone(iip));
+      ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+          fsDir.getFSNamesystem(), iip);
+      updateBlocks(fsDir, addCloseOp, iip, newFile, ecSchema);
       break;
     }
     case OP_CLOSE: {
@@ -438,8 +439,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      updateBlocks(fsDir, addCloseOp, iip, file,
-          fsDir.getECSchema(iip), fsDir.isInECZone(iip));
+      ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+          fsDir.getFSNamesystem(), iip);
+      updateBlocks(fsDir, addCloseOp, iip, file, ecSchema);
 
       // Now close the file
       if (!file.isUnderConstruction() &&
@@ -497,8 +499,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, true);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // Update in-memory data structures
-      updateBlocks(fsDir, updateOp, iip, oldFile,
-          fsDir.getECSchema(iip), fsDir.isInECZone(iip));
+      ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+          fsDir.getFSNamesystem(), iip);
+      updateBlocks(fsDir, updateOp, iip, oldFile, ecSchema);
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(updateOp.rpcClientId, updateOp.rpcCallId);
@@ -515,8 +518,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, true);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // add the new block to the INodeFile
-      addNewBlock(addBlockOp, oldFile,
-          fsDir.getECSchema(iip), fsDir.isInECZone(iip));
+      ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+          fsDir.getFSNamesystem(), iip);
+      addNewBlock(addBlockOp, oldFile, ecSchema);
       break;
     }
     case OP_SET_REPLICATION: {
@@ -957,8 +961,7 @@ public class FSEditLogLoader {
   /**
    * Add a new block into the given INodeFile
    */
-  private void addNewBlock(AddBlockOp op, INodeFile file,
-                           ECSchema schema, boolean isStriped)
+  private void addNewBlock(AddBlockOp op, INodeFile file, ECSchema ecSchema)
       throws IOException {
     BlockInfo[] oldBlocks = file.getBlocks();
     Block pBlock = op.getPenultimateBlock();
@@ -986,8 +989,9 @@ public class FSEditLogLoader {
     }
     // add the new block
     final BlockInfo newBlockInfo;
+    boolean isStriped = ecSchema != null;
     if (isStriped) {
-      newBlockInfo = new BlockInfoStripedUnderConstruction(newBlock, schema);
+      newBlockInfo = new BlockInfoStripedUnderConstruction(newBlock, ecSchema);
     } else {
       newBlockInfo = new BlockInfoContiguousUnderConstruction(newBlock,
           file.getPreferredBlockReplication());
@@ -1002,8 +1006,7 @@ public class FSEditLogLoader {
    * @throws IOException
    */
   private void updateBlocks(FSDirectory fsDir, BlockListUpdatingOp op,
-      INodesInPath iip, INodeFile file, ECSchema schema,
-      boolean isStriped) throws IOException {
+      INodesInPath iip, INodeFile file, ECSchema ecSchema) throws IOException {
     // Update its block list
     BlockInfo[] oldBlocks = file.getBlocks();
     Block[] newBlocks = op.getBlocks();
@@ -1062,6 +1065,7 @@ public class FSEditLogLoader {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }
     } else if (newBlocks.length > oldBlocks.length) {
+      final boolean isStriped = ecSchema != null;
       // We're adding blocks
       for (int i = oldBlocks.length; i < newBlocks.length; i++) {
         Block newBlock = newBlocks[i];
@@ -1071,7 +1075,7 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           if (isStriped) {
-            newBI = new BlockInfoStripedUnderConstruction(newBlock, schema);
+            newBI = new BlockInfoStripedUnderConstruction(newBlock, ecSchema);
           } else {
             newBI = new BlockInfoContiguousUnderConstruction(newBlock,
                 file.getPreferredBlockReplication());
