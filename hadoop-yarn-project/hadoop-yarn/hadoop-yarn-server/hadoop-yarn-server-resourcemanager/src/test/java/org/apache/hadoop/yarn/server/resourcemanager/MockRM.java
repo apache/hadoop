@@ -322,6 +322,14 @@ public class MockRM extends ResourceManager {
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }
   
+  public RMApp submitApp(Resource resource, String name, String user,
+      Map<ApplicationAccessType, String> acls, String queue) throws Exception {
+    return submitApp(resource, name, user, acls, false, queue,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+          true, false, false, null, 0, null, true);
+  }
+
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, String queue, 
       boolean waitForAccepted) throws Exception {
@@ -358,14 +366,18 @@ public class MockRM extends ResourceManager {
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
       int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers) throws Exception {
-    return submitApp(masterMemory, name, user, acls, unmanaged, queue,
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(masterMemory);
+    return submitApp(resource, name, user, acls, unmanaged, queue,
         maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
         false, null, 0, null, true);
   }
 
   public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval)
       throws Exception {
-    return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(masterMemory);
+    return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
@@ -377,21 +389,25 @@ public class MockRM extends ResourceManager {
       int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
       ApplicationId applicationId) throws Exception {
-    return submitApp(masterMemory, name, user, acls, unmanaged, queue,
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(masterMemory);
+    return submitApp(resource, name, user, acls, unmanaged, queue,
       maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
       isAppIdProvided, applicationId, 0, null, true);
   }
 
   public RMApp submitApp(int masterMemory,
       LogAggregationContext logAggregationContext) throws Exception {
-    return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(masterMemory);
+    return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
       false, null, 0, logAggregationContext, true);
    }
 
-  public RMApp submitApp(int masterMemory, String name, String user,
+  public RMApp submitApp(Resource capability, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
       int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
@@ -422,8 +438,6 @@ public class MockRM extends ResourceManager {
     sub.setApplicationType(appType);
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
-    final Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(masterMemory);
     sub.setResource(capability);
     clc.setApplicationACLs(acls);
     if (ts != null && UserGroupInformation.isSecurityEnabled()) {
