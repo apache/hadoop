@@ -2065,7 +2065,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public ECSchema[] getECSchemas() throws IOException {
     checkNNStartup();
-    return namesystem.getECSchemas();
+    return namesystem.getErasureCodingSchemas();
   }
 
   @Override // ClientProtocol

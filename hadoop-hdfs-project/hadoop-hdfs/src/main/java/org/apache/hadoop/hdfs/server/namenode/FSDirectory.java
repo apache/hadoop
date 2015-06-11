@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -56,7 +55,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -1131,38 +1129,6 @@ public class FSDirectory implements Closeable {
         throw new IOException("Could not parse file encryption info for " +
             "inode " + inode, e);
       }
-    } finally {
-      readUnlock();
-    }
-  }
-
-  XAttr createErasureCodingZone(String src, ECSchema schema, int cellSize)
-      throws IOException {
-    writeLock();
-    try {
-      return ecZoneManager.createErasureCodingZone(src, schema, cellSize);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  public boolean isInECZone(INodesInPath iip) throws IOException {
-    return getECSchema(iip) != null;
-  }
-
-  ECSchema getECSchema(INodesInPath iip) throws IOException {
-    readLock();
-    try {
-      return ecZoneManager.getECSchema(iip);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  ErasureCodingZone getECZone(INodesInPath iip) throws IOException {
-    readLock();
-    try {
-      return ecZoneManager.getECZone(iip);
     } finally {
       readUnlock();
     }

@@ -293,3 +293,6 @@
     HDFS-8556. Erasure Coding: Fix usage of 'createZone' (vinayakumarb)
 
     HDFS-8571. Fix TestErasureCodingCli test (Vinayakumar B via waltersu4549)
+
+    HDFS-8450. Erasure Coding: Consolidate erasure coding zone related
+    implementation into a single class (Rakesh R via vinayakumarb)

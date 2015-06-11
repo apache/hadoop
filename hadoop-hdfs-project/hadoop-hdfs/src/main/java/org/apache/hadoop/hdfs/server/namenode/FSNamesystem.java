@@ -2134,7 +2134,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      if (!isInECZone(src)) {
+      if (!FSDirErasureCodingOp.isInErasureCodingZone(this, src)) {
         blockManager.verifyReplication(src, replication, clientMachine);
       }
     } finally {
@@ -3208,7 +3208,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final long diff;
     final short replicationFactor;
     if (fileINode.isStriped()) {
-      final ECSchema ecSchema = dir.getECSchema(iip);
+      final ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+          this, iip);
       final short numDataUnits = (short) ecSchema.getNumDataUnits();
       final short numParityUnits = (short) ecSchema.getNumParityUnits();
 
@@ -6207,9 +6208,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return cacheManager;
   }
 
-  /** @return the schema manager. */
-  public ErasureCodingSchemaManager getECSchemaManager() {
+  /** @return the ErasureCodingSchemaManager. */
+  public ErasureCodingSchemaManager getErasureCodingSchemaManager() {
     return ecSchemaManager;
+  }
+
+  /** @return the ErasureCodingZoneManager. */
+  public ErasureCodingZoneManager getErasureCodingZoneManager() {
+    return dir.ecZoneManager;
   }
 
   @Override  // NameNodeMXBean
@@ -7170,47 +7176,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void createErasureCodingZone(final String srcArg, final ECSchema schema,
       int cellSize, final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
-    String src = srcArg;
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
     HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = null;
-    byte[][] pathComponents = null;
     boolean success = false;
-    try {
-      checkSuperuserPrivilege();
-      checkOperation(OperationCategory.WRITE);
-      pathComponents =
-          FSDirectory.getPathComponentsForReservedPath(src);
-      pc = getPermissionChecker();
-    } catch (Throwable e) {
-      logAuditEvent(success, "createErasureCodingZone", srcArg);
-      throw e;
-    }
     writeLock();
     try {
-      checkSuperuserPrivilege();
       checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot create erasure coding zone on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-
-      final XAttr ecXAttr = dir.createErasureCodingZone(src, schema, cellSize);
-      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(ecXAttr);
-      getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      final INodesInPath iip = dir.getINodesInPath4Write(src, false);
-      resultingStat = dir.getAuditFileInfo(iip);
+      checkNameNodeSafeMode("Cannot create erasure coding zone on " + srcArg);
+      resultingStat = FSDirErasureCodingOp.createErasureCodingZone(this,
+          srcArg, schema, cellSize, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, "createErasureCodingZone", srcArg, null,
+          resultingStat);
     }
-    getEditLog().logSync();
-    logAuditEvent(success, "createErasureCodingZone", srcArg, null, resultingStat);
-  }
-
-  private boolean isInECZone(String src) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = FSDirectory.resolvePath(src, pathComponents, dir);
-    final INodesInPath iip = dir.getINodesInPath(src, true);
-    return dir.isInECZone(iip);
   }
 
   /**
@@ -7229,15 +7213,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get available ECSchemas
+   * Get available erasure coding schemas
    */
-  ECSchema[] getECSchemas() throws IOException {
+  ECSchema[] getErasureCodingSchemas() throws IOException {
     checkOperation(OperationCategory.READ);
     waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return ecSchemaManager.getSchemas();
+      return FSDirErasureCodingOp.getErasureCodingSchemas(this);
     } finally {
       readUnlock();
     }
@@ -7246,13 +7230,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the ECSchema specified by the name
    */
-  ECSchema getECSchema(String schemaName) throws IOException {
+  ECSchema getErasureCodingSchema(String schemaName) throws IOException {
     checkOperation(OperationCategory.READ);
     waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return ecSchemaManager.getSchema(schemaName);
+      return FSDirErasureCodingOp.getErasureCodingSchema(this, schemaName);
     } finally {
       readUnlock();
     }
@@ -7443,16 +7427,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override
   public ErasureCodingZone getErasureCodingZoneForPath(String src)
       throws IOException {
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(src);
-    final FSPermissionChecker pc = getPermissionChecker();
-    src = dir.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = dir.getINodesInPath(src, true);
-    if (isPermissionEnabled) {
-      dir.checkPathAccess(pc, iip, FsAction.READ);
-    }
-    return dir.getECZone(iip);
+    return FSDirErasureCodingOp.getErasureCodingZone(this, src);
   }
-
 }
 

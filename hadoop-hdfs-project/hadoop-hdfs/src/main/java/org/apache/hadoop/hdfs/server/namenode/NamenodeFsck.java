@@ -573,9 +573,17 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       // count expected replicas
       short targetFileReplication;
       if(file.getReplication() == 0) {
-        INode inode = namenode.getNamesystem().getFSDirectory().getINode(path);
-        INodesInPath iip = INodesInPath.fromINode(inode);
-        ECSchema ecSchema = namenode.getNamesystem().getFSDirectory().getECSchema(iip);
+        final FSNamesystem fsn = namenode.getNamesystem();
+        final ECSchema ecSchema;
+        fsn.readLock();
+        try {
+          INode inode = namenode.getNamesystem().getFSDirectory()
+              .getINode(path);
+          INodesInPath iip = INodesInPath.fromINode(inode);
+          ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(fsn, iip);
+        } finally {
+          fsn.readUnlock();
+        }
         targetFileReplication = (short) (ecSchema.getNumDataUnits() + ecSchema.getNumParityUnits());
       } else {
         targetFileReplication = file.getReplication();

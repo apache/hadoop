@@ -494,7 +494,8 @@ class FSDirWriteFileOp {
       INodesInPath iip = fsd.addINode(existing, newNode);
       if (iip != null) {
         // check if the file is in an EC zone
-        if (fsd.isInECZone(iip)) {
+        if (FSDirErasureCodingOp.isInErasureCodingZone(fsd.getFSNamesystem(),
+            iip)) {
           newNode.addStripedBlocksFeature();
         }
         if (aclEntries != null) {
@@ -529,7 +530,8 @@ class FSDirWriteFileOp {
       // associate new last block for the file
       final BlockInfo blockInfo;
       if (isStriped) {
-        ECSchema ecSchema = fsd.getECSchema(inodesInPath);
+        ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+            fsd.getFSNamesystem(), inodesInPath);
         short numDataUnits = (short) ecSchema.getNumDataUnits();
         short numParityUnits = (short) ecSchema.getNumParityUnits();
         short numLocations = (short) (numDataUnits + numParityUnits);
@@ -585,7 +587,9 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       newiip = fsd.addINode(existing, newNode);
-      if (newiip != null && fsd.isInECZone(newiip)) {
+      if (newiip != null
+          && FSDirErasureCodingOp.isInErasureCodingZone(fsd.getFSNamesystem(),
+              newiip)) {
         newNode.addStripedBlocksFeature();
       }
     } finally {

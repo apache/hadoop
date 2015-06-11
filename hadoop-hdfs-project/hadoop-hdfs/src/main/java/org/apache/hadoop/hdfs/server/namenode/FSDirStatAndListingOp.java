@@ -444,8 +444,9 @@ class FSDirStatAndListingOp {
 
     final FileEncryptionInfo feInfo = isRawPath ? null :
         fsd.getFileEncryptionInfo(node, snapshot, iip);
-    
-    final ErasureCodingZone ecZone = fsd.getECZone(iip);
+
+    final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+        fsd.getFSNamesystem(), iip);
     final ECSchema schema = ecZone != null ? ecZone.getSchema() : null;
     final int cellSize = ecZone != null ? ecZone.getCellSize() : 0;
 
@@ -527,7 +528,8 @@ class FSDirStatAndListingOp {
     }
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
-    final ErasureCodingZone ecZone = fsd.getECZone(iip);
+    final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+        fsd.getFSNamesystem(), iip);
     final ECSchema schema = ecZone != null ? ecZone.getSchema() : null;
     final int cellSize = ecZone != null ? ecZone.getCellSize() : 0;
 
