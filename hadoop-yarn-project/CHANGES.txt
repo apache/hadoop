@@ -521,6 +521,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3778. Fix Yarn resourcemanger CLI usage. (Brahma Reddy Battula via xgong)
 
+    YARN-3794. TestRMEmbeddedElector fails because of ambiguous LOG reference.
+    (Chengbing Liu via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
