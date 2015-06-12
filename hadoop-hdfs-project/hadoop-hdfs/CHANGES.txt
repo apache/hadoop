@@ -996,6 +996,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8583. Document that NFS gateway does not work with rpcbind
     on SLES 11. (Arpit Agarwal)
 
+    HDFS-8572. DN always uses HTTP/localhost@REALM principals in SPNEGO.
+    (wheat9)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

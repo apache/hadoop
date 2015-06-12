@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
@@ -148,7 +148,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
@@ -163,7 +162,6 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -180,7 +178,6 @@ import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tracing.SpanReceiverHost;
@@ -299,7 +296,6 @@ public class DataNode extends ReconfigurableBase
   private volatile boolean heartbeatsDisabledForTests = false;
   private DataStorage storage = null;
 
-  private HttpServer2 infoServer = null;
   private DatanodeHttpServer httpServer = null;
   private int infoPort;
   private int infoSecurePort;
@@ -761,29 +757,12 @@ public class DataNode extends ReconfigurableBase
    */
   private void startInfoServer(Configuration conf)
     throws IOException {
-    Configuration confForInfoServer = new Configuration(conf);
-    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
-    HttpServer2.Builder builder = new HttpServer2.Builder()
-      .setName("datanode")
-      .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
-      .addEndpoint(URI.create("http://localhost:0"))
-      .setFindPort(true);
-
-    this.infoServer = builder.build();
-
-    this.infoServer.setAttribute("datanode", this);
-    this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    this.infoServer.addServlet(null, "/blockScannerReport",
-                               BlockScanner.Servlet.class);
-
-    this.infoServer.start();
-    InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
-
     // SecureDataNodeStarter will bind the privileged port to the channel if
     // the DN is started by JSVC, pass it along.
     ServerSocketChannel httpServerChannel = secureResources != null ?
-      secureResources.getHttpServerChannel() : null;
-    this.httpServer = new DatanodeHttpServer(conf, jettyAddr, httpServerChannel);
+        secureResources.getHttpServerChannel() : null;
+
+    this.httpServer = new DatanodeHttpServer(conf, httpServerChannel);
     httpServer.start();
     if (httpServer.getHttpAddress() != null) {
       infoPort = httpServer.getHttpAddress().getPort();
@@ -1715,13 +1694,6 @@ public class DataNode extends ReconfigurableBase
     shutdownPeriodicScanners();
 
     // Stop the web server
-    if (infoServer != null) {
-      try {
-        infoServer.stop();
-      } catch (Exception e) {
-        LOG.warn("Exception shutting down DataNode", e);
-      }
-    }
     if (httpServer != null) {
       try {
         httpServer.close();
