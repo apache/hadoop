@@ -57,7 +57,7 @@ public class TestBpServiceActorScheduler {
     for (final long now : getTimestamps()) {
       Scheduler scheduler = makeMockScheduler(now);
       assertTrue(scheduler.isHeartbeatDue(now));
-      assertTrue(scheduler.isBlockReportDue());
+      assertTrue(scheduler.isBlockReportDue(scheduler.monotonicNow()));
     }
   }
 

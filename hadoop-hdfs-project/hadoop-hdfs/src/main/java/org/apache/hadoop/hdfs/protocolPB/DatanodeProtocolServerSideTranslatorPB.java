@@ -114,7 +114,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
           report, request.getCacheCapacity(), request.getCacheUsed(),
           request.getXmitsInProgress(),
           request.getXceiverCount(), request.getFailedVolumes(),
-          volumeFailureSummary);
+          volumeFailureSummary, request.getRequestFullBlockReportLease());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -135,6 +135,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       builder.setRollingUpgradeStatus(PBHelper
           .convertRollingUpgradeStatus(rollingUpdateStatus));
     }
+    builder.setFullBlockReportLeaseId(response.getFullBlockReportLeaseId());
     return builder.build();
   }
 
