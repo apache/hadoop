@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +41,6 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StripedBlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -330,10 +328,14 @@ public final class FSImageFormatPBINode {
       short replication = (short) f.getReplication();
       LoaderContext state = parent.getLoaderContext();
 
-      BlockInfoContiguous[] blocks = new BlockInfoContiguous[bp.size()];
-      for (int i = 0, e = bp.size(); i < e; ++i) {
-        blocks[i] = new BlockInfoContiguous(PBHelper.convert(bp.get(i)), replication);
+      BlockInfoContiguous[] blocks = null;
+      if (!f.hasStripedBlocks()) {
+        blocks = new BlockInfoContiguous[bp.size()];
+        for (int i = 0, e = bp.size(); i < e; ++i) {
+          blocks[i] = new BlockInfoContiguous(PBHelper.convert(bp.get(i)), replication);
+        }
       }
+
       final PermissionStatus permissions = loadPermission(f.getPermission(),
           parent.getLoaderContext().getStringTable());
 
@@ -357,10 +359,9 @@ public final class FSImageFormatPBINode {
       if (f.hasStripedBlocks()) {
         // TODO: HDFS-7859
         ECSchema schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
-        StripedBlocksFeature sb = f.getStripedBlocks();
         stripeFeature = file.addStripedBlocksFeature();
-        for (StripedBlockProto sp : sb.getBlocksList()) {
-          stripeFeature.addBlock(PBHelper.convert(sp, schema));
+        for (BlockProto b : bp) {
+          stripeFeature.addBlock(new BlockInfoStriped(PBHelper.convert(b), schema));
         }
       }
 
@@ -658,14 +659,14 @@ public final class FSImageFormatPBINode {
 
       FileWithStripedBlocksFeature sb = n.getStripedBlocksFeature();
       if (sb != null) {
-        StripedBlocksFeature.Builder builder =
-            StripedBlocksFeature.newBuilder();
         BlockInfoStriped[] sblocks = sb.getBlocks();
         if (sblocks != null) {
           for (BlockInfoStriped sblk : sblocks) {
-            builder.addBlocks(PBHelper.convert(sblk));
+            b.addBlocks(PBHelper.convert(sblk));
           }
         }
+        StripedBlocksFeature.Builder builder =
+            StripedBlocksFeature.newBuilder();
         b.setStripedBlocks(builder.build());
       }
 

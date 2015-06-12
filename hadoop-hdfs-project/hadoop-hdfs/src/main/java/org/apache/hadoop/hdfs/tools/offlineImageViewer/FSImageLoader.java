@@ -41,15 +41,12 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StripedBlockProto;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
@@ -485,21 +482,8 @@ class FSImageLoader {
 
   static long getFileSize(FsImageProto.INodeSection.INodeFile f) {
     long size = 0;
-    if (f.hasStripedBlocks()) {
-      List<StripedBlockProto> blocksList = f.getStripedBlocks().getBlocksList();
-      // Get total of actual data block size
-      for (StripedBlockProto p : blocksList) {
-        // Total usage by this striped blocks should be the total of data
-        // blocks and parity blocks
-        size += StripedBlockUtil.spaceConsumedByStripedBlock(p.getBlock()
-            .getNumBytes(), p.getDataBlockNum(), p.getParityBlockNum(),
-            HdfsConstants.BLOCK_STRIPED_CELL_SIZE);
-      }
-    } else {
-      for (HdfsProtos.BlockProto p : f.getBlocksList()) {
-        size += p.getNumBytes();
-      }
-
+    for (HdfsProtos.BlockProto p : f.getBlocksList()) {
+      size += p.getNumBytes();
     }
     return size;
   }

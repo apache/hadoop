@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -136,28 +135,25 @@ public class TestOfflineImageViewerWithStripedBlocks {
     }
     FSImageLoader loader = FSImageLoader.load(orgFsimage.getAbsolutePath());
     String fileStatus = loader.getFileStatus("/eczone/striped");
-    long expectedSpaceConsumed = StripedBlockUtil.spaceConsumedByStripedBlock(
-        bytes.length, HdfsConstants.NUM_DATA_BLOCKS,
-        HdfsConstants.NUM_PARITY_BLOCKS, HdfsConstants.BLOCK_STRIPED_CELL_SIZE);
+    long expectedFileSize = bytes.length;
 
     // Verify space consumed present in BlockInfoStriped
     FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
     INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
     assertTrue("Invalid block size", fileNode.getBlocks().length > 0);
-    long actualSpaceConsumed = 0;
+    long actualFileSize = 0;
     for (BlockInfo blockInfo : fileNode.getBlocks()) {
       assertTrue("Didn't find block striped information",
           blockInfo instanceof BlockInfoStriped);
-      BlockInfoStriped b = (BlockInfoStriped) blockInfo;
-      actualSpaceConsumed += b.spaceConsumed();
+      actualFileSize += blockInfo.getNumBytes();
     }
 
     assertEquals("Wrongly computed file size contains striped blocks",
-        expectedSpaceConsumed, actualSpaceConsumed);
+        expectedFileSize, actualFileSize);
 
     // Verify space consumed present in filestatus
     String EXPECTED_FILE_SIZE = "\"length\":"
-        + String.valueOf(expectedSpaceConsumed);
+        + String.valueOf(expectedFileSize);
     assertTrue(
         "Wrongly computed file size contains striped blocks, file status:"
             + fileStatus + ". Expected file size is : " + EXPECTED_FILE_SIZE,

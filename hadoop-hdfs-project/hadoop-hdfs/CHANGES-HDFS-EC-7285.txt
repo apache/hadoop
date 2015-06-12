@@ -296,3 +296,6 @@
 
     HDFS-8450. Erasure Coding: Consolidate erasure coding zone related
     implementation into a single class (Rakesh R via vinayakumarb)
+
+    HDFS-8585. Erasure Coding: Remove dataBlockNum and parityBlockNum from
+    StripedBlockProto. (Yi Liu via jing9)
