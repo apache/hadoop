@@ -66,7 +66,7 @@ public class TestTracingShortCircuitLocalRead {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
         SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
-        TestTracing.SetSpanReceiver.class.getName());
+        SetSpanReceiver.class.getName());
     conf.setLong("dfs.blocksize", 100 * 1024);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
@@ -92,7 +92,7 @@ public class TestTracingShortCircuitLocalRead {
         "OpRequestShortCircuitAccessProto",
         "ShortCircuitShmRequestProto"
       };
-      TestTracing.assertSpanNamesFound(expectedSpanNames);
+      SetSpanReceiver.assertSpanNamesFound(expectedSpanNames);
     } finally {
       dfs.close();
       cluster.shutdown();

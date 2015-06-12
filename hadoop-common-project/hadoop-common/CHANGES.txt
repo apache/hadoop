@@ -645,6 +645,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12055. Deprecate usage of NativeIO#link. (Andrew Wang via cnauroth)
 
+    HADOOP-11971. Move test utilities for tracing from hadoop-hdfs to
+    hadoop-common. (Masatake Iwasaki via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
