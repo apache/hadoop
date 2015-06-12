@@ -51,7 +51,7 @@ public abstract class  BlockInfo extends Block
    * per replica is 42 bytes (LinkedList#Entry object per replica) versus 16
    * bytes using the triplets.
    */
-  protected Object[] triplets;
+  Object[] triplets;
 
   /**
    * Construct an entry for blocksmap
@@ -295,7 +295,7 @@ public abstract class  BlockInfo extends Block
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted
-   * to {@link BlockInfoContiguousUnderConstruction}.
+   * to {@link BlockInfoUnderConstruction}.
    * @return {@link BlockUCState#COMPLETE}
    */
   public BlockUCState getBlockUCState() {
@@ -312,26 +312,28 @@ public abstract class  BlockInfo extends Block
   }
 
   /**
-   * Convert a complete block to an under construction block.
+   * Convert a block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  public BlockInfoContiguousUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
     if(isComplete()) {
-      BlockInfoContiguousUnderConstruction ucBlock =
-          new BlockInfoContiguousUnderConstruction(this,
-          getBlockCollection().getPreferredBlockReplication(), s, targets);
-      ucBlock.setBlockCollection(getBlockCollection());
-      return ucBlock;
+      return convertCompleteBlockToUC(s, targets);
     }
     // the block is already under construction
-    BlockInfoContiguousUnderConstruction ucBlock =
-        (BlockInfoContiguousUnderConstruction)this;
+    BlockInfoUnderConstruction ucBlock =
+        (BlockInfoUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
     ucBlock.setBlockCollection(getBlockCollection());
     return ucBlock;
   }
+
+  /**
+   * Convert a complete block to an under construction block.
+   */
+  abstract BlockInfoUnderConstruction convertCompleteBlockToUC(
+      BlockUCState s, DatanodeStorageInfo[] targets);
 
   @Override
   public int hashCode() {
