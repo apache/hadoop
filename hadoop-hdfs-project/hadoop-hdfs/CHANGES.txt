@@ -623,6 +623,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8573. Move creation of restartMeta file logic from BlockReceiver to
     ReplicaInPipeline. (Eddy Xu via wang)
 
+    HDFS-7923. The DataNodes should rate-limit their full block reports by
+    asking the NN on heartbeat messages (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
