@@ -15,27 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 
 /**
- * Runs all tests in BlockReportTestBase, sending one block report
- * per DataNode. This tests that the NN can handle the legacy DN
- * behavior where it presents itself as a single logical storage.
+ * Used to inject certain faults for testing.
  */
-public class TestNNHandlesCombinedBlockReport extends BlockReportTestBase {
+public class BlockManagerFaultInjector {
+  @VisibleForTesting
+  public static BlockManagerFaultInjector instance =
+      new BlockManagerFaultInjector();
 
-  @Override
-  protected void sendBlockReports(DatanodeRegistration dnR, String poolId,
-                                  StorageBlockReport[] reports) throws IOException {
-    LOG.info("Sending combined block reports for " + dnR);
-    cluster.getNameNodeRpc().blockReport(dnR, poolId, reports,
-        new BlockReportContext(1, 0, System.nanoTime(), 0L));
+  @VisibleForTesting
+  public static BlockManagerFaultInjector getInstance() {
+    return instance;
+  }
+
+  @VisibleForTesting
+  public void incomingBlockReportRpc(DatanodeID nodeID,
+          BlockReportContext context) throws IOException {
+
+  }
+
+  @VisibleForTesting
+  public void requestBlockReportLease(DatanodeDescriptor node, long leaseId) {
+  }
+
+  @VisibleForTesting
+  public void removeBlockReportLease(DatanodeDescriptor node, long leaseId) {
   }
 }

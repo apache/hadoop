@@ -21,6 +21,7 @@ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -31,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -159,11 +161,14 @@ public class TestFsDatasetCache {
       throws IOException {
     NNHAStatusHeartbeat ha = new NNHAStatusHeartbeat(HAServiceState.ACTIVE,
         fsImage.getLastAppliedOrWrittenTxId());
-    HeartbeatResponse response = new HeartbeatResponse(cmds, ha, null);
+    HeartbeatResponse response =
+        new HeartbeatResponse(cmds, ha, null,
+            ThreadLocalRandom.current().nextLong() | 1L);
     doReturn(response).when(spyNN).sendHeartbeat(
         (DatanodeRegistration) any(),
         (StorageReport[]) any(), anyLong(), anyLong(),
-        anyInt(), anyInt(), anyInt(), (VolumeFailureSummary) any());
+        anyInt(), anyInt(), anyInt(), (VolumeFailureSummary) any(),
+        anyBoolean());
   }
 
   private static DatanodeCommand[] cacheBlock(HdfsBlockLocation loc) {
