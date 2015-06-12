@@ -35,22 +35,32 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.nio.channels.ServerSocketChannel;
 import java.security.GeneralSecurityException;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 
 public class DatanodeHttpServer implements Closeable {
+  private final HttpServer2 infoServer;
   private final EventLoopGroup bossGroup;
   private final EventLoopGroup workerGroup;
   private final ServerSocketChannel externalHttpChannel;
@@ -64,10 +74,35 @@ public class DatanodeHttpServer implements Closeable {
 
   static final Log LOG = LogFactory.getLog(DatanodeHttpServer.class);
 
-  public DatanodeHttpServer(final Configuration conf, final InetSocketAddress
-    jettyAddr, final ServerSocketChannel externalHttpChannel)
+  public DatanodeHttpServer(final Configuration conf,
+      final ServerSocketChannel externalHttpChannel)
     throws IOException {
     this.conf = conf;
+
+    Configuration confForInfoServer = new Configuration(conf);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+        .setName("datanode")
+        .setConf(confForInfoServer)
+        .setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .hostName(getHostnameForSpnegoPrincipal(confForInfoServer))
+        .addEndpoint(URI.create("http://localhost:0"))
+        .setFindPort(true);
+
+    this.infoServer = builder.build();
+
+    this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
+    this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
+        FileChecksumServlets.GetServlet.class);
+
+    this.infoServer.setAttribute("datanode", this);
+    this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    this.infoServer.addServlet(null, "/blockScannerReport",
+                               BlockScanner.Servlet.class);
+
+    this.infoServer.start();
+    final InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
+
     this.confForCreate = new Configuration(conf);
     confForCreate.set(FsPermission.UMASK_LABEL, "000");
 
@@ -170,5 +205,20 @@ public class DatanodeHttpServer implements Closeable {
     if (externalHttpChannel != null) {
       externalHttpChannel.close();
     }
+    try {
+      infoServer.stop();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  private static String getHostnameForSpnegoPrincipal(Configuration conf) {
+    String addr = conf.getTrimmed(DFS_DATANODE_HTTP_ADDRESS_KEY, null);
+    if (addr == null) {
+      addr = conf.getTrimmed(DFS_DATANODE_HTTPS_ADDRESS_KEY,
+                             DFS_DATANODE_HTTPS_ADDRESS_DEFAULT);
+    }
+    InetSocketAddress inetSocker = NetUtils.createSocketAddr(addr);
+    return inetSocker.getHostString();
   }
 }
