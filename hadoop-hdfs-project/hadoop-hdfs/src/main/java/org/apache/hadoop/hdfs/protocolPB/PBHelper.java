@@ -183,7 +183,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StripedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsResponseProto;
@@ -195,7 +194,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -442,20 +440,6 @@ public class PBHelper {
 
   public static Block convert(BlockProto b) {
     return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
-  }
-
-  public static BlockInfoStriped convert(StripedBlockProto p, ECSchema schema) {
-    return new BlockInfoStriped(convert(p.getBlock()), schema);
-  }
-
-  public static StripedBlockProto convert(BlockInfoStriped blk) {
-    BlockProto bp = BlockProto.newBuilder().setBlockId(blk.getBlockId())
-        .setGenStamp(blk.getGenerationStamp()).setNumBytes(blk.getNumBytes())
-        .build();
-    return StripedBlockProto.newBuilder()
-        .setDataBlockNum(blk.getDataBlockNum())
-        .setParityBlockNum(blk.getParityBlockNum())
-        .setBlock(bp).build();
   }
 
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {

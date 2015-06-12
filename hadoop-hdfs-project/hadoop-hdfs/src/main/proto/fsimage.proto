@@ -93,7 +93,7 @@ message INodeSection {
   }
 
   message StripedBlocksFeature {
-    repeated StripedBlockProto blocks = 1;
+    // store striped blocks related information
   }
 
   message AclFeatureProto {
