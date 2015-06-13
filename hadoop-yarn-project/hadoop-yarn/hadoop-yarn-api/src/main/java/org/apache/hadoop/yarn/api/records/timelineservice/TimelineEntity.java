@@ -470,4 +470,7 @@ public class TimelineEntity {
     return real == null ? this : real;
   }
 
+  public String toString() {
+    return identifier.toString();
+  }
 }

@@ -1329,8 +1329,6 @@ public class RMAppImpl implements RMApp, Recoverable {
           .applicationFinished(app, finalState);
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
-
-      app.stopTimelineCollector();
     };
   }
 
