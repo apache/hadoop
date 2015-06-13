@@ -886,6 +886,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8554. TestDatanodeLayoutUpgrade fails on Windows. (cnauroth)
 
+    HDFS-8593. Calculation of effective layout version mishandles comparison to
+    current layout version in storage. (cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

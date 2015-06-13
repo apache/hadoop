@@ -7004,10 +7004,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @return layout version in effect
    */
   public int getEffectiveLayoutVersion() {
-    if (isRollingUpgrade()) {
-      int storageLV = fsImage.getStorage().getLayoutVersion();
-      if (storageLV >=
-          NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION) {
+    return getEffectiveLayoutVersion(isRollingUpgrade(),
+        fsImage.getStorage().getLayoutVersion(),
+        NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+  }
+
+  @VisibleForTesting
+  static int getEffectiveLayoutVersion(boolean isRollingUpgrade, int storageLV,
+      int minCompatLV, int currentLV) {
+    if (isRollingUpgrade) {
+      if (storageLV <= minCompatLV) {
         // The prior layout version satisfies the minimum compatible layout
         // version of the current software.  Keep reporting the prior layout
         // as the effective one.  Downgrade is possible.
@@ -7016,7 +7023,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     // The current software cannot satisfy the layout version of the prior
     // software.  Proceed with using the current layout version.
-    return NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+    return currentLV;
   }
 
   /**
