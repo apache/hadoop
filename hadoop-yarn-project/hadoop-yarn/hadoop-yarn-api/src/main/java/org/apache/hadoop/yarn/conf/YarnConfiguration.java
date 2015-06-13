@@ -500,6 +500,16 @@ public class YarnConfiguration extends Configuration {
       + "system-metrics-publisher.enabled";
   public static final boolean DEFAULT_SYSTEM_METRICS_PUBLISHER_ENABLED = false;
 
+  /**
+   * The setting that controls whether yarn container metrics is published to
+   * the timeline server or not by RM. This configuration setting is for ATS
+   * V2
+   */
+  public static final String RM_PUBLISH_CONTAINER_METRICS_ENABLED = YARN_PREFIX
+      + "rm.system-metrics-publisher.emit-container-events";
+  public static final boolean DEFAULT_RM_PUBLISH_CONTAINER_METRICS_ENABLED =
+      false;
+
   public static final String RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "system-metrics-publisher.dispatcher.pool-size";
   public static final int DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =

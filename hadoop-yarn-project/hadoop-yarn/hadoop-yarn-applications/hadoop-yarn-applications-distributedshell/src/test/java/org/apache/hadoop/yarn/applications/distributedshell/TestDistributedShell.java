@@ -74,6 +74,8 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
+import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.timeline.PluginStoreTestUtils;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
@@ -86,7 +88,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -140,6 +141,7 @@ public class TestDistributedShell {
     // disable aux-service based timeline aggregators
     conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
 
+    conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
@@ -494,48 +496,96 @@ public class TestDistributedShell {
               "/1/1/" : "/test_flow_name/test_flow_version/12345678/") +
               appId.toString();
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
-      String outputDirApp = basePath + "/DS_APP_ATTEMPT/";
 
-      File entityFolder = new File(outputDirApp);
-      Assert.assertTrue(entityFolder.isDirectory());
-
+      // Verify DS_APP_ATTEMPT entities posted by the client
       // there will be at least one attempt, look for that file
-      String appTimestampFileName = "appattempt_" + appId.getClusterTimestamp()
-          + "_000" + appId.getId() + "_000001"
-          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      String appAttemptFileName = outputDirApp + appTimestampFileName;
-      File appAttemptFile = new File(appAttemptFileName);
-      Assert.assertTrue(appAttemptFile.exists());
+      String appTimestampFileName =
+          "appattempt_" + appId.getClusterTimestamp() + "_000" + appId.getId()
+              + "_000001"
+              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      verifyEntityTypeFileExists(basePath, "DS_APP_ATTEMPT",
+          appTimestampFileName);
 
-      String outputDirContainer = basePath + "/DS_CONTAINER/";
-      File containerFolder = new File(outputDirContainer);
-      Assert.assertTrue(containerFolder.isDirectory());
-
-      String containerTimestampFileName = "container_"
-          + appId.getClusterTimestamp() + "_000" + appId.getId()
-          + "_01_000002.thist";
-      String containerFileName = outputDirContainer + containerTimestampFileName;
-      File containerFile = new File(containerFileName);
-      Assert.assertTrue(containerFile.exists());
+      // Verify DS_CONTAINER entities posted by the client
+      String containerTimestampFileName =
+          "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
+              + "_01_000002.thist";
+      verifyEntityTypeFileExists(basePath, "DS_CONTAINER",
+          containerTimestampFileName);
 
       // Verify NM posting container metrics info.
-      String outputDirContainerMetrics = basePath + "/" + 
-          TimelineEntityType.YARN_CONTAINER + "/";
-      File containerMetricsFolder = new File(outputDirContainerMetrics);
-      Assert.assertTrue(containerMetricsFolder.isDirectory());
+      String containerMetricsTimestampFileName =
+          "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
+              + "_01_000001"
+              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      verifyEntityTypeFileExists(basePath,
+          TimelineEntityType.YARN_CONTAINER.toString(),
+          containerMetricsTimestampFileName);
 
-      String containerMetricsTimestampFileName = "container_"
-        + appId.getClusterTimestamp() + "_000" + appId.getId()
-        + "_01_000001.thist";
-      String containerMetricsFileName = outputDirContainerMetrics + 
-        containerMetricsTimestampFileName;
+      // Verify RM posting Application life cycle Events are getting published
+      String appMetricsTimestampFileName =
+          "application_" + appId.getClusterTimestamp() + "_000" + appId.getId()
+              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      File appEntityFile =
+          verifyEntityTypeFileExists(basePath,
+              TimelineEntityType.YARN_APPLICATION.toString(),
+              appMetricsTimestampFileName);
+      verifyStringExistsSpecifiedTimes(appEntityFile,
+          ApplicationMetricsConstants.CREATED_EVENT_TYPE, 1,
+          "Application created event should be published atleast once");
+      verifyStringExistsSpecifiedTimes(appEntityFile,
+          ApplicationMetricsConstants.FINISHED_EVENT_TYPE, 1,
+          "Application finished event should be published atleast once");
 
-      File containerMetricsFile = new File(containerMetricsFileName);
-      Assert.assertTrue(containerMetricsFile.exists());
-
+      // Verify RM posting AppAttempt life cycle Events are getting published
+      String appAttemptMetricsTimestampFileName =
+          "appattempt_" + appId.getClusterTimestamp() + "_000" + appId.getId()
+              + "_000001"
+              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      File appAttemptEntityFile =
+          verifyEntityTypeFileExists(basePath,
+              TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
+              appAttemptMetricsTimestampFileName);
+      verifyStringExistsSpecifiedTimes(appAttemptEntityFile,
+          AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE, 1,
+          "AppAttempt register event should be published atleast once");
+      verifyStringExistsSpecifiedTimes(appAttemptEntityFile,
+          AppAttemptMetricsConstants.FINISHED_EVENT_TYPE, 1,
+          "AppAttempt finished event should be published atleast once");
     } finally {
       FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
     }
+  }
+
+  private File verifyEntityTypeFileExists(String basePath, String entityType,
+      String entityfileName) {
+    String outputDirPathForEntity = basePath + "/" + entityType + "/";
+    File outputDirForEntity = new File(outputDirPathForEntity);
+    Assert.assertTrue(outputDirForEntity.isDirectory());
+
+    String entityFilePath = outputDirPathForEntity + entityfileName;
+
+    File entityFile = new File(entityFilePath);
+    Assert.assertTrue(entityFile.exists());
+    return entityFile;
+  }
+
+  private void verifyStringExistsSpecifiedTimes(File entityFile,
+      String searchString, long expectedNumOfTimes, String errorMsg)
+      throws IOException {
+    BufferedReader reader = null;
+    String strLine;
+    long actualCount = 0;
+    try {
+      reader = new BufferedReader(new FileReader(entityFile));
+      while ((strLine = reader.readLine()) != null) {
+        if (strLine.trim().contains(searchString))
+          actualCount++;
+      }
+    } finally {
+      reader.close();
+    }
+    Assert.assertEquals(errorMsg, expectedNumOfTimes, actualCount);
   }
 
   /**
