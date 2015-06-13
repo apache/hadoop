@@ -27,9 +27,19 @@ public class ContainerMetricsConstants {
 
   public static final String ENTITY_TYPE = "YARN_CONTAINER";
 
+  // Event of this type will be emitted by NM.
   public static final String CREATED_EVENT_TYPE = "YARN_CONTAINER_CREATED";
 
+  // Event of this type will be emitted by RM.
+  public static final String CREATED_IN_RM_EVENT_TYPE =
+      "YARN_RM_CONTAINER_CREATED";
+
+  // Event of this type will be emitted by NM.
   public static final String FINISHED_EVENT_TYPE = "YARN_CONTAINER_FINISHED";
+
+  // Event of this type will be emitted by RM.
+  public static final String FINISHED_IN_RM_EVENT_TYPE =
+      "YARN_RM_CONTAINER_FINISHED";
 
   public static final String PARENT_PRIMARIY_FILTER = "YARN_CONTAINER_PARENT";
 
