@@ -90,7 +90,7 @@ public class TestRMAppLogAggregationStatus {
     rmContext =
         new RMContextImpl(rmDispatcher, null, null, null,
           null, null, null, null, null);
-    rmContext.setSystemMetricsPublisher(new SystemMetricsPublisher());
+    rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
     rmContext.setRMApplicationHistoryWriter(mock(RMApplicationHistoryWriter.class));
 
     rmContext

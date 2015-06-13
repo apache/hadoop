@@ -465,7 +465,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    return new SystemMetricsPublisher(); 
+    return new SystemMetricsPublisher(rmContext);
   }
 
   // sanity check for configurations
