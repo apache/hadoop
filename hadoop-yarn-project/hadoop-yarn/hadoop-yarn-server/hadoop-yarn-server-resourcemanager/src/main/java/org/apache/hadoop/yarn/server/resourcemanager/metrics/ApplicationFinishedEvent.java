@@ -22,6 +22,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 
 public class ApplicationFinishedEvent extends
@@ -33,6 +35,7 @@ public class ApplicationFinishedEvent extends
   private YarnApplicationState state;
   private ApplicationAttemptId latestAppAttemptId;
   private RMAppMetrics appMetrics;
+  private RMAppImpl app;
 
   public ApplicationFinishedEvent(
       ApplicationId appId,
@@ -41,19 +44,25 @@ public class ApplicationFinishedEvent extends
       YarnApplicationState state,
       ApplicationAttemptId latestAppAttemptId,
       long finishedTime,
-      RMAppMetrics appMetrics) {
+      RMAppMetrics appMetrics,
+      RMAppImpl app) {
     super(SystemMetricsEventType.APP_FINISHED, finishedTime);
     this.appId = appId;
     this.diagnosticsInfo = diagnosticsInfo;
     this.appStatus = appStatus;
     this.latestAppAttemptId = latestAppAttemptId;
     this.state = state;
-    this.appMetrics=appMetrics;
+    this.appMetrics = appMetrics;
+    this.app = app;
   }
 
   @Override
   public int hashCode() {
     return appId.hashCode();
+  }
+
+  public RMAppImpl getApp() {
+    return app;
   }
 
   public ApplicationId getApplicationId() {

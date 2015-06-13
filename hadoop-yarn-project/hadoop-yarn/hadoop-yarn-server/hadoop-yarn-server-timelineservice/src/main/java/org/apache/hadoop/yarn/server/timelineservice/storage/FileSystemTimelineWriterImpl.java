@@ -55,7 +55,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   public static final String DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
     = "/tmp/timeline_service_data";
 
-  private static final String ENTITIES_DIR = "entities";
+  public static final String ENTITIES_DIR = "entities";
 
   /** Default extension for output files */
   public static final String TIMELINE_SERVICE_STORAGE_EXTENSION = ".thist";
@@ -76,7 +76,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
     return response;
   }
 
-  private void write(String clusterId, String userId, String flowName,
+  private synchronized void write(String clusterId, String userId, String flowName,
       String flowVersion, long flowRun, String appId, TimelineEntity entity,
       TimelineWriteResponse response) throws IOException {
     PrintWriter out = null;

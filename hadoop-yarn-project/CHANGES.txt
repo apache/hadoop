@@ -82,6 +82,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3721. build is broken on YARN-2928 branch due to possible dependency
     cycle (Li Lu via sjlee)
 
+    YARN-3044. Made RM write app, attempt and optional container lifecycle
+    events to timeline service v2. (Naganarasimha G R via zjshen)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
