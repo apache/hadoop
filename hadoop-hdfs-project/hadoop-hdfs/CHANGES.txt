@@ -1005,6 +1005,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8596. TestDistributedFileSystem et al tests are broken in branch-2
     due to incorrect setting of "datanode" attribute. (Yongjun Zhang)
 
+    HDFS-8595. TestCommitBlockSynchronization fails in branch-2.7. (Patch
+    applies to all branches). (Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
