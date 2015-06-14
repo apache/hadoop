@@ -77,6 +77,7 @@ public class DatanodeHttpServer implements Closeable {
   static final Log LOG = LogFactory.getLog(DatanodeHttpServer.class);
 
   public DatanodeHttpServer(final Configuration conf,
+      final DataNode datanode,
       final ServerSocketChannel externalHttpChannel)
     throws IOException {
     this.conf = conf;
@@ -97,7 +98,7 @@ public class DatanodeHttpServer implements Closeable {
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
         FileChecksumServlets.GetServlet.class);
 
-    this.infoServer.setAttribute("datanode", this);
+    this.infoServer.setAttribute("datanode", datanode);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
                                BlockScanner.Servlet.class);
