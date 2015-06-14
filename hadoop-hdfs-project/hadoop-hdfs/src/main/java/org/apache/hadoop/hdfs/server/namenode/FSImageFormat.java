@@ -365,12 +365,6 @@ public class FSImageFormat {
           long maxSequentialBlockId = in.readLong();
           namesystem.getBlockIdManager().setLastAllocatedContiguousBlockId(
               maxSequentialBlockId);
-          if (NameNodeLayoutVersion.supports(
-              NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)) {
-            final long maxStripedBlockId = in.readLong();
-            namesystem.getBlockIdManager().setLastAllocatedStripedBlockId(
-                maxStripedBlockId);
-          }
         } else {
 
           long startingGenStamp = namesystem.getBlockIdManager()
@@ -759,31 +753,16 @@ public class FSImageFormat {
       atime = in.readLong();
     }
     final long blockSize = in.readLong();
-    final boolean isStriped = NameNodeLayoutVersion.supports(
-            NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)
-            && (in.readBoolean());
     final int numBlocks = in.readInt();
-    // TODO: ECSchema can be restored from persisted file (HDFS-7859).
-    final ECSchema schema = isStriped ?
-        ErasureCodingSchemaManager.getSystemDefaultSchema() : null;
 
     if (numBlocks >= 0) {
       // file
       
       // read blocks
-      Block[] blocks;
-      if (isStriped) {
-        blocks = new Block[numBlocks];
-        for (int j = 0; j < numBlocks; j++) {
-          blocks[j] = new BlockInfoStriped(new Block(), schema);
-          blocks[j].readFields(in);
-        }
-      } else {
-        blocks = new BlockInfoContiguous[numBlocks];
-        for (int j = 0; j < numBlocks; j++) {
-          blocks[j] = new BlockInfoContiguous(replication);
-          blocks[j].readFields(in);
-        }
+      Block[] blocks = new BlockInfoContiguous[numBlocks];
+      for (int j = 0; j < numBlocks; j++) {
+        blocks[j] = new BlockInfoContiguous(replication);
+        blocks[j].readFields(in);
       }
 
       String clientName = "";
@@ -803,16 +782,8 @@ public class FSImageFormat {
             // convert the last block to BlockUC
             if (blocks.length > 0) {
               Block lastBlk = blocks[blocks.length - 1];
-              if (isStriped){
-                BlockInfoStriped lastStripedBlk = (BlockInfoStriped) lastBlk;
-                blocks[blocks.length - 1]
-                        = new BlockInfoStripedUnderConstruction(lastBlk,
-                                lastStripedBlk.getSchema());
-              } else {
-                blocks[blocks.length - 1]
-                        = new BlockInfoContiguousUnderConstruction(lastBlk,
-                                replication);
-              }
+              blocks[blocks.length - 1] =
+                  new BlockInfoContiguousUnderConstruction(lastBlk, replication);
             }
           }
         }
@@ -825,19 +796,9 @@ public class FSImageFormat {
         counter.increment();
       }
 
-      INodeFile file;
-      if (isStriped) {
-        file = new INodeFile(inodeId, localName, permissions, modificationTime,
-            atime, new BlockInfoContiguous[0], (short) 0, blockSize);
-        file.addStripedBlocksFeature();
-        for (Block block : blocks) {
-          file.getStripedBlocksFeature().addBlock((BlockInfoStriped) block);
-        }
-      } else {
-        file = new INodeFile(inodeId, localName, permissions,
-            modificationTime, atime, (BlockInfoContiguous[]) blocks,
-            replication, blockSize);
-      }
+      INodeFile file = new INodeFile(inodeId, localName, permissions,
+          modificationTime, atime, (BlockInfoContiguous[]) blocks,
+          replication, blockSize);
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
@@ -1315,7 +1276,6 @@ public class FSImageFormat {
         out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV2());
         out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampAtblockIdSwitch());
         out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedContiguousBlockId());
-        out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedStripedBlockId());
         out.writeLong(context.getTxId());
         out.writeLong(sourceNamesystem.dir.getLastInodeId());
 

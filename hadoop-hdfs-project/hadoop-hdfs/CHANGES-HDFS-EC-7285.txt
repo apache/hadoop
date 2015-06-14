@@ -299,3 +299,6 @@
 
     HDFS-8585. Erasure Coding: Remove dataBlockNum and parityBlockNum from
     StripedBlockProto. (Yi Liu via jing9)
+
+    HDFS-8559. Erasure Coding: fix non-protobuf fsimage for striped blocks.
+    (Jing Zhao via yliu)
