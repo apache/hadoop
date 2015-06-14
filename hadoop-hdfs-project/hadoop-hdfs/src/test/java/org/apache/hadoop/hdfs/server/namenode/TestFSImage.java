@@ -244,26 +244,10 @@ public class TestFSImage {
         fileByLoaded.getPermissionStatus().getPermission());
     assertEquals(mtime, fileByLoaded.getModificationTime());
     assertEquals(isUC ? mtime : atime, fileByLoaded.getAccessTime());
-    assertEquals(0, fileByLoaded.getContiguousBlocks().length);
-    assertEquals(0, fileByLoaded.getFileReplication());
+    // TODO for striped blocks, we currently save and load them as contiguous
+    // blocks to/from legacy fsimage
+    assertEquals(3, fileByLoaded.getContiguousBlocks().length);
     assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
-
-    //check the BlockInfoStriped
-    BlockInfoStriped[] stripedBlksByLoaded =
-        fileByLoaded.getStripedBlocksFeature().getBlocks();
-    assertEquals(3, stripedBlksByLoaded.length);
-    for (int i = 0; i < 3; i++) {
-      assertEquals(stripedBlks[i].getBlockId(),
-          stripedBlksByLoaded[i].getBlockId());
-      assertEquals(stripedBlks[i].getNumBytes(),
-          stripedBlksByLoaded[i].getNumBytes());
-      assertEquals(stripedBlks[i].getGenerationStamp(),
-          stripedBlksByLoaded[i].getGenerationStamp());
-      assertEquals(stripedBlks[i].getDataBlockNum(),
-          stripedBlksByLoaded[i].getDataBlockNum());
-      assertEquals(stripedBlks[i].getParityBlockNum(),
-          stripedBlksByLoaded[i].getParityBlockNum());
-    }
 
     if (isUC) {
       assertEquals(client,
