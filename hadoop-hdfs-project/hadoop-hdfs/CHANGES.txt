@@ -1002,6 +1002,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8572. DN always uses HTTP/localhost@REALM principals in SPNEGO.
     (wheat9)
 
+    HDFS-8596. TestDistributedFileSystem et al tests are broken in branch-2
+    due to incorrect setting of "datanode" attribute. (Yongjun Zhang)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

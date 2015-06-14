@@ -762,7 +762,7 @@ public class DataNode extends ReconfigurableBase
     ServerSocketChannel httpServerChannel = secureResources != null ?
         secureResources.getHttpServerChannel() : null;
 
-    this.httpServer = new DatanodeHttpServer(conf, httpServerChannel);
+    this.httpServer = new DatanodeHttpServer(conf, this, httpServerChannel);
     httpServer.start();
     if (httpServer.getHttpAddress() != null) {
       infoPort = httpServer.getHttpAddress().getPort();
