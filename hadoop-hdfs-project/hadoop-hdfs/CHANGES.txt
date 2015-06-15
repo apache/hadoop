@@ -122,6 +122,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8595. TestCommitBlockSynchronization fails in branch-2.7. (Patch
     applies to all branches). (Arpit Agarwal)
 
+    HDFS-8600. TestWebHdfsFileSystemContract.testGetFileBlockLocations fails
+    in branch-2.7. (Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

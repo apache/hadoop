@@ -334,10 +334,9 @@ public class JsonUtil {
 
     // Handle the case of old servers (1.x, 0.23.x) sending 'name' instead
     // of ipAddr and xferPort.
+    int xferPort = getInt(m, "xferPort", -1);
     Object tmpValue = m.get("ipAddr");
     String ipAddr = (tmpValue == null) ? null : (String)tmpValue;
-    tmpValue = m.get("xferPort");
-    int xferPort = (tmpValue == null) ? -1 : (int)(long)(Long)tmpValue;
     if (ipAddr == null) {
       tmpValue = m.get("name");
       if (tmpValue != null) {
