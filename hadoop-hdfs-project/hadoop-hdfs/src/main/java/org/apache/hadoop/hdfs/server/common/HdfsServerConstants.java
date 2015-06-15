@@ -84,7 +84,8 @@ public interface HdfsServerConstants {
   enum NodeType {
     NAME_NODE,
     DATA_NODE,
-    JOURNAL_NODE
+    JOURNAL_NODE,
+    STORAGE_CONTAINER_SERVICE
   }
 
   /** Startup options for rolling upgrade. */
