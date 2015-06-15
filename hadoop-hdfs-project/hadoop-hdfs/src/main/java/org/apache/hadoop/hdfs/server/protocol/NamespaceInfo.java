@@ -76,7 +76,12 @@ public class NamespaceInfo extends StorageInfo {
 
   // defaults to enabled capabilites since this ctor is for server
   public NamespaceInfo() {
-    super(NodeType.NAME_NODE);
+    this(NodeType.NAME_NODE);
+  }
+
+  // defaults to enabled capabilites since this ctor is for server
+  public NamespaceInfo(NodeType nodeType) {
+    super(nodeType);
     buildVersion = null;
     capabilities = CAPABILITIES_SUPPORTED;
   }
@@ -84,16 +89,17 @@ public class NamespaceInfo extends StorageInfo {
   // defaults to enabled capabilites since this ctor is for server
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion) {
-    this(nsID, clusterID, bpID, cT, buildVersion, softwareVersion,
-        CAPABILITIES_SUPPORTED);
+    this(nsID, clusterID, bpID, cT, buildVersion,
+         softwareVersion, NodeType.NAME_NODE,
+         CAPABILITIES_SUPPORTED);
   }
 
   // for use by server and/or client
   public NamespaceInfo(int nsID, String clusterID, String bpID,
       long cT, String buildVersion, String softwareVersion,
-      long capabilities) {
+      NodeType nodeType, long capabilities) {
     super(HdfsServerConstants.NAMENODE_LAYOUT_VERSION, nsID, clusterID, cT,
-        NodeType.NAME_NODE);
+        nodeType);
     blockPoolID = bpID;
     this.buildVersion = buildVersion;
     this.softwareVersion = softwareVersion;
@@ -104,6 +110,12 @@ public class NamespaceInfo extends StorageInfo {
       long cT) {
     this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
         VersionInfo.getVersion());
+  }
+
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
+                       long cT, NodeType nodeType) {
+    this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
+         VersionInfo.getVersion(), nodeType, CAPABILITIES_SUPPORTED);
   }
   
   public long getCapabilities() {

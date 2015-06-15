@@ -157,7 +157,8 @@ public class PBHelper {
   public static StorageInfoProto convert(StorageInfo info) {
     return StorageInfoProto.newBuilder().setClusterID(info.getClusterID())
         .setCTime(info.getCTime()).setLayoutVersion(info.getLayoutVersion())
-        .setNamespceID(info.getNamespaceID()).build();
+        .setNamespceID(info.getNamespaceID())
+        .setNodeType(convert(info.getNodeType())).build();
   }
 
   public static StorageInfo convert(StorageInfoProto info, NodeType type) {
@@ -334,9 +335,43 @@ public class PBHelper {
 
   public static NamespaceInfo convert(NamespaceInfoProto info) {
     StorageInfoProto storage = info.getStorageInfo();
+
+    // The default node type must be NAME_NODE for wire compatibility.
     return new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
         info.getBlockPoolID(), storage.getCTime(), info.getBuildVersion(),
-        info.getSoftwareVersion(), info.getCapabilities());
+        info.getSoftwareVersion(),
+        storage.hasNodeType() ? convert(storage.getNodeType()) : NodeType.NAME_NODE,
+        info.getCapabilities());
+  }
+
+  public static NodeType convert(StorageInfoProto.NodeTypeProto nodeType) {
+    switch(nodeType) {
+    case NAME_NODE:
+      return NodeType.NAME_NODE;
+    case DATA_NODE:
+      return NodeType.DATA_NODE;
+    case JOURNAL_NODE:
+      return NodeType.JOURNAL_NODE;
+    case STORAGE_CONTAINER_SERVICE:
+      return NodeType.STORAGE_CONTAINER_SERVICE;
+    default:
+      throw new IllegalArgumentException("Unrecognized NodeType " + nodeType);
+    }
+  }
+
+  public static StorageInfoProto.NodeTypeProto convert(NodeType nodeType) {
+    switch(nodeType) {
+    case NAME_NODE:
+      return StorageInfoProto.NodeTypeProto.NAME_NODE;
+    case DATA_NODE:
+      return StorageInfoProto.NodeTypeProto.DATA_NODE;
+    case JOURNAL_NODE:
+      return StorageInfoProto.NodeTypeProto.JOURNAL_NODE;
+    case STORAGE_CONTAINER_SERVICE:
+      return StorageInfoProto.NodeTypeProto.STORAGE_CONTAINER_SERVICE;
+    default:
+      throw new IllegalArgumentException("Unrecognized NodeType " + nodeType);
+    }
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {
