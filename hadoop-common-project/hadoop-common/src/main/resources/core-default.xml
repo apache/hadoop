@@ -360,6 +360,24 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.posix.attr.uid.name</name>
+  <value>uidNumber</value>
+  <description>
+    The attribute of posixAccount to use when groups for membership.
+    Mostly useful for schemas wherein groups have memberUids that use an
+    attribute other than uidNumber.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.posix.attr.gid.name</name>
+  <value>gidNumber</value>
+  <description>
+    The attribute of posixAccount indicating the group id.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.directory.search.timeout</name>
   <value>10000</value>
   <description>

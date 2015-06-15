@@ -148,10 +148,17 @@ public class LdapGroupsMapping
   public static final String GROUP_NAME_ATTR_DEFAULT = "cn";
 
   /*
+   * LDAP attribute names to use when doing posix-like lookups
+   */
+  public static final String POSIX_UID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.uid.name";
+  public static final String POSIX_UID_ATTR_DEFAULT = "uidNumber";
+
+  public static final String POSIX_GID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.gid.name";
+  public static final String POSIX_GID_ATTR_DEFAULT = "gidNumber";
+
+  /*
    * Posix attributes
    */
-  public static final String POSIX_UIDNUMBER = "uidNumber";
-  public static final String POSIX_GIDNUMBER = "gidNumber";
   public static final String POSIX_GROUP = "posixGroup";
   public static final String POSIX_ACCOUNT = "posixAccount";
 
@@ -184,6 +191,8 @@ public class LdapGroupsMapping
   private String userSearchFilter;
   private String groupMemberAttr;
   private String groupNameAttr;
+  private String posixUidAttr;
+  private String posixGidAttr;
   private boolean isPosix;
 
   public static final int RECONNECT_RETRY_COUNT = 3;
@@ -240,8 +249,8 @@ public class LdapGroupsMapping
       if (isPosix) {
         String gidNumber = null;
         String uidNumber = null;
-        Attribute gidAttribute = result.getAttributes().get(POSIX_GIDNUMBER);
-        Attribute uidAttribute = result.getAttributes().get(POSIX_UIDNUMBER);
+        Attribute gidAttribute = result.getAttributes().get(posixGidAttr);
+        Attribute uidAttribute = result.getAttributes().get(posixUidAttr);
         if (gidAttribute != null) {
           gidNumber = gidAttribute.get().toString();
         }
@@ -251,7 +260,7 @@ public class LdapGroupsMapping
         if (uidNumber != null && gidNumber != null) {
           groupResults =
               ctx.search(baseDN,
-                  "(&"+ groupSearchFilter + "(|(" + POSIX_GIDNUMBER + "={0})" +
+                  "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
                       "(" + groupMemberAttr + "={1})))",
                   new Object[] { gidNumber, uidNumber },
                   SEARCH_CONTROLS);
@@ -361,11 +370,17 @@ public class LdapGroupsMapping
         conf.get(GROUP_MEMBERSHIP_ATTR_KEY, GROUP_MEMBERSHIP_ATTR_DEFAULT);
     groupNameAttr =
         conf.get(GROUP_NAME_ATTR_KEY, GROUP_NAME_ATTR_DEFAULT);
+    posixUidAttr =
+        conf.get(POSIX_UID_ATTR_KEY, POSIX_UID_ATTR_DEFAULT);
+    posixGidAttr =
+        conf.get(POSIX_GID_ATTR_KEY, POSIX_GID_ATTR_DEFAULT);
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT, DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
     SEARCH_CONTROLS.setTimeLimit(dirSearchTimeout);
-    // Limit the attributes returned to only those required to speed up the search. See HADOOP-10626 for more details.
-    SEARCH_CONTROLS.setReturningAttributes(new String[] {groupNameAttr});
+    // Limit the attributes returned to only those required to speed up the search.
+    // See HADOOP-10626 and HADOOP-12001 for more details.
+    SEARCH_CONTROLS.setReturningAttributes(
+        new String[] {groupNameAttr, posixUidAttr, posixGidAttr});
 
     this.conf = conf;
   }
