@@ -471,6 +471,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6389. Fix BaileyBorweinPlouffe CLI usage message. (Brahma Reddy Battula
     via devaraj)
 
+    MAPREDUCE-6363. [NNBench] Lease mismatch error when running with multiple
+    mappers. (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
