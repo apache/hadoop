@@ -917,6 +917,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8521. Add VisibleForTesting annotation to
     BlockPoolSlice#selectReplicaToDelete. (cmccabe)
 
+    HDFS-8540.  Mover should exit with NO_MOVE_BLOCK if no block can be moved.
+    (surendra singh lilhore via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -163,8 +162,7 @@ public class Mover {
   private ExitStatus run() {
     try {
       init();
-      boolean hasRemaining = new Processor().processNamespace();
-      return hasRemaining ? ExitStatus.IN_PROGRESS : ExitStatus.SUCCESS;
+      return new Processor().processNamespace().getExitStatus();
     } catch (IllegalArgumentException e) {
       System.out.println(e + ".  Exiting ...");
       return ExitStatus.ILLEGAL_ARGUMENTS;
@@ -262,11 +260,11 @@ public class Mover {
      * @return whether there is still remaining migration work for the next
      *         round
      */
-    private boolean processNamespace() throws IOException {
+    private Result processNamespace() throws IOException {
       getSnapshottableDirs();
-      boolean hasRemaining = false;
+      Result result = new Result();
       for (Path target : targetPaths) {
-        hasRemaining |= processPath(target.toUri().getPath());
+        processPath(target.toUri().getPath(), result);
       }
       // wait for pending move to finish and retry the failed migration
       boolean hasFailed = Dispatcher.waitForMoveCompletion(storages.targets
@@ -282,16 +280,15 @@ public class Mover {
         // Reset retry count if no failure.
         retryCount.set(0);
       }
-      hasRemaining |= hasFailed;
-      return hasRemaining;
+      result.updateHasRemaining(hasFailed);
+      return result;
     }
 
     /**
      * @return whether there is still remaing migration work for the next
      *         round
      */
-    private boolean processPath(String fullPath) {
-      boolean hasRemaining = false;
+    private void processPath(String fullPath, Result result) {
       for (byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;;) {
         final DirectoryListing children;
         try {
@@ -299,73 +296,71 @@ public class Mover {
         } catch(IOException e) {
           LOG.warn("Failed to list directory " + fullPath
               + ". Ignore the directory and continue.", e);
-          return hasRemaining;
+          return;
         }
         if (children == null) {
-          return hasRemaining;
+          return;
         }
         for (HdfsFileStatus child : children.getPartialListing()) {
-          hasRemaining |= processRecursively(fullPath, child);
+          processRecursively(fullPath, child, result);
         }
         if (children.hasMore()) {
           lastReturnedName = children.getLastName();
         } else {
-          return hasRemaining;
+          return;
         }
       }
     }
 
     /** @return whether the migration requires next round */
-    private boolean processRecursively(String parent, HdfsFileStatus status) {
+    private void processRecursively(String parent, HdfsFileStatus status,
+        Result result) {
       String fullPath = status.getFullName(parent);
-      boolean hasRemaining = false;
       if (status.isDir()) {
         if (!fullPath.endsWith(Path.SEPARATOR)) {
           fullPath = fullPath + Path.SEPARATOR;
         }
 
-        hasRemaining = processPath(fullPath);
+        processPath(fullPath, result);
         // process snapshots if this is a snapshottable directory
         if (snapshottableDirs.contains(fullPath)) {
           final String dirSnapshot = fullPath + HdfsConstants.DOT_SNAPSHOT_DIR;
-          hasRemaining |= processPath(dirSnapshot);
+          processPath(dirSnapshot, result);
         }
       } else if (!status.isSymlink()) { // file
         try {
           if (!isSnapshotPathInCurrent(fullPath)) {
             // the full path is a snapshot path but it is also included in the
             // current directory tree, thus ignore it.
-            hasRemaining = processFile(fullPath, (HdfsLocatedFileStatus)status);
+            processFile(fullPath, (HdfsLocatedFileStatus) status, result);
           }
         } catch (IOException e) {
           LOG.warn("Failed to check the status of " + parent
               + ". Ignore it and continue.", e);
-          return false;
         }
       }
-      return hasRemaining;
     }
 
     /** @return true if it is necessary to run another round of migration */
-    private boolean processFile(String fullPath, HdfsLocatedFileStatus status) {
+    private void processFile(String fullPath, HdfsLocatedFileStatus status,
+        Result result) {
       final byte policyId = status.getStoragePolicy();
       // currently we ignore files with unspecified storage policy
       if (policyId == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
-        return false;
+        return;
       }
       final BlockStoragePolicy policy = blockStoragePolicies[policyId];
       if (policy == null) {
         LOG.warn("Failed to get the storage policy of file " + fullPath);
-        return false;
+        return;
       }
       final List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
 
       final LocatedBlocks locatedBlocks = status.getBlockLocations();
-      boolean hasRemaining = false;
       final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
       List<LocatedBlock> lbs = locatedBlocks.getLocatedBlocks();
-      for(int i = 0; i < lbs.size(); i++) {
+      for (int i = 0; i < lbs.size(); i++) {
         if (i == lbs.size() - 1 && !lastBlkComplete) {
           // last block is incomplete, skip it
           continue;
@@ -375,12 +370,15 @@ public class Mover {
             lb.getStorageTypes());
         if (!diff.removeOverlap(true)) {
           if (scheduleMoves4Block(diff, lb)) {
-            hasRemaining |= (diff.existing.size() > 1 &&
-                diff.expected.size() > 1);
+            result.updateHasRemaining(diff.existing.size() > 1
+                && diff.expected.size() > 1);
+            // One block scheduled successfully, set noBlockMoved to false
+            result.setNoBlockMoved(false);
+          } else {
+            result.updateHasRemaining(true);
           }
         }
       }
-      return hasRemaining;
     }
 
     boolean scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb) {
@@ -711,6 +709,45 @@ public class Mover {
     }
   }
 
+  private static class Result {
+
+    private boolean hasRemaining;
+    private boolean noBlockMoved;
+
+    Result() {
+      hasRemaining = false;
+      noBlockMoved = true;
+    }
+
+    boolean isHasRemaining() {
+      return hasRemaining;
+    }
+
+    boolean isNoBlockMoved() {
+      return noBlockMoved;
+    }
+
+    void updateHasRemaining(boolean hasRemaining) {
+      this.hasRemaining |= hasRemaining;
+    }
+
+    void setNoBlockMoved(boolean noBlockMoved) {
+      this.noBlockMoved = noBlockMoved;
+    }
+
+    /**
+     * @return SUCCESS if all moves are success and there is no remaining move.
+     *         Return NO_MOVE_BLOCK if there moves available but all the moves
+     *         cannot be scheduled. Otherwise, return IN_PROGRESS since there
+     *         must be some remaining moves.
+     */
+    ExitStatus getExitStatus() {
+      return !isHasRemaining() ? ExitStatus.SUCCESS
+          : isNoBlockMoved() ? ExitStatus.NO_MOVE_BLOCK
+              : ExitStatus.IN_PROGRESS;
+    }
+
+  }
   /**
    * Run a Mover in command line.
    *
