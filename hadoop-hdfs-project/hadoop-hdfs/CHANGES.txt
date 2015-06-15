@@ -125,6 +125,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8600. TestWebHdfsFileSystemContract.testGetFileBlockLocations fails
     in branch-2.7. (Arpit Agarwal)
 
+    HDFS-8576.  Lease recovery should return true if the lease can be released
+    and the file can be closed.  (J.Andreina via szetszwo)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
