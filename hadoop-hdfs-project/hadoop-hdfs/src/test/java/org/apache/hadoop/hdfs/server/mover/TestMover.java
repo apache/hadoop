@@ -328,6 +328,35 @@ public class TestMover {
     }
   }
 
+  @Test(timeout = 300000)
+  public void testMoveWhenStoragePolicyNotSatisfying() throws Exception {
+    // HDFS-8147
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[][] { { StorageType.DISK }, { StorageType.DISK },
+                { StorageType.DISK } }).build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testMoveWhenStoragePolicyNotSatisfying";
+      // write to DISK
+      final FSDataOutputStream out = dfs.create(new Path(file));
+      out.writeChars("testMoveWhenStoragePolicyNotSatisfying");
+      out.close();
+
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] { "-p", file.toString() });
+      int exitcode = ExitStatus.NO_MOVE_BLOCK.getExitCode();
+      Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testMoverFailedRetry() throws Exception {
     // HDFS-8147
