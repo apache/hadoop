@@ -52,14 +52,17 @@ public class TestLdapGroupsMappingWithPosixGroup
     SearchResult mockUserResult = mock(SearchResult.class);
     when(mockUserNamingEnum.nextElement()).thenReturn(mockUserResult);
 
+    Attribute mockUidNumberAttr = mock(Attribute.class);
+    Attribute mockGidNumberAttr = mock(Attribute.class);
     Attribute mockUidAttr = mock(Attribute.class);
-    Attribute mockGidAttr = mock(Attribute.class);
     Attributes mockAttrs = mock(Attributes.class);
 
-    when(mockUidAttr.get()).thenReturn("700");
-    when(mockGidAttr.get()).thenReturn("600");
-    when(mockAttrs.get(eq("uidNumber"))).thenReturn(mockUidAttr);
-    when(mockAttrs.get(eq("gidNumber"))).thenReturn(mockGidAttr);
+    when(mockUidAttr.get()).thenReturn("some_user");
+    when(mockUidNumberAttr.get()).thenReturn("700");
+    when(mockGidNumberAttr.get()).thenReturn("600");
+    when(mockAttrs.get(eq("uid"))).thenReturn(mockUidAttr);
+    when(mockAttrs.get(eq("uidNumber"))).thenReturn(mockUidNumberAttr);
+    when(mockAttrs.get(eq("gidNumber"))).thenReturn(mockGidNumberAttr);
 
     when(mockUserResult.getAttributes()).thenReturn(mockAttrs);
   }
@@ -85,6 +88,8 @@ public class TestLdapGroupsMappingWithPosixGroup
     conf.set(LdapGroupsMapping.USER_SEARCH_FILTER_KEY,
         "(objectClass=posixAccount)");
     conf.set(LdapGroupsMapping.GROUP_MEMBERSHIP_ATTR_KEY, "memberUid");
+    conf.set(LdapGroupsMapping.POSIX_UID_ATTR_KEY, "uidNumber");
+    conf.set(LdapGroupsMapping.POSIX_GID_ATTR_KEY, "gidNumber");
     conf.set(LdapGroupsMapping.GROUP_NAME_ATTR_KEY, "cn");
 
     mappingSpy.setConf(conf);
@@ -94,10 +99,14 @@ public class TestLdapGroupsMappingWithPosixGroup
 
     Assert.assertEquals(expectedGroups, groups);
 
+    mappingSpy.getConf().set(LdapGroupsMapping.POSIX_UID_ATTR_KEY, "uid");
+
+    Assert.assertEquals(expectedGroups, groups);
+
     // We should have searched for a user, and then two groups
     verify(mockContext, times(searchTimes)).search(anyString(),
-                                         anyString(),
-                                         any(Object[].class),
-                                         any(SearchControls.class));
+        anyString(),
+        any(Object[].class),
+        any(SearchControls.class));
   }
 }
