@@ -889,6 +889,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8593. Calculation of effective layout version mishandles comparison to
     current layout version in storage. (cnauroth)
 
+    HDFS-8607. TestFileCorruption doesn't work as expected. (Walter Su via
+    Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
