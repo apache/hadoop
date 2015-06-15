@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodePr
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Test;
@@ -211,5 +213,49 @@ public class TestLeaseRecovery {
     }
     assertTrue("File should be closed", newdfs.recoverLease(file));
 
+  }
+
+  /**
+   * Recover the lease on a file and append file from another client.
+   */
+  @Test
+  public void testLeaseRecoveryAndAppend() throws Exception {
+    Configuration conf = new Configuration();
+    try{
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    Path file = new Path("/testLeaseRecovery");
+    DistributedFileSystem dfs = cluster.getFileSystem();
+
+    // create a file with 0 bytes
+    FSDataOutputStream out = dfs.create(file);
+    out.hflush();
+    out.hsync();
+
+    // abort the original stream
+    ((DFSOutputStream) out.getWrappedStream()).abort();
+    DistributedFileSystem newdfs =
+        (DistributedFileSystem) FileSystem.newInstance
+        (cluster.getConfiguration(0));
+
+    // Append to a file , whose lease is held by another client should fail
+    try {
+        newdfs.append(file);
+        fail("Append to a file(lease is held by another client) should fail");
+    } catch (RemoteException e) {
+      assertTrue(e.getMessage().contains("file lease is currently owned"));
+    }
+
+    // Lease recovery on first try should be successful
+    boolean recoverLease = newdfs.recoverLease(file);
+    assertTrue(recoverLease);
+    FSDataOutputStream append = newdfs.append(file);
+    append.write("test".getBytes());
+    append.close();
+    }finally{
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    }
   }
 }
