@@ -200,7 +200,11 @@ class BlocksMap {
   }
 
   int size() {
-    return blocks.size();
+    if (blocks != null) {
+      return blocks.size();
+    } else {
+      return 0;
+    }
   }
 
   Iterable<BlockInfoContiguous> getBlocks() {

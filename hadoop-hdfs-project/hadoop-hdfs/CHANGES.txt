@@ -181,6 +181,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-9476. TestDFSUpgradeFromImage#testUpgradeFromRel1BBWImage
     occasionally fail. (Masatake Iwasaki via aajisaka)
 
+    HDFS-8548. Minicluster throws NPE on shutdown.
+    (surendra singh lilhore via xyao)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
