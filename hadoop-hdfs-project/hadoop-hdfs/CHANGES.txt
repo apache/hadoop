@@ -920,6 +920,8 @@ Release 2.7.1 - UNRELEASED
     HDFS-8521. Add VisibleForTesting annotation to
     BlockPoolSlice#selectReplicaToDelete. (cmccabe)
 
+    HDFS-8361. Choose SSD over DISK in block placement.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
