@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -604,7 +603,7 @@ public class LeafQueue extends AbstractCSQueue {
     for (Iterator<FiCaSchedulerApp> i=pendingApplications.iterator(); 
          i.hasNext(); ) {
       FiCaSchedulerApp application = i.next();
-      
+      ApplicationId applicationId = application.getApplicationId();
       // Check am resource limit
       Resource amIfStarted = 
         Resources.add(application.getAMResource(), queueUsage.getAMUsed());
@@ -624,7 +623,9 @@ public class LeafQueue extends AbstractCSQueue {
             " single application in queue, it is likely set too low." +
             " skipping enforcement to allow at least one application to start"); 
         } else {
-          LOG.info("not starting application as amIfStarted exceeds amLimit");
+          LOG.info("Not activating application " + applicationId
+              + " as  amIfStarted: " + amIfStarted + " exceeds amLimit: "
+              + amLimit);
           continue;
         }
       }
@@ -645,8 +646,9 @@ public class LeafQueue extends AbstractCSQueue {
             " single application in queue for user, it is likely set too low." +
             " skipping enforcement to allow at least one application to start"); 
         } else {
-          LOG.info("not starting application as amIfStarted exceeds " +
-            "userAmLimit");
+          LOG.info("Not activating application " + applicationId
+              + " for user: " + user + " as userAmIfStarted: "
+              + userAmIfStarted + " exceeds userAmLimit: " + userAMLimit);
           continue;
         }
       }
@@ -657,9 +659,8 @@ public class LeafQueue extends AbstractCSQueue {
       metrics.incAMUsed(application.getUser(), application.getAMResource());
       metrics.setAMResouceLimitForUser(application.getUser(), userAMLimit);
       i.remove();
-      LOG.info("Application " + application.getApplicationId() +
-          " from user: " + application.getUser() + 
-          " activated in queue: " + getQueueName());
+      LOG.info("Application " + applicationId + " from user: "
+          + application.getUser() + " activated in queue: " + getQueueName());
     }
   }
   

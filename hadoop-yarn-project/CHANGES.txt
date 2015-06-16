@@ -306,6 +306,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3785. Support for Resource as an argument during submitApp call in MockRM
     test class. (Sunil G via xgong)
 
+    YARN-3789. Improve logs for LeafQueue#activateApplications().
+    (Bibin A Chundatt via devaraj)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
