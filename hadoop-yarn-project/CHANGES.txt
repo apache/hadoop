@@ -20,6 +20,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3489. RMServerUtils.validateResourceRequests should only obtain queue 
     info once. (Varun Saxena via wangda)
 
+    YARN-3711. Documentation of ResourceManager HA should explain configurations
+    about listen addresses. (Masatake Iwasaki via ozawa)
+
   OPTIMIZATIONS
 
     YARN-3006. Improve the error message when attempting manual failover with 
