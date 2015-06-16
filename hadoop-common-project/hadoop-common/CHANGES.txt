@@ -858,6 +858,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12001. Fixed LdapGroupsMapping to include configurable Posix UID and
     GID attributes during the search. (Patrick White via vinodkv)
 
+    HADOOP-12095. org.apache.hadoop.fs.shell.TestCount fails.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
