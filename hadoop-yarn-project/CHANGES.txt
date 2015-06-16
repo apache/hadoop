@@ -85,6 +85,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3044. Made RM write app, attempt and optional container lifecycle
     events to timeline service v2. (Naganarasimha G R via zjshen)
 
+    YARN-3801. [JDK-8] Exclude jdk.tools from hbase-client and
+    hbase-testing-util (Tsuyoshi Ozawa via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
