@@ -33,7 +33,7 @@ state.
 HFTP is primarily useful if you have multiple HDFS clusters with
 different versions and you need to move data from one to another. HFTP
 is wire-compatible even between different versions of HDFS. For
-example, you can do things like: `hadoop distcp -i hftp://sourceFS:50070/src hdfs://destFS:50070/dest`.
+example, you can do things like: `hadoop distcp -i hftp://sourceFS:50070/src hdfs://destFS:8020/dest`.
 Note that HFTP is read-only so the destination must be an HDFS filesystem.
 (Also, in this example, the distcp should be run using the configuraton of
 the new filesystem.)
