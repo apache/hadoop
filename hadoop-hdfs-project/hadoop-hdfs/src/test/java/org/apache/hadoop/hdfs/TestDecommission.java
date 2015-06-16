@@ -1045,32 +1045,6 @@ public class TestDecommission {
     doDecomCheck(datanodeManager, decomManager, 1);
   }
 
-  @Deprecated
-  @Test(timeout=120000)
-  public void testNodesPerInterval() throws Exception {
-    Configuration newConf = new Configuration(conf);
-    org.apache.log4j.Logger.getLogger(DecommissionManager.class)
-        .setLevel(Level.TRACE);
-    // Set the deprecated configuration key which limits the # of nodes per 
-    // interval
-    newConf.setInt("dfs.namenode.decommission.nodes.per.interval", 1);
-    // Disable the normal monitor runs
-    newConf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY,
-        Integer.MAX_VALUE);
-    startCluster(1, 3, newConf);
-    final FileSystem fs = cluster.getFileSystem();
-    final DatanodeManager datanodeManager =
-        cluster.getNamesystem().getBlockManager().getDatanodeManager();
-    final DecommissionManager decomManager = datanodeManager.getDecomManager();
-
-    // Write a 3 block file, so each node has one block. Should scan 1 node 
-    // each time.
-    DFSTestUtil.createFile(fs, new Path("/file1"), 64, (short) 3, 0xBAD1DEA);
-    for (int i=0; i<3; i++) {
-      doDecomCheck(datanodeManager, decomManager, 1);
-    }
-  }
-
   private void doDecomCheck(DatanodeManager datanodeManager,
       DecommissionManager decomManager, int expectedNumCheckedNodes)
       throws IOException, ExecutionException, InterruptedException {
