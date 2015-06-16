@@ -527,6 +527,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3794. TestRMEmbeddedElector fails because of ambiguous LOG reference.
     (Chengbing Liu via devaraj)
 
+    YARN-3714. AM proxy filter can not get RM webapp address from
+    yarn.resourcemanager.hostname.rm-id. (Masatake Iwasaki via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
