@@ -1026,6 +1026,8 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8597. Fix TestFSImage#testZeroBlockSize on Windows. (Xiaoyu Yao)
 
+    HDFS-4660. Block corruption can happen during pipeline recovery (kihwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
