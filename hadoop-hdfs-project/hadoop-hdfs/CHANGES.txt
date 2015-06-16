@@ -1024,6 +1024,8 @@ Release 2.7.1 - UNRELEASED
     HDFS-8576.  Lease recovery should return true if the lease can be released
     and the file can be closed.  (J.Andreina via szetszwo)
 
+    HDFS-8597. Fix TestFSImage#testZeroBlockSize on Windows. (Xiaoyu Yao)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
