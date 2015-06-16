@@ -1323,7 +1323,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void checkNameNodeSafeMode(String errorMsg)
       throws RetriableException, SafeModeException {
     if (isInSafeMode()) {
-      SafeModeException se = new SafeModeException(errorMsg, safeMode);
+      SafeModeException se = newSafemodeException(errorMsg);
       if (haEnabled && haContext != null
           && haContext.getState().getServiceState() == HAServiceState.ACTIVE
           && shouldRetrySafeMode(this.safeMode)) {
@@ -1332,6 +1332,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw se;
       }
     }
+  }
+
+  private SafeModeException newSafemodeException(String errorMsg) {
+    return new SafeModeException(errorMsg + ". Name node is in safe " +
+        "mode.\n" + safeMode.getTurnOffTip());
   }
 
   boolean isPermissionEnabled() {
@@ -1803,8 +1808,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       for (LocatedBlock b : ret.blocks.getLocatedBlocks()) {
         // if safemode & no block locations yet then throw safemodeException
         if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
-          SafeModeException se = new SafeModeException(
-              "Zero blocklocations for " + src, safeMode);
+          SafeModeException se = newSafemodeException(
+              "Zero blocklocations for " + src);
           if (haEnabled && haContext != null &&
               haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
             throw new RetriableException(se);

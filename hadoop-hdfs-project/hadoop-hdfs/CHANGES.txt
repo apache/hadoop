@@ -895,6 +895,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8607. TestFileCorruption doesn't work as expected. (Walter Su via
     Arpit Agarwal)
 
+    HDFS-8592. SafeModeException never get unwrapped. (wheat9)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

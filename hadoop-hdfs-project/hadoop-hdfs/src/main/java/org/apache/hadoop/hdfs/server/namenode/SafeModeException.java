@@ -32,8 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class SafeModeException extends IOException {
   private static final long serialVersionUID = 1L;
-
-  public SafeModeException(String text, FSNamesystem.SafeModeInfo mode ) {
-    super(text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
+  public SafeModeException(String msg) {
+    super(msg);
   }
 }
