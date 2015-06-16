@@ -544,6 +544,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3723. Need to clearly document primaryFilter and otherInfo value type.
     (Zhijie Shen via xgong)
 
+    YARN-3711. Documentation of ResourceManager HA should explain configurations
+    about listen addresses. (Masatake Iwasaki via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
