@@ -281,7 +281,7 @@ public class TestCount {
     count.processOptions(options);
     String withStorageTypeHeader =
         // <----13---> <-------17------> <----13-----> <------17------->
-        "   DISK_QUOTA    REM_DISK_QUOTA     SSD_QUOTA     REM_SSD_QUOTA " +
+        "    SSD_QUOTA     REM_SSD_QUOTA    DISK_QUOTA    REM_DISK_QUOTA " +
         // <----13---> <-------17------>
         "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
         "PATHNAME";
@@ -335,8 +335,8 @@ public class TestCount {
     count.processOptions(options);
     String withStorageTypeHeader =
         // <----13---> <-------17------>
-        "   DISK_QUOTA    REM_DISK_QUOTA " +
         "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "   DISK_QUOTA    REM_DISK_QUOTA " +
         "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
