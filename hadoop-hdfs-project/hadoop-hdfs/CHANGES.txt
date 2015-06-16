@@ -903,6 +903,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8548. Minicluster throws NPE on shutdown.
     (surendra singh lilhore via xyao)
 
+    HDFS-8551. Fix hdfs datanode CLI usage message.
+    (Brahma Reddy Battula via xyao)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
