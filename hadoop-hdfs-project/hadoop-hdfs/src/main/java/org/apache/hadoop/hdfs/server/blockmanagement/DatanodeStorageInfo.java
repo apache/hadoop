@@ -206,7 +206,7 @@ public class DatanodeStorageInfo {
     return storageID;
   }
 
-  StorageType getStorageType() {
+  public StorageType getStorageType() {
     return storageType;
   }
 
