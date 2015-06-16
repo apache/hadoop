@@ -861,6 +861,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12095. org.apache.hadoop.fs.shell.TestCount fails.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-12076. Incomplete Cache Mechanism in CredentialProvider API.
+    (Larry McCay via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

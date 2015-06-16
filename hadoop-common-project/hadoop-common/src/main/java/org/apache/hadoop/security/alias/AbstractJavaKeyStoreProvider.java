@@ -41,9 +41,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -174,13 +172,6 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     return keyStore;
   }
 
-  public Map<String, CredentialEntry> getCache() {
-    return cache;
-  }
-
-  private final Map<String, CredentialEntry> cache =
-      new HashMap<String, CredentialEntry>();
-
   protected final String getPathAsString() {
     return getPath().toString();
   }
@@ -213,9 +204,6 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     try {
       SecretKeySpec key = null;
       try {
-        if (cache.containsKey(alias)) {
-          return cache.get(alias);
-        }
         if (!keyStore.containsAlias(alias)) {
           return null;
         }
@@ -269,7 +257,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
       throws IOException {
     writeLock.lock();
     try {
-      if (keyStore.containsAlias(alias) || cache.containsKey(alias)) {
+      if (keyStore.containsAlias(alias)) {
         throw new IOException("Credential " + alias + " already exists in "
             + this);
       }
@@ -296,7 +284,6 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
       } catch (KeyStoreException e) {
         throw new IOException("Problem removing " + name + " from " + this, e);
       }
-      cache.remove(name);
       changed = true;
     } finally {
       writeLock.unlock();
