@@ -38,12 +38,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -208,7 +210,8 @@ public class TestRMAdminService {
         rm.adminService.getAccessControlList().getAclString().trim();
 
     Assert.assertTrue(!aclStringAfter.equals(aclStringBefore));
-    Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
+    Assert.assertEquals(aclStringAfter, "world:anyone:rwcda," +
+        UserGroupInformation.getCurrentUser().getShortUserName());
   }
 
   @Test
@@ -695,7 +698,8 @@ public class TestRMAdminService {
       String aclStringAfter =
           resourceManager.adminService.getAccessControlList()
               .getAclString().trim();
-      Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
+      Assert.assertEquals(aclStringAfter, "world:anyone:rwcda," +
+          UserGroupInformation.getCurrentUser().getShortUserName());
 
       // validate values for queue configuration
       CapacityScheduler cs =
@@ -759,6 +763,47 @@ public class TestRMAdminService {
         resourceManager.stop();
       }
     }
+  }
+
+  /* For verifying fix for YARN-3804 */
+  @Test
+  public void testRefreshAclWithDaemonUser() throws Exception {
+    String daemonUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    uploadDefaultConfiguration();
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.YARN_ADMIN_ACL, daemonUser + "xyz");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    assertEquals(daemonUser + "xyz," + daemonUser,
+        rm.adminService.getAccessControlList().getAclString().trim());
+
+    yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.YARN_ADMIN_ACL, daemonUser + "abc");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+    try {
+      rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
+    } catch (YarnException e) {
+      if (e.getCause() != null &&
+          e.getCause() instanceof AccessControlException) {
+        fail("Refresh should not have failed due to incorrect ACL");
+      }
+      throw e;
+    }
+
+    assertEquals(daemonUser + "abc," + daemonUser,
+        rm.adminService.getAccessControlList().getAclString().trim());
   }
 
   @Test
