@@ -112,6 +112,8 @@ public class AdminService extends CompositeService implements
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
+  private UserGroupInformation daemonUser;
+
   @VisibleForTesting
   boolean isDistributedNodeLabelConfiguration = false;
 
@@ -138,10 +140,9 @@ public class AdminService extends CompositeService implements
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
+    daemonUser = UserGroupInformation.getCurrentUser();
     authorizer = YarnAuthorizationProvider.getInstance(conf);
-    authorizer.setAdmins(new AccessControlList(conf.get(
-      YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)), UserGroupInformation
+    authorizer.setAdmins(getAdminAclList(conf), UserGroupInformation
         .getCurrentUser());
     rmId = conf.get(YarnConfiguration.RM_HA_ID);
 
@@ -149,6 +150,14 @@ public class AdminService extends CompositeService implements
         YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
 
     super.serviceInit(conf);
+  }
+
+  private AccessControlList getAdminAclList(Configuration conf) {
+    AccessControlList aclList = new AccessControlList(conf.get(
+        YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    aclList.addUser(daemonUser.getShortUserName());
+    return aclList;
   }
 
   @Override
@@ -470,9 +479,7 @@ public class AdminService extends CompositeService implements
     Configuration conf =
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    authorizer.setAdmins(new AccessControlList(conf.get(
-      YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)), UserGroupInformation
+    authorizer.setAdmins(getAdminAclList(conf), UserGroupInformation
         .getCurrentUser());
     RMAuditLogger.logSuccess(user.getShortUserName(), argName,
         "AdminService");
