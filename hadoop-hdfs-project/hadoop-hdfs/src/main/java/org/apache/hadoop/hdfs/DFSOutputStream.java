@@ -899,16 +899,9 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   /**
-   * Set the data streamer object.
-   */
-  protected synchronized void setStreamer(DataStreamer streamer) {
-    this.streamer = streamer;
-  }
-
-  /**
    * Returns the data streamer object.
    */
-  protected synchronized DataStreamer getStreamer() {
+  protected DataStreamer getStreamer() {
     return streamer;
   }
 }
