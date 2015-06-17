@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
@@ -61,17 +60,18 @@ import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+
 /**********************************************************************
- * ClientProtocol is used by user code via 
- * {@link org.apache.hadoop.hdfs.DistributedFileSystem} class to communicate 
- * with the NameNode.  User code can manipulate the directory namespace, 
- * as well as open/close file streams, etc.
+ * ClientProtocol is used by user code via the DistributedFileSystem class to
+ * communicate with the NameNode.  User code can manipulate the directory
+ * namespace, as well as open/close file streams, etc.
  *
  **********************************************************************/
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
+    serverPrincipal = DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
 @TokenInfo(DelegationTokenSelector.class)
 public interface ClientProtocol {
 
