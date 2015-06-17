@@ -233,6 +233,8 @@ Be sure to configure the following:
 
     This determines the maximum amount of memory a DataNode will use for caching. On Unix-like systems, the "locked-in-memory size" ulimit (`ulimit -l`) of the DataNode user also needs to be increased to match this parameter (see below section on [OS Limits](#OS_Limits)). When setting this value, please remember that you will need space in memory for other things as well, such as the DataNode and application JVM heaps and the operating system page cache.
 
+    This setting is shared with the [Lazy Persist Writes feature](./MemoryStorage.html). The Data Node will ensure that the combined memory used by Lazy Persist Writes and Centralized Cache Management does not exceed the amount configured in `dfs.datanode.max.locked.memory`.
+
 #### Optional
 
 The following properties are not required, but may be specified for tuning:
