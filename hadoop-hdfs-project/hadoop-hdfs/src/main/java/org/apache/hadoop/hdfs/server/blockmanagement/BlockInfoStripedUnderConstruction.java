@@ -57,16 +57,17 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   /**
    * Constructor with null storage targets.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema) {
-    this(blk, schema, UNDER_CONSTRUCTION, null);
+  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
+      int cellSize) {
+    this(blk, schema, cellSize, UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a striped block that is currently being constructed.
    */
   public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
-      BlockUCState state, DatanodeStorageInfo[] targets) {
-    super(blk, schema);
+      int cellSize, BlockUCState state, DatanodeStorageInfo[] targets) {
+    super(blk, schema, cellSize);
     assert getBlockUCState() != COMPLETE :
       "BlockInfoStripedUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;

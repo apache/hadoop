@@ -302,3 +302,6 @@
 
     HDFS-8559. Erasure Coding: fix non-protobuf fsimage for striped blocks.
     (Jing Zhao via yliu)
+
+    HDFS-8580. Erasure coding: Persist cellSize in BlockInfoStriped and
+    StripedBlocksFeature. (Walter Su via jing9)

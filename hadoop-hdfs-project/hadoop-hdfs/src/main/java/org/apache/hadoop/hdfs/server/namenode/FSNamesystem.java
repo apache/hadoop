@@ -3208,8 +3208,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final long diff;
     final short replicationFactor;
     if (fileINode.isStriped()) {
-      final ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
-          this, iip);
+      final ErasureCodingZone ecZone = FSDirErasureCodingOp
+          .getErasureCodingZone(this, iip);
+      final ECSchema ecSchema = ecZone.getSchema();
       final short numDataUnits = (short) ecSchema.getNumDataUnits();
       final short numParityUnits = (short) ecSchema.getNumParityUnits();
 
@@ -3218,7 +3219,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           fileINode.getPreferredBlockSize() * numBlocks;
 
       final BlockInfoStriped striped = new BlockInfoStriped(commitBlock,
-          ecSchema);
+          ecSchema, ecZone.getCellSize());
       final long actualBlockGroupSize = striped.spaceConsumed();
 
       diff = fullBlockGroupSize - actualBlockGroupSize;

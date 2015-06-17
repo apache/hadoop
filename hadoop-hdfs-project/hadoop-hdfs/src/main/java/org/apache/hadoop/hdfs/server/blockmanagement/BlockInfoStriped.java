@@ -39,6 +39,7 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_S
  */
 public class BlockInfoStriped extends BlockInfo {
   private final ECSchema schema;
+  private final int cellSize;
   /**
    * Always the same size with triplets. Record the block index for each triplet
    * TODO: actually this is only necessary for over-replicated block. Thus can
@@ -46,15 +47,16 @@ public class BlockInfoStriped extends BlockInfo {
    */
   private byte[] indices;
 
-  public BlockInfoStriped(Block blk, ECSchema schema) {
+  public BlockInfoStriped(Block blk, ECSchema schema, int cellSize) {
     super(blk, (short) (schema.getNumDataUnits() + schema.getNumParityUnits()));
     indices = new byte[schema.getNumDataUnits() + schema.getNumParityUnits()];
     initIndices();
     this.schema = schema;
+    this.cellSize = cellSize;
   }
 
   BlockInfoStriped(BlockInfoStriped b) {
-    this(b, b.getSchema());
+    this(b, b.getSchema(), b.getCellSize());
     this.setBlockCollection(b.getBlockCollection());
   }
 
@@ -73,6 +75,10 @@ public class BlockInfoStriped extends BlockInfo {
 
   public ECSchema getSchema() {
     return schema;
+  }
+
+  public int getCellSize() {
+    return cellSize;
   }
 
   private void initIndices() {
@@ -236,7 +242,7 @@ public class BlockInfoStriped extends BlockInfo {
       BlockUCState s, DatanodeStorageInfo[] targets) {
     final BlockInfoStripedUnderConstruction ucBlock;
     if(isComplete()) {
-      ucBlock = new BlockInfoStripedUnderConstruction(this, schema,
+      ucBlock = new BlockInfoStripedUnderConstruction(this, schema, cellSize,
           s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
     } else {

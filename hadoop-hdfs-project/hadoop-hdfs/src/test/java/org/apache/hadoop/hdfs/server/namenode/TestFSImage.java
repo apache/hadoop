@@ -72,6 +72,7 @@ public class TestFSImage {
       "image-with-zero-block-size.tar.gz";
   private static final ECSchema testSchema
       = ErasureCodingSchemaManager.getSystemDefaultSchema();
+  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
   @Test
   public void testPersist() throws IOException {
@@ -203,7 +204,7 @@ public class TestFSImage {
     for (int i = 0; i < stripedBlks.length; i++) {
       stripedBlks[i] = new BlockInfoStriped(
               new Block(stripedBlkId + i, preferredBlockSize, timestamp),
-              testSchema);
+              testSchema, cellSize);
       file.getStripedBlocksFeature().addBlock(stripedBlks[i]);
     }
 
