@@ -481,8 +481,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     FSNamesystem fsn = namenode.getNamesystem();
     fsn.readLock();
     try {
-      blocks = fsn.getBlockLocations(
-          fsn.getPermissionChecker(), path, 0, fileLen, false, false)
+      blocks = FSDirStatAndListingOp.getBlockLocations(
+          fsn.getFSDirectory(), fsn.getPermissionChecker(),
+          path, 0, fileLen, false)
           .blocks;
     } catch (FileNotFoundException fnfe) {
       blocks = null;

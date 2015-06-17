@@ -80,6 +80,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 
 /**
@@ -92,6 +93,7 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_S
 @InterfaceAudience.Private
 public class FSDirectory implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
+
   private static INodeDirectory createRoot(FSNamesystem namesystem) {
     final INodeDirectory r = new INodeDirectory(
         INodeId.ROOT_INODE_ID,
@@ -327,6 +329,9 @@ public class FSDirectory implements Closeable {
   }
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;
+  }
+  long getAccessTimePrecision() {
+    return accessTimePrecision;
   }
   boolean isQuotaByStorageTypeEnabled() {
     return quotaByStorageTypeEnabled;
@@ -1546,6 +1551,21 @@ public class FSDirectory implements Closeable {
             parentAccess, access, subAccess, ignoreEmptyDir);
       } finally {
         readUnlock();
+      }
+    }
+  }
+
+  void checkUnreadableBySuperuser(
+      FSPermissionChecker pc, INode inode, int snapshotId)
+      throws IOException {
+    if (pc.isSuperUser()) {
+      for (XAttr xattr : FSDirXAttrOp.getXAttrs(this, inode, snapshotId)) {
+        if (XAttrHelper.getPrefixName(xattr).
+            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
+          throw new AccessControlException(
+              "Access is denied for " + pc.getUser() + " since the superuser "
+              + "is not allowed to perform this operation.");
+        }
       }
     }
   }
