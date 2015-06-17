@@ -648,6 +648,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11971. Move test utilities for tracing from hadoop-hdfs to
     hadoop-common. (Masatake Iwasaki via aajisaka)
 
+    HADOOP-11965. determine-flaky-tests needs a summary mode.
+    (Yufei Gu via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
