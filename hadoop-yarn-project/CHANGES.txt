@@ -530,6 +530,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3714. AM proxy filter can not get RM webapp address from
     yarn.resourcemanager.hostname.rm-id. (Masatake Iwasaki via xgong)
 
+    YARN-3617. Fix WindowsResourceCalculatorPlugin.getCpuFrequency()
+    returning always -1. (J.Andreina via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

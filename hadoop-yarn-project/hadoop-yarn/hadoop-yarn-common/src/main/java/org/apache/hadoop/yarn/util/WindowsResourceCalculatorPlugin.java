@@ -157,7 +157,7 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public long getCpuFrequency() {
     refreshIfNeeded();
-    return -1;
+    return cpuFrequencyKhz;
   }
 
   /** {@inheritDoc} */
