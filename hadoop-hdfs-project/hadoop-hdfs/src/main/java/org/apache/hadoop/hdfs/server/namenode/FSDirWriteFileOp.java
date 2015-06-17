@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -531,8 +532,9 @@ class FSDirWriteFileOp {
       // associate new last block for the file
       final BlockInfo blockInfo;
       if (isStriped) {
-        ECSchema ecSchema = FSDirErasureCodingOp.getErasureCodingSchema(
+        ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
             fsd.getFSNamesystem(), inodesInPath);
+        ECSchema ecSchema = ecZone.getSchema();
         short numDataUnits = (short) ecSchema.getNumDataUnits();
         short numParityUnits = (short) ecSchema.getNumParityUnits();
         short numLocations = (short) (numDataUnits + numParityUnits);
@@ -541,8 +543,8 @@ class FSDirWriteFileOp {
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
         blockInfo = new BlockInfoStripedUnderConstruction(block, ecSchema,
-            HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
-            targets);
+            ecZone.getCellSize(),
+            HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       } else {
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),

@@ -94,6 +94,7 @@ message INodeSection {
 
   message StripedBlocksFeature {
     // store striped blocks related information
+    optional uint32 cellSize = 1;
   }
 
   message AclFeatureProto {

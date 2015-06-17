@@ -360,8 +360,13 @@ public final class FSImageFormatPBINode {
         // TODO: HDFS-7859
         ECSchema schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
         stripeFeature = file.addStripedBlocksFeature();
-        for (BlockProto b : bp) {
-          stripeFeature.addBlock(new BlockInfoStriped(PBHelper.convert(b), schema));
+        if (bp.size() > 0) {
+          // if a striped file has block, the cellSize must exist in proto
+          final int cellSize = f.getStripedBlocks().getCellSize();
+          for (BlockProto b : bp) {
+            stripeFeature.addBlock(new BlockInfoStriped(PBHelper.convert(b),
+                schema, cellSize));
+          }
         }
       }
 
@@ -376,7 +381,7 @@ public final class FSImageFormatPBINode {
           if (stripeFeature != null) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
             ucBlk = new BlockInfoStripedUnderConstruction(striped,
-                striped.getSchema());
+                striped.getSchema(), striped.getCellSize());
           } else {
             ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk,
                 replication);
@@ -659,14 +664,17 @@ public final class FSImageFormatPBINode {
 
       FileWithStripedBlocksFeature sb = n.getStripedBlocksFeature();
       if (sb != null) {
-        BlockInfoStriped[] sblocks = sb.getBlocks();
-        if (sblocks != null) {
-          for (BlockInfoStriped sblk : sblocks) {
-            b.addBlocks(PBHelper.convert(sblk));
-          }
-        }
         StripedBlocksFeature.Builder builder =
             StripedBlocksFeature.newBuilder();
+        BlockInfoStriped[] sblocks = sb.getBlocks();
+        if (sblocks != null && sblocks.length > 0) {
+          final int cellSize = sblocks[0].getCellSize();
+          for (BlockInfoStriped sblk : sblocks) {
+            assert cellSize == sblk.getCellSize();
+            b.addBlocks(PBHelper.convert(sblk));
+          }
+          builder.setCellSize(cellSize);
+        }
         b.setStripedBlocks(builder.build());
       }
 

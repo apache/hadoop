@@ -53,6 +53,7 @@ public class TestStripedINodeFile {
 
   private static final ECSchema testSchema
       = ErasureCodingSchemaManager.getSystemDefaultSchema();
+  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
@@ -69,22 +70,20 @@ public class TestStripedINodeFile {
 
   @Test
   public void testBlockStripedTotalBlockCount() {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema);
+        = new BlockInfoStriped(blk, testSchema, cellSize);
     assertEquals(9, blockInfoStriped.getTotalBlockNum());
   }
 
   @Test
   public void testBlockStripedLength()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema);
+        = new BlockInfoStriped(blk, testSchema, cellSize);
     inf.addBlock(blockInfoStriped);
     assertEquals(1, inf.getBlocks().length);
   }
@@ -92,12 +91,11 @@ public class TestStripedINodeFile {
   @Test
   public void testBlockStripedConsumedSpace()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema);
+        = new BlockInfoStriped(blk, testSchema, cellSize);
     blockInfoStriped.setNumBytes(1);
     inf.addBlock(blockInfoStriped);
     //   0. Calculate the total bytes per stripes <Num Bytes per Stripes>
@@ -119,16 +117,15 @@ public class TestStripedINodeFile {
   @Test
   public void testMultipleBlockStripedConsumedSpace()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk1 = new Block(1);
     BlockInfoStriped blockInfoStriped1
-        = new BlockInfoStriped(blk1, testSchema);
+        = new BlockInfoStriped(blk1, testSchema, cellSize);
     blockInfoStriped1.setNumBytes(1);
     Block blk2 = new Block(2);
     BlockInfoStriped blockInfoStriped2
-        = new BlockInfoStriped(blk2, testSchema);
+        = new BlockInfoStriped(blk2, testSchema, cellSize);
     blockInfoStriped2.setNumBytes(1);
     inf.addBlock(blockInfoStriped1);
     inf.addBlock(blockInfoStriped2);
@@ -140,12 +137,11 @@ public class TestStripedINodeFile {
   @Test
   public void testBlockStripedFileSize()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema);
+        = new BlockInfoStriped(blk, testSchema, cellSize);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
     // Compute file size should return actual data
@@ -157,12 +153,11 @@ public class TestStripedINodeFile {
   @Test
   public void testBlockStripedUCFileSize()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk, testSchema);
+        = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);
     bInfoStripedUC.setNumBytes(100);
     inf.addBlock(bInfoStripedUC);
     assertEquals(100, inf.computeFileSize());
@@ -172,12 +167,11 @@ public class TestStripedINodeFile {
   @Test
   public void testBlockStripedComputeQuotaUsage()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema);
+        = new BlockInfoStriped(blk, testSchema, cellSize);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
 
@@ -195,12 +189,11 @@ public class TestStripedINodeFile {
   @Test
   public void testBlockStripedUCComputeQuotaUsage()
       throws IOException, InterruptedException {
-    ECSchema defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
     INodeFile inf = createStripedINodeFile();
     inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk, testSchema);
+        = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);
     bInfoStripedUC.setNumBytes(100);
     inf.addBlock(bInfoStripedUC);
 

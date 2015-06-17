@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -46,8 +47,9 @@ public class TestBlockInfoStriped {
   private static final Block baseBlock = new Block(BASE_ID);
   private static final ECSchema testSchema
       = ErasureCodingSchemaManager.getSystemDefaultSchema();
+  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
-      testSchema);
+      testSchema, cellSize);
 
   private Block[] createReportedBlocks(int num) {
     Block[] blocks = new Block[num];
@@ -235,7 +237,7 @@ public class TestBlockInfoStriped {
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutput out = new DataOutputStream(byteStream);
     BlockInfoStriped blk = new BlockInfoStriped(new Block(blkID, numBytes,
-        generationStamp), testSchema);
+        generationStamp), testSchema, cellSize);
 
     try {
       blk.write(out);
