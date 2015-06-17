@@ -7,3 +7,6 @@
     HDFS-8456. Ozone: Introduce STORAGE_CONTAINER_SERVICE as a new NodeType.
     (Arpit Agarwal)
 
+    HDFS-8641. OzoneHandler : Add Quota Support. (Anu Engineer via
+    Arpit Agarwal)
+
