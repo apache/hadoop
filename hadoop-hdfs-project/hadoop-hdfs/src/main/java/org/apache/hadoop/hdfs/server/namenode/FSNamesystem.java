@@ -34,8 +34,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
@@ -87,7 +85,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
+import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -169,7 +167,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -484,9 +481,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final long minBlockSize;         // minimum block size
   final long maxBlocksPerFile;     // maximum # of blocks per file
 
-  // precision of access times.
-  private final long accessTimePrecision;
-
   /** Lock to protect FSNamesystem. */
   private final FSNamesystemLock fsLock;
 
@@ -800,8 +794,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_DEFAULT);
       this.maxBlocksPerFile = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT);
-      this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
-          DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
       
@@ -1631,14 +1623,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return serverDefaults;
   }
 
-  long getAccessTimePrecision() {
-    return accessTimePrecision;
-  }
-
-  private boolean isAccessTimeSupported() {
-    return accessTimePrecision > 0;
-  }
-
   /////////////////////////////////////////////////////////
   //
   // These methods are called by HadoopFS clients
@@ -1689,19 +1673,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, "setOwner", src, null, auditStat);
   }
 
-  static class GetBlockLocationsResult {
-    final boolean updateAccessTime;
-    final LocatedBlocks blocks;
-    boolean updateAccessTime() {
-      return updateAccessTime;
-    }
-    private GetBlockLocationsResult(
-        boolean updateAccessTime, LocatedBlocks blocks) {
-      this.updateAccessTime = updateAccessTime;
-      this.blocks = blocks;
-    }
-  }
-
   /**
    * Get block locations within the specified range.
    * @see ClientProtocol#getBlockLocations(String, long, long)
@@ -1714,7 +1685,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      res = getBlockLocations(pc, srcArg, offset, length, true, true);
+      res = FSDirStatAndListingOp.getBlockLocations(
+          dir, pc, srcArg, offset, length, true);
+      if (isInSafeMode()) {
+        for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
+          // if safemode & no block locations yet then throw safemodeException
+          if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
+            SafeModeException se = newSafemodeException(
+                "Zero blocklocations for " + srcArg);
+            if (haEnabled && haContext != null &&
+                haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
+              throw new RetriableException(se);
+            } else {
+              throw se;
+            }
+          }
+        }
+      }
     } catch (AccessControlException e) {
       logAuditEvent(false, "open", srcArg);
       throw e;
@@ -1724,7 +1711,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     logAuditEvent(true, "open", srcArg);
 
-    if (res.updateAccessTime()) {
+    if (!isInSafeMode() && res.updateAccessTime()) {
       byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
           srcArg);
       String src = srcArg;
@@ -1754,7 +1741,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         final INodesInPath iip = dir.getINodesInPath(src, true);
         INode inode = iip.getLastINode();
         boolean updateAccessTime = inode != null &&
-            now > inode.getAccessTime() + getAccessTimePrecision();
+            now > inode.getAccessTime() + dir.getAccessTimePrecision();
         if (!isInSafeMode() && updateAccessTime) {
           boolean changed = FSDirAttrOp.setTimes(dir,
               inode, -1, now, false, iip.getLatestSnapshotId());
@@ -1783,88 +1770,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
     return blocks;
-  }
-
-  /**
-   * Get block locations within the specified range.
-   * @see ClientProtocol#getBlockLocations(String, long, long)
-   * @throws IOException
-   */
-  GetBlockLocationsResult getBlockLocations(
-      FSPermissionChecker pc, String src, long offset, long length,
-      boolean needBlockToken, boolean checkSafeMode) throws IOException {
-    if (offset < 0) {
-      throw new HadoopIllegalArgumentException(
-          "Negative offset is not supported. File: " + src);
-    }
-    if (length < 0) {
-      throw new HadoopIllegalArgumentException(
-          "Negative length is not supported. File: " + src);
-    }
-    final GetBlockLocationsResult ret = getBlockLocationsInt(
-        pc, src, offset, length, needBlockToken);
-
-    if (checkSafeMode && isInSafeMode()) {
-      for (LocatedBlock b : ret.blocks.getLocatedBlocks()) {
-        // if safemode & no block locations yet then throw safemodeException
-        if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
-          SafeModeException se = newSafemodeException(
-              "Zero blocklocations for " + src);
-          if (haEnabled && haContext != null &&
-              haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
-            throw new RetriableException(se);
-          } else {
-            throw se;
-          }
-        }
-      }
-    }
-    return ret;
-  }
-
-  private GetBlockLocationsResult getBlockLocationsInt(
-      FSPermissionChecker pc, final String srcArg, long offset, long length,
-      boolean needBlockToken)
-      throws IOException {
-    String src = srcArg;
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = dir.resolvePath(pc, srcArg, pathComponents);
-    final INodesInPath iip = dir.getINodesInPath(src, true);
-    final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
-    if (isPermissionEnabled) {
-      dir.checkPathAccess(pc, iip, FsAction.READ);
-      checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
-    }
-
-    final long fileSize = iip.isSnapshot()
-        ? inode.computeFileSize(iip.getPathSnapshotId())
-        : inode.computeFileSizeNotIncludingLastUcBlock();
-    boolean isUc = inode.isUnderConstruction();
-    if (iip.isSnapshot()) {
-      // if src indicates a snapshot file, we need to make sure the returned
-      // blocks do not exceed the size of the snapshot file.
-      length = Math.min(length, fileSize - offset);
-      isUc = false;
-    }
-
-    final FileEncryptionInfo feInfo =
-        FSDirectory.isReservedRawName(srcArg) ? null
-            : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
-
-    final LocatedBlocks blocks = blockManager.createLocatedBlocks(
-        inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
-        length, needBlockToken, iip.isSnapshot(), feInfo);
-
-    // Set caching information for the located blocks.
-    for (LocatedBlock lb : blocks.getLocatedBlocks()) {
-      cacheManager.setCachedLocations(lb);
-    }
-
-    final long now = now();
-    boolean updateAccessTime = isAccessTimeSupported() && !isInSafeMode()
-        && !iip.isSnapshot()
-        && now > inode.getAccessTime() + getAccessTimePrecision();
-    return new GetBlockLocationsResult(updateAccessTime, blocks);
   }
 
   /**
@@ -3912,8 +3817,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(NameNode.OperationCategory.READ);
-      dl = FSDirStatAndListingOp.getListingInt(dir, src, startAfter,
-          needLocation);
+      dl = getListingInt(dir, src, startAfter, needLocation);
     } catch (AccessControlException e) {
       logAuditEvent(false, "listStatus", src);
       throw e;
@@ -5307,21 +5211,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   PermissionStatus createFsOwnerPermissions(FsPermission permission) {
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
-  }
-
-  private void checkUnreadableBySuperuser(FSPermissionChecker pc,
-      INode inode, int snapshotId)
-      throws IOException {
-    if (pc.isSuperUser()) {
-      for (XAttr xattr : FSDirXAttrOp.getXAttrs(dir, inode, snapshotId)) {
-        if (XAttrHelper.getPrefixName(xattr).
-            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
-          throw new AccessControlException("Access is denied for " +
-              pc.getUser() + " since the superuser is not allowed to " +
-              "perform this operation.");
-        }
-      }
-    }
   }
 
   @Override

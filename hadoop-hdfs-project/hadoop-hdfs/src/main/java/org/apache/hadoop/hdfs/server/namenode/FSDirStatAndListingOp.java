@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -42,6 +44,8 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+
+import static org.apache.hadoop.util.Time.now;
 
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
@@ -137,9 +141,69 @@ class FSDirStatAndListingOp {
     return getContentSummaryInt(fsd, iip);
   }
 
+  /**
+   * Get block locations within the specified range.
+   * @see ClientProtocol#getBlockLocations(String, long, long)
+   * @throws IOException
+   */
+  static GetBlockLocationsResult getBlockLocations(
+      FSDirectory fsd, FSPermissionChecker pc, String src, long offset,
+      long length, boolean needBlockToken) throws IOException {
+    Preconditions.checkArgument(offset >= 0,
+        "Negative offset is not supported. File: " + src);
+    Preconditions.checkArgument(length >= 0,
+        "Negative length is not supported. File: " + src);
+    CacheManager cm = fsd.getFSNamesystem().getCacheManager();
+    BlockManager bm = fsd.getBlockManager();
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    boolean isReservedName = FSDirectory.isReservedRawName(src);
+    fsd.readLock();
+    try {
+      src = fsd.resolvePath(pc, src, pathComponents);
+      final INodesInPath iip = fsd.getINodesInPath(src, true);
+      final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPathAccess(pc, iip, FsAction.READ);
+        fsd.checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
+      }
+
+      final long fileSize = iip.isSnapshot()
+          ? inode.computeFileSize(iip.getPathSnapshotId())
+          : inode.computeFileSizeNotIncludingLastUcBlock();
+
+      boolean isUc = inode.isUnderConstruction();
+      if (iip.isSnapshot()) {
+        // if src indicates a snapshot file, we need to make sure the returned
+        // blocks do not exceed the size of the snapshot file.
+        length = Math.min(length, fileSize - offset);
+        isUc = false;
+      }
+
+      final FileEncryptionInfo feInfo = isReservedName ? null
+          : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
+
+      final LocatedBlocks blocks = bm.createLocatedBlocks(
+          inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
+          length, needBlockToken, iip.isSnapshot(), feInfo);
+
+      // Set caching information for the located blocks.
+      for (LocatedBlock lb : blocks.getLocatedBlocks()) {
+        cm.setCachedLocations(lb);
+      }
+
+      final long now = now();
+      boolean updateAccessTime = fsd.isAccessTimeSupported()
+          && !iip.isSnapshot()
+          && now > inode.getAccessTime() + fsd.getAccessTimePrecision();
+      return new GetBlockLocationsResult(updateAccessTime, blocks);
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
   private static byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
-    return inodePolicy != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED ? inodePolicy :
-        parentPolicy;
+    return inodePolicy != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED
+        ? inodePolicy : parentPolicy;
   }
 
   /**
@@ -294,13 +358,11 @@ class FSDirStatAndListingOp {
       byte policyId = includeStoragePolicy && !i.isSymlink() ?
           i.getStoragePolicyID() :
           HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      INodeAttributes nodeAttrs = getINodeAttributes(
-          fsd, path, HdfsFileStatus.EMPTY_NAME, i, src.getPathSnapshotId());
-      return createFileStatus(
-          fsd, HdfsFileStatus.EMPTY_NAME,
-          i, nodeAttrs, policyId,
-          src.getPathSnapshotId(),
-          isRawPath, src);
+      INodeAttributes nodeAttrs = getINodeAttributes(fsd, path,
+                                                     HdfsFileStatus.EMPTY_NAME,
+                                                     i, src.getPathSnapshotId());
+      return createFileStatus(fsd, HdfsFileStatus.EMPTY_NAME, i, nodeAttrs,
+                              policyId, src.getPathSnapshotId(), isRawPath, src);
     } finally {
       fsd.readUnlock();
     }
@@ -518,6 +580,19 @@ class FSDirStatAndListingOp {
       }
     } finally {
       fsd.readUnlock();
+    }
+  }
+
+  static class GetBlockLocationsResult {
+    final boolean updateAccessTime;
+    final LocatedBlocks blocks;
+    boolean updateAccessTime() {
+      return updateAccessTime;
+    }
+    private GetBlockLocationsResult(
+        boolean updateAccessTime, LocatedBlocks blocks) {
+      this.updateAccessTime = updateAccessTime;
+      this.blocks = blocks;
     }
   }
 }
