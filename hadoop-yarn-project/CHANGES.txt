@@ -309,6 +309,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3789. Improve logs for LeafQueue#activateApplications().
     (Bibin A Chundatt via devaraj)
 
+    YARN-3148. Allow CORS related headers to passthrough in WebAppProxyServlet.
+    (Varun Saxena via devaraj)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
