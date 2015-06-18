@@ -653,6 +653,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8589. Fix unused imports in BPServiceActor and BlockReportLeaseManager
     (cmccabe)
 
+    HDFS-6249. Output AclEntry in PBImageXmlWriter.
+    (surendra singh lilhore via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
