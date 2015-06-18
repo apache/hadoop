@@ -8,6 +8,9 @@ Release 2.6.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-7139. Allow appending to existing SequenceFiles
+    (kanaka kumar avvaru via vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-11238. Update the NameNode's Group Cache in the background when
