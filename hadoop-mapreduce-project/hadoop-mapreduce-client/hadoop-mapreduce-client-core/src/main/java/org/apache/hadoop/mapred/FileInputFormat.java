@@ -253,7 +253,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       LOG.debug("Time taken to get FileStatuses: "
           + sw.now(TimeUnit.MILLISECONDS));
     }
-    LOG.info("Total input paths to process : " + result.length);
+    LOG.info("Total input files to process : " + result.length);
     return result;
   }
   
