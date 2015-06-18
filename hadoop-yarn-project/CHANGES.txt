@@ -536,6 +536,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3617. Fix WindowsResourceCalculatorPlugin.getCpuFrequency()
     returning always -1. (J.Andreina via devaraj)
 
+    YARN-3824. Fix two minor nits in member variable properties
+    of YarnConfiguration. (Ray Chiang via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
