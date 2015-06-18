@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
-import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -287,7 +286,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       LOG.debug("Time taken to get FileStatuses: "
           + sw.now(TimeUnit.MILLISECONDS));
     }
-    LOG.info("Total input paths to process : " + result.size()); 
+    LOG.info("Total input files to process : " + result.size());
     return result;
   }
 
