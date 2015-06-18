@@ -1156,6 +1156,9 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-8615. Correct HTTP method in WebHDFS document.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
