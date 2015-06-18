@@ -924,6 +924,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8551. Fix hdfs datanode CLI usage message.
     (Brahma Reddy Battula via xyao)
 
+    HDFS-8615. Correct HTTP method in WebHDFS document.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
