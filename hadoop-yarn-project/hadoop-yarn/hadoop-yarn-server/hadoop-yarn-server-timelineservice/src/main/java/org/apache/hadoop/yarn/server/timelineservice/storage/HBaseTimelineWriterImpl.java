@@ -26,19 +26,22 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
-import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineEntitySchemaConstants;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 
 /**
  * This implements a hbase based backend for storing application timeline entity
@@ -50,7 +53,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     TimelineWriter {
 
   private Connection conn;
-  private BufferedMutator entityTable;
+  private TypedBufferedMutator<EntityTable> entityTable;
 
   private static final Log LOG = LogFactory
       .getLog(HBaseTimelineWriterImpl.class);
@@ -72,10 +75,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     super.serviceInit(conf);
     Configuration hbaseConf = HBaseConfiguration.create(conf);
     conn = ConnectionFactory.createConnection(hbaseConf);
-    TableName entityTableName = TableName.valueOf(hbaseConf.get(
-        TimelineEntitySchemaConstants.ENTITY_TABLE_NAME,
-        TimelineEntitySchemaConstants.DEFAULT_ENTITY_TABLE_NAME));
-    entityTable = conn.getBufferedMutator(entityTableName);
+    entityTable = new EntityTable().getTableMutator(hbaseConf, conn);
   }
 
   /**
@@ -86,9 +86,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       String flowName, String flowVersion, long flowRunId, String appId,
       TimelineEntities data) throws IOException {
 
-    byte[] rowKeyPrefix = TimelineWriterUtils.getRowKeyPrefix(clusterId,
-        userId, flowName, flowRunId, appId);
-
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
     for (TimelineEntity te : data.getEntities()) {
 
@@ -96,19 +93,19 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       if (te == null) {
         continue;
       }
-      // get row key
-      byte[] row = TimelineWriterUtils.join(
-          TimelineEntitySchemaConstants.ROW_KEY_SEPARATOR_BYTES, rowKeyPrefix,
-          Bytes.toBytes(te.getType()), Bytes.toBytes(te.getId()));
 
-      storeInfo(row, te, flowVersion);
-      storeEvents(row, te.getEvents());
-      storeConfig(row, te.getConfigs());
-      storeMetrics(row, te.getMetrics());
-      storeRelations(row, te.getIsRelatedToEntities(),
-          EntityColumnDetails.PREFIX_IS_RELATED_TO);
-      storeRelations(row, te.getRelatesToEntities(),
-          EntityColumnDetails.PREFIX_RELATES_TO);
+      byte[] rowKey =
+          EntityRowKey.getRowKey(clusterId, userId, flowName, flowRunId, appId,
+              te);
+
+      storeInfo(rowKey, te, flowVersion);
+      storeEvents(rowKey, te.getEvents());
+      storeConfig(rowKey, te.getConfigs());
+      storeMetrics(rowKey, te.getMetrics());
+      storeRelations(rowKey, te.getIsRelatedToEntities(),
+          EntityColumnPrefix.IS_RELATED_TO);
+      storeRelations(rowKey, te.getRelatesToEntities(),
+          EntityColumnPrefix.RELATES_TO);
     }
 
     return putStatus;
@@ -119,10 +116,15 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   private void storeRelations(byte[] rowKey,
       Map<String, Set<String>> connectedEntities,
-      EntityColumnDetails columnNamePrefix) throws IOException {
-    for (Map.Entry<String, Set<String>> entry : connectedEntities.entrySet()) {
-      columnNamePrefix.store(rowKey, entityTable, entry.getKey(),
-          entry.getValue());
+      EntityColumnPrefix entityColumnPrefix) throws IOException {
+    for (Map.Entry<String, Set<String>> connectedEntity : connectedEntities
+        .entrySet()) {
+      // id3?id4?id5
+      String compoundValue =
+          Separator.VALUES.joinEncoded(connectedEntity.getValue());
+
+      entityColumnPrefix.store(rowKey, entityTable, connectedEntity.getKey(),
+          null, compoundValue);
     }
   }
 
@@ -132,13 +134,13 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   private void storeInfo(byte[] rowKey, TimelineEntity te, String flowVersion)
       throws IOException {
 
-    EntityColumnDetails.ID.store(rowKey, entityTable, te.getId());
-    EntityColumnDetails.TYPE.store(rowKey, entityTable, te.getType());
-    EntityColumnDetails.CREATED_TIME.store(rowKey, entityTable,
+    EntityColumn.ID.store(rowKey, entityTable, null, te.getId());
+    EntityColumn.TYPE.store(rowKey, entityTable, null, te.getType());
+    EntityColumn.CREATED_TIME.store(rowKey, entityTable, null,
         te.getCreatedTime());
-    EntityColumnDetails.MODIFIED_TIME.store(rowKey, entityTable,
+    EntityColumn.MODIFIED_TIME.store(rowKey, entityTable, null,
         te.getModifiedTime());
-    EntityColumnDetails.FLOW_VERSION.store(rowKey, entityTable, flowVersion);
+    EntityColumn.FLOW_VERSION.store(rowKey, entityTable, null, flowVersion);
   }
 
   /**
@@ -150,8 +152,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       return;
     }
     for (Map.Entry<String, String> entry : config.entrySet()) {
-      EntityColumnFamily.CONFIG.store(rowKey, entityTable,
-          entry.getKey(), entry.getValue());
+      EntityColumnPrefix.CONFIG.store(rowKey, entityTable, entry.getKey(),
+          null, entry.getValue());
     }
   }
 
@@ -163,11 +165,12 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       throws IOException {
     if (metrics != null) {
       for (TimelineMetric metric : metrics) {
-        String key = metric.getId();
+        String metricColumnQualifier = metric.getId();
         Map<Long, Number> timeseries = metric.getValues();
-        for (Map.Entry<Long, Number> entry : timeseries.entrySet()) {
-          EntityColumnFamily.METRICS.store(rowKey, entityTable, key,
-              entry.getKey(), entry.getValue());
+        for (Map.Entry<Long, Number> timeseriesEntry : timeseries.entrySet()) {
+          Long timestamp = timeseriesEntry.getKey();
+          EntityColumnPrefix.METRIC.store(rowKey, entityTable,
+              metricColumnQualifier, timestamp, timeseriesEntry.getValue());
         }
       }
     }
@@ -181,19 +184,27 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     if (events != null) {
       for (TimelineEvent event : events) {
         if (event != null) {
-          String id = event.getId();
-          if (id != null) {
-            byte[] idBytes = Bytes.toBytes(id);
+          String eventId = event.getId();
+          if (eventId != null) {
             Map<String, Object> eventInfo = event.getInfo();
             if (eventInfo != null) {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
-                EntityColumnDetails.PREFIX_EVENTS.store(rowKey,
-                    entityTable, idBytes, info.getKey(), info.getValue());
-              }
+                // eventId?infoKey
+                byte[] columnQualifierFirst =
+                    Bytes.toBytes(Separator.VALUES.encode(eventId));
+                byte[] compoundColumnQualifierBytes =
+                    Separator.VALUES.join(columnQualifierFirst,
+                        Bytes.toBytes(info.getKey()));
+                // convert back to string to avoid additional API on store.
+                String compoundColumnQualifier =
+                    Bytes.toString(compoundColumnQualifierBytes);
+                EntityColumnPrefix.METRIC.store(rowKey, entityTable,
+                    compoundColumnQualifier, null, info.getValue());
+              } // for info: eventInfo
             }
           }
         }
-      }
+      } // event : events
     }
   }
 
@@ -204,8 +215,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   /**
-   * close the hbase connections
-   * The close APIs perform flushing and release any
+   * close the hbase connections The close APIs perform flushing and release any
    * resources held
    */
   @Override
