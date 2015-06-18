@@ -914,6 +914,10 @@ Release 2.7.1 - UNRELEASED
     HADOOP-12078. The default retry policy does not handle RetriableException
     correctly. (Arpit Agarwal)
 
+    HADOOP-12100. ImmutableFsPermission should not override applyUmask since
+    that method doesn't modify the FsPermission (Bibin A Chundatt via Colin P.
+    McCabe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
