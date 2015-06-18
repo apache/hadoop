@@ -305,3 +305,6 @@
 
     HDFS-8580. Erasure coding: Persist cellSize in BlockInfoStriped and
     StripedBlocksFeature. (Walter Su via jing9)
+
+    HDFS-8466. Refactor BlockInfoContiguous and fix NPE in
+    TestBlockInfo#testCopyConstructor() (vinayakumarb)
