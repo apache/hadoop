@@ -278,7 +278,7 @@ public class YarnConfiguration extends Configuration {
       + "intermediate-data-encryption.enable";
 
   @Private
-  public static final Boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
+  public static final boolean DEFAULT_YARN_INTERMEDIATE_DATA_ENCRYPTION = false;
 
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 
@@ -729,7 +729,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String RM_PROXY_USER_PRIVILEGES_ENABLED = RM_PREFIX
       + "proxy-user-privileges.enabled";
-  public static boolean DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED = false;
+  public static final boolean DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED = false;
 
   /**
    * How many diagnostics/failure messages can be saved in RM for
