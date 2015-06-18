@@ -37,13 +37,13 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   /**
-   * Copy construction.
-   * This is used to convert BlockReplicationInfoUnderConstruction
+   * Copy construction. This is used to convert
+   * BlockReplicationInfoUnderConstruction
+   *
    * @param from BlockReplicationInfo to copy from.
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
-    this(from, from.getBlockCollection().getPreferredBlockReplication());
-    this.triplets = new Object[from.triplets.length];
+    this(from, (short) (from.triplets.length / 3));
     this.setBlockCollection(from.getBlockCollection());
   }
 
