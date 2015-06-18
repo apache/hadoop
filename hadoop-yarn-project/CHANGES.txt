@@ -539,6 +539,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3824. Fix two minor nits in member variable properties
     of YarnConfiguration. (Ray Chiang via devaraj)
 
+    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
+    after NM is reconnected. (zhihai xu via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
