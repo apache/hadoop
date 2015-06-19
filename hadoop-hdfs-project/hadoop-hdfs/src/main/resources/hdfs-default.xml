@@ -1079,7 +1079,7 @@
 
 <property>
   <name>dfs.datanode.readahead.bytes</name>
-  <value>4193404</value>
+  <value>4194304</value>
   <description>
         While reading block files, if the Hadoop native libraries are available,
         the datanode can use the posix_fadvise system call to explicitly
