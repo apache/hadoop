@@ -349,6 +349,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6392. Document mapred class path options.
     (Brahma Reddy Battula via cnauroth)
 
+    MAPREDUCE-6395. Improve the commit failure messages in MRAppMaster recovery.
+    (Brahma Reddy Battula via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
