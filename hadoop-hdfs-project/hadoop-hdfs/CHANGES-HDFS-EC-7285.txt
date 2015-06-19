@@ -314,3 +314,6 @@
 
     HDFS-8543. Erasure Coding: processOverReplicatedBlock() handles striped block.
     (Walter Su via jing9)
+
+    HDFS-8602. Erasure Coding: Client can't read(decode) the EC files which have
+    corrupt blocks. (jing9 and Kai Sasaki)

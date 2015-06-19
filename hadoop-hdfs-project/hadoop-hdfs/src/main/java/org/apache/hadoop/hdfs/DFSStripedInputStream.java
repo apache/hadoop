@@ -45,7 +45,6 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResu
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.htrace.Span;
@@ -340,7 +339,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   private Callable<Void> readCell(final BlockReader reader,
       final DatanodeInfo datanode, final long currentReaderOffset,
       final long targetReaderOffset, final ByteBufferStrategy strategy,
-      final int targetLength,
+      final int targetLength, final ExtendedBlock currentBlock,
       final Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap) {
     return new Callable<Void>() {
       @Override
@@ -359,7 +358,8 @@ public class DFSStripedInputStream extends DFSInputStream {
         }
         int result = 0;
         while (result < targetLength) {
-          int ret = readToBuffer(reader, datanode, strategy, corruptedBlockMap);
+          int ret = readToBuffer(reader, datanode, strategy, currentBlock,
+              corruptedBlockMap);
           if (ret < 0) {
             throw new IOException("Unexpected EOS from the reader");
           }
@@ -373,21 +373,22 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   private int readToBuffer(BlockReader blockReader,
       DatanodeInfo currentNode, ByteBufferStrategy readerStrategy,
+      ExtendedBlock currentBlock,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
     try {
       return readerStrategy.doRead(blockReader, 0, 0);
     } catch (ChecksumException ce) {
       DFSClient.LOG.warn("Found Checksum error for "
-          + getCurrentBlock() + " from " + currentNode
+          + currentBlock + " from " + currentNode
           + " at " + ce.getPos());
       // we want to remember which block replicas we have tried
-      addIntoCorruptedBlockMap(getCurrentBlock(), currentNode,
+      addIntoCorruptedBlockMap(currentBlock, currentNode,
           corruptedBlockMap);
       throw ce;
     } catch (IOException e) {
       DFSClient.LOG.warn("Exception while reading from "
-          + getCurrentBlock() + " of " + src + " from "
+          + currentBlock + " of " + src + " from "
           + currentNode, e);
       throw e;
     }
@@ -768,7 +769,7 @@ public class DFSStripedInputStream extends DFSInputStream {
       Callable<Void> readCallable = readCell(blockReaders[chunkIndex],
           currentNodes[chunkIndex], blockReaderOffsets[chunkIndex],
           alignedStripe.getOffsetInBlock(), strategy,
-          chunk.byteBuffer.remaining(), corruptedBlockMap);
+          chunk.byteBuffer.remaining(), block.getBlock(), corruptedBlockMap);
       Future<Void> request = readingService.submit(readCallable);
       futures.put(request, chunkIndex);
     }
