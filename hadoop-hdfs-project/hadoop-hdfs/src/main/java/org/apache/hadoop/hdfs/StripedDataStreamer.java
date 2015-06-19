@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hdfs.DFSStripedOutputStream.Coordinator;
+import org.apache.hadoop.hdfs.DFSStripedOutputStream.MultipleBlockingQueue;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -37,18 +38,64 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
-/****************************************************************************
- * The StripedDataStreamer class is used by {@link DFSStripedOutputStream}.
- * There are two kinds of StripedDataStreamer, leading streamer and ordinary
- * stream. Leading streamer requests a block group from NameNode, unwraps
- * it to located blocks and transfers each located block to its corresponding
- * ordinary streamer via a blocking queue.
- *
- ****************************************************************************/
+/**
+ * This class extends {@link DataStreamer} to support writing striped blocks
+ * to datanodes.
+ * A {@link DFSStripedOutputStream} has multiple {@link StripedDataStreamer}s.
+ * Whenever the streamers need to talk the namenode, only the fastest streamer
+ * sends an rpc call to the namenode and then populates the result for the
+ * other streamers.
+ */
 public class StripedDataStreamer extends DataStreamer {
+  /**
+   * This class is designed for multiple threads to share a
+   * {@link MultipleBlockingQueue}. Initially, the queue is empty. The earliest
+   * thread calling poll populates entries to the queue and the other threads
+   * will wait for it. Once the entries are populated, all the threads can poll
+   * their entries.
+   *
+   * @param <T> the queue entry type.
+   */
+  static abstract class ConcurrentPoll<T> {
+    private final MultipleBlockingQueue<T> queue;
+
+    ConcurrentPoll(MultipleBlockingQueue<T> queue) {
+      this.queue = queue;
+    }
+
+    T poll(final int i) throws IOException {
+      for(;;) {
+        synchronized(queue) {
+          final T polled = queue.poll(i);
+          if (polled != null) { // already populated; return polled item.
+            return polled;
+          }
+          if (isReady2Populate()) {
+            populate();
+            return queue.poll(i);
+          }
+        }
+
+        // sleep and then retry.
+        try {
+          Thread.sleep(100);
+        } catch(InterruptedException ie) {
+          throw DFSUtil.toInterruptedIOException(
+              "Sleep interrupted during poll", ie);
+        }
+      }
+    }
+
+    boolean isReady2Populate() {
+      return queue.isEmpty();
+    }
+
+    abstract void populate() throws IOException;
+  }
+
   private final Coordinator coordinator;
   private final int index;
-  private volatile boolean isFailed;
+  private volatile boolean failed;
 
   StripedDataStreamer(HdfsFileStatus stat,
                       DFSClient dfsClient, String src,
@@ -66,16 +113,12 @@ public class StripedDataStreamer extends DataStreamer {
     return index;
   }
 
-  void setIsFailed(boolean isFailed) {
-    this.isFailed = isFailed;
+  void setFailed(boolean failed) {
+    this.failed = failed;
   }
 
   boolean isFailed() {
-    return isFailed;
-  }
-
-  public boolean isLeadingStreamer () {
-    return index == 0;
+    return failed;
   }
 
   private boolean isParityStreamer() {
@@ -85,81 +128,110 @@ public class StripedDataStreamer extends DataStreamer {
   @Override
   protected void endBlock() {
     if (!isParityStreamer()) {
-      coordinator.putEndBlock(index, block);
+      coordinator.offerEndBlock(index, block);
     }
     super.endBlock();
   }
 
   @Override
-  protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
+  protected LocatedBlock locateFollowingBlock(final DatanodeInfo[] excludedNodes)
       throws IOException {
-    if (isLeadingStreamer()) {
-      if (block != null) {
-        // set numByte for the previous block group
-        long bytes = 0;
-        for (int i = 0; i < NUM_DATA_BLOCKS; i++) {
-          final ExtendedBlock b = coordinator.getEndBlock(i);
-          if (b != null) {
-            StripedBlockUtil.checkBlocks(block, i, b);
-            bytes += b.getNumBytes();
-          }
-        }
-        block.setNumBytes(bytes);
+    final MultipleBlockingQueue<LocatedBlock> followingBlocks
+        = coordinator.getFollowingBlocks();
+    return new ConcurrentPoll<LocatedBlock>(followingBlocks) {
+      @Override
+      boolean isReady2Populate() {
+        return super.isReady2Populate()
+            && (block == null || coordinator.hasAllEndBlocks());
       }
 
-      putLoactedBlocks(super.locateFollowingBlock(excludedNodes));
-    }
+      @Override
+      void populate() throws IOException {
+        getLastException().check(false);
 
-    return coordinator.getStripedBlock(index);
-  }
+        if (block != null) {
+          // set numByte for the previous block group
+          long bytes = 0;
+          for (int i = 0; i < NUM_DATA_BLOCKS; i++) {
+            final ExtendedBlock b = coordinator.takeEndBlock(i);
+            StripedBlockUtil.checkBlocks(index, block, i, b);
+            bytes += b.getNumBytes();
+          }
+          block.setNumBytes(bytes);
+          block.setBlockId(block.getBlockId() - index);
+        }
 
-  void putLoactedBlocks(LocatedBlock lb) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Obtained block group " + lb);
-    }
-    LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
-        (LocatedStripedBlock)lb,
-        BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("locateFollowingBlock: index=" + index + ", block=" + block);
+        }
 
-    // TODO allow write to continue if blocks.length >= NUM_DATA_BLOCKS
-    assert blocks.length == (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) :
-        "Fail to get block group from namenode: blockGroupSize: " +
-            (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS) + ", blocks.length: " +
-            blocks.length;
-    for (int i = 0; i < blocks.length; i++) {
-      coordinator.putStripedBlock(i, blocks[i]);
-    }
+        final LocatedBlock lb = StripedDataStreamer.super.locateFollowingBlock(
+            excludedNodes);
+        final LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
+            (LocatedStripedBlock)lb,
+            BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
+
+        for (int i = 0; i < blocks.length; i++) {
+          if (!coordinator.getStripedDataStreamer(i).isFailed()) {
+            if (blocks[i] == null) {
+              getLastException().set(
+                  new IOException("Failed to get following block, i=" + i));
+            } else {
+              followingBlocks.offer(i, blocks[i]);
+            }
+          }
+        }
+      }
+    }.poll(index);
   }
 
   @Override
   LocatedBlock updateBlockForPipeline() throws IOException {
-    if (isLeadingStreamer()) {
-      final LocatedBlock updated = super.updateBlockForPipeline();
-      final ExtendedBlock block = updated.getBlock();
-      for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
-        final LocatedBlock lb = new LocatedBlock(block, null, null, null,
-                -1, updated.isCorrupt(), null);
-        lb.setBlockToken(updated.getBlockToken());
-        coordinator.putStripedBlock(i, lb);
+    final MultipleBlockingQueue<LocatedBlock> newBlocks
+        = coordinator.getNewBlocks();
+    return new ConcurrentPoll<LocatedBlock>(newBlocks) {
+      @Override
+      void populate() throws IOException {
+        final ExtendedBlock bg = coordinator.getBlockGroup();
+        final LocatedBlock updated = callUpdateBlockForPipeline(bg);
+        final long newGS = updated.getBlock().getGenerationStamp();
+        for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
+          final ExtendedBlock bi = coordinator.getStripedDataStreamer(i).getBlock();
+          if (bi != null) {
+            final LocatedBlock lb = new LocatedBlock(newBlock(bi, newGS),
+                null, null, null, -1, updated.isCorrupt(), null);
+            lb.setBlockToken(updated.getBlockToken());
+            newBlocks.offer(i, lb);
+          } else {
+            final LocatedBlock lb = coordinator.getFollowingBlocks().peek(i);
+            lb.getBlock().setGenerationStamp(newGS);
+          }
+        }
       }
-    }
-    return coordinator.getStripedBlock(index);
+    }.poll(index);
   }
 
   @Override
-  ExtendedBlock updatePipeline(long newGS) throws IOException {
-    if (isLeadingStreamer()) {
-      final ExtendedBlock newBlock = super.updatePipeline(newGS);
-      for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
-        coordinator.putUpdateBlock(i, new ExtendedBlock(newBlock));
+  ExtendedBlock updatePipeline(final long newGS) throws IOException {
+    final MultipleBlockingQueue<ExtendedBlock> updateBlocks
+        = coordinator.getUpdateBlocks();
+    return new ConcurrentPoll<ExtendedBlock>(updateBlocks) {
+      @Override
+      void populate() throws IOException {
+        final ExtendedBlock bg = coordinator.getBlockGroup();
+        final ExtendedBlock newBG = newBlock(bg, newGS);
+        final ExtendedBlock updated = callUpdatePipeline(bg, newBG);
+        for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
+          final ExtendedBlock bi = coordinator.getStripedDataStreamer(i).getBlock();
+          updateBlocks.offer(i, newBlock(bi, updated.getGenerationStamp()));
+        }
       }
-    }
-    return coordinator.getUpdateBlock(index);
+    }.poll(index);
   }
 
   @Override
   public String toString() {
-    return "#" + index + ": isFailed? " + Boolean.toString(isFailed).charAt(0)
+    return "#" + index + ": failed? " + Boolean.toString(failed).charAt(0)
         + ", " + super.toString();
   }
 }

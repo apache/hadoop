@@ -28,7 +28,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
@@ -51,27 +49,33 @@ import org.apache.htrace.TraceScope;
 import com.google.common.base.Preconditions;
 
 
-/****************************************************************
- * The DFSStripedOutputStream class supports writing files in striped
- * layout. Each stripe contains a sequence of cells and multiple
- * {@link StripedDataStreamer}s in DFSStripedOutputStream are responsible
- * for writing the cells to different datanodes.
- *
- ****************************************************************/
-
+/**
+ * This class supports writing files in striped layout and erasure coded format.
+ * Each stripe contains a sequence of cells.
+ */
 @InterfaceAudience.Private
 public class DFSStripedOutputStream extends DFSOutputStream {
   static class MultipleBlockingQueue<T> {
-    private final int pullTimeout;
     private final List<BlockingQueue<T>> queues;
 
-    MultipleBlockingQueue(int numQueue, int queueSize, int pullTimeout) {
+    MultipleBlockingQueue(int numQueue, int queueSize) {
       queues = new ArrayList<>(numQueue);
       for (int i = 0; i < numQueue; i++) {
         queues.add(new LinkedBlockingQueue<T>(queueSize));
       }
+    }
 
-      this.pullTimeout = pullTimeout;
+    boolean isEmpty() {
+      for(int i = 0; i < queues.size(); i++) {
+        if (!queues.get(i).isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    int numQueues() {
+      return queues.size();
     }
 
     void offer(int i, T object) {
@@ -80,12 +84,16 @@ public class DFSStripedOutputStream extends DFSOutputStream {
           + " to queue, i=" + i);
     }
 
-    T poll(int i) throws InterruptedIOException {
+    T take(int i) throws InterruptedIOException {
       try {
-        return queues.get(i).poll(pullTimeout, TimeUnit.SECONDS);
-      } catch (InterruptedException e) {
-        throw DFSUtil.toInterruptedIOException("poll interrupted, i=" + i, e);
+        return queues.get(i).take();
+      } catch(InterruptedException ie) {
+        throw DFSUtil.toInterruptedIOException("take interrupted, i=" + i, ie);
       }
+    }
+
+    T poll(int i) {
+      return queues.get(i).poll();
     }
 
     T peek(int i) {
@@ -94,35 +102,53 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
   /** Coordinate the communication between the streamers. */
-  static class Coordinator {
-    private final MultipleBlockingQueue<LocatedBlock> stripedBlocks;
+  class Coordinator {
+    private final MultipleBlockingQueue<LocatedBlock> followingBlocks;
     private final MultipleBlockingQueue<ExtendedBlock> endBlocks;
+
+    private final MultipleBlockingQueue<LocatedBlock> newBlocks;
     private final MultipleBlockingQueue<ExtendedBlock> updateBlocks;
 
     Coordinator(final DfsClientConf conf, final int numDataBlocks,
         final int numAllBlocks) {
-      stripedBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1,
-          conf.getStripedWriteMaxSecondsGetStripedBlock());
-      endBlocks = new MultipleBlockingQueue<>(numDataBlocks, 1,
-          conf.getStripedWriteMaxSecondsGetEndedBlock());
-      updateBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1,
-          conf.getStripedWriteMaxSecondsGetStripedBlock());
+      followingBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
+      endBlocks = new MultipleBlockingQueue<>(numDataBlocks, 1);
+
+      newBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
+      updateBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
     }
 
-    void putEndBlock(int i, ExtendedBlock block) {
+    MultipleBlockingQueue<LocatedBlock> getFollowingBlocks() {
+      return followingBlocks;
+    }
+
+    MultipleBlockingQueue<LocatedBlock> getNewBlocks() {
+      return newBlocks;
+    }
+
+    MultipleBlockingQueue<ExtendedBlock> getUpdateBlocks() {
+      return updateBlocks;
+    }
+
+    StripedDataStreamer getStripedDataStreamer(int i) {
+      return DFSStripedOutputStream.this.getStripedDataStreamer(i);
+    }
+
+    void offerEndBlock(int i, ExtendedBlock block) {
       endBlocks.offer(i, block);
     }
 
-    ExtendedBlock getEndBlock(int i) throws InterruptedIOException {
-      return endBlocks.poll(i);
+    ExtendedBlock takeEndBlock(int i) throws InterruptedIOException {
+      return endBlocks.take(i);
     }
 
-    void putUpdateBlock(int i, ExtendedBlock block) {
-      updateBlocks.offer(i, block);
-    }
-
-    ExtendedBlock getUpdateBlock(int i) throws InterruptedIOException {
-      return updateBlocks.poll(i);
+    boolean hasAllEndBlocks() {
+      for(int i = 0; i < endBlocks.numQueues(); i++) {
+        if (endBlocks.peek(i) == null) {
+          return false;
+        }
+      }
+      return true;
     }
 
     void setBytesEndBlock(int i, long newBytes, ExtendedBlock block) {
@@ -130,24 +156,35 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       if (b == null) {
         // streamer just has failed, put end block and continue
         b = block;
-        putEndBlock(i, b);
+        offerEndBlock(i, b);
       }
       b.setNumBytes(newBytes);
     }
 
-    void putStripedBlock(int i, LocatedBlock block) throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("putStripedBlock " + block + ", i=" + i);
+    /** @return a block representing the entire block group. */
+    ExtendedBlock getBlockGroup() {
+      final StripedDataStreamer s0 = getStripedDataStreamer(0);
+      final ExtendedBlock b0 = s0.getBlock();
+      if (b0 == null) {
+        return null;
       }
-      stripedBlocks.offer(i, block);
-    }
 
-    LocatedBlock getStripedBlock(int i) throws IOException {
-      final LocatedBlock lb = stripedBlocks.poll(i);
-      if (lb == null) {
-        throw new IOException("Failed: i=" + i);
+      final boolean atBlockGroupBoundary = s0.getBytesCurBlock() == 0 && b0.getNumBytes() > 0;
+      final ExtendedBlock block = new ExtendedBlock(b0);
+      long numBytes = b0.getNumBytes();
+      for (int i = 1; i < numDataBlocks; i++) {
+        final StripedDataStreamer si = getStripedDataStreamer(i);
+        final ExtendedBlock bi = si.getBlock();
+        if (bi != null && bi.getGenerationStamp() > block.getGenerationStamp()) {
+          block.setGenerationStamp(bi.getGenerationStamp());
+        }
+        numBytes += atBlockGroupBoundary? bi.getNumBytes(): si.getBytesCurBlock();
       }
-      return lb;
+      block.setNumBytes(numBytes);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("getBlockGroup: " + block + ", numBytes=" + block.getNumBytes());
+      }
+      return block;
     }
   }
 
@@ -223,13 +260,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private final int numAllBlocks;
   private final int numDataBlocks;
 
-  private StripedDataStreamer getLeadingStreamer() {
-    return streamers.get(0);
-  }
-
   @Override
   ExtendedBlock getBlock() {
-    return getLeadingStreamer().getBlock();
+    return coordinator.getBlockGroup();
   }
 
   /** Construct a new output stream for creating a file. */
@@ -308,7 +341,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     int count = 0;
     for(StripedDataStreamer s : streamers) {
       if (!s.isFailed()) {
-        s.getErrorState().initExtenalError();
+        if (s.getBlock() != null) {
+          s.getErrorState().initExternalError();
+        }
         count++;
       }
     }
@@ -325,7 +360,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private void handleStreamerFailure(String err,
                                      Exception e) throws IOException {
     LOG.warn("Failed: " + err + ", " + this, e);
-    getCurrentStreamer().setIsFailed(true);
+    getCurrentStreamer().setFailed(true);
     checkStreamers();
     currentPacket = null;
   }
@@ -443,10 +478,17 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     dfsClient.endFileLease(fileId);
   }
 
-  //TODO: Handle slow writers (HDFS-7786)
-  //Cuurently only check if the leading streamer is terminated
+  @Override
   boolean isClosed() {
-    return closed || getLeadingStreamer().streamerClosed();
+    if (closed) {
+      return true;
+    }
+    for(StripedDataStreamer s : streamers) {
+      if (!s.streamerClosed()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -560,7 +602,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   @Override
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
-      getLeadingStreamer().getLastException().check(true);
+      final MultipleIOException.Builder b = new MultipleIOException.Builder();
+      for(int i = 0; i < streamers.size(); i++) {
+        final StripedDataStreamer si = getStripedDataStreamer(i);
+        try {
+          si.getLastException().check(true);
+        } catch (IOException e) {
+          b.add(e);
+        }
+      }
+      final IOException ioe = b.build();
+      if (ioe != null) {
+        throw ioe;
+      }
       return;
     }
 
@@ -594,7 +648,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       }
 
       closeThreads(false);
-      final ExtendedBlock lastBlock = getCommittedBlock();
+      final ExtendedBlock lastBlock = coordinator.getBlockGroup();
       TraceScope scope = Trace.startSpan("completeFile", Sampler.NEVER);
       try {
         completeFile(lastBlock);
@@ -606,31 +660,5 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     } finally {
       setClosed();
     }
-  }
-
-  /**
-   * Generate the block which is reported and will be committed in NameNode.
-   * Need to go through all the streamers writing data blocks and add their
-   * bytesCurBlock together. Note that at this time all streamers have been
-   * closed. Also this calculation can cover streamers with writing failures.
-   *
-   * @return An ExtendedBlock with size of the whole block group.
-   */
-  ExtendedBlock getCommittedBlock() throws IOException {
-    ExtendedBlock b = getLeadingStreamer().getBlock();
-    if (b == null) {
-      return null;
-    }
-    final ExtendedBlock block = new ExtendedBlock(b);
-    final boolean atBlockGroupBoundary =
-        getLeadingStreamer().getBytesCurBlock() == 0 &&
-            getLeadingStreamer().getBlock() != null &&
-            getLeadingStreamer().getBlock().getNumBytes() > 0;
-    for (int i = 1; i < numDataBlocks; i++) {
-      block.setNumBytes(block.getNumBytes() +
-          (atBlockGroupBoundary ? streamers.get(i).getBlock().getNumBytes() :
-              streamers.get(i).getBytesCurBlock()));
-    }
-    return block;
   }
 }

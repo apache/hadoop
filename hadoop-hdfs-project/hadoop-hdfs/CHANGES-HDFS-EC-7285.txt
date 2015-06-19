@@ -308,3 +308,6 @@
 
     HDFS-8466. Refactor BlockInfoContiguous and fix NPE in
     TestBlockInfo#testCopyConstructor() (vinayakumarb)
+
+    HDFS-8254. Avoid assigning a leading streamer in StripedDataStreamer to
+    tolerate datanode failure. (Tsz Wo Nicholas Sze via jing9)
