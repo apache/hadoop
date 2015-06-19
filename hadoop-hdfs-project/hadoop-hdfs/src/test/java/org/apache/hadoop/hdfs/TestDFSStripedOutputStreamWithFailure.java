@@ -93,6 +93,13 @@ public class TestDFSStripedOutputStreamWithFailure {
   }
 
   @Test(timeout=120000)
+  public void testDatanodeFailure0() {
+    final int length = NUM_DATA_BLOCKS*(BLOCK_SIZE - CELL_SIZE);
+    final int dn = 0;
+    runTest("file" + dn, length, dn);
+  }
+
+  @Test(timeout=120000)
   public void testDatanodeFailure1() {
     final int length = NUM_DATA_BLOCKS*(BLOCK_SIZE - CELL_SIZE);
     final int dn = 1;
