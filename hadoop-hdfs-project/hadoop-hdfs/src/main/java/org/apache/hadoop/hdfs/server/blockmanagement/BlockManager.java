@@ -25,6 +25,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -3131,10 +3132,30 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     }
-    chooseExcessReplicates(nonExcess, block, replication, 
-        addedNode, delNodeHint, placementPolicies.getPolicy(false));
+    chooseExcessReplicates(nonExcess, block, replication, addedNode,
+        delNodeHint);
   }
 
+  private void chooseExcessReplicates(
+      final Collection<DatanodeStorageInfo> nonExcess,
+      BlockInfo storedBlock, short replication,
+      DatanodeDescriptor addedNode,
+      DatanodeDescriptor delNodeHint) {
+    assert namesystem.hasWriteLock();
+    // first form a rack to datanodes map and
+    BlockCollection bc = getBlockCollection(storedBlock);
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
+        bc.getStoragePolicyID());
+    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+        replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
+    if (!storedBlock.isStriped()) {
+      chooseExcessReplicasContiguous(bc, nonExcess, storedBlock,
+          replication, addedNode, delNodeHint, excessTypes);
+    } else {
+      chooseExcessReplicasStriped(bc, nonExcess, storedBlock, delNodeHint,
+          excessTypes);
+    }
+  }
 
   /**
    * We want "replication" replicates for the block, but we now have too many.  
@@ -3150,20 +3171,13 @@ public class BlockManager implements BlockStatsMXBean {
    * If no such a node is available,
    * then pick a node with least free space
    */
-  private void chooseExcessReplicates(final Collection<DatanodeStorageInfo> nonExcess, 
-                              BlockInfo storedBlock, short replication,
-                              DatanodeDescriptor addedNode,
-                              DatanodeDescriptor delNodeHint,
-                              BlockPlacementPolicy replicator) {
-    assert namesystem.hasWriteLock();
-    // first form a rack to datanodes map and
-    BlockCollection bc = getBlockCollection(storedBlock);
-    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
-        bc.getStoragePolicyID());
-    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
-        replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
-
-
+  private void chooseExcessReplicasContiguous(BlockCollection bc,
+      final Collection<DatanodeStorageInfo> nonExcess,
+      BlockInfo storedBlock, short replication,
+      DatanodeDescriptor addedNode,
+      DatanodeDescriptor delNodeHint,
+      List<StorageType> excessTypes) {
+    BlockPlacementPolicy replicator = placementPolicies.getPolicy(false);
     final Map<String, List<DatanodeStorageInfo>> rackMap = new HashMap<>();
     final List<DatanodeStorageInfo> moreThanOne = new ArrayList<>();
     final List<DatanodeStorageInfo> exactlyOne = new ArrayList<>();
@@ -3191,28 +3205,101 @@ public class BlockManager implements BlockStatsMXBean {
             moreThanOne, exactlyOne, excessTypes);
       }
       firstOne = false;
-
       // adjust rackmap, moreThanOne, and exactlyOne
       replicator.adjustSetsWithChosenReplica(rackMap, moreThanOne,
           exactlyOne, cur);
 
-      nonExcess.remove(cur);
-      addToExcessReplicate(cur.getDatanodeDescriptor(), storedBlock);
-
-      //
-      // The 'excessblocks' tracks blocks until we get confirmation
-      // that the datanode has deleted them; the only way we remove them
-      // is when we get a "removeBlock" message.  
-      //
-      // The 'invalidate' list is used to inform the datanode the block 
-      // should be deleted.  Items are removed from the invalidate list
-      // upon giving instructions to the datanodes.
-      //
-      final Block blockToInvalidate = getBlockToInvalidate(storedBlock, cur);
-      addToInvalidates(blockToInvalidate, cur.getDatanodeDescriptor());
-      blockLog.debug("BLOCK* chooseExcessReplicates: "
-                +"({}, {}) is added to invalidated blocks set", cur, storedBlock);
+      processChosenExcessReplica(nonExcess, cur, storedBlock);
     }
+  }
+
+  /**
+   * We want block group has every internal block, but we have redundant
+   * internal blocks (which have the same index).
+   * In this method, we delete the redundant internal blocks until only one
+   * left for each index.
+   *
+   * The block placement policy will make sure that the left internal blocks are
+   * spread across racks and also try hard to pick one with least free space.
+   */
+  private void chooseExcessReplicasStriped(BlockCollection bc,
+      final Collection<DatanodeStorageInfo> nonExcess,
+      BlockInfo storedBlock,
+      DatanodeDescriptor delNodeHint,
+      List<StorageType> excessTypes) {
+    assert storedBlock instanceof BlockInfoStriped;
+    BlockInfoStriped sblk = (BlockInfoStriped) storedBlock;
+    short groupSize = sblk.getTotalBlockNum();
+    if (nonExcess.size() <= groupSize) {
+      return;
+    }
+    BlockPlacementPolicy placementPolicy = placementPolicies.getPolicy(true);
+    List<DatanodeStorageInfo> empty = new ArrayList<>(0);
+
+    // find all duplicated indices
+    BitSet found = new BitSet(groupSize); //indices found
+    BitSet duplicated = new BitSet(groupSize); //indices found more than once
+    HashMap<DatanodeStorageInfo, Integer> storage2index = new HashMap<>();
+    for (DatanodeStorageInfo storage : nonExcess) {
+      int index = sblk.getStorageBlockIndex(storage);
+      assert index >= 0;
+      if (found.get(index)) {
+        duplicated.set(index);
+      }
+      found.set(index);
+      storage2index.put(storage, index);
+    }
+
+    // use delHint only if delHint is duplicated
+    final DatanodeStorageInfo delStorageHint =
+        DatanodeStorageInfo.getDatanodeStorageInfo(nonExcess, delNodeHint);
+    if (delStorageHint != null) {
+      Integer index = storage2index.get(delStorageHint);
+      if (index != null && duplicated.get(index)) {
+        processChosenExcessReplica(nonExcess, delStorageHint, storedBlock);
+      }
+    }
+
+    // for each duplicated index, delete some replicas until only one left
+    for (int targetIndex = duplicated.nextSetBit(0); targetIndex >= 0;
+         targetIndex = duplicated.nextSetBit(targetIndex + 1)) {
+      List<DatanodeStorageInfo> candidates = new ArrayList<>();
+      for (DatanodeStorageInfo storage : nonExcess) {
+        int index = storage2index.get(storage);
+        if (index == targetIndex) {
+          candidates.add(storage);
+        }
+      }
+      Block internalBlock = new Block(storedBlock);
+      internalBlock.setBlockId(storedBlock.getBlockId() + targetIndex);
+      while (candidates.size() > 1) {
+        DatanodeStorageInfo target = placementPolicy.chooseReplicaToDelete(bc,
+            internalBlock, (short)1, candidates, empty, excessTypes);
+        processChosenExcessReplica(nonExcess, target, storedBlock);
+        candidates.remove(target);
+      }
+      duplicated.clear(targetIndex);
+    }
+  }
+
+  private void processChosenExcessReplica(
+      final Collection<DatanodeStorageInfo> nonExcess,
+      final DatanodeStorageInfo chosen, BlockInfo storedBlock) {
+    nonExcess.remove(chosen);
+    addToExcessReplicate(chosen.getDatanodeDescriptor(), storedBlock);
+    //
+    // The 'excessblocks' tracks blocks until we get confirmation
+    // that the datanode has deleted them; the only way we remove them
+    // is when we get a "removeBlock" message.
+    //
+    // The 'invalidate' list is used to inform the datanode the block
+    // should be deleted.  Items are removed from the invalidate list
+    // upon giving instructions to the datanodes.
+    //
+    final Block blockToInvalidate = getBlockToInvalidate(storedBlock, chosen);
+    addToInvalidates(blockToInvalidate, chosen.getDatanodeDescriptor());
+    blockLog.info("BLOCK* chooseExcessReplicates: "
+        +"({}, {}) is added to invalidated blocks set", chosen, storedBlock);
   }
 
   /** Check if we can use delHint */

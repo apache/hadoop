@@ -311,3 +311,6 @@
 
     HDFS-8254. Avoid assigning a leading streamer in StripedDataStreamer to
     tolerate datanode failure. (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-8543. Erasure Coding: processOverReplicatedBlock() handles striped block.
+    (Walter Su via jing9)

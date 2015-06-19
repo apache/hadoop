@@ -111,6 +111,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -1993,17 +1994,29 @@ public class DFSTestUtil {
   }
 
   /**
-   * Verify that blocks in striped block group are on different nodes.
+   * Verify that blocks in striped block group are on different nodes, and every
+   * internal blocks exists.
    */
   public static void verifyLocatedStripedBlocks(LocatedBlocks lbs,
        int groupSize) {
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+      assert lb instanceof LocatedStripedBlock;
       HashSet<DatanodeInfo> locs = new HashSet<>();
       for (DatanodeInfo datanodeInfo : lb.getLocations()) {
         locs.add(datanodeInfo);
       }
       assertEquals(groupSize, lb.getLocations().length);
       assertEquals(groupSize, locs.size());
+
+      // verify that every internal blocks exists
+      int[] blockIndices = ((LocatedStripedBlock) lb).getBlockIndices();
+      assertEquals(groupSize, blockIndices.length);
+      HashSet<Integer> found = new HashSet<>();
+      for (int index : blockIndices) {
+        assert index >=0;
+        found.add(index);
+      }
+      assertEquals(groupSize, found.size());
     }
   }
 }
