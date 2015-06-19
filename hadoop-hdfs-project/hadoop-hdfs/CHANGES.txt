@@ -1061,6 +1061,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-4660. Block corruption can happen during pipeline recovery (kihwal)
 
+    HDFS-8633. Fix setting of dfs.datanode.readahead.bytes in hdfs-default.xml
+    to match DFSConfigKeys. (Ray Chiang via Yongjun Zhang)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
