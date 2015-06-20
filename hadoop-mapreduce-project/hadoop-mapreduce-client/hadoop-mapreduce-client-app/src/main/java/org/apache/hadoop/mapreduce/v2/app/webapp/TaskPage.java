@@ -24,11 +24,14 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
+import java.util.EnumSet;
 import java.util.Collection;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
@@ -48,7 +51,6 @@ public class TaskPage extends AppView {
   static class AttemptsBlock extends HtmlBlock {
     final App app;
     final boolean enableUIActions;
-    private String stateURLFormat;
 
     @Inject
     AttemptsBlock(App ctx, Configuration conf) {
@@ -66,37 +68,36 @@ public class TaskPage extends AppView {
         return;
       }
 
+      JobId jobId = app.getJob().getID();
       if (enableUIActions) {
         // Kill task attempt
-        String appID = app.getJob().getID().getAppId().toString();
-        String jobID = app.getJob().getID().toString();
-        String taskID = app.getTask().getID().toString();
-        stateURLFormat =
-            String.format("/proxy/%s/ws/v1/mapreduce/jobs/%s/tasks/%s/"
-                + "attempts", appID, jobID, taskID) + "/%s/state";
-
-        String current =
-            String.format("/proxy/%s/mapreduce/task/%s", appID, taskID);
 
         StringBuilder script = new StringBuilder();
-        script.append("function confirmAction(stateURL) {")
-            .append(" b = confirm(\"Are you sure?\");")
-            .append(" if (b == true) {")
-            .append(" $.ajax({")
-            .append(" type: 'PUT',")
-            .append(" url: stateURL,")
-            .append(" contentType: 'application/json',")
-            .append(" data: '{\"state\":\"KILLED\"}',")
-            .append(" dataType: 'json'")
-            .append(" }).done(function(data){")
-            .append(" setTimeout(function(){")
-            .append(" location.href = '").append(current).append("';")
-            .append(" }, 1000);")
-            .append(" }).fail(function(data){")
-            .append(" console.log(data);")
-            .append(" });")
-            .append(" }")
-            .append("}");
+        script
+            .append("function confirmAction(appID, jobID, taskID, attID) {\n")
+            .append("  var b = confirm(\"Are you sure?\");\n")
+            .append("  if (b == true) {\n")
+            .append("    var current = '/proxy/' + appID")
+            .append("      + '/mapreduce/task/' + taskID;\n")
+            .append("    var stateURL = '/proxy/' + appID")
+            .append("      + '/ws/v1/mapreduce/jobs/' + jobID")
+            .append("      + '/tasks/' + taskID")
+            .append("      + '/attempts/' + attID + '/state';\n")
+            .append("    $.ajax({\n")
+            .append("      type: 'PUT',\n")
+            .append("      url: stateURL,\n")
+            .append("      contentType: 'application/json',\n")
+            .append("      data: '{\"state\":\"KILLED\"}',\n")
+            .append("      dataType: 'json'\n")
+            .append("    }).done(function(data) {\n")
+            .append("         setTimeout(function() {\n")
+            .append("           location.href = current;\n")
+            .append("         }, 1000);\n")
+            .append("    }).fail(function(data) {\n")
+            .append("         console.log(data);\n")
+            .append("    });\n")
+            .append("  }\n")
+            .append("}\n");
 
         html.script().$type("text/javascript")._(script.toString())._();
       }
@@ -135,8 +136,8 @@ public class TaskPage extends AppView {
               StringEscapeUtils.escapeHtml(ta.getStatus()))).append("\",\"")
 
         .append(nodeHttpAddr == null ? "N/A" :
-          "<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>"
-          + nodeHttpAddr + "</a>")
+            "<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>"
+                + nodeHttpAddr + "</a>")
         .append("\",\"")
 
         .append(ta.getAssignedContainerId() == null ? "N/A" :
@@ -151,12 +152,21 @@ public class TaskPage extends AppView {
         .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
           diag)));
         if (enableUIActions) {
-          attemptsTableData.append("\",\"")
-          .append("<a href=javascript:void(0) onclick=confirmAction('")
-          .append(String.format(stateURLFormat, ta.getId()))
-          .append("');>Kill</a>")
-          .append("\"],\n");
-        } else {
+          attemptsTableData.append("\",\"");
+          if (EnumSet.of(
+                  TaskAttemptState.SUCCEEDED,
+                  TaskAttemptState.FAILED,
+                  TaskAttemptState.KILLED).contains(attempt.getState())) {
+            attemptsTableData.append("N/A");
+          } else {
+            attemptsTableData
+              .append("<a href=javascript:void(0) onclick=confirmAction('")
+              .append(jobId.getAppId()).append("','")
+              .append(jobId).append("','")
+              .append(attempt.getID().getTaskId()).append("','")
+              .append(ta.getId())
+              .append("');>Kill</a>");
+          }
           attemptsTableData.append("\"],\n");
         }
       }
