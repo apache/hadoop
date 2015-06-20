@@ -148,9 +148,6 @@ Trunk (Unreleased)
     HDFS-7591. hdfs classpath command should support same options as hadoop
     classpath (Varun Saxena via Arpit Agarwal)
 
-    HDFS-7546. Document, and set an accepting default for
-    dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
-
     HDFS-316. Balancer should run for a configurable # of iterations (Xiaoyu
     Yao via aw)
 
@@ -966,6 +963,9 @@ Release 2.7.1 - UNRELEASED
     BlockPoolSlice#selectReplicaToDelete. (cmccabe)
 
     HDFS-8361. Choose SSD over DISK in block placement.  (szetszwo)
+
+    HDFS-7546. Document, and set an accepting default for
+    dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
 
   OPTIMIZATIONS
 
