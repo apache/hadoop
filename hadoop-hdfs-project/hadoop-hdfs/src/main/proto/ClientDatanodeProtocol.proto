@@ -180,6 +180,14 @@ message GetReconfigurationStatusResponseProto {
   repeated GetReconfigurationStatusConfigChangeProto changes = 3;
 }
 
+message ListReconfigurablePropertiesRequestProto {
+}
+
+/** Query the reconfigurable properties on DataNode. */
+message ListReconfigurablePropertiesResponseProto {
+  repeated string name = 1;
+}
+
 /**
  * Protocol used from client to the Datanode.
  * See the request and response for details of rpc call.
@@ -229,6 +237,10 @@ service ClientDatanodeProtocolService {
 
   rpc startReconfiguration(StartReconfigurationRequestProto)
       returns(StartReconfigurationResponseProto);
+
+  rpc listReconfigurableProperties(
+      ListReconfigurablePropertiesRequestProto)
+      returns(ListReconfigurablePropertiesResponseProto);
 
   rpc triggerBlockReport(TriggerBlockReportRequestProto)
       returns(TriggerBlockReportResponseProto);
