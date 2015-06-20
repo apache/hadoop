@@ -483,6 +483,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6373. The logger reports total input paths but it is referring
     to input files. (Bibin A Chundatt via devaraj)
 
+    MAPREDUCE-6405. NullPointerException in App Attempts page.
+    (Siqi Li and Gera Shegalov via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
