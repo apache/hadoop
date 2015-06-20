@@ -352,6 +352,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6395. Improve the commit failure messages in MRAppMaster recovery.
     (Brahma Reddy Battula via gera)
 
+    MAPREDUCE-6316. Task Attempt List entries should link to the task overview.
+    (Siqi Li via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
