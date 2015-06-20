@@ -658,6 +658,9 @@ Release 2.8.0 - UNRELEASED
     do not generate spurious reconfig warnings (Lei (Eddy) Xu via Colin P.
     McCabe)
 
+    HDFS-8192. Eviction should key off used locked memory instead of
+    ram disk free space. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
