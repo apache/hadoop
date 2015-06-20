@@ -200,7 +200,7 @@ public class TestBlocks {
     block.render(html);
     pWriter.flush();
     // should be printed information about attempts
-    assertTrue(data.toString().contains("0 attempt_0_0001_r_000000_0"));
+    assertTrue(data.toString().contains("attempt_0_0001_r_000000_0"));
     assertTrue(data.toString().contains("SUCCEEDED"));
     assertFalse(data.toString().contains("Processed 128/128 records <p> \n"));
     assertTrue(data.toString().contains("Processed 128\\/128 records &lt;p&gt; \\n"));

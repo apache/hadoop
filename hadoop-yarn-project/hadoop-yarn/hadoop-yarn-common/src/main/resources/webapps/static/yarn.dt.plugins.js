@@ -146,17 +146,13 @@ function parseHadoopID(data, type, full) {
   if (type === 'display') {
     return data;
   }
-  //Return the visible string rather than the entire HTML tag
-  return data.split('>')[1].split('<')[0];
-}
 
-//JSON array element is "20000 attempt_1360183373897_0001_m_000002_0"
-function parseHadoopAttemptID(data, type, full) {
-  if (type === 'display' || type === 'filter') {
-    return data.split(' ')[1];
-  }
-  //For sorting use the order as defined in the JSON element
-  return data.split(' ')[0];
+  var splits =  data.split('>');
+  // Return original string if there is no HTML tag
+  if (splits.length === 1) return data;
+
+  //Return the visible string rather than the entire HTML tag
+  return splits[1].split('<')[0];
 }
 
 function parseHadoopProgress(data, type, full) {
