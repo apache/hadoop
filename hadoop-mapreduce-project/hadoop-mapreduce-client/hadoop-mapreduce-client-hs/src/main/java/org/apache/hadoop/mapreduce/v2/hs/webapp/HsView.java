@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
@@ -53,6 +54,18 @@ public class HsView extends TwoColumnLayout {
   protected void commonPreHead(Page.HTML<_> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
+  }
+
+  /**
+   * Determine which navigation column is active.
+   */
+  protected void setActiveNavColumnForTask() {
+    String tid = $(TASK_ID);
+    String activeNav = "2";
+    if((tid == null || tid.isEmpty())) {
+      activeNav = "1";
+    }
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:"+activeNav+"}");
   }
 
   /*

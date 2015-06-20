@@ -355,6 +355,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6316. Task Attempt List entries should link to the task overview.
     (Siqi Li via gera)
 
+    MAPREDUCE-6305. AM/Task log page should be able to link back to the job.
+    (Siqi Li via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
