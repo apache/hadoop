@@ -780,7 +780,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
   File createRbwFile(String bpid, Block b) throws IOException {
     checkReference();
     reserveSpaceForRbw(b.getNumBytes());
-    return getBlockPoolSlice(bpid).createRbwFile(b);
+    try {
+      return getBlockPoolSlice(bpid).createRbwFile(b);
+    } catch (IOException exception) {
+      releaseReservedSpace(b.getNumBytes());
+      throw exception;
+    }
   }
 
   /**

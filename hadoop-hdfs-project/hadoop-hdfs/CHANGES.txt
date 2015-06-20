@@ -1064,6 +1064,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8633. Fix setting of dfs.datanode.readahead.bytes in hdfs-default.xml
     to match DFSConfigKeys. (Ray Chiang via Yongjun Zhang)
 
+    HDFS-8626. Reserved RBW space is not released if creation of RBW File
+    fails. (kanaka kumar avvaru via Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
