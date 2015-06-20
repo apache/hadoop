@@ -118,6 +118,11 @@ public class TestReconfiguration {
       super(conf);
     }
 
+    @Override
+    protected Configuration getNewConf() {
+      return new Configuration();
+    }
+
     @Override 
     public Collection<String> getReconfigurableProperties() {
       return Arrays.asList(PROP1, PROP2, PROP4);
@@ -336,6 +341,11 @@ public class TestReconfiguration {
       super(conf);
     }
 
+    @Override
+    protected Configuration getNewConf() {
+      return new Configuration();
+    }
+
     final CountDownLatch latch = new CountDownLatch(1);
 
     @Override
@@ -397,7 +407,7 @@ public class TestReconfiguration {
 
     waitAsyncReconfigureTaskFinish(dummy);
     ReconfigurationTaskStatus status = dummy.getReconfigurationTaskStatus();
-    assertEquals(3, status.getStatus().size());
+    assertEquals(2, status.getStatus().size());
     for (Map.Entry<PropertyChange, Optional<String>> result :
         status.getStatus().entrySet()) {
       PropertyChange change = result.getKey();

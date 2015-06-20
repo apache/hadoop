@@ -52,6 +52,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusResponseProto;
@@ -59,7 +61,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRec
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -101,6 +102,9 @@ public class ClientDatanodeProtocolTranslatorPB implements
       GetReconfigurationStatusRequestProto.newBuilder().build();
   private final static StartReconfigurationRequestProto VOID_START_RECONFIG =
       StartReconfigurationRequestProto.newBuilder().build();
+  private static final ListReconfigurablePropertiesRequestProto
+      VOID_LIST_RECONFIGURABLE_PROPERTIES =
+      ListReconfigurablePropertiesRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
       Configuration conf, int socketTimeout, boolean connectToDnViaHostname,
@@ -335,6 +339,19 @@ public class ClientDatanodeProtocolTranslatorPB implements
       throw ProtobufHelper.getRemoteException(e);
     }
     return new ReconfigurationTaskStatus(startTime, endTime, statusMap);
+  }
+
+  @Override
+  public List<String> listReconfigurableProperties()
+      throws IOException {
+    ListReconfigurablePropertiesResponseProto response;
+    try {
+      response = rpcProxy.listReconfigurableProperties(NULL_CONTROLLER,
+          VOID_LIST_RECONFIGURABLE_PROPERTIES);
+      return response.getNameList();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override
