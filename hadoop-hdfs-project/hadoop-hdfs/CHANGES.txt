@@ -635,8 +635,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8606. Cleanup DFSOutputStream by removing unwanted changes
     from HDFS-8386. (Rakesh R via szetszwo)
 
-    HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
-
     HDFS-9608. Merge HDFS-7912 to trunk and branch-2 (track BlockInfo instead
     of Block in UnderReplicatedBlocks and PendingReplicationBlocks).
     (Zhe Zhang via wang)
@@ -966,6 +964,8 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-7546. Document, and set an accepting default for
     dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
+
+    HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
 
   OPTIMIZATIONS
 
