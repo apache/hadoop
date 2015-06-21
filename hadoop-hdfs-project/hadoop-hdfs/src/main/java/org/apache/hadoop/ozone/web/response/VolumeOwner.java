@@ -16,22 +16,44 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.headers;
+package org.apache.hadoop.ozone.web.response;
+
+
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 /**
- * OZONE specific HTTP headers.
+ * Volume Owner represents the owner of a volume.
+ *
+ * This is a class instead of a string since we might need to extend this class
+ * to support other forms of authentication.
  */
-public final class Header {
-  public static final String OZONE_QUOTA_BYTES = "BYTES";
-  public static final String OZONE_QUOTA_MB = "MB";
-  public static final String OZONE_QUOTA_GB = "GB";
-  public static final String OZONE_QUOTA_TB = "TB";
-  public static final String OZONE_QUOTA_REMOVE = "remove";
-  public static final String OZONE_QUOTA_UNDEFINED = "undefined";
+public class VolumeOwner {
+  @JsonSerialize(include=JsonSerialize.Inclusion.NON_NULL)
+  private String name;
 
-  public static final String OZONE_LIST_QUERY_BUCKET ="bucket";
-
-  private Header() {
-    // Never constructed.
+  /**
+   * Constructor for VolumeOwner.
+   *
+   * @param name - name of the User
+   */
+  public VolumeOwner(String name) {
+    this.name = name;
   }
+
+  /**
+   * Constructs Volume Owner.
+   */
+  public VolumeOwner() {
+    name = null;
+  }
+
+  /**
+   * Returns the user name.
+   *
+   * @return Name
+   */
+  public String getName() {
+    return name;
+  }
+
 }

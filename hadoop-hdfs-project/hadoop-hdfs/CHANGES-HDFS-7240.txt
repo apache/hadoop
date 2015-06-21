@@ -10,3 +10,4 @@
     HDFS-8641. OzoneHandler : Add Quota Support. (Anu Engineer via
     Arpit Agarwal)
 
+    HDFS-8448. Create REST Interface for Volumes. (Anu Engineer via cnauroth)
