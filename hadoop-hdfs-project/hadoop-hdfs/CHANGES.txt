@@ -29,6 +29,10 @@ Release 2.6.1 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using
+    hard-links to preserve old edit logs, instead of copying them. (Zhe Zhang
+    via Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-7425. NameNode block deletion logging uses incorrect appender.
