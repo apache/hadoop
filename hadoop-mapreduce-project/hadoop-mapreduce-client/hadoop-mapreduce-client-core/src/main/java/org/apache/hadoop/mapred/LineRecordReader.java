@@ -38,6 +38,7 @@ import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.lib.input.CompressedSplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.SplitLineReader;
+import org.apache.hadoop.mapreduce.lib.input.UncompressedSplitLineReader;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 
@@ -131,7 +132,8 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
       }
     } else {
       fileIn.seek(start);
-      in = new SplitLineReader(fileIn, job, recordDelimiter);
+      in = new UncompressedSplitLineReader(
+          fileIn, job, recordDelimiter, split.getLength());
       filePosition = fileIn;
     }
     // If this is not the first split, we always throw away first record
