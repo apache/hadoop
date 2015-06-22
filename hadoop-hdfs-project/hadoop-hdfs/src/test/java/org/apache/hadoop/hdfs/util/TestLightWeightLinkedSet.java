@@ -325,10 +325,19 @@ public class TestLightWeightLinkedSet {
     assertEquals(NUM, set.size());
     assertFalse(set.isEmpty());
 
+    // Advance the bookmark.
+    Iterator<Integer> bkmrkIt = set.getBookmark();
+    for (int i=0; i<set.size()/2+1; i++) {
+      bkmrkIt.next();
+    }
+    assertTrue(bkmrkIt.hasNext());
+
     // clear the set
     set.clear();
     assertEquals(0, set.size());
     assertTrue(set.isEmpty());
+    bkmrkIt = set.getBookmark();
+    assertFalse(bkmrkIt.hasNext());
 
     // poll should return an empty list
     assertEquals(0, set.pollAll().size());
@@ -363,4 +372,64 @@ public class TestLightWeightLinkedSet {
     LOG.info("Test capacity - DONE");
   }
 
+  @Test(timeout=60000)
+  public void testGetBookmarkReturnsBookmarkIterator() {
+    LOG.info("Test getBookmark returns proper iterator");
+    assertTrue(set.addAll(list));
+
+    Iterator<Integer> bookmark = set.getBookmark();
+    assertEquals(bookmark.next(), list.get(0));
+
+    final int numAdvance = list.size()/2;
+    for(int i=1; i<numAdvance; i++) {
+      bookmark.next();
+    }
+
+    Iterator<Integer> bookmark2 = set.getBookmark();
+    assertEquals(bookmark2.next(), list.get(numAdvance));
+  }
+
+  @Test(timeout=60000)
+  public void testBookmarkAdvancesOnRemoveOfSameElement() {
+    LOG.info("Test that the bookmark advances if we remove its element.");
+    assertTrue(set.add(list.get(0)));
+    assertTrue(set.add(list.get(1)));
+    assertTrue(set.add(list.get(2)));
+
+    Iterator<Integer> it = set.getBookmark();
+    assertEquals(it.next(), list.get(0));
+    set.remove(list.get(1));
+    it = set.getBookmark();
+    assertEquals(it.next(), list.get(2));
+  }
+
+  @Test(timeout=60000)
+  public void testBookmarkSetToHeadOnAddToEmpty() {
+    LOG.info("Test bookmark is set after adding to previously empty set.");
+    Iterator<Integer> it = set.getBookmark();
+    assertFalse(it.hasNext());
+    set.add(list.get(0));
+    set.add(list.get(1));
+
+    it = set.getBookmark();
+    assertTrue(it.hasNext());
+    assertEquals(it.next(), list.get(0));
+    assertEquals(it.next(), list.get(1));
+    assertFalse(it.hasNext());
+  }
+
+  @Test(timeout=60000)
+  public void testResetBookmarkPlacesBookmarkAtHead() {
+    set.addAll(list);
+    Iterator<Integer> it = set.getBookmark();
+    final int numAdvance = set.size()/2;
+    for (int i=0; i<numAdvance; i++) {
+      it.next();
+    }
+    assertEquals(it.next(), list.get(numAdvance));
+
+    set.resetBookmark();
+    it = set.getBookmark();
+    assertEquals(it.next(), list.get(0));
+  }
 }
