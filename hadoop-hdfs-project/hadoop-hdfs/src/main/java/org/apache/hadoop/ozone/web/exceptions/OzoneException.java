@@ -46,6 +46,21 @@ public class OzoneException extends Exception {
 
 
   /**
+   * Constructor that allows a shortMessage and exception.
+   *
+   * @param httpCode Error Code
+   * @param shortMessage Short Message
+   * @param ex Exception
+   */
+  public OzoneException(long httpCode, String shortMessage, Exception ex) {
+    super(ex);
+    this.message = ex.getMessage();
+    this.shortMessage = shortMessage;
+    this.httpCode = httpCode;
+  }
+
+
+  /**
    * Constructor that allows a shortMessage.
    *
    * @param httpCode Error Code
@@ -68,7 +83,7 @@ public class OzoneException extends Exception {
     this.resource = message;
     this.httpCode = httpCode;
   }
- 
+
   /**
    * Returns the Resource that was involved in the exception.
    *
@@ -99,7 +114,7 @@ public class OzoneException extends Exception {
   /**
    * Sets the error message.
    *
-   * @param longMessage  - Long message
+   * @param longMessage - Long message
    */
   public void setMessage(String longMessage) {
     this.message = longMessage;
