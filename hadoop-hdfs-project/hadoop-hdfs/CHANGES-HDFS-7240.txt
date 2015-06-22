@@ -11,3 +11,6 @@
     Arpit Agarwal)
 
     HDFS-8448. Create REST Interface for Volumes. (Anu Engineer via cnauroth)
+
+    HDFS-8637. OzoneHandler : Add Error Table. (Anu Engineer via Arpit Agarwal)
+
