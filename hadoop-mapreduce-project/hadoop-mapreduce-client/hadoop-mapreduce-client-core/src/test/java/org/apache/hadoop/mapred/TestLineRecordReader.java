@@ -25,13 +25,17 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -41,6 +45,9 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.junit.Test;
 
 public class TestLineRecordReader {
+  private static Path workDir = new Path(new Path(System.getProperty(
+      "test.build.data", "target"), "data"), "TestTextInputFormat");
+  private static Path inputDir = new Path(workDir, "input");
 
   private void testSplitRecords(String testFileName, long firstSplitLength)
       throws IOException {
@@ -50,15 +57,27 @@ public class TestLineRecordReader {
     long testFileSize = testFile.length();
     Path testFilePath = new Path(testFile.getAbsolutePath());
     Configuration conf = new Configuration();
+    testSplitRecordsForFile(conf, firstSplitLength, testFileSize, testFilePath);
+  }
+
+  private void testSplitRecordsForFile(Configuration conf,
+      long firstSplitLength, long testFileSize, Path testFilePath)
+      throws IOException {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
         LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
-    assertTrue("unexpected test data at " + testFile,
+    assertTrue("unexpected test data at " + testFilePath,
         testFileSize > firstSplitLength);
 
+    String delimiter = conf.get("textinputformat.record.delimiter");
+    byte[] recordDelimiterBytes = null;
+    if (null != delimiter) {
+      recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
+    }
     // read the data without splitting to count the records
     FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
         (String[])null);
-    LineRecordReader reader = new LineRecordReader(conf, split);
+    LineRecordReader reader = new LineRecordReader(conf, split,
+        recordDelimiterBytes);
     LongWritable key = new LongWritable();
     Text value = new Text();
     int numRecordsNoSplits = 0;
@@ -69,7 +88,7 @@ public class TestLineRecordReader {
 
     // count the records in the first split
     split = new FileSplit(testFilePath, 0, firstSplitLength, (String[])null);
-    reader = new LineRecordReader(conf, split);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
     int numRecordsFirstSplit = 0;
     while (reader.next(key,  value)) {
       ++numRecordsFirstSplit;
@@ -79,14 +98,14 @@ public class TestLineRecordReader {
     // count the records in the second split
     split = new FileSplit(testFilePath, firstSplitLength,
         testFileSize - firstSplitLength, (String[])null);
-    reader = new LineRecordReader(conf, split);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
     int numRecordsRemainingSplits = 0;
     while (reader.next(key,  value)) {
       ++numRecordsRemainingSplits;
     }
     reader.close();
 
-    assertEquals("Unexpected number of records in bzip2 compressed split",
+    assertEquals("Unexpected number of records in split",
         numRecordsNoSplits, numRecordsFirstSplit + numRecordsRemainingSplits);
   }
 
@@ -289,5 +308,53 @@ public class TestLineRecordReader {
       decompressors.add(CodecPool.getDecompressor(codec));
     }
     assertEquals(10, decompressors.size());
+  }
+
+  /**
+   * Writes the input test file
+   *
+   * @param conf
+   * @return Path of the file created
+   * @throws IOException
+   */
+  private Path createInputFile(Configuration conf, String data)
+      throws IOException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    Path file = new Path(inputDir, "test.txt");
+    Writer writer = new OutputStreamWriter(localFs.create(file));
+    try {
+      writer.write(data);
+    } finally {
+      writer.close();
+    }
+    return file;
+  }
+
+  @Test
+  public void testUncompressedInput() throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "abc+++def+++ghi+++"
+        + "jkl+++mno+++pqr+++stu+++vw +++xyz";
+    Path inputFile = createInputFile(conf, inputData);
+    conf.set("textinputformat.record.delimiter", "+++");
+    for(int bufferSize = 1; bufferSize <= inputData.length(); bufferSize++) {
+      for(int splitSize = 1; splitSize < inputData.length(); splitSize++) {
+        conf.setInt("io.file.buffer.size", bufferSize);
+        testSplitRecordsForFile(conf, splitSize, inputData.length(), inputFile);
+      }
+    }
+  }
+
+  @Test
+  public void testUncompressedInputContainingCRLF() throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "a\r\nb\rc\nd\r\n";
+    Path inputFile = createInputFile(conf, inputData);
+    for(int bufferSize = 1; bufferSize <= inputData.length(); bufferSize++) {
+      for(int splitSize = 1; splitSize < inputData.length(); splitSize++) {
+        conf.setInt("io.file.buffer.size", bufferSize);
+        testSplitRecordsForFile(conf, splitSize, inputData.length(), inputFile);
+      }
+    }
   }
 }

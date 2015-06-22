@@ -498,6 +498,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6403. Fix typo in the usage of NNBench.
     (Jagadesh Kiran N via aajisaka)
 
+    MAPREDUCE-5948. org.apache.hadoop.mapred.LineRecordReader does not handle
+    multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
+    AJISAKA via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
