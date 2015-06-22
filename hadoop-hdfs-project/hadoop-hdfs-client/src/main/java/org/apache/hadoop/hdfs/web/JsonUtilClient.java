@@ -389,6 +389,16 @@ class JsonUtilClient {
     return aclStatusBuilder.build();
   }
 
+  static String getPath(final Map<?, ?> json)
+      throws IOException {
+    if (json == null) {
+      return null;
+    }
+
+    String path = (String) json.get("Path");
+    return path;
+  }
+
   static byte[] getXAttr(final Map<?, ?> json, final String name)
       throws IOException {
     if (json == null) {

@@ -938,6 +938,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-4366. Block Replication Policy Implementation May Skip Higher-Priority
     Blocks for Lower-Priority Blocks (Derek Dagit via kihwal)
 
+    HDFS-8542. WebHDFS getHomeDirectory behavior does not match specification.
+    (Kanaka Kumar Avvaru via jghoman)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

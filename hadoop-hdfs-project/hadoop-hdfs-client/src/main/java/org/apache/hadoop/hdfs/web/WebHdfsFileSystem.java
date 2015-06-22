@@ -110,6 +110,7 @@ public class WebHdfsFileSystem extends FileSystem
   protected Text tokenServiceName;
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
+  private Path cachedHomeDirectory;
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
   private boolean disallowFallbackToInsecureCluster;
@@ -193,7 +194,7 @@ public class WebHdfsFileSystem extends FileSystem
               failoverSleepMaxMillis);
     }
 
-    this.workingDir = getHomeDirectory();
+    this.workingDir = makeQualified(new Path(getHomeDirectoryString(ugi)));
     this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
     this.disallowFallbackToInsecureCluster = !conf.getBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
@@ -267,14 +268,35 @@ public class WebHdfsFileSystem extends FileSystem
     return NetUtils.getCanonicalUri(uri, getDefaultPort());
   }
 
-  /** @return the home directory. */
+  /** @return the home directory */
+  @Deprecated
   public static String getHomeDirectoryString(final UserGroupInformation ugi) {
     return "/user/" + ugi.getShortUserName();
   }
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path(getHomeDirectoryString(ugi)));
+    if (cachedHomeDirectory == null) {
+      final HttpOpParam.Op op = GetOpParam.Op.GETHOMEDIRECTORY;
+      try {
+        String pathFromDelegatedFS = new FsPathResponseRunner<String>(op, null,
+            new UserParam(ugi)) {
+          @Override
+          String decodeResponse(Map<?, ?> json) throws IOException {
+            return JsonUtilClient.getPath(json);
+          }
+        }   .run();
+
+        cachedHomeDirectory = new Path(pathFromDelegatedFS).makeQualified(
+            this.getUri(), null);
+
+      } catch (IOException e) {
+        LOG.error("Unable to get HomeDirectory from original File System", e);
+        cachedHomeDirectory = new Path("/user/" + ugi.getShortUserName())
+            .makeQualified(this.getUri(), null);
+      }
+    }
+    return cachedHomeDirectory;
   }
 
   @Override
@@ -284,12 +306,13 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public synchronized void setWorkingDirectory(final Path dir) {
-    String result = makeAbsolute(dir).toUri().getPath();
+    Path absolutePath = makeAbsolute(dir);
+    String result = absolutePath.toUri().getPath();
     if (!DFSUtilClient.isValidName(result)) {
       throw new IllegalArgumentException("Invalid DFS directory name " +
                                          result);
     }
-    workingDir = makeAbsolute(dir);
+    workingDir = absolutePath;
   }
 
   private Path makeAbsolute(Path f) {
