@@ -59,7 +59,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 
 /**
  * This program executes a specified operation that applies load to 
@@ -197,7 +196,7 @@ public class NNBench {
       "This is not mandatory>\n" +
       "\t-replicationFactorPerFile <Replication factor for the files." +
         " default is 1. This is not mandatory>\n" +
-      "\t-baseDir <base DFS path. default is /becnhmarks/NNBench. " +
+      "\t-baseDir <base DFS path. default is /benchmarks/NNBench. " +
       "This is not mandatory>\n" +
       "\t-readFileAfterOpen <true or false. if true, it reads the file and " +
       "reports the average time to read. This is valid with the open_read " +

@@ -492,6 +492,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6405. NullPointerException in App Attempts page.
     (Siqi Li and Gera Shegalov via devaraj)
 
+    MAPREDUCE-6403. Fix typo in the usage of NNBench.
+    (Jagadesh Kiran N via aajisaka)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
