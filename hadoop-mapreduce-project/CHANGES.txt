@@ -358,6 +358,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6305. AM/Task log page should be able to link back to the job.
     (Siqi Li via gera)
 
+    MAPREDUCE-6408. Queue name and user name should be printed on the job page.
+    (Siqi Li via gera)
+
   OPTIMIZATIONS
 
   BUG FIXES
