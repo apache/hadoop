@@ -312,6 +312,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3148. Allow CORS related headers to passthrough in WebAppProxyServlet.
     (Varun Saxena via devaraj)
 
+    YARN-3834. Scrub debug logging of tokens during resource localization.
+    (Chris Nauroth via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
