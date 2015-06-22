@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -127,23 +128,8 @@ public abstract class NNUpgradeUtil {
 
     for (String s : fileNameList) {
       File prevFile = new File(tmpDir, s);
-      Preconditions.checkState(prevFile.canRead(),
-          "Edits log file " + s + " is not readable.");
       File newFile = new File(curDir, prevFile.getName());
-      Preconditions.checkState(newFile.createNewFile(),
-          "Cannot create new edits log file in " + curDir);
-      EditLogFileInputStream in = new EditLogFileInputStream(prevFile);
-      EditLogFileOutputStream out =
-          new EditLogFileOutputStream(conf, newFile, 512*1024);
-      FSEditLogOp logOp = in.nextValidOp();
-      while (logOp != null) {
-        out.write(logOp);
-        logOp = in.nextOp();
-      }
-      out.setReadyToFlush();
-      out.flushAndSync(true);
-      out.close();
-      in.close();
+      Files.createLink(newFile.toPath(), prevFile.toPath());
     }
   }
 
