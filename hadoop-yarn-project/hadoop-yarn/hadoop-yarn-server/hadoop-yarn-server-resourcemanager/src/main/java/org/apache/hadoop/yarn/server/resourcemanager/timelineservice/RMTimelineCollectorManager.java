@@ -56,7 +56,7 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
       if (parts.length != 2 || parts[1].isEmpty()) {
         continue;
       }
-      switch (parts[0]) {
+      switch (parts[0].toUpperCase()) {
         case TimelineUtils.FLOW_NAME_TAG_PREFIX:
           collector.getTimelineEntityContext().setFlowName(parts[1]);
           break;

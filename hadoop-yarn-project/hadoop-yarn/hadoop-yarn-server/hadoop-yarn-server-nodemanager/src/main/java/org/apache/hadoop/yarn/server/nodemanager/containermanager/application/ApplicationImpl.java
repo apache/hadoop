@@ -104,11 +104,11 @@ public class ApplicationImpl implements Application {
     stateMachine = stateMachineFactory.make(this);
     Configuration conf = context.getConf();
     if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      createAndStartTimelienClient(conf);
+      createAndStartTimelineClient(conf);
     }
   }
   
-  private void createAndStartTimelienClient(Configuration conf) {
+  private void createAndStartTimelineClient(Configuration conf) {
     // create and start timeline client
     this.timelineClient = TimelineClient.createTimelineClient(appId);
     timelineClient.init(conf);

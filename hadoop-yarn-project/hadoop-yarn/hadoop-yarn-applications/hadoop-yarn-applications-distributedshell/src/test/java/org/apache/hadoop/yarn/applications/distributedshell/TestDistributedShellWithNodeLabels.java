@@ -30,7 +30,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -40,11 +42,14 @@ public class TestDistributedShellWithNodeLabels {
   
   static final int NUM_NMS = 2;
   TestDistributedShell distShellTest;
- 
+
+  @Rule
+  public TestName currTestName = new TestName();
+
   @Before
   public void setup() throws Exception {
     distShellTest = new TestDistributedShell();
-    distShellTest.setupInternal(NUM_NMS);
+    distShellTest.setupInternal(NUM_NMS,currTestName);
   }
   
   private void initializeNodeLabels() throws IOException {

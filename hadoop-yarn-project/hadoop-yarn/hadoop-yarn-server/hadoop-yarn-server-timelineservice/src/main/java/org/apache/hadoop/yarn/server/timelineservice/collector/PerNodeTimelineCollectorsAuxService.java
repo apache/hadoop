@@ -56,8 +56,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   private final NodeTimelineCollectorManager collectorManager;
 
   public PerNodeTimelineCollectorsAuxService() {
-    // use the same singleton
-    this(NodeTimelineCollectorManager.getInstance());
+    this(new NodeTimelineCollectorManager());
   }
 
   @VisibleForTesting PerNodeTimelineCollectorsAuxService(
