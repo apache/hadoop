@@ -35,9 +35,6 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3333. Rename TimelineAggregator etc. to TimelineCollector. (Sangjin Lee
     via junping_du)
 
-    YARN-3377. Fixed test failure in TestTimelineServiceClientIntegration.
-    (Sangjin Lee via zjshen)
-
     YARN-3034. Implement RM starting its timeline collector. (Naganarasimha G R
     via junping_du)
 
@@ -61,26 +58,14 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3551. Consolidate data model change according to the backend
     implementation (Zhijie Shen via sjlee)
 
-    YARN-3562. unit tests failures and issues found from findbug from earlier
-    ATS checkins (Naganarasimha G R via sjlee)
-
     YARN-3134. Implemented Phoenix timeline writer to access HBase backend. (Li
     Lu via zjshen)
 
     YARN-3529. Added mini HBase cluster and Phoenix support to timeline service
     v2 unit tests. (Li Lu via zjshen)
 
-    YARN-3634. TestMRTimelineEventHandling and TestApplication are broken. (
-    Sangjin Lee via junping_du)
-
     YARN-3411. [Storage implementation] explore the native HBase write schema
     for storage (Vrushali C via sjlee)
-
-    YARN-3726. Fix TestHBaseTimelineWriterImpl unit test failure by fixing its
-    test data (Vrushali C via sjlee)
-
-    YARN-3721. build is broken on YARN-2928 branch due to possible dependency
-    cycle (Li Lu via sjlee)
 
     YARN-3044. Made RM write app, attempt and optional container lifecycle
     events to timeline service v2. (Naganarasimha G R via zjshen)
@@ -99,6 +84,24 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-3377. Fixed test failure in TestTimelineServiceClientIntegration.
+    (Sangjin Lee via zjshen)
+
+    YARN-3562. unit tests failures and issues found from findbug from earlier
+    ATS checkins (Naganarasimha G R via sjlee)
+
+    YARN-3634. TestMRTimelineEventHandling and TestApplication are broken. (
+    Sangjin Lee via junping_du)
+
+    YARN-3726. Fix TestHBaseTimelineWriterImpl unit test failure by fixing its
+    test data (Vrushali C via sjlee)
+
+    YARN-3721. build is broken on YARN-2928 branch due to possible dependency
+    cycle (Li Lu via sjlee)
+
+    YARN-3792. Test case failures in TestDistributedShell and some issue fixes
+    related to ATSV2 (Naganarasimha G R via sjlee)
 
 Trunk - Unreleased
 
