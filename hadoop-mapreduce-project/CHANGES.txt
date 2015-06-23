@@ -548,6 +548,9 @@ Release 2.7.1 - UNRELEASED
     MAPREDUCE-6387. Serialize the recently added Task#encryptedSpillKey field at 
     the end. (Arun Suresh via kasha)
 
+    MAPREDUCE-6410. Fixed MapReduce JobHistory server to use the right (login)
+    UGI to refresh log and cleaner settings. (Varun Saxena via vinodkv)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
