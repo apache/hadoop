@@ -1326,7 +1326,7 @@
   <value>2</value>
   <description>The file output committer algorithm version
   valid algorithm version number: 1 or 2
-  default to 1, which is the original algorithm
+  default to 2, which is the original algorithm
 
   In algorithm version 1,
 

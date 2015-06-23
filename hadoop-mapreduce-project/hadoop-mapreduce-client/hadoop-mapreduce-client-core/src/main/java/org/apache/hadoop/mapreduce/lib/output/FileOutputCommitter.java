@@ -63,7 +63,7 @@ public class FileOutputCommitter extends OutputCommitter {
       "mapreduce.fileoutputcommitter.marksuccessfuljobs";
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
       "mapreduce.fileoutputcommitter.algorithm.version";
-  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 1;
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 2;
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;

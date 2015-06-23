@@ -200,6 +200,9 @@ Trunk (Unreleased)
     MAPREDUCE-6396. TestPipeApplication fails by NullPointerException.
     (Brahma Reddy Battula via aajisaka)
 
+    MAPREDUCE-6406. Update FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT
+    to match mapred-default.xml. (Ray Chiang via devaraj)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
