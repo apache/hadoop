@@ -16,25 +16,16 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.headers;
+package org.apache.hadoop.ozone.web.utils;
 
 /**
- * OZONE specific HTTP headers.
+ * Set of constants used in Ozone implementation.
  */
-public final class Header {
-  public static final String OZONE_QUOTA_BYTES = "BYTES";
-  public static final String OZONE_QUOTA_MB = "MB";
-  public static final String OZONE_QUOTA_GB = "GB";
-  public static final String OZONE_QUOTA_TB = "TB";
-  public static final String OZONE_QUOTA_REMOVE = "remove";
-  public static final String OZONE_QUOTA_UNDEFINED = "undefined";
+public final class OzoneConsts {
+  public static final String OZONE_SIMPLE_ROOT_USER = "root";
+  public static final String OZONE_SIMPLE_HDFS_USER = "hdfs";
 
-  public static final String OZONE_LIST_QUERY_BUCKET = "bucket";
-
-  public static final String OZONE_USER = "x-ozone-user";
-  public static final String OZONE_SIMPLE_AUTHENTICATION_SCHEME = "OZONE";
-
-  private Header() {
-    // Never constructed.
+  private OzoneConsts() {
+    // Never Constructed
   }
 }

@@ -14,3 +14,6 @@
 
     HDFS-8637. OzoneHandler : Add Error Table. (Anu Engineer via Arpit Agarwal)
 
+    HDFS-8634. OzoneHandler: Add userAuth Interface and Simple userAuth
+    handler. (Anu Engineer via Arpit Agarwal)
+
