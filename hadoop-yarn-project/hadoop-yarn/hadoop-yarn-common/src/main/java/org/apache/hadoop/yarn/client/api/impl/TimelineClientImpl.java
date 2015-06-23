@@ -418,6 +418,14 @@ public class TimelineClientImpl extends TimelineClient {
     // timelineServiceAddress could haven't be initialized yet
     // or stale (only for new timeline service)
     int retries = pollTimelineServiceAddress(this.maxServiceRetries);
+    if (timelineServiceAddress == null) {
+      String errMessage = "TimelineClient has reached to max retry times : "
+          + this.maxServiceRetries
+          + ", but failed to fetch timeline service address. Please verify"
+          + " Timeline Auxillary Service is configured in all the NMs";
+      LOG.error(errMessage);
+      throw new YarnException(errMessage);
+    }
 
     // timelineServiceAddress could be stale, add retry logic here.
     boolean needRetry = true;

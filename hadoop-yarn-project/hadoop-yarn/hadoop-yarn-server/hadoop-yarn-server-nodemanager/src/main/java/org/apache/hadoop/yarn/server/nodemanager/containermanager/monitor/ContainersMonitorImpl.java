@@ -96,11 +96,8 @@ public class ContainersMonitorImpl extends AbstractService implements
   
   // For posting entities in new timeline service in a non-blocking way
   // TODO replace with event loop in TimelineClient.
-  private static ExecutorService threadPool =
-      Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
-          .build());
-  
+  private static ExecutorService threadPool;
+
   @Private
   public static enum ContainerMetric {
     CPU, MEMORY
@@ -225,6 +222,10 @@ public class ContainersMonitorImpl extends AbstractService implements
     if (publishContainerMetricsToTimelineService) {
       LOG.info("NodeManager has been configured to publish container " +
           "metrics to Timeline Service V2.");
+      threadPool =
+          Executors.newCachedThreadPool(
+              new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
+              .build());
     } else {
       LOG.warn("NodeManager has not been configured to publish container " +
           "metrics to Timeline Service V2.");
@@ -280,6 +281,9 @@ public class ContainersMonitorImpl extends AbstractService implements
   
   // TODO remove threadPool after adding non-blocking call in TimelineClient
   private static void shutdownAndAwaitTermination() {
+    if (threadPool == null) {
+      return;
+    }
     threadPool.shutdown();
     try {
       if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
@@ -689,7 +693,6 @@ public class ContainersMonitorImpl extends AbstractService implements
             timelineClient.putEntities(entity);
           } catch (IOException|YarnException e) {
             LOG.error("putEntityNonBlocking get failed: " + e);
-            throw new RuntimeException(e.toString());
           }
         }
       };
