@@ -497,7 +497,7 @@ public class Client {
     }
     if (cliParser.hasOption("flow_run_id")) {
       try {
-        flowRunId = Long.valueOf(cliParser.getOptionValue("flow_run_id"));
+        flowRunId = Long.parseLong(cliParser.getOptionValue("flow_run_id"));
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(
             "Flow run is not a valid long value", e);
