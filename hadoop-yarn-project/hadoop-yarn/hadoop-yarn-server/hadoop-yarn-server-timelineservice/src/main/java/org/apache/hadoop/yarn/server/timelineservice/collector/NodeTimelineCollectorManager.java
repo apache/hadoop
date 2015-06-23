@@ -48,21 +48,11 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
-
-/**
- *
- * It is a singleton, and instances should be obtained via
- * {@link #getInstance()}.
- *
- */
 @Private
 @Unstable
 public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   private static final Log LOG =
       LogFactory.getLog(NodeTimelineCollectorManager.class);
-  private static final NodeTimelineCollectorManager INSTANCE =
-      new NodeTimelineCollectorManager();
-
 
   // REST server for this collector manager
   private HttpServer2 timelineRestServer;
@@ -72,10 +62,6 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   private volatile CollectorNodemanagerProtocol nmCollectorService;
 
   static final String COLLECTOR_MANAGER_ATTR_KEY = "collector.manager";
-
-  static NodeTimelineCollectorManager getInstance() {
-    return INSTANCE;
-  }
 
   @VisibleForTesting
   protected NodeTimelineCollectorManager() {
