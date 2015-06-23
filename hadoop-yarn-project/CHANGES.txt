@@ -545,6 +545,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
     after NM is reconnected. (zhihai xu via xgong)
 
+    YARN-3835. hadoop-yarn-server-resourcemanager test package bundles
+    core-site.xml, yarn-site.xml (vamsee via rkanter)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

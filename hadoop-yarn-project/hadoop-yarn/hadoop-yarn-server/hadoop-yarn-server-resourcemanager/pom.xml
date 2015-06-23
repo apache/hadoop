@@ -258,6 +258,10 @@
                   <mainClass>org.apache.hadoop.test.YarnTestDriver</mainClass>
                 </manifest>
               </archive>
+              <excludes>
+                <exclude>**/core-site.xml</exclude>
+                <exclude>**/yarn-site.xml</exclude>
+              </excludes>
             </configuration>
           </execution>
         </executions>
