@@ -1284,7 +1284,7 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   private void cleanUpLocalDirs(FileContext lfs, DeletionService del) {
-    for (String localDir : dirsHandler.getLocalDirs()) {
+    for (String localDir : dirsHandler.getLocalDirsForCleanup()) {
       cleanUpLocalDir(lfs, del, localDir);
     }
   }
