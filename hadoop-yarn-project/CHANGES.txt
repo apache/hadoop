@@ -699,6 +699,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3842. NMProxy should retry on NMNotYetReadyException. 
     (Robert Kanter via kasha)
 
+    YARN-3809. Failed to launch new attempts because
+    ApplicationMasterLauncher's threads all hang (Jun Gong via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
