@@ -23,10 +23,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
 
+import com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -58,19 +60,23 @@ public class TestHAConfiguration {
     }
   }
 
-  private Configuration getHAConf(String nsId, String host1, String host2) {
+  private Configuration getHAConf(String nsId, String ... hosts) {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
-    conf.set(DFSUtil.addKeySuffixes(
-        DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId),
-        "nn1,nn2");    
     conf.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
+
+    String[] nnids = new String[hosts.length];
+    for (int i = 0; i < hosts.length; i++) {
+      String nnid = "nn" + (i + 1);
+      nnids[i] = nnid;
+      conf.set(DFSUtil.addKeySuffixes(
+              DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, nnid),
+          hosts[i] + ":12345");
+    }
+
     conf.set(DFSUtil.addKeySuffixes(
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn1"),
-        host1 + ":12345");
-    conf.set(DFSUtil.addKeySuffixes(
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, "nn2"),
-        host2 + ":12345");
+            DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId),
+        Joiner.on(',').join(nnids));
     return conf;
   }
 
@@ -87,11 +93,28 @@ public class TestHAConfiguration {
     // 0.0.0.0, it should substitute the address from the RPC configuration
     // above.
     StandbyCheckpointer checkpointer = new StandbyCheckpointer(conf, fsn);
-    assertEquals(new URL("http", "1.2.3.2",
-        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""),
-        checkpointer.getActiveNNAddress());
+    assertAddressMatches("1.2.3.2", checkpointer.getActiveNNAddresses().get(0));
+
+    //test when there are three NNs
+    // Use non-local addresses to avoid host address matching
+    conf = getHAConf("ns1", "1.2.3.1", "1.2.3.2", "1.2.3.3");
+
+    // This is done by the NN before the StandbyCheckpointer is created
+    NameNode.initializeGenericKeys(conf, "ns1", "nn1");
+
+    checkpointer = new StandbyCheckpointer(conf, fsn);
+    assertEquals("Got an unexpected number of possible active NNs", 2, checkpointer
+        .getActiveNNAddresses().size());
+    assertEquals(new URL("http", "1.2.3.2", DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""),
+        checkpointer.getActiveNNAddresses().get(0));
+    assertAddressMatches("1.2.3.2", checkpointer.getActiveNNAddresses().get(0));
+    assertAddressMatches("1.2.3.3", checkpointer.getActiveNNAddresses().get(1));
   }
-  
+
+  private void assertAddressMatches(String address, URL url) throws MalformedURLException {
+    assertEquals(new URL("http", address, DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""), url);
+  }
+
   /**
    * Tests that the namenode edits dirs and shared edits dirs are gotten with
    * duplicates removed
