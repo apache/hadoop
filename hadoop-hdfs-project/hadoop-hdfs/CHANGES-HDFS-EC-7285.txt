@@ -320,3 +320,6 @@
 
     HDFS-8567. Erasure Coding: SafeMode handles file smaller than a full stripe.
     (Walter Su via jing9)
+
+    HDFS-8253. DFSStripedOutputStream.closeThreads releases cellBuffers
+    multiple times.  (Kai Sasaki via szetszwo)
