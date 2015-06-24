@@ -208,7 +208,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   /** Is WebHDFS enabled in conf? */
-  public static boolean isEnabled(final Configuration conf, final Log log) {
+  public static boolean isEnabled(final Configuration conf) {
     final boolean b = conf.getBoolean(
         HdfsClientConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);

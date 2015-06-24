@@ -68,7 +68,7 @@ public class NameNodeHttpServer {
   }
 
   private void initWebHdfs(Configuration conf) throws IOException {
-    if (WebHdfsFileSystem.isEnabled(conf, HttpServer2.LOG)) {
+    if (WebHdfsFileSystem.isEnabled(conf)) {
       // set user pattern based on configuration file
       UserParam.setUserPattern(conf.get(
           DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
