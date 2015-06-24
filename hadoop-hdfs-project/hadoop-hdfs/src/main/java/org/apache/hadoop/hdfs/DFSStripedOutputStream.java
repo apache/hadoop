@@ -494,21 +494,24 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   @Override
   protected void closeThreads(boolean force) throws IOException {
     final MultipleIOException.Builder b = new MultipleIOException.Builder();
-    for (StripedDataStreamer streamer : streamers) {
-      try {
-        streamer.close(force);
-        streamer.join();
-        streamer.closeSocket();
-      } catch(Exception e) {
+    try {
+      for (StripedDataStreamer streamer : streamers) {
         try {
-          handleStreamerFailure("force=" + force, e);
-        } catch(IOException ioe) {
-          b.add(ioe);
+          streamer.close(force);
+          streamer.join();
+          streamer.closeSocket();
+        } catch (Exception e) {
+          try {
+            handleStreamerFailure("force=" + force, e);
+          } catch (IOException ioe) {
+            b.add(ioe);
+          }
+        } finally {
+          streamer.setSocketToNull();
         }
-      } finally {
-        streamer.setSocketToNull();
-        setClosed();
       }
+    } finally {
+      setClosed();
     }
     final IOException ioe = b.build();
     if (ioe != null) {
