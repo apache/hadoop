@@ -60,6 +60,8 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-3360. Add JMX metrics to TimelineDataManager (Jason Lowe via jeagles)
+
     YARN-3345. Add non-exclusive node label API. (Wangda Tan via jianhe)
 
     YARN-3365. Enhanced NodeManager to support using the 'tc' tool via
