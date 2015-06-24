@@ -368,9 +368,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
           public void run() {
             try {
               onTimerEvent();
-            }
-            catch (Exception e) {
-              LOG.warn(e);
+            } catch (Exception e) {
+              LOG.warn("Error invoking metrics timer", e);
             }
           }
         }, millis, millis);
