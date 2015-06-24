@@ -702,6 +702,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3809. Failed to launch new attempts because
     ApplicationMasterLauncher's threads all hang (Jun Gong via jlowe)
 
+    YARN-3832. Resource Localization fails on a cluster due to existing cache
+    directories (Brahma Reddy Battula via jlowe)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
