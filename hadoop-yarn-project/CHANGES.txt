@@ -156,6 +156,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3585. NodeManager cannot exit on SHUTDOWN event triggered and NM
     recovery is enabled (Rohith Sharmaks via jlowe)
 
+    YARN-3832. Resource Localization fails on a cluster due to existing cache
+    directories (Brahma Reddy Battula via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
