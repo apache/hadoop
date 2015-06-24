@@ -77,6 +77,18 @@
   </property>
 
   <property>
+    <description>Number of threads used to launch/cleanup AM.</description>
+    <name>yarn.resourcemanager.amlauncher.thread-count</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <description>Retry times to connect with NM.</description>
+    <name>yarn.resourcemanager.nodemanager-connect-retries</name>
+    <value>10</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>

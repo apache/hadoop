@@ -143,6 +143,16 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "client.thread-count";
   public static final int DEFAULT_RM_CLIENT_THREAD_COUNT = 50;
 
+  /** Number of threads used to launch/cleanup AM.*/
+  public static final String RM_AMLAUNCHER_THREAD_COUNT =
+      RM_PREFIX + "amlauncher.thread-count";
+  public static final int DEFAULT_RM_AMLAUNCHER_THREAD_COUNT = 50;
+
+  /** Retry times to connect with NM.*/
+  public static final String RM_NODEMANAGER_CONNECT_RETIRES =
+      RM_PREFIX + "nodemanager-connect-retries";
+  public static final int DEFAULT_RM_NODEMANAGER_CONNECT_RETIRES = 10;
+
   /** The Kerberos principal for the resource manager.*/
   public static final String RM_PRINCIPAL =
     RM_PREFIX + "principal";
