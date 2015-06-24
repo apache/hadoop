@@ -17,40 +17,38 @@ import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.apache.hadoop.security.ssl.SSLFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.servlet.*;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.security.GeneralSecurityException;
 import java.net.HttpCookie;
 import java.util.List;
 
-public class TestHttpCookieFlag {
+public class TestAuthenticationSessionCookie {
   private static final String BASEDIR = System.getProperty("test.build.dir",
           "target/test-dir") + "/" + TestHttpCookieFlag.class.getSimpleName();
+  private static boolean isCookiePersistent;
+  private static final long TOKEN_VALIDITY_SEC = 1000;
+  private static long expires;
   private static String keystoresDir;
   private static String sslConfDir;
-  private static SSLFactory clientSslFactory;
   private static HttpServer2 server;
 
   public static class DummyAuthenticationFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
+      isCookiePersistent = false;
     }
 
     @Override
@@ -58,9 +56,8 @@ public class TestHttpCookieFlag {
                          FilterChain chain) throws IOException,
                                                    ServletException {
       HttpServletResponse resp = (HttpServletResponse) response;
-      boolean isHttps = "https".equals(request.getScheme());
-      AuthenticationFilter.createAuthCookie(resp, "token", null, null, -1,
-              true, isHttps);
+      AuthenticationFilter.createAuthCookie(resp, "token", null, null, expires,
+              isCookiePersistent, true);
       chain.doFilter(request, resp);
     }
 
@@ -68,6 +65,7 @@ public class TestHttpCookieFlag {
     public void destroy() {
     }
   }
+
   public static class DummyFilterInitializer extends FilterInitializer {
     @Override
     public void initFilter(FilterContainer container, Configuration conf) {
@@ -76,11 +74,37 @@ public class TestHttpCookieFlag {
     }
   }
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  public static class Dummy2AuthenticationFilter
+  extends DummyAuthenticationFilter {
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+      isCookiePersistent = true;
+      expires = System.currentTimeMillis() + TOKEN_VALIDITY_SEC;
+    }
+
+    @Override
+    public void destroy() {
+    }
+  }
+
+  public static class Dummy2FilterInitializer extends FilterInitializer {
+    @Override
+    public void initFilter(FilterContainer container, Configuration conf) {
+      container.addFilter("Dummy2Auth", Dummy2AuthenticationFilter.class
+              .getName(), null);
+    }
+  }
+
+  public void startServer(boolean isTestSessionCookie) throws Exception {
     Configuration conf = new Configuration();
-    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+    if (isTestSessionCookie) {
+      conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
             DummyFilterInitializer.class.getName());
+    } else {
+      conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+            Dummy2FilterInitializer.class.getName());
+    }
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -93,8 +117,6 @@ public class TestHttpCookieFlag {
     sslConf.addResource("ssl-server.xml");
     sslConf.addResource("ssl-client.xml");
 
-    clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
-    clientSslFactory.init();
 
     server = new HttpServer2.Builder()
             .setName("test")
@@ -113,7 +135,14 @@ public class TestHttpCookieFlag {
   }
 
   @Test
-  public void testHttpCookie() throws IOException {
+  public void testSessionCookie() throws IOException {
+    try {
+        startServer(true);
+    } catch (Exception e) {
+        // Auto-generated catch block
+        e.printStackTrace();
+    }
+
     URL base = new URL("http://" + NetUtils.getHostPortString(server
             .getConnectorAddress(0)));
     HttpURLConnection conn = (HttpURLConnection) new URL(base,
@@ -122,31 +151,37 @@ public class TestHttpCookieFlag {
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     Assert.assertTrue(!cookies.isEmpty());
-    Assert.assertTrue(header.contains("; HttpOnly"));
+    Log.info(header);
+    Assert.assertFalse(header.contains("; Expires="));
     Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }
-
+  
   @Test
-  public void testHttpsCookie() throws IOException, GeneralSecurityException {
-    URL base = new URL("https://" + NetUtils.getHostPortString(server
-            .getConnectorAddress(1)));
-    HttpsURLConnection conn = (HttpsURLConnection) new URL(base,
+  public void testPersistentCookie() throws IOException {
+    try {
+        startServer(false);
+    } catch (Exception e) {
+        // Auto-generated catch block
+        e.printStackTrace();
+    }
+
+    URL base = new URL("http://" + NetUtils.getHostPortString(server
+            .getConnectorAddress(0)));
+    HttpURLConnection conn = (HttpURLConnection) new URL(base,
             "/echo").openConnection();
-    conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
 
     String header = conn.getHeaderField("Set-Cookie");
     List<HttpCookie> cookies = HttpCookie.parse(header);
     Assert.assertTrue(!cookies.isEmpty());
-    Assert.assertTrue(header.contains("; HttpOnly"));
-    Assert.assertTrue(cookies.get(0).getSecure());
+    Log.info(header);
+    Assert.assertTrue(header.contains("; Expires="));
     Assert.assertTrue("token".equals(cookies.get(0).getValue()));
   }
 
-  @AfterClass
-  public static void cleanup() throws Exception {
+  @After
+  public void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
-    clientSslFactory.destroy();
   }
 }
