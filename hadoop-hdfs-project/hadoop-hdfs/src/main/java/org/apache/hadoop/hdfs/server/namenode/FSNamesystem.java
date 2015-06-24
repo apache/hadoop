@@ -4878,7 +4878,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     private synchronized void incrementSafeBlockCount(short storageNum,
         BlockInfo storedBlock) {
       final int safe = storedBlock.isStriped() ?
-          ((BlockInfoStriped) storedBlock).getDataBlockNum() : safeReplication;
+          ((BlockInfoStriped) storedBlock).getRealDataBlockNum() : safeReplication;
       if (storageNum == safe) {
         this.blockSafe++;
 

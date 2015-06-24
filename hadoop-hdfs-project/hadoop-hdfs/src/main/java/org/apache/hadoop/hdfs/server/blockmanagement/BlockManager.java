@@ -592,13 +592,16 @@ public class BlockManager {
   }
 
   public int getDefaultStorageNum(BlockInfo block) {
-    return block.isStriped() ?
-        ((BlockInfoStriped) block).getTotalBlockNum() : defaultReplication;
+    if (block.isStriped()) {
+      return ((BlockInfoStriped) block).getRealTotalBlockNum();
+    } else {
+      return defaultReplication;
+    }
   }
 
   public short getMinStorageNum(BlockInfo block) {
     if (block.isStriped()) {
-      return getStripedDataBlockNum(block);
+      return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
       return minReplication;
     }
@@ -707,7 +710,7 @@ public class BlockManager {
     // OP_CLOSE edit on the standby).
     namesystem.adjustSafeModeBlockTotals(0, 1);
     final int minStorage = curBlock.isStriped() ?
-        ((BlockInfoStriped) curBlock).getDataBlockNum() : minReplication;
+        ((BlockInfoStriped) curBlock).getRealDataBlockNum() : minReplication;
     namesystem.incrementSafeBlockCount(
         Math.min(numNodes, minStorage), curBlock);
     
@@ -3854,27 +3857,12 @@ public class BlockManager {
   
   public short getExpectedReplicaNum(BlockCollection bc, BlockInfo block) {
     if (block.isStriped()) {
-      return (short) (getStripedDataBlockNum(block) + 
-          ((BlockInfoStriped) block).getParityBlockNum());
+      return ((BlockInfoStriped) block).getRealTotalBlockNum();
     } else {
       return bc.getPreferredBlockReplication();
     }
   }
-  
-  short getStripedDataBlockNum(BlockInfo block) {
-    assert block.isStriped();
-    final BlockInfoStriped sblock = (BlockInfoStriped) block;
-    short dataBlockNum = sblock.getDataBlockNum();
-    if (sblock.isComplete() ||
-        sblock.getBlockUCState() == BlockUCState.COMMITTED) {
-      // if the sblock is committed/completed and its length is less than a
-      // full stripe, the minimum storage number needs to be adjusted
-      dataBlockNum = (short) Math.min(dataBlockNum,
-          (sblock.getNumBytes() - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
-    }
-    return dataBlockNum;
-  }
-  
+
   public long getMissingBlocksCount() {
     // not locking
     return this.neededReplications.getCorruptBlockSize();
