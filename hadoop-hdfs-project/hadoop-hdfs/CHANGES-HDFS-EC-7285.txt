@@ -317,3 +317,6 @@
 
     HDFS-8602. Erasure Coding: Client can't read(decode) the EC files which have
     corrupt blocks. (jing9 and Kai Sasaki)
+
+    HDFS-8567. Erasure Coding: SafeMode handles file smaller than a full stripe.
+    (Walter Su via jing9)

@@ -73,6 +73,24 @@ public class BlockInfoStriped extends BlockInfo {
     return (short) this.schema.getNumParityUnits();
   }
 
+  /**
+   * If the block is committed/completed and its length is less than a full
+   * stripe, it returns the the number of actual data blocks.
+   * Otherwise it returns the number of data units specified by schema.
+   */
+  public short getRealDataBlockNum() {
+    if (isComplete() || getBlockUCState() == BlockUCState.COMMITTED) {
+      return (short) Math.min(getDataBlockNum(),
+          (getNumBytes() - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
+    } else {
+      return getDataBlockNum();
+    }
+  }
+
+  public short getRealTotalBlockNum() {
+    return (short) (getRealDataBlockNum() + getParityBlockNum());
+  }
+
   public ECSchema getSchema() {
     return schema;
   }
