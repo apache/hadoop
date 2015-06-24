@@ -949,6 +949,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8542. WebHDFS getHomeDirectory behavior does not match specification.
     (Kanaka Kumar Avvaru via jghoman)
 
+    HDFS-8546. Prune cached replicas from DatanodeDescriptor state on replica
+    invalidation. (wang)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
