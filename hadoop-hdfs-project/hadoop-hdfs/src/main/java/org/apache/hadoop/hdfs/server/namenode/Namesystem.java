@@ -29,21 +29,23 @@ import org.apache.hadoop.security.AccessControlException;
 @InterfaceAudience.Private
 public interface Namesystem extends RwLock, SafeMode {
   /** Is this name system running? */
-  public boolean isRunning();
+  boolean isRunning();
 
   /** Check if the user has superuser privilege. */
-  public void checkSuperuserPrivilege() throws AccessControlException;
+  void checkSuperuserPrivilege() throws AccessControlException;
 
   /** @return the block pool ID */
-  public String getBlockPoolId();
+  String getBlockPoolId();
 
-  public boolean isInStandbyState();
+  boolean isInStandbyState();
 
-  public boolean isGenStampInFuture(Block block);
+  boolean isGenStampInFuture(Block block);
 
-  public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
+  void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
 
-  public void checkOperation(OperationCategory read) throws StandbyException;
+  void checkOperation(OperationCategory read) throws StandbyException;
 
-  public boolean isInSnapshot(BlockInfoUnderConstruction blockUC);
+  boolean isInSnapshot(BlockInfoUnderConstruction blockUC);
+
+  CacheManager getCacheManager();
 }
