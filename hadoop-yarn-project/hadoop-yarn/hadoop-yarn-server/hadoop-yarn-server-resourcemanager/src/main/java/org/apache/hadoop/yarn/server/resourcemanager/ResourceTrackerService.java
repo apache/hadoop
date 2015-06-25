@@ -100,21 +100,10 @@ public class ResourceTrackerService extends AbstractService implements
   private InetSocketAddress resourceTrackerAddress;
   private String minimumNodeManagerVersion;
 
-  private static final NodeHeartbeatResponse resync = recordFactory
-      .newRecordInstance(NodeHeartbeatResponse.class);
-  private static final NodeHeartbeatResponse shutDown = recordFactory
-  .newRecordInstance(NodeHeartbeatResponse.class);
-  
   private int minAllocMb;
   private int minAllocVcores;
 
   private boolean isDistributedNodeLabelsConf;
-
-  static {
-    resync.setNodeAction(NodeAction.RESYNC);
-
-    shutDown.setNodeAction(NodeAction.SHUTDOWN);
-  }
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
@@ -414,8 +403,8 @@ public class ResourceTrackerService extends AbstractService implements
           "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
               + nodeId.getHost();
       LOG.info(message);
-      shutDown.setDiagnosticsMessage(message);
-      return shutDown;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(
+          NodeAction.SHUTDOWN, message);
     }
 
     // 2. Check if it's a registered node
@@ -424,8 +413,8 @@ public class ResourceTrackerService extends AbstractService implements
       /* node does not exist */
       String message = "Node not found resyncing " + remoteNodeStatus.getNodeId();
       LOG.info(message);
-      resync.setDiagnosticsMessage(message);
-      return resync;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(NodeAction.RESYNC,
+          message);
     }
 
     // Send ping
@@ -445,11 +434,11 @@ public class ResourceTrackerService extends AbstractService implements
               + lastNodeHeartbeatResponse.getResponseId() + " nm response id:"
               + remoteNodeStatus.getResponseId();
       LOG.info(message);
-      resync.setDiagnosticsMessage(message);
       // TODO: Just sending reboot is not enough. Think more.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeEvent(nodeId, RMNodeEventType.REBOOTING));
-      return resync;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(NodeAction.RESYNC,
+          message);
     }
 
     // Heartbeat response

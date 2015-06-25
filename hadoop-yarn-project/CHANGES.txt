@@ -553,6 +553,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3790. usedResource from rootQueue metrics may get stale data for FS
     scheduler after recovering the container (Zhihai Xu via rohithsharmaks)
 
+    YARN-3826. Race condition in ResourceTrackerService leads to
+    wrong diagnostics messages. (Chengbing Liu via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
