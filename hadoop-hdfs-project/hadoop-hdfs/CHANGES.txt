@@ -666,6 +666,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8639. Add Option for NameNode HTTP port in MiniDFSClusterManager.
     (Kai Sasaki via jing9)
 
+    HDFS-8462. Implement GETXATTRS and LISTXATTRS operations for WebImageViewer.
+    (Jagadesh Kiran N via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

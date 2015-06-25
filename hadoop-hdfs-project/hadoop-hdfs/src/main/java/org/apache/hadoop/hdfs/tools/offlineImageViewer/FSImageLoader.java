@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.BufferedInputStream;
-import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -38,10 +37,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -306,6 +308,77 @@ class FSImageLoader {
       list.add(getFileStatus(inode, false));
     }
     return list;
+  }
+
+  /**
+   * Return the JSON formatted XAttrNames of the specified file.
+   *
+   * @param path
+   *          a path specifies a file
+   * @return JSON formatted XAttrNames
+   * @throws IOException
+   *           if failed to serialize fileStatus to JSON.
+   */
+  String listXAttrs(String path) throws IOException {
+    return JsonUtil.toJsonString(getXAttrList(path));
+  }
+
+  /**
+   * Return the JSON formatted XAttrs of the specified file.
+   *
+   * @param path
+   *          a path specifies a file
+   * @return JSON formatted XAttrs
+   * @throws IOException
+   *           if failed to serialize fileStatus to JSON.
+   */
+  String getXAttrs(String path, List<String> names, String encoder)
+      throws IOException {
+
+    List<XAttr> xAttrs = getXAttrList(path);
+    List<XAttr> filtered;
+    if (names == null || names.size() == 0) {
+      filtered = xAttrs;
+    } else {
+      filtered = Lists.newArrayListWithCapacity(names.size());
+      for (String name : names) {
+        XAttr search = XAttrHelper.buildXAttr(name);
+
+        boolean found = false;
+        for (XAttr aXAttr : xAttrs) {
+          if (aXAttr.getNameSpace() == search.getNameSpace()
+              && aXAttr.getName().equals(search.getName())) {
+
+            filtered.add(aXAttr);
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          throw new IOException(
+              "At least one of the attributes provided was not found.");
+        }
+      }
+
+    }
+    return JsonUtil.toJsonString(filtered,
+        new XAttrEncodingParam(encoder).getEncoding());
+  }
+
+  private List<XAttr> getXAttrList(String path) throws IOException {
+    long id = lookup(path);
+    FsImageProto.INodeSection.INode inode = fromINodeId(id);
+    switch (inode.getType()) {
+    case FILE:
+      return FSImageFormatPBINode.Loader.loadXAttrs(
+          inode.getFile().getXAttrs(), stringTable);
+    case DIRECTORY:
+      return FSImageFormatPBINode.Loader.loadXAttrs(inode.getDirectory()
+          .getXAttrs(), stringTable);
+    default:
+      return null;
+    }
   }
 
   /**
