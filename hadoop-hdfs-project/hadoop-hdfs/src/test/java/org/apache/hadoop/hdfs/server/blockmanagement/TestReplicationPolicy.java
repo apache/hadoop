@@ -52,7 +52,6 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -854,6 +853,7 @@ public class TestReplicationPolicy {
           .getNamesystem().getBlockManager().neededReplications;
       for (int i = 0; i < 100; i++) {
         // Adding the blocks directly to normal priority
+
         neededReplications.add(genBlockInfo(ThreadLocalRandom.current().
             nextLong()), 2, 0, 3);
       }
@@ -1159,8 +1159,7 @@ public class TestReplicationPolicy {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
     when(mockNS.hasWriteLock()).thenReturn(true);
-    BlockManager bm =
-        new BlockManager(mockNS, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
@@ -1183,18 +1182,16 @@ public class TestReplicationPolicy {
     // block under construction, the BlockManager will realize the expected
     // replication has been achieved and remove it from the under-replicated
     // queue.
-    BlockInfoUnderConstruction info = new BlockInfoUnderConstructionContiguous(block1, (short)1);
+    BlockInfoUnderConstruction info =
+        new BlockInfoUnderConstructionContiguous(block1, (short) 1);
     BlockCollection bc = mock(BlockCollection.class);
     when(bc.getPreferredBlockReplication()).thenReturn((short)1);
     bm.addBlockCollection(info, bc);
 
-    StatefulBlockInfo statefulBlockInfo = new StatefulBlockInfo(info,
-      block1, ReplicaState.RBW);
-
     // Adding this block will increase its current replication, and that will
     // remove it from the queue.
-    bm.addStoredBlockUnderConstruction(statefulBlockInfo,
-        TestReplicationPolicy.storages[0]);
+    bm.addStoredBlockUnderConstruction(new StatefulBlockInfo(info, info,
+              ReplicaState.FINALIZED), TestReplicationPolicy.storages[0]);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.
@@ -1209,8 +1206,7 @@ public class TestReplicationPolicy {
           throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
-    BlockManager bm =
-        new BlockManager(mockNS, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
@@ -1234,17 +1230,18 @@ public class TestReplicationPolicy {
     when(mbc.getLastBlock()).thenReturn(info);
     when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);
     when(mbc.getPreferredBlockReplication()).thenReturn((short)1);
+    when(mbc.isUnderConstruction()).thenReturn(true);
     ContentSummary cs = mock(ContentSummary.class);
     when(cs.getLength()).thenReturn((long)1);
     when(mbc.computeContentSummary(bm.getStoragePolicySuite())).thenReturn(cs);
     info.setBlockCollection(mbc);
     bm.addBlockCollection(info, mbc);
 
-    DatanodeStorageInfo[] dnAry = {storages[0]};
+    DatanodeStorageInfo[] storageAry = {new DatanodeStorageInfo(
+        dataNodes[0], new DatanodeStorage("s1"))};
     final BlockInfoUnderConstruction ucBlock =
         info.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
-            dnAry);
-
+            storageAry);
     DatanodeStorageInfo storage = mock(DatanodeStorageInfo.class);
     DatanodeDescriptor dn = mock(DatanodeDescriptor.class);
     when(dn.isDecommissioned()).thenReturn(true);
@@ -1258,7 +1255,7 @@ public class TestReplicationPolicy {
     when(mbc.setLastBlock((BlockInfo) any(), (DatanodeStorageInfo[]) any()))
     .thenReturn(ucBlock);
 
-    bm.convertLastBlockToUnderConstruction(mbc, 0);
+    bm.convertLastBlockToUnderConstruction(mbc, 0L);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.
@@ -1272,8 +1269,7 @@ public class TestReplicationPolicy {
       throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
-    BlockManager bm =
-        new BlockManager(mockNS, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     BlockInfo block1 = genBlockInfo(ThreadLocalRandom.current().nextLong());
