@@ -556,6 +556,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3826. Race condition in ResourceTrackerService leads to
     wrong diagnostics messages. (Chengbing Liu via devaraj)
 
+    YARN-3745. SerializedException should also try to instantiate internal
+    exception with the default constructor. (Lavkesh Lahngir via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
