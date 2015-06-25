@@ -509,6 +509,9 @@ Release 2.8.0 - UNRELEASED
     too early (Brahma Reddy Battula, Akira AJISAKA, and Gera Shegalov via
     jlowe)
 
+    MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
+    (zhihai xu via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
