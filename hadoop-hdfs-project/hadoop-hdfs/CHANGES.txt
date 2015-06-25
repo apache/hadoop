@@ -330,6 +330,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8645. Resolve inconsistent code in TestReplicationPolicy between
     trunk and branch-2. (Zhe Zhang via wang)
 
+    HDFS-8462. Implement GETXATTRS and LISTXATTRS operations for WebImageViewer.
+    (Jagadesh Kiran N via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
