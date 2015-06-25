@@ -18,35 +18,30 @@
 package org.apache.hadoop.hdfs.server.datanode.web.dtp;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2FrameAdapter;
 import io.netty.handler.codec.http2.Http2Headers;
 
 import java.nio.charset.StandardCharsets;
 
-class DtpHttp2FrameListener extends Http2FrameAdapter {
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.web.http2.LastHttp2Message;
 
-  private Http2ConnectionEncoder encoder;
-
-  public void encoder(Http2ConnectionEncoder encoder) {
-    this.encoder = encoder;
-  }
+/**
+ * A dummy handler that just write back a string message.
+ */
+@InterfaceAudience.Private
+public class DtpChannelHandler extends
+    SimpleChannelInboundHandler<Http2Headers> {
 
   @Override
-  public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
-      Http2Headers headers, int streamDependency, short weight,
-      boolean exclusive, int padding, boolean endStream) throws Http2Exception {
-    encoder.writeHeaders(ctx, streamId,
-      new DefaultHttp2Headers().status(HttpResponseStatus.OK.codeAsText()), 0,
-      false, ctx.newPromise());
-    encoder.writeData(
-      ctx,
-      streamId,
-      ctx.alloc().buffer()
-          .writeBytes("HTTP/2 DTP".getBytes(StandardCharsets.UTF_8)), 0, true,
-      ctx.newPromise());
+  protected void channelRead0(ChannelHandlerContext ctx, Http2Headers msg)
+      throws Exception {
+    ctx.write(new DefaultHttp2Headers().status(HttpResponseStatus.OK
+        .codeAsText()));
+    ctx.write(ctx.alloc().buffer()
+        .writeBytes("HTTP/2 DTP".getBytes(StandardCharsets.UTF_8)));
+    ctx.writeAndFlush(LastHttp2Message.get());
   }
 }

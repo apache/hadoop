@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.stream.ChunkedWriteHandler;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.datanode.web.dtp.DtpHttp2Handler;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http2.Http2CodecUtil;
-import io.netty.handler.stream.ChunkedWriteHandler;
+import org.apache.hadoop.hdfs.server.datanode.web.dtp.DtpChannelHandler;
+import org.apache.hadoop.hdfs.web.http2.Http2StreamChannel;
+import org.apache.hadoop.hdfs.web.http2.ServerHttp2ConnectionHandler;
 
 /**
  * A port unification handler to support HTTP/1.1 and HTTP/2 on the same port.
@@ -64,7 +67,15 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
   }
 
   private void configureHttp2(ChannelHandlerContext ctx) {
-    ctx.pipeline().addLast(new DtpHttp2Handler());
+    ctx.pipeline().addLast(
+      ServerHttp2ConnectionHandler.create(ctx.channel(),
+        new ChannelInitializer<Http2StreamChannel>() {
+
+          @Override
+          protected void initChannel(Http2StreamChannel ch) throws Exception {
+            ch.pipeline().addLast(new DtpChannelHandler());
+          }
+        }));
   }
 
   @Override

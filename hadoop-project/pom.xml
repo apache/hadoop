@@ -589,6 +589,13 @@
       </dependency>
 
       <dependency>
+        <groupId>org.eclipse.jetty.http2</groupId>
+        <artifactId>http2-client</artifactId>
+        <version>9.3.0.M2</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
         <groupId>com.twitter</groupId>
         <artifactId>hpack</artifactId>
         <version>0.11.0</version>

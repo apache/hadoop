@@ -136,10 +136,8 @@ public class TestDtpHttp2 {
     request.headers().add(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(),
       streamId);
     Promise<FullHttpResponse> promise = CHANNEL.eventLoop().newPromise();
-    synchronized (RESPONSE_HANDLER) {
-      CHANNEL.writeAndFlush(request);
-      RESPONSE_HANDLER.put(streamId, promise);
-    }
+    RESPONSE_HANDLER.put(streamId, promise);
+    CHANNEL.writeAndFlush(request);
     assertEquals(HttpResponseStatus.OK, promise.get().status());
     ByteBuf content = promise.get().content();
     assertEquals("HTTP/2 DTP", content.toString(StandardCharsets.UTF_8));

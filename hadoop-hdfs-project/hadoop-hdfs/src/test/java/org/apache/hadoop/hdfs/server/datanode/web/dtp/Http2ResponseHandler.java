@@ -23,14 +23,15 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http2.HttpUtil;
 import io.netty.util.concurrent.Promise;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
+import net.sf.ehcache.store.chm.ConcurrentHashMap;
 
 public class Http2ResponseHandler extends
     SimpleChannelInboundHandler<FullHttpResponse> {
 
-  private Map<Integer, Promise<FullHttpResponse>> streamId2Promise =
-      new HashMap<>();
+  private ConcurrentMap<Integer, Promise<FullHttpResponse>> streamId2Promise =
+      new ConcurrentHashMap<>();
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg)
@@ -46,10 +47,7 @@ public class Http2ResponseHandler extends
       // this is the upgrade response message, just ignore it.
       return;
     }
-    Promise<FullHttpResponse> promise;
-    synchronized (this) {
-      promise = streamId2Promise.get(streamId);
-    }
+    Promise<FullHttpResponse> promise = streamId2Promise.get(streamId);
     if (promise == null) {
       System.err.println("Message received for unknown stream id " + streamId);
     } else {

@@ -1,0 +1,3 @@
+HDFS-7966 AND RELATED CHANGES
+
+  HDFS-8515. Implement HTTP/2 stream channels. (Duo Zhang via wheat9)

@@ -194,6 +194,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>htrace-core4</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jetty.http2</groupId>
+      <artifactId>http2-client</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-kms</artifactId>
       <classifier>classes</classifier>

@@ -15,20 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode.web.dtp;
+package org.apache.hadoop.hdfs.web.http2;
+
+import io.netty.handler.codec.http.LastHttpContent;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
-
 /**
- * The HTTP/2 handler.
+ * Used to tell an inbound handler that the remote side of an HTTP/2 stream is
+ * closed, or used by an outbound handler to tell the HTTP/2 stream to close
+ * local side.
+ * @see LastHttpContent#EMPTY_LAST_CONTENT
  */
 @InterfaceAudience.Private
-public class DtpHttp2Handler extends Http2ConnectionHandler {
+public final class LastHttp2Message {
 
-  public DtpHttp2Handler() {
-    super(true, new DtpHttp2FrameListener());
-    ((DtpHttp2FrameListener) decoder().listener()).encoder(encoder());
+  private static final LastHttp2Message INSTANCE = new LastHttp2Message();
+
+  private LastHttp2Message() {
+  }
+
+  /**
+   * Get the singleton <tt>LastHttp2Message</tt> instance.
+   */
+  public static LastHttp2Message get() {
+    return INSTANCE;
   }
 }
