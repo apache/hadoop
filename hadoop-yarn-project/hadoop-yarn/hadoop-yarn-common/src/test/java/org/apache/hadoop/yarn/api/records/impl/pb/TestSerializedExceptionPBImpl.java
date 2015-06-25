@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.nio.channels.ClosedChannelException;
+
 import org.junit.Assert;
 import org.apache.hadoop.yarn.api.records.impl.pb.SerializedExceptionPBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -52,6 +54,15 @@ public class TestSerializedExceptionPBImpl {
 
     pb.init(ex);
     Assert.assertEquals(ex.toString(), pb.deSerialize().toString());
+  }
+
+  @Test
+  public void testDeserializeWithDefaultConstructor() {
+    // Init SerializedException with an Exception with default constructor.
+    ClosedChannelException ex = new ClosedChannelException();
+    SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
+    pb.init(ex);
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
   }
 
   @Test
