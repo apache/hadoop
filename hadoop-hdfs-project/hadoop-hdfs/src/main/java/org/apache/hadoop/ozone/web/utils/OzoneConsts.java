@@ -18,12 +18,21 @@
 
 package org.apache.hadoop.ozone.web.utils;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Set of constants used in Ozone implementation.
  */
+@InterfaceAudience.Private
 public final class OzoneConsts {
   public static final String OZONE_SIMPLE_ROOT_USER = "root";
   public static final String OZONE_SIMPLE_HDFS_USER = "hdfs";
+
+  /*
+   * BucketName length is used for both buckets and volume lengths
+   */
+  public static final int OZONE_MIN_BUCKET_NAME_LENGTH = 3;
+  public static final int OZONE_MAX_BUCKET_NAME_LENGTH = 63;
 
   private OzoneConsts() {
     // Never Constructed

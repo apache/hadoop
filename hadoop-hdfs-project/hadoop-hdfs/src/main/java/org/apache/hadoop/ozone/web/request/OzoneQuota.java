@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.request;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.headers.Header;
 import org.codehaus.jackson.annotate.JsonIgnore;
 
@@ -26,6 +27,7 @@ import org.codehaus.jackson.annotate.JsonIgnore;
  * represents an OzoneQuota Object that can be applied to
  * a storage volume.
  */
+@InterfaceAudience.Private
 public class OzoneQuota {
   private static final long MB_IN_BYTES = 1048576L;
   private static final long GB_IN_BYTES = 1073741824L;

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.response;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonMethod;
@@ -35,6 +36,7 @@ import java.io.IOException;
  * VolumeInfo Class is the Java class that represents
  * Json when VolumeInfo Call is made.
  */
+@InterfaceAudience.Private
 public class VolumeInfo implements Comparable<VolumeInfo> {
 
   static final String VOLUME_INFO = "VOLUME_INFO_FILTER";

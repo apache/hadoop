@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.exceptions;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
@@ -33,6 +34,7 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
  * Please note : The errors in this table are sorted by the HTTP_ERROR codes
  * if you add new error codes to this table please follow the same convention.
  */
+@InterfaceAudience.Private
 public final class ErrorTable {
 
   /* Error 400 */
@@ -149,12 +151,12 @@ public final class ErrorTable {
    *
    * @return creates a new instance of error based on the template
    */
-  public static OzoneException newError(OzoneException e, long requestID,
+  public static OzoneException newError(OzoneException e, String requestID,
                                         String resource, String hostID) {
     OzoneException err =
         new OzoneException(e.getHttpCode(), e.getShortMessage(),
                            e.getMessage());
-    err.setRequestId(Long.toString(requestID));
+    err.setRequestId(requestID);
     err.setResource(resource);
     err.setHostID(hostID);
     return err;
@@ -172,7 +174,7 @@ public final class ErrorTable {
     OzoneException err =
         new OzoneException(e.getHttpCode(), e.getShortMessage(),
                            e.getMessage());
-    err.setRequestId(Long.toString(args.getRequestID()));
+    err.setRequestId(args.getRequestID());
     err.setResource(args.getResourceName());
     err.setHostID(args.getHostName());
     return err;
@@ -191,7 +193,7 @@ public final class ErrorTable {
                                         Exception ex) {
     OzoneException err =
         new OzoneException(e.getHttpCode(), e.getShortMessage(), ex);
-    err.setRequestId(Long.toString(args.getRequestID()));
+    err.setRequestId(args.getRequestID());
     err.setResource(args.getResourceName());
     err.setHostID(args.getHostName());
     err.setMessage(ex.getMessage());

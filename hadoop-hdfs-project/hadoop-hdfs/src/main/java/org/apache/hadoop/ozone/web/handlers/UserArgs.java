@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.web.handlers;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.UriInfo;
@@ -25,9 +27,10 @@ import javax.ws.rs.core.UriInfo;
  * UserArgs is used to package caller info
  * and pass it down to file system.
  */
+@InterfaceAudience.Private
 public class UserArgs {
   private String userName;
-  private final long requestID;
+  private final String requestID;
   private final String hostName;
   private final UriInfo uri;
   private final Request request;
@@ -38,16 +41,34 @@ public class UserArgs {
    * Constructs  user args.
    *
    * @param userName - User name
-   * @param requestID _ Request ID
+   * @param requestID - Request ID
    * @param hostName - Host Name
-   * @param req  - Request
+   * @param req - Request
    * @param info - Uri Info
    * @param httpHeaders - http headers
    */
-  public UserArgs(String userName, long requestID, String hostName, Request req,
-                  UriInfo info, HttpHeaders httpHeaders) {
+  public UserArgs(String userName, String requestID, String hostName,
+                  Request req, UriInfo info, HttpHeaders httpHeaders) {
     this.hostName = hostName;
     this.userName = userName;
+    this.requestID = requestID;
+    this.uri = info;
+    this.request = req;
+    this.headers = httpHeaders;
+  }
+
+  /**
+   * Constructs  user args when we don't know the user name yet.
+   *
+   * @param requestID _ Request ID
+   * @param hostName - Host Name
+   * @param req - Request
+   * @param info - UriInfo
+   * @param httpHeaders - http headers
+   */
+  public UserArgs(String requestID, String hostName, Request req, UriInfo info,
+                  HttpHeaders httpHeaders) {
+    this.hostName = hostName;
     this.requestID = requestID;
     this.uri = info;
     this.request = req;
@@ -68,7 +89,7 @@ public class UserArgs {
    *
    * @return Long
    */
-  public long getRequestID() {
+  public String getRequestID() {
     return requestID;
   }
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.exceptions;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -29,6 +30,7 @@ import java.io.IOException;
  * Class the represents various errors returned by the
  * Ozone Layer.
  */
+@InterfaceAudience.Private
 public class OzoneException extends Exception {
 
   @JsonProperty("httpCode")

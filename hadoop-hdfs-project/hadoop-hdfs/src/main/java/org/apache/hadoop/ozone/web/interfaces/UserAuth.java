@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.interfaces;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 
@@ -26,6 +27,7 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
  *
  * Please see concrete implementations for more information
  */
+@InterfaceAudience.Private
 public interface UserAuth {
   /**
    * Returns the user name as a string from the URI and HTTP headers.

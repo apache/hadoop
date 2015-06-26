@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.ozone.web.headers;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * OZONE specific HTTP headers.
  */
+@InterfaceAudience.Private
 public final class Header {
   public static final String OZONE_QUOTA_BYTES = "BYTES";
   public static final String OZONE_QUOTA_MB = "MB";
@@ -33,6 +36,13 @@ public final class Header {
 
   public static final String OZONE_USER = "x-ozone-user";
   public static final String OZONE_SIMPLE_AUTHENTICATION_SCHEME = "OZONE";
+  public static final String OZONE_VERSION_HEADER = "x-ozone-version";
+
+  public static final String OZONE_LIST_QUERY_SERVICE = "service";
+  public static final String OZONE_LIST_QUERY_VOLUME = "volume";
+
+  public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
+  public static final String OZONE_SERVER_NAME = "x-ozone-server-name";
 
   private Header() {
     // Never constructed.

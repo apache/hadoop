@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.interfaces;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
@@ -34,6 +35,7 @@ import java.io.IOException;
  * One for the local file system that is handy while testing
  * and another which will point to the HDFS backend.
  */
+@InterfaceAudience.Private
 public interface StorageHandler {
 
   /**
