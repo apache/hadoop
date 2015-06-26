@@ -535,7 +535,14 @@ public class DFSTestUtil {
       public Boolean get() {
         try {
           FileStatus stat = dfs.getFileStatus(file);
-          return replication == stat.getReplication();
+          BlockLocation[] locs = dfs.getFileBlockLocations(stat, 0, stat
+              .getLen());
+          for (BlockLocation loc : locs) {
+            if (replication != loc.getHosts().length) {
+              return false;
+            }
+          }
+          return true;
         } catch (IOException e) {
           LOG.info("getFileStatus on path " + file + " failed!", e);
           return false;
