@@ -238,6 +238,18 @@ public class LocalDirsHandlerService extends AbstractService {
   }
 
   /**
+   * Function to get the local dirs which should be considered for reading
+   * existing files on disk. Contains the good local dirs and the local dirs
+   * that have reached the disk space limit
+   *
+   * @return the local dirs which should be considered for reading
+   */
+  public List<String> getLocalDirsForRead() {
+    return DirectoryCollection.concat(localDirs.getGoodDirs(),
+        localDirs.getFullDirs());
+  }
+
+  /**
    * Function to get the local dirs which should be considered when cleaning up
    * resources. Contains the good local dirs and the local dirs that have reached
    * the disk space limit
@@ -247,6 +259,18 @@ public class LocalDirsHandlerService extends AbstractService {
   public List<String> getLocalDirsForCleanup() {
     return DirectoryCollection.concat(localDirs.getGoodDirs(),
         localDirs.getFullDirs());
+  }
+
+  /**
+   * Function to get the log dirs which should be considered for reading
+   * existing files on disk. Contains the good log dirs and the log dirs that
+   * have reached the disk space limit
+   *
+   * @return the log dirs which should be considered for reading
+   */
+  public List<String> getLogDirsForRead() {
+    return DirectoryCollection.concat(logDirs.getGoodDirs(),
+        logDirs.getFullDirs());
   }
 
   /**
