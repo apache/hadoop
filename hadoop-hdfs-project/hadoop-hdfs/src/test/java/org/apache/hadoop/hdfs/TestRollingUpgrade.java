@@ -19,7 +19,17 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.ThreadLocalRandom;
+
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+import javax.management.openmbean.CompositeDataSupport;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,7 +55,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * This class tests rolling upgrade.
@@ -56,7 +68,7 @@ public class TestRollingUpgrade {
   public static void runCmd(DFSAdmin dfsadmin, boolean success,
       String... args) throws  Exception {
     if (success) {
-      Assert.assertEquals(0, dfsadmin.run(args));
+      assertEquals(0, dfsadmin.run(args));
     } else {
       Assert.assertTrue(dfsadmin.run(args) != 0);
     }
@@ -86,6 +98,7 @@ public class TestRollingUpgrade {
         //illegal argument "abc" to rollingUpgrade option
         runCmd(dfsadmin, false, "-rollingUpgrade", "abc");
 
+        checkMxBeanIsNull();
         //query rolling upgrade
         runCmd(dfsadmin, true, "-rollingUpgrade");
 
@@ -96,11 +109,16 @@ public class TestRollingUpgrade {
 
         //query rolling upgrade
         runCmd(dfsadmin, true, "-rollingUpgrade", "query");
+        checkMxBean();
 
         dfs.mkdirs(bar);
 
         //finalize rolling upgrade
         runCmd(dfsadmin, true, "-rollingUpgrade", "finalize");
+        // RollingUpgradeInfo should be null after finalization, both via
+        // Java API and in JMX
+        assertNull(dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
+        checkMxBeanIsNull();
 
         dfs.mkdirs(baz);
 
@@ -197,7 +215,7 @@ public class TestRollingUpgrade {
         LOG.info("START\n" + info1);
 
         //query rolling upgrade
-        Assert.assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
+        assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
 
         dfs.mkdirs(bar);
         cluster.shutdown();
@@ -218,13 +236,13 @@ public class TestRollingUpgrade {
       Assert.assertFalse(dfs2.exists(baz));
 
       //query rolling upgrade in cluster2
-      Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
+      assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
 
       dfs2.mkdirs(baz);
 
       LOG.info("RESTART cluster 2");
       cluster2.restartNameNode();
-      Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
+      assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));
       Assert.assertTrue(dfs2.exists(baz));
@@ -238,7 +256,7 @@ public class TestRollingUpgrade {
 
       LOG.info("RESTART cluster 2 again");
       cluster2.restartNameNode();
-      Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
+      assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));
       Assert.assertTrue(dfs2.exists(baz));
@@ -259,8 +277,30 @@ public class TestRollingUpgrade {
     }
   }
 
+  private static CompositeDataSupport getBean()
+      throws MalformedObjectNameException, MBeanException,
+      AttributeNotFoundException, InstanceNotFoundException,
+      ReflectionException {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName =
+        new ObjectName("Hadoop:service=NameNode,name=NameNodeInfo");
+    return (CompositeDataSupport)mbs.getAttribute(mxbeanName,
+        "RollingUpgradeStatus");
+  }
+
+  private static void checkMxBeanIsNull() throws Exception {
+    CompositeDataSupport ruBean = getBean();
+    assertNull(ruBean);
+  }
+
+  private static void checkMxBean() throws Exception {
+    CompositeDataSupport ruBean = getBean();
+    assertNotEquals(0l, ruBean.get("startTime"));
+    assertEquals(0l, ruBean.get("finalizeTime"));
+  }
+
   @Test
-  public void testRollback() throws IOException {
+  public void testRollback() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -279,10 +319,13 @@ public class TestRollingUpgrade {
       out.write(data, 0, data.length);
       out.close();
 
+      checkMxBeanIsNull();
       startRollingUpgrade(foo, bar, file, data, cluster);
+      checkMxBean();
       cluster.getFileSystem().rollEdits();
       cluster.getFileSystem().rollEdits();
       rollbackRollingUpgrade(foo, bar, file, data, cluster);
+      checkMxBeanIsNull();
 
       startRollingUpgrade(foo, bar, file, data, cluster);
       cluster.getFileSystem().rollEdits();
@@ -356,18 +399,18 @@ public class TestRollingUpgrade {
       // check the datanode
       final String dnAddr = dn.getDatanodeId().getIpcAddr(false);
       final String[] args1 = {"-getDatanodeInfo", dnAddr};
-      Assert.assertEquals(0, dfsadmin.run(args1));
+      runCmd(dfsadmin, true, args1);
 
       // issue shutdown to the datanode.
       final String[] args2 = {"-shutdownDatanode", dnAddr, "upgrade" };
-      Assert.assertEquals(0, dfsadmin.run(args2));
+      runCmd(dfsadmin, true, args2);
 
       // the datanode should be down.
       Thread.sleep(2000);
       Assert.assertFalse("DataNode should exit", dn.isDatanodeUp());
 
       // ping should fail.
-      Assert.assertEquals(-1, dfsadmin.run(args1));
+      assertEquals(-1, dfsadmin.run(args1));
     } finally {
       if (cluster != null) cluster.shutdown();
     }

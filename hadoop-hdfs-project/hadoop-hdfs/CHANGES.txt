@@ -1110,6 +1110,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8626. Reserved RBW space is not released if creation of RBW File
     fails. (kanaka kumar avvaru via Arpit Agarwal)
 
+    HDFS08656. Preserve compatibility of ClientProtocol#rollingUpgrade after
+    finalization. (wang)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
