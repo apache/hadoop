@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.interfaces;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.headers.Header;
 
@@ -39,6 +40,7 @@ import javax.ws.rs.core.UriInfo;
  * Volume Interface acts as the HTTP entry point for
  * volume related functionality.
  */
+@InterfaceAudience.Private
 @Path("/{volume}")
 public interface Volume {
 

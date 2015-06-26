@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.response;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 /**
@@ -27,6 +28,7 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
  * This is a class instead of a string since we might need to extend this class
  * to support other forms of authentication.
  */
+@InterfaceAudience.Private
 public class VolumeOwner {
   @JsonSerialize(include=JsonSerialize.Inclusion.NON_NULL)
   private String name;

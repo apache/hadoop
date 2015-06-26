@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.web.userauth;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -33,6 +34,7 @@ import java.util.List;
  * mode of ozone. This maps more or less to the simple user scheme in
  * HDFS.
  */
+@InterfaceAudience.Private
 public class Simple implements UserAuth {
   /**
    * Returns the x-ozone-user or the user on behalf of, This is

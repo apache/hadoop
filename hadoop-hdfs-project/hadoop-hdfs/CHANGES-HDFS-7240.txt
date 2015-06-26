@@ -17,3 +17,6 @@
     HDFS-8634. OzoneHandler: Add userAuth Interface and Simple userAuth
     handler. (Anu Engineer via Arpit Agarwal)
 
+    HDFS-8644. OzoneHandler : Add volume handler. (Anu Engineer via
+    Arpit Agarwal)
+

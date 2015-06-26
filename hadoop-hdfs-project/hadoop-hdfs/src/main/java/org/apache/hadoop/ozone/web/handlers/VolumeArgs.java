@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.web.handlers;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -29,6 +30,7 @@ import javax.ws.rs.core.UriInfo;
  * related arguments in the call to underlying
  * file system.
  */
+@InterfaceAudience.Private
 public class VolumeArgs extends UserArgs {
   private String adminName;
   private final String volumeName;
@@ -63,11 +65,30 @@ public class VolumeArgs extends UserArgs {
    * @param info - URI info
    * @param headers - http headers
    */
-  public VolumeArgs(String userName, String volumeName, long requestID,
+  public VolumeArgs(String userName, String volumeName, String requestID,
                     String hostName, Request request, UriInfo info,
                     HttpHeaders headers) {
     super(userName, requestID, hostName, request, info, headers);
     this.volumeName = volumeName;
+  }
+
+  /**
+   * Constructs  volume Args.
+   *
+   * @param volumeName - volume Name
+   * @param userArgs - userArgs
+   */
+  public VolumeArgs(String volumeName, UserArgs userArgs) {
+    this(userArgs.getUserName(), volumeName, userArgs.getRequestID(),
+         userArgs.getHostName(), userArgs.getRequest(), userArgs.getUri(),
+         userArgs.getHeaders());
+  }
+
+  /**
+   * Creates VolumeArgs from another VolumeArgs.
+   */
+  public VolumeArgs(VolumeArgs volArgs) {
+    this(volArgs.getVolumeName(), volArgs);
   }
 
   /**

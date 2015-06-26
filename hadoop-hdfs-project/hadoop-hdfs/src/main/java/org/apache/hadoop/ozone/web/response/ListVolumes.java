@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.web.response;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.codehaus.jackson.annotate.JsonAutoDetect;
 import org.codehaus.jackson.annotate.JsonMethod;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -35,6 +36,7 @@ import java.util.List;
  * List Volume Class is the class that is returned in JSON format to
  * users when they call ListVolumes.
  */
+@InterfaceAudience.Private
 public class ListVolumes {
   private List<VolumeInfo> volumes;
 
