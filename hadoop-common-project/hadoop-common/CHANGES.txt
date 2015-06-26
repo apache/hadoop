@@ -679,6 +679,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11885. hadoop-dist dist-layout-stitching.sh does not work with dash.
     (wang)
 
+    HADOOP-12036. Consolidate all of the cmake extensions in one directory
+    (alanburlison via cmccabe)
+
   BUG FIXES
 
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
