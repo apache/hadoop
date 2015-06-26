@@ -53,6 +53,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-11203. Allow ditscp to accept bandwitdh in fraction MegaBytes
+    (Raju Bairishetti via amareshwari)
+
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
 
