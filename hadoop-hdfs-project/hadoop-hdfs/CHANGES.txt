@@ -674,6 +674,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8665. Fix replication check in DFSTestUtils#waitForReplication. (wang)
 
+    HDFS-8546. Use try with resources in DataStorage and Storage. (wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
