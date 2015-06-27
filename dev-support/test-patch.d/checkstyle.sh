@@ -18,79 +18,126 @@ add_plugin checkstyle
 
 CHECKSTYLE_TIMER=0
 
-# if it ends in an explicit .sh, then this is shell code.
-# if it doesn't have an extension, we assume it is shell code too
 function checkstyle_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ \.java$ ]]; then
-    add_test checkstyle
+  if [[ ${BUILDTOOL} == maven
+    || ${BUILDTOOL} == ant ]]; then
+    if [[ ${filename} =~ \.java$ ]]; then
+      add_test checkstyle
+    fi
   fi
 }
 
-function checkstyle_mvnrunner
+function checkstyle_runner
 {
-  local logfile=$1
-  local output=$2
+  local repostatus=$1
   local tmp=${PATCH_DIR}/$$.${RANDOM}
   local j
+  local i=0
+  local fn
+  local savestart=${TIMER}
+  local savestop
+  local output
+  local logfile
+  local repo
+  local modulesuffix
+  local cmd
 
-  "${MVN}" clean test checkstyle:checkstyle -DskipTests \
-    -Dcheckstyle.consoleOutput=true \
-    "-D${PROJECT_NAME}PatchProcess" 2>&1 \
-      | tee "${logfile}" \
-      | ${GREP} ^/ \
-      | ${SED} -e "s,${BASEDIR},.,g" \
-          > "${tmp}"
+  modules_reset
 
-  # the checkstyle output files are massive, so
-  # let's reduce the work by filtering out files
-  # that weren't changed.  Some modules are
-  # MASSIVE and this can cut the output down to
-  # by orders of magnitude!!
-  for j in ${CHANGED_FILES}; do
-    ${GREP} "${j}" "${tmp}" >> "${output}"
+  if [[ ${repostatus} == branch ]]; then
+    repo=${PATCH_BRANCH}
+  else
+    repo="the patch"
+  fi
+
+  #shellcheck disable=SC2153
+  until [[ $i -eq ${#MODULE[@]} ]]; do
+    start_clock
+    fn=$(module_file_fragment "${MODULE[${i}]}")
+    modulesuffix=$(basename "${MODULE[${i}]}")
+    output="${PATCH_DIR}/${repostatus}-checkstyle-${fn}.txt"
+    logfile="${PATCH_DIR}/maven-${repostatus}-checkstyle-${fn}.txt"
+    pushd "${BASEDIR}/${MODULE[${i}]}" >/dev/null
+
+    case ${BUILDTOOL} in
+      maven)
+        cmd="${MVN} ${MAVEN_ARGS[*]} clean test \
+           checkstyle:checkstyle \
+          -Dcheckstyle.consoleOutput=true \
+          ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} -Ptest-patch"
+      ;;
+      ant)
+        cmd="${ANT}  \
+          -Dcheckstyle.consoleOutput=true \
+          ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} \
+          ${ANT_ARGS[*]} checkstyle"
+      ;;
+    esac
+
+    #shellcheck disable=SC2086
+    echo ${cmd} "> ${logfile}"
+    #shellcheck disable=SC2086
+    ${cmd}  2>&1 \
+            | tee "${logfile}" \
+            | ${GREP} ^/ \
+            | ${SED} -e "s,${BASEDIR},.,g" \
+                > "${tmp}"
+
+    if [[ $? == 0 ]] ; then
+      module_status ${i} +1 "${logfile}" "${modulesuffix} in ${repo} passed checkstyle"
+    else
+      module_status ${i} -1 "${logfile}" "${modulesuffix} in ${repo} failed checkstyle"
+      ((result = result + 1))
+    fi
+    savestop=$(stop_clock)
+    #shellcheck disable=SC2034
+    MODULE_STATUS_TIMER[${i}]=${savestop}
+
+    for j in ${CHANGED_FILES}; do
+      ${GREP} "${j}" "${tmp}" >> "${output}"
+    done
+
+    rm "${tmp}" 2>/dev/null
+    # shellcheck disable=SC2086
+    popd >/dev/null
+    ((i=i+1))
   done
 
-  rm "${tmp}" 2>/dev/null
+  TIMER=${savestart}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
 }
 
 function checkstyle_preapply
 {
-  local module_suffix
-  local modules=${CHANGED_MODULES}
-  local module
+  local result
 
-  verify_needed_test checkstyle
-
-  if [[ $? == 0 ]]; then
-    return 0
-  fi
-
-  big_console_header "checkstyle plugin: prepatch"
+  big_console_header "${PATCH_BRANCH} checkstyle"
 
   start_clock
 
-  for module in ${modules}
-  do
-    pushd "${module}" >/dev/null
-    echo "  Running checkstyle in ${module}"
-    module_suffix=$(basename "${module}")
+  verify_needed_test checkstyle
+  if [[ $? == 0 ]]; then
+    echo "Patch does not need checkstyle testing."
+    return 0
+  fi
 
-    checkstyle_mvnrunner \
-      "${PATCH_DIR}/maven-${PATCH_BRANCH}checkstyle-${module_suffix}.txt" \
-      "${PATCH_DIR}/${PATCH_BRANCH}checkstyle${module_suffix}.txt"
-
-    if [[ $? != 0 ]] ; then
-      echo "Pre-patch ${PATCH_BRANCH} checkstyle compilation is broken?"
-      add_jira_table -1 checkstyle "Pre-patch ${PATCH_BRANCH} ${module} checkstyle compilation may be broken."
-    fi
-    popd >/dev/null
-  done
+  personality_modules branch checkstyle
+  checkstyle_runner branch
+  result=$?
+  modules_messages branch checkstyle true
 
   # keep track of how much as elapsed for us already
   CHECKSTYLE_TIMER=$(stop_clock)
+  if [[ ${result} != 0 ]]; then
+    return 1
+  fi
   return 0
 }
 
@@ -135,71 +182,71 @@ function checkstyle_calcdiffs
 
 function checkstyle_postapply
 {
-  local rc=0
+  local result
   local module
-  local modules=${CHANGED_MODULES}
-  local module_suffix
+  local fn
+  local i=0
   local numprepatch=0
   local numpostpatch=0
   local diffpostpatch=0
 
-  verify_needed_test checkstyle
+  big_console_header "Patch checkstyle plugin"
 
+  start_clock
+
+  verify_needed_test checkstyle
   if [[ $? == 0 ]]; then
+    echo "Patch does not need checkstyle testing."
     return 0
   fi
 
-  big_console_header "checkstyle plugin: postpatch"
+  personality_modules patch checkstyle
+  checkstyle_runner patch
+  result=$?
 
-  start_clock
 
   # add our previous elapsed to our new timer
   # by setting the clock back
   offset_clock "${CHECKSTYLE_TIMER}"
 
-  for module in ${modules}
-  do
-    pushd "${module}" >/dev/null
-    echo "  Running checkstyle in ${module}"
-    module_suffix=$(basename "${module}")
-
-    checkstyle_mvnrunner \
-      "${PATCH_DIR}/maven-patchcheckstyle-${module_suffix}.txt" \
-      "${PATCH_DIR}/patchcheckstyle${module_suffix}.txt"
-
-    if [[ $? != 0 ]] ; then
-      ((rc = rc +1))
-      echo "Post-patch checkstyle compilation is broken."
-      add_jira_table -1 checkstyle "Post-patch checkstyle ${module} compilation is broken."
+  until [[ $i -eq ${#MODULE[@]} ]]; do
+    if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
+      ((result=result+1))
+      ((i=i+1))
       continue
+    fi
+    module=${MODULE[$i]}
+    fn=$(module_file_fragment "${module}")
+
+    if [[ ! -f "${PATCH_DIR}/branch-checkstyle-${fn}.txt" ]]; then
+      touch "${PATCH_DIR}/branch-checkstyle-${fn}.txt"
     fi
 
     #shellcheck disable=SC2016
     diffpostpatch=$(checkstyle_calcdiffs \
-      "${PATCH_DIR}/${PATCH_BRANCH}checkstyle${module_suffix}.txt" \
-      "${PATCH_DIR}/patchcheckstyle${module_suffix}.txt" \
-      "${PATCH_DIR}/diffcheckstyle${module_suffix}.txt" )
+      "${PATCH_DIR}/branch-checkstyle-${fn}.txt" \
+      "${PATCH_DIR}/patch-checkstyle-${fn}.txt" \
+      "${PATCH_DIR}/diff-checkstyle-${fn}.txt" )
 
     if [[ ${diffpostpatch} -gt 0 ]] ; then
-      ((rc = rc + 1))
+      ((result = result + 1))
 
       # shellcheck disable=SC2016
-      numprepatch=$(wc -l "${PATCH_DIR}/${PATCH_BRANCH}checkstyle${module_suffix}.txt" | ${AWK} '{print $1}')
+      numprepatch=$(wc -l "${PATCH_DIR}/branch-checkstyle-${fn}.txt" | ${AWK} '{print $1}')
       # shellcheck disable=SC2016
-      numpostpatch=$(wc -l "${PATCH_DIR}/patchcheckstyle${module_suffix}.txt" | ${AWK} '{print $1}')
+      numpostpatch=$(wc -l "${PATCH_DIR}/patch-checkstyle-${fn}.txt" | ${AWK} '{print $1}')
 
-      add_jira_table -1 checkstyle "The applied patch generated "\
-        "${diffpostpatch} new checkstyle issues (total was ${numprepatch}, now ${numpostpatch})."
-      footer="${footer} @@BASE@@/diffcheckstyle${module_suffix}.txt"
+      module_status ${i} -1 "diff-checkstyle-${fn}.txt" "Patch generated "\
+        "${diffpostpatch} new checkstyle issues in "\
+        "${module} (total was ${numprepatch}, now ${numpostpatch})."
     fi
-
-    popd >/dev/null
+    ((i=i+1))
   done
 
-  if [[ ${rc} -gt 0 ]] ; then
-    add_jira_footer checkstyle "${footer}"
+  modules_messages patch checkstyle true
+
+  if [[ ${result} != 0 ]]; then
     return 1
   fi
-  add_jira_table +1 checkstyle "There were no new checkstyle issues."
   return 0
 }

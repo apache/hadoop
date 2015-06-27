@@ -43,7 +43,9 @@ PATCH=${PATCH:-patch} # allow overriding patch binary
 # Cleanup handler for temporary files
 TOCLEAN=""
 cleanup() {
-  rm $TOCLEAN
+  if [[ -n ${TOCLEAN} ]]; then
+    rm $TOCLEAN
+  fi
   exit $1
 }
 trap "cleanup 1" HUP INT QUIT TERM

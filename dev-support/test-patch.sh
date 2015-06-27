@@ -14,13 +14,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Make sure that bash version meets the pre-requisite
+
+if [[ -z "${BASH_VERSINFO}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+  echo "bash v3.2+ is required. Sorry."
+  exit 1
+fi
+
 ### BUILD_URL is set by Hudson if it is run by patch process
 
 this="${BASH_SOURCE-$0}"
 BINDIR=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
-CWD=$(pwd)
+STARTINGDIR=$(pwd)
 USER_PARAMS=("$@")
 GLOBALTIMER=$(date +"%s")
+
+# global arrays
+declare -a MAVEN_ARGS=("--batch-mode")
+declare -a ANT_ARGS=("-noinput")
+declare -a TP_HEADER
+declare -a TP_VOTE_TABLE
+declare -a TP_TEST_TABLE
+declare -a TP_FOOTER_TABLE
+declare -a MODULE_STATUS
+declare -a MODULE_STATUS_TIMER
+declare -a MODULE_STATUS_MSG
+declare -a MODULE_STATUS_LOG
+declare -a MODULE
+
+TP_HEADER_COUNTER=0
+TP_VOTE_COUNTER=0
+TP_TEST_COUNTER=0
+TP_FOOTER_COUNTER=0
 
 ## @description  Setup the default global variables
 ## @audience     public
@@ -33,10 +60,15 @@ function setup_defaults
   else
     MVN=${MAVEN_HOME}/bin/mvn
   fi
-  # This parameter needs to be kept as an array
-  MAVEN_ARGS=()
 
-  PROJECT_NAME=hadoop
+  if [[ -z "${ANT_HOME:-}" ]]; then
+    ANT=ant
+  else
+    ANT=${ANT_HOME}/bin/ant
+  fi
+
+  PROJECT_NAME=yetus
+  DOCKERFILE="${BINDIR}/test-patch-docker/Dockerfile-startstub"
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
   JENKINS=false
   BASEDIR=$(pwd)
@@ -44,13 +76,15 @@ function setup_defaults
 
   USER_PLUGIN_DIR=""
   LOAD_SYSTEM_PLUGINS=true
+  ALLOWSUMMARIES=true
 
-  FINDBUGS_HOME=${FINDBUGS_HOME:-}
-  FINDBUGS_WARNINGS_FAIL_PRECHECK=false
+  DOCKERSUPPORT=false
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
-  PATCH_BRANCH_DEFAULT="trunk"
+  PATCH_BRANCH_DEFAULT="master"
+
+  #shellcheck disable=SC2034
   CHANGED_MODULES=""
   USER_MODULE_LIST=""
   OFFLINE=false
@@ -58,50 +92,40 @@ function setup_defaults
   REEXECED=false
   RESETREPO=false
   ISSUE=""
-  ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+  ISSUE_RE='^(YETUS)-[0-9]+$'
   TIMER=$(date +"%s")
   PATCHURL=""
-
   OSTYPE=$(uname -s)
+  BUILDTOOL=maven
+  BUGSYSTEM=jira
+  JDK_TEST_LIST="javac javadoc unit"
+  GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
+  GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
 
   # Solaris needs POSIX, not SVID
   case ${OSTYPE} in
     SunOS)
-      PS=${PS:-ps}
       AWK=${AWK:-/usr/xpg4/bin/awk}
       SED=${SED:-/usr/xpg4/bin/sed}
       WGET=${WGET:-wget}
       GIT=${GIT:-git}
-      EGREP=${EGREP:-/usr/xpg4/bin/egrep}
       GREP=${GREP:-/usr/xpg4/bin/grep}
-      PATCH=${PATCH:-patch}
+      PATCH=${PATCH:-/usr/gnu/bin/patch}
       DIFF=${DIFF:-/usr/gnu/bin/diff}
-      JIRACLI=${JIRA:-jira}
       FILE=${FILE:-file}
     ;;
     *)
-      PS=${PS:-ps}
       AWK=${AWK:-awk}
       SED=${SED:-sed}
       WGET=${WGET:-wget}
       GIT=${GIT:-git}
-      EGREP=${EGREP:-egrep}
       GREP=${GREP:-grep}
       PATCH=${PATCH:-patch}
       DIFF=${DIFF:-diff}
-      JIRACLI=${JIRA:-jira}
       FILE=${FILE:-file}
     ;;
   esac
 
-  declare -a JIRA_COMMENT_TABLE
-  declare -a JIRA_FOOTER_TABLE
-  declare -a JIRA_HEADER
-  declare -a JIRA_TEST_TABLE
-
-  JFC=0
-  JTC=0
-  JTT=0
   RESULT=0
 }
 
@@ -110,7 +134,7 @@ function setup_defaults
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function hadoop_error
+function yetus_error
 {
   echo "$*" 1>&2
 }
@@ -120,10 +144,41 @@ function hadoop_error
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function hadoop_debug
+function yetus_debug
 {
-  if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
+  if [[ -n "${TP_SHELL_SCRIPT_DEBUG}" ]]; then
     echo "[$(date) DEBUG]: $*" 1>&2
+  fi
+}
+
+## @description  Convert the given module name to a file fragment
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        module
+function module_file_fragment
+{
+  local mod=$1
+  if [[ ${mod} == . ]]; then
+    echo root
+  else
+    echo "$1" | tr '/' '_' | tr '\\' '_'
+  fi
+}
+
+## @description  Convert time in seconds to m + s
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        seconds
+function clock_display
+{
+  local -r elapsed=$1
+
+  if [[ ${elapsed} -lt 0 ]]; then
+    echo "N/A"
+  else
+    printf  "%3sm %02ss" $((elapsed/60)) $((elapsed%60))
   fi
 }
 
@@ -133,7 +188,7 @@ function hadoop_debug
 ## @replaceable  no
 function start_clock
 {
-  hadoop_debug "Start clock"
+  yetus_debug "Start clock"
   TIMER=$(date +"%s")
 }
 
@@ -145,7 +200,7 @@ function stop_clock
 {
   local -r stoptime=$(date +"%s")
   local -r elapsed=$((stoptime-TIMER))
-  hadoop_debug "Stop clock"
+  yetus_debug "Stop clock"
 
   echo ${elapsed}
 }
@@ -158,7 +213,7 @@ function stop_global_clock
 {
   local -r stoptime=$(date +"%s")
   local -r elapsed=$((stoptime-GLOBALTIMER))
-  hadoop_debug "Stop global clock"
+  yetus_debug "Stop global clock"
 
   echo ${elapsed}
 }
@@ -178,10 +233,10 @@ function offset_clock
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function add_jira_header
+function add_header_line
 {
-  JIRA_HEADER[${JHC}]="| $* |"
-  JHC=$(( JHC+1 ))
+  TP_HEADER[${TP_HEADER_COUNTER}]="$*"
+  ((TP_HEADER_COUNTER=TP_HEADER_COUNTER+1 ))
 }
 
 ## @description  Add to the output table. If the first parameter is a number
@@ -199,88 +254,152 @@ function add_jira_header
 ## @param        subsystem
 ## @param        string
 ## @return       Elapsed time display
-function add_jira_table
+function add_vote_table
 {
   local value=$1
   local subsystem=$2
   shift 2
 
-  local color
-  local calctime=0
-
+  local calctime
   local -r elapsed=$(stop_clock)
 
-  if [[ ${elapsed} -lt 0 ]]; then
-    calctime="N/A"
-  else
-    printf -v calctime "%3sm %02ss" $((elapsed/60)) $((elapsed%60))
+  yetus_debug "add_vote_table ${value} ${subsystem} ${*}"
+
+  calctime=$(clock_display "${elapsed}")
+
+  if [[ ${value} == "1" ]]; then
+    value="+1"
   fi
 
-  echo ""
-  echo "Elapsed time: ${calctime}"
-  echo ""
-
-  case ${value} in
-    1|+1)
-      value="+1"
-      color="green"
-    ;;
-    -1)
-      color="red"
-    ;;
-    0)
-      color="blue"
-    ;;
-    null)
-    ;;
-  esac
-
-  if [[ -z ${color} ]]; then
-    JIRA_COMMENT_TABLE[${JTC}]="|  | ${subsystem} | | ${*:-} |"
-    JTC=$(( JTC+1 ))
+  if [[ -z ${value} ]]; then
+    TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="|  | ${subsystem} | | ${*:-} |"
   else
-    JIRA_COMMENT_TABLE[${JTC}]="| {color:${color}}${value}{color} | ${subsystem} | ${calctime} | $* |"
-    JTC=$(( JTC+1 ))
+    TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| ${value} | ${subsystem} | ${calctime} | $* |"
   fi
+  ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1))
 }
 
-## @description  Put the final environment information at the bottom
+## @description  Report the JVM version of the given directory
+## @stability     stable
+## @audience     private
+## @replaceable  yes
+## @params       directory
+## @returns      version
+function report_jvm_version
+{
+  #shellcheck disable=SC2016
+  "${1}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \"
+}
+
+## @description  Verify if a given test is multijdk
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        test
+## @return       1 = yes
+## @return       0 = no
+function verify_multijdk_test
+{
+  local i=$1
+
+  if [[ "${JDK_DIR_LIST}" == "${JAVA_HOME}" ]]; then
+    yetus_debug "MultiJDK not configured."
+    return 0
+  fi
+
+  if [[ ${JDK_TEST_LIST} =~ $i ]]; then
+    yetus_debug "${i} is in ${JDK_TEST_LIST} and MultiJDK configured."
+    return 1
+  fi
+  return 0
+}
+
+## @description  Absolute path the JDK_DIR_LIST and JAVA_HOME.
+## @description  if JAVA_HOME is in JDK_DIR_LIST, it is positioned last
+## @stability    stable
+## @audience     private
+## @replaceable  yes
+function fullyqualifyjdks
+{
+  local i
+  local jdkdir
+  local tmplist
+
+  JAVA_HOME=$(cd -P -- "${JAVA_HOME}" >/dev/null && pwd -P)
+
+  for i in ${JDK_DIR_LIST}; do
+    jdkdir=$(cd -P -- "${i}" >/dev/null && pwd -P)
+    if [[ ${jdkdir} != "${JAVA_HOME}" ]]; then
+      tmplist="${tmplist} ${jdkdir}"
+    fi
+  done
+
+  JDK_DIR_LIST="${tmplist} ${JAVA_HOME}"
+  JDK_DIR_LIST=${JDK_DIR_LIST/ }
+}
+
+## @description  Put the opening environment information at the bottom
 ## @description  of the footer table
 ## @stability     stable
 ## @audience     private
 ## @replaceable  yes
-function close_jira_footer
+function prepopulate_footer
 {
   # shellcheck disable=SC2016
-  local -r javaversion=$("${JAVA_HOME}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \")
+  local javaversion
+  local listofjdks
   local -r unamea=$(uname -a)
+  local i
 
-  add_jira_footer "Java" "${javaversion}"
-  add_jira_footer "uname" "${unamea}"
+  add_footer_table "uname" "${unamea}"
+  add_footer_table "Build tool" "${BUILDTOOL}"
+
+  if [[ -n ${PERSONALITY} ]]; then
+    add_footer_table "Personality" "${PERSONALITY}"
+  fi
+
+  javaversion=$(report_jvm_version "${JAVA_HOME}")
+  add_footer_table "Default Java" "${javaversion}"
+  if [[ -n ${JDK_DIR_LIST}
+    &&  ${JDK_DIR_LIST} != "${JAVA_HOME}" ]]; then
+    for i in ${JDK_DIR_LIST}; do
+      javaversion=$(report_jvm_version "${i}")
+      listofjdks="${listofjdks} ${i}:${javaversion}"
+    done
+    add_footer_table "Multi-JDK versions" "${listofjdks}"
+  fi
+}
+
+## @description  Put docker stats in various tables
+## @stability     stable
+## @audience     private
+## @replaceable  yes
+function finish_docker_stats
+{
+  if [[ ${DOCKERMODE} == true ]]; then
+    # DOCKER_VERSION is set by our creator.
+    add_footer_table "Docker" "${DOCKER_VERSION}"
+  fi
 }
 
 ## @description  Put the final elapsed time at the bottom of the table.
 ## @audience     private
 ## @stability    stable
 ## @replaceable  no
-function close_jira_table
+function finish_vote_table
 {
 
   local -r elapsed=$(stop_global_clock)
+  local calctime
 
-  if [[ ${elapsed} -lt 0 ]]; then
-    calctime="N/A"
-  else
-    printf -v calctime "%3sm %02ss" $((elapsed/60)) $((elapsed%60))
-  fi
+  calctime=$(clock_display "${elapsed}")
 
   echo ""
   echo "Total Elapsed time: ${calctime}"
   echo ""
 
-
-  JIRA_COMMENT_TABLE[${JTC}]="| | | ${calctime} | |"
-  JTC=$(( JTC+1 ))
+  TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| | | ${calctime} | |"
+  ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1 ))
 }
 
 ## @description  Add to the footer of the display. @@BASE@@ will get replaced with the
@@ -291,13 +410,13 @@ function close_jira_table
 ## @replaceable  no
 ## @param        subsystem
 ## @param        string
-function add_jira_footer
+function add_footer_table
 {
   local subsystem=$1
   shift 1
 
-  JIRA_FOOTER_TABLE[${JFC}]="| ${subsystem} | $* |"
-  JFC=$(( JFC+1 ))
+  TP_FOOTER_TABLE[${TP_FOOTER_COUNTER}]="| ${subsystem} | $* |"
+  ((TP_FOOTER_COUNTER=TP_FOOTER_COUNTER+1 ))
 }
 
 ## @description  Special table just for unit test failures
@@ -306,13 +425,13 @@ function add_jira_footer
 ## @replaceable  no
 ## @param        failurereason
 ## @param        testlist
-function add_jira_test_table
+function add_test_table
 {
   local failure=$1
   shift 1
 
-  JIRA_TEST_TABLE[${JTT}]="| ${failure} | $* |"
-  JTT=$(( JTT+1 ))
+  TP_TEST_TABLE[${TP_TEST_COUNTER}]="| ${failure} | $* |"
+  ((TP_TEST_COUNTER=TP_TEST_COUNTER+1 ))
 }
 
 ## @description  Large display for the user console
@@ -332,29 +451,6 @@ function big_console_header
   echo "============================================================================"
   echo "============================================================================"
   printf "\n\n"
-}
-
-## @description  Remove {color} tags from a string
-## @audience     public
-## @stability    stable
-## @replaceable  no
-## @param        string
-## @return       string
-function colorstripper
-{
-  local string=$1
-  shift 1
-
-  local green=""
-  local white=""
-  local red=""
-  local blue=""
-
-  echo "${string}" | \
-  ${SED} -e "s,{color:red},${red},g" \
-         -e "s,{color:green},${green},g" \
-         -e "s,{color:blue},${blue},g" \
-         -e "s,{color},${white},g"
 }
 
 ## @description  Find the largest size of a column of an array
@@ -391,7 +487,7 @@ function find_java_home
 {
   start_clock
   if [[ -z ${JAVA_HOME:-} ]]; then
-    case $(uname -s) in
+    case ${OSTYPE} in
       Darwin)
         if [[ -z "${JAVA_HOME}" ]]; then
           if [[ -x /usr/libexec/java_home ]]; then
@@ -409,7 +505,7 @@ function find_java_home
 
   if [[ -z ${JAVA_HOME:-} ]]; then
     echo "JAVA_HOME is not defined."
-    add_jira_table -1 pre-patch "JAVA_HOME is not defined."
+    add_vote_table -1 pre-patch "JAVA_HOME is not defined."
     return 1
   fi
   return 0
@@ -420,26 +516,17 @@ function find_java_home
 ## @stability stable
 ## @audience public
 ## @returns ${JIRACLI} exit code
-function write_to_jira
+function write_comment
 {
   local -r commentfile=${1}
   shift
 
-  local retval
+  local retval=0
 
   if [[ ${OFFLINE} == false
      && ${JENKINS} == true ]]; then
-    export USER=hudson
-    # shellcheck disable=SC2086
-    ${JIRACLI} --comment "$(cat ${commentfile})" \
-               -s https://issues.apache.org/jira \
-               -a addcomment -u hadoopqa \
-               -p "${JIRA_PASSWD}" \
-               --issue "${ISSUE}"
+    ${BUGSYSTEM}_write_comment "${commentfile}"
     retval=$?
-    ${JIRACLI} -s https://issues.apache.org/jira \
-               -a logout -u hadoopqa \
-               -p "${JIRA_PASSWD}"
   fi
   return ${retval}
 }
@@ -457,44 +544,46 @@ function verify_patchdir_still_exists
   local extra=""
 
   if [[ ! -d ${PATCH_DIR} ]]; then
-      rm "${commentfile}" 2>/dev/null
+    rm "${commentfile}" 2>/dev/null
 
-      echo "(!) The patch artifact directory has been removed! " > "${commentfile}"
-      echo "This is a fatal error for test-patch.sh.  Aborting. " >> "${commentfile}"
-      echo
-      cat ${commentfile}
-      echo
-      if [[ ${JENKINS} == true ]]; then
-        if [[ -n ${NODE_NAME} ]]; then
-          extra=" (node ${NODE_NAME})"
-        fi
-        echo "Jenkins${extra} information at ${BUILD_URL} may provide some hints. " >> "${commentfile}"
-
-        write_to_jira ${commentfile}
+    echo "(!) The patch artifact directory has been removed! " > "${commentfile}"
+    echo "This is a fatal error for test-patch.sh.  Aborting. " >> "${commentfile}"
+    echo
+    cat ${commentfile}
+    echo
+    if [[ ${JENKINS} == true ]]; then
+      if [[ -n ${NODE_NAME} ]]; then
+        extra=" (node ${NODE_NAME})"
       fi
+      echo "Jenkins${extra} information at ${BUILD_URL} may provide some hints. " >> "${commentfile}"
 
-      rm "${commentfile}"
-      cleanup_and_exit ${RESULT}
+      write_comment ${commentfile}
     fi
+
+    rm "${commentfile}"
+    cleanup_and_exit ${RESULT}
+  fi
 }
 
-## @description generate a list of all files and line numbers that
-## @description that were added/changed in the source repo
+## @description generate a list of all files and line numbers in $GITDIFFLINES that
+## @description that were added/changed in the source repo.  $GITDIFFCONTENT
+## @description is same file, but also includes the content of those lines
 ## @audience    private
 ## @stability   stable
-## @params      filename
 ## @replaceable no
 function compute_gitdiff
 {
-  local outfile=$1
   local file
   local line
   local startline
   local counter
   local numlines
   local actual
+  local content
+  local outfile="${PATCH_DIR}/computegitdiff.${RANDOM}"
 
   pushd "${BASEDIR}" >/dev/null
+  ${GIT} add --all --intent-to-add
   while read line; do
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
@@ -511,11 +600,27 @@ function compute_gitdiff
         numlines=1
       fi
       counter=0
-      until [[ ${counter} -gt ${numlines} ]]; do
+      # it isn't obvious, but on MOST platforms under MOST use cases,
+      # this is faster than using sed, and definitely faster than using
+      # awk.
+      # http://unix.stackexchange.com/questions/47407/cat-line-x-to-line-y-on-a-huge-file
+      # has a good discussion w/benchmarks
+      #
+      # note that if tail is still sending data through the pipe, but head gets enough
+      # to do what was requested, head will exit, leaving tail with a broken pipe.
+      # we're going to send stderr to /dev/null and ignore the error since head's
+      # output is really what we're looking for
+      tail -n "+${startline}" "${file}" 2>/dev/null | head -n ${numlines} > "${outfile}"
+      oldifs=${IFS}
+      IFS=''
+      while read -r content; do
           ((actual=counter+startline))
-          echo "${file}:${actual}:" >> "${outfile}"
+          echo "${file}:${actual}:" >> "${GITDIFFLINES}"
+          printf "%s:%s:%s\n" "${file}" "${actual}" "${content}" >> "${GITDIFFCONTENT}"
           ((counter=counter+1))
-      done
+      done < "${outfile}"
+      rm "${outfile}"
+      IFS=${oldifs}
     fi
   done < <("${GIT}" diff --unified=0 --no-color)
   popd >/dev/null
@@ -540,35 +645,39 @@ function echo_and_redirect
   verify_patchdir_still_exists
 
   find "${BASEDIR}" -type d -exec chmod +x {} \;
+  # to the screen
   echo "${*} > ${logfile} 2>&1"
-  "${@}" > "${logfile}" 2>&1
+  # to the log
+  echo "${*}" > "${logfile}"
+  # the actual command
+  "${@}" >> "${logfile}" 2>&1
 }
 
-## @description is PATCH_DIR relative to BASEDIR?
+## @description is a given directory relative to BASEDIR?
 ## @audience    public
 ## @stability   stable
 ## @replaceable yes
-## @returns     1 - no, PATCH_DIR
-## @returns     0 - yes, PATCH_DIR - BASEDIR
-function relative_patchdir
+## @param       path
+## @returns     1 - no, path
+## @returns     0 - yes, path - BASEDIR
+function relative_dir
 {
-  local p=${PATCH_DIR#${BASEDIR}}
+  local p=${1#${BASEDIR}}
 
-  if [[ ${#p} -eq ${#PATCH_DIR} ]]; then
-    echo ${p}
+  if [[ ${#p} -eq ${#1} ]]; then
+    echo "${p}"
     return 1
   fi
   p=${p#/}
-  echo ${p}
+  echo "${p}"
   return 0
 }
-
 
 ## @description  Print the usage information
 ## @audience     public
 ## @stability    stable
 ## @replaceable  no
-function hadoop_usage
+function testpatch_usage
 {
   local -r up=$(echo ${PROJECT_NAME} | tr '[:lower:]' '[:upper:]')
 
@@ -582,25 +691,36 @@ function hadoop_usage
   echo "Options:"
   echo "--basedir=<dir>        The directory to apply the patch to (default current directory)"
   echo "--branch=<ref>         Forcibly set the branch"
-  echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'trunk')"
+  echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'master')"
+  #not quite working yet
+  #echo "--bugsystem=<type>     The bug system in use ('jira', the default, or 'github')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
-  echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default Hadoop's wiki)"
+  echo "--build-tool=<tool>    Pick which build tool to focus around (maven, ant)"
+  echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default: ${HOW_TO_CONTRIBUTE} )"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
-  echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
-  echo "--findbugs-strict-precheck If there are Findbugs warnings during precheck, fail"
-  echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
+  echo "--docker               Spawn a docker container"
+  echo "--dockerfile=<file>    Dockerfile fragment to use as the base"
+  echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${ISSUE_RE}\')"
+  echo "--java-home=<path>     Set JAVA_HOME (In Docker mode, this should be local to the image)"
+  echo "--multijdkdirs=<paths> Comma delimited lists of JDK paths to use for multi-JDK tests"
+  echo "--multijdktests=<list> Comma delimited tests to use when multijdkdirs is used. (default: javac,javadoc,unit)"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
-  echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
+  echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/test-patch-${PROJECT_NAME}/pid')"
+  echo "--personality=<file>   The personality file to load"
   echo "--plugins=<dir>        A directory of user provided plugins. see test-patch.d for examples (default empty)"
-  echo "--project=<name>       The short name for project currently using test-patch (default 'hadoop')"
+  echo "--project=<name>       The short name for project currently using test-patch (default 'yetus')"
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
   echo "--skip-system-plugins  Do not load plugins from ${BINDIR}/test-patch.d"
+  echo "--summarize=<bool>     Allow tests to summarize results"
   echo "--testlist=<list>      Specify which subsystem tests to use (comma delimited)"
-
+  echo "--test-parallel=<bool> Run multiple tests in parallel (default false in developer mode, true in Jenkins mode)"
+  echo "--test-threads=<int>   Number of tests to run in parallel (default defined in ${PROJECT_NAME} build)"
+  echo ""
   echo "Shell binary overrides:"
+  echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
@@ -608,17 +728,24 @@ function hadoop_usage
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
-  echo "--ps-cmd=<cmd>         The 'ps' command to use (default 'ps')"
   echo "--sed-cmd=<cmd>        The 'sed' command to use (default 'sed')"
 
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
+  echo "--build-url            Set the build location web page"
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
-  echo "--jira-cmd=<cmd>       The 'jira' command to use (default 'jira')"
-  echo "--jira-password=<pw>   The password for the 'jira' command"
   echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
   echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
+
+  importplugins
+
+  for plugin in ${PLUGINS} ${BUGSYSTEMS}; do
+    if declare -f ${plugin}_usage >/dev/null 2>&1; then
+      echo
+      "${plugin}_usage"
+    fi
+  done
 }
 
 ## @description  Interpret the command line parameters
@@ -634,6 +761,9 @@ function parse_args
 
   for i in "$@"; do
     case ${i} in
+      --ant-cmd=*)
+        ANT=${i#*=}
+      ;;
       --awk-cmd=*)
         AWK=${i#*=}
       ;;
@@ -646,14 +776,23 @@ function parse_args
       --branch-default=*)
         PATCH_BRANCH_DEFAULT=${i#*=}
       ;;
+      --bugsystem=*)
+        BUGSYSTEM=${i#*=}
+      ;;
       --build-native=*)
         BUILD_NATIVE=${i#*=}
+      ;;
+      --build-tool=*)
+        BUILDTOOL=${i#*=}
+      ;;
+      --build-url=*)
+        BUILD_URL=${i#*=}
       ;;
       --contrib-guide=*)
         HOW_TO_CONTRIBUTE=${i#*=}
       ;;
       --debug)
-        HADOOP_SHELL_SCRIPT_DEBUG=true
+        TP_SHELL_SCRIPT_DEBUG=true
       ;;
       --diff-cmd=*)
         DIFF=${i#*=}
@@ -661,17 +800,20 @@ function parse_args
       --dirty-workspace)
         DIRTY_WORKSPACE=true
       ;;
+      --docker)
+        DOCKERSUPPORT=true
+      ;;
+      --dockerfile=*)
+        DOCKERFILE=${i#*=}
+      ;;
+      --dockermode)
+        DOCKERMODE=true
+      ;;
       --eclipse-home=*)
         ECLIPSE_HOME=${i#*=}
       ;;
       --file-cmd=*)
         FILE=${i#*=}
-      ;;
-      --findbugs-home=*)
-        FINDBUGS_HOME=${i#*=}
-      ;;
-      --findbugs-strict-precheck)
-        FINDBUGS_WARNINGS_FAIL_PRECHECK=true
       ;;
       --git-cmd=*)
         GIT=${i#*=}
@@ -680,7 +822,7 @@ function parse_args
         GREP=${i#*=}
       ;;
       --help|-help|-h|help|--h|--\?|-\?|\?)
-        hadoop_usage
+        testpatch_usage
         exit 0
       ;;
       --issue-re=*)
@@ -691,17 +833,22 @@ function parse_args
       ;;
       --jenkins)
         JENKINS=true
-      ;;
-      --jira-cmd=*)
-        JIRACLI=${i#*=}
-      ;;
-      --jira-password=*)
-        JIRA_PASSWD=${i#*=}
+        TEST_PARALLEL=${TEST_PARALLEL:-true}
       ;;
       --modulelist=*)
         USER_MODULE_LIST=${i#*=}
         USER_MODULE_LIST=${USER_MODULE_LIST//,/ }
-        hadoop_debug "Manually forcing modules ${USER_MODULE_LIST}"
+        yetus_debug "Manually forcing modules ${USER_MODULE_LIST}"
+      ;;
+      --multijdkdirs=*)
+        JDK_DIR_LIST=${i#*=}
+        JDK_DIR_LIST=${JDK_DIR_LIST//,/ }
+        yetus_debug "Multi-JVM mode activated with ${JDK_DIR_LIST}"
+      ;;
+      --multijdktests=*)
+        JDK_TEST_LIST=${i#*=}
+        JDK_TEST_LIST=${JDK_TEST_LIST//,/ }
+        yetus_debug "Multi-JVM test list: ${JDK_TEST_LIST}"
       ;;
       --mvn-cmd=*)
         MVN=${i#*=}
@@ -718,19 +865,17 @@ function parse_args
       --patch-dir=*)
         USER_PATCH_DIR=${i#*=}
       ;;
+      --personality=*)
+        PERSONALITY=${i#*=}
+      ;;
       --plugins=*)
         USER_PLUGIN_DIR=${i#*=}
       ;;
       --project=*)
         PROJECT_NAME=${i#*=}
       ;;
-      --ps-cmd=*)
-        PS=${i#*=}
-      ;;
       --reexec)
         REEXECED=true
-        start_clock
-        add_jira_table 0 reexec "dev-support patch detected."
       ;;
       --resetrepo)
         RESETREPO=true
@@ -741,16 +886,37 @@ function parse_args
       --skip-system-plugins)
         LOAD_SYSTEM_PLUGINS=false
       ;;
+      --summarize=*)
+        ALLOWSUMMARIES=${i#*=}
+      ;;
       --testlist=*)
         testlist=${i#*=}
         testlist=${testlist//,/ }
         for j in ${testlist}; do
-          hadoop_debug "Manually adding patch test subsystem ${j}"
+          yetus_debug "Manually adding patch test subsystem ${j}"
           add_test "${j}"
         done
       ;;
+      --test-parallel=*)
+        TEST_PARALLEL=${i#*=}
+      ;;
+      --test-threads=*)
+        # shellcheck disable=SC2034
+        TEST_THREADS=${i#*=}
+      ;;
+      --tpglobaltimer=*)
+        GLOBALTIMER=${i#*=}
+      ;;
+      --tpreexectimer=*)
+        REEXECLAUNCHTIMER=${i#*=}
+      ;;
       --wget-cmd=*)
         WGET=${i#*=}
+      ;;
+      --*)
+        ## PATCH_OR_ISSUE can't be a --.  So this is probably
+        ## a plugin thing.
+        continue
       ;;
       *)
         PATCH_OR_ISSUE=${i}
@@ -758,24 +924,57 @@ function parse_args
     esac
   done
 
+  if [[ -n ${REEXECLAUNCHTIMER} ]]; then
+    TIMER=${REEXECLAUNCHTIMER};
+  else
+    start_clock
+  fi
+
+  if [[ ${REEXECED} == true
+    && ${DOCKERMODE} == true ]]; then
+    add_vote_table 0 reexec "docker + precommit patch detected."
+  elif [[ ${REEXECED} == true ]]; then
+    add_vote_table 0 reexec "precommit patch detected."
+  elif [[ ${DOCKERMODE} == true ]]; then
+    add_vote_table 0 reexec "docker mode."
+  fi
+
   # if we requested offline, pass that to mvn
-  if [[ ${OFFLINE} == "true" ]] ; then
+  if [[ ${OFFLINE} == "true" ]]; then
     MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
+    ANT_ARGS=(${ANT_ARGS[@]} -Doffline=)
+  fi
+
+  if [[ -z "${PATCH_OR_ISSUE}" ]]; then
+    testpatch_usage
+    exit 1
   fi
 
   # we need absolute dir for ${BASEDIR}
-  cd "${CWD}"
+  cd "${STARTINGDIR}"
   BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
 
-  if [[ ${BUILD_NATIVE} == "true" ]] ; then
-    NATIVE_PROFILE=-Pnative
-    REQUIRE_TEST_LIB_HADOOP=-Drequire.test.libhadoop
+  if [[ -n ${USER_PATCH_DIR} ]]; then
+    PATCH_DIR="${USER_PATCH_DIR}"
+  else
+    PATCH_DIR=/tmp/test-patch-${PROJECT_NAME}/$$
   fi
-  if [[ -z "${PATCH_OR_ISSUE}" ]]; then
-    hadoop_usage
-    exit 1
+
+  cd "${STARTINGDIR}"
+  if [[ ! -d ${PATCH_DIR} ]]; then
+    mkdir -p "${PATCH_DIR}"
+    if [[ $? == 0 ]] ; then
+      echo "${PATCH_DIR} has been created"
+    else
+      echo "Unable to create ${PATCH_DIR}"
+      cleanup_and_exit 1
+    fi
   fi
-  if [[ ${JENKINS} == "true" ]] ; then
+
+  # we need absolute dir for PATCH_DIR
+  PATCH_DIR=$(cd -P -- "${PATCH_DIR}" >/dev/null && pwd -P)
+
+  if [[ ${JENKINS} == "true" ]]; then
     echo "Running in Jenkins mode"
     ISSUE=${PATCH_OR_ISSUE}
     RESETREPO=true
@@ -790,46 +989,61 @@ function parse_args
     JENKINS=false
   fi
 
-  if [[ -n ${USER_PATCH_DIR} ]]; then
-    PATCH_DIR="${USER_PATCH_DIR}"
-  else
-    PATCH_DIR=/tmp/${PROJECT_NAME}-test-patch/$$
+  if [[ -n "${USER_PLUGIN_DIR}" ]]; then
+    USER_PLUGIN_DIR=$(cd -P -- "${USER_PLUGIN_DIR}" >/dev/null && pwd -P)
   fi
 
-  cd "${CWD}"
-  if [[ ! -d ${PATCH_DIR} ]]; then
-    mkdir -p "${PATCH_DIR}"
-    if [[ $? == 0 ]] ; then
-      echo "${PATCH_DIR} has been created"
-    else
-      echo "Unable to create ${PATCH_DIR}"
-      cleanup_and_exit 1
-    fi
-  fi
-
-  # we need absolute dir for PATCH_DIR
-  PATCH_DIR=$(cd -P -- "${PATCH_DIR}" >/dev/null && pwd -P)
-
-  GITDIFFLINES=${PATCH_DIR}/gitdifflines.txt
+  GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
+  GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
 }
 
 ## @description  Locate the pom.xml file for a given directory
 ## @audience     private
 ## @stability    stable
 ## @replaceable  no
-## @return       directory containing the pom.xml
-function find_pom_dir
+## @return       directory containing the pom.xml. Nothing returned if not found.
+function find_pomxml_dir
 {
   local dir
 
   dir=$(dirname "$1")
 
-  hadoop_debug "Find pom dir for: ${dir}"
+  yetus_debug "Find pom.xml dir for: ${dir}"
 
   while builtin true; do
     if [[ -f "${dir}/pom.xml" ]];then
       echo "${dir}"
-      hadoop_debug "Found: ${dir}"
+      yetus_debug "Found: ${dir}"
+      return
+    elif [[ ${dir} == "." ]]; then
+      yetus_error "ERROR: pom.xml is not found. Make sure the target is a Maven-based project."
+      return
+    else
+      dir=$(dirname "${dir}")
+    fi
+  done
+}
+
+## @description  Locate the build.xml file for a given directory
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       directory containing the build.xml. Nothing returned if not found.
+function find_buildxml_dir
+{
+  local dir
+
+  dir=$(dirname "$1")
+
+  yetus_debug "Find build.xml dir for: ${dir}"
+
+  while builtin true; do
+    if [[ -f "${dir}/build.xml" ]];then
+      echo "${dir}"
+      yetus_debug "Found: ${dir}"
+      return
+    elif [[ ${dir} == "." ]]; then
+      yetus_error "ERROR: build.xml is not found. Make sure the target is a Ant-based project."
       return
     else
       dir=$(dirname "${dir}")
@@ -858,33 +1072,65 @@ function find_changed_files
     | sort -u)
 }
 
-## @description  Find the modules of the maven build that ${PATCH_DIR}/patch modifies
+## @description  Find the modules of the build that ${PATCH_DIR}/patch modifies
 ## @audience     private
 ## @stability    stable
 ## @replaceable  no
-## @return       None; sets ${CHANGED_MODULES}
+## @return       None; sets ${CHANGED_MODULES} and ${CHANGED_UNFILTERED_MODULES}
 function find_changed_modules
 {
   # Come up with a list of changed files into ${TMP}
   local pomdirs
+  local pomdir
   local module
   local pommods
 
   # Now find all the modules that were changed
   for file in ${CHANGED_FILES}; do
-    #shellcheck disable=SC2086
-    pomdirs="${pomdirs} $(find_pom_dir ${file})"
+    case ${BUILDTOOL} in
+      maven)
+        #shellcheck disable=SC2086
+        pomdir=$(find_pomxml_dir ${file})
+        if [[ -z ${pomdir} ]]; then
+          output_to_console 1
+          output_to_bugsystem 1
+          cleanup_and_exit 1
+        fi
+        pomdirs="${pomdirs} ${pomdir}"
+      ;;
+      ant)
+        #shellcheck disable=SC2086
+        pomdir=$(find_buildxml_dir ${file})
+        if [[ -z ${pomdir} ]]; then
+          output_to_console 1
+          output_to_bugsystem 1
+          cleanup_and_exit 1
+        fi
+        pomdirs="${pomdirs} ${pomdir}"
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        output_to_console 1
+        output_to_bugsystem 1
+        cleanup_and_exit 1
+      ;;
+    esac
   done
 
-  # Filter out modules without code
-  for module in ${pomdirs}; do
-    ${GREP} "<packaging>pom</packaging>" "${module}/pom.xml" > /dev/null
-    if [[ "$?" != 0 ]]; then
-      pommods="${pommods} ${module}"
-    fi
-  done
+  #shellcheck disable=SC2086,SC2034
+  CHANGED_UNFILTERED_MODULES=$(echo ${pomdirs} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
 
-  #shellcheck disable=SC2086
+  if [[ ${BUILDTOOL} == maven ]]; then
+    # Filter out modules without code
+    for module in ${pomdirs}; do
+      ${GREP} "<packaging>pom</packaging>" "${module}/pom.xml" > /dev/null
+      if [[ "$?" != 0 ]]; then
+        pommods="${pommods} ${module}"
+      fi
+    done
+  fi
+
+  #shellcheck disable=SC2086,SC2034
   CHANGED_MODULES=$(echo ${pommods} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
 }
 
@@ -904,38 +1150,38 @@ function git_checkout
 
   cd "${BASEDIR}"
   if [[ ! -d .git ]]; then
-    hadoop_error "ERROR: ${BASEDIR} is not a git repo."
+    yetus_error "ERROR: ${BASEDIR} is not a git repo."
     cleanup_and_exit 1
   fi
 
   if [[ ${RESETREPO} == "true" ]] ; then
     ${GIT} reset --hard
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git reset is failing"
+      yetus_error "ERROR: git reset is failing"
       cleanup_and_exit 1
     fi
 
     # if PATCH_DIR is in BASEDIR, then we don't want
     # git wiping it out.
-    exemptdir=$(relative_patchdir)
+    exemptdir=$(relative_dir "${PATCH_DIR}")
     if [[ $? == 1 ]]; then
       ${GIT} clean -xdf
     else
       # we do, however, want it emptied of all _files_.
       # we need to leave _directories_ in case we are in
       # re-exec mode (which places a directory full of stuff in it)
-      hadoop_debug "Exempting ${exemptdir} from clean"
+      yetus_debug "Exempting ${exemptdir} from clean"
       rm "${PATCH_DIR}/*" 2>/dev/null
       ${GIT} clean -xdf -e "${exemptdir}"
     fi
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git clean is failing"
+      yetus_error "ERROR: git clean is failing"
       cleanup_and_exit 1
     fi
 
     ${GIT} checkout --force "${PATCH_BRANCH_DEFAULT}"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
+      yetus_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
       cleanup_and_exit 1
     fi
 
@@ -949,14 +1195,14 @@ function git_checkout
     if [[ ${OFFLINE} == false ]]; then
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
-        hadoop_error "ERROR: git pull is failing"
+        yetus_error "ERROR: git pull is failing"
         cleanup_and_exit 1
       fi
     fi
     # forcibly checkout this branch or git ref
     ${GIT} checkout --force "${PATCH_BRANCH}"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git checkout ${PATCH_BRANCH} is failing"
+      yetus_error "ERROR: git checkout ${PATCH_BRANCH} is failing"
       cleanup_and_exit 1
     fi
 
@@ -965,7 +1211,7 @@ function git_checkout
     if [[ ${OFFLINE} == false ]]; then
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
-        hadoop_error "ERROR: git pull is failing"
+        yetus_error "ERROR: git pull is failing"
         cleanup_and_exit 1
       fi
     fi
@@ -974,9 +1220,9 @@ function git_checkout
 
     status=$(${GIT} status --porcelain)
     if [[ "${status}" != "" && -z ${DIRTY_WORKSPACE} ]] ; then
-      hadoop_error "ERROR: --dirty-workspace option not provided."
-      hadoop_error "ERROR: can't run in a workspace that contains the following modifications"
-      hadoop_error "${status}"
+      yetus_error "ERROR: --dirty-workspace option not provided."
+      yetus_error "ERROR: can't run in a workspace that contains the following modifications"
+      yetus_error "${status}"
       cleanup_and_exit 1
     fi
 
@@ -1005,80 +1251,8 @@ function git_checkout
     echo "Testing ${ISSUE} patch on ${PATCH_BRANCH}."
   fi
 
-  add_jira_footer "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
+  add_footer_table "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
 
-  if [[ ! -f ${BASEDIR}/pom.xml ]]; then
-    hadoop_error "ERROR: This verison of test-patch.sh only supports Maven-based builds. Aborting."
-    add_jira_table -1 pre-patch "Unsupported build system."
-    output_to_jira 1
-    cleanup_and_exit 1
-  fi
-  return 0
-}
-
-## @description  Confirm the source environment is compilable
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_without_patch
-{
-  local -r mypwd=$(pwd)
-
-  big_console_header "Pre-patch ${PATCH_BRANCH} Java verification"
-
-  start_clock
-
-  verify_needed_test javac
-
-  if [[ $? == 1 ]]; then
-    echo "Compiling ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch
-    if [[ $? != 0 ]] ; then
-      echo "${PATCH_BRANCH} compilation is broken?"
-      add_jira_table -1 pre-patch "${PATCH_BRANCH} compilation may be broken."
-      return 1
-    fi
-  else
-    echo "Patch does not appear to need javac tests."
-  fi
-
-  verify_needed_test javadoc
-
-  if [[ $? == 1 ]]; then
-    echo "Javadoc'ing ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
-    if [[ $? != 0 ]] ; then
-      echo "Pre-patch ${PATCH_BRANCH} javadoc compilation is broken?"
-      add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} JavaDoc compilation may be broken."
-      return 1
-    fi
-  else
-    echo "Patch does not appear to need javadoc tests."
-  fi
-
-  verify_needed_test site
-
-  if [[ $? == 1 ]]; then
-    echo "site creation for ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}SiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
-    if [[ $? != 0 ]] ; then
-      echo "Pre-patch ${PATCH_BRANCH} site compilation is broken?"
-      add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} site compilation may be broken."
-      return 1
-    fi
-  else
-    echo "Patch does not appear to need site tests."
-  fi
-
-  precheck_findbugs
-
-  if [[ $? != 0 ]] ; then
-    return 1
-  fi
-
-  add_jira_table 0 pre-patch "Pre-patch ${PATCH_BRANCH} compilation is healthy."
   return 0
 }
 
@@ -1136,7 +1310,7 @@ function determine_branch
   local allbranches
   local patchnamechunk
 
-  hadoop_debug "Determine branch"
+  yetus_debug "Determine branch"
 
   # something has already set this, so move on
   if [[ -n ${PATCH_BRANCH} ]]; then
@@ -1155,12 +1329,12 @@ function determine_branch
   allbranches=$(${GIT} branch -r | tr -d ' ' | ${SED} -e s,origin/,,g)
 
   for j in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
-    hadoop_debug "Determine branch: starting with ${j}"
+    yetus_debug "Determine branch: starting with ${j}"
     # shellcheck disable=SC2016
     patchnamechunk=$(echo "${j}" | ${AWK} -F/ '{print $NF}')
 
     # ISSUE.branch.##.patch
-    hadoop_debug "Determine branch: ISSUE.branch.##.patch"
+    yetus_debug "Determine branch: ISSUE.branch.##.patch"
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2 -d. )
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
     if [[ $? == 0 ]]; then
@@ -1168,7 +1342,7 @@ function determine_branch
     fi
 
     # ISSUE-branch-##.patch
-    hadoop_debug "Determine branch: ISSUE-branch-##.patch"
+    yetus_debug "Determine branch: ISSUE-branch-##.patch"
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
     if [[ $? == 0 ]]; then
@@ -1176,7 +1350,7 @@ function determine_branch
     fi
 
     # ISSUE-##.patch.branch
-    hadoop_debug "Determine branch: ISSUE-##.patch.branch"
+    yetus_debug "Determine branch: ISSUE-##.patch.branch"
     # shellcheck disable=SC2016
     PATCH_BRANCH=$(echo "${patchnamechunk}" | ${AWK} -F. '{print $NF}')
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
@@ -1185,7 +1359,7 @@ function determine_branch
     fi
 
     # ISSUE-branch.##.patch
-    hadoop_debug "Determine branch: ISSUE-branch.##.patch"
+    yetus_debug "Determine branch: ISSUE-branch.##.patch"
     # shellcheck disable=SC2016
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | ${AWK} -F. '{print $(NF-2)}' 2>/dev/null)
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
@@ -1210,7 +1384,7 @@ function determine_issue
   local patchnamechunk
   local maybeissue
 
-  hadoop_debug "Determine issue"
+  yetus_debug "Determine issue"
 
   # we can shortcut jenkins
   if [[ ${JENKINS} == true ]]; then
@@ -1241,13 +1415,13 @@ function add_test
 {
   local testname=$1
 
-  hadoop_debug "Testing against ${testname}"
+  yetus_debug "Testing against ${testname}"
 
   if [[ -z ${NEEDED_TESTS} ]]; then
-    hadoop_debug "Setting tests to ${testname}"
+    yetus_debug "Setting tests to ${testname}"
     NEEDED_TESTS=${testname}
   elif [[ ! ${NEEDED_TESTS} =~ ${testname} ]] ; then
-    hadoop_debug "Adding ${testname}"
+    yetus_debug "Adding ${testname}"
     NEEDED_TESTS="${NEEDED_TESTS} ${testname}"
   fi
 }
@@ -1279,44 +1453,8 @@ function determine_needed_tests
   local i
 
   for i in ${CHANGED_FILES}; do
-    if [[ ${i} =~ src/main/webapp ]]; then
-      hadoop_debug "tests/webapp: ${i}"
-    elif [[ ${i} =~ \.sh
-         || ${i} =~ \.cmd
-         ]]; then
-      hadoop_debug "tests/shell: ${i}"
-    elif [[ ${i} =~ \.md$
-         || ${i} =~ \.md\.vm$
-         || ${i} =~ src/site
-         || ${i} =~ src/main/docs
-         ]]; then
-      hadoop_debug "tests/site: ${i}"
-      add_test site
-    elif [[ ${i} =~ \.c$
-         || ${i} =~ \.cc$
-         || ${i} =~ \.h$
-         || ${i} =~ \.hh$
-         || ${i} =~ \.proto$
-         || ${i} =~ src/test
-         || ${i} =~ \.cmake$
-         || ${i} =~ CMakeLists.txt
-         ]]; then
-      hadoop_debug "tests/units: ${i}"
-      add_test javac
-      add_test unit
-    elif [[ ${i} =~ pom.xml$
-         || ${i} =~ \.java$
-         || ${i} =~ src/main
-         ]]; then
-      hadoop_debug "tests/javadoc+units: ${i}"
-      add_test javadoc
-      add_test javac
-      add_test unit
-    fi
 
-    if [[ ${i} =~ \.java$ ]]; then
-      add_test findbugs
-    fi
+    personality_file_tests "${i}"
 
     for plugin in ${PLUGINS}; do
       if declare -f ${plugin}_filefilter >/dev/null 2>&1; then
@@ -1325,7 +1463,7 @@ function determine_needed_tests
     done
   done
 
-  add_jira_footer "Optional Tests" "${NEEDED_TESTS}"
+  add_footer_table "Optional Tests" "${NEEDED_TESTS}"
 }
 
 ## @description  Given ${PATCH_ISSUE}, determine what type of patch file is in use, and do the
@@ -1338,7 +1476,7 @@ function determine_needed_tests
 function locate_patch
 {
   local notSureIfPatch=false
-  hadoop_debug "locate patch"
+  yetus_debug "locate patch"
 
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
     PATCH_FILE="${PATCH_OR_ISSUE}"
@@ -1349,36 +1487,64 @@ function locate_patch
     else
       ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
 
+      case $? in
+        0)
+        ;;
+        2)
+          yetus_error "ERROR: .wgetrc/.netrc parsing error."
+          cleanup_and_exit 1
+        ;;
+        3)
+          yetus_error "ERROR: File IO error."
+          cleanup_and_exit 1
+        ;;
+        4)
+          yetus_error "ERROR: URL ${PATCH_OR_ISSUE} is unreachable."
+          cleanup_and_exit 1
+        ;;
+        *)
+          # we want to try and do as much as we can in docker mode,
+          # but if the patch was passed as a file, then we may not
+          # be able to continue.
+          if [[ ${REEXECED} == true
+              && -f "${PATCH_DIR}/patch" ]]; then
+            PATCH_FILE="${PATCH_DIR}/patch"
+          else
+            yetus_error "ERROR: Unable to fetch ${PATCH_OR_ISSUE}."
+            cleanup_and_exit 1
+          fi
+          ;;
+      esac
+
+      if [[ -z "${PATCH_FILE}" ]]; then
+        if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
+          if [[ ${JENKINS} == true ]]; then
+            yetus_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+            cleanup_and_exit 1
+          else
+            yetus_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+          fi
+        fi
+
+        relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
+        PATCHURL="http://issues.apache.org${relativePatchURL}"
+        if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
+          notSureIfPatch=true
+        fi
+        patchNum=$(echo "${PATCHURL}" | ${GREP} -o '[0-9]*/' | ${GREP} -o '[0-9]*')
+        echo "${ISSUE} patch is being downloaded at $(date) from"
+      fi
+    fi
+    if [[ -z "${PATCH_FILE}" ]]; then
+      echo "${PATCHURL}"
+      add_footer_table "Patch URL" "${PATCHURL}"
+      ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
       if [[ $? != 0 ]];then
-        hadoop_error "ERROR: Unable to determine what ${PATCH_OR_ISSUE} may reference."
+        yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
         cleanup_and_exit 1
       fi
-
-      if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
-        if [[ ${JENKINS} == true ]]; then
-          hadoop_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
-          cleanup_and_exit 1
-        else
-          hadoop_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
-        fi
-      fi
-
-      relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
-      PATCHURL="http://issues.apache.org${relativePatchURL}"
-      if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
-        notSureIfPatch=true
-      fi
-      patchNum=$(echo "${PATCHURL}" | ${GREP} -o '[0-9]*/' | ${GREP} -o '[0-9]*')
-      echo "${ISSUE} patch is being downloaded at $(date) from"
+      PATCH_FILE="${PATCH_DIR}/patch"
     fi
-    echo "${PATCHURL}"
-    add_jira_footer "Patch URL" "${PATCHURL}"
-    ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
-    if [[ $? != 0 ]];then
-      hadoop_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
-      cleanup_and_exit 1
-    fi
-    PATCH_FILE="${PATCH_DIR}/patch"
   fi
 
   if [[ ! -f "${PATCH_DIR}/patch" ]]; then
@@ -1386,18 +1552,19 @@ function locate_patch
     if [[ $? == 0 ]] ; then
       echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
     else
-      hadoop_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      yetus_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
       cleanup_and_exit 1
     fi
   fi
+
   if [[ ${notSureIfPatch} == "true" ]]; then
     guess_patch_file "${PATCH_DIR}/patch"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: ${PATCHURL} is not a patch file."
+      yetus_error "ERROR: ${PATCHURL} is not a patch file."
       cleanup_and_exit 1
     else
-      hadoop_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
-      add_jira_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
+      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
+      add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
 }
@@ -1413,15 +1580,15 @@ function guess_patch_file
   local patch=$1
   local fileOutput
 
-  hadoop_debug "Trying to guess is ${patch} is a patch file."
+  yetus_debug "Trying to guess is ${patch} is a patch file."
   fileOutput=$("${FILE}" "${patch}")
   if [[ $fileOutput =~ \ diff\  ]]; then
-    hadoop_debug "file magic says it's a diff."
+    yetus_debug "file magic says it's a diff."
     return 0
   fi
-  fileOutput=$(head -n 1 "${patch}" | "${EGREP}" "^(From [a-z0-9]* Mon Sep 17 00:00:00 2001)|(diff .*)|(Index: .*)$")
+  fileOutput=$(head -n 1 "${patch}" | "${GREP}" -E "^(From [a-z0-9]* Mon Sep 17 00:00:00 2001)|(diff .*)|(Index: .*)$")
   if [[ $? == 0 ]]; then
-    hadoop_debug "first line looks like a patch file."
+    yetus_debug "first line looks like a patch file."
     return 0
   fi
   return 1
@@ -1442,7 +1609,7 @@ function verify_patch_file
   "${BINDIR}/smart-apply-patch.sh" "${PATCH_DIR}/patch" dryrun
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
-    add_jira_table -1 patch "The patch command could not apply the patch during dryrun."
+    add_vote_table -1 patch "The patch command could not apply the patch during dryrun."
     return 1
   else
     return 0
@@ -1464,17 +1631,91 @@ function apply_patch_file
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
-    add_jira_table -1 patch "The patch command could not apply the patch."
+    add_vote_table -1 patch "The patch command could not apply the patch."
     output_to_console 1
-    output_to_jira 1
+    output_to_bugsystem 1
     cleanup_and_exit 1
   fi
   return 0
 }
 
+## @description  copy the test-patch binary bits to a new working dir,
+## @description  setting USER_PLUGIN_DIR and PERSONALITY to the new
+## @description  locations.
+## @description  this is used for test-patch in docker and reexec mode
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function copytpbits
+{
+  local dockerdir
+  local dockfile
+  local person
+  # we need to copy/consolidate all the bits that might have changed
+  # that are considered part of test-patch.  This *might* break
+  # things that do off-path includes, but there isn't much we can
+  # do about that, I don't think.
 
-## @description  If this actually patches the files used for the QA process
-## @description  under dev-support and its subdirectories, then
+  # if we've already copied, then don't bother doing it again
+  if [[ ${STARTDIR} == ${PATCH_DIR}/precommit ]]; then
+    hadoop_debug "Skipping copytpbits; already copied once"
+    return
+  fi
+
+  pushd "${STARTINGDIR}" >/dev/null
+  mkdir -p "${PATCH_DIR}/precommit/user-plugins"
+  mkdir -p "${PATCH_DIR}/precommit/personality"
+  mkdir -p "${PATCH_DIR}/precommit/test-patch-docker"
+
+  # copy our entire universe, preserving links, etc.
+  (cd "${BINDIR}"; tar cpf - . ) | (cd "${PATCH_DIR}/precommit"; tar xpf - )
+
+  if [[ -n "${USER_PLUGIN_DIR}"
+    && -d "${USER_PLUGIN_DIR}"  ]]; then
+    cp -pr "${USER_PLUGIN_DIR}/*" \
+      "${PATCH_DIR}/precommit/user-plugins"
+  fi
+  # Set to be relative to ${PATCH_DIR}/precommit
+  USER_PLUGIN_DIR="${PATCH_DIR}/precommit/user-plugins"
+
+  if [[ -n ${PERSONALITY}
+    && -f ${PERSONALITY} ]]; then
+    cp -pr "${PERSONALITY}" "${PATCH_DIR}/precommit/personality"
+    person=$(basename "${PERSONALITY}")
+
+    # Set to be relative to ${PATCH_DIR}/precommit
+    PERSONALITY="${PATCH_DIR}/precommit/personality/${person}"
+  fi
+
+  if [[ -n ${DOCKERFILE}
+      && -f ${DOCKERFILE} ]]; then
+    dockerdir=$(dirname "${DOCKERFILE}")
+    dockfile=$(basename "${DOCKERFILE}")
+    pushd "${dockerdir}" >/dev/null
+    gitfilerev=$("${GIT}" log -n 1 --pretty=format:%h -- "${dockfile}" 2>/dev/null)
+    popd >/dev/null
+    if [[ -z ${gitfilerev} ]]; then
+      gitfilerev=$(date "+%F")
+      gitfilerev="date${gitfilerev}"
+    fi
+    (
+      echo "### TEST_PATCH_PRIVATE: dockerfile=${DOCKERFILE}"
+      echo "### TEST_PATCH_PRIVATE: gitrev=${gitfilerev}"
+      cat "${DOCKERFILE}"
+      # make sure we put some space between, just in case last
+      # line isn't an empty line or whatever
+      printf "\n\n"
+      cat "${BINDIR}/test-patch-docker/Dockerfile-endstub"
+
+      printf "\n\n"
+    ) > "${PATCH_DIR}/precommit/test-patch-docker/Dockerfile"
+    DOCKERFILE="${PATCH_DIR}/precommit/test-patch-docker/Dockerfile"
+  fi
+
+  popd >/dev/null
+}
+
+## @description  If this patches actually patches test-patch.sh, then
 ## @description  run with the patched version for the test.
 ## @audience     private
 ## @stability    evolving
@@ -1483,54 +1724,563 @@ function apply_patch_file
 function check_reexec
 {
   local commentfile=${PATCH_DIR}/tp.${RANDOM}
+  local tpdir
+  local copy=false
+  local testdir
+  local person
 
   if [[ ${REEXECED} == true ]]; then
     big_console_header "Re-exec mode detected. Continuing."
     return
   fi
 
-  if [[ ! ${CHANGED_FILES} =~ dev-support/test-patch
-     && ! ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
+  for testdir in "${BINDIR}" \
+      "${PERSONALITY}" \
+      "${USER_PLUGIN_DIR}" \
+      "${DOCKERFILE}"; do
+    tpdir=$(relative_dir "${testdir}")
+    if [[ $? == 0
+        && ${CHANGED_FILES} =~ ${tpdir} ]]; then
+      copy=true
+    fi
+  done
+
+  if [[ ${copy} == true ]]; then
+    big_console_header "precommit patch detected"
+
+    if [[ ${RESETREPO} == false ]]; then
+      ((RESULT = RESULT + 1))
+      yetus_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
+      add_vote_table -1 precommit "Couldn't test precommit changes because we aren't configured to destructively change the working directory."
+    else
+
+      apply_patch_file
+
+      if [[ ${JENKINS} == true ]]; then
+        rm "${commentfile}" 2>/dev/null
+        echo "(!) A patch to the testing environment has been detected. " > "${commentfile}"
+        echo "Re-executing against the patched versions to perform further tests. " >> "${commentfile}"
+        echo "The console is at ${BUILD_URL}console in case of problems." >> "${commentfile}"
+        write_comment "${commentfile}"
+        rm "${commentfile}"
+      fi
+    fi
+  fi
+
+  if [[ ${DOCKERSUPPORT} == false
+     && ${copy} == false ]]; then
     return
   fi
 
-  big_console_header "dev-support patch detected"
+  if [[ ${DOCKERSUPPORT} == true
+      && ${copy} == false ]]; then
+    big_console_header "Re-execing under Docker"
 
-  if [[ ${RESETREPO} == false ]]; then
-    ((RESULT = RESULT + 1))
-    hadoop_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
-    add_jira_table -1 dev-support "Couldn't test dev-support changes because we aren't configured to destructively change the working directory."
-    return
   fi
 
-  printf "\n\nRe-executing against patched versions to test.\n\n"
+  # copy our universe
+  copytpbits
 
-  apply_patch_file
+  if [[ ${DOCKERSUPPORT} == true ]]; then
+    # if we are doing docker, then we re-exec, but underneath the
+    # container
 
-  if [[ ${JENKINS} == true ]]; then
+    client=$(docker version | grep 'Client version' | cut -f2 -d: | tr -d ' ')
+    server=$(docker version | grep 'Server version' | cut -f2 -d: | tr -d ' ')
 
-    rm "${commentfile}" 2>/dev/null
+    dockerversion="Client=${client} Server=${server}"
 
-    echo "(!) A patch to the files used for the QA process has been detected. " > "${commentfile}"
-    echo "Re-executing against the patched versions to perform further tests. " >> "${commentfile}"
-    echo "The console is at ${BUILD_URL}console in case of problems." >> "${commentfile}"
+    TESTPATCHMODE="${USER_PARAMS[*]}"
+    if [[ -n "${BUILD_URL}" ]]; then
+      TESTPATCHMODE="--build-url=${BUILD_URL} ${TESTPATCHMODE}"
+    fi
+    TESTPATCHMODE="--tpglobaltimer=${GLOBALTIMER} ${TESTPATCHMODE}"
+    TESTPATCHMODE="--tpreexectimer=${TIMER} ${TESTPATCHMODE}"
+    TESTPATCHMODE="--personality=\'${PERSONALITY}\' ${TESTPATCHMODE}"
+    TESTPATCHMODE="--plugins=\'${USER_PLUGIN_DIR}\' ${TESTPATCHMODE}"
+    TESTPATCHMODE=" ${TESTPATCHMODE}"
+    export TESTPATCHMODE
 
-    write_to_jira "${commentfile}"
-    rm "${commentfile}"
+    patchdir=$(relative_dir "${PATCH_DIR}")
+
+    cd "${BASEDIR}"
+    #shellcheck disable=SC2093
+    exec bash "${PATCH_DIR}/precommit/test-patch-docker/test-patch-docker.sh" \
+       --dockerversion="${dockerversion}" \
+       --java-home="${JAVA_HOME}" \
+       --patch-dir="${patchdir}" \
+       --project="${PROJECT_NAME}"
+
+  else
+
+    # if we aren't doing docker, then just call ourselves
+    # but from the new path with the new flags
+    #shellcheck disable=SC2093
+    cd "${PATCH_DIR}/precommit/"
+    exec "${PATCH_DIR}/precommit/test-patch.sh" \
+      "${USER_PARAMS[@]}" \
+      --reexec \
+      --basedir="${BASEDIR}" \
+      --branch="${PATCH_BRANCH}" \
+      --patch-dir="${PATCH_DIR}" \
+      --tpglobaltimer="${GLOBALTIMER}" \
+      --tpreexectimer="${TIMER}" \
+      --personality="${PERSONALITY}" \
+      --plugins="${USER_PLUGIN_DIR}"
+  fi
+}
+
+## @description  Reset the test results
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+function modules_reset
+{
+  MODULE_STATUS=()
+  MODULE_STATUS_TIMER=()
+  MODULE_STATUS_MSG=()
+  MODULE_STATUS_LOG=()
+}
+
+## @description  Utility to print standard module errors
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        repostatus
+## @param        testtype
+## @param        mvncmdline
+function modules_messages
+{
+  local repostatus=$1
+  local testtype=$2
+  local summarymode=$3
+  shift 2
+  local modindex=0
+  local repo
+  local goodtime=0
+  local failure=false
+  local oldtimer
+  local statusjdk
+  local multijdkmode=false
+
+  if [[ ${repostatus} == branch ]]; then
+    repo=${PATCH_BRANCH}
+  else
+    repo="the patch"
   fi
 
-  cd "${CWD}"
-  mkdir -p "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/test-patch* "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/smart-apply* "${PATCH_DIR}/dev-support-test"
+  verify_multijdk_test "${testtype}"
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
 
-  big_console_header "exec'ing test-patch.sh now..."
+  oldtimer=${TIMER}
 
-  exec "${PATCH_DIR}/dev-support-test/test-patch.sh" \
-    --reexec \
-    --branch="${PATCH_BRANCH}" \
-    --patch-dir="${PATCH_DIR}" \
-      "${USER_PARAMS[@]}"
+  if [[ ${summarymode} == true
+    && ${ALLOWSUMMARIES} == true ]]; then
+
+    until [[ ${modindex} -eq ${#MODULE[@]} ]]; do
+
+      if [[ ${multijdkmode} == true ]]; then
+        statusjdk=${MODULE_STATUS_JDK[${modindex}]}
+      fi
+
+      if [[ "${MODULE_STATUS[${modindex}]}" == '+1' ]]; then
+        ((goodtime=goodtime + ${MODULE_STATUS_TIMER[${modindex}]}))
+      else
+        failure=true
+        start_clock
+        echo ""
+        echo "${MODULE_STATUS_MSG[${modindex}]}"
+        echo ""
+        offset_clock "${MODULE_STATUS_TIMER[${modindex}]}"
+        add_vote_table "${MODULE_STATUS[${modindex}]}" "${testtype}" "${MODULE_STATUS_MSG[${modindex}]}"
+        if [[ ${MODULE_STATUS[${modindex}]} == -1
+          && -n "${MODULE_STATUS_LOG[${modindex}]}" ]]; then
+          add_footer_table "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${modindex}]}"
+        fi
+      fi
+      ((modindex=modindex+1))
+    done
+
+    if [[ ${failure} == false ]]; then
+      start_clock
+      offset_clock "${goodtime}"
+      add_vote_table +1 "${testtype}" "${repo} passed${statusjdk}"
+    fi
+  else
+    until [[ ${modindex} -eq ${#MODULE[@]} ]]; do
+      start_clock
+      echo ""
+      echo "${MODULE_STATUS_MSG[${modindex}]}"
+      echo ""
+      offset_clock "${MODULE_STATUS_TIMER[${modindex}]}"
+      add_vote_table "${MODULE_STATUS[${modindex}]}" "${testtype}" "${MODULE_STATUS_MSG[${modindex}]}"
+      if [[ ${MODULE_STATUS[${modindex}]} == -1
+        && -n "${MODULE_STATUS_LOG[${modindex}]}" ]]; then
+        add_footer_table "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${modindex}]}"
+      fi
+      ((modindex=modindex+1))
+    done
+  fi
+  TIMER=${oldtimer}
+}
+
+## @description  Add a test result
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        module
+## @param        runtime
+function module_status
+{
+  local index=$1
+  local value=$2
+  local log=$3
+  shift 3
+
+  local jdk
+
+  jdk=$(report_jvm_version "${JAVA_HOME}")
+
+  if [[ -n ${index}
+    && ${index} =~ ^[0-9]+$ ]]; then
+    MODULE_STATUS[${index}]="${value}"
+    MODULE_STATUS_LOG[${index}]="${log}"
+    MODULE_STATUS_JDK[${index}]=" with JDK v${jdk}"
+    MODULE_STATUS_MSG[${index}]="${*}"
+  else
+    yetus_error "ASSERT: module_status given bad index: ${index}"
+    local frame=0
+    while caller $frame; do
+      ((frame++));
+    done
+    echo "$*"
+    exit 1
+  fi
+}
+
+## @description  run the maven tests for the queued modules
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        repostatus
+## @param        testtype
+## @param        mvncmdline
+function modules_workers
+{
+  local repostatus=$1
+  local testtype=$2
+  shift 2
+  local modindex=0
+  local fn
+  local savestart=${TIMER}
+  local savestop
+  local repo
+  local modulesuffix
+  local jdk=""
+  local jdkindex=0
+  local statusjdk
+
+  if [[ ${repostatus} == branch ]]; then
+    repo=${PATCH_BRANCH}
+  else
+    repo="the patch"
+  fi
+
+  modules_reset
+
+  verify_multijdk_test "${testtype}"
+  if [[ $? == 1 ]]; then
+    jdk=$(report_jvm_version "${JAVA_HOME}")
+    statusjdk=" with JDK v${jdk}"
+    jdk="-jdk${jdk}"
+    jdk=${jdk// /}
+    yetus_debug "Starting MultiJDK mode${statusjdk} on ${testtype}"
+  fi
+
+  until [[ ${modindex} -eq ${#MODULE[@]} ]]; do
+    start_clock
+
+    fn=$(module_file_fragment "${MODULE[${modindex}]}")
+    fn="${fn}${jdk}"
+    modulesuffix=$(basename "${MODULE[${modindex}]}")
+    pushd "${BASEDIR}/${MODULE[${modindex}]}" >/dev/null
+
+    if [[ ${modulesuffix} == . ]]; then
+      modulesuffix="root"
+    fi
+
+    if [[ $? != 0 ]]; then
+      echo "${BASEDIR}/${MODULE[${modindex}]} no longer exists. Skipping."
+      ((modindex=modindex+1))
+      continue
+    fi
+
+    case ${BUILDTOOL} in
+      maven)
+        #shellcheck disable=SC2086
+        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
+          ${MVN} "${MAVEN_ARGS[@]}" \
+            "${@//@@@MODULEFN@@@/${fn}}" \
+             ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} -Ptest-patch
+      ;;
+      ant)
+        #shellcheck disable=SC2086
+        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
+          "${ANT}" "${ANT_ARGS[@]}" \
+          ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} \
+          "${@//@@@MODULEFN@@@/${fn}}"
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        return 1
+      ;;
+    esac
+
+    if [[ $? == 0 ]] ; then
+      module_status \
+        ${modindex} \
+        +1 \
+        "${repostatus}-${testtype}-${fn}.txt" \
+        "${modulesuffix} in ${repo} passed${statusjdk}."
+    else
+      module_status \
+        ${modindex} \
+        -1 \
+        "${repostatus}-${testtype}-${fn}.txt" \
+        "${modulesuffix} in ${repo} failed${statusjdk}."
+      ((result = result + 1))
+    fi
+    savestop=$(stop_clock)
+    MODULE_STATUS_TIMER[${modindex}]=${savestop}
+    # shellcheck disable=SC2086
+    echo "Elapsed: $(clock_display ${savestop})"
+    popd >/dev/null
+    ((modindex=modindex+1))
+  done
+
+  TIMER=${savestart}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Reset the queue for tests
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+function clear_personality_queue
+{
+  yetus_debug "Personality: clear queue"
+  MODCOUNT=0
+  MODULE=()
+}
+
+## @description  Build the queue for tests
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        module
+## @param        profiles/flags/etc
+function personality_enqueue_module
+{
+  yetus_debug "Personality: enqueue $*"
+  local module=$1
+  shift
+
+  MODULE[${MODCOUNT}]=${module}
+  MODULEEXTRAPARAM[${MODCOUNT}]=${*}
+  ((MODCOUNT=MODCOUNT+1))
+}
+
+## @description  Confirm compilation pre-patch
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_javac
+{
+  local result=0
+  local -r savejavahome=${JAVA_HOME}
+  local multijdkmode=false
+  local jdkindex=0
+
+  big_console_header "Pre-patch ${PATCH_BRANCH} javac compilation"
+
+  verify_needed_test javac
+  if [[ $? == 0 ]]; then
+     echo "Patch does not appear to need javac tests."
+     return 0
+  fi
+
+  verify_multijdk_test javac
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
+
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+    fi
+
+    personality_modules branch javac
+    case ${BUILDTOOL} in
+      maven)
+        modules_workers branch javac clean compile
+      ;;
+      ant)
+        modules_workers branch javac
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        return 1
+      ;;
+    esac
+
+    ((result=result + $?))
+    modules_messages branch javac true
+
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Confirm Javadoc pre-patch
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_javadoc
+{
+  local result=0
+  local -r savejavahome=${JAVA_HOME}
+  local multijdkmode=false
+  local jdkindex=0
+
+  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc verification"
+
+  verify_needed_test javadoc
+  if [[ $? == 0 ]]; then
+     echo "Patch does not appear to need javadoc tests."
+     return 0
+  fi
+
+  verify_multijdk_test javadoc
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
+
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+    fi
+
+    personality_modules branch javadoc
+    case ${BUILDTOOL} in
+      maven)
+        modules_workers branch javadoc clean javadoc:javadoc
+      ;;
+      ant)
+        modules_workers branch javadoc clean javadoc
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        return 1
+      ;;
+    esac
+
+    ((result=result + $?))
+    modules_messages branch javadoc true
+
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Confirm site pre-patch
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_site
+{
+  local result=0
+
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  big_console_header "Pre-patch ${PATCH_BRANCH} site verification"
+
+  verify_needed_test site
+  if [[ $? == 0 ]];then
+    echo "Patch does not appear to need site tests."
+    return 0
+  fi
+
+  personality_modules branch site
+  modules_workers branch site clean site site:stage
+  result=$?
+  modules_messages branch site true
+  if [[ ${result} != 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Confirm the source environment pre-patch
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_without_patch
+{
+  local result=0
+
+  precheck_mvninstall
+
+  if [[ $? -gt 0 ]]; then
+    ((result = result +1 ))
+  fi
+
+  precheck_javac
+
+  if [[ $? -gt 0 ]]; then
+    ((result = result +1 ))
+  fi
+
+  precheck_javadoc
+
+  if [[ $? -gt 0 ]]; then
+    ((result = result +1 ))
+  fi
+
+  precheck_site
+
+  if [[ $? -gt 0 ]]; then
+    ((result = result +1 ))
+  fi
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+
+  return 0
 }
 
 ## @description  Check the current directory for @author tags
@@ -1542,25 +2292,27 @@ function check_reexec
 function check_author
 {
   local authorTags
+  local -r appname=$(basename "${BASH_SOURCE-$0}")
 
   big_console_header "Checking there are no @author tags in the patch."
 
-  start_clock
-
-  if [[ ${CHANGED_FILES} =~ dev-support/test-patch ]]; then
-    add_jira_table 0 @author "Skipping @author checks as test-patch has been patched."
+  if [[ ${CHANGED_FILES} =~ ${appname} ]]; then
+    echo "Skipping @author checks as ${appname} has been patched."
+    add_vote_table 0 @author "Skipping @author checks as ${appname} has been patched."
     return 0
   fi
+
+  start_clock
 
   authorTags=$("${GREP}" -c -i '^[^-].*@author' "${PATCH_DIR}/patch")
   echo "There appear to be ${authorTags} @author tags in the patch."
   if [[ ${authorTags} != 0 ]] ; then
-    add_jira_table -1 @author \
-      "The patch appears to contain ${authorTags} @author tags which the Hadoop" \
+    add_vote_table -1 @author \
+      "The patch appears to contain ${authorTags} @author tags which the" \
       " community has agreed to not allow in code contributions."
     return 1
   fi
-  add_jira_table +1 @author "The patch does not contain any @author tags."
+  add_vote_table +1 @author "The patch does not contain any @author tags."
   return 0
 }
 
@@ -1575,13 +2327,14 @@ function check_modified_unittests
   local testReferences=0
   local i
 
+  big_console_header "Checking there are new or changed tests in the patch."
+
   verify_needed_test unit
 
   if [[ $? == 0 ]]; then
+    echo "Patch does not appear to need new or modified tests."
     return 0
   fi
-
-  big_console_header "Checking there are new or changed tests in the patch."
 
   start_clock
 
@@ -1593,29 +2346,184 @@ function check_modified_unittests
 
   echo "There appear to be ${testReferences} test file(s) referenced in the patch."
   if [[ ${testReferences} == 0 ]] ; then
-    add_jira_table -1 "tests included" \
+    add_vote_table -1 "test4tests" \
       "The patch doesn't appear to include any new or modified tests. " \
       "Please justify why no new tests are needed for this patch." \
       "Also please list what manual steps were performed to verify this patch."
     return 1
   fi
-  add_jira_table +1 "tests included" \
+  add_vote_table +1 "test4tests" \
     "The patch appears to include ${testReferences} new or modified test files."
   return 0
 }
 
-## @description  Helper for check_javadoc
+## @description  Helper for check_patch_javac
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
 ## @return       0 on success
 ## @return       1 on failure
-function count_javadoc_warns
+function count_javac_probs
 {
   local warningfile=$1
+  local val1
+  local val2
 
-  #shellcheck disable=SC2016,SC2046
-  return $(${EGREP} "^[0-9]+ warnings$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}')
+  case ${BUILDTOOL} in
+    maven)
+      #shellcheck disable=SC2016,SC2046
+      ${AWK} 'BEGIN {total = 0} {total += 1} END {print total}' "${warningfile}"
+    ;;
+    ant)
+      #shellcheck disable=SC2016
+      val1=$(${GREP} -E "\[javac\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
+      #shellcheck disable=SC2016
+      val2=$(${GREP} -E "\[javac\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
+      echo $((val1+val2))
+    ;;
+  esac
+}
+
+## @description  Count and compare the number of javac warnings pre- and post- patch
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function check_patch_javac
+{
+  local i
+  local result=0
+  local fn
+  local -r savejavahome=${JAVA_HOME}
+  local multijdkmode=false
+  local jdk=""
+  local jdkindex=0
+  local statusjdk
+  declare -i numbranch=0
+  declare -i numpatch=0
+
+  big_console_header "Determining number of patched javac errors"
+
+  verify_needed_test javac
+
+  if [[ $? == 0 ]]; then
+    echo "Patch does not appear to need javac tests."
+    return 0
+  fi
+
+  verify_multijdk_test javac
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
+
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+      jdk=$(report_jvm_version "${JAVA_HOME}")
+      yetus_debug "Using ${JAVA_HOME} to run this set of tests"
+      statusjdk=" with JDK v${jdk}"
+      jdk="-jdk${jdk}"
+      jdk=${jdk// /}
+    fi
+
+    personality_modules patch javac
+
+    case ${BUILDTOOL} in
+      maven)
+        modules_workers patch javac clean compile
+      ;;
+      ant)
+        modules_workers patch javac
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        return 1
+      ;;
+    esac
+
+    i=0
+    until [[ ${i} -eq ${#MODULE[@]} ]]; do
+      if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
+        ((result=result+1))
+        ((i=i+1))
+        continue
+      fi
+
+      fn=$(module_file_fragment "${MODULE[${i}]}")
+      fn="${fn}${jdk}"
+      module_suffix=$(basename "${MODULE[${i}]}")
+      if [[ ${module_suffix} == \. ]]; then
+        module_suffix=root
+      fi
+
+      # if it was a new module, this won't exist.
+      if [[ -f "${PATCH_DIR}/branch-javac-${fn}.txt" ]]; then
+        ${GREP} '\[WARNING\]' "${PATCH_DIR}/branch-javac-${fn}.txt" \
+          > "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
+      else
+        touch "${PATCH_DIR}/branch-javac-${fn}.txt" \
+          "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
+      fi
+
+      ${GREP} '\[WARNING\]' "${PATCH_DIR}/patch-javac-${fn}.txt" \
+        > "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
+
+      numbranch=$(count_javac_probs "${PATCH_DIR}/branch-javac-${fn}-warning.txt")
+      numpatch=$(count_javac_probs "${PATCH_DIR}/patch-javac-${fn}-warning.txt")
+
+      if [[ -n ${numbranch}
+          && -n ${numpatch}
+          && ${numpatch} -gt ${numbranch} ]]; then
+
+        ${DIFF} -u "${PATCH_DIR}/branch-javac-${fn}-warning.txt" \
+          "${PATCH_DIR}/patch-javac-${fn}-warning.txt" \
+          > "${PATCH_DIR}/javac-${fn}-diff.txt"
+
+        module_status ${i} -1 "javac-${fn}-diff.txt" \
+          "Patched ${module_suffix} generated "\
+          "$((numpatch-numbranch)) additional warning messages${statusjdk}." \
+
+        ((result=result+1))
+      fi
+      ((i=i+1))
+    done
+
+    modules_messages patch javac true
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Helper for check_patch_javadoc
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function count_javadoc_probs
+{
+  local warningfile=$1
+  local val1
+  local val2
+
+  case ${BUILDTOOL} in
+    maven)
+      #shellcheck disable=SC2016,SC2046
+      ${GREP} -E "^[0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}'
+    ;;
+    ant)
+      #shellcheck disable=SC2016
+      val1=$(${GREP} -E "\[javadoc\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
+      #shellcheck disable=SC2016
+      val2=$(${GREP} -E "\[javadoc\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
+      echo $((val1+val2))
+    ;;
+  esac
 }
 
 ## @description  Count and compare the number of JavaDoc warnings pre- and post- patch
@@ -1624,53 +2532,106 @@ function count_javadoc_warns
 ## @replaceable  no
 ## @return       0 on success
 ## @return       1 on failure
-function check_javadoc
+function check_patch_javadoc
 {
-  local numBranchJavadocWarnings
-  local numPatchJavadocWarnings
-
-  verify_needed_test javadoc
-
-  if [[ $? == 0 ]]; then
-    echo "This patch does not appear to need javadoc checks."
-    return 0
-  fi
+  local i
+  local result=0
+  local fn
+  local -r savejavahome=${JAVA_HOME}
+  local multijdkmode=false
+  local jdk=""
+  local jdkindex=0
+  local statusjdk
+  declare -i numbranch=0
+  declare -i numpatch=0
 
   big_console_header "Determining number of patched javadoc warnings"
 
-  start_clock
-
-  if [[ -d hadoop-project ]]; then
-    (cd hadoop-project; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
+  verify_needed_test javadoc
+    if [[ $? == 0 ]]; then
+    echo "Patch does not appear to need javadoc tests."
+    return 0
   fi
-  if [[ -d hadoop-common-project/hadoop-annotations ]]; then
-    (cd hadoop-common-project/hadoop-annotations; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
+
+  verify_multijdk_test javadoc
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
   fi
-  echo_and_redirect "${PATCH_DIR}/patchJavadocWarnings.txt"  "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
-  count_javadoc_warns "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt"
-  numBranchJavadocWarnings=$?
-  count_javadoc_warns "${PATCH_DIR}/patchJavadocWarnings.txt"
-  numPatchJavadocWarnings=$?
 
-  echo "There appear to be ${numBranchJavadocWarnings} javadoc warnings before the patch and ${numPatchJavadocWarnings} javadoc warnings after applying the patch."
-  if [[ ${numBranchJavadocWarnings} != "" && ${numPatchJavadocWarnings} != "" ]] ; then
-    if [[ ${numPatchJavadocWarnings} -gt ${numBranchJavadocWarnings} ]] ; then
-
-      ${GREP} -i warning "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" > "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarningsFiltered.txt"
-      ${GREP} -i warning "${PATCH_DIR}/patchJavadocWarnings.txt" > "${PATCH_DIR}/patchJavadocWarningsFiltered.txt"
-      ${DIFF} -u "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarningsFiltered.txt" \
-        "${PATCH_DIR}/patchJavadocWarningsFiltered.txt" \
-        > "${PATCH_DIR}/diffJavadocWarnings.txt"
-      rm -f "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarningsFiltered.txt" "${PATCH_DIR}/patchJavadocWarningsFiltered.txt"
-
-      add_jira_table -1 javadoc "The applied patch generated "\
-      "$((numPatchJavadocWarnings-numBranchJavadocWarnings))" \
-      " additional warning messages."
-      add_jira_footer javadoc "@@BASE@@/diffJavadocWarnings.txt"
-      return 1
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+      jdk=$(report_jvm_version "${JAVA_HOME}")
+      yetus_debug "Using ${JAVA_HOME} to run this set of tests"
+      statusjdk=" with JDK v${jdk}"
+      jdk="-jdk${jdk}"
+      jdk=${jdk// /}
     fi
+
+    personality_modules patch javadoc
+    case ${BUILDTOOL} in
+      maven)
+        modules_workers patch javadoc clean javadoc:javadoc
+      ;;
+      ant)
+        modules_workers patch javadoc clean javadoc
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
+        return 1
+      ;;
+    esac
+
+    i=0
+    until [[ ${i} -eq ${#MODULE[@]} ]]; do
+      if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
+        ((result=result+1))
+        ((i=i+1))
+        continue
+      fi
+
+      fn=$(module_file_fragment "${MODULE[${i}]}")
+      fn="${fn}${jdk}"
+      numbranch=$(count_javadoc_probs "${PATCH_DIR}/branch-javadoc-${fn}.txt")
+      numpatch=$(count_javadoc_probs "${PATCH_DIR}/patch-javadoc-${fn}.txt")
+
+      if [[ -n ${numbranch}
+          && -n ${numpatch}
+          && ${numpatch} -gt ${numbranch} ]] ; then
+
+        if [[ -f "${PATCH_DIR}/branch-javadoc-${fn}.txt" ]]; then
+          ${GREP} -i warning "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
+            > "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt"
+        else
+          touch "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
+            "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt"
+        fi
+
+        ${GREP} -i warning "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
+          > "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt"
+
+        ${DIFF} -u "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt" \
+          "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt" \
+          > "${PATCH_DIR}/javadoc-${fn}-diff.txt"
+        rm -f "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt" \
+           "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt"
+
+        module_status ${i} -1  "javadoc-${fn}-diff.txt" \
+          "Patched ${MODULE[${i}]} generated "\
+          "$((numpatch-numbranch)) additional warning messages${statusjdk}."
+
+        ((result=result+1))
+      fi
+      ((i=i+1))
+    done
+
+    modules_messages patch javadoc true
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
   fi
-  add_jira_table +1 javadoc "There were no new javadoc warning messages."
   return 0
 }
 
@@ -1682,144 +2643,27 @@ function check_javadoc
 ## @return       1 on failure
 function check_site
 {
-  local -r mypwd=$(pwd)
+  local result=0
+
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  big_console_header "Determining number of patched site errors"
 
   verify_needed_test site
-
   if [[ $? == 0 ]]; then
-    echo "This patch does not appear to need site checks."
+    echo "Patch does not appear to need site tests."
     return 0
   fi
 
-  big_console_header "Determining if patched site still builds"
-
-  start_clock
-
-  echo "site creation for ${mypwd}"
-  echo_and_redirect "${PATCH_DIR}/patchSiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
-  if [[ $? != 0 ]] ; then
-    echo "Site compilation is broken"
-    add_jira_table -1 site "Site compilation is broken."
-    add_jira_footer site "@@BASE@@/patchSiteWarnings.txt"
+  personality_modules patch site
+  modules_workers patch site clean site site:stage -Dmaven.javadoc.skip=true
+  result=$?
+  modules_messages patch site true
+  if [[ ${result} != 0 ]]; then
     return 1
   fi
-  add_jira_table +1 site "Site still builds."
-  return 0
-}
-
-## @description  Helper for check_javac
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function count_javac_warns
-{
-  local warningfile=$1
-  #shellcheck disable=SC2016,SC2046
-  return $(${AWK} 'BEGIN {total = 0} {total += 1} END {print total}' "${warningfile}")
-}
-
-## @description  Count and compare the number of javac warnings pre- and post- patch
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_javac
-{
-  local branchJavacWarnings
-  local patchJavacWarnings
-
-  verify_needed_test javac
-
-  if [[ $? == 0 ]]; then
-    echo "This patch does not appear to need javac checks."
-    return 0
-  fi
-
-  big_console_header "Determining number of patched javac warnings."
-
-  start_clock
-
-  echo_and_redirect "${PATCH_DIR}/patchJavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess ${NATIVE_PROFILE} -Ptest-patch
-  if [[ $? != 0 ]] ; then
-    add_jira_table -1 javac "The patch appears to cause the build to fail."
-    return 2
-  fi
-  ### Compare ${PATCH_BRANCH} and patch javac warning numbers
-  if [[ -f ${PATCH_DIR}/patchJavacWarnings.txt ]] ; then
-    ${GREP} '\[WARNING\]' "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" > "${PATCH_DIR}/filtered${PATCH_BRANCH}JavacWarnings.txt"
-    ${GREP} '\[WARNING\]' "${PATCH_DIR}/patchJavacWarnings.txt" > "${PATCH_DIR}/filteredPatchJavacWarnings.txt"
-
-    count_javac_warns "${PATCH_DIR}/filtered${PATCH_BRANCH}JavacWarnings.txt"
-    branchJavacWarnings=$?
-    count_javac_warns "${PATCH_DIR}/filteredPatchJavacWarnings.txt"
-    patchJavacWarnings=$?
-
-    echo "There appear to be ${branchJavacWarnings} javac compiler warnings before the patch and ${patchJavacWarnings} javac compiler warnings after applying the patch."
-    if [[ ${patchJavacWarnings} != "" && ${branchJavacWarnings} != "" ]] ; then
-      if [[ ${patchJavacWarnings} -gt ${branchJavacWarnings} ]] ; then
-
-        ${DIFF} "${PATCH_DIR}/filtered${PATCH_BRANCH}JavacWarnings.txt" \
-        "${PATCH_DIR}/filteredPatchJavacWarnings.txt" \
-        > "${PATCH_DIR}/diffJavacWarnings.txt"
-
-        add_jira_table -1 javac "The applied patch generated "\
-        "$((patchJavacWarnings-branchJavacWarnings))" \
-        " additional warning messages."
-
-        add_jira_footer javac "@@BASE@@/diffJavacWarnings.txt"
-
-        return 1
-      fi
-    fi
-  fi
-
-  add_jira_table +1 javac "There were no new javac warning messages."
-  return 0
-}
-
-## @description  Verify all files have an Apache License
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_apachelicense
-{
-  big_console_header "Determining number of patched release audit warnings."
-
-  start_clock
-
-  echo_and_redirect "${PATCH_DIR}/patchReleaseAuditOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" apache-rat:check -D${PROJECT_NAME}PatchProcess
-  #shellcheck disable=SC2038
-  find "${BASEDIR}" -name rat.txt | xargs cat > "${PATCH_DIR}/patchReleaseAuditWarnings.txt"
-
-  ### Compare ${PATCH_BRANCH} and patch release audit warning numbers
-  if [[ -f ${PATCH_DIR}/patchReleaseAuditWarnings.txt ]] ; then
-    patchReleaseAuditWarnings=$("${GREP}" -c '\!?????' "${PATCH_DIR}/patchReleaseAuditWarnings.txt")
-    echo ""
-    echo ""
-    echo "There appear to be ${patchReleaseAuditWarnings} release audit warnings after applying the patch."
-    if [[ ${patchReleaseAuditWarnings} != "" ]] ; then
-      if [[ ${patchReleaseAuditWarnings} -gt 0 ]] ; then
-        add_jira_table -1 "release audit" "The applied patch generated ${patchReleaseAuditWarnings} release audit warnings."
-
-        ${GREP} '\!?????' "${PATCH_DIR}/patchReleaseAuditWarnings.txt" \
-        >  "${PATCH_DIR}/patchReleaseAuditProblems.txt"
-
-        echo "Lines that start with ????? in the release audit "\
-            "report indicate files that do not have an Apache license header." \
-            >> "${PATCH_DIR}/patchReleaseAuditProblems.txt"
-
-        add_jira_footer "Release Audit" "@@BASE@@/patchReleaseAuditProblems.txt"
-
-        return 1
-      fi
-    fi
-  fi
-  add_jira_table 1 "release audit" "The applied patch does not increase the total number of release audit warnings."
   return 0
 }
 
@@ -1829,283 +2673,68 @@ function check_apachelicense
 ## @replaceable  no
 ## @return       0 on success
 ## @return       1 on failure
-function check_mvn_install
+function precheck_mvninstall
 {
-  local retval
+  local result=0
+
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  big_console_header "Verifying mvn install works"
 
   verify_needed_test javadoc
   retval=$?
 
   verify_needed_test javac
   ((retval = retval + $? ))
-
   if [[ ${retval} == 0 ]]; then
     echo "This patch does not appear to need mvn install checks."
     return 0
   fi
 
-  big_console_header "Installing all of the jars"
+  personality_modules branch mvninstall
+  modules_workers branch mvninstall -fae clean install -Dmaven.javadoc.skip=true
+  result=$?
+  modules_messages branch mvninstall true
+  if [[ ${result} != 0 ]]; then
+    return 1
+  fi
+  return 0
+}
 
-  start_clock
-  echo_and_redirect "${PATCH_DIR}/jarinstall.txt" "${MVN}" "${MAVEN_ARGS[@]}" install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
+## @description  Verify mvn install works
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function check_mvninstall
+{
+  local result=0
+
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  big_console_header "Verifying mvn install still works"
+
+  verify_needed_test javadoc
   retval=$?
-  if [[ ${retval} != 0 ]]; then
-    add_jira_table -1 install "The patch causes mvn install to fail."
-  else
-    add_jira_table +1 install "mvn install still works."
-  fi
-  return ${retval}
-}
 
-## @description  are the needed bits for findbugs present?
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 findbugs will work for our use
-## @return       1 findbugs is missing some component
-function findbugs_is_installed
-{
-  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
-    printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
-    add_jira_table -1 findbugs "Findbugs is not installed."
-    return 1
-  fi
-  return 0
-}
-
-## @description  Run the maven findbugs plugin and record found issues in a bug database
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function findbugs_mvnrunner
-{
-  local name=$1
-  local logfile=$2
-  local warnings_file=$3
-
-  echo_and_redirect "${logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean test findbugs:findbugs -DskipTests \
-    "-D${PROJECT_NAME}PatchProcess" < /dev/null
-  if [[ $? != 0 ]]; then
-    return 1
-  fi
-  cp target/findbugsXml.xml "${warnings_file}.xml"
-
-  "${FINDBUGS_HOME}/bin/setBugDatabaseInfo" -name "${name}" \
-      "${warnings_file}.xml" "${warnings_file}.xml"
-  if [[ $? != 0 ]]; then
-    return 1
-  fi
-
-  "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${warnings_file}.xml" \
-      "${warnings_file}.html"
-  if [[ $? != 0 ]]; then
-    return 1
-  fi
-
-  return 0
-}
-
-## @description  Track pre-existing findbugs warnings
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_findbugs
-{
-  local -r mypwd=$(pwd)
-  local module_suffix
-  local modules=${CHANGED_MODULES}
-  local module
-  local findbugs_version
-  local rc=0
-  local module_findbugs_warnings
-  local findbugs_warnings=0
-
-  verify_needed_test findbugs
-
-  if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need findbugs tests."
+  verify_needed_test javac
+  ((retval = retval + $? ))
+  if [[ ${retval} == 0 ]]; then
+    echo "This patch does not appear to need mvn install checks."
     return 0
   fi
 
-  echo "findbugs baseline for ${mypwd}"
-
-  findbugs_is_installed
-  if [[ $? != 0 ]]; then
+  personality_modules patch mvninstall
+  modules_workers patch mvninstall install -Dmaven.javadoc.skip=true
+  result=$?
+  modules_messages patch mvninstall true
+  if [[ ${result} != 0 ]]; then
     return 1
-  fi
-
-  for module in ${modules}
-  do
-    pushd "${module}" >/dev/null
-    echo "  Running findbugs in ${module}"
-    module_suffix=$(basename "${module}")
-    findbugs_mvnrunner "${PATCH_BRANCH}" \
-        "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt" \
-        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}"
-    (( rc = rc + $? ))
-
-    if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" ]]; then
-      #shellcheck disable=SC2016
-      module_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first \
-          "${PATCH_BRANCH}" \
-          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
-          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
-          | ${AWK} '{print $1}')
-      if [[ $? != 0 ]]; then
-        popd >/dev/null
-        return 1
-      fi
-
-      findbugs_warnings=$((findbugs_warnings+module_findbugs_warnings))
-
-      if [[ ${module_findbugs_warnings} -gt 0 ]] ; then
-        add_jira_footer "Pre-patch Findbugs warnings" "@@BASE@@/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.html"
-      fi
-    fi
-    popd >/dev/null
-  done
-
-  #shellcheck disable=SC2016
-  findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt")
-
-  if [[ ${rc} -ne 0 ]]; then
-    echo "Pre-patch ${PATCH_BRANCH} findbugs is broken?"
-    add_jira_table -1 pre-patch "Findbugs (version ${findbugs_version}) appears to be broken on ${PATCH_BRANCH}."
-    return 1
-  fi
-
-  if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" && \
-        ${findbugs_warnings} -gt 0 ]] ; then
-    echo "Pre-patch ${PATCH_BRANCH} findbugs has ${findbugs_warnings} warnings."
-    add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} has ${findbugs_warnings} extant Findbugs (version ${findbugs_version}) warnings."
-    return 1
-  fi
-
-  return 0
-}
-
-## @description  Verify patch does not trigger any findbugs warnings
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_findbugs
-{
-  local rc=0
-  local module
-  local modules=${CHANGED_MODULES}
-  local module_suffix
-  local combined_xml
-  local newBugs
-  local new_findbugs_warnings
-  local new_findbugs_fixed_warnings
-  local findbugs_warnings=0
-  local findbugs_fixed_warnings=0
-  local line
-  local firstpart
-  local secondpart
-  local findbugs_version
-
-  verify_needed_test findbugs
-
-  if [[ $? == 0 ]]; then
-    return 0
-  fi
-
-  big_console_header "Determining number of patched Findbugs warnings."
-
-  start_clock
-
-  findbugs_is_installed
-  if [[ $? != 0 ]]; then
-    return 1
-  fi
-
-  for module in ${modules}
-  do
-    pushd "${module}" >/dev/null
-    echo "  Running findbugs in ${module}"
-    module_suffix=$(basename "${module}")
-
-    findbugs_mvnrunner patch \
-        "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt" \
-        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}"
-
-    if [[ $? != 0 ]] ; then
-      ((rc = rc +1))
-      echo "Post-patch findbugs compilation is broken."
-      add_jira_table -1 findbugs "Post-patch findbugs ${module} compilation is broken."
-      continue
-    fi
-
-    combined_xml="$PATCH_DIR/combinedFindbugsWarnings${module_suffix}.xml"
-    newBugs="${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}"
-    "${FINDBUGS_HOME}/bin/computeBugHistory" -useAnalysisTimes -withMessages \
-        -output "${combined_xml}" \
-        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.xml" \
-        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
-    if [[ $? != 0 ]]; then
-      popd >/dev/null
-      return 1
-    fi
-
-    #shellcheck disable=SC2016
-    new_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first patch \
-        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
-    if [[ $? != 0 ]]; then
-      popd >/dev/null
-      return 1
-    fi
-    #shellcheck disable=SC2016
-    new_findbugs_fixed_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -fixed patch \
-        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
-    if [[ $? != 0 ]]; then
-      popd >/dev/null
-      return 1
-    fi
-
-    echo "Found ${new_findbugs_warnings} new Findbugs warnings and ${new_findbugs_fixed_warnings} newly fixed warnings."
-    findbugs_warnings=$((findbugs_warnings+new_findbugs_warnings))
-    findbugs_fixed_warnings=$((findbugs_fixed_warnings+new_findbugs_fixed_warnings))
-
-    "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${newBugs}.xml" \
-        "${newBugs}.html"
-    if [[ $? != 0 ]]; then
-      popd >/dev/null
-      return 1
-    fi
-
-    if [[ ${new_findbugs_warnings} -gt 0 ]] ; then
-      populate_test_table FindBugs "module:${module_suffix}"
-      while read line; do
-        firstpart=$(echo "${line}" | cut -f2 -d:)
-        secondpart=$(echo "${line}" | cut -f9- -d' ')
-        add_jira_test_table "" "${firstpart}:${secondpart}"
-      done < <("${FINDBUGS_HOME}/bin/convertXmlToText" "${newBugs}.xml")
-
-      add_jira_footer "Findbugs warnings" "@@BASE@@/newPatchFindbugsWarnings${module_suffix}.html"
-    fi
-
-    popd >/dev/null
-  done
-
-  #shellcheck disable=SC2016
-  findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt")
-
-  if [[ ${findbugs_warnings} -gt 0 ]] ; then
-    add_jira_table -1 findbugs "The patch appears to introduce ${findbugs_warnings} new Findbugs (version ${findbugs_version}) warnings."
-    return 1
-  fi
-
-  if [[ ${findbugs_fixed_warnings} -gt 0 ]] ; then
-    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings, and fixes ${findbugs_fixed_warnings} pre-existing warnings."
-  else
-    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   fi
   return 0
 }
@@ -2118,7 +2747,11 @@ function check_findbugs
 ## @return       1 on failure
 function check_mvn_eclipse
 {
-  big_console_header "Running mvn eclipse:eclipse."
+  if [[ ${BUILDTOOL} != maven ]]; then
+    return 0
+  fi
+
+  big_console_header "Verifying mvn eclipse:eclipse still works"
 
   verify_needed_test javac
   if [[ $? == 0 ]]; then
@@ -2126,14 +2759,13 @@ function check_mvn_eclipse
     return 0
   fi
 
-  start_clock
-
-  echo_and_redirect "${PATCH_DIR}/patchEclipseOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" eclipse:eclipse -D${PROJECT_NAME}PatchProcess
-  if [[ $? != 0 ]] ; then
-    add_jira_table -1 eclipse:eclipse "The patch failed to build with eclipse:eclipse."
+  personality_modules patch eclipse
+  modules_workers patch eclipse eclipse:eclipse
+  result=$?
+  modules_messages patch eclipse true
+  if [[ ${result} != 0 ]]; then
     return 1
   fi
-  add_jira_table +1 eclipse:eclipse "The patch built with eclipse:eclipse."
   return 0
 }
 
@@ -2152,10 +2784,10 @@ function populate_test_table
 
   for i in "$@"; do
     if [[ -z "${first}" ]]; then
-      add_jira_test_table "${reason}" "${i}"
+      add_test_table "${reason}" "${i}"
       first="${reason}"
     else
-      add_jira_test_table " " "${i}"
+      add_test_table " " "${i}"
     fi
   done
 }
@@ -2168,6 +2800,20 @@ function populate_test_table
 ## @return       1 on failure
 function check_unittests
 {
+  local i
+  local failed_tests=""
+  local test_timeouts=""
+  local test_logfile
+  local module_test_timeouts=""
+  local result=0
+  local -r savejavahome=${JAVA_HOME}
+  local multijdkmode=false
+  local jdk=""
+  local jdkindex=0
+  local statusjdk
+
+  big_console_header "Running unit tests"
+
   verify_needed_test unit
 
   if [[ $? == 0 ]]; then
@@ -2175,128 +2821,92 @@ function check_unittests
     return 0
   fi
 
-  big_console_header "Running unit tests"
+  verify_multijdk_test unit
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
 
-  start_clock
-
-  local failed_tests=""
-  local modules=${CHANGED_MODULES}
-  local building_common=0
-  local hdfs_modules
-  local ordered_modules=""
-  local failed_test_builds=""
-  local test_timeouts=""
-  local test_logfile
-  local test_build_result
-  local module_test_timeouts=""
-  local result
-  local totalresult=0
-  local module_prefix
-
-  #
-  # If we are building hadoop-hdfs-project, we must build the native component
-  # of hadoop-common-project first.  In order to accomplish this, we move the
-  # hadoop-hdfs subprojects to the end of the list so that common will come
-  # first.
-  #
-  # Of course, we may not be building hadoop-common at all-- in this case, we
-  # explicitly insert a mvn compile -Pnative of common, to ensure that the
-  # native libraries show up where we need them.
-  #
-
-  for module in ${modules}; do
-    if [[ ${module} == hadoop-hdfs-project* ]]; then
-      hdfs_modules="${hdfs_modules} ${module}"
-    elif [[ ${module} == hadoop-common-project* ]]; then
-      ordered_modules="${ordered_modules} ${module}"
-      building_common=1
-    else
-      ordered_modules="${ordered_modules} ${module}"
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+      jdk=$(report_jvm_version "${JAVA_HOME}")
+      statusjdk="JDK v${jdk} "
+      jdk="-jdk${jdk}"
+      jdk=${jdk// /}
     fi
-  done
 
-  if [[ -n "${hdfs_modules}" ]]; then
-    ordered_modules="${ordered_modules} ${hdfs_modules}"
-    if [[ ${building_common} -eq 0 ]]; then
-      echo "  Building hadoop-common with -Pnative in order to provide libhadoop.so to the hadoop-hdfs unit tests."
-      echo_and_redirect "${PATCH_DIR}/testrun_native.txt" "${MVN}" "${MAVEN_ARGS[@]}" compile ${NATIVE_PROFILE} "-D${PROJECT_NAME}PatchProcess"
-      if [[ $? != 0 ]]; then
-        add_jira_table -1 "native" "Failed to build the native portion " \
-          "of hadoop-common prior to running the unit tests in ${ordered_modules}"
+    personality_modules patch unit
+    case ${BUILDTOOL} in
+      maven)
+        modules_workers patch unit clean install -fae
+      ;;
+      ant)
+        modules_workers patch unit
+      ;;
+      *)
+        yetus_error "ERROR: Unsupported build tool."
         return 1
-      else
-        add_jira_table +1 "native" "Pre-build of native portion"
+      ;;
+    esac
+    ((result=result+$?))
+
+    modules_messages patch unit false
+    if [[ ${result} == 0 ]]; then
+      continue
+    fi
+
+    i=0
+    until [[ $i -eq ${#MODULE[@]} ]]; do
+      module=${MODULE[${i}]}
+      fn=$(module_file_fragment "${module}")
+      fn="${fn}${jdk}"
+      test_logfile="${PATCH_DIR}/patch-unit-${fn}.txt"
+
+      # shellcheck disable=2016
+      module_test_timeouts=$(${AWK} '/^Running / { array[$NF] = 1 } /^Tests run: .* in / { delete array[$NF] } END { for (x in array) { print x } }' "${test_logfile}")
+      if [[ -n "${module_test_timeouts}" ]] ; then
+        test_timeouts="${test_timeouts} ${module_test_timeouts}"
+        ((result=result+1))
       fi
+
+      pushd "${MODULE[${i}]}" >/dev/null
+      #shellcheck disable=SC2026,SC2038,SC2016
+      module_failed_tests=$(find . -name 'TEST*.xml'\
+        | xargs "${GREP}" -l -E "<failure|<error"\
+        | ${AWK} -F/ '{sub("TEST-org.apache.",""); sub(".xml",""); print $NF}')
+
+      popd >/dev/null
+
+      if [[ -n "${module_failed_tests}" ]] ; then
+        failed_tests="${failed_tests} ${module_failed_tests}"
+        ((result=result+1))
+      fi
+
+      ((i=i+1))
+    done
+
+    if [[ -n "${failed_tests}" ]] ; then
+      # shellcheck disable=SC2086
+      populate_test_table "${statusjdk}Failed unit tests" ${failed_tests}
+      failed_tests=""
     fi
-  fi
-
-  for module in ${ordered_modules}; do
-    result=0
-    start_clock
-    pushd "${module}" >/dev/null
-    module_suffix=$(basename "${module}")
-    module_prefix=$(echo "${module}" | cut -f2 -d- )
-
-    test_logfile=${PATCH_DIR}/testrun_${module_suffix}.txt
-    echo "  Running tests in ${module_suffix}"
-    echo_and_redirect "${test_logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} -D${PROJECT_NAME}PatchProcess
-    test_build_result=$?
-
-    add_jira_footer "${module_suffix} test log" "@@BASE@@/testrun_${module_suffix}.txt"
-
-    # shellcheck disable=2016
-    module_test_timeouts=$(${AWK} '/^Running / { if (last) { print last } last=$2 } /^Tests run: / { last="" }' "${test_logfile}")
-    if [[ -n "${module_test_timeouts}" ]] ; then
-      test_timeouts="${test_timeouts} ${module_test_timeouts}"
-      result=1
-    fi
-
-    #shellcheck disable=SC2026,SC2038,SC2016
-    module_failed_tests=$(find . -name 'TEST*.xml'\
-      | xargs "${GREP}" -l -E "<failure|<error"\
-      | ${AWK} -F/ '{sub("TEST-org.apache.",""); sub(".xml",""); print $NF}')
-
-    if [[ -n "${module_failed_tests}" ]] ; then
-      failed_tests="${failed_tests} ${module_failed_tests}"
-      result=1
-    fi
-    if [[ ${test_build_result} != 0 && -z "${module_failed_tests}" && -z "${module_test_timeouts}" ]] ; then
-      failed_test_builds="${failed_test_builds} ${module_suffix}"
-      result=1
-    fi
-    popd >/dev/null
-
-    if [[ $result == 1 ]]; then
-      add_jira_table -1 "${module_prefix} tests" "Tests failed in ${module_suffix}."
-    else
-      add_jira_table +1 "${module_prefix} tests" "Tests passed in ${module_suffix}."
+    if [[ -n "${test_timeouts}" ]] ; then
+      # shellcheck disable=SC2086
+      populate_test_table "${statusjdk}Timed out tests" ${test_timeouts}
+      test_timeouts=""
     fi
 
-    ((totalresult = totalresult + result))
   done
-
-  if [[ -n "${failed_tests}" ]] ; then
-    # shellcheck disable=SC2086
-    populate_test_table "Failed unit tests" ${failed_tests}
-  fi
-  if [[ -n "${test_timeouts}" ]] ; then
-    # shellcheck disable=SC2086
-    populate_test_table "Timed out tests" ${test_timeouts}
-  fi
-  if [[ -n "${failed_test_builds}" ]] ; then
-    # shellcheck disable=SC2086
-    populate_test_table "Failed build" ${failed_test_builds}
-  fi
+  JAVA_HOME=${savejavahome}
 
   if [[ ${JENKINS} == true ]]; then
-    add_jira_footer "Test Results" "${BUILD_URL}testReport/"
+    add_footer_table "${statusjdk} Test Results" "${BUILD_URL}testReport/"
   fi
 
-  if [[ ${totalresult} -gt 0 ]]; then
+  if [[ ${result} -gt 0 ]]; then
     return 1
-  else
-    return 0
   fi
+  return 0
 }
 
 ## @description  Print out the finished details on the console
@@ -2310,7 +2920,7 @@ function output_to_console
 {
   local result=$1
   shift
-  local i
+  local i=0
   local ourstring
   local vote
   local subs
@@ -2359,25 +2969,24 @@ function output_to_console
     rm "${spcfx}"
   fi
 
-  seccoladj=$(findlargest 2 "${JIRA_COMMENT_TABLE[@]}")
+  seccoladj=$(findlargest 2 "${TP_VOTE_TABLE[@]}")
   if [[ ${seccoladj} -lt 10 ]]; then
     seccoladj=10
   fi
 
   seccoladj=$((seccoladj + 2 ))
   i=0
-  until [[ $i -eq ${#JIRA_HEADER[@]} ]]; do
-    printf "%s\n" "${JIRA_HEADER[${i}]}"
+  until [[ $i -eq ${#TP_HEADER[@]} ]]; do
+    printf "%s\n" "${TP_HEADER[${i}]}"
     ((i=i+1))
   done
 
   printf "| %s | %*s |  %s   | %s\n" "Vote" ${seccoladj} Subsystem Runtime "Comment"
   echo "============================================================================"
   i=0
-  until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
-    ourstring=$(echo "${JIRA_COMMENT_TABLE[${i}]}" | tr -s ' ')
+  until [[ $i -eq ${#TP_VOTE_TABLE[@]} ]]; do
+    ourstring=$(echo "${TP_VOTE_TABLE[${i}]}" | tr -s ' ')
     vote=$(echo "${ourstring}" | cut -f2 -d\|)
-    vote=$(colorstripper "${vote}")
     subs=$(echo "${ourstring}"  | cut -f3 -d\|)
     ela=$(echo "${ourstring}" | cut -f4 -d\|)
     comment=$(echo "${ourstring}"  | cut -f5 -d\|)
@@ -2396,12 +3005,12 @@ function output_to_console
     rm "${commentfile2}" "${commentfile1}" 2>/dev/null
   done
 
-  if [[ ${#JIRA_TEST_TABLE[@]} -gt 0 ]]; then
-    seccoladj=$(findlargest 1 "${JIRA_TEST_TABLE[@]}")
+  if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
+    seccoladj=$(findlargest 1 "${TP_TEST_TABLE[@]}")
     printf "\n\n%*s | Tests\n" "${seccoladj}" "Reason"
     i=0
-    until [[ $i -eq ${#JIRA_TEST_TABLE[@]} ]]; do
-      ourstring=$(echo "${JIRA_TEST_TABLE[${i}]}" | tr -s ' ')
+    until [[ $i -eq ${#TP_TEST_TABLE[@]} ]]; do
+      ourstring=$(echo "${TP_TEST_TABLE[${i}]}" | tr -s ' ')
       vote=$(echo "${ourstring}" | cut -f2 -d\|)
       subs=$(echo "${ourstring}"  | cut -f3 -d\|)
       printf "%*s | %s\n" "${seccoladj}" "${vote}" "${subs}"
@@ -2413,87 +3022,21 @@ function output_to_console
   echo "============================================================================"
   i=0
 
-  until [[ $i -eq ${#JIRA_FOOTER_TABLE[@]} ]]; do
-    comment=$(echo "${JIRA_FOOTER_TABLE[${i}]}" |
+  until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
+    comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
               ${SED} -e "s,@@BASE@@,${PATCH_DIR},g")
     printf "%s\n" "${comment}"
     ((i=i+1))
   done
 }
 
-## @description  Print out the finished details to the JIRA issue
+## @description  Write the final output to the selected bug system
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-## @param        runresult
-function output_to_jira
+function output_to_bugsystem
 {
-  local result=$1
-  local i
-  local commentfile=${PATCH_DIR}/commentfile
-  local comment
-
-  rm "${commentfile}" 2>/dev/null
-
-  if [[ ${JENKINS} != "true" ]] ; then
-    return 0
-  fi
-
-  big_console_header "Adding comment to JIRA"
-
-  add_jira_footer "Console output" "${BUILD_URL}console"
-
-  if [[ ${result} == 0 ]]; then
-    add_jira_header "(/) *{color:green}+1 overall{color}*"
-  else
-    add_jira_header "(x) *{color:red}-1 overall{color}*"
-  fi
-
-
-  { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
-
-  i=0
-  until [[ $i -eq ${#JIRA_HEADER[@]} ]]; do
-    printf "%s\n" "${JIRA_HEADER[${i}]}" >> "${commentfile}"
-    ((i=i+1))
-  done
-
-  { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
-
-  echo "|| Vote || Subsystem || Runtime || Comment ||" >> "${commentfile}"
-
-  i=0
-  until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
-    printf "%s\n" "${JIRA_COMMENT_TABLE[${i}]}" >> "${commentfile}"
-    ((i=i+1))
-  done
-
-
-  if [[ ${#JIRA_TEST_TABLE[@]} -gt 0 ]]; then
-    { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
-
-    echo "|| Reason || Tests ||" >>  "${commentfile}"
-    i=0
-    until [[ $i -eq ${#JIRA_TEST_TABLE[@]} ]]; do
-      printf "%s\n" "${JIRA_TEST_TABLE[${i}]}" >> "${commentfile}"
-      ((i=i+1))
-    done
-  fi
-
-  { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
-
-  echo "|| Subsystem || Report/Notes ||" >> "${commentfile}"
-  i=0
-  until [[ $i -eq ${#JIRA_FOOTER_TABLE[@]} ]]; do
-    comment=$(echo "${JIRA_FOOTER_TABLE[${i}]}" |
-              ${SED} -e "s,@@BASE@@,${BUILD_URL}artifact/patchprocess,g")
-    printf "%s\n" "${comment}" >> "${commentfile}"
-    ((i=i+1))
-  done
-
-  printf "\n\nThis message was automatically generated.\n\n" >> "${commentfile}"
-
-  write_to_jira "${commentfile}"
+  "${BUGSYSTEM}_finalreport" "${@}"
 }
 
 ## @description  Clean the filesystem as appropriate and then exit
@@ -2511,9 +3054,9 @@ function cleanup_and_exit
     # there is no need to move it since we assume that
     # Jenkins or whatever already knows where it is at
     # since it told us to put it there!
-    relative_patchdir >/dev/null
+    relative_dir "${PATCH_DIR}" >/dev/null
     if [[ $? == 1 ]]; then
-      hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
+      yetus_debug "mv ${PATCH_DIR} ${BASEDIR}"
       mv "${PATCH_DIR}" "${BASEDIR}"
     fi
   fi
@@ -2532,17 +3075,16 @@ function postcheckout
   local routine
   local plugin
 
-  for routine in find_java_home verify_patch_file
-  do
+  for routine in find_java_home verify_patch_file; do
     verify_patchdir_still_exists
 
-    hadoop_debug "Running ${routine}"
+    yetus_debug "Running ${routine}"
     ${routine}
 
     (( RESULT = RESULT + $? ))
     if [[ ${RESULT} != 0 ]] ; then
       output_to_console 1
-      output_to_jira 1
+      output_to_bugsystem 1
       cleanup_and_exit 1
     fi
   done
@@ -2552,14 +3094,14 @@ function postcheckout
 
     if declare -f ${plugin}_postcheckout >/dev/null 2>&1; then
 
-      hadoop_debug "Running ${plugin}_postcheckout"
+      yetus_debug "Running ${plugin}_postcheckout"
       #shellcheck disable=SC2086
       ${plugin}_postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
         output_to_console 1
-        output_to_jira 1
+        output_to_bugsystem 1
         cleanup_and_exit 1
       fi
     fi
@@ -2580,7 +3122,7 @@ function preapply
   do
     verify_patchdir_still_exists
 
-    hadoop_debug "Running ${routine}"
+    yetus_debug "Running ${routine}"
     ${routine}
 
     (( RESULT = RESULT + $? ))
@@ -2591,7 +3133,7 @@ function preapply
 
     if declare -f ${plugin}_preapply >/dev/null 2>&1; then
 
-      hadoop_debug "Running ${plugin}_preapply"
+      yetus_debug "Running ${plugin}_preapply"
       #shellcheck disable=SC2086
       ${plugin}_preapply
 
@@ -2610,32 +3152,30 @@ function postapply
   local plugin
   local retval
 
-  compute_gitdiff "${GITDIFFLINES}"
+  compute_gitdiff
 
-  check_javac
+  check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
     output_to_console 1
-    output_to_jira 1
+    output_to_bugsystem 1
     cleanup_and_exit 1
   fi
 
   ((RESULT = RESULT + retval))
 
-  for routine in check_javadoc check_apachelicense check_site
+  for routine in check_patch_javadoc check_site
   do
     verify_patchdir_still_exists
-    hadoop_debug "Running ${routine}"
-    $routine
-
+    yetus_debug "Running ${routine}"
+    ${routine}
     (( RESULT = RESULT + $? ))
-
   done
 
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_postapply >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_postapply"
+      yetus_debug "Running ${plugin}_postapply"
       #shellcheck disable=SC2086
       ${plugin}_postapply
       (( RESULT = RESULT + $? ))
@@ -2652,24 +3192,19 @@ function postinstall
   local routine
   local plugin
 
-  for routine in check_mvn_eclipse check_findbugs
-  do
-    verify_patchdir_still_exists
-    hadoop_debug "Running ${routine}"
-    ${routine}
-    (( RESULT = RESULT + $? ))
-  done
+  verify_patchdir_still_exists
+  check_mvn_eclipse
+  (( RESULT = RESULT + $? ))
 
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_postinstall >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_postinstall"
+      yetus_debug "Running ${plugin}_postinstall"
       #shellcheck disable=SC2086
       ${plugin}_postinstall
       (( RESULT = RESULT + $? ))
     fi
   done
-
 }
 
 ## @description  Driver to execute _tests routines
@@ -2692,7 +3227,7 @@ function runtests
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_tests >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_tests"
+      yetus_debug "Running ${plugin}_tests"
       #shellcheck disable=SC2086
       ${plugin}_tests
       (( RESULT = RESULT + $? ))
@@ -2717,13 +3252,49 @@ function importplugins
   fi
 
   if [[ -n "${USER_PLUGIN_DIR}" && -d "${USER_PLUGIN_DIR}" ]]; then
-    hadoop_debug "Loading user provided plugins from ${USER_PLUGIN_DIR}"
+    yetus_debug "Loading user provided plugins from ${USER_PLUGIN_DIR}"
     files=("${files[@]}" ${USER_PLUGIN_DIR}/*.sh)
   fi
 
   for i in "${files[@]}"; do
-    hadoop_debug "Importing ${i}"
-    . "${i}"
+    if [[ -f ${i} ]]; then
+      yetus_debug "Importing ${i}"
+      . "${i}"
+    fi
+  done
+
+  if [[ -z ${PERSONALITY}
+      && -f "${BINDIR}/personality/${PROJECT_NAME}.sh" ]]; then
+    PERSONALITY="${BINDIR}/personality/${PROJECT_NAME}.sh"
+  fi
+
+  if [[ -n ${PERSONALITY} ]]; then
+    if [[ ! -f ${PERSONALITY} ]]; then
+      if [[ -f "${BINDIR}/personality/${PROJECT_NAME}.sh" ]]; then
+        PERSONALITY="${BINDIR}/personality/${PROJECT_NAME}.sh"
+      else
+        yetus_debug "Can't find ${PERSONALITY} to import."
+        return
+      fi
+    fi
+    yetus_debug "Importing ${PERSONALITY}"
+    . "${PERSONALITY}"
+  fi
+}
+
+## @description  Let plugins also get a copy of the arguments
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function parse_args_plugins
+{
+  for plugin in ${PLUGINS} ${BUGSYSTEMS}; do
+    if declare -f ${plugin}_parse_args >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_parse_args"
+      #shellcheck disable=SC2086
+      ${plugin}_parse_args "$@"
+      (( RESULT = RESULT + $? ))
+    fi
   done
 }
 
@@ -2734,6 +3305,15 @@ function importplugins
 function add_plugin
 {
   PLUGINS="${PLUGINS} $1"
+}
+
+## @description  Register test-patch.d plugins
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function add_bugsystem
+{
+  BUGSYSTEMS="${BUGSYSTEMS} $1"
 }
 
 ###############################################################################
@@ -2748,11 +3328,11 @@ parse_args "$@"
 
 importplugins
 
+parse_args_plugins "$@"
+
+finish_docker_stats
+
 locate_patch
-
-find_changed_files
-
-determine_needed_tests
 
 # from here on out, we'll be in ${BASEDIR} for cwd
 # routines need to pushd/popd if they change.
@@ -2764,9 +3344,17 @@ if [[ ${JENKINS} == "true" ]] ; then
   fi
 fi
 
+find_changed_files
+
 check_reexec
 
+determine_needed_tests
+
 postcheckout
+
+fullyqualifyjdks
+
+prepopulate_footer
 
 find_changed_modules
 
@@ -2774,18 +3362,22 @@ preapply
 
 apply_patch_file
 
+# we find changed modules again
+# in case the patch adds or removes a module
+# this also means that test suites need to be
+# aware that there might not be a 'before'
+find_changed_modules
+
 postapply
 
-check_mvn_install
+check_mvninstall
 
 postinstall
 
 runtests
 
-close_jira_footer
-
-close_jira_table
+finish_vote_table
 
 output_to_console ${RESULT}
-output_to_jira ${RESULT}
+output_to_bugsystem ${RESULT}
 cleanup_and_exit ${RESULT}
