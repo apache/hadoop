@@ -559,6 +559,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3745. SerializedException should also try to instantiate internal
     exception with the default constructor. (Lavkesh Lahngir via devaraj)
 
+    YARN-2871. TestRMRestart#testRMRestartGetApplicationList sometime fails in trunk.
+    (zhihai xu via xgong)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
