@@ -249,6 +249,8 @@ Trunk (Unreleased)
     HADOOP-12385. Include nested stack trace in SaslRpcClient.getServerToken()
     (stevel)
 
+    HADOOP-12133. Add schemas to Maven Assembly XMLs (Gábor Lipták via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
