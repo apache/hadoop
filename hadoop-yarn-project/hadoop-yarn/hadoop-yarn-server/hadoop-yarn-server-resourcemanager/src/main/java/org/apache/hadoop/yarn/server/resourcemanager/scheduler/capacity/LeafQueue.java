@@ -676,7 +676,8 @@ public class LeafQueue extends AbstractCSQueue {
     
     LOG.info("Application added -" +
         " appId: " + application.getApplicationId() +
-        " user: " + user + "," + " leaf-queue: " + getQueueName() +
+        " user: " + application.getUser() + "," +
+        " leaf-queue: " + getQueueName() +
         " #user-pending-applications: " + user.getPendingApplications() +
         " #user-active-applications: " + user.getActiveApplications() +
         " #queue-pending-applications: " + getNumPendingApplications() +
