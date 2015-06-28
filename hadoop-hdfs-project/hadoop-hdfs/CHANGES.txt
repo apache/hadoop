@@ -968,6 +968,18 @@ Release 2.8.0 - UNRELEASED
     HDFS-8546. Prune cached replicas from DatanodeDescriptor state on replica
     invalidation. (wang)
 
+Release 2.7.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
