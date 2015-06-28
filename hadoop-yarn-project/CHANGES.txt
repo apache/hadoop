@@ -562,6 +562,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2871. TestRMRestart#testRMRestartGetApplicationList sometime fails in trunk.
     (zhihai xu via xgong)
 
+    YARN-3859. LeafQueue doesn't print user properly for application add.
+    (Varun Saxena via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
