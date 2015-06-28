@@ -1113,6 +1113,9 @@ Release 2.7.1 - UNRELEASED
     HDFS08656. Preserve compatibility of ClientProtocol#rollingUpgrade after
     finalization. (wang)
 
+    HDFS-8681. BlockScanner is incorrectly disabled by default.
+    (Arpit Agarwal)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
