@@ -565,6 +565,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3859. LeafQueue doesn't print user properly for application add.
     (Varun Saxena via devaraj)
 
+    YARN-3860. rmadmin -transitionToActive should check the state of non-target node.
+    (Masatake Iwasaki via junping_du)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
