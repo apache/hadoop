@@ -20,10 +20,9 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.channels.ClosedChannelException;
 
-import org.junit.Assert;
-import org.apache.hadoop.yarn.api.records.impl.pb.SerializedExceptionPBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSerializedExceptionPBImpl {
@@ -78,5 +77,14 @@ public class TestSerializedExceptionPBImpl {
 
     SerializedExceptionPBImpl pb3 = new SerializedExceptionPBImpl();
     Assert.assertEquals(defaultProto.getTrace(), pb3.getRemoteTrace());
+  }
+
+  @Test
+  public void testThrowableDeserialization() {
+    // java.lang.Error should also be serializable
+    Error ex = new Error();
+    SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
+    pb.init(ex);
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
   }
 }
