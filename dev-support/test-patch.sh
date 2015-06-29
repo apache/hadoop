@@ -2339,7 +2339,7 @@ function check_modified_unittests
   start_clock
 
   for i in ${CHANGED_FILES}; do
-    if [[ ${i} =~ /test/ ]]; then
+    if [[ ${i} =~ (^|/)test/ ]]; then
       ((testReferences=testReferences + 1))
     fi
   done
