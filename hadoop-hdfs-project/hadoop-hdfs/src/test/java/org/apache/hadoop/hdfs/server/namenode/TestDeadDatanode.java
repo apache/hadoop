@@ -18,9 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +33,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -43,6 +48,7 @@ import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.net.Node;
 import org.junit.After;
 import org.junit.Test;
 
@@ -125,5 +131,41 @@ public class TestDeadDatanode {
     assertEquals(1, cmd.length);
     assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());
+  }
+
+  @Test
+  public void testDeadNodeAsBlockTarget() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+
+    String poolId = cluster.getNamesystem().getBlockPoolId();
+    // wait for datanode to be marked live
+    DataNode dn = cluster.getDataNodes().get(0);
+    DatanodeRegistration reg = DataNodeTestUtils.getDNRegistrationForBP(cluster
+        .getDataNodes().get(0), poolId);
+    // Get the updated datanode descriptor
+    BlockManager bm = cluster.getNamesystem().getBlockManager();
+    DatanodeManager dm = bm.getDatanodeManager();
+    Node clientNode = dm.getDatanode(reg);
+
+    DFSTestUtil.waitForDatanodeState(cluster, reg.getDatanodeUuid(), true,
+        20000);
+
+    // Shutdown and wait for datanode to be marked dead
+    dn.shutdown();
+    DFSTestUtil.waitForDatanodeState(cluster, reg.getDatanodeUuid(), false,
+        20000);
+    // Get the updated datanode descriptor available in DNM
+    // choose the targets, but local node should not get selected as this is not
+    // part of the cluster anymore
+    DatanodeStorageInfo[] results = bm.chooseTarget4NewBlock("/hello", 3,
+        clientNode, new HashSet<Node>(), 256 * 1024 * 1024L, null, (byte) 7);
+    for (DatanodeStorageInfo datanodeStorageInfo : results) {
+      assertFalse("Dead node should not be choosen", datanodeStorageInfo
+          .getDatanodeDescriptor().equals(clientNode));
+    }
   }
 }
