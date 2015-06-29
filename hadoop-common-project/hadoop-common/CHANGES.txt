@@ -539,6 +539,9 @@ Release 2.7.1 - 2015-07-06
     that method doesn't modify the FsPermission (Bibin A Chundatt via Colin P.
     McCabe)
 
+    HADOOP-12107. long running apps may have a huge number of StatisticsData
+    instances under FileSystem (Sangjin Lee via Ming Ma)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
