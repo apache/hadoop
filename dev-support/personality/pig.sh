@@ -37,21 +37,21 @@ function personality_modules
 
   case ${testtype} in
     findbugs)
-     # shellcheck disable=SC2034
+      # shellcheck disable=SC2034
       ANT_FINDBUGSXML="${BASEDIR}/build/test/findbugs/pig-findbugs-report.xml"
       extra="-Dfindbugs.home=${FINDBUGS_HOME}"
     ;;
     javac)
-      extra="${extra} -Djavac.args=-Xlint -Dcompile.c++=yes clean tar"
+      extra="${extra} -Djavac.args=-Xlint -Dcompile.c++=yes clean piggybank"
       ;;
     javadoc)
       extra="${extra} -Dforrest.home=${FORREST_HOME}"
       ;;
     unit)
-      extra="${extra} -Dtest.junit.output.format=xml  -Dcompile.c++=yes -Dtest.output=yes  test-core"
+      extra="${extra} -Dtest.junit.output.format=xml -Dcompile.c++=yes -Dtest.output=yes test-core"
       ;;
   esac
 
-    # shellcheck disable=SC2086
+  # shellcheck disable=SC2086
   personality_enqueue_module . ${extra}
 }
