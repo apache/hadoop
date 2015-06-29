@@ -490,6 +490,9 @@ Trunk (Unreleased)
     HADOOP-11347. RawLocalFileSystem#mkdir and create should honor umask (Varun
     Saxena via Colin P. McCabe)
 
+    HADOOP-12107. long running apps may have a huge number of StatisticsData
+    instances under FileSystem (Sangjin Lee via Ming Ma)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
