@@ -101,7 +101,7 @@ public class SerializedExceptionPBImpl extends SerializedException {
     } else if (RuntimeException.class.isAssignableFrom(realClass)) {
       classType = RuntimeException.class;
     } else {
-      classType = Exception.class;
+      classType = Throwable.class;
     }
     return instantiateException(realClass.asSubclass(classType), getMessage(),
       cause == null ? null : cause.deSerialize());

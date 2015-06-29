@@ -571,6 +571,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
     network exception. (Raju Bairishetti via jianhe)
 
+    YARN-3770. SerializedException should also handle java.lang.Error on
+    de-serialization. (Lavkesh Lahngir via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
