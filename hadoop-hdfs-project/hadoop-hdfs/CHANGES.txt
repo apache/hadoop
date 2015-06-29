@@ -971,6 +971,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8586. Dead Datanode is allocated for write when client is from deadnode
     (Brahma Reddy Battula via vinayakumarb)
 
+    HDFS-8628. Update missing command option for fetchdt
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
