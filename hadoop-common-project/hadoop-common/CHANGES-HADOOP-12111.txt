@@ -1,3 +1,0 @@
-  Breakdown of HADOOP-12111 sub-tasks:
-
-  HADOOP-12113. update test-patch branch to latest code (aw)
