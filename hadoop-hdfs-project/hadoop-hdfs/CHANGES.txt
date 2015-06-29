@@ -977,6 +977,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8628. Update missing command option for fetchdt
     (J.Andreina via vinayakumarb)
 
+    HDFS-8687. Remove the duplicate usage message from Dfsck.java. (Brahma
+    Reddy Battula via Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -377,7 +377,6 @@ public class DFSck extends Configured implements Tool {
     int res = -1;
     if ((args.length == 0) || ("-files".equals(args[0]))) {
       printUsage(System.err);
-      ToolRunner.printGenericCommandUsage(System.err);
     } else if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
       res = 0;
     } else {
