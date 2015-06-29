@@ -568,6 +568,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3860. rmadmin -transitionToActive should check the state of non-target node.
     (Masatake Iwasaki via junping_du)
 
+    YARN-3695. ServerProxy (NMProxy, etc.) shouldn't retry forever for non
+    network exception. (Raju Bairishetti via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
