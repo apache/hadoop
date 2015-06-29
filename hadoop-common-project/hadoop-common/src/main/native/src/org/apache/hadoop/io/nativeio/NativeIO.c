@@ -592,6 +592,7 @@ done:
 #else
   THROW(env, "java/io/IOException",
     "The function Windows.createFileWithMode0() is not supported on this platform");
+  return NULL;
 #endif
 }
 
