@@ -893,6 +893,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12119. hadoop fs -expunge does not work for federated namespace
     (J.Andreina via vinayakumarb)
 
+    HADOOP-12089. StorageException complaining " no lease ID" when updating
+    FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
