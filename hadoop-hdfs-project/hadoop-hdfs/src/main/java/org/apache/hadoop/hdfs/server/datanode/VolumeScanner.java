@@ -656,24 +656,24 @@ public class VolumeScanner extends Thread {
 
   public synchronized void markSuspectBlock(ExtendedBlock block) {
     if (stopping) {
-      LOG.info("{}: Not scheduling suspect block {} for " +
+      LOG.debug("{}: Not scheduling suspect block {} for " +
           "rescanning, because this volume scanner is stopping.", this, block);
       return;
     }
     Boolean recent = recentSuspectBlocks.getIfPresent(block);
     if (recent != null) {
-      LOG.info("{}: Not scheduling suspect block {} for " +
+      LOG.debug("{}: Not scheduling suspect block {} for " +
           "rescanning, because we rescanned it recently.", this, block);
       return;
     }
     if (suspectBlocks.contains(block)) {
-      LOG.info("{}: suspect block {} is already queued for " +
+      LOG.debug("{}: suspect block {} is already queued for " +
           "rescanning.", this, block);
       return;
     }
     suspectBlocks.add(block);
     recentSuspectBlocks.put(block, true);
-    LOG.info("{}: Scheduling suspect block {} for rescanning.", this, block);
+    LOG.debug("{}: Scheduling suspect block {} for rescanning.", this, block);
     notify(); // wake scanner thread.
   }
 

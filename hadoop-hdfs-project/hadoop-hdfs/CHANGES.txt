@@ -8,6 +8,8 @@ Release 2.7.2 - UNRELEASED
 
   IMPROVEMENTS
 
+  HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
+
   OPTIMIZATIONS
 
   BUG FIXES
