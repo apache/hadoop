@@ -685,6 +685,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8653. Code cleanup for DatanodeManager, DatanodeDescriptor and
     DatanodeStorageInfo. (Zhe Zhang via wang)
 
+    HDFS-8493. Consolidate truncate() related implementation in a single class.
+    (Rakesh R via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

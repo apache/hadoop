@@ -201,7 +201,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
@@ -1831,218 +1830,44 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * block recovery to truncate the last block of the file.
    *
    * @return true if client does not need to wait for block recovery,
-   * false if client needs to wait for block recovery.
+   *         false if client needs to wait for block recovery.
    */
-  boolean truncate(String src, long newLength,
-                   String clientName, String clientMachine,
-                   long mtime)
-      throws IOException, UnresolvedLinkException {
+  boolean truncate(String src, long newLength, String clientName,
+      String clientMachine, long mtime) throws IOException,
+      UnresolvedLinkException {
+
     requireEffectiveLayoutVersionForFeature(Feature.TRUNCATE);
-    boolean ret;
+    final FSDirTruncateOp.TruncateResult r;
     try {
-      ret = truncateInt(src, newLength, clientName, clientMachine, mtime);
+      NameNode.stateChangeLog.debug(
+          "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
+      if (newLength < 0) {
+        throw new HadoopIllegalArgumentException(
+            "Cannot truncate to a negative file size: " + newLength + ".");
+      }
+      final FSPermissionChecker pc = getPermissionChecker();
+      checkOperation(OperationCategory.WRITE);
+      writeLock();
+      BlocksMapUpdateInfo toRemoveBlocks = new BlocksMapUpdateInfo();
+      try {
+        checkOperation(OperationCategory.WRITE);
+        checkNameNodeSafeMode("Cannot truncate for " + src);
+        r = FSDirTruncateOp.truncate(this, src, newLength, clientName,
+            clientMachine, mtime, toRemoveBlocks, pc);
+      } finally {
+        writeUnlock();
+      }
+      getEditLog().logSync();
+      if (!toRemoveBlocks.getToDeleteList().isEmpty()) {
+        removeBlocks(toRemoveBlocks);
+        toRemoveBlocks.clear();
+      }
+      logAuditEvent(true, "truncate", src, null, r.getFileStatus());
     } catch (AccessControlException e) {
       logAuditEvent(false, "truncate", src);
       throw e;
     }
-    return ret;
-  }
-
-  boolean truncateInt(String srcArg, long newLength,
-                      String clientName, String clientMachine,
-                      long mtime)
-      throws IOException, UnresolvedLinkException {
-    String src = srcArg;
-    NameNode.stateChangeLog.debug(
-        "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
-    if (newLength < 0) {
-      throw new HadoopIllegalArgumentException(
-          "Cannot truncate to a negative file size: " + newLength + ".");
-    }
-    HdfsFileStatus stat = null;
-    FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
-    boolean res;
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    writeLock();
-    BlocksMapUpdateInfo toRemoveBlocks = new BlocksMapUpdateInfo();
-    try {
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot truncate for " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      res = truncateInternal(src, newLength, clientName,
-          clientMachine, mtime, pc, toRemoveBlocks);
-      stat = dir.getAuditFileInfo(dir.getINodesInPath4Write(src, false));
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
-    if (!toRemoveBlocks.getToDeleteList().isEmpty()) {
-      removeBlocks(toRemoveBlocks);
-      toRemoveBlocks.clear();
-    }
-    logAuditEvent(true, "truncate", src, null, stat);
-    return res;
-  }
-
-  /**
-   * Truncate a file to a given size
-   * Update the count at each ancestor directory with quota
-   */
-  boolean truncateInternal(String src, long newLength,
-                           String clientName, String clientMachine,
-                           long mtime, FSPermissionChecker pc,
-                           BlocksMapUpdateInfo toRemoveBlocks)
-      throws IOException, UnresolvedLinkException {
-    assert hasWriteLock();
-    INodesInPath iip = dir.getINodesInPath4Write(src, true);
-    if (isPermissionEnabled) {
-      dir.checkPathAccess(pc, iip, FsAction.WRITE);
-    }
-    INodeFile file = INodeFile.valueOf(iip.getLastINode(), src);
-    final BlockStoragePolicy lpPolicy =
-        blockManager.getStoragePolicy("LAZY_PERSIST");
-
-    if (lpPolicy != null &&
-        lpPolicy.getId() == file.getStoragePolicyID()) {
-      throw new UnsupportedOperationException(
-          "Cannot truncate lazy persist file " + src);
-    }
-
-    // Check if the file is already being truncated with the same length
-    final BlockInfo last = file.getLastBlock();
-    if (last != null && last.getBlockUCState() == BlockUCState.UNDER_RECOVERY) {
-      final Block truncateBlock
-          = ((BlockInfoUnderConstruction)last).getTruncateBlock();
-      if (truncateBlock != null) {
-        final long truncateLength = file.computeFileSize(false, false)
-            + truncateBlock.getNumBytes();
-        if (newLength == truncateLength) {
-          return false;
-        }
-      }
-    }
-
-    // Opening an existing file for truncate. May need lease recovery.
-    recoverLeaseInternal(RecoverLeaseOp.TRUNCATE_FILE,
-        iip, src, clientName, clientMachine, false);
-    // Truncate length check.
-    long oldLength = file.computeFileSize();
-    if(oldLength == newLength) {
-      return true;
-    }
-    if(oldLength < newLength) {
-      throw new HadoopIllegalArgumentException(
-          "Cannot truncate to a larger file size. Current size: " + oldLength +
-              ", truncate size: " + newLength + ".");
-    }
-    // Perform INodeFile truncation.
-    final QuotaCounts delta = new QuotaCounts.Builder().build();
-    boolean onBlockBoundary = dir.truncate(iip, newLength, toRemoveBlocks,
-        mtime, delta);
-    Block truncateBlock = null;
-    if(!onBlockBoundary) {
-      // Open file for write, but don't log into edits
-      long lastBlockDelta = file.computeFileSize() - newLength;
-      assert lastBlockDelta > 0 : "delta is 0 only if on block bounday";
-      truncateBlock = prepareFileForTruncate(iip, clientName, clientMachine,
-          lastBlockDelta, null);
-    }
-
-    // update the quota: use the preferred block size for UC block
-    dir.writeLock();
-    try {
-      dir.updateCountNoQuotaCheck(iip, iip.length() - 1, delta);
-    } finally {
-      dir.writeUnlock();
-    }
-
-    getEditLog().logTruncate(src, clientName, clientMachine, newLength, mtime,
-        truncateBlock);
-    return onBlockBoundary;
-  }
-
-  /**
-   * Convert current INode to UnderConstruction.
-   * Recreate lease.
-   * Create new block for the truncated copy.
-   * Schedule truncation of the replicas.
-   *
-   * @return the returned block will be written to editLog and passed back into
-   * this method upon loading.
-   */
-  Block prepareFileForTruncate(INodesInPath iip,
-                               String leaseHolder,
-                               String clientMachine,
-                               long lastBlockDelta,
-                               Block newBlock)
-      throws IOException {
-    INodeFile file = iip.getLastINode().asFile();
-    file.recordModification(iip.getLatestSnapshotId());
-    file.toUnderConstruction(leaseHolder, clientMachine);
-    assert file.isUnderConstruction() : "inode should be under construction.";
-    leaseManager.addLease(
-        file.getFileUnderConstructionFeature().getClientName(), file.getId());
-    boolean shouldRecoverNow = (newBlock == null);
-    BlockInfo oldBlock = file.getLastBlock();
-    boolean shouldCopyOnTruncate = shouldCopyOnTruncate(file, oldBlock);
-    if(newBlock == null) {
-      newBlock = (shouldCopyOnTruncate) ? createNewBlock() :
-          new Block(oldBlock.getBlockId(), oldBlock.getNumBytes(),
-              nextGenerationStamp(blockIdManager.isLegacyBlock(oldBlock)));
-    }
-
-    BlockInfoUnderConstruction truncatedBlockUC;
-    if(shouldCopyOnTruncate) {
-      // Add new truncateBlock into blocksMap and
-      // use oldBlock as a source for copy-on-truncate recovery
-      truncatedBlockUC = new BlockInfoUnderConstructionContiguous(newBlock,
-          file.getPreferredBlockReplication());
-      truncatedBlockUC.setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
-      truncatedBlockUC.setTruncateBlock(oldBlock);
-      file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
-      getBlockManager().addBlockCollection(truncatedBlockUC, file);
-
-      NameNode.stateChangeLog.debug(
-          "BLOCK* prepareFileForTruncate: Scheduling copy-on-truncate to new" +
-          " size {}  new block {} old block {}", truncatedBlockUC.getNumBytes(),
-          newBlock, truncatedBlockUC.getTruncateBlock());
-    } else {
-      // Use new generation stamp for in-place truncate recovery
-      blockManager.convertLastBlockToUnderConstruction(file, lastBlockDelta);
-      oldBlock = file.getLastBlock();
-      assert !oldBlock.isComplete() : "oldBlock should be under construction";
-      truncatedBlockUC = (BlockInfoUnderConstruction) oldBlock;
-      truncatedBlockUC.setTruncateBlock(new Block(oldBlock));
-      truncatedBlockUC.getTruncateBlock().setNumBytes(
-          oldBlock.getNumBytes() - lastBlockDelta);
-      truncatedBlockUC.getTruncateBlock().setGenerationStamp(
-          newBlock.getGenerationStamp());
-
-      NameNode.stateChangeLog.debug(
-          "BLOCK* prepareFileForTruncate: {} Scheduling in-place block " +
-          "truncate to new size {}",
-          truncatedBlockUC.getTruncateBlock().getNumBytes(), truncatedBlockUC);
-    }
-    if (shouldRecoverNow) {
-      truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp());
-    }
-
-    return newBlock;
-  }
-
-  /**
-   * Defines if a replica needs to be copied on truncate or
-   * can be truncated in place.
-   */
-  boolean shouldCopyOnTruncate(INodeFile file, BlockInfo blk) {
-    if(!isUpgradeFinalized()) {
-      return true;
-    }
-    if (isRollingUpgrade()) {
-      return true;
-    }
-    return file.isBlockInLatestSnapshot(blk);
+    return r.getResult();
   }
 
   /**

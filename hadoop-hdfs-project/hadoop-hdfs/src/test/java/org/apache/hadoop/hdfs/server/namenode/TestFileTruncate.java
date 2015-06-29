@@ -1008,8 +1008,8 @@ public class TestFileTruncate {
     fsn.writeLock();
     try {
       Block oldBlock = file.getLastBlock();
-      Block truncateBlock =
-          fsn.prepareFileForTruncate(iip, client, clientMachine, 1, null);
+      Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
+          client, clientMachine, 1, null);
       // In-place truncate uses old block id with new genStamp.
       assertThat(truncateBlock.getBlockId(),
           is(equalTo(oldBlock.getBlockId())));
@@ -1041,8 +1041,8 @@ public class TestFileTruncate {
     fsn.writeLock();
     try {
       Block oldBlock = file.getLastBlock();
-      Block truncateBlock =
-          fsn.prepareFileForTruncate(iip, client, clientMachine, 1, null);
+      Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
+          client, clientMachine, 1, null);
       // Copy-on-write truncate makes new block with new id and genStamp
       assertThat(truncateBlock.getBlockId(),
           is(not(equalTo(oldBlock.getBlockId()))));

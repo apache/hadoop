@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
@@ -49,11 +48,9 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
@@ -905,98 +902,6 @@ public class FSDirectory implements Closeable {
 
   public INodeMap getINodeMap() {
     return inodeMap;
-  }
-
-  /**
-   * FSEditLogLoader implementation.
-   * Unlike FSNamesystem.truncate, this will not schedule block recovery.
-   */
-  void unprotectedTruncate(String src, String clientName, String clientMachine,
-                           long newLength, long mtime, Block truncateBlock)
-      throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException, IOException {
-    INodesInPath iip = getINodesInPath(src, true);
-    INodeFile file = iip.getLastINode().asFile();
-    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    boolean onBlockBoundary =
-        unprotectedTruncate(iip, newLength, collectedBlocks, mtime, null);
-
-    if(! onBlockBoundary) {
-      BlockInfo oldBlock = file.getLastBlock();
-      Block tBlk =
-      getFSNamesystem().prepareFileForTruncate(iip,
-          clientName, clientMachine, file.computeFileSize() - newLength,
-          truncateBlock);
-      assert Block.matchingIdAndGenStamp(tBlk, truncateBlock) &&
-          tBlk.getNumBytes() == truncateBlock.getNumBytes() :
-          "Should be the same block.";
-      if(oldBlock.getBlockId() != tBlk.getBlockId() &&
-         !file.isBlockInLatestSnapshot(oldBlock)) {
-        getBlockManager().removeBlockFromMap(oldBlock);
-      }
-    }
-    assert onBlockBoundary == (truncateBlock == null) :
-      "truncateBlock is null iff on block boundary: " + truncateBlock;
-    getFSNamesystem().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
-  }
-
-  boolean truncate(INodesInPath iip, long newLength,
-                   BlocksMapUpdateInfo collectedBlocks,
-                   long mtime, QuotaCounts delta)
-      throws IOException {
-    writeLock();
-    try {
-      return unprotectedTruncate(iip, newLength, collectedBlocks, mtime, delta);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
-   * Truncate has the following properties:
-   * 1.) Any block deletions occur now.
-   * 2.) INode length is truncated now – new clients can only read up to
-   * the truncated length.
-   * 3.) INode will be set to UC and lastBlock set to UNDER_RECOVERY.
-   * 4.) NN will trigger DN truncation recovery and waits for DNs to report.
-   * 5.) File is considered UNDER_RECOVERY until truncation recovery completes.
-   * 6.) Soft and hard Lease expiration require truncation recovery to complete.
-   *
-   * @return true if on the block boundary or false if recovery is need
-   */
-  boolean unprotectedTruncate(INodesInPath iip, long newLength,
-                              BlocksMapUpdateInfo collectedBlocks,
-                              long mtime, QuotaCounts delta) throws IOException {
-    assert hasWriteLock();
-    INodeFile file = iip.getLastINode().asFile();
-    int latestSnapshot = iip.getLatestSnapshotId();
-    file.recordModification(latestSnapshot, true);
-
-    verifyQuotaForTruncate(iip, file, newLength, delta);
-
-    long remainingLength =
-        file.collectBlocksBeyondMax(newLength, collectedBlocks);
-    file.excludeSnapshotBlocks(latestSnapshot, collectedBlocks);
-    file.setModificationTime(mtime);
-    // return whether on a block boundary
-    return (remainingLength - newLength) == 0;
-  }
-
-  private void verifyQuotaForTruncate(INodesInPath iip, INodeFile file,
-      long newLength, QuotaCounts delta) throws QuotaExceededException {
-    if (!getFSNamesystem().isImageLoaded() || shouldSkipQuotaChecks()) {
-      // Do not check quota if edit log is still being processed
-      return;
-    }
-    final BlockStoragePolicy policy = getBlockStoragePolicySuite()
-        .getPolicy(file.getStoragePolicyID());
-    file.computeQuotaDeltaForTruncate(newLength, policy, delta);
-    readLock();
-    try {
-      verifyQuota(iip, iip.length() - 1, delta, null);
-    } finally {
-      readUnlock();
-    }
   }
 
   /**
