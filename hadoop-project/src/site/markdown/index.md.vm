@@ -16,47 +16,38 @@ Apache Hadoop ${project.version}
 ================================
 
 Apache Hadoop ${project.version} is a minor release in the 2.x.y release
-line, building upon the previous stable release 2.4.1.
+line, building upon the previous release 2.7.0. This is the next stable release
+after Apache Hadoop 2.6.x.
 
-Here is a short overview of the major features and improvements.
+Here is a short overview of the major features and improvements since 2.6.x.
+
+* IMPORTANT notes
+
+    *   This release drops support for JDK6 runtime and works with JDK 7+ only.
 
 *   Common
 
-    *   Authentication improvements when using an HTTP proxy server. This is
-        useful when accessing WebHDFS via a proxy server.
-
-    *   A new Hadoop metrics sink that allows writing directly to Graphite.
-
-    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
-        related to the Hadoop Compatible Filesystem (HCFS) effort.
+    *   Support Windows Azure Storage - Blob as a file system in Hadoop.
 
 *   HDFS
 
-    *   Support for POSIX-style filesystem extended attributes. See the
-        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
-        for more details.
+    *   Support for file truncate
 
-    *   Using the OfflineImageViewer, clients can now browse an fsimage via
-        the WebHDFS API.
+    *   Support for quotas per storage type
 
-    *   The NFS gateway received a number of supportability improvements and
-        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
-        and the gateway is now able to reject connections from unprivileged ports.
-
-    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
-        modernized with HTML5 and Javascript.
+    *   Support for files with variable-length blocks
 
 *   YARN
 
-    *   YARN's REST APIs now support write/modify operations. Users can submit and
-        kill applications through REST APIs.
+    *   Make YARN authorization pluggable
 
-    *   The timeline store in YARN, used for storing generic and
-        application-specific information for applications, supports authentication
-        through Kerberos.
+    *   Automatic shared, global caching of YARN localized resources (beta)
 
-    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
-        are created dynamically at runtime under any specified parent-queue.
+*   MAPREDUCE
+
+    *   Ability to limit running Map/Reduce tasks of a job
+
+    *   Speed up FileOutputCommitter for very large jobs with many output files.
 
 Getting Started
 ===============
