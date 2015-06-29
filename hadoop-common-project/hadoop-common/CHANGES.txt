@@ -685,6 +685,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11885. hadoop-dist dist-layout-stitching.sh does not work with dash.
     (wang)
 
+    HADOOP-12104. Migrate Hadoop Pipes native build to new CMake framework
+    (alanburlison via cmccabe)
+
     HADOOP-12036. Consolidate all of the cmake extensions in one directory
     (alanburlison via cmccabe)
 
