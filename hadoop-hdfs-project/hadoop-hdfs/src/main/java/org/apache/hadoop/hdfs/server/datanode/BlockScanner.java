@@ -317,7 +317,7 @@ public class BlockScanner {
    */
   synchronized void markSuspectBlock(String storageId, ExtendedBlock block) {
     if (!isEnabled()) {
-      LOG.info("Not scanning suspicious block {} on {}, because the block " +
+      LOG.debug("Not scanning suspicious block {} on {}, because the block " +
           "scanner is disabled.", block, storageId);
       return;
     }
