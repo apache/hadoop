@@ -983,6 +983,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8687. Remove the duplicate usage message from Dfsck.java. (Brahma
     Reddy Battula via Arpit Agarwal)
 
+    HDFS-8579. Update HDFS usage with missing options
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -26,6 +26,7 @@ function hadoop_usage
   echo "                       Hadoop jar and the required libraries"
   echo "  crypto               configure HDFS encryption zones"
   echo "  datanode             run a DFS datanode"
+  echo "  debug                run a Debug Admin to execute HDFS debug commands"
   echo "  dfs                  run a filesystem command on the file system"
   echo "  dfsadmin             run a DFS admin client"
   echo "  fetchdt              fetch a delegation token from the NameNode"
