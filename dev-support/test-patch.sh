@@ -1060,16 +1060,11 @@ function find_changed_files
 {
   # get a list of all of the files that have been changed,
   # except for /dev/null (which would be present for new files).
-  # Additionally, remove any a/ b/ patterns at the front
-  # of the patch filenames and any revision info at the end
+  # Additionally, remove any a/ b/ patterns at the front of the patch filenames.
   # shellcheck disable=SC2016
-  CHANGED_FILES=$(${GREP} -E '^(\+\+\+|---) ' "${PATCH_DIR}/patch" \
-    | ${SED} \
-      -e 's,^....,,' \
-      -e 's,^[ab]/,,' \
-    | ${GREP} -v /dev/null \
-    | ${AWK} '{print $1}' \
-    | sort -u)
+  CHANGED_FILES=$(${AWK} 'function p(s){sub("^[ab]/","",s); if(s!~"^/dev/null"){print s}}
+    /^diff --git /   { p($3); p($4) }
+    /^(\+\+\+|---) / { p($2) }' "${PATCH_DIR}/patch" | sort -u)
 }
 
 ## @description  Find the modules of the build that ${PATCH_DIR}/patch modifies
@@ -1453,7 +1448,7 @@ function determine_needed_tests
   local i
 
   for i in ${CHANGED_FILES}; do
-
+    yetus_debug "Determining needed tests for ${i}"
     personality_file_tests "${i}"
 
     for plugin in ${PLUGINS}; do
