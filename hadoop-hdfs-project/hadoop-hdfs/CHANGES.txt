@@ -338,6 +338,9 @@ Trunk (Unreleased)
 
     HDFS-8412. Fix the test failures in HTTPFS. (umamahesh)
 
+    HDFS-8627. NPE thrown if unable to fetch token from Namenode
+    (J.Andreina via vinayakumarb)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES

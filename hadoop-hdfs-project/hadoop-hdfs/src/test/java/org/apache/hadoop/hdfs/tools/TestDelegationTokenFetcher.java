@@ -90,4 +90,19 @@ public class TestDelegationTokenFetcher {
     DelegationTokenFetcher.cancelTokens(conf, p);
     Assert.assertEquals(testToken, FakeRenewer.getLastCanceled());
   }
+
+  /**
+   * If token returned is null, saveDelegationToken should not
+   * throw nullPointerException
+   */
+  @Test
+  public void testReturnedTokenIsNull() throws Exception {
+    WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
+    doReturn(null).when(fs).getDelegationToken(anyString());
+    Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
+    DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
+    // When Token returned is null, TokenFile should not exist
+    Assert.assertFalse(p.getFileSystem(conf).exists(p));
+
+  }
 }
