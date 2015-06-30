@@ -301,6 +301,10 @@ message LocatedBlocksProto {
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
   optional FileEncryptionInfoProto fileEncryptionInfo = 6;
+
+  // Optional field for erasure coding
+  optional ECSchemaProto eCSchema = 7;
+  optional uint32 stripeCellSize = 8;
 }
 
 /**

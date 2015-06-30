@@ -1338,8 +1338,9 @@ public class PBHelper {
         lb.hasLastBlock() ?
             PBHelper.convertLocatedBlockProto(lb.getLastBlock()) : null,
         lb.getIsLastBlockComplete(),
-        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) :
-            null);
+        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) : null,
+        lb.hasECSchema() ? convertECSchema(lb.getECSchema()) : null,
+        lb.hasStripeCellSize() ? lb.getStripeCellSize() : 0);
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1354,6 +1355,12 @@ public class PBHelper {
     }
     if (lb.getFileEncryptionInfo() != null) {
       builder.setFileEncryptionInfo(convert(lb.getFileEncryptionInfo()));
+    }
+    if (lb.getECSchema() != null) {
+      builder.setECSchema(convertECSchema(lb.getECSchema()));
+    }
+    if (lb.getStripeCellSize() != 0) {
+      builder.setStripeCellSize(lb.getStripeCellSize());
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())

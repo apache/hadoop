@@ -550,7 +550,7 @@ public class TestDFSClientRetries {
       badBlocks.add(badLocatedBlock);
       return new LocatedBlocks(goodBlockList.getFileLength(), false,
                                badBlocks, null, true,
-                               null);
+                               null, null, 0);
     }
   }
   

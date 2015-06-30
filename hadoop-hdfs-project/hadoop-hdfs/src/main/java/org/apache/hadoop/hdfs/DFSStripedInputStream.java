@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
@@ -139,9 +140,10 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final CompletionService<Void> readingService;
   private ReaderRetryPolicy retry;
 
-  DFSStripedInputStream(DFSClient dfsClient, String src, boolean verifyChecksum,
-      ECSchema schema, int cellSize) throws IOException {
-    super(dfsClient, src, verifyChecksum);
+  DFSStripedInputStream(DFSClient dfsClient, String src,
+      boolean verifyChecksum, ECSchema schema, int cellSize,
+      LocatedBlocks locatedBlocks) throws IOException {
+    super(dfsClient, src, verifyChecksum, locatedBlocks);
 
     assert schema != null;
     this.schema = schema;
