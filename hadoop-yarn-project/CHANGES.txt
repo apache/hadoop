@@ -317,6 +317,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3834. Scrub debug logging of tokens during resource localization.
     (Chris Nauroth via xgong)
 
+    YARN-3827. Migrate YARN native build to new CMake framework (Alan Burlison
+    via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
