@@ -115,6 +115,9 @@ Trunk (Unreleased)
     MAPREDUCE-2632. Avoid calling the partitioner when the numReduceTasks is 1.
     (Ravi Teja Ch N V and Sunil G via kasha)
 
+    MAPREDUCE-6407. Migrate MAPREDUCE nativetask build to new CMake framework
+    (Alan Burlison via Colin P. McCabe)
+
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
