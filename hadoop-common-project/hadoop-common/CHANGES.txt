@@ -905,6 +905,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12154. FileSystem#getUsed() returns the file length only from root '/'
     (J.Andreina via vinayakumarb)
 
+    HADOOP-10798. globStatus() should always return a sorted list of files
+    (cmccabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
