@@ -671,6 +671,8 @@ Release 2.8.0 - UNRELEASED
     TestCryptoStreamsWithOpensslAesCtrCryptoCodec when OpenSSL is not
     installed. (wang)
 
+    HADOOP-12124. Add HTrace support for FsShell (cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
