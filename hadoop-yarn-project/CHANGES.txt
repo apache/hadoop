@@ -574,6 +574,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3770. SerializedException should also handle java.lang.Error on
     de-serialization. (Lavkesh Lahngir via jianhe)
 
+    YARN-3768. ArrayIndexOutOfBoundsException with empty environment variables.
+    (Zhihai Xu via gera)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
