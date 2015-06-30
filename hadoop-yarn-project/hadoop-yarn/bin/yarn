@@ -211,7 +211,7 @@ if [ "$COMMAND" = "classpath" ] ; then
   if [ "$#" -gt 0 ]; then
     CLASS=org.apache.hadoop.util.Classpath
   else
-    if $cygwin; then
+    if [ "$cygwin" = true ]; then
       CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
     fi
     echo $CLASSPATH
@@ -327,7 +327,7 @@ else
 fi
 
 # cygwin path translation
-if $cygwin; then
+if [ "$cygwin" = true ]; then
   CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
   HADOOP_LOG_DIR=$(cygpath -w "$HADOOP_LOG_DIR" 2>/dev/null)
   HADOOP_PREFIX=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
@@ -345,7 +345,7 @@ YARN_OPTS="$YARN_OPTS -Dhadoop.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$HADOOP_YARN_HOME"
 HADOOP_HOME=$HADOOP_PREFIX
-if $cygwin; then
+if [ "$cygwin" = true ]; then
   HADOOP_HOME=$(cygpath -w "$HADOOP_HOME" 2>/dev/null)
 fi
 export HADOOP_HOME
@@ -353,7 +353,7 @@ YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 YARN_OPTS="$YARN_OPTS -Dhadoop.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 YARN_OPTS="$YARN_OPTS -Dyarn.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-  if $cygwin; then
+  if [ "$cygwin" = true ]; then
     JAVA_LIBRARY_PATH=$(cygpath -w "$JAVA_LIBRARY_PATH" 2>/dev/null)
   fi
   YARN_OPTS="$YARN_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"

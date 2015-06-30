@@ -146,7 +146,7 @@ if [ "$COMMAND" = "classpath" ] ; then
   if [ "$#" -gt 0 ]; then
     CLASS=org.apache.hadoop.util.Classpath
   else
-    if $cygwin; then
+    if [ "$cygwin" = true ]; then
       CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
     fi
     echo $CLASSPATH
@@ -155,7 +155,7 @@ if [ "$COMMAND" = "classpath" ] ; then
 fi
 
 # cygwin path translation
-if $cygwin; then
+if [ "$cygwin" = true ]; then
   CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
   HADOOP_LOG_DIR=$(cygpath -w "$HADOOP_LOG_DIR" 2>/dev/null)
   HADOOP_PREFIX=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
