@@ -60,13 +60,7 @@ public abstract class IFileWrappedMapOutput<K, V> extends MapOutput<K, V> {
                       long compressedLength, long decompressedLength,
                       ShuffleClientMetrics metrics,
                       Reporter reporter) throws IOException {
-    IFileInputStream iFin =
-        new IFileInputStream(input, compressedLength, conf);
-    try {
-      this.doShuffle(host, iFin, compressedLength,
-                    decompressedLength, metrics, reporter);
-    } finally {
-      iFin.close();
-    }
+    doShuffle(host, new IFileInputStream(input, compressedLength, conf),
+        compressedLength, decompressedLength, metrics, reporter);
   }
 }

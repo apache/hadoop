@@ -161,6 +161,12 @@ public class AuthenticationFilter implements Filter {
   public static final String COOKIE_PATH = "cookie.path";
 
   /**
+   * Constant for the configuration property
+   * that indicates the persistence of the HTTP cookie.
+   */
+  public static final String COOKIE_PERSISTENT = "cookie.persistent";
+
+  /**
    * Constant for the configuration property that indicates the name of the
    * SignerSecretProvider class to use.
    * Possible values are: "string", "random", "zookeeper", or a classname.
@@ -187,6 +193,7 @@ public class AuthenticationFilter implements Filter {
   private long validity;
   private String cookieDomain;
   private String cookiePath;
+  private boolean isCookiePersistent;
   private boolean isInitializedByTomcat;
 
   /**
@@ -228,6 +235,9 @@ public class AuthenticationFilter implements Filter {
 
     cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
     cookiePath = config.getProperty(COOKIE_PATH, null);
+    isCookiePersistent = Boolean.parseBoolean(
+            config.getProperty(COOKIE_PERSISTENT, "false"));
+
   }
 
   protected void initializeAuthHandler(String authHandlerClassName, FilterConfig filterConfig)
@@ -369,6 +379,15 @@ public class AuthenticationFilter implements Filter {
    */
   protected String getCookiePath() {
     return cookiePath;
+  }
+
+  /**
+   * Returns the cookie persistence to use for the HTTP cookie.
+   *
+   * @return the cookie persistence to use for the HTTP cookie.
+   */
+  protected boolean isCookiePersistent() {
+    return isCookiePersistent;
   }
 
   /**
@@ -549,7 +568,8 @@ public class AuthenticationFilter implements Filter {
           if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
             String signedToken = signer.sign(token.toString());
             createAuthCookie(httpResponse, signedToken, getCookieDomain(),
-                    getCookiePath(), token.getExpires(), isHttps);
+                    getCookiePath(), token.getExpires(),
+                    isCookiePersistent(), isHttps);
           }
           doFilter(filterChain, httpRequest, httpResponse);
         }
@@ -569,7 +589,7 @@ public class AuthenticationFilter implements Filter {
     if (unauthorizedResponse) {
       if (!httpResponse.isCommitted()) {
         createAuthCookie(httpResponse, "", getCookieDomain(),
-                getCookiePath(), 0, isHttps);
+                getCookiePath(), 0, isCookiePersistent(), isHttps);
         // If response code is 401. Then WWW-Authenticate Header should be
         // present.. reset to 403 if not found..
         if ((errCode == HttpServletResponse.SC_UNAUTHORIZED)
@@ -614,6 +634,7 @@ public class AuthenticationFilter implements Filter {
    * @param isSecure is the cookie secure?
    * @param token the token.
    * @param expires the cookie expiration time.
+   * @param isCookiePersistent whether the cookie is persistent or not.
    *
    * XXX the following code duplicate some logic in Jetty / Servlet API,
    * because of the fact that Hadoop is stuck at servlet 2.5 and jetty 6
@@ -621,6 +642,7 @@ public class AuthenticationFilter implements Filter {
    */
   public static void createAuthCookie(HttpServletResponse resp, String token,
                                       String domain, String path, long expires,
+                                      boolean isCookiePersistent,
                                       boolean isSecure) {
     StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
                            .append("=");
@@ -636,7 +658,7 @@ public class AuthenticationFilter implements Filter {
       sb.append("; Domain=").append(domain);
     }
 
-    if (expires >= 0) {
+    if (expires >= 0 && isCookiePersistent) {
       Date date = new Date(expires);
       SimpleDateFormat df = new SimpleDateFormat("EEE, " +
               "dd-MMM-yyyy HH:mm:ss zzz");

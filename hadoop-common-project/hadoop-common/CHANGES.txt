@@ -53,6 +53,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-11203. Allow ditscp to accept bandwitdh in fraction MegaBytes
+    (Raju Bairishetti via amareshwari)
+
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
 
@@ -656,6 +659,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-7139. Allow appending to existing SequenceFiles
     (kanaka kumar avvaru via vinayakumarb)
 
+    HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
+    occurs (Jason Lowe via jeagles)
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -675,6 +680,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11885. hadoop-dist dist-layout-stitching.sh does not work with dash.
     (wang)
+
+    HADOOP-12036. Consolidate all of the cmake extensions in one directory
+    (alanburlison via cmccabe)
 
   BUG FIXES
 

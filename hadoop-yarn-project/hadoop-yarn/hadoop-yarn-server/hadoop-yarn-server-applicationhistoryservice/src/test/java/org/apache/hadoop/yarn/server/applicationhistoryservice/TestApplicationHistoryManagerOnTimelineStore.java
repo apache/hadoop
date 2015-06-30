@@ -98,6 +98,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     TimelineACLsManager aclsManager = new TimelineACLsManager(new YarnConfiguration());
     TimelineDataManager dataManager =
         new TimelineDataManager(store, aclsManager);
+    dataManager.init(conf);
     ApplicationACLsManager appAclsManager = new ApplicationACLsManager(conf);
     historyManager =
         new ApplicationHistoryManagerOnTimelineStore(dataManager, appAclsManager);

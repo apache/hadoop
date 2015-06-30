@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
@@ -902,9 +903,26 @@ public final class CacheManager {
     if (cachedBlock == null) {
       return;
     }
-    List<DatanodeDescriptor> datanodes = cachedBlock.getDatanodes(Type.CACHED);
-    for (DatanodeDescriptor datanode : datanodes) {
-      block.addCachedLoc(datanode);
+    List<DatanodeDescriptor> cachedDNs = cachedBlock.getDatanodes(Type.CACHED);
+    for (DatanodeDescriptor datanode : cachedDNs) {
+      // Filter out cached blocks that do not have a backing replica.
+      //
+      // This should not happen since it means the CacheManager thinks
+      // something is cached that does not exist, but it's a safety
+      // measure.
+      boolean found = false;
+      for (DatanodeInfo loc : block.getLocations()) {
+        if (loc.equals(datanode)) {
+          block.addCachedLoc(loc);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        LOG.warn("Datanode {} is not a valid cache location for block {} "
+            + "because that node does not have a backing replica!",
+            datanode, block.getBlock().getBlockName());
+      }
     }
   }
 

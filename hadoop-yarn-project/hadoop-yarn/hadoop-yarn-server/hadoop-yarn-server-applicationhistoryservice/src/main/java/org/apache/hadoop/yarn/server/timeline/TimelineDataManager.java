@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
@@ -56,6 +57,7 @@ public class TimelineDataManager extends AbstractService {
   @VisibleForTesting
   public static final String DEFAULT_DOMAIN_ID = "DEFAULT";
 
+  private TimelineDataManagerMetrics metrics;
   private TimelineStore store;
   private TimelineACLsManager timelineACLsManager;
 
@@ -69,6 +71,7 @@ public class TimelineDataManager extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    metrics = TimelineDataManagerMetrics.create();
     TimelineDomain domain = store.getDomain("DEFAULT");
     // it is okay to reuse an existing domain even if it was created by another
     // user of the timeline server before, because it allows everybody to access.
@@ -130,6 +133,38 @@ public class TimelineDataManager extends AbstractService {
       Long limit,
       EnumSet<Field> fields,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEntitiesOps();
+    try {
+      TimelineEntities entities = doGetEntities(
+          entityType,
+          primaryFilter,
+          secondaryFilter,
+          windowStart,
+          windowEnd,
+          fromId,
+          fromTs,
+          limit,
+          fields,
+          callerUGI);
+      metrics.incrGetEntitiesTotal(entities.getEntities().size());
+      return entities;
+    } finally {
+      metrics.addGetEntitiesTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEntities doGetEntities(
+      String entityType,
+      NameValuePair primaryFilter,
+      Collection<NameValuePair> secondaryFilter,
+      Long windowStart,
+      Long windowEnd,
+      String fromId,
+      Long fromTs,
+      Long limit,
+      EnumSet<Field> fields,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineEntities entities = null;
     entities = store.getEntities(
         entityType,
@@ -161,6 +196,20 @@ public class TimelineDataManager extends AbstractService {
       String entityId,
       EnumSet<Field> fields,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEntityOps();
+    try {
+      return doGetEntity(entityType, entityId, fields, callerUGI);
+    } finally {
+      metrics.addGetEntityTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEntity doGetEntity(
+      String entityType,
+      String entityId,
+      EnumSet<Field> fields,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineEntity entity = null;
     entity =
         store.getEntity(entityId, entityType, fields);
@@ -183,6 +232,32 @@ public class TimelineDataManager extends AbstractService {
    * @see TimelineReader#getEntityTimelines
    */
   public TimelineEvents getEvents(
+      String entityType,
+      SortedSet<String> entityIds,
+      SortedSet<String> eventTypes,
+      Long windowStart,
+      Long windowEnd,
+      Long limit,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetEventsOps();
+    try {
+      TimelineEvents events = doGetEvents(
+          entityType,
+          entityIds,
+          eventTypes,
+          windowStart,
+          windowEnd,
+          limit,
+          callerUGI);
+      metrics.incrGetEventsTotal(events.getAllEvents().size());
+      return events;
+    } finally {
+      metrics.addGetEventsTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineEvents doGetEvents(
       String entityType,
       SortedSet<String> entityIds,
       SortedSet<String> eventTypes,
@@ -236,9 +311,22 @@ public class TimelineDataManager extends AbstractService {
   public TimelinePutResponse postEntities(
       TimelineEntities entities,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrPostEntitiesOps();
+    try {
+      return doPostEntities(entities, callerUGI);
+    } finally {
+      metrics.addPostEntitiesTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelinePutResponse doPostEntities(
+      TimelineEntities entities,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     if (entities == null) {
       return new TimelinePutResponse();
     }
+    metrics.incrPostEntitiesTotal(entities.getEntities().size());
     TimelineEntities entitiesToPut = new TimelineEntities();
     List<TimelinePutResponse.TimelinePutError> errors =
         new ArrayList<TimelinePutResponse.TimelinePutError>();
@@ -303,6 +391,17 @@ public class TimelineDataManager extends AbstractService {
    */
   public void putDomain(TimelineDomain domain,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrPutDomainOps();
+    try {
+      doPutDomain(domain, callerUGI);
+    } finally {
+      metrics.addPutDomainTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private void doPutDomain(TimelineDomain domain,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomain existingDomain =
         store.getDomain(domain.getId());
     if (existingDomain != null) {
@@ -329,6 +428,17 @@ public class TimelineDataManager extends AbstractService {
    */
   public TimelineDomain getDomain(String domainId,
       UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetDomainOps();
+    try {
+      return doGetDomain(domainId, callerUGI);
+    } finally {
+      metrics.addGetDomainTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineDomain doGetDomain(String domainId,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomain domain = store.getDomain(domainId);
     if (domain != null) {
       if (timelineACLsManager.checkAccess(callerUGI, domain)) {
@@ -343,6 +453,19 @@ public class TimelineDataManager extends AbstractService {
    * the owner or the admin of the domain, empty list is going to be returned.
    */
   public TimelineDomains getDomains(String owner,
+      UserGroupInformation callerUGI) throws YarnException, IOException {
+    long startTime = Time.monotonicNow();
+    metrics.incrGetDomainsOps();
+    try {
+      TimelineDomains domains = doGetDomains(owner, callerUGI);
+      metrics.incrGetDomainsTotal(domains.getDomains().size());
+      return domains;
+    } finally {
+      metrics.addGetDomainsTime(Time.monotonicNow() - startTime);
+    }
+  }
+
+  private TimelineDomains doGetDomains(String owner,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomains domains = store.getDomains(owner);
     boolean hasAccess = true;
