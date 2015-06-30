@@ -2085,9 +2085,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Return the total size of all files in the filesystem.*/
   public long getUsed() throws IOException{
     long used = 0;
-    FileStatus[] files = listStatus(new Path("/"));
-    for(FileStatus file:files){
-      used += file.getLen();
+    RemoteIterator<LocatedFileStatus> files = listFiles(new Path("/"), true);
+    while (files.hasNext()) {
+      used += files.next().getLen();
     }
     return used;
   }
