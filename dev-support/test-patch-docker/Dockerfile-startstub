@@ -32,7 +32,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libjansson-dev \
     fuse libfuse-dev \
     libcurl4-openssl-dev \
-    python python2.7
+    python python2.7 \
+    openjdk-7-jdk
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
