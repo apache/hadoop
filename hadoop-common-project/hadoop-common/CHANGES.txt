@@ -232,6 +232,8 @@ Trunk (Unreleased)
 
     HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
 
+    HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

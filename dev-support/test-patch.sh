@@ -1521,8 +1521,8 @@ function check_reexec
 
   cd "${CWD}"
   mkdir -p "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/test-patch* "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/smart-apply* "${PATCH_DIR}/dev-support-test"
+  (cd "${BINDIR}"; tar cpf - . ) \
+	| (cd  "${PATCH_DIR}/dev-support-test"; tar xpf - )
 
   big_console_header "exec'ing test-patch.sh now..."
 
