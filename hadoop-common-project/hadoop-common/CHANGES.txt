@@ -666,6 +666,11 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
     occurs (Jason Lowe via jeagles)
+
+    HADOOP-12158. Improve error message in
+    TestCryptoStreamsWithOpensslAesCtrCryptoCodec when OpenSSL is not
+    installed. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
