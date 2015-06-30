@@ -18,36 +18,33 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-import java.util.List;
-
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
+/**
+ * TaskAttemptTooManyFetchFailureEvent is used for TA_TOO_MANY_FETCH_FAILURE.
+ */
+public class TaskAttemptTooManyFetchFailureEvent extends TaskAttemptEvent {
+  private TaskAttemptId reduceID;
+  private String  reduceHostname;
 
-
-public class JobTaskAttemptFetchFailureEvent extends JobEvent {
-
-  private final TaskAttemptId reduce;
-  private final List<TaskAttemptId> maps;
-  private final String hostname;
-
-  public JobTaskAttemptFetchFailureEvent(TaskAttemptId reduce, 
-      List<TaskAttemptId> maps, String host) {
-    super(reduce.getTaskId().getJobId(),
-        JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE);
-    this.reduce = reduce;
-    this.maps = maps;
-    this.hostname = host;
+  /**
+   * Create a new TaskAttemptTooManyFetchFailureEvent.
+   * @param attemptId the id of the mapper task attempt
+   * @param reduceId the id of the reporting reduce task attempt.
+   * @param reduceHost the hostname of the reporting reduce task attempt.
+   */
+  public TaskAttemptTooManyFetchFailureEvent(TaskAttemptId attemptId,
+      TaskAttemptId reduceId, String reduceHost) {
+      super(attemptId, TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE);
+    this.reduceID = reduceId;
+    this.reduceHostname = reduceHost;
   }
 
-  public List<TaskAttemptId> getMaps() {
-    return maps;
+  public TaskAttemptId getReduceId() {
+    return reduceID;
   }
 
-  public TaskAttemptId getReduce() {
-    return reduce;
-  }
-
-  public String getHost() {
-    return hostname;
-  }
+  public String getReduceHost() {
+    return reduceHostname;
+  }  
 }
