@@ -323,3 +323,6 @@
 
     HDFS-8253. DFSStripedOutputStream.closeThreads releases cellBuffers
     multiple times.  (Kai Sasaki via szetszwo)
+
+    HDFS-8468. 2 RPC calls for every file read in DFSClient#open(..) resulting in
+    double Audit log entries (vinayakumarb)

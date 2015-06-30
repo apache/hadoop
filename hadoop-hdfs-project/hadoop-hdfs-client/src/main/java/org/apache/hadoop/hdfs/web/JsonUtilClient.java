@@ -479,7 +479,7 @@ class JsonUtilClient {
         (Map<?, ?>) m.get("lastLocatedBlock"));
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
-        lastLocatedBlock, isLastBlockComplete, null);
+        lastLocatedBlock, isLastBlockComplete, null, null, 0);
   }
 
 }

@@ -1873,10 +1873,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final FileEncryptionInfo feInfo =
         FSDirectory.isReservedRawName(srcArg) ? null
             : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
+    final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+        this, iip);
 
     final LocatedBlocks blocks = blockManager.createLocatedBlocks(
         inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
-        length, needBlockToken, iip.isSnapshot(), feInfo);
+        length, needBlockToken, iip.isSnapshot(), feInfo, ecZone);
 
     // Set caching information for the located blocks.
     for (LocatedBlock lb : blocks.getLocatedBlocks()) {
