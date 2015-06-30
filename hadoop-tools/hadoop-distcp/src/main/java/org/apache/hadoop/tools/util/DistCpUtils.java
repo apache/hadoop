@@ -468,43 +468,4 @@ public class DistCpUtils {
     return (sourceChecksum == null || targetChecksum == null ||
             sourceChecksum.equals(targetChecksum));
   }
-
-  /* see if two file systems are the same or not
-   *
-   */
-  public static boolean compareFs(FileSystem srcFs, FileSystem destFs) {
-    URI srcUri = srcFs.getUri();
-    URI dstUri = destFs.getUri();
-    if (srcUri.getScheme() == null) {
-      return false;
-    }
-    if (!srcUri.getScheme().equals(dstUri.getScheme())) {
-      return false;
-    }
-    String srcHost = srcUri.getHost();
-    String dstHost = dstUri.getHost();
-    if ((srcHost != null) && (dstHost != null)) {
-      try {
-        srcHost = InetAddress.getByName(srcHost).getCanonicalHostName();
-        dstHost = InetAddress.getByName(dstHost).getCanonicalHostName();
-      } catch(UnknownHostException ue) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("Could not compare file-systems. Unknown host: ", ue);
-        return false;
-      }
-      if (!srcHost.equals(dstHost)) {
-        return false;
-      }
-    }
-    else if (srcHost == null && dstHost != null) {
-      return false;
-    }
-    else if (srcHost != null) {
-      return false;
-    }
-
-    //check for ports
-
-    return srcUri.getPort() == dstUri.getPort();
-  }
 }

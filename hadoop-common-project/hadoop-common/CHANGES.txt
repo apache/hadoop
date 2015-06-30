@@ -910,6 +910,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10798. globStatus() should always return a sorted list of files
     (cmccabe)
 
+    HADOOP-12159. Move DistCpUtils#compareFs() to org.apache.hadoop.fs.FileUtil
+    and fix for HA namespaces (rchiang via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

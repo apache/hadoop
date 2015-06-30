@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
-import org.junit.Before;
+import org.junit.*;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,8 +26,11 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.URI;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,10 +48,12 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.tools.tar.TarEntry;
 import org.apache.tools.tar.TarOutputStream;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+
+import javax.print.attribute.URISyntax;
+
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
@@ -63,6 +69,25 @@ public class TestFileUtil {
   private final File dir1 = new File(del, DIR + "1");
   private final File dir2 = new File(del, DIR + "2");
   private final File partitioned = new File(TEST_DIR, "partitioned");
+
+  private InetAddress inet1;
+  private InetAddress inet2;
+  private InetAddress inet3;
+  private InetAddress inet4;
+  private InetAddress inet5;
+  private InetAddress inet6;
+  private URI uri1;
+  private URI uri2;
+  private URI uri3;
+  private URI uri4;
+  private URI uri5;
+  private URI uri6;
+  private FileSystem fs1;
+  private FileSystem fs2;
+  private FileSystem fs3;
+  private FileSystem fs4;
+  private FileSystem fs5;
+  private FileSystem fs6;
 
   /**
    * Creates multiple directories for testing.
@@ -80,6 +105,7 @@ public class TestFileUtil {
    *   file: part-r-00000, contents: "foo"
    *   file: part-r-00001, contents: "bar"
    */
+  @Ignore
   private void setupDirs() throws IOException {
     Assert.assertFalse(del.exists());
     Assert.assertFalse(tmp.exists());
@@ -1095,5 +1121,83 @@ public class TestFileUtil {
         }
       }
     }
+  }
+
+  @Ignore
+  public void setupCompareFs() {
+    // Set up Strings
+    String host1 = "1.2.3.4";
+    String host2 = "2.3.4.5";
+    int port1 = 7000;
+    int port2 = 7001;
+    String uris1 = "hdfs://" + host1 + ":" + Integer.toString(port1) + "/tmp/foo";
+    String uris2 = "hdfs://" + host1 + ":" + Integer.toString(port2) + "/tmp/foo";
+    String uris3 = "hdfs://" + host2 + ":" + Integer.toString(port2) + "/tmp/foo";
+    String uris4 = "hdfs://" + host2 + ":" + Integer.toString(port2) + "/tmp/foo";
+    String uris5 = "file:///" + host1 + ":" + Integer.toString(port1) + "/tmp/foo";
+    String uris6 = "hdfs:///" + host1 + "/tmp/foo";
+    // Set up URI objects
+    try {
+      uri1 = new URI(uris1);
+      uri2 = new URI(uris2);
+      uri3 = new URI(uris3);
+      uri4 = new URI(uris4);
+      uri5 = new URI(uris5);
+      uri6 = new URI(uris6);
+    } catch (URISyntaxException use) {
+    }
+    // Set up InetAddress
+    inet1 = mock(InetAddress.class);
+    when(inet1.getCanonicalHostName()).thenReturn(host1);
+    inet2 = mock(InetAddress.class);
+    when(inet2.getCanonicalHostName()).thenReturn(host1);
+    inet3 = mock(InetAddress.class);
+    when(inet3.getCanonicalHostName()).thenReturn(host2);
+    inet4 = mock(InetAddress.class);
+    when(inet4.getCanonicalHostName()).thenReturn(host2);
+    inet5 = mock(InetAddress.class);
+    when(inet5.getCanonicalHostName()).thenReturn(host1);
+    inet6 = mock(InetAddress.class);
+    when(inet6.getCanonicalHostName()).thenReturn(host1);
+
+    // Link of InetAddress to corresponding URI
+    try {
+      when(InetAddress.getByName(uris1)).thenReturn(inet1);
+      when(InetAddress.getByName(uris2)).thenReturn(inet2);
+      when(InetAddress.getByName(uris3)).thenReturn(inet3);
+      when(InetAddress.getByName(uris4)).thenReturn(inet4);
+      when(InetAddress.getByName(uris5)).thenReturn(inet5);
+    } catch (UnknownHostException ue) {
+    }
+
+    fs1 = mock(FileSystem.class);
+    when(fs1.getUri()).thenReturn(uri1);
+    fs2 = mock(FileSystem.class);
+    when(fs2.getUri()).thenReturn(uri2);
+    fs3 = mock(FileSystem.class);
+    when(fs3.getUri()).thenReturn(uri3);
+    fs4 = mock(FileSystem.class);
+    when(fs4.getUri()).thenReturn(uri4);
+    fs5 = mock(FileSystem.class);
+    when(fs5.getUri()).thenReturn(uri5);
+    fs6 = mock(FileSystem.class);
+    when(fs6.getUri()).thenReturn(uri6);
+  }
+
+  @Test
+  public void testCompareFsNull() throws Exception {
+    setupCompareFs();
+    assertEquals(FileUtil.compareFs(null,fs1),false);
+    assertEquals(FileUtil.compareFs(fs1,null),false);
+  }
+
+  @Test
+  public void testCompareFsDirectories() throws Exception {
+    setupCompareFs();
+    assertEquals(FileUtil.compareFs(fs1,fs1),true);
+    assertEquals(FileUtil.compareFs(fs1,fs2),false);
+    assertEquals(FileUtil.compareFs(fs1,fs5),false);
+    assertEquals(FileUtil.compareFs(fs3,fs4),true);
+    assertEquals(FileUtil.compareFs(fs1,fs6),false);
   }
 }
