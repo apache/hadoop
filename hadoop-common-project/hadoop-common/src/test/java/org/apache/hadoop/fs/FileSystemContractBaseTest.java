@@ -20,7 +20,6 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
@@ -225,13 +224,9 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
     paths = fs.listStatus(path("/test/hadoop"));
     assertEquals(3, paths.length);
-    ArrayList<String> list = new ArrayList<String>();
-    for (FileStatus fileState : paths) {
-      list.add(fileState.getPath().toString());
-    }
-    assertTrue(list.contains(path("/test/hadoop/a")));
-    assertTrue(list.contains(path("/test/hadoop/b")));
-    assertTrue(list.contains(path("/test/hadoop/c")));
+    assertEquals(path("/test/hadoop/a"), paths[0].getPath());
+    assertEquals(path("/test/hadoop/b"), paths[1].getPath());
+    assertEquals(path("/test/hadoop/c"), paths[2].getPath());
 
     paths = fs.listStatus(path("/test/hadoop/a"));
     assertEquals(0, paths.length);

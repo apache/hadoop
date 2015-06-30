@@ -664,10 +664,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
     occurs (Jason Lowe via jeagles)
-
-    HADOOP-12009 Clarify FileSystem.listStatus() sorting order & fix
-    FileSystemContractBaseTest:testListStatus. (J.Andreina via stevel)
-
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
