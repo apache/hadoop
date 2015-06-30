@@ -183,10 +183,6 @@ to the same path:
     forall fs in listStatus(Path) :
       fs == getFileStatus(fs.path)
 
-**Ordering of results**: there is no guarantee of ordering of the listed entries.
-While HDFS currently returns an alphanumerically sorted list, neither the Posix `readdir()`
-nor Java's `File.listFiles()` API calls define any ordering of returned values. Applications
-which require a uniform sort order on the results must perform the sorting themselves.
 
 ### Atomicity and Consistency
 
