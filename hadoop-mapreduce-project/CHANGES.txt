@@ -518,6 +518,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
     (zhihai xu via jlowe)
 
+    MAPREDUCE-6121. JobResourceUpdater#compareFs() doesn't handle HA namespaces
+    (rchiang via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
