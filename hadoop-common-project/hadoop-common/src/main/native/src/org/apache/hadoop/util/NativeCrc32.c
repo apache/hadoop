@@ -168,7 +168,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChun
   // Setup complete. Actually verify checksums.
   ret = bulk_crc(data, data_len, sums, crc_type,
                             bytes_per_checksum, verify ? &error_data : NULL);
-  if (likely(verify && ret == CHECKSUMS_VALID || !verify && ret == 0)) {
+  if (likely((verify && ret == CHECKSUMS_VALID) || (!verify && ret == 0))) {
     return;
   } else if (unlikely(verify && ret == INVALID_CHECKSUM_DETECTED)) {
     long pos = base_pos + (error_data.bad_data - data);
@@ -261,7 +261,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeComputeChun
         env, error_data.got_crc, error_data.expected_crc,
         j_filename, pos);
       return;
-    } else if (unlikely(verify && ret != CHECKSUMS_VALID || !verify && ret != 0)) {
+    } else if (unlikely((verify && ret != CHECKSUMS_VALID) || (!verify && ret != 0))) {
       THROW(env, "java/lang/AssertionError",
         "Bad response code from native bulk_crc");
       return;

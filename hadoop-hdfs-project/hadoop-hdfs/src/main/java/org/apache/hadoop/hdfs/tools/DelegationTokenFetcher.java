@@ -176,14 +176,17 @@ public class DelegationTokenFetcher {
                                   final String renewer, final Path tokenFile)
           throws IOException {
     Token<?> token = fs.getDelegationToken(renewer);
+    if (null != token) {
+      Credentials cred = new Credentials();
+      cred.addToken(token.getKind(), token);
+      cred.writeTokenStorageFile(tokenFile, conf);
 
-    Credentials cred = new Credentials();
-    cred.addToken(token.getKind(), token);
-    cred.writeTokenStorageFile(tokenFile, conf);
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Fetched token " + fs.getUri() + " for " + token.getService()
-              + " into " + tokenFile);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Fetched token " + fs.getUri() + " for " +
+            token.getService() + " into " + tokenFile);
+      }
+    } else {
+      System.err.println("ERROR: Failed to fetch token from " + fs.getUri());
     }
   }
 

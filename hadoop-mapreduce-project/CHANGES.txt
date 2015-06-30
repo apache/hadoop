@@ -512,6 +512,18 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
     (zhihai xu via jlowe)
 
+Release 2.7.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

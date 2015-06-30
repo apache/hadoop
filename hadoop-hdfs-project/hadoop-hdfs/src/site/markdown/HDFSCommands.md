@@ -89,12 +89,16 @@ Run a filesystem command on the file system supported in Hadoop. The various COM
 
 ### `fetchdt`
 
-Usage: `hdfs fetchdt [--webservice <namenode_http_addr>] <path> `
+Usage: `hdfs fetchdt <opts> <token_file_path> `
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `--webservice` *https\_address* | use http protocol instead of RPC |
-| *fileName* | File name to store the token into. |
+| `--webservice` *NN_Url* | Url to contact NN on (starts with http or https)|
+| `--renewer` *name* | Name of the delegation token renewer |
+| `--cancel` | Cancel the delegation token |
+| `--renew` | Renew the delegation token.  Delegation token must have been fetched using the --renewer *name* option.|
+| `--print` | Print the delegation token |
+| *token_file_path* | File path to store the token into. |
 
 Gets Delegation Token from a NameNode. See [fetchdt](./HdfsUserGuide.html#fetchdt) for more info.
 
