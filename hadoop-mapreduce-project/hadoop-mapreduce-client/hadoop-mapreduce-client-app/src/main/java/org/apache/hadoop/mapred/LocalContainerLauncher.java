@@ -233,7 +233,7 @@ public class LocalContainerLauncher extends AbstractService implements
         try {
           event = eventQueue.take();
         } catch (InterruptedException e) {  // mostly via T_KILL? JOB_KILL?
-          LOG.error("Returning, interrupted : " + e);
+          LOG.warn("Returning, interrupted : " + e);
           break;
         }
 
