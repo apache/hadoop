@@ -580,6 +580,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3768. ArrayIndexOutOfBoundsException with empty environment variables.
     (Zhihai Xu via gera)
 
+    YARN-3823. Fix mismatch in default values for 
+    yarn.scheduler.maximum-allocation-vcores property. (Ray Chiang via devaraj)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
