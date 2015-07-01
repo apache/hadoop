@@ -1197,11 +1197,15 @@ public class MRAppMaster extends CompositeService {
       startJobs();
     }
   }
-  
+
+  protected void shutdownTaskLog() {
+    TaskLog.syncLogsShutdown(logSyncer);
+  }
+
   @Override
   public void stop() {
     super.stop();
-    TaskLog.syncLogsShutdown(logSyncer);
+    shutdownTaskLog();
   }
 
   private boolean isRecoverySupported() throws IOException {
@@ -1705,10 +1709,14 @@ public class MRAppMaster extends CompositeService {
     T call(Configuration conf) throws Exception;
   }
 
+  protected void shutdownLogManager() {
+    LogManager.shutdown();
+  }
+
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
-    LogManager.shutdown();
+    shutdownLogManager();
   }
 
   public ClientService getClientService() {

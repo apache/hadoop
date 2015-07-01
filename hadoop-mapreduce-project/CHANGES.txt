@@ -527,6 +527,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6420. Interrupted Exception in LocalContainerLauncher should be
     logged in warn/info level (Chang Li via jlowe)
 
+    MAPREDUCE-6418. MRApp should not shutdown LogManager during shutdown
+    (Chang Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
