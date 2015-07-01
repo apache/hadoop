@@ -276,10 +276,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             aggregator.doContainerLogAggregation(writer, appFinished);
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
+          this.delService.delete(this.userUgi.getShortUserName(), null,
+              uploadedFilePathsInThisCycle
+                  .toArray(new Path[uploadedFilePathsInThisCycle.size()]));
         }
-        this.delService.delete(this.userUgi.getShortUserName(), null,
-          uploadedFilePathsInThisCycle
-            .toArray(new Path[uploadedFilePathsInThisCycle.size()]));
 
         // This container is finished, and all its logs have been uploaded,
         // remove it from containerLogAggregators.
