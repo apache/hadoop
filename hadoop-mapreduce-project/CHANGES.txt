@@ -524,6 +524,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6121. JobResourceUpdater#compareFs() doesn't handle HA namespaces
     (rchiang via rkanter)
 
+    MAPREDUCE-6420. Interrupted Exception in LocalContainerLauncher should be
+    logged in warn/info level (Chang Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
