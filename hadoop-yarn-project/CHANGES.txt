@@ -598,6 +598,9 @@ Release 2.7.2 - UNRELEASED
 
   BUG FIXES
 
+    YARN-3793. Several NPEs when deleting local files on NM recovery (Varun
+    Saxena via jlowe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
