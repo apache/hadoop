@@ -916,6 +916,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12116. Fix unrecommended syntax usages in hadoop/hdfs/yarn script for
     cygwin in branch-2. (Li Lu via cnauroth)
 
+    HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
+    name using reflection. (Lei (Eddy) Xu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
