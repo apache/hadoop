@@ -992,6 +992,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8579. Update HDFS usage with missing options
     (J.Andreina via vinayakumarb)
 
+    HDFS-8706. Fix typo in datanode startup options in HDFSCommands.html.
+    (Brahma Reddy Battula via Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
