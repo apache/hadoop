@@ -1714,6 +1714,15 @@
 </property>
 
 <property>
+  <description>
+  File format the AM will use when generating the .jhist file.  Valid
+  values are "json" for text output and "binary" for faster parsing.
+  </description>
+  <name>mapreduce.jobhistory.jhist.format</name>
+  <value>json</value>
+</property>
+
+<property>
   <name>mapreduce.job.heap.memory-mb.ratio</name>
   <value>0.8</value>
   <description>The ratio of heap-size to container-size. If no -Xmx is

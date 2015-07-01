@@ -190,7 +190,8 @@ public class TestEvents {
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     FSDataOutputStream fsOutput = new FSDataOutputStream(output,
         new FileSystem.Statistics("scheme"));
-    EventWriter writer = new EventWriter(fsOutput);
+    EventWriter writer = new EventWriter(fsOutput,
+        EventWriter.WriteMode.JSON);
     writer.write(getJobPriorityChangedEvent());
     writer.write(getJobStatusChangedEvent());
     writer.write(getTaskUpdatedEvent());

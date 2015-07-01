@@ -372,6 +372,9 @@ Release 2.8.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
+    jlowe)
+
   BUG FIXES
 
     MAPREDUCE-6314. TestPipeApplication fails on trunk.
