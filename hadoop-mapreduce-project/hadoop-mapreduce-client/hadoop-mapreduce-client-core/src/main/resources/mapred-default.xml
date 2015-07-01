@@ -2168,6 +2168,15 @@
 </property>
 
 <property>
+  <description>
+  File format the AM will use when generating the .jhist file.  Valid
+  values are "json" for text output and "binary" for faster parsing.
+  </description>
+  <name>mapreduce.jobhistory.jhist.format</name>
+  <value>json</value>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.containerlauncher.threadpool-initial-size</name>
   <value>10</value>
   <description>The initial size of thread pool to launch containers in the
