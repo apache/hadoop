@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 
 
@@ -451,25 +452,30 @@ public abstract class AbstractYarnScheduler
     new Timer().schedule(new TimerTask() {
       @Override
       public void run() {
-        for (SchedulerApplication<T> app : applications.values()) {
-
-          T attempt = app.getCurrentAppAttempt();
-          synchronized (attempt) {
-            for (ContainerId containerId : attempt.getPendingRelease()) {
-              RMAuditLogger.logFailure(
-                app.getUser(),
-                AuditConstants.RELEASE_CONTAINER,
-                "Unauthorized access or invalid container",
-                "Scheduler",
-                "Trying to release container not owned by app or with invalid id.",
-                attempt.getApplicationId(), containerId);
-            }
-            attempt.getPendingRelease().clear();
-          }
-        }
+        clearPendingContainerCache();
         LOG.info("Release request cache is cleaned up");
       }
     }, nmExpireInterval);
+  }
+
+  @VisibleForTesting
+  public void clearPendingContainerCache() {
+    for (SchedulerApplication<T> app : applications.values()) {
+      T attempt = app.getCurrentAppAttempt();
+      if (attempt != null) {
+        synchronized (attempt) {
+          for (ContainerId containerId : attempt.getPendingRelease()) {
+            RMAuditLogger.logFailure(app.getUser(),
+                AuditConstants.RELEASE_CONTAINER,
+                "Unauthorized access or invalid container", "Scheduler",
+                "Trying to release container not owned by app "
+                    + "or with invalid id.", attempt.getApplicationId(),
+                containerId);
+          }
+          attempt.getPendingRelease().clear();
+        }
+      }
+    }
   }
 
   // clean up a completed container
