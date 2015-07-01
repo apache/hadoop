@@ -583,6 +583,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3823. Fix mismatch in default values for 
     yarn.scheduler.maximum-allocation-vcores property. (Ray Chiang via devaraj)
 
+    YARN-3830. AbstractYarnScheduler.createReleaseCache may try to clean a null
+    attempt. (nijel via devaraj)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

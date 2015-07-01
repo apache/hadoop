@@ -18,25 +18,35 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.HashMap;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
@@ -338,6 +348,58 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       verifyMaximumResourceCapability(resource1, scheduler);
     } finally {
       rm.stop();
+    }
+  }
+
+  /*
+   * This test case is to test the pending containers are cleared from the
+   * attempt even if one of the application in the list have current attempt as
+   * null (no attempt).
+   */
+  @SuppressWarnings({ "rawtypes" })
+  @Test(timeout = 10000)
+  public void testReleasedContainerIfAppAttemptisNull() throws Exception {
+    YarnConfiguration conf=getConf();
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    MockRM rm1 = new MockRM(conf, memStore);
+    try {
+      rm1.start();
+      MockNM nm1 =
+          new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+      nm1.registerNode();
+
+      AbstractYarnScheduler scheduler =
+          (AbstractYarnScheduler) rm1.getResourceScheduler();
+      // Mock App without attempt
+      RMApp mockAPp =
+          new MockRMApp(125, System.currentTimeMillis(), RMAppState.NEW);
+      SchedulerApplication<FiCaSchedulerApp> application =
+          new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser());
+
+      // Second app with one app attempt
+      RMApp app = rm1.submitApp(200);
+      MockAM am1 = MockRM.launchAndRegisterAM(app, rm1, nm1);
+      final ContainerId runningContainer =
+          ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
+      am1.allocate(null, Arrays.asList(runningContainer));
+
+      Map schedulerApplications = scheduler.getSchedulerApplications();
+      SchedulerApplication schedulerApp =
+          (SchedulerApplication) scheduler.getSchedulerApplications().get(
+              app.getApplicationId());
+      schedulerApplications.put(mockAPp.getApplicationId(), application);
+
+      scheduler.clearPendingContainerCache();
+
+      Assert.assertEquals("Pending containers are not released "
+          + "when one of the application attempt is null !", schedulerApp
+          .getCurrentAppAttempt().getPendingRelease().size(), 0);
+    } finally {
+      if (rm1 != null) {
+        rm1.stop();
+      }
     }
   }
 
