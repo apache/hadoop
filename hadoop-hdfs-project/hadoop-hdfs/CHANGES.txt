@@ -251,6 +251,8 @@ Release 2.7.3 - 2016-08-25
     HDFS-9019. Adding informative message to sticky bit permission denied
     exception. (xyao)
 
+    HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
