@@ -586,6 +586,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3830. AbstractYarnScheduler.createReleaseCache may try to clean a null
     attempt. (nijel via devaraj)
 
+    YARN-3875. FSSchedulerNode#reserveResource() doesn't print Application Id
+    properly in log. (Bibin A Chundatt via devaraj)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
