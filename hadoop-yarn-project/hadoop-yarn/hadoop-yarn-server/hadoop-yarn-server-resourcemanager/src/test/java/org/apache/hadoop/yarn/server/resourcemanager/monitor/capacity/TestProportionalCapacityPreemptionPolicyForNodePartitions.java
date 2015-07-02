@@ -50,13 +50,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -92,7 +93,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
   private Configuration conf = null;
   private CapacitySchedulerConfiguration csConf = null;
   private CapacityScheduler cs = null;
-  private EventHandler<ContainerPreemptEvent> mDisp = null;
+  private EventHandler<SchedulerEvent> mDisp = null;
   private ProportionalCapacityPreemptionPolicy policy = null;
   private Resource clusterResource = null;
 
@@ -125,11 +126,14 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
     rmContext = mock(RMContext.class);
     when(rmContext.getNodeLabelManager()).thenReturn(nlm);
+    Dispatcher disp = mock(Dispatcher.class);
+    when(rmContext.getDispatcher()).thenReturn(disp);
+    when(disp.getEventHandler()).thenReturn(mDisp);
     csConf = new CapacitySchedulerConfiguration();
     when(cs.getConfiguration()).thenReturn(csConf);
     when(cs.getRMContext()).thenReturn(rmContext);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, mDisp, cs, mClock);
+    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs, mClock);
     partitionToResource = new HashMap<>();
     nodeIdToSchedulerNodes = new HashMap<>();
     nameToCSQueues = new HashMap<>();
@@ -828,7 +832,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     when(cs.getClusterResource()).thenReturn(clusterResource);
     mockApplications(appsConfig);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, mDisp, cs, mClock);
+    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs, mClock);
   }
 
   private void mockContainers(String containersConfig, ApplicationAttemptId attemptId,

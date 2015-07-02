@@ -601,6 +601,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3793. Several NPEs when deleting local files on NM recovery (Varun
     Saxena via jlowe)
 
+    YARN-3508. Prevent processing preemption events on the main RM dispatcher. 
+    (Varun Saxena via wangda)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
