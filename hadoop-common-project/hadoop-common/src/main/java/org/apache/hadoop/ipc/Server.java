@@ -1963,7 +1963,9 @@ public abstract class Server {
         // If the incoming RPC included tracing info, always continue the trace
         TraceInfo parentSpan = new TraceInfo(header.getTraceInfo().getTraceId(),
                                              header.getTraceInfo().getParentId());
-        traceSpan = Trace.startSpan(rpcRequest.toString(), parentSpan).detach();
+        traceSpan = Trace.startSpan(
+            RpcClientUtil.toTraceName(rpcRequest.toString()),
+            parentSpan).detach();
       }
 
       Call call = new Call(header.getCallId(), header.getRetryCount(),
