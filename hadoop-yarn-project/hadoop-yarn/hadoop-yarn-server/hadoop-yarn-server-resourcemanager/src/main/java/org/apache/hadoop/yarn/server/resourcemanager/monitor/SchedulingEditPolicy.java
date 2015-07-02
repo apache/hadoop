@@ -18,14 +18,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 
 public interface SchedulingEditPolicy {
 
-  public void init(Configuration config,
-      EventHandler<ContainerPreemptEvent> dispatcher,
+  public void init(Configuration config, RMContext context,
       PreemptableResourceScheduler scheduler);
 
   /**
