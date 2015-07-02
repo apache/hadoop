@@ -409,10 +409,14 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   /**
-   * Write an operation to the edit log. Do not sync to persistent
-   * store yet.
+   * Write an operation to the edit log.
+   * <p/>
+   * Additionally, this will sync the edit log if required by the underlying
+   * edit stream's automatic sync policy (e.g. when the buffer is full, or
+   * if a time interval has elapsed).
    */
   void logEdit(final FSEditLogOp op) {
+    boolean needsSync = false;
     synchronized (this) {
       assert isOpenForWrite() :
         "bad state: " + state;
@@ -434,14 +438,16 @@ public class FSEditLog implements LogsPurgeable {
       endTransaction(start);
       
       // check if it is time to schedule an automatic sync
-      if (!shouldForceSync()) {
-        return;
+      needsSync = shouldForceSync();
+      if (needsSync) {
+        isAutoSyncScheduled = true;
       }
-      isAutoSyncScheduled = true;
     }
     
-    // sync buffered edit log entries to persistent store
-    logSync();
+    // Sync the log if an automatic sync is required.
+    if (needsSync) {
+      logSync();
+    }
   }
 
   /**
@@ -1191,11 +1197,13 @@ public class FSEditLog implements LogsPurgeable {
       throws IOException {
     return journalSet.getEditLogManifest(fromTxId);
   }
- 
+
   /**
    * Finalizes the current edit log and opens a new log segment.
-   * @return the transaction id of the BEGIN_LOG_SEGMENT transaction
-   * in the new log.
+   *
+   * @param layoutVersion The layout version of the new edit log segment.
+   * @return the transaction id of the BEGIN_LOG_SEGMENT transaction in the new
+   * log.
    */
   synchronized long rollEditLog(int layoutVersion) throws IOException {
     LOG.info("Rolling edit logs");
