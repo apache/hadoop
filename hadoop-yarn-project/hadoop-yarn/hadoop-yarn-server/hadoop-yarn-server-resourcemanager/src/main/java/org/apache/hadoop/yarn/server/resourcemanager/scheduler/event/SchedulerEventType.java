@@ -36,5 +36,10 @@ public enum SchedulerEventType {
   APP_ATTEMPT_REMOVED,
 
   // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED
+  CONTAINER_EXPIRED,
+
+  // Source: SchedulingEditPolicy
+  DROP_RESERVATION,
+  PREEMPT_CONTAINER,
+  KILL_CONTAINER
 }
