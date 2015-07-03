@@ -145,6 +145,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14100. Upgrade Jsch jar to latest version to fix vulnerability in
     old versions. (Vinayakumar B and Brahma Reddy Battula via aajisaka)
 
+    HADOOP-12173. NetworkTopology::add calls toString always.
+    (Inigo Goiri via cdouglas)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
