@@ -298,7 +298,7 @@ See the [HDFS Transparent Encryption Documentation](./TransparentEncryption.html
 
 ### `datanode`
 
-Usage: `hdfs datanode [-regular | -rollback | -rollingupgrace rollback]`
+Usage: `hdfs datanode [-regular | -rollback | -rollingupgrade rollback]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |

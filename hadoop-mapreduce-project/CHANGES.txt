@@ -115,6 +115,9 @@ Trunk (Unreleased)
     MAPREDUCE-2632. Avoid calling the partitioner when the numReduceTasks is 1.
     (Ravi Teja Ch N V and Sunil G via kasha)
 
+    MAPREDUCE-6407. Migrate MAPREDUCE nativetask build to new CMake framework
+    (Alan Burlison via Colin P. McCabe)
+
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
@@ -364,7 +367,13 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6408. Queue name and user name should be printed on the job page.
     (Siqi Li via gera)
 
+    MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
+    failure diagnostics (Chang Li via jlowe)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
+    jlowe)
 
   BUG FIXES
 
@@ -511,6 +520,15 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
     (zhihai xu via jlowe)
+
+    MAPREDUCE-6121. JobResourceUpdater#compareFs() doesn't handle HA namespaces
+    (rchiang via rkanter)
+
+    MAPREDUCE-6420. Interrupted Exception in LocalContainerLauncher should be
+    logged in warn/info level (Chang Li via jlowe)
+
+    MAPREDUCE-6418. MRApp should not shutdown LogManager during shutdown
+    (Chang Li via jlowe)
 
 Release 2.7.2 - UNRELEASED
 

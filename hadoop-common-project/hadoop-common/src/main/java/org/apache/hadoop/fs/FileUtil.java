@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -1328,5 +1331,44 @@ public class FileUtil {
     String[] jarCp = {classPathJar.getCanonicalPath(),
                         unexpandedWildcardClasspath.toString()};
     return jarCp;
+  }
+
+  public static boolean compareFs(FileSystem srcFs, FileSystem destFs) {
+    if (srcFs==null || destFs==null) {
+      return false;
+    }
+    URI srcUri = srcFs.getUri();
+    URI dstUri = destFs.getUri();
+    if (srcUri.getScheme()==null) {
+      return false;
+    }
+    if (!srcUri.getScheme().equals(dstUri.getScheme())) {
+      return false;
+    }
+    String srcHost = srcUri.getHost();
+    String dstHost = dstUri.getHost();
+    if ((srcHost!=null) && (dstHost!=null)) {
+      if (srcHost.equals(dstHost)) {
+        return srcUri.getPort()==dstUri.getPort();
+      }
+      try {
+        srcHost = InetAddress.getByName(srcHost).getCanonicalHostName();
+        dstHost = InetAddress.getByName(dstHost).getCanonicalHostName();
+      } catch (UnknownHostException ue) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Could not compare file-systems. Unknown host: ", ue);
+        }
+        return false;
+      }
+      if (!srcHost.equals(dstHost)) {
+        return false;
+      }
+    } else if (srcHost==null && dstHost!=null) {
+      return false;
+    } else if (srcHost!=null) {
+      return false;
+    }
+    // check for ports
+    return srcUri.getPort()==dstUri.getPort();
   }
 }

@@ -194,7 +194,7 @@ class JobResourceUploader {
 
     FileSystem remoteFs = null;
     remoteFs = originalPath.getFileSystem(conf);
-    if (compareFs(remoteFs, jtFs)) {
+    if (FileUtil.compareFs(remoteFs, jtFs)) {
       return originalPath;
     }
     // this might have name collisions. copy will throw an exception
@@ -203,42 +203,6 @@ class JobResourceUploader {
     FileUtil.copy(remoteFs, originalPath, jtFs, newPath, false, conf);
     jtFs.setReplication(newPath, replication);
     return newPath;
-  }
-
-  /*
-   * see if two file systems are the same or not.
-   */
-  private boolean compareFs(FileSystem srcFs, FileSystem destFs) {
-    URI srcUri = srcFs.getUri();
-    URI dstUri = destFs.getUri();
-    if (srcUri.getScheme() == null) {
-      return false;
-    }
-    if (!srcUri.getScheme().equals(dstUri.getScheme())) {
-      return false;
-    }
-    String srcHost = srcUri.getHost();
-    String dstHost = dstUri.getHost();
-    if ((srcHost != null) && (dstHost != null)) {
-      try {
-        srcHost = InetAddress.getByName(srcHost).getCanonicalHostName();
-        dstHost = InetAddress.getByName(dstHost).getCanonicalHostName();
-      } catch (UnknownHostException ue) {
-        return false;
-      }
-      if (!srcHost.equals(dstHost)) {
-        return false;
-      }
-    } else if (srcHost == null && dstHost != null) {
-      return false;
-    } else if (srcHost != null && dstHost == null) {
-      return false;
-    }
-    // check for ports
-    if (srcUri.getPort() != dstUri.getPort()) {
-      return false;
-    }
-    return true;
   }
 
   private void copyJar(Path originalJarPath, Path submitJarFile,

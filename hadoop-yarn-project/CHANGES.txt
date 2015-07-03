@@ -317,6 +317,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3834. Scrub debug logging of tokens during resource localization.
     (Chris Nauroth via xgong)
 
+    YARN-3827. Migrate YARN native build to new CMake framework (Alan Burlison
+    via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -574,6 +577,18 @@ Release 2.8.0 - UNRELEASED
     YARN-3770. SerializedException should also handle java.lang.Error on
     de-serialization. (Lavkesh Lahngir via jianhe)
 
+    YARN-3768. ArrayIndexOutOfBoundsException with empty environment variables.
+    (Zhihai Xu via gera)
+
+    YARN-3823. Fix mismatch in default values for 
+    yarn.scheduler.maximum-allocation-vcores property. (Ray Chiang via devaraj)
+
+    YARN-3830. AbstractYarnScheduler.createReleaseCache may try to clean a null
+    attempt. (nijel via devaraj)
+
+    YARN-3875. FSSchedulerNode#reserveResource() doesn't print Application Id
+    properly in log. (Bibin A Chundatt via devaraj)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -585,6 +600,12 @@ Release 2.7.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-3793. Several NPEs when deleting local files on NM recovery (Varun
+    Saxena via jlowe)
+
+    YARN-3508. Prevent processing preemption events on the main RM dispatcher. 
+    (Varun Saxena via wangda)
 
 Release 2.7.1 - UNRELEASED
 

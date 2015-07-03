@@ -67,18 +67,18 @@ public class TestTracing {
 
     String[] expectedSpanNames = {
       "testWriteTraceHooks",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.create",
+      "ClientProtocol#create",
       "ClientNamenodeProtocol#create",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.fsync",
+      "ClientProtocol#fsync",
       "ClientNamenodeProtocol#fsync",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
+      "ClientProtocol#complete",
       "ClientNamenodeProtocol#complete",
       "newStreamForCreate",
       "DFSOutputStream#write",
       "DFSOutputStream#close",
       "dataStreamer",
       "OpWriteBlockProto",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.addBlock",
+      "ClientProtocol#addBlock",
       "ClientNamenodeProtocol#addBlock"
     };
     SetSpanReceiver.assertSpanNamesFound(expectedSpanNames);
@@ -95,11 +95,11 @@ public class TestTracing {
     // and children of them are exception.
     String[] spansInTopTrace = {
       "testWriteTraceHooks",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.create",
+      "ClientProtocol#create",
       "ClientNamenodeProtocol#create",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.fsync",
+      "ClientProtocol#fsync",
       "ClientNamenodeProtocol#fsync",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
+      "ClientProtocol#complete",
       "ClientNamenodeProtocol#complete",
       "newStreamForCreate",
       "DFSOutputStream#write",
@@ -113,7 +113,7 @@ public class TestTracing {
 
     // test for timeline annotation added by HADOOP-11242
     Assert.assertEquals("called",
-        map.get("org.apache.hadoop.hdfs.protocol.ClientProtocol.create")
+        map.get("ClientProtocol#create")
            .get(0).getTimelineAnnotations()
            .get(0).getMessage());
 
@@ -131,7 +131,7 @@ public class TestTracing {
 
     String[] expectedSpanNames = {
       "testReadTraceHooks",
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol.getBlockLocations",
+      "ClientProtocol#getBlockLocations",
       "ClientNamenodeProtocol#getBlockLocations",
       "OpReadBlockProto"
     };

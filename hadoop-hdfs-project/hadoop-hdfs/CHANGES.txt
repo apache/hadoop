@@ -691,6 +691,16 @@ Release 2.8.0 - UNRELEASED
     HDFS-8493. Consolidate truncate() related implementation in a single class.
     (Rakesh R via wheat9)
 
+    HDFS-8635. Migrate HDFS native build to new CMake framework (Alan Burlison
+    via Colin P. McCabe)
+
+    HDFS-8666. Speedup the TestMover tests. (Walter Su via jing9)
+
+    HDFS-8703. Merge refactor of DFSInputStream from ErasureCoding branch
+    (vinayakumarb)
+
+    HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -987,6 +997,12 @@ Release 2.8.0 - UNRELEASED
     Reddy Battula via Arpit Agarwal)
 
     HDFS-8579. Update HDFS usage with missing options
+    (J.Andreina via vinayakumarb)
+
+    HDFS-8706. Fix typo in datanode startup options in HDFSCommands.html.
+    (Brahma Reddy Battula via Arpit Agarwal)
+
+    HDFS-8577. Avoid retrying to recover lease on a file which does not exist
     (J.Andreina via vinayakumarb)
 
 Release 2.7.2 - UNRELEASED

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.LogFactory;
@@ -285,6 +286,14 @@ class Globber {
         (flattenedPatterns.size() <= 1)) {
       return null;
     }
-    return results.toArray(new FileStatus[0]);
+    /*
+     * In general, the results list will already be sorted, since listStatus
+     * returns results in sorted order for many Hadoop filesystems.  However,
+     * not all Hadoop filesystems have this property.  So we sort here in order
+     * to get consistent results.  See HADOOP-10798 for details.
+     */
+    FileStatus ret[] = results.toArray(new FileStatus[0]);
+    Arrays.sort(ret);
+    return ret;
   }
 }

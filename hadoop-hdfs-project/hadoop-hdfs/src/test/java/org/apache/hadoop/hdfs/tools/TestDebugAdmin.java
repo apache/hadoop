@@ -37,6 +37,7 @@ import java.io.PrintStream;
 
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestDebugAdmin {
   private MiniDFSCluster cluster;
@@ -115,5 +116,12 @@ public class TestDebugAdmin {
             "-meta", metaFile.getAbsolutePath(),
             "-block", blockFile.getAbsolutePath()})
     );
+  }
+
+  @Test(timeout = 60000)
+  public void testRecoverLeaseforFileNotFound() throws Exception {
+    assertTrue(runCmd(new String[] {
+        "recoverLease", "-path", "/foo", "-retries", "2" }).contains(
+        "Giving up on recoverLease for /foo after 1 try"));
   }
 }

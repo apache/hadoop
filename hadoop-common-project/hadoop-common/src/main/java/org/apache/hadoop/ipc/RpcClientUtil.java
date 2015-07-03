@@ -210,4 +210,28 @@ public class RpcClientUtil {
     }
     return clazz.getSimpleName() + "#" + method.getName();
   }
+
+  /**
+   * Convert an RPC class method to a string.
+   * The format we want is
+   * 'SecondOutermostClassShortName#OutermostClassShortName'.
+   *
+   * For example, if the full class name is:
+   *   org.apache.hadoop.hdfs.protocol.ClientProtocol.getBlockLocations
+   *
+   * the format we want is:
+   *   ClientProtocol#getBlockLocations
+   */
+  public static String toTraceName(String fullName) {
+    int lastPeriod = fullName.lastIndexOf('.');
+    if (lastPeriod < 0) {
+      return fullName;
+    }
+    int secondLastPeriod = fullName.lastIndexOf('.', lastPeriod - 1);
+    if (secondLastPeriod < 0) {
+      return fullName;
+    }
+    return fullName.substring(secondLastPeriod + 1, lastPeriod) + "#" +
+        fullName.substring(lastPeriod + 1);
+  }
 }
