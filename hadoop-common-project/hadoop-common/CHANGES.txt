@@ -430,6 +430,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
     name using reflection. (lei)
 
+    HADOOP-12173. NetworkTopology::add calls toString always.
+    (Inigo Goiri via cdouglas)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
