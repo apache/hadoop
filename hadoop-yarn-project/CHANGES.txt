@@ -589,6 +589,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3875. FSSchedulerNode#reserveResource() doesn't print Application Id
     properly in log. (Bibin A Chundatt via devaraj)
 
+    YARN-3882. AggregatedLogFormat should close aclScanner and ownerScanner
+    after create them. (zhihai xu via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
