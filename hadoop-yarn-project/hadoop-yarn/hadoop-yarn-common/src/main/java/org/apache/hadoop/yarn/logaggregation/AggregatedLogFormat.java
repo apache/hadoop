@@ -489,18 +489,23 @@ public class AggregatedLogFormat {
      * @throws IOException
      */
     public String getApplicationOwner() throws IOException {
-      TFile.Reader.Scanner ownerScanner = reader.createScanner();
-      LogKey key = new LogKey();
-      while (!ownerScanner.atEnd()) {
-        TFile.Reader.Scanner.Entry entry = ownerScanner.entry();
-        key.readFields(entry.getKeyStream());
-        if (key.toString().equals(APPLICATION_OWNER_KEY.toString())) {
-          DataInputStream valueStream = entry.getValueStream();
-          return valueStream.readUTF();
+      TFile.Reader.Scanner ownerScanner = null;
+      try {
+        ownerScanner = reader.createScanner();
+        LogKey key = new LogKey();
+        while (!ownerScanner.atEnd()) {
+          TFile.Reader.Scanner.Entry entry = ownerScanner.entry();
+          key.readFields(entry.getKeyStream());
+          if (key.toString().equals(APPLICATION_OWNER_KEY.toString())) {
+            DataInputStream valueStream = entry.getValueStream();
+            return valueStream.readUTF();
+          }
+          ownerScanner.advance();
         }
-        ownerScanner.advance();
+        return null;
+      } finally {
+        IOUtils.cleanup(LOG, ownerScanner);
       }
-      return null;
     }
 
     /**
@@ -513,38 +518,42 @@ public class AggregatedLogFormat {
     public Map<ApplicationAccessType, String> getApplicationAcls()
         throws IOException {
       // TODO Seek directly to the key once a comparator is specified.
-      TFile.Reader.Scanner aclScanner = reader.createScanner();
-      LogKey key = new LogKey();
-      Map<ApplicationAccessType, String> acls =
-          new HashMap<ApplicationAccessType, String>();
-      while (!aclScanner.atEnd()) {
-        TFile.Reader.Scanner.Entry entry = aclScanner.entry();
-        key.readFields(entry.getKeyStream());
-        if (key.toString().equals(APPLICATION_ACL_KEY.toString())) {
-          DataInputStream valueStream = entry.getValueStream();
-          while (true) {
-            String appAccessOp = null;
-            String aclString = null;
-            try {
-              appAccessOp = valueStream.readUTF();
-            } catch (EOFException e) {
-              // Valid end of stream.
-              break;
+      TFile.Reader.Scanner aclScanner = null;
+      try {
+        aclScanner = reader.createScanner();
+        LogKey key = new LogKey();
+        Map<ApplicationAccessType, String> acls =
+            new HashMap<ApplicationAccessType, String>();
+        while (!aclScanner.atEnd()) {
+          TFile.Reader.Scanner.Entry entry = aclScanner.entry();
+          key.readFields(entry.getKeyStream());
+          if (key.toString().equals(APPLICATION_ACL_KEY.toString())) {
+            DataInputStream valueStream = entry.getValueStream();
+            while (true) {
+              String appAccessOp = null;
+              String aclString = null;
+              try {
+                appAccessOp = valueStream.readUTF();
+              } catch (EOFException e) {
+                // Valid end of stream.
+                break;
+              }
+              try {
+                aclString = valueStream.readUTF();
+              } catch (EOFException e) {
+                throw new YarnRuntimeException("Error reading ACLs", e);
+              }
+              acls.put(ApplicationAccessType.valueOf(appAccessOp), aclString);
             }
-            try {
-              aclString = valueStream.readUTF();
-            } catch (EOFException e) {
-              throw new YarnRuntimeException("Error reading ACLs", e);
-            }
-            acls.put(ApplicationAccessType.valueOf(appAccessOp), aclString);
           }
-
+          aclScanner.advance();
         }
-        aclScanner.advance();
+        return acls;
+      } finally {
+        IOUtils.cleanup(LOG, aclScanner);
       }
-      return acls;
     }
-    
+
     /**
      * Read the next key and return the value-stream.
      * 
