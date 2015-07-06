@@ -675,6 +675,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12171. Shorten overly-long htrace span names for server (cmccabe)
 
+    HADOOP-12045. Enable LocalFileSystem#setTimes to change atime.
+    (Kazuho Fujii via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
