@@ -12,6 +12,9 @@ Release 2.7.2 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
+    multiple times (zhihai xu via vinayakumarb)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
