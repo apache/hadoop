@@ -678,6 +678,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12045. Enable LocalFileSystem#setTimes to change atime.
     (Kazuho Fujii via cnauroth)
 
+    HADOOP-11974. Fix FIONREAD #include on Solaris (Alan Burlison via Colin P.
+    McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

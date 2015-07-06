@@ -31,7 +31,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h> /* for FIONREAD */
+
+/* For FIONREAD */
+#if defined(__sun)
+#include <sys/filio.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
