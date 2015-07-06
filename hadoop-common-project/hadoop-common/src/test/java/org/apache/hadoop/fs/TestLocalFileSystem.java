@@ -378,7 +378,14 @@ public class TestLocalFileSystem {
     assertTrue(dataFileFound);
     assertTrue(checksumFileFound);
   }
-  
+
+  private void checkTimesStatus(Path path,
+    long expectedModTime, long expectedAccTime) throws IOException {
+    FileStatus status = fileSys.getFileStatus(path);
+    assertEquals(expectedModTime, status.getModificationTime());
+    assertEquals(expectedAccTime, status.getAccessTime());
+  }
+
   @Test(timeout = 1000)
   public void testSetTimes() throws Exception {
     Path path = new Path(TEST_ROOT_DIR, "set-times");
@@ -387,15 +394,24 @@ public class TestLocalFileSystem {
     // test only to the nearest second, as the raw FS may not
     // support millisecond timestamps
     long newModTime = 12345000;
+    long newAccTime = 23456000;
 
     FileStatus status = fileSys.getFileStatus(path);
     assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    long accessTime = status.getAccessTime();
+    assertTrue("check we're actually changing something", newAccTime != status.getAccessTime());
+
+    fileSys.setTimes(path, newModTime, newAccTime);
+    checkTimesStatus(path, newModTime, newAccTime);
+
+    newModTime = 34567000;
 
     fileSys.setTimes(path, newModTime, -1);
-    status = fileSys.getFileStatus(path);
-    assertEquals(newModTime, status.getModificationTime());
-    assertEquals(accessTime, status.getAccessTime());
+    checkTimesStatus(path, newModTime, newAccTime);
+
+    newAccTime = 45678000;
+
+    fileSys.setTimes(path, -1, newAccTime);
+    checkTimesStatus(path, newModTime, newAccTime);
   }
 
   /**

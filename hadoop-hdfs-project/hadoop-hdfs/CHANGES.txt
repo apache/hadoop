@@ -1005,6 +1005,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8577. Avoid retrying to recover lease on a file which does not exist
     (J.Andreina via vinayakumarb)
 
+    HDFS-8686. WebHdfsFileSystem#getXAttr(Path p, final String name) doesn't
+    work if namespace is in capitals (kanaka kumar avvaru via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

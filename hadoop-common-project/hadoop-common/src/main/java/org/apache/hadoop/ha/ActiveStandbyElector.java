@@ -173,7 +173,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private Lock sessionReestablishLockForTests = new ReentrantLock();
   private boolean wantToBeInElection;
-  
+  private boolean monitorLockNodePending = false;
+  private ZooKeeper monitorLockNodeClient;
+
   /**
    * Create a new ActiveStandbyElector object <br/>
    * The elector is created by providing to it the Zookeeper configuration, the
@@ -468,7 +470,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public synchronized void processResult(int rc, String path, Object ctx,
       Stat stat) {
     if (isStaleClient(ctx)) return;
-    
+    monitorLockNodePending = false;
+
     assert wantToBeInElection :
         "Got a StatNode result after quitting election";
 
@@ -744,6 +747,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     return state;
   }
 
+  @VisibleForTesting
+  synchronized boolean isMonitorLockNodePending() {
+    return monitorLockNodePending;
+  }
+
   private boolean reEstablishSession() {
     int connectionRetryCount = 0;
     boolean success = false;
@@ -949,7 +957,13 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   private void monitorLockNodeAsync() {
-    zkClient.exists(zkLockFilePath, 
+    if (monitorLockNodePending && monitorLockNodeClient == zkClient) {
+      LOG.info("Ignore duplicate monitor lock-node request.");
+      return;
+    }
+    monitorLockNodePending = true;
+    monitorLockNodeClient = zkClient;
+    zkClient.exists(zkLockFilePath,
         watcher, this,
         zkClient);
   }

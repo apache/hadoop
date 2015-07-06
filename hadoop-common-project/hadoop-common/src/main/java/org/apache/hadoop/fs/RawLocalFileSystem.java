@@ -33,6 +33,10 @@ import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
@@ -644,9 +648,14 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().isEmpty(); 
     }
     
-    DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
+    DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs)
+      throws IOException {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-          f.lastModified(), new Path(f.getPath()).makeQualified(fs.getUri(),
+          f.lastModified(),
+          Files.readAttributes(f.toPath(),
+            BasicFileAttributes.class).lastAccessTime().toMillis(),
+          null, null, null,
+          new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
     }
     
@@ -758,25 +767,20 @@ public class RawLocalFileSystem extends FileSystem {
   }
  
   /**
-   * Sets the {@link Path}'s last modified time <em>only</em> to the given
-   * valid time.
+   * Sets the {@link Path}'s last modified time and last access time to
+   * the given valid times.
    *
    * @param mtime the modification time to set (only if greater than zero).
-   * @param atime currently ignored.
-   * @throws IOException if setting the last modified time fails.
+   * @param atime the access time to set (only if greater than zero).
+   * @throws IOException if setting the times fails.
    */
   @Override
   public void setTimes(Path p, long mtime, long atime) throws IOException {
-    File f = pathToFile(p);
-    if(mtime >= 0) {
-      if(!f.setLastModified(mtime)) {
-        throw new IOException(
-          "couldn't set last-modified time to " +
-          mtime +
-          " for " +
-          f.getAbsolutePath());
-      }
-    }
+    BasicFileAttributeView view = Files.getFileAttributeView(
+        pathToFile(p).toPath(), BasicFileAttributeView.class);
+    FileTime fmtime = (mtime >= 0) ? FileTime.fromMillis(mtime) : null;
+    FileTime fatime = (atime >= 0) ? FileTime.fromMillis(atime) : null;
+    view.setTimes(fmtime, fatime, null);
   }
 
   @Override

@@ -815,7 +815,8 @@ public class ShuffleHandler extends AuxiliaryService {
         try {
           MapOutputInfo info = mapOutputInfoMap.get(mapId);
           if (info == null) {
-            info = getMapOutputInfo(outputBasePathStr, mapId, reduceId, user);
+            info = getMapOutputInfo(outputBasePathStr + mapId,
+                mapId, reduceId, user);
           }
           lastMap =
               sendMapOutput(ctx, ch, user, mapId,
