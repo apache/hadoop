@@ -1601,7 +1601,7 @@ function verify_patch_file
   # Before building, check to make sure that the patch is valid
   export PATCH
 
-  "${BINDIR}/smart-apply-patch.sh" "${PATCH_DIR}/patch" dryrun
+  "${BINDIR}/smart-apply-patch.sh" --dry-run "${PATCH_DIR}/patch"
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
     add_vote_table -1 patch "The patch command could not apply the patch during dryrun."

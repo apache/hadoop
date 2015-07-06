@@ -11,179 +11,533 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-#
-# Determine if the git diff patch file has prefixes.
-# These files are generated via "git diff" *without* the --no-prefix option.
-#
-# We can apply these patches more easily because we know that the a/ and b/
-# prefixes in the "diff" lines stands for the project root directory.
-# So we don't have to hunt for the project root.
-# And of course, we know that the patch file was generated using git, so we
-# know git apply can handle it properly.
-#
-# Arguments: git diff file name.
-# Return: 0 if it is a git diff with prefix; 1 otherwise.
-#
-has_prefix() {
-  awk '/^diff --git / { if ($3 !~ "^a/" || $4 !~ "^b/") { exit 1 } }
-    /^\+{3}|-{3} / { if ($2 !~ "^[ab]/" && $2 !~ "^/dev/null") { exit 1 } }' "$1"
-  return $?
-}
+# Make sure that bash version meets the pre-requisite
 
-PATCH_FILE=$1
-DRY_RUN=$2
-if [ -z "$PATCH_FILE" ]; then
-  echo usage: $0 patch-file
+if [[ -z "${BASH_VERSINFO}" ]] \
+   || [[ "${BASH_VERSINFO[0]}" -lt 3 ]] \
+   || [[ "${BASH_VERSINFO[0]}" -eq 3 && "${BASH_VERSINFO[1]}" -lt 2 ]]; then
+  echo "bash v3.2+ is required. Sorry."
   exit 1
 fi
 
-TMPDIR=${TMPDIR:-/tmp}
-PATCH=${PATCH:-patch} # allow overriding patch binary
+RESULT=0
 
-# Cleanup handler for temporary files
-TOCLEAN=""
-cleanup() {
-  if [[ -n ${TOCLEAN} ]]; then
-    rm $TOCLEAN
-  fi
-  exit $1
+## @description  Print a message to stderr
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        string
+function yetus_error
+{
+  echo "$*" 1>&2
 }
-trap "cleanup 1" HUP INT QUIT TERM
 
-# Allow passing "-" for stdin patches
-if [ "$PATCH_FILE" == "-" ]; then
-  PATCH_FILE="$TMPDIR/smart-apply.in.$RANDOM"
-  cat /dev/fd/0 > $PATCH_FILE
-  TOCLEAN="$TOCLEAN $PATCH_FILE"
-fi
+## @description  Print a message to stderr if --debug is turned on
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        string
+function yetus_debug
+{
+  if [[ -n "${YETUS_SHELL_SCRIPT_DEBUG}" ]]; then
+    echo "[$(date) DEBUG]: $*" 1>&2
+  fi
+}
 
-ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
-if [[ ${PATCH_FILE} =~ ^http || ${PATCH_FILE} =~ ${ISSUE_RE} ]]; then
-  # Allow downloading of patches
-  PFILE="$TMPDIR/smart-apply.in.$RANDOM"
-  TOCLEAN="$TOCLEAN $PFILE"
-  if [[ ${PATCH_FILE} =~ ^http ]]; then
-    patchURL="${PATCH_FILE}"
-  else # Get URL of patch from JIRA
-    wget -q -O "${PFILE}" "http://issues.apache.org/jira/browse/${PATCH_FILE}"
-    if [[ $? != 0 ]]; then
-      echo "Unable to determine what ${PATCH_FILE} may reference." 1>&2
-      cleanup 1
-    elif [[ $(grep -c 'Patch Available' "${PFILE}") == 0 ]]; then
-      echo "${PATCH_FILE} is not \"Patch Available\".  Exiting." 1>&2
-      cleanup 1
-    fi
-    relativePatchURL=$(grep -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PFILE}" | grep -v -e 'htm[l]*$' | sort | tail -1 | grep -o '/jira/secure/attachment/[0-9]*/[^"]*')
-    patchURL="http://issues.apache.org${relativePatchURL}"
-  fi
-  if [[ -n $DRY_RUN ]]; then
-    echo "Downloading ${patchURL}"
-  fi
-  wget -q -O "${PFILE}" "${patchURL}"
-  if [[ $? != 0 ]]; then
-    echo "${PATCH_FILE} could not be downloaded." 1>&2
-    cleanup 1
-  fi
-  PATCH_FILE="${PFILE}"
-fi
+## @description  Clean the filesystem as appropriate and then exit
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        runresult
+function cleanup_and_exit
+{
+  local result=$1
 
-# Case for git-diff patches
-if grep -q "^diff --git" "${PATCH_FILE}"; then
-  GIT_FLAGS="--binary -v"
-  if has_prefix "$PATCH_FILE"; then
-    GIT_FLAGS="$GIT_FLAGS -p1"
-  else
-    GIT_FLAGS="$GIT_FLAGS -p0"
+  if [[ ${PATCH_DIR} =~ ^/tmp/apply-patch
+    && -d ${PATCH_DIR} ]]; then
+    rm -rf "${PATCH_DIR}"
   fi
-  if [[ -z $DRY_RUN ]]; then
-    GIT_FLAGS="$GIT_FLAGS --stat --apply"
-    echo Going to apply git patch with: git apply "${GIT_FLAGS}"
-  else
-    GIT_FLAGS="$GIT_FLAGS --check"
-  fi
+
   # shellcheck disable=SC2086
-  git apply ${GIT_FLAGS} "${PATCH_FILE}"
+  exit ${result}
+}
+
+## @description  Setup the default global variables
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function setup_defaults
+{
+  PATCHURL=""
+  OSTYPE=$(uname -s)
+
+  # Solaris needs POSIX, not SVID
+  case ${OSTYPE} in
+    SunOS)
+      AWK=${AWK:-/usr/xpg4/bin/awk}
+      SED=${SED:-/usr/xpg4/bin/sed}
+      WGET=${WGET:-wget}
+      GIT=${GIT:-git}
+      GREP=${GREP:-/usr/xpg4/bin/grep}
+      PATCH=${PATCH:-/usr/gnu/bin/patch}
+      DIFF=${DIFF:-/usr/gnu/bin/diff}
+      FILE=${FILE:-file}
+    ;;
+    *)
+      AWK=${AWK:-awk}
+      SED=${SED:-sed}
+      WGET=${WGET:-wget}
+      GIT=${GIT:-git}
+      GREP=${GREP:-grep}
+      PATCH=${PATCH:-patch}
+      DIFF=${DIFF:-diff}
+      FILE=${FILE:-file}
+    ;;
+  esac
+
+  DRYRUNMODE=false
+  PATCH_DIR=/tmp
+  while [[ -e ${PATCH_DIR} ]]; do
+    PATCH_DIR=/tmp/apply-patch-${RANDOM}.${RANDOM}
+  done
+  PATCHMODES=("git" "patch")
+  PATCHMODE=""
+  PATCHPREFIX=0
+}
+
+## @description  Print the usage information
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function yetus_usage
+{
+  echo "Usage: apply-patch.sh [options] patch-file | issue-number | http"
+  echo
+  echo "--debug                If set, then output some extra stuff to stderr"
+  echo "--dry-run              Check for patch viability without applying"
+  echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/apply-patch-(random))"
+  echo
+  echo "Shell binary overrides:"
+  echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
+  echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
+  echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
+  echo "--patch-cmd=<cmd>      The GNU-compatible 'patch' command to use (default 'patch')"
+  echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
+}
+
+## @description  Interpret the command line parameters
+## @audience     private
+## @stability    stable
+## @replaceable  no
+## @params       $@
+## @return       May exit on failure
+function parse_args
+{
+  local i
+
+  for i in "$@"; do
+    case ${i} in
+      --debug)
+        YETUS_SHELL_SCRIPT_DEBUG=true
+      ;;
+      --dry-run)
+        DRYRUNMODE=true
+      ;;
+      --file-cmd=*)
+        FILE=${i#*=}
+      ;;
+      --git-cmd=*)
+        GIT=${i#*=}
+      ;;
+      --grep-cmd=*)
+        GREP=${i#*=}
+      ;;
+      --help|-help|-h|help|--h|--\?|-\?|\?)
+        yetus_usage
+        exit 0
+      ;;
+      --patch-cmd=*)
+        PATCH=${i#*=}
+      ;;
+      --patch-dir=*)
+        PATCH_DIR=${i#*=}
+      ;;
+      --wget-cmd=*)
+        WGET=${i#*=}
+      ;;
+      --*)
+        ## PATCH_OR_ISSUE can't be a --.  So this is probably
+        ## a plugin thing.
+        continue
+      ;;
+      *)
+        PATCH_OR_ISSUE=${i#*=}
+      ;;
+    esac
+  done
+
+  if [[ ! -d ${PATCH_DIR} ]]; then
+    mkdir -p "${PATCH_DIR}"
+    if [[ $? != 0 ]] ; then
+      yetus_error "ERROR: Unable to create ${PATCH_DIR}"
+      cleanup_and_exit 1
+    fi
+  fi
+}
+
+## @description Given a possible patch file, guess if it's a patch file without using smart-apply-patch
+## @audience private
+## @stability evolving
+## @param path to patch file to test
+## @return 0 we think it's a patch file
+## @return 1 we think it's not a patch file
+function guess_patch_file
+{
+  local patch=$1
+  local fileOutput
+
+  yetus_debug "Trying to guess is ${patch} is a patch file."
+  fileOutput=$("${FILE}" "${patch}")
+  if [[ $fileOutput =~ \ diff\  ]]; then
+    yetus_debug "file magic says it's a diff."
+    return 0
+  fi
+  fileOutput=$(head -n 1 "${patch}" | "${GREP}" -E "^(From [a-z0-9]* Mon Sep 17 00:00:00 2001)|(diff .*)|(Index: .*)$")
   if [[ $? == 0 ]]; then
-    cleanup 0
+    yetus_debug "first line looks like a patch file."
+    return 0
   fi
-  echo "git apply failed. Going to apply the patch with: ${PATCH}"
-fi
+  return 1
+}
 
-# Come up with a list of changed files into $TMP
-TMP="$TMPDIR/smart-apply.paths.$RANDOM"
-TOCLEAN="$TOCLEAN $TMP"
+## @description  Given ${PATCH_ISSUE}, determine what type of patch file is in use, and do the
+## @description  necessary work to place it into ${PATCH_DIR}/patch.
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure, may exit
+function locate_patch
+{
+  local notSureIfPatch=false
+  yetus_debug "locate patch"
 
-if $PATCH -p0 -E --dry-run < $PATCH_FILE 2>&1 > $TMP; then
-  PLEVEL=0
-  #if the patch applied at P0 there is the possability that all we are doing
-  # is adding new files and they would apply anywhere. So try to guess the
-  # correct place to put those files.
+  # Allow passing "-" for stdin patches
+  if [[ ${PATCH_OR_ISSUE} == - ]]; then
+    PATCH_FILE="${PATCH_DIR}/patch"
+    cat /dev/fd/0 > "${PATCH_FILE}"
+  elif [[ -f ${PATCH_OR_ISSUE} ]]; then
+    PATCH_FILE="${PATCH_OR_ISSUE}"
+  else
+    if [[ ${PATCH_OR_ISSUE} =~ ^http ]]; then
+      echo "Patch is being downloaded at $(date) from"
+      PATCHURL="${PATCH_OR_ISSUE}"
+    else
+      ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
 
-  TMP2="$TMPDIR/smart-apply.paths.2.$RANDOM"
-  TOCLEAN="$TOCLEAN $TMP2"
+      case $? in
+        0)
+        ;;
+        2)
+          yetus_error "ERROR: .wgetrc/.netrc parsing error."
+          cleanup_and_exit 1
+        ;;
+        3)
+          yetus_error "ERROR: File IO error."
+          cleanup_and_exit 1
+        ;;
+        4)
+          yetus_error "ERROR: URL ${PATCH_OR_ISSUE} is unreachable."
+          cleanup_and_exit 1
+        ;;
+        *)
+          yetus_error "ERROR: Unable to fetch ${PATCH_OR_ISSUE}."
+          cleanup_and_exit 1
+        ;;
+      esac
 
-  egrep '^patching file |^checking file ' $TMP | awk '{print $3}' | grep -v /dev/null | sort -u > $TMP2
+      if [[ -z "${PATCH_FILE}" ]]; then
+        if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
+          if [[ ${JENKINS} == true ]]; then
+            yetus_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+            cleanup_and_exit 1
+          else
+            yetus_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+          fi
+        fi
 
-  if [ ! -s $TMP2 ]; then
-    echo "Error: Patch dryrun couldn't detect changes the patch would make. Exiting."
-    cleanup 1
+        relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
+        PATCHURL="http://issues.apache.org${relativePatchURL}"
+        if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
+          notSureIfPatch=true
+        fi
+        echo "${ISSUE} patch is being downloaded at $(date) from"
+      fi
+    fi
+    if [[ -z "${PATCH_FILE}" ]]; then
+      ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
+      if [[ $? != 0 ]];then
+        yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
+        cleanup_and_exit 1
+      fi
+      PATCH_FILE="${PATCH_DIR}/patch"
+    fi
   fi
 
-  #first off check that all of the files do not exist
-  FOUND_ANY=0
-  for CHECK_FILE in $(cat $TMP2)
-  do
-    if [[ -f $CHECK_FILE ]]; then
-      FOUND_ANY=1
+  if [[ ! -f "${PATCH_DIR}/patch" ]]; then
+    cp "${PATCH_FILE}" "${PATCH_DIR}/patch"
+    if [[ $? == 0 ]] ; then
+      echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
+    else
+      yetus_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      cleanup_and_exit 1
+    fi
+  fi
+
+  if [[ ! -f "${PATCH_DIR}/patch" ]]; then
+    cp "${PATCH_FILE}" "${PATCH_DIR}/patch"
+    if [[ $? == 0 ]] ; then
+      echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
+    else
+      yetus_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      cleanup_and_exit 1
+    fi
+  fi
+
+  if [[ ${notSureIfPatch} == "true" ]]; then
+    guess_patch_file "${PATCH_FILE}"
+    if [[ $? != 0 ]]; then
+      yetus_error "ERROR: ${PATCHURL} is not a patch file."
+      cleanup_and_exit 1
+    else
+      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
+    fi
+  fi
+}
+
+## @description  if patch-level zero, then verify we aren't
+## @description  just adding files
+## @audience     public
+## @stability    stable
+## @param        filename
+## @param        command
+## @param        [..]
+## @replaceable  no
+## @returns      $?
+function verify_zero
+{
+  local logfile=$1
+  shift
+  local dir
+
+  # don't return /dev/null
+  # shellcheck disable=SC2016
+  changed_files1=$(${AWK} 'function p(s){if(s!~"^/dev/null"){print s}}
+    /^diff --git /   { p($3); p($4) }
+    /^(\+\+\+|---) / { p($2) }' "${PATCH_DIR}/patch" | sort -u)
+
+  # maybe we interpreted the patch wrong? check the log file
+  # shellcheck disable=SC2016
+  changed_files2=$(${GREP} -E '^[cC]heck' "${logfile}" \
+    | ${AWK} '{print $3}' \
+    | ${SED} -e 's,\.\.\.$,,g')
+
+  for filename in ${changed_files1} ${changed_files2}; do
+
+    # leading prefix = bad
+    if [[ ${filename} =~ ^(a|b)/ ]]; then
+      return 1
+    fi
+
+    # touching an existing file is proof enough
+    # that pl=0 is good
+    if [[ -f ${filename} ]]; then
+      return 0
+    fi
+
+    dir=$(dirname ${filename} 2>/dev/null)
+    if [[ -n ${dir} && -d ${dir} ]]; then
+      return 0
     fi
   done
 
-  if [[ "$FOUND_ANY" = "0" ]]; then
-    #all of the files are new files so we have to guess where the correct place to put it is.
+  # ¯\_(ツ)_/¯ - no way for us to know, all new files with no prefix!
+  yetus_error "WARNING: Patch only adds files; using patch level ${PATCHPREFIX}"
+  return 0
+}
 
-    # if all of the lines start with a/ or b/, then this is a git patch that
-    # was generated without --no-prefix
-    if ! grep -qv '^a/\|^b/' $TMP2 ; then
-      echo Looks like this is a git patch. Stripping a/ and b/ prefixes
-      echo and incrementing PLEVEL
-      PLEVEL=$[$PLEVEL + 1]
-      sed -i -e 's,^[ab]/,,' $TMP2
+## @description  run the command, sending stdout and stderr to the given filename
+## @audience     public
+## @stability    stable
+## @param        filename
+## @param        command
+## @param        [..]
+## @replaceable  no
+## @returns      $?
+function run_and_redirect
+{
+  local logfile=$1
+  shift
+
+  # to the log
+  echo "${*}" > "${logfile}"
+  # the actual command
+  "${@}" >> "${logfile}" 2>&1
+}
+
+## @description git patch dryrun
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function git_dryrun
+{
+  local prefixsize=${1:-0}
+
+  while [[ ${prefixsize} -lt 4
+    && -z ${PATCHMODE} ]]; do
+    run_and_redirect "${PATCH_DIR}/apply-patch-git-dryrun.log" \
+       "${GIT}" apply --binary -v --check "-p${prefixsize}" "${PATCH_FILE}"
+    if [[ $? == 0 ]]; then
+      PATCHPREFIX=${prefixsize}
+      PATCHMODE=git
+      echo "Verifying the patch:"
+      cat "${PATCH_DIR}/apply-patch-git-dryrun.log"
+      break
     fi
+    ((prefixsize=prefixsize+1))
+  done
 
-    PREFIX_DIRS_AND_FILES=$(cut -d '/' -f 1 $TMP2 | sort -u)
- 
-    # if we are at the project root then nothing more to do
-    if [[ -d hadoop-common-project ]]; then
-      echo Looks like this is being run at project root
-
-    # if all of the lines start with hadoop-common/, hadoop-hdfs/, hadoop-yarn/ or hadoop-mapreduce/, this is
-    # relative to the hadoop root instead of the subproject root, so we need
-    # to chop off another layer
-    elif [[ "$PREFIX_DIRS_AND_FILES" =~ ^(hadoop-common-project|hadoop-hdfs-project|hadoop-yarn-project|hadoop-mapreduce-project)$ ]]; then
-
-      echo Looks like this is relative to project root. Increasing PLEVEL
-      PLEVEL=$[$PLEVEL + 1]
-
-    elif ! echo "$PREFIX_DIRS_AND_FILES" | grep -vxq 'hadoop-common-project\|hadoop-hdfs-project\|hadoop-yarn-project\|hadoop-mapreduce-project' ; then
-      echo Looks like this is a cross-subproject patch. Try applying from the project root
-      cleanup 1
+  if [[ ${prefixsize} -eq 0 ]]; then
+    verify_zero "${PATCH_DIR}/apply-patch-git-dryrun.log"
+    if [[ $? != 0 ]]; then
+      PATCHMODE=""
+      PATCHPREFIX=""
+      git_dryrun 1
     fi
   fi
-elif $PATCH -p1 -E --dry-run < $PATCH_FILE 2>&1 > /dev/null; then
-  PLEVEL=1
-elif $PATCH -p2 -E --dry-run < $PATCH_FILE 2>&1 > /dev/null; then
-  PLEVEL=2
-else
-  echo "The patch does not appear to apply with p0 to p2";
-  cleanup 1;
+}
+
+## @description  patch patch dryrun
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function patch_dryrun
+{
+  local prefixsize=${1:-0}
+
+  while [[ ${prefixsize} -lt 4
+    && -z ${PATCHMODE} ]]; do
+    run_and_redirect "${PATCH_DIR}/apply-patch-patch-dryrun.log" \
+      "${PATCH}" "-p${prefixsize}" -E --dry-run < "${PATCH_FILE}"
+    if [[ $? == 0 ]]; then
+      PATCHPREFIX=${prefixsize}
+      PATCHMODE=patch
+      if [[ ${DRYRUNMODE} == true ]]; then
+        echo "Verifying the patch:"
+        cat "${PATCH_DIR}/apply-patch-patch-dryrun.log"
+      fi
+      break
+    fi
+    ((prefixsize=prefixsize+1))
+  done
+
+  if [[ ${prefixsize} -eq 0 ]]; then
+    verify_zero "${PATCH_DIR}/apply-patch-patch-dryrun.log"
+    if [[ $? != 0 ]]; then
+      PATCHMODE=""
+      PATCHPREFIX=""
+      patch_dryrun 1
+    fi
+  fi
+}
+
+## @description  driver for dryrun methods
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function dryrun
+{
+  local method
+
+  for method in "${PATCHMODES[@]}"; do
+    if declare -f ${method}_dryrun >/dev/null; then
+      "${method}_dryrun"
+    fi
+    if [[ -n ${PATCHMODE} ]]; then
+      break
+    fi
+  done
+
+  if [[ -n ${PATCHMODE} ]]; then
+    RESULT=0
+    return 0
+  fi
+  RESULT=1
+  return 1
+}
+
+## @description  git patch apply
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function git_apply
+{
+  echo "Applying the patch:"
+  run_and_redirect "${PATCH_DIR}/apply-patch-git-apply.log" \
+    "${GIT}" apply --binary -v --stat --apply "-p${PATCHPREFIX}" "${PATCH_FILE}"
+  cat "${PATCH_DIR}/apply-patch-git-apply.log"
+}
+
+
+## @description  patch patch apply
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function patch_apply
+{
+  echo "Applying the patch:"
+  run_and_redirect "${PATCH_DIR}/apply-patch-patch-apply.log" \
+    "${PATCH}" "-p${PATCHPREFIX}" -E < "${PATCH_FILE}"
+  cat "${PATCH_DIR}/apply-patch-patch-apply.log"
+}
+
+
+## @description  driver for patch apply methods
+## @replaceable  no
+## @audience     private
+## @stability    evolving
+function apply
+{
+  if declare -f ${PATCHMODE}_apply >/dev/null; then
+    "${PATCHMODE}_apply"
+    if [[ $? -gt 0 ]]; then
+      RESULT=1
+    else
+      RESULT=0
+    fi
+  else
+    yetus_error "ERROR: Patching method ${PATCHMODE} does not have a way to apply patches!"
+    RESULT=1
+  fi
+}
+
+trap "cleanup_and_exit 1" HUP INT QUIT TERM
+
+setup_defaults
+
+parse_args "$@"
+
+locate_patch
+
+dryrun
+
+if [[ ${RESULT} -gt 0 ]]; then
+  yetus_error "ERROR: Aborting! The patch cannot be verified."
+  cleanup_and_exit ${RESULT}
 fi
 
-# If this is a dry run then exit instead of applying the patch
-if [[ -n $DRY_RUN ]]; then
-  cleanup 0;
+if [[ ${DRYRUNMODE} == false ]]; then
+  apply
 fi
 
-echo Going to apply patch with: $PATCH -p$PLEVEL
-$PATCH -p$PLEVEL -E < $PATCH_FILE
-
-cleanup $?
+cleanup_and_exit ${RESULT}
