@@ -542,6 +542,9 @@ Release 2.7.2 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6425. ShuffleHandler passes wrong "base" parameter to getMapOutputInfo
+    if mapId is not in the cache. (zhihai xu via devaraj)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
