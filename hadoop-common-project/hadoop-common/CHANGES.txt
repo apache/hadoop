@@ -924,6 +924,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
     name using reflection. (Lei (Eddy) Xu)
 
+    HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
+    multiple times (zhihai xu via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
