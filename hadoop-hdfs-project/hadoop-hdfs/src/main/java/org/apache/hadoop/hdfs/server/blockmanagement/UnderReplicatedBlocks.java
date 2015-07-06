@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  *
  * <p/>
  * The policy for choosing which priority to give added blocks
- * is implemented in {@link #getPriority(int, int, int)}.
+ * is implemented in {@link #getPriority(BlockInfo, int, int, int)}.
  * </p>
  * <p>The queue order is as follows:</p>
  * <ol>
@@ -144,14 +144,28 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * @param expectedReplicas expected number of replicas of the block
    * @return the priority for the blocks, between 0 and ({@link #LEVEL}-1)
    */
-  private int getPriority(int curReplicas,
+  private int getPriority(BlockInfo block,
+                          int curReplicas,
                           int decommissionedReplicas,
                           int expectedReplicas) {
     assert curReplicas >= 0 : "Negative replicas!";
     if (curReplicas >= expectedReplicas) {
       // Block has enough copies, but not enough racks
       return QUEUE_REPLICAS_BADLY_DISTRIBUTED;
-    } else if (curReplicas == 0) {
+    }
+    if (block.isStriped()) {
+      BlockInfoStriped sblk = (BlockInfoStriped) block;
+      return getPriorityStriped(curReplicas, decommissionedReplicas,
+          sblk.getRealDataBlockNum(), sblk.getParityBlockNum());
+    } else {
+      return getPriorityContiguous(curReplicas, decommissionedReplicas,
+          expectedReplicas);
+    }
+  }
+
+  private int getPriorityContiguous(int curReplicas, int decommissionedReplicas,
+      int expectedReplicas) {
+    if (curReplicas == 0) {
       // If there are zero non-decommissioned replicas but there are
       // some decommissioned replicas, then assign them highest priority
       if (decommissionedReplicas > 0) {
@@ -160,7 +174,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       //all we have are corrupt blocks
       return QUEUE_WITH_CORRUPT_BLOCKS;
     } else if (curReplicas == 1) {
-      //only on replica -risk of loss
+      // only one replica, highest risk of loss
       // highest priority
       return QUEUE_HIGHEST_PRIORITY;
     } else if ((curReplicas * 3) < expectedReplicas) {
@@ -169,6 +183,27 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
       return QUEUE_VERY_UNDER_REPLICATED;
     } else {
       //add to the normal queue for under replicated blocks
+      return QUEUE_UNDER_REPLICATED;
+    }
+  }
+
+  private int getPriorityStriped(int curReplicas, int decommissionedReplicas,
+      short dataBlkNum, short parityBlkNum) {
+    if (curReplicas < dataBlkNum) {
+      // There are some replicas on decommissioned nodes so it's not corrupted
+      if (curReplicas + decommissionedReplicas >= dataBlkNum) {
+        return QUEUE_HIGHEST_PRIORITY;
+      }
+      return QUEUE_WITH_CORRUPT_BLOCKS;
+    } else if (curReplicas == dataBlkNum) {
+      // highest risk of loss, highest priority
+      return QUEUE_HIGHEST_PRIORITY;
+    } else if ((curReplicas - dataBlkNum) * 3 < parityBlkNum + 1) {
+      // can only afford one replica loss
+      // this is considered very under-replicated
+      return QUEUE_VERY_UNDER_REPLICATED;
+    } else {
+      // add to the normal queue for under replicated blocks
       return QUEUE_UNDER_REPLICATED;
     }
   }
@@ -185,7 +220,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
                            int decomissionedReplicas,
                            int expectedReplicas) {
     assert curReplicas >= 0 : "Negative replicas!";
-    int priLevel = getPriority(curReplicas, decomissionedReplicas,
+    int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
                                expectedReplicas);
     if(priorityQueues.get(priLevel).add(block)) {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS &&
@@ -208,7 +243,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
                               int oldReplicas, 
                               int decommissionedReplicas,
                               int oldExpectedReplicas) {
-    int priLevel = getPriority(oldReplicas,
+    int priLevel = getPriority(block, oldReplicas,
                                decommissionedReplicas,
                                oldExpectedReplicas);
     boolean removedBlock = remove(block, priLevel);
@@ -282,8 +317,10 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
                            int curReplicasDelta, int expectedReplicasDelta) {
     int oldReplicas = curReplicas-curReplicasDelta;
     int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
-    int curPri = getPriority(curReplicas, decommissionedReplicas, curExpectedReplicas);
-    int oldPri = getPriority(oldReplicas, decommissionedReplicas, oldExpectedReplicas);
+    int curPri = getPriority(block, curReplicas, decommissionedReplicas,
+        curExpectedReplicas);
+    int oldPri = getPriority(block, oldReplicas, decommissionedReplicas,
+        oldExpectedReplicas);
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("UnderReplicationBlocks.update " + 
         block +
