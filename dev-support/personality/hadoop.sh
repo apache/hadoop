@@ -183,7 +183,7 @@ function personality_modules
         return
       fi
       ;;
-    releaseaudit)
+    asflicense)
       # this is very fast and provides the full path if we do it from
       # the root of the source
       personality_enqueue_module .
