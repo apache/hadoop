@@ -3155,12 +3155,12 @@ public class BlockManager implements BlockStatsMXBean {
         bc.getStoragePolicyID());
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
         replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
-    if (!storedBlock.isStriped()) {
-      chooseExcessReplicasContiguous(bc, nonExcess, storedBlock,
-          replication, addedNode, delNodeHint, excessTypes);
-    } else {
+    if (storedBlock.isStriped()) {
       chooseExcessReplicasStriped(bc, nonExcess, storedBlock, delNodeHint,
           excessTypes);
+    } else {
+      chooseExcessReplicasContiguous(bc, nonExcess, storedBlock,
+          replication, addedNode, delNodeHint, excessTypes);
     }
   }
 
@@ -3237,9 +3237,6 @@ public class BlockManager implements BlockStatsMXBean {
     assert storedBlock instanceof BlockInfoStriped;
     BlockInfoStriped sblk = (BlockInfoStriped) storedBlock;
     short groupSize = sblk.getTotalBlockNum();
-    if (nonExcess.size() <= groupSize) {
-      return;
-    }
     BlockPlacementPolicy placementPolicy = placementPolicies.getPolicy(true);
     List<DatanodeStorageInfo> empty = new ArrayList<>(0);
 

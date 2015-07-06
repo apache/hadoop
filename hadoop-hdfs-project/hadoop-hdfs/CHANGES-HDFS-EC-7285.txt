@@ -326,3 +326,6 @@
 
     HDFS-8468. 2 RPC calls for every file read in DFSClient#open(..) resulting in
     double Audit log entries (vinayakumarb)
+
+    HDFS-8684. Erasure Coding: fix some block number calculation for striped
+    block. (yliu)

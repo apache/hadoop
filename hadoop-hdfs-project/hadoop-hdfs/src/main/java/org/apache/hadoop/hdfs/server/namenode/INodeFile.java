@@ -814,13 +814,9 @@ public class INodeFile extends INodeWithAdditionalFields
       if (!includesLastUcBlock) {
         size = 0;
       } else if (usePreferredBlockSize4LastUcBlock) {
-        // Striped blocks keeps block group which counts
-        // (data blocks num + parity blocks num). When you
-        // count actual used size by BlockInfoStripedUC must
-        // be multiplied by these blocks number.
         BlockInfoStripedUnderConstruction blockInfoStripedUC
             = (BlockInfoStripedUnderConstruction) blockInfos[last];
-        size = getPreferredBlockSize() * blockInfoStripedUC.getTotalBlockNum();
+        size = getPreferredBlockSize() * blockInfoStripedUC.getDataBlockNum();
       }
     }
     //sum other blocks
