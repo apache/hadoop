@@ -306,4 +306,12 @@ public class BlockManagerTestUtil {
       throws ExecutionException, InterruptedException {
     dm.getDecomManager().runMonitor();
   }
+
+  /**
+   * add block to the replicateBlocks queue of the Datanode
+   */
+  public static void addBlockToBeReplicated(DatanodeDescriptor node,
+      Block block, DatanodeStorageInfo[] targets) {
+    node.addBlockToBeReplicated(block, targets);
+  }
 }
