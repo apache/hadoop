@@ -610,7 +610,7 @@ Release 2.7.2 - UNRELEASED
     YARN-3508. Prevent processing preemption events on the main RM dispatcher. 
     (Varun Saxena via wangda)
 
-Release 2.7.1 - UNRELEASED
+Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
 
