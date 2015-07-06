@@ -413,6 +413,20 @@ class JsonUtilClient {
     return null;
   }
 
+  /** Expecting only single XAttr in the map. return its value */
+  static byte[] getXAttr(final Map<?, ?> json) throws IOException {
+    if (json == null) {
+      return null;
+    }
+
+    Map<String, byte[]> xAttrs = toXAttrs(json);
+    if (xAttrs != null && !xAttrs.values().isEmpty()) {
+      return xAttrs.values().iterator().next();
+    }
+
+    return null;
+  }
+
   static Map<String, byte[]> toXAttrs(final Map<?, ?> json)
       throws IOException {
     if (json == null) {

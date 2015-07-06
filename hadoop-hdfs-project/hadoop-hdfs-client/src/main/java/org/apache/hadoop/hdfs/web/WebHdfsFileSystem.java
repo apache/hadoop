@@ -972,7 +972,7 @@ public class WebHdfsFileSystem extends FileSystem
         new XAttrEncodingParam(XAttrCodec.HEX)) {
       @Override
       byte[] decodeResponse(Map<?, ?> json) throws IOException {
-        return JsonUtilClient.getXAttr(json, name);
+        return JsonUtilClient.getXAttr(json);
       }
     }.run();
   }

@@ -231,6 +231,9 @@ public class TestOfflineImageViewerForXAttr {
           "user.attr1"));
       assertEquals("value1", value);
 
+      value = new String(webhdfs.getXAttr(new Path("/dir1"), "USER.attr1"));
+      assertEquals("value1", value);
+
       Map<String, byte[]> contentMap = webhdfs.getXAttrs(new Path("/dir1"),
           names);
 
