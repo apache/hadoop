@@ -179,7 +179,7 @@ public abstract class  BlockInfo extends Block
    *                      information indicating the index of the block in the
    *                      corresponding block group.
    */
-  abstract boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock);
+  abstract void addStorage(DatanodeStorageInfo storage, Block reportedBlock);
 
   /**
    * Remove {@link DatanodeStorageInfo} location for a block
@@ -191,6 +191,11 @@ public abstract class  BlockInfo extends Block
    * DatanodeStorageInfo's linked list.
    */
   abstract void replaceBlock(BlockInfo newBlock);
+
+  /**
+   * @return true if there is no storage storing the block
+   */
+  abstract boolean hasEmptyStorage();
 
   /**
    * Find specified DatanodeStorageInfo.

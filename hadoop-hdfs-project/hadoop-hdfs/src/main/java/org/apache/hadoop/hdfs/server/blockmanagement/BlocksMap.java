@@ -117,7 +117,7 @@ class BlocksMap {
    * remove it from all data-node lists it belongs to;
    * and remove all data-node locations associated with the block.
    */
-  void removeBlock(Block block) {
+  void removeBlock(BlockInfo block) {
     BlockInfo blockInfo = blocks.remove(block);
     if (blockInfo == null)
       return;
@@ -190,7 +190,7 @@ class BlocksMap {
     // remove block from the data-node list and the node from the block info
     boolean removed = node.removeBlock(info);
 
-    if (info.getDatanode(0) == null     // no datanodes left
+    if (info.hasEmptyStorage()     // no datanodes left
               && info.isDeleted()) {  // does not belong to a file
       blocks.remove(b);  // remove block from the map
     }

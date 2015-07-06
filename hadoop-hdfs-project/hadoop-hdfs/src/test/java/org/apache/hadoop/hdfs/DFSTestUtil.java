@@ -560,7 +560,8 @@ public class DFSTestUtil {
       throws TimeoutException, InterruptedException {
     int count = 0;
     final int ATTEMPTS = 50;
-    int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+    int repls = BlockManagerTestUtil.numCorruptReplicas(ns.getBlockManager(),
+        b.getLocalBlock());
     while (repls != corruptRepls && count < ATTEMPTS) {
       try {
         IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(),
@@ -572,7 +573,8 @@ public class DFSTestUtil {
       count++;
       // check more often so corrupt block reports are not easily missed
       for (int i = 0; i < 10; i++) {
-        repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+        repls = BlockManagerTestUtil.numCorruptReplicas(ns.getBlockManager(),
+            b.getLocalBlock());
         Thread.sleep(100);
         if (repls == corruptRepls) {
           break;

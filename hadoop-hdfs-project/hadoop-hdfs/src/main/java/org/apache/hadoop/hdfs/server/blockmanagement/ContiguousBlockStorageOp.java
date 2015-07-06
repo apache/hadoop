@@ -45,13 +45,12 @@ class ContiguousBlockStorageOp {
     return last;
   }
 
-  static boolean addStorage(BlockInfo b, DatanodeStorageInfo storage) {
+  static void addStorage(BlockInfo b, DatanodeStorageInfo storage) {
     // find the last null node
     int lastNode = ensureCapacity(b, 1);
     b.setStorageInfo(lastNode, storage);
     b.setNext(lastNode, null);
     b.setPrevious(lastNode, null);
-    return true;
   }
 
   static boolean removeStorage(BlockInfo b,
@@ -102,5 +101,9 @@ class ContiguousBlockStorageOp {
           result == DatanodeStorageInfo.AddBlockResult.ADDED,
           "newBlock already exists.");
     }
+  }
+
+  static boolean hasEmptyStorage(BlockInfo b) {
+    return b.getStorageInfo(0) == null;
   }
 }
