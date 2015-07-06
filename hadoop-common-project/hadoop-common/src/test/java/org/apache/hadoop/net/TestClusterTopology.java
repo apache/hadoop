@@ -18,8 +18,10 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.math3.stat.inference.ChiSquareTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -79,12 +81,14 @@ public class TestClusterTopology extends Assert {
   public void testCountNumNodes() throws Exception {
     // create the topology
     NetworkTopology cluster = new NetworkTopology();
-    cluster.add(getNewNode("node1", "/d1/r1"));
+    NodeElement node1 = getNewNode("node1", "/d1/r1");
+    cluster.add(node1);
     NodeElement node2 = getNewNode("node2", "/d1/r2");
     cluster.add(node2);
-    cluster.add(getNewNode("node3", "/d1/r3"));
-    NodeElement node3 = getNewNode("node4", "/d1/r4");
+    NodeElement node3 = getNewNode("node3", "/d1/r3");
     cluster.add(node3);
+    NodeElement node4 = getNewNode("node4", "/d1/r4");
+    cluster.add(node4);
     // create exclude list
     List<Node> excludedNodes = new ArrayList<Node>();
 
@@ -95,7 +99,7 @@ public class TestClusterTopology extends Assert {
     assertEquals("4 nodes should be available with extra excluded Node", 4,
         cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes));
     // add one existing node to exclude list
-    excludedNodes.add(node3);
+    excludedNodes.add(node4);
     assertEquals("excluded nodes with ROOT scope should be considered", 3,
         cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes));
     assertEquals("excluded nodes without ~ scope should be considered", 2,
@@ -112,6 +116,69 @@ public class TestClusterTopology extends Assert {
     // getting count with non-exist scope.
     assertEquals("No nodes should be considered for non-exist scope", 0,
         cluster.countNumOfAvailableNodes("/non-exist", excludedNodes));
+    // remove a node from the cluster
+    cluster.remove(node1);
+    assertEquals("1 node should be available", 1,
+        cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes));
+  }
+
+  /**
+   * Test how well we pick random nodes.
+   */
+  @Test
+  public void testChooseRandom() {
+    // create the topology
+    NetworkTopology cluster = new NetworkTopology();
+    NodeElement node1 = getNewNode("node1", "/d1/r1");
+    cluster.add(node1);
+    NodeElement node2 = getNewNode("node2", "/d1/r2");
+    cluster.add(node2);
+    NodeElement node3 = getNewNode("node3", "/d1/r3");
+    cluster.add(node3);
+    NodeElement node4 = getNewNode("node4", "/d1/r3");
+    cluster.add(node4);
+
+    // Number of iterations to do the test
+    int numIterations = 100;
+
+    // Pick random nodes
+    HashMap<String,Integer> histogram = new HashMap<String,Integer>();
+    for (int i=0; i<numIterations; i++) {
+      String randomNode = cluster.chooseRandom(NodeBase.ROOT).getName();
+      if (!histogram.containsKey(randomNode)) {
+        histogram.put(randomNode, 0);
+      }
+      histogram.put(randomNode, histogram.get(randomNode) + 1);
+    }
+    assertEquals("Random is not selecting all nodes", 4, histogram.size());
+
+    // Check with 99% confidence (alpha=0.01 as confidence = (100 * (1 - alpha)
+    ChiSquareTest chiSquareTest = new ChiSquareTest();
+    double[] expected = new double[histogram.size()];
+    long[] observed = new long[histogram.size()];
+    int j=0;
+    for (Integer occurrence : histogram.values()) {
+      expected[j] = 1.0 * numIterations / histogram.size();
+      observed[j] = occurrence;
+      j++;
+    }
+    boolean chiSquareTestRejected =
+        chiSquareTest.chiSquareTest(expected, observed, 0.01);
+
+    // Check that they have the proper distribution
+    assertFalse("Not choosing nodes randomly", chiSquareTestRejected);
+
+    // Pick random nodes excluding the 2 nodes in /d1/r3
+    histogram = new HashMap<String,Integer>();
+    for (int i=0; i<numIterations; i++) {
+      String randomNode = cluster.chooseRandom("~/d1/r3").getName();
+      if (!histogram.containsKey(randomNode)) {
+        histogram.put(randomNode, 0);
+      }
+      histogram.put(randomNode, histogram.get(randomNode) + 1);
+    }
+    assertEquals("Random is not selecting the nodes it should",
+        2, histogram.size());
   }
 
   private NodeElement getNewNode(String name, String rackLocation) {
