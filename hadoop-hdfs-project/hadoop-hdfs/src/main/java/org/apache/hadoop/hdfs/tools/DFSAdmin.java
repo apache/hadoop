@@ -290,9 +290,15 @@ public class DFSAdmin extends FsShell {
       String storageTypeString =
           StringUtils.popOptionWithArgument("-storageType", parameters);
       if (storageTypeString != null) {
-        this.type = StorageType.parseStorageType(storageTypeString);
+        try {
+          this.type = StorageType.parseStorageType(storageTypeString);
+        } catch (IllegalArgumentException e) {
+          throw new IllegalArgumentException("Storage type "
+              + storageTypeString
+              + " is not available. Available storage types are "
+              + StorageType.getTypesSupportingQuota());
+        }
       }
-      
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
