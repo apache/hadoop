@@ -30,8 +30,8 @@
 
 #define TEST_ROOT "/tmp/test-container-executor"
 #define DONT_TOUCH_FILE "dont-touch-me"
-#define NM_LOCAL_DIRS       TEST_ROOT "/local-1," TEST_ROOT "/local-2," \
-               TEST_ROOT "/local-3," TEST_ROOT "/local-4," TEST_ROOT "/local-5"
+#define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
+               TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
 #define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
 #define ARRAY_SIZE 1000
 

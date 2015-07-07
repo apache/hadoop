@@ -243,8 +243,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                    appId,
                    nmPrivateContainerTokensPath.toUri().getPath().toString(),
-                   StringUtils.join(",", localDirs),
-                   StringUtils.join(",", logDirs)));
+                   StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                       localDirs),
+                   StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                       logDirs)));
 
     File jvm =                                  // use same jvm as parent
       new File(new File(System.getProperty("java.home"), "bin"), "java");
@@ -365,8 +367,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             nmPrivateContainerScriptPath.toUri().getPath().toString(),
             nmPrivateTokensPath.toUri().getPath().toString(),
             pidFilePath.toString(),
-            StringUtils.join(",", localDirs),
-            StringUtils.join(",", logDirs),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                localDirs),
+            StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
+                logDirs),
             resourcesOptions));
 
         if (tcCommandFile != null) {

@@ -278,8 +278,12 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     s.add("c");
     assertEquals("", StringUtils.join(":", s.subList(0, 0)));
     assertEquals("a", StringUtils.join(":", s.subList(0, 1)));
+    assertEquals("", StringUtils.join(':', s.subList(0, 0)));
+    assertEquals("a", StringUtils.join(':', s.subList(0, 1)));
     assertEquals("a:b", StringUtils.join(":", s.subList(0, 2)));
     assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
+    assertEquals("a:b", StringUtils.join(':', s.subList(0, 2)));
+    assertEquals("a:b:c", StringUtils.join(':', s.subList(0, 3)));
   }
   
   @Test (timeout = 30000)
