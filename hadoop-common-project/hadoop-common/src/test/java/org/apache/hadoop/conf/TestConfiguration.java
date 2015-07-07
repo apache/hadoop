@@ -1355,6 +1355,19 @@ public class TestConfiguration extends TestCase {
     // it's expected behaviour.
   }
 
+  public void testNullValueProperties() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setAllowNullValueProperties(true);
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("attr", "value", true);
+    appendProperty("attr", "", true);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals("value", conf.get("attr"));
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
