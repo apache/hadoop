@@ -73,6 +73,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3801. [JDK-8] Exclude jdk.tools from hbase-client and
     hbase-testing-util (Tsuyoshi Ozawa via sjlee)
 
+    YARN-3051. Created storage oriented reader interface for fetching raw entity
+    data and made the filesystem based implementation. (Varun Saxena via zjshen)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
