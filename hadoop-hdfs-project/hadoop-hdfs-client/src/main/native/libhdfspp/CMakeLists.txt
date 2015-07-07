@@ -18,7 +18,7 @@
 
 project (libhdfspp)
 
-add_definitions(-DASIO_STANDALONE)
+add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
 
 if(UNIX)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")

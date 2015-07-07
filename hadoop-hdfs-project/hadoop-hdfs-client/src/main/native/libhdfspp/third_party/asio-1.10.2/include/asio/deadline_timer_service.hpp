@@ -18,6 +18,7 @@
 #include "asio/detail/config.hpp"
 
 #if defined(ASIO_HAS_BOOST_DATE_TIME) \
+  || defined(ASIO_CPP11_DATE_TIME) \
   || defined(GENERATING_DOCUMENTATION)
 
 #include <cstddef>
@@ -166,6 +167,7 @@ private:
 #include "asio/detail/pop_options.hpp"
 
 #endif // defined(ASIO_HAS_BOOST_DATE_TIME)
+       // || defined(ASIO_CPP11_DATE_TIME)
        // || defined(GENERATING_DOCUMENTATION)
 
 #endif // ASIO_DEADLINE_TIMER_SERVICE_HPP
