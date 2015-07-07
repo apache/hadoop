@@ -420,8 +420,6 @@ def main():
   else:
     title=options.title
 
-  haderrors=False
-
   for v in versions:
     vstr=str(v)
     jlist = JiraIter(vstr,projects)
@@ -470,6 +468,14 @@ def main():
     for jira in sorted(jlist):
       if jira.getIncompatibleChange():
         incompatlist.append(jira)
+        if (len(jira.getReleaseNote())==0):
+            warningCount+=1
+
+      if jira.checkVersionString():
+         warningCount+=1
+
+      if jira.checkMissingComponent() or jira.checkMissingAssignee():
+        errorCount+=1
       elif jira.getType() == "Bug":
         buglist.append(jira)
       elif jira.getType() == "Improvement":
@@ -490,7 +496,6 @@ def main():
              notableclean(jira.getSummary()))
 
       if (jira.getIncompatibleChange()) and (len(jira.getReleaseNote())==0):
-        warningCount+=1
         reloutputs.writeKeyRaw(jira.getProject(),"\n---\n\n")
         reloutputs.writeKeyRaw(jira.getProject(), line)
         line ='\n**WARNING: No release note provided for this incompatible change.**\n\n'
@@ -498,11 +503,9 @@ def main():
         reloutputs.writeKeyRaw(jira.getProject(), line)
 
       if jira.checkVersionString():
-          warningCount+=1
           lintMessage += "\nWARNING: Version string problem for %s " % jira.getId()
 
       if (jira.checkMissingComponent() or jira.checkMissingAssignee()):
-          errorCount+=1
           errorMessage=[]
           jira.checkMissingComponent() and errorMessage.append("component")
           jira.checkMissingAssignee() and errorMessage.append("assignee")
@@ -517,12 +520,11 @@ def main():
     if (options.lint is True):
         print lintMessage
         print "======================================="
-        print "%s: Error:%d, Warning:%d \n" % (vstr, errorCount, warningCount)
+        print "Error:%d, Warning:%d \n" % (errorCount, warningCount)
 
-    if (errorCount>0):
-        haderrors=True
-        cleanOutputDir(vstr)
-        continue
+        if (errorCount>0):
+            cleanOutputDir(version)
+            sys.exit(1)
 
     reloutputs.writeAll("\n\n")
     reloutputs.close()
@@ -568,9 +570,6 @@ def main():
 
   if options.index:
     buildindex(title,options.license)
-
-  if haderrors is True:
-    sys.exit(1)
 
 if __name__ == "__main__":
   main()
