@@ -16,6 +16,20 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+project (libhdfspp)
 
-add_subdirectory(libhdfspp)
+add_definitions(-DASIO_STANDALONE)
+
+if(UNIX)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
+endif()
+
+# Mac OS 10.7 and later deprecates most of the methods in OpenSSL.
+# Add -Wno-deprecated-declarations to avoid the warnings.
+if(APPLE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations")
+endif()
+
+include_directories(third_party/gmock-1.7.0)
+
+add_subdirectory(third_party/gmock-1.7.0)
