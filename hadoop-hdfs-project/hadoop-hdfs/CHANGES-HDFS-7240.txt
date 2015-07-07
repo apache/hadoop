@@ -20,3 +20,4 @@
     HDFS-8644. OzoneHandler : Add volume handler. (Anu Engineer via
     Arpit Agarwal)
 
+    HDFS-8654. OzoneHandler : Add ACL support. (Anu Engineer via Arpit Agarwal)
