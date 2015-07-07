@@ -36,6 +36,7 @@ import java.util.List;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class PrivilegedOperation {
+  public final static char LINUX_FILE_PATH_SEPARATOR = '%';
 
   public enum OperationType {
     CHECK_SETUP("--checksetup"),

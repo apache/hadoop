@@ -595,6 +595,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3837. javadocs of TimelineAuthenticationFilterInitializer give wrong
     prefix for auth options. (Bibin A Chundatt via devaraj)
 
+    YARN-2194. Fix bug causing CGroups functionality to fail on RHEL7.
+    (Wei Yan via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
