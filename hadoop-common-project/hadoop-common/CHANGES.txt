@@ -526,6 +526,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
     (Kengo Seki via aajisaka)
 
+    HADOOP-5732. Add SFTP FileSystem. (Ramtin Boustani and Inigo Goiri via
+    cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation
