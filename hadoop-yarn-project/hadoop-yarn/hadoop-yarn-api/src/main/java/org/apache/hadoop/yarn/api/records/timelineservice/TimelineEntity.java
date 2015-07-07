@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records.timelineservice;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
+import org.codehaus.jackson.annotate.JsonSetter;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -335,6 +336,7 @@ public class TimelineEntity {
     }
   }
 
+  @JsonSetter("isrelatedto")
   public void setIsRelatedToEntities(
       Map<String, Set<String>> isRelatedToEntities) {
     if (real == null) {
@@ -423,6 +425,7 @@ public class TimelineEntity {
     }
   }
 
+  @JsonSetter("relatesto")
   public void setRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
     if (real == null) {
       this.relatesToEntities =
@@ -441,6 +444,7 @@ public class TimelineEntity {
     }
   }
 
+  @JsonSetter("createdtime")
   public void setCreatedTime(long createdTime) {
     if (real == null) {
       this.createdTime = createdTime;
@@ -458,6 +462,7 @@ public class TimelineEntity {
     }
   }
 
+  @JsonSetter("modifiedtime")
   public void setModifiedTime(long modifiedTime) {
     if (real == null) {
       this.modifiedTime = modifiedTime;
