@@ -933,6 +933,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
     multiple times (zhihai xu via vinayakumarb)
 
+    HADOOP-12117. Potential NPE from Configuration#loadProperty with
+    allowNullValueProperties set. (zhihai xu via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
