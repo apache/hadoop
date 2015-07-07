@@ -509,7 +509,7 @@ public class TestBlockManager {
         + " even if all available source nodes have reached their replication"
         + " limits below the hard limit.",
         bm.chooseSourceDatanode(
-            bm.getStoredBlock(aBlock),
+            aBlock,
             cntNodes,
             liveNodes,
             new NumberReplicas(),
@@ -519,7 +519,7 @@ public class TestBlockManager {
         + " replication since all available source nodes have reached"
         + " their replication limits.",
         bm.chooseSourceDatanode(
-            bm.getStoredBlock(aBlock),
+            aBlock,
             cntNodes,
             liveNodes,
             new NumberReplicas(),
@@ -532,7 +532,7 @@ public class TestBlockManager {
     assertNull("Does not choose a source node for a highest-priority"
         + " replication when all available nodes exceed the hard limit.",
         bm.chooseSourceDatanode(
-            bm.getStoredBlock(aBlock),
+            aBlock,
             cntNodes,
             liveNodes,
             new NumberReplicas(),
@@ -558,7 +558,7 @@ public class TestBlockManager {
         + " if all available source nodes have reached their replication"
         + " limits below the hard limit.",
         bm.chooseSourceDatanode(
-            bm.getStoredBlock(aBlock),
+            aBlock,
             cntNodes,
             liveNodes,
             new NumberReplicas(),
@@ -572,7 +572,7 @@ public class TestBlockManager {
     assertNull("Does not choose a source decommissioning node for a normal"
         + " replication when all available nodes exceed the hard limit.",
         bm.chooseSourceDatanode(
-            bm.getStoredBlock(aBlock),
+            aBlock,
             cntNodes,
             liveNodes,
             new NumberReplicas(),

@@ -267,8 +267,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
       //record datanodes that have corrupted block replica
-      Collection<DatanodeDescriptor> corruptionRecord =
-          bm.getCorruptReplicas(blockInfo);
+      Collection<DatanodeDescriptor> corruptionRecord = null;
+      if (bm.getCorruptReplicas(block) != null) {
+        corruptionRecord = bm.getCorruptReplicas(block);
+      }
 
       //report block replicas status on datanodes
       for(int idx = (blockInfo.numNodes()-1); idx >= 0; idx--) {
@@ -277,7 +279,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             dn.getNetworkLocation() + " ");
         if (corruptionRecord != null && corruptionRecord.contains(dn)) {
           out.print(CORRUPT_STATUS+"\t ReasonCode: "+
-            bm.getCorruptReason(blockInfo, dn));
+            bm.getCorruptReason(block,dn));
         } else if (dn.isDecommissioned() ){
           out.print(DECOMMISSIONED_STATUS);
         } else if (dn.isDecommissionInProgress()) {
@@ -648,7 +650,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
               LightWeightLinkedSet<BlockInfo> blocksExcess =
                   bm.excessReplicateMap.get(dnDesc.getDatanodeUuid());
               Collection<DatanodeDescriptor> corruptReplicas =
-                  bm.getCorruptReplicas(storedBlock);
+                  bm.getCorruptReplicas(block.getLocalBlock());
               sb.append("(");
               if (dnDesc.isDecommissioned()) {
                 sb.append("DECOMMISSIONED)");
@@ -656,7 +658,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                 sb.append("DECOMMISSIONING)");
               } else if (corruptReplicas != null && corruptReplicas.contains(dnDesc)) {
                 sb.append("CORRUPT)");
-              } else if (blocksExcess != null && blocksExcess.contains(storedBlock)) {
+              } else if (blocksExcess != null && blocksExcess.contains(block.getLocalBlock())) {
                 sb.append("EXCESS)");
               } else if (dnDesc.isStale(this.staleInterval)) {
                 sb.append("STALE_NODE)");

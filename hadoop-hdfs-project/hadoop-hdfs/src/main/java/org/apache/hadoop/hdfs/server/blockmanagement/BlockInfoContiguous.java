@@ -45,8 +45,8 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   @Override
-  void addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
-    ContiguousBlockStorageOp.addStorage(this, storage);
+  boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
+    return ContiguousBlockStorageOp.addStorage(this, storage);
   }
 
   @Override
@@ -72,10 +72,5 @@ public class BlockInfoContiguous extends BlockInfo {
             getBlockCollection().getPreferredBlockReplication(), s, targets);
     ucBlock.setBlockCollection(getBlockCollection());
     return ucBlock;
-  }
-
-  @Override
-  boolean hasEmptyStorage() {
-    return ContiguousBlockStorageOp.hasEmptyStorage(this);
   }
 }

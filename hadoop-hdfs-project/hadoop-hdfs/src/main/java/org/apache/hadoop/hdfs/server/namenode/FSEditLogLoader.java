@@ -1035,7 +1035,7 @@ public class FSEditLogLoader {
         throw new IOException("Trying to remove more than one block from file "
             + path);
       }
-      BlockInfo oldBlock = oldBlocks[oldBlocks.length - 1];
+      Block oldBlock = oldBlocks[oldBlocks.length - 1];
       boolean removed = FSDirWriteFileOp.unprotectedRemoveBlock(
           fsDir, path, iip, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
