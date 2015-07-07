@@ -684,6 +684,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11974. Fix FIONREAD #include on Solaris (Alan Burlison via Colin P.
     McCabe)
 
+    HADOOP-12193. Rename Touchz.java to Touch.java. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
