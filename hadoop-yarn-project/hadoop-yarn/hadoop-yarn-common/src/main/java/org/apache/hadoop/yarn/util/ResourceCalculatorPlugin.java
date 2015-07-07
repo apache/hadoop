@@ -124,6 +124,22 @@ public class ResourceCalculatorPlugin extends Configured {
     return sys.getCpuUsage();
   }
 
+   /**
+   * Obtain the aggregated number of bytes read over the network.
+   * @return total number of bytes read.
+   */
+  public long getNetworkBytesRead() {
+    return sys.getNetworkBytesRead();
+  }
+
+  /**
+   * Obtain the aggregated number of bytes written to the network.
+   * @return total number of bytes written.
+   */
+  public long getNetworkBytesWritten() {
+    return sys.getNetworkBytesWritten();
+  }
+
   /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If
    * class name is null, this method will try and return a memory calculator

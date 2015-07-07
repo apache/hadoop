@@ -178,4 +178,19 @@ public class SysInfoWindows extends SysInfo {
     refreshIfNeeded();
     return cpuUsage;
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesRead() {
+    // TODO unimplemented
+    return 0L;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesWritten() {
+    // TODO unimplemented
+    return 0L;
+  }
+
 }

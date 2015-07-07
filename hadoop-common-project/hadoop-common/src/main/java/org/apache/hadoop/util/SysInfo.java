@@ -108,4 +108,16 @@ public abstract class SysInfo {
    */
   public abstract float getCpuUsage();
 
+  /**
+   * Obtain the aggregated number of bytes read over the network.
+   * @return total number of bytes read.
+   */
+  public abstract long getNetworkBytesRead();
+
+  /**
+   * Obtain the aggregated number of bytes written to the network.
+   * @return total number of bytes written.
+   */
+  public abstract long getNetworkBytesWritten();
+
 }

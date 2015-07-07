@@ -44,8 +44,10 @@ public class TestSysInfoLinux {
     public FakeLinuxResourceCalculatorPlugin(String procfsMemFile,
                                              String procfsCpuFile,
                                              String procfsStatFile,
+			                                       String procfsNetFile,
                                              long jiffyLengthInMillis) {
-      super(procfsMemFile, procfsCpuFile, procfsStatFile, jiffyLengthInMillis);
+      super(procfsMemFile, procfsCpuFile, procfsStatFile, procfsNetFile,
+          jiffyLengthInMillis);
     }
     @Override
     long getCurrentTime() {
@@ -61,14 +63,17 @@ public class TestSysInfoLinux {
   private static final String FAKE_MEMFILE;
   private static final String FAKE_CPUFILE;
   private static final String FAKE_STATFILE;
+  private static final String FAKE_NETFILE;
   private static final long FAKE_JIFFY_LENGTH = 10L;
   static {
     int randomNum = (new Random()).nextInt(1000000000);
     FAKE_MEMFILE = TEST_ROOT_DIR + File.separator + "MEMINFO_" + randomNum;
     FAKE_CPUFILE = TEST_ROOT_DIR + File.separator + "CPUINFO_" + randomNum;
     FAKE_STATFILE = TEST_ROOT_DIR + File.separator + "STATINFO_" + randomNum;
+    FAKE_NETFILE = TEST_ROOT_DIR + File.separator + "NETINFO_" + randomNum;
     plugin = new FakeLinuxResourceCalculatorPlugin(FAKE_MEMFILE, FAKE_CPUFILE,
                                                    FAKE_STATFILE,
+                                                   FAKE_NETFILE,
                                                    FAKE_JIFFY_LENGTH);
   }
   static final String MEMINFO_FORMAT =
@@ -140,6 +145,17 @@ public class TestSysInfoLinux {
     "processes 26414943\n" +
     "procs_running 1\n" +
     "procs_blocked 0\n";
+
+  static final String NETINFO_FORMAT =
+    "Inter-|   Receive                                                |  Transmit\n"+
+    "face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets"+
+    "errs drop fifo colls carrier compressed\n"+
+    "   lo: 42236310  563003    0    0    0     0          0         0 42236310  563003    " +
+    "0    0    0     0       0          0\n"+
+    " eth0: %d 3452527    0    0    0     0          0    299787 %d 1866280    0    0    " +
+    "0     0       0          0\n"+
+    " eth1: %d 3152521    0    0    0     0          0    219781 %d 1866290    0    0    " +
+    "0     0       0          0\n";
 
   /**
    * Test parsing /proc/stat and /proc/cpuinfo
@@ -320,4 +336,26 @@ public class TestSysInfoLinux {
       IOUtils.closeQuietly(fWriter);
     }
   }
+
+  /**
+   * Test parsing /proc/net/dev
+   * @throws IOException
+   */
+  @Test
+  public void parsingProcNetFile() throws IOException {
+    long numBytesReadIntf1 = 2097172468L;
+    long numBytesWrittenIntf1 = 1355620114L;
+    long numBytesReadIntf2 = 1097172460L;
+    long numBytesWrittenIntf2 = 1055620110L;
+    File tempFile = new File(FAKE_NETFILE);
+    tempFile.deleteOnExit();
+    FileWriter fWriter = new FileWriter(FAKE_NETFILE);
+    fWriter.write(String.format(NETINFO_FORMAT,
+                            numBytesReadIntf1, numBytesWrittenIntf1,
+                            numBytesReadIntf2, numBytesWrittenIntf2));
+    fWriter.close();
+    assertEquals(plugin.getNetworkBytesRead(), numBytesReadIntf1 + numBytesReadIntf2);
+    assertEquals(plugin.getNetworkBytesWritten(), numBytesWrittenIntf1 + numBytesWrittenIntf2);
+  }
+
 }
