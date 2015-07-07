@@ -83,9 +83,22 @@ public class SysInfoLinux extends SysInfo {
                       "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
   private CpuTimeTracker cpuTimeTracker;
 
+  /**
+   * Pattern for parsing /proc/net/dev.
+   */
+  private static final String PROCFS_NETFILE = "/proc/net/dev";
+  private static final Pattern PROCFS_NETFILE_FORMAT =
+      Pattern .compile("^[ \t]*([a-zA-Z]+[0-9]*):" +
+               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
+               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
+               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
+               "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+).*");
+
+
   private String procfsMemFile;
   private String procfsCpuFile;
   private String procfsStatFile;
+  private String procfsNetFile;
   private long jiffyLengthInMillis;
 
   private long ramSize = 0;
@@ -98,6 +111,8 @@ public class SysInfoLinux extends SysInfo {
   /* number of physical cores on the system. */
   private int numCores = 0;
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
+  private long numNetBytesRead = 0L; // aggregated bytes read from network
+  private long numNetBytesWritten = 0L; // aggregated bytes written to network
 
   private boolean readMemInfoFile = false;
   private boolean readCpuInfoFile = false;
@@ -130,7 +145,7 @@ public class SysInfoLinux extends SysInfo {
 
   public SysInfoLinux() {
     this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT,
-        JIFFY_LENGTH_IN_MILLIS);
+         PROCFS_NETFILE, JIFFY_LENGTH_IN_MILLIS);
   }
 
   /**
@@ -139,16 +154,19 @@ public class SysInfoLinux extends SysInfo {
    * @param procfsMemFile fake file for /proc/meminfo
    * @param procfsCpuFile fake file for /proc/cpuinfo
    * @param procfsStatFile fake file for /proc/stat
+   * @param procfsNetFile fake file for /proc/net/dev
    * @param jiffyLengthInMillis fake jiffy length value
    */
   @VisibleForTesting
   public SysInfoLinux(String procfsMemFile,
                                        String procfsCpuFile,
                                        String procfsStatFile,
+                                       String procfsNetFile,
                                        long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
+    this.procfsNetFile = procfsNetFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
   }
@@ -338,6 +356,61 @@ public class SysInfoLinux extends SysInfo {
     }
   }
 
+  /**
+   * Read /proc/net/dev file, parse and calculate amount
+   * of bytes read and written through the network.
+   */
+  private void readProcNetInfoFile() {
+
+    numNetBytesRead = 0L;
+    numNetBytesWritten = 0L;
+
+    // Read "/proc/net/dev" file
+    BufferedReader in;
+    InputStreamReader fReader;
+    try {
+      fReader = new InputStreamReader(
+          new FileInputStream(procfsNetFile), Charset.forName("UTF-8"));
+      in = new BufferedReader(fReader);
+    } catch (FileNotFoundException f) {
+      return;
+    }
+
+    Matcher mat;
+    try {
+      String str = in.readLine();
+      while (str != null) {
+        mat = PROCFS_NETFILE_FORMAT.matcher(str);
+        if (mat.find()) {
+          assert mat.groupCount() >= 16;
+
+          // ignore loopback interfaces
+          if (mat.group(1).equals("lo")) {
+            str = in.readLine();
+            continue;
+          }
+          numNetBytesRead += Long.parseLong(mat.group(2));
+          numNetBytesWritten += Long.parseLong(mat.group(10));
+        }
+        str = in.readLine();
+      }
+    } catch (IOException io) {
+      LOG.warn("Error reading the stream " + io);
+    } finally {
+      // Close the streams
+      try {
+        fReader.close();
+        try {
+          in.close();
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + in);
+        }
+      } catch (IOException i) {
+        LOG.warn("Error closing the stream " + fReader);
+      }
+    }
+  }
+
   /** {@inheritDoc} */
   @Override
   public long getPhysicalMemorySize() {
@@ -405,6 +478,20 @@ public class SysInfoLinux extends SysInfo {
     return overallCpuUsage;
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesRead() {
+    readProcNetInfoFile();
+    return numNetBytesRead;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getNetworkBytesWritten() {
+    readProcNetInfoFile();
+    return numNetBytesWritten;
+  }
+
   /**
    * Test the {@link SysInfoLinux}.
    *
@@ -424,6 +511,10 @@ public class SysInfoLinux extends SysInfo {
     System.out.println("CPU frequency (kHz) : " + plugin.getCpuFrequency());
     System.out.println("Cumulative CPU time (ms) : " +
             plugin.getCumulativeCpuTime());
+    System.out.println("Total network read (bytes) : "
+            + plugin.getNetworkBytesRead());
+    System.out.println("Total network written (bytes) : "
+            + plugin.getNetworkBytesWritten());
     try {
       // Sleep so we can compute the CPU usage
       Thread.sleep(500L);

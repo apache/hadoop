@@ -693,6 +693,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12180. Move ResourceCalculatorPlugin from YARN to Common. 
     (Chris Douglas via kasha)
 
+    HADOOP-12210. Collect network usage on the node (Robert Grandl via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
