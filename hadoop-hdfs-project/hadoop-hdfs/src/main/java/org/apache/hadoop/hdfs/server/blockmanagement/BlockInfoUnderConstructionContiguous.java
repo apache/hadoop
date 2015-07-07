@@ -55,10 +55,6 @@ public class BlockInfoUnderConstructionContiguous extends
    * Convert an under construction block to a complete block.
    *
    * @return BlockInfo - a complete block.
-   * @throws IOException if the state of the block
-   * (the generation stamp and the length) has not been committed by
-   * the client or it does not have at least a minimal number of replicas
-   * reported from data-nodes.
    */
   @Override
   public BlockInfoContiguous convertToCompleteBlock() {
@@ -69,8 +65,8 @@ public class BlockInfoUnderConstructionContiguous extends
   }
 
   @Override
-  boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
-    return ContiguousBlockStorageOp.addStorage(this, storage);
+  void addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
+    ContiguousBlockStorageOp.addStorage(this, storage);
   }
 
   @Override
@@ -86,6 +82,11 @@ public class BlockInfoUnderConstructionContiguous extends
   @Override
   void replaceBlock(BlockInfo newBlock) {
     ContiguousBlockStorageOp.replaceBlock(this, newBlock);
+  }
+
+  @Override
+  boolean hasEmptyStorage() {
+    return ContiguousBlockStorageOp.hasEmptyStorage(this);
   }
 
   @Override

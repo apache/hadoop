@@ -678,6 +678,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12045. Enable LocalFileSystem#setTimes to change atime.
     (Kazuho Fujii via cnauroth)
 
+    HADOOP-11974. Fix FIONREAD #include on Solaris (Alan Burlison via Colin P.
+    McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -927,8 +930,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
     name using reflection. (Lei (Eddy) Xu)
 
-    HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
-    multiple times (zhihai xu via vinayakumarb)
+    HADOOP-12117. Potential NPE from Configuration#loadProperty with
+    allowNullValueProperties set. (zhihai xu via vinayakumarb)
 
 Release 2.7.2 - UNRELEASED
 
@@ -942,7 +945,10 @@ Release 2.7.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.7.1 - UNRELEASED
+    HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
+    multiple times (zhihai xu via vinayakumarb)
+
+Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
 

@@ -2735,14 +2735,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       to.put(entry.getKey(), entry.getValue());
     }
   }
-  
+
   private void loadProperty(Properties properties, String name, String attr,
       String value, boolean finalParameter, String[] source) {
     if (value != null || allowNullValueProperties) {
+      if (value == null) {
+        value = DEFAULT_STRING_CHECK;
+      }
       if (!finalParameters.contains(attr)) {
-        if (value==null && allowNullValueProperties) {
-          value = DEFAULT_STRING_CHECK;
-        }
         properties.setProperty(attr, value);
         if(source != null) {
           updatingResource.put(attr, source);

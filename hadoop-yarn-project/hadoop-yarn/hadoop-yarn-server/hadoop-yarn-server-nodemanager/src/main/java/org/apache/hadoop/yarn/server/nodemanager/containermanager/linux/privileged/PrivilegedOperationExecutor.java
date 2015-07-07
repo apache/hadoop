@@ -234,7 +234,7 @@ public class PrivilegedOperationExecutor {
 
       if (noneArgsOnly == false) {
         //We have already appended at least one tasks file.
-        finalOpArg.append(",");
+        finalOpArg.append(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR);
         finalOpArg.append(tasksFile);
       } else {
         finalOpArg.append(tasksFile);

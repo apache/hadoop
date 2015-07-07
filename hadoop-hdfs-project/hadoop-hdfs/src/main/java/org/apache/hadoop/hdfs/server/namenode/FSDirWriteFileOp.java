@@ -71,7 +71,7 @@ class FSDirWriteFileOp {
   private FSDirWriteFileOp() {}
   static boolean unprotectedRemoveBlock(
       FSDirectory fsd, String path, INodesInPath iip, INodeFile fileNode,
-      Block block) throws IOException {
+      BlockInfo block) throws IOException {
     // modify file-> block and blocksMap
     // fileNode should be under construction
     BlockInfoUnderConstruction uc = fileNode.removeLastBlock(block);
@@ -136,7 +136,9 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       // Remove the block from the pending creates list
-      if (!unprotectedRemoveBlock(fsd, src, iip, file, localBlock)) {
+      BlockInfo storedBlock = fsd.getBlockManager().getStoredBlock(localBlock);
+      if (storedBlock != null &&
+          !unprotectedRemoveBlock(fsd, src, iip, file, storedBlock)) {
         return;
       }
     } finally {

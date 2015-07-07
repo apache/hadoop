@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -409,10 +410,11 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
     if (isCpuWeightEnabled()) {
       sb.append(pathForCgroup(CONTROLLER_CPU, containerName) + "/tasks");
-      sb.append(",");
+      sb.append(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR);
     }
 
-    if (sb.charAt(sb.length() - 1) == ',') {
+    if (sb.charAt(sb.length() - 1) ==
+        PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR) {
       sb.deleteCharAt(sb.length() - 1);
     }
 
