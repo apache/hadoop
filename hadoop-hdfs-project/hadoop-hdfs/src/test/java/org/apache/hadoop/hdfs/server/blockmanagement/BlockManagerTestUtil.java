@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -88,7 +87,7 @@ public class BlockManagerTestUtil {
       final Block b) {
     final Set<String> rackSet = new HashSet<String>(0);
     final Collection<DatanodeDescriptor> corruptNodes = 
-       getCorruptReplicas(blockManager).getNodes(blockManager.getStoredBlock(b));
+       getCorruptReplicas(blockManager).getNodes(b);
     for(DatanodeStorageInfo storage : blockManager.blocksMap.getStorages(b)) {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
@@ -306,9 +305,5 @@ public class BlockManagerTestUtil {
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
     dm.getDecomManager().runMonitor();
-  }
-
-  public static int numCorruptReplicas(BlockManager bm, Block block) {
-    return bm.corruptReplicas.numCorruptReplicas(bm.getStoredBlock(block));
   }
 }

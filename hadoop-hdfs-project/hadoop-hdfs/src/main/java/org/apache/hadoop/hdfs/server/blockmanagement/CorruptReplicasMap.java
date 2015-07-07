@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.Server;
 
@@ -46,12 +46,8 @@ public class CorruptReplicasMap{
     CORRUPTION_REPORTED  // client or datanode reported the corruption
   }
 
-  /**
-   * Used to track corrupted replicas (for contiguous block) or internal blocks
-   * (for striped block) and the corresponding DataNodes. For a striped block,
-   * the key here is the striped block group object stored in the blocksMap.
-   */
-  private final SortedMap<BlockInfo, Map<DatanodeDescriptor, Reason>> corruptReplicasMap = new TreeMap<>();
+  private final SortedMap<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
+    new TreeMap<Block, Map<DatanodeDescriptor, Reason>>();
 
   /**
    * Mark the block belonging to datanode as corrupt.
@@ -61,21 +57,21 @@ public class CorruptReplicasMap{
    * @param reason a textual reason (for logging purposes)
    * @param reasonCode the enum representation of the reason
    */
-  void addToCorruptReplicasMap(BlockInfo blk, DatanodeDescriptor dn,
+  void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
       String reason, Reason reasonCode) {
     Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
     if (nodes == null) {
-      nodes = new HashMap<>();
+      nodes = new HashMap<DatanodeDescriptor, Reason>();
       corruptReplicasMap.put(blk, nodes);
     }
-
+    
     String reasonText;
     if (reason != null) {
       reasonText = " because " + reason;
     } else {
       reasonText = "";
     }
-
+    
     if (!nodes.keySet().contains(dn)) {
       NameNode.blockStateChangeLog.info(
           "BLOCK NameSystem.addToCorruptReplicasMap: {} added as corrupt on "
@@ -96,7 +92,7 @@ public class CorruptReplicasMap{
    *
    * @param blk Block to be removed
    */
-  void removeFromCorruptReplicasMap(BlockInfo blk) {
+  void removeFromCorruptReplicasMap(Block blk) {
     if (corruptReplicasMap != null) {
       corruptReplicasMap.remove(blk);
     }
@@ -109,13 +105,12 @@ public class CorruptReplicasMap{
    * @return true if the removal is successful; 
              false if the replica is not in the map
    */ 
-  boolean removeFromCorruptReplicasMap(BlockInfo blk,
-      DatanodeDescriptor datanode) {
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
     return removeFromCorruptReplicasMap(blk, datanode, Reason.ANY);
   }
 
-  boolean removeFromCorruptReplicasMap(BlockInfo blk,
-      DatanodeDescriptor datanode, Reason reason) {
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode,
+      Reason reason) {
     Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
     if (datanodes==null)
       return false;
@@ -144,9 +139,11 @@ public class CorruptReplicasMap{
    * @param blk Block for which nodes are requested
    * @return collection of nodes. Null if does not exists
    */
-  Collection<DatanodeDescriptor> getNodes(BlockInfo blk) {
-    Map<DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
-    return nodes != null ? nodes.keySet() : null;
+  Collection<DatanodeDescriptor> getNodes(Block blk) {
+    Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
+    if (nodes == null)
+      return null;
+    return nodes.keySet();
   }
 
   /**
@@ -156,12 +153,12 @@ public class CorruptReplicasMap{
    * @param node DatanodeDescriptor which holds the replica
    * @return true if replica is corrupt, false if does not exists in this map
    */
-  boolean isReplicaCorrupt(BlockInfo blk, DatanodeDescriptor node) {
+  boolean isReplicaCorrupt(Block blk, DatanodeDescriptor node) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     return ((nodes != null) && (nodes.contains(node)));
   }
 
-  int numCorruptReplicas(BlockInfo blk) {
+  int numCorruptReplicas(Block blk) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     return (nodes == null) ? 0 : nodes.size();
   }
@@ -171,9 +168,9 @@ public class CorruptReplicasMap{
   }
 
   /**
-   * Return a range of corrupt replica block ids. Up to numExpectedBlocks
+   * Return a range of corrupt replica block ids. Up to numExpectedBlocks 
    * blocks starting at the next block after startingBlockId are returned
-   * (fewer if numExpectedBlocks blocks are unavailable). If startingBlockId
+   * (fewer if numExpectedBlocks blocks are unavailable). If startingBlockId 
    * is null, up to numExpectedBlocks blocks are returned from the beginning.
    * If startingBlockId cannot be found, null is returned.
    *
@@ -184,39 +181,44 @@ public class CorruptReplicasMap{
    * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
    *
    */
-  @VisibleForTesting
   long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
                                    Long startingBlockId) {
     if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
       return null;
     }
-    Iterator<BlockInfo> blockIt = corruptReplicasMap.keySet().iterator();
+    
+    Iterator<Block> blockIt = corruptReplicasMap.keySet().iterator();
+    
     // if the starting block id was specified, iterate over keys until
     // we find the matching block. If we find a matching block, break
-    // to leave the iterator on the next block after the specified block.
+    // to leave the iterator on the next block after the specified block. 
     if (startingBlockId != null) {
       boolean isBlockFound = false;
       while (blockIt.hasNext()) {
-        BlockInfo b = blockIt.next();
+        Block b = blockIt.next();
         if (b.getBlockId() == startingBlockId) {
           isBlockFound = true;
-          break;
+          break; 
         }
       }
+      
       if (!isBlockFound) {
         return null;
       }
     }
 
-    ArrayList<Long> corruptReplicaBlockIds = new ArrayList<>();
+    ArrayList<Long> corruptReplicaBlockIds = new ArrayList<Long>();
+
     // append up to numExpectedBlocks blockIds to our list
     for(int i=0; i<numExpectedBlocks && blockIt.hasNext(); i++) {
       corruptReplicaBlockIds.add(blockIt.next().getBlockId());
     }
+    
     long[] ret = new long[corruptReplicaBlockIds.size()];
     for(int i=0; i<ret.length; i++) {
       ret[i] = corruptReplicaBlockIds.get(i);
     }
+    
     return ret;
   }
 
@@ -227,7 +229,7 @@ public class CorruptReplicasMap{
    * @param node datanode that contains this corrupted replica
    * @return reason
    */
-  String getCorruptReason(BlockInfo block, DatanodeDescriptor node) {
+  String getCorruptReason(Block block, DatanodeDescriptor node) {
     Reason reason = null;
     if(corruptReplicasMap.containsKey(block)) {
       if (corruptReplicasMap.get(block).containsKey(node)) {

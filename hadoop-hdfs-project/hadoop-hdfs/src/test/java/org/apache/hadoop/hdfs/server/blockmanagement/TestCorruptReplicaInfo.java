@@ -48,19 +48,20 @@ public class TestCorruptReplicaInfo {
   private static final Log LOG = 
                            LogFactory.getLog(TestCorruptReplicaInfo.class);
   
-  private final Map<Long, BlockInfo> block_map = new HashMap<>();
+  private final Map<Long, Block> block_map =
+    new HashMap<Long, Block>();  
     
   // Allow easy block creation by block id
   // Return existing block if one with same block id already exists
-  private BlockInfo getBlock(Long block_id) {
+  private Block getBlock(Long block_id) {
     if (!block_map.containsKey(block_id)) {
-      block_map.put(block_id,
-          new BlockInfoContiguous(new Block(block_id, 0, 0), (short) 1));
+      block_map.put(block_id, new Block(block_id,0,0));
     }
+    
     return block_map.get(block_id);
   }
   
-  private BlockInfo getBlock(int block_id) {
+  private Block getBlock(int block_id) {
     return getBlock((long)block_id);
   }
   
@@ -81,7 +82,7 @@ public class TestCorruptReplicaInfo {
       // create a list of block_ids. A list is used to allow easy validation of the
       // output of getCorruptReplicaBlockIds
       int NUM_BLOCK_IDS = 140;
-      List<Long> block_ids = new LinkedList<>();
+      List<Long> block_ids = new LinkedList<Long>();
       for (int i=0;i<NUM_BLOCK_IDS;i++) {
         block_ids.add((long)i);
       }
@@ -129,7 +130,7 @@ public class TestCorruptReplicaInfo {
   }
   
   private static void addToCorruptReplicasMap(CorruptReplicasMap crm,
-      BlockInfo blk, DatanodeDescriptor dn) {
+      Block blk, DatanodeDescriptor dn) {
     crm.addToCorruptReplicasMap(blk, dn, "TEST", Reason.NONE);
   }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -273,17 +274,18 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
           "No blocks found, lease removed.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;
-    for (ReplicaUnderConstruction replica : replicas) {
+    for (int i = 0; i < replicas.size(); i++) {
       // Check if all replicas have been tried or not.
-      if (replica.isAlive()) {
-        allLiveReplicasTriedAsPrimary = allLiveReplicasTriedAsPrimary
-            && replica.getChosenAsPrimary();
+      if (replicas.get(i).isAlive()) {
+        allLiveReplicasTriedAsPrimary =
+            (allLiveReplicasTriedAsPrimary &&
+                replicas.get(i).getChosenAsPrimary());
       }
     }
     if (allLiveReplicasTriedAsPrimary) {
       // Just set all the replicas to be chosen whether they are alive or not.
-      for (ReplicaUnderConstruction replica : replicas) {
-        replica.setChosenAsPrimary(false);
+      for (int i = 0; i < replicas.size(); i++) {
+        replicas.get(i).setChosenAsPrimary(false);
       }
     }
     long mostRecentLastUpdate = 0;
@@ -343,6 +345,10 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
    * Convert an under construction block to a complete block.
    *
    * @return a complete block.
+   * @throws IOException
+   *           if the state of the block (the generation stamp and the length)
+   *           has not been committed by the client or it does not have at
+   *           least a minimal number of replicas reported from data-nodes.
    */
   public abstract BlockInfo convertToCompleteBlock();
 
@@ -380,8 +386,8 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{UCState=").append(blockUCState).append(", truncateBlock=")
-      .append(truncateBlock)
+    sb.append("{UCState=").append(blockUCState)
+      .append(", truncateBlock=" + truncateBlock)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
     if (replicas != null) {
