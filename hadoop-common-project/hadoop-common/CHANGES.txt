@@ -686,6 +686,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12193. Rename Touchz.java to Touch.java. (wang)
 
+    HADOOP-12195. Add annotation to package-info.java file to workaround
+    MCOMPILER-205. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
