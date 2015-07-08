@@ -328,26 +328,20 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <protocCommand>${protoc.path}</protocCommand>
               <imports>
                 <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/../hadoop-hdfs-client/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>ClientDatanodeProtocol.proto</include>
-                  <include>ClientNamenodeProtocol.proto</include>
                   <include>DatanodeProtocol.proto</include>
                   <include>HAZKInfo.proto</include>
                   <include>InterDatanodeProtocol.proto</include>
                   <include>JournalProtocol.proto</include>
                   <include>NamenodeProtocol.proto</include>
                   <include>QJournalProtocol.proto</include>
-                  <include>acl.proto</include>
-                  <include>xattr.proto</include>
-                  <include>datatransfer.proto</include>
+                  <include>editlog.proto</include>
                   <include>fsimage.proto</include>
-                  <include>hdfs.proto</include>
-                  <include>encryption.proto</include>
-                  <include>inotify.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
