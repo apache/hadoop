@@ -722,6 +722,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12194. Support for incremental generation in the protoc plugin.
     (wang)
 
+    HADOOP-11878. FileContext#fixRelativePart should check for not null for a
+    more informative exception. (Brahma Reddy Battula via kasha)
+
   BUG FIXES
 
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there

@@ -59,6 +59,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
+import com.google.common.base.Preconditions;
+
 /**
  * The FileContext class provides an interface for users of the Hadoop
  * file system. It exposes a number of file system operations, e.g. create,
@@ -262,6 +264,7 @@ public class FileContext {
    * has been deliberately declared private.
    */
   Path fixRelativePart(Path p) {
+    Preconditions.checkNotNull(p, "path cannot be null");
     if (p.isUriPathAbsolute()) {
       return p;
     } else {
