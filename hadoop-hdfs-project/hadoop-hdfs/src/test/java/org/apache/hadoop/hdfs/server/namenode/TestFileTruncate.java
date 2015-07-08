@@ -62,9 +62,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestFileTruncate {
@@ -90,8 +89,8 @@ public class TestFileTruncate {
 
  private Path parent;
 
-  @BeforeClass
-  public static void startUp() throws IOException {
+  @Before
+  public void setUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BLOCK_SIZE);
@@ -105,18 +104,13 @@ public class TestFileTruncate {
         .waitSafeMode(true)
         .build();
     fs = cluster.getFileSystem();
+    parent = new Path("/test");
   }
 
-  @AfterClass
-  public static void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     if(fs != null)      fs.close();
     if(cluster != null) cluster.shutdown();
-  }
-
-  @Before
-  public void setup() throws IOException {
-    parent = new Path("/test");
-    fs.delete(parent, true);
   }
 
   /**
