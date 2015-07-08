@@ -230,8 +230,6 @@ Trunk (Unreleased)
     HADOOP-11142. Remove hdfs dfs reference from file system shell
     documentation (Kengo Seki via aw)
 
-    HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
-
     HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
 
   BUG FIXES

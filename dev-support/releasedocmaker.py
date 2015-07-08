@@ -87,15 +87,8 @@ def notableclean(str):
   str=str.rstrip()
   return str
 
-# clean output dir
-def cleanOutputDir(dir):
-    files = os.listdir(dir)
-    for name in files:
-        os.remove(os.path.join(dir,name))
-    os.rmdir(dir)
-
 def mstr(obj):
-  if (obj is None):
+  if (obj == None):
     return ""
   return unicode(obj)
 
@@ -155,7 +148,7 @@ class Jira:
     return mstr(self.fields['description'])
 
   def getReleaseNote(self):
-    if (self.notes is None):
+    if (self.notes == None):
       field = self.parent.fieldIdMap['Release Note']
       if (self.fields.has_key(field)):
         self.notes=mstr(self.fields[field])
@@ -166,14 +159,14 @@ class Jira:
   def getPriority(self):
     ret = ""
     pri = self.fields['priority']
-    if(pri is not None):
+    if(pri != None):
       ret = pri['name']
     return mstr(ret)
 
   def getAssignee(self):
     ret = ""
     mid = self.fields['assignee']
-    if(mid is not None):
+    if(mid != None):
       ret = mid['displayName']
     return mstr(ret)
 
@@ -189,21 +182,21 @@ class Jira:
   def getType(self):
     ret = ""
     mid = self.fields['issuetype']
-    if(mid is not None):
+    if(mid != None):
       ret = mid['name']
     return mstr(ret)
 
   def getReporter(self):
     ret = ""
     mid = self.fields['reporter']
-    if(mid is not None):
+    if(mid != None):
       ret = mid['displayName']
     return mstr(ret)
 
   def getProject(self):
     ret = ""
     mid = self.fields['project']
-    if(mid is not None):
+    if(mid != None):
       ret = mid['key']
     return mstr(ret)
 
@@ -221,7 +214,7 @@ class Jira:
     return False
 
   def getIncompatibleChange(self):
-    if (self.incompat is None):
+    if (self.incompat == None):
       field = self.parent.fieldIdMap['Hadoop Flags']
       self.reviewed=False
       self.incompat=False
@@ -233,24 +226,6 @@ class Jira:
             if hf['value'] == "Reviewed":
               self.reviewed=True
     return self.incompat
-
-  def checkMissingComponent(self):
-      if (len(self.fields['components'])>0):
-          return False
-      return True
-
-  def checkMissingAssignee(self):
-      if (self.fields['assignee'] is not None):
-          return False
-      return True
-
-  def checkVersionString(self):
-      field = self.parent.fieldIdMap['Fix Version/s']
-      for h in self.fields[field]:
-          found = re.match('^((\d+)(\.\d+)*).*$|^(\w+\-\d+)$', h['name'])
-          if not found:
-              return True
-      return False
 
   def getReleaseDate(self,version):
     for j in range(len(self.fields['fixVersions'])):
@@ -364,11 +339,9 @@ def main():
              help="build an index file")
   parser.add_option("-u","--usetoday", dest="usetoday", action="store_true",
              help="use current date for unreleased versions")
-  parser.add_option("-n","--lint", dest="lint", action="store_true",
-             help="use lint flag to exit on failures")
   (options, args) = parser.parse_args()
 
-  if (options.versions is None):
+  if (options.versions == None):
     options.versions = []
 
   if (len(args) > 2):
@@ -423,9 +396,6 @@ def main():
   reloutputs.writeAll(relhead)
   choutputs.writeAll(chhead)
 
-  errorCount=0
-  warningCount=0
-  lintMessage=""
   incompatlist=[]
   buglist=[]
   improvementlist=[]
@@ -438,14 +408,6 @@ def main():
   for jira in sorted(jlist):
     if jira.getIncompatibleChange():
       incompatlist.append(jira)
-      if (len(jira.getReleaseNote())==0):
-          warningCount+=1
-
-    if jira.checkVersionString():
-       warningCount+=1
-
-    if jira.checkMissingComponent() or jira.checkMissingAssignee():
-      errorCount+=1
     elif jira.getType() == "Bug":
       buglist.append(jira)
     elif jira.getType() == "Improvement":
@@ -469,32 +431,14 @@ def main():
       reloutputs.writeKeyRaw(jira.getProject(),"\n---\n\n")
       reloutputs.writeKeyRaw(jira.getProject(), line)
       line ='\n**WARNING: No release note provided for this incompatible change.**\n\n'
-      lintMessage += "\nWARNING: incompatible change %s lacks release notes." % (notableclean(jira.getId()))
+      print 'WARNING: incompatible change %s lacks release notes.' % (notableclean(jira.getId()))
       reloutputs.writeKeyRaw(jira.getProject(), line)
-
-    if jira.checkVersionString():
-        lintMessage += "\nWARNING: Version string problem for %s " % jira.getId()
-
-    if (jira.checkMissingComponent() or jira.checkMissingAssignee()):
-        errorMessage=[]
-        jira.checkMissingComponent() and errorMessage.append("component")
-        jira.checkMissingAssignee() and errorMessage.append("assignee")
-        lintMessage += "\nERROR: missing %s for %s " %  (" and ".join(errorMessage) , jira.getId())
 
     if (len(jira.getReleaseNote())>0):
       reloutputs.writeKeyRaw(jira.getProject(),"\n---\n\n")
       reloutputs.writeKeyRaw(jira.getProject(), line)
       line ='\n%s\n\n' % (tableclean(jira.getReleaseNote()))
       reloutputs.writeKeyRaw(jira.getProject(), line)
-
-  if (options.lint is True):
-      print lintMessage
-      print "======================================="
-      print "Error:%d, Warning:%d \n" % (errorCount, warningCount)
-
-      if (errorCount>0):
-          cleanOutputDir(version)
-          sys.exit(1)
 
   reloutputs.writeAll("\n\n")
   reloutputs.close()
