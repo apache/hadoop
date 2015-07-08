@@ -719,6 +719,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12172. FsShell mkdir -p makes an unnecessary check for the existence
     of the parent. (cnauroth)
 
+    HADOOP-12194. Support for incremental generation in the protoc plugin.
+    (wang)
+
   BUG FIXES
 
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
