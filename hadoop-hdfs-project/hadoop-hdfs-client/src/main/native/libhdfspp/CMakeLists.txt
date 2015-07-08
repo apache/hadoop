@@ -18,6 +18,9 @@
 
 project (libhdfspp)
 
+find_package(Protobuf REQUIRED)
+find_package(Threads)
+
 add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
 
 if(UNIX)
@@ -30,6 +33,13 @@ if(APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations")
 endif()
 
-include_directories(third_party/gmock-1.7.0)
+include_directories(
+  include
+  lib
+  ${PROJECT_BINARY_DIR}/lib/proto
+  third_party/asio-1.10.2/include
+  third_party/gmock-1.7.0
+)
 
 add_subdirectory(third_party/gmock-1.7.0)
+add_subdirectory(lib)
