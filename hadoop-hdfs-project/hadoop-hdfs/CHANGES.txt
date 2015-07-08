@@ -707,6 +707,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8620. Clean up the checkstyle warinings about ClientProtocol.
     (Takanobu Asanuma via wheat9)
 
+    HDFS-8712. Remove 'public' and 'abstracta modifiers in FsVolumeSpi and
+    FsDatasetSpi (Lei (Eddy) Xu via vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
