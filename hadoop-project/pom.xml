@@ -666,6 +666,11 @@
         <version>2.0.0-M5</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.sshd</groupId>
+        <artifactId>sshd-core</artifactId>
+        <version>0.14.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.ftpserver</groupId>
         <artifactId>ftplet-api</artifactId>
         <version>1.0.0</version>

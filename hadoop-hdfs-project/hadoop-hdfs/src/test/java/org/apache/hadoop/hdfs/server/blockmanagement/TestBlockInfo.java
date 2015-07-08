@@ -63,7 +63,9 @@ public class TestBlockInfo {
 
     final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo("storageID", "127.0.0.1");
 
-    blockInfo.addStorage(storage, blockInfo);
+    boolean added = blockInfo.addStorage(storage, blockInfo);
+
+    Assert.assertTrue(added);
     Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
   }
 
@@ -71,7 +73,7 @@ public class TestBlockInfo {
   public void testCopyConstructor() {
     BlockInfo old = new BlockInfoContiguous((short) 3);
     try {
-      BlockInfo copy = new BlockInfoContiguous(old);
+      BlockInfo copy = new BlockInfoContiguous((BlockInfoContiguous)old);
       assertEquals(old.getBlockCollection(), copy.getBlockCollection());
       assertEquals(old.getCapacity(), copy.getCapacity());
     } catch (Exception e) {
@@ -108,8 +110,8 @@ public class TestBlockInfo {
     final int MAX_BLOCKS = 10;
 
     DatanodeStorageInfo dd = DFSTestUtil.createDatanodeStorageInfo("s1", "1.1.1.1");
-    ArrayList<Block> blockList = new ArrayList<>(MAX_BLOCKS);
-    ArrayList<BlockInfo> blockInfoList = new ArrayList<>();
+    ArrayList<Block> blockList = new ArrayList<Block>(MAX_BLOCKS);
+    ArrayList<BlockInfo> blockInfoList = new ArrayList<BlockInfo>();
     int headIndex;
     int curIndex;
 

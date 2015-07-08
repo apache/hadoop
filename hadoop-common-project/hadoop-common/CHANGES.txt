@@ -230,8 +230,6 @@ Trunk (Unreleased)
     HADOOP-11142. Remove hdfs dfs reference from file system shell
     documentation (Kengo Seki via aw)
 
-    HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
-
     HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
 
   BUG FIXES
@@ -526,6 +524,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
     (Kengo Seki via aajisaka)
 
+    HADOOP-5732. Add SFTP FileSystem. (Ramtin Boustani and Inigo Goiri via
+    cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation
@@ -680,6 +681,11 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11974. Fix FIONREAD #include on Solaris (Alan Burlison via Colin P.
     McCabe)
+
+    HADOOP-12193. Rename Touchz.java to Touch.java. (wang)
+
+    HADOOP-12195. Add annotation to package-info.java file to workaround
+    MCOMPILER-205. (wang)
 
   OPTIMIZATIONS
 

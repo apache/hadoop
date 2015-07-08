@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 
 /**
- * Unix touch like commands 
+ * Unix touch like commands
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

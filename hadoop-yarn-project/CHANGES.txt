@@ -598,6 +598,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2194. Fix bug causing CGroups functionality to fail on RHEL7.
     (Wei Yan via vvasudev)
 
+    YARN-3892. Fixed NPE on RMStateStore#serviceStop when
+    CapacityScheduler#serviceInit fails. (Bibin A Chundatt via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -615,6 +618,8 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3508. Prevent processing preemption events on the main RM dispatcher. 
     (Varun Saxena via wangda)
+
+    YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
 
 Release 2.7.1 - 2015-07-06 
 
