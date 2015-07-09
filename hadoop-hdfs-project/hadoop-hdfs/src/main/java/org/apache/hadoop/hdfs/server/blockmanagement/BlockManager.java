@@ -3690,17 +3690,19 @@ public class BlockManager {
   }
 
   public BlockInfo getStoredBlock(Block block) {
-    BlockInfo info = null;
-    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
-      info = blocksMap.getStoredBlock(
-          new Block(BlockIdManager.convertToStripedID(block.getBlockId())));
-      if ((info == null) && hasNonEcBlockUsingStripedID){
-        info = blocksMap.getStoredBlock(block);
-      }
-    } else {
-      info = blocksMap.getStoredBlock(block);
+    if (!BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      return blocksMap.getStoredBlock(block);
     }
-    return info;
+    if (!hasNonEcBlockUsingStripedID) {
+      return blocksMap.getStoredBlock(
+          new Block(BlockIdManager.convertToStripedID(block.getBlockId())));
+    }
+    BlockInfo info = blocksMap.getStoredBlock(block);
+    if (info != null) {
+      return info;
+    }
+    return blocksMap.getStoredBlock(
+        new Block(BlockIdManager.convertToStripedID(block.getBlockId())));
   }
 
   /** updates a block in under replication queue */

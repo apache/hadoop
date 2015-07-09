@@ -338,3 +338,6 @@
 
     HDFS-8563. Erasure Coding: fsck handles file smaller than a full stripe.
     (Walter Su via jing9)
+
+    HDFS-8484. Erasure coding: Two contiguous blocks occupy IDs belong to same
+    striped group. (Walter Su via jing9)
