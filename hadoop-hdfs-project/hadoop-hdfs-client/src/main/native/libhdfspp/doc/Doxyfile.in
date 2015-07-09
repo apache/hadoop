@@ -8,6 +8,7 @@ BUILTIN_STL_SUPPORT    = YES
 
 INPUT                  = @PROJECT_SOURCE_DIR@/doc/mainpage.dox \
                          @PROJECT_SOURCE_DIR@/include/libhdfspp \
+                         @PROJECT_SOURCE_DIR@/lib/common/continuation \
 
 INPUT_ENCODING         = UTF-8
 RECURSIVE              = NO
