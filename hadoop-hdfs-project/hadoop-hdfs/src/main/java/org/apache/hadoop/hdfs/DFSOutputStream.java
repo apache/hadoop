@@ -459,7 +459,7 @@ public class DFSOutputStream extends FSOutputSummer
    * write filled up its partial chunk. Tell the summer to generate full
    * crc chunks from now on.
    */
-  private void adjustChunkBoundary() {
+  protected void adjustChunkBoundary() {
     if (streamer.getAppendChunk() &&
         streamer.getBytesCurBlock() % bytesPerChecksum == 0) {
       streamer.setAppendChunk(false);

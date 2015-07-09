@@ -332,3 +332,6 @@
 
     HDFS-8461. Erasure coding: fix priority level of UnderReplicatedBlocks for
     striped block. (Walter Su via jing9)
+
+    HDFS-8719. Erasure Coding: client generates too many small packets when
+    writing parity data. (Li Bo via waltersu4549)
