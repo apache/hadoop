@@ -217,8 +217,10 @@ public class TestPrivilegedOperationExecutor {
           .squashCGroupOperations(ops);
       String expected = new StringBuffer
           (PrivilegedOperation.CGROUP_ARG_PREFIX)
-          .append(cGroupTasks1).append(',')
-          .append(cGroupTasks2).append(',')
+          .append(cGroupTasks1).append(PrivilegedOperation
+              .LINUX_FILE_PATH_SEPARATOR)
+          .append(cGroupTasks2).append(PrivilegedOperation
+              .LINUX_FILE_PATH_SEPARATOR)
           .append(cGroupTasks3).toString();
 
       //We expect axactly one argument
