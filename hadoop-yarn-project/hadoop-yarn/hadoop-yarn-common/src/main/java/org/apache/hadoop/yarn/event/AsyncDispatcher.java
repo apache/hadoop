@@ -55,9 +55,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   // stop functionality.
   private volatile boolean drainEventsOnStop = false;
 
-  // Indicates all the remaining dispatcher's events on stop have been drained
-  // and processed.
-  private volatile boolean drained = true;
   private Object waitForDrained = new Object();
 
   // For drainEventsOnStop enabled only, block newly coming events into the
@@ -84,13 +81,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       @Override
       public void run() {
         while (!stopped && !Thread.currentThread().isInterrupted()) {
-          drained = eventQueue.isEmpty();
           // blockNewEvents is only set when dispatcher is draining to stop,
           // adding this check is to avoid the overhead of acquiring the lock
           // and calling notify every time in the normal run of the loop.
           if (blockNewEvents) {
             synchronized (waitForDrained) {
-              if (drained) {
+              if (eventQueue.isEmpty()) {
                 waitForDrained.notify();
               }
             }
@@ -139,7 +135,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       blockNewEvents = true;
       LOG.info("AsyncDispatcher is draining to stop, igonring any new events.");
       synchronized (waitForDrained) {
-        while (!drained && eventHandlingThread.isAlive()) {
+        while (!eventQueue.isEmpty() && eventHandlingThread.isAlive()) {
           waitForDrained.wait(1000);
           LOG.info("Waiting for AsyncDispatcher to drain. Thread state is :" +
               eventHandlingThread.getState());
@@ -223,12 +219,21 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     return handlerInstance;
   }
 
+  @VisibleForTesting
+  protected boolean hasPendingEvents() {
+    return !eventQueue.isEmpty();
+  }
+
+  @VisibleForTesting
+  protected boolean isEventThreadWaiting() {
+    return eventHandlingThread.getState() == Thread.State.WAITING;
+  }
+
   class GenericEventHandler implements EventHandler<Event> {
     public void handle(Event event) {
       if (blockNewEvents) {
         return;
       }
-      drained = false;
 
       /* all this method does is enqueue all the events onto the queue */
       int qSize = eventQueue.size();
@@ -284,10 +289,5 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         System.exit(-1);
       }
     };
-  }
-
-  @VisibleForTesting
-  protected boolean isDrained() {
-    return this.drained;
   }
 }
