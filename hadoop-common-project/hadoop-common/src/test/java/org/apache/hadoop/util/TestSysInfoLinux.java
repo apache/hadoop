@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.util;
+package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
@@ -31,30 +30,30 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * A JUnit test to test {@link LinuxResourceCalculatorPlugin}
+ * A JUnit test to test {@link SysInfoLinux}
  * Create the fake /proc/ information and verify the parsing and calculation
  */
-public class TestLinuxResourceCalculatorPlugin {
+public class TestSysInfoLinux {
   /**
    * LinuxResourceCalculatorPlugin with a fake timer
    */
   static class FakeLinuxResourceCalculatorPlugin extends
-      LinuxResourceCalculatorPlugin {
-    
-	  long currentTime = 0;
-	  public FakeLinuxResourceCalculatorPlugin(String procfsMemFile,
-			                                       String procfsCpuFile,
-			                                       String procfsStatFile,
-			                                       long jiffyLengthInMillis) {
-	    super(procfsMemFile, procfsCpuFile, procfsStatFile, jiffyLengthInMillis);
-	  }
-	  @Override
-	  long getCurrentTime() {
-	    return currentTime;
-	  }
-	  public void advanceTime(long adv) {
-	    currentTime += adv * this.getJiffyLengthInMillis();
-	  }
+      SysInfoLinux {
+
+    long currentTime = 0;
+    public FakeLinuxResourceCalculatorPlugin(String procfsMemFile,
+                                             String procfsCpuFile,
+                                             String procfsStatFile,
+                                             long jiffyLengthInMillis) {
+      super(procfsMemFile, procfsCpuFile, procfsStatFile, jiffyLengthInMillis);
+    }
+    @Override
+    long getCurrentTime() {
+      return currentTime;
+    }
+    public void advanceTime(long adv) {
+      currentTime += adv * this.getJiffyLengthInMillis();
+    }
   }
   private static final FakeLinuxResourceCalculatorPlugin plugin;
   private static String TEST_ROOT_DIR = new Path(System.getProperty(
@@ -72,36 +71,36 @@ public class TestLinuxResourceCalculatorPlugin {
                                                    FAKE_STATFILE,
                                                    FAKE_JIFFY_LENGTH);
   }
-  static final String MEMINFO_FORMAT = 
-	  "MemTotal:      %d kB\n" +
-	  "MemFree:         %d kB\n" +
-	  "Buffers:        138244 kB\n" +
-	  "Cached:         947780 kB\n" +
-	  "SwapCached:     142880 kB\n" +
-	  "Active:        3229888 kB\n" +
-	  "Inactive:       %d kB\n" +
-	  "SwapTotal:     %d kB\n" +
-	  "SwapFree:      %d kB\n" +
-	  "Dirty:          122012 kB\n" +
-	  "Writeback:           0 kB\n" +
-	  "AnonPages:     2710792 kB\n" +
-	  "Mapped:          24740 kB\n" +
-	  "Slab:           132528 kB\n" +
-	  "SReclaimable:   105096 kB\n" +
-	  "SUnreclaim:      27432 kB\n" +
-	  "PageTables:      11448 kB\n" +
-	  "NFS_Unstable:        0 kB\n" +
-	  "Bounce:              0 kB\n" +
-	  "CommitLimit:   4125904 kB\n" +
-	  "Committed_AS:  4143556 kB\n" +
-	  "VmallocTotal: 34359738367 kB\n" +
-	  "VmallocUsed:      1632 kB\n" +
-	  "VmallocChunk: 34359736375 kB\n" +
-	  "HugePages_Total:     0\n" +
-	  "HugePages_Free:      0\n" +
-	  "HugePages_Rsvd:      0\n" +
-	  "Hugepagesize:     2048 kB";
-  
+  static final String MEMINFO_FORMAT =
+    "MemTotal:      %d kB\n" +
+    "MemFree:         %d kB\n" +
+    "Buffers:        138244 kB\n" +
+    "Cached:         947780 kB\n" +
+    "SwapCached:     142880 kB\n" +
+    "Active:        3229888 kB\n" +
+    "Inactive:       %d kB\n" +
+    "SwapTotal:     %d kB\n" +
+    "SwapFree:      %d kB\n" +
+    "Dirty:          122012 kB\n" +
+    "Writeback:           0 kB\n" +
+    "AnonPages:     2710792 kB\n" +
+    "Mapped:          24740 kB\n" +
+    "Slab:           132528 kB\n" +
+    "SReclaimable:   105096 kB\n" +
+    "SUnreclaim:      27432 kB\n" +
+    "PageTables:      11448 kB\n" +
+    "NFS_Unstable:        0 kB\n" +
+    "Bounce:              0 kB\n" +
+    "CommitLimit:   4125904 kB\n" +
+    "Committed_AS:  4143556 kB\n" +
+    "VmallocTotal: 34359738367 kB\n" +
+    "VmallocUsed:      1632 kB\n" +
+    "VmallocChunk: 34359736375 kB\n" +
+    "HugePages_Total:     0\n" +
+    "HugePages_Free:      0\n" +
+    "HugePages_Rsvd:      0\n" +
+    "Hugepagesize:     2048 kB";
+
   static final String CPUINFO_FORMAT =
     "processor : %s\n" +
     "vendor_id : AuthenticAMD\n" +
@@ -128,8 +127,8 @@ public class TestLinuxResourceCalculatorPlugin {
     "cache_alignment : 64\n" +
     "address sizes : 40 bits physical, 48 bits virtual\n" +
     "power management: ts fid vid ttp";
-  
-  static final String STAT_FILE_FORMAT = 
+
+  static final String STAT_FILE_FORMAT =
     "cpu  %d %d %d 1646495089 831319 48713 164346 0\n" +
     "cpu0 15096055 30805 3823005 411456015 206027 13 14269 0\n" +
     "cpu1 14760561 89890 6432036 408707910 456857 48074 130857 0\n" +
@@ -141,7 +140,7 @@ public class TestLinuxResourceCalculatorPlugin {
     "processes 26414943\n" +
     "procs_running 1\n" +
     "procs_blocked 0\n";
-  
+
   /**
    * Test parsing /proc/stat and /proc/cpuinfo
    * @throws IOException
@@ -164,7 +163,7 @@ public class TestLinuxResourceCalculatorPlugin {
     fWriter.close();
     assertEquals(plugin.getNumProcessors(), numProcessors);
     assertEquals(plugin.getCpuFrequency(), cpuFrequencyKHz);
-    
+
     // Write fake /proc/stat file.
     long uTime = 54972994;
     long nTime = 188860;
@@ -183,13 +182,13 @@ public class TestLinuxResourceCalculatorPlugin {
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
     assertEquals(plugin.getCpuUsage(), 6.25F, 0.0);
-    
+
     // Advance the time and sample again. This time, we call getCpuUsage() only.
     uTime += 600L;
     plugin.advanceTime(300L);
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCpuUsage(), 25F, 0.0);
-    
+
     // Advance very short period of time (one jiffy length).
     // In this case, CPU usage should not be updated.
     uTime += 1L;
@@ -199,7 +198,7 @@ public class TestLinuxResourceCalculatorPlugin {
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
     assertEquals(plugin.getCpuUsage(), 25F, 0.0); // CPU usage is not updated.
   }
-  
+
   /**
    * Write information to fake /proc/stat file
    */
@@ -209,7 +208,7 @@ public class TestLinuxResourceCalculatorPlugin {
     fWriter.write(String.format(STAT_FILE_FORMAT, uTime, nTime, sTime));
     fWriter.close();
   }
-  
+
   /**
    * Test parsing /proc/meminfo
    * @throws IOException
@@ -226,7 +225,7 @@ public class TestLinuxResourceCalculatorPlugin {
     FileWriter fWriter = new FileWriter(FAKE_MEMFILE);
     fWriter.write(String.format(MEMINFO_FORMAT,
       memTotal, memFree, inactive, swapTotal, swapFree));
-    
+
     fWriter.close();
     assertEquals(plugin.getAvailablePhysicalMemorySize(),
                  1024L * (memFree + inactive));

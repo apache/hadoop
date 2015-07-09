@@ -40,9 +40,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.SysInfoLinux;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
@@ -64,8 +64,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   public static final String PROCFS_STAT_FILE = "stat";
   public static final String PROCFS_CMDLINE_FILE = "cmdline";
-  public static final long PAGE_SIZE;
-  public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
+  public static final long PAGE_SIZE = SysInfoLinux.PAGE_SIZE;
+  public static final long JIFFY_LENGTH_IN_MILLIS =
+      SysInfoLinux.JIFFY_LENGTH_IN_MILLIS; // in millisecond
   private final CpuTimeTracker cpuTimeTracker;
   private Clock clock;
 
@@ -107,31 +108,6 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   protected Map<String, ProcessTreeSmapMemInfo> processSMAPTree =
       new HashMap<String, ProcessTreeSmapMemInfo>();
-
-  static {
-    long jiffiesPerSecond = -1;
-    long pageSize = -1;
-    try {
-      if(Shell.LINUX) {
-        ShellCommandExecutor shellExecutorClk = new ShellCommandExecutor(
-            new String[] { "getconf", "CLK_TCK" });
-        shellExecutorClk.execute();
-        jiffiesPerSecond = Long.parseLong(shellExecutorClk.getOutput().replace("\n", ""));
-
-        ShellCommandExecutor shellExecutorPage = new ShellCommandExecutor(
-            new String[] { "getconf", "PAGESIZE" });
-        shellExecutorPage.execute();
-        pageSize = Long.parseLong(shellExecutorPage.getOutput().replace("\n", ""));
-
-      }
-    } catch (IOException e) {
-      LOG.error(StringUtils.stringifyException(e));
-    } finally {
-      JIFFY_LENGTH_IN_MILLIS = jiffiesPerSecond != -1 ?
-                     Math.round(1000D / jiffiesPerSecond) : -1;
-                     PAGE_SIZE = pageSize;
-    }
-  }
 
   // to enable testing, using this variable which can be configured
   // to a test directory.
