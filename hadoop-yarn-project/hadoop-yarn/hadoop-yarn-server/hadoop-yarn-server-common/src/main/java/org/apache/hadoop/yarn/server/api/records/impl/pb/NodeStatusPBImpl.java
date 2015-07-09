@@ -35,9 +35,10 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.ResourceUtilizationProto;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-    
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 
 public class NodeStatusPBImpl extends NodeStatus {
   NodeStatusProto proto = NodeStatusProto.getDefaultInstance();
@@ -291,6 +292,28 @@ public class NodeStatusPBImpl extends NodeStatus {
     this.nodeHealthStatus = healthStatus;
   }
 
+  @Override
+  public ResourceUtilization getContainersUtilization() {
+    NodeStatusProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    if (!p.hasContainersUtilization()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getContainersUtilization());
+  }
+
+  @Override
+  public void setContainersUtilization(
+      ResourceUtilization containersUtilization) {
+    maybeInitBuilder();
+    if (containersUtilization == null) {
+      this.builder.clearContainersUtilization();
+      return;
+    }
+    this.builder
+        .setContainersUtilization(convertToProtoFormat(containersUtilization));
+  }
+
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl)nodeId).getProto();
   }
@@ -322,5 +345,14 @@ public class NodeStatusPBImpl extends NodeStatus {
   
   private ApplicationIdProto convertToProtoFormat(ApplicationId c) {
     return ((ApplicationIdPBImpl)c).getProto();
+  }
+
+  private ResourceUtilizationProto convertToProtoFormat(ResourceUtilization r) {
+    return ((ResourceUtilizationPBImpl) r).getProto();
+  }
+
+  private ResourceUtilizationPBImpl convertFromProtoFormat(
+      ResourceUtilizationProto p) {
+    return new ResourceUtilizationPBImpl(p);
   }
 }

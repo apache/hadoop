@@ -131,6 +131,9 @@ Release 2.8.0 - UNRELEASED
     YARN-41. The RM should handle the graceful shutdown of the NM. (Devaraj K via 
     junping_du)
 
+    YARN-1012. Report NM aggregated container resource utilization in heartbeat. 
+    (Inigo Goiri via kasha)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
