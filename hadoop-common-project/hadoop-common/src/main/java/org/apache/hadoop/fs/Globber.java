@@ -28,6 +28,10 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class Globber {
@@ -136,6 +140,19 @@ class Globber {
   }
 
   public FileStatus[] glob() throws IOException {
+    TraceScope scope = Trace.startSpan("Globber#glob");
+    Span span = scope.getSpan();
+    if (span != null) {
+      span.addKVAnnotation("pattern", pathPattern.toUri().getPath());
+    }
+    try {
+      return doGlob();
+    } finally {
+      scope.close();
+    }
+  }
+
+  private FileStatus[] doGlob() throws IOException {
     // First we get the scheme and authority of the pattern that was passed
     // in.
     String scheme = schemeFromPath(pathPattern);

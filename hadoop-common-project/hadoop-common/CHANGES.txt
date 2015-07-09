@@ -687,6 +687,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12195. Add annotation to package-info.java file to workaround
     MCOMPILER-205. (wang)
 
+    HADOOP-12201. Add tracing to FileSystem#createFileSystem and Globber#glob
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
