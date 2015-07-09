@@ -335,3 +335,6 @@
 
     HDFS-8719. Erasure Coding: client generates too many small packets when
     writing parity data. (Li Bo via waltersu4549)
+
+    HDFS-8563. Erasure Coding: fsck handles file smaller than a full stripe.
+    (Walter Su via jing9)

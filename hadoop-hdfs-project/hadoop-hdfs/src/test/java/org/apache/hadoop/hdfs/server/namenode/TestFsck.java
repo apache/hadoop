@@ -1648,23 +1648,31 @@ public class TestFsck {
                       + ErasureCodingSchemaManager.getSystemDefaultSchema().getNumParityUnits();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
+
+      // create a contiguous file
       Path replDirPath = new Path("/replicated");
       Path replFilePath = new Path(replDirPath, "replfile");
       final short factor = 3;
       DFSTestUtil.createFile(fs, replFilePath, 1024, factor, 0);
       DFSTestUtil.waitReplication(fs, replFilePath, factor);
+
+      // create a large striped file
       Path ecDirPath = new Path("/striped");
-      Path ecFilePath = new Path(ecDirPath, "ecfile");
-      final int numBlocks = 4;
-      DFSTestUtil.createStripedFile(cluster, ecFilePath, ecDirPath, numBlocks, 2, true);
+      Path largeFilePath = new Path(ecDirPath, "largeFile");
+      DFSTestUtil.createStripedFile(cluster, largeFilePath, ecDirPath, 1, 2, true);
+
+      // create a small striped file
+      Path smallFilePath = new Path(ecDirPath, "smallFile");
+      DFSTestUtil.writeFile(fs, smallFilePath, "hello world!");
+
       long replTime = fs.getFileStatus(replFilePath).getAccessTime();
-      long ecTime = fs.getFileStatus(ecFilePath).getAccessTime();
+      long ecTime = fs.getFileStatus(largeFilePath).getAccessTime();
       Thread.sleep(precision);
       setupAuditLogs();
       String outStr = runFsck(conf, 0, true, "/");
       verifyAuditLogs();
       assertEquals(replTime, fs.getFileStatus(replFilePath).getAccessTime());
-      assertEquals(ecTime, fs.getFileStatus(ecFilePath).getAccessTime());
+      assertEquals(ecTime, fs.getFileStatus(largeFilePath).getAccessTime());
       System.out.println(outStr);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       if (fs != null) {try{fs.close();} catch(Exception e){}}
