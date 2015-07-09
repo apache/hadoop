@@ -24,8 +24,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -457,7 +455,7 @@ public class DFSOutputStream extends FSOutputSummer
    * write filled up its partial chunk. Tell the summer to generate full
    * crc chunks from now on.
    */
-  private void adjustChunkBoundary() {
+  protected void adjustChunkBoundary() {
     if (getStreamer().getAppendChunk() &&
         getStreamer().getBytesCurBlock() % bytesPerChecksum == 0) {
       getStreamer().setAppendChunk(false);

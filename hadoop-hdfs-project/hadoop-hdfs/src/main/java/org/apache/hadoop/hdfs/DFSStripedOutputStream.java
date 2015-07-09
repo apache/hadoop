@@ -318,6 +318,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   private synchronized StripedDataStreamer setCurrentStreamer(int i) {
     streamer = streamers.get(i);
+    adjustChunkBoundary();
     return getCurrentStreamer();
   }
 
