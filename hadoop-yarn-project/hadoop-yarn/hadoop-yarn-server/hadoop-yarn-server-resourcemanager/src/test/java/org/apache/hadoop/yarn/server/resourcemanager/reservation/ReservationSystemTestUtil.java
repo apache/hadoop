@@ -378,14 +378,15 @@ public class ReservationSystemTestUtil {
     return rr;
   }
 
-  public static Map<ReservationInterval, ReservationRequest> generateAllocation(
+  public static Map<ReservationInterval, Resource> generateAllocation(
       long startTime, long step, int[] alloc) {
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     for (int i = 0; i < alloc.length; i++) {
       req.put(new ReservationInterval(startTime + i * step, startTime + (i + 1)
-          * step), ReservationRequest.newInstance(
-          Resource.newInstance(1024, 1), alloc[i]));
+          * step), ReservationSystemUtil.toResource(ReservationRequest
+          .newInstance(
+          Resource.newInstance(1024, 1), alloc[i])));
     }
     return req;
   }

@@ -516,7 +516,7 @@ public class TestGreedyReservationAgent {
                 .generateAllocation(0, step, f), res, minAlloc)));
 
     int[] f2 = { 5, 5, 5, 5, 5, 5, 5 };
-    Map<ReservationInterval, ReservationRequest> alloc = 
+    Map<ReservationInterval, Resource> alloc =
         ReservationSystemTestUtil.generateAllocation(5000, step, f2);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
