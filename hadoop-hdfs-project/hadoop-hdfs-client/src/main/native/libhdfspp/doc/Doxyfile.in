@@ -1,0 +1,16 @@
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "libhdfspp"
+OUTPUT_DIRECTORY       = doc
+TAB_SIZE               = 2
+MARKDOWN_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+
+
+INPUT                  = @PROJECT_SOURCE_DIR@/doc/mainpage.dox \
+                         @PROJECT_SOURCE_DIR@/include/libhdfspp \
+
+INPUT_ENCODING         = UTF-8
+RECURSIVE              = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
