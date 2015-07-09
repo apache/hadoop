@@ -1023,6 +1023,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8642. Make TestFileTruncate more reliable. (Rakesh R via
     Arpit Agarwal)
 
+    HDFS-8729. Fix TestFileTruncate#testTruncateWithDataNodesRestartImmediately
+    which occasionally failed. (Walter Su via jing9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
