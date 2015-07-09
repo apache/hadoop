@@ -11,6 +11,8 @@ Requirements:
 * Zlib devel (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
+* Jansson C XML parsing library ( if compiling libwebhdfs )
+* Doxygen ( if compiling libhdfspp and generating the documents )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * python (for releasedocs)
 * bats (for shell code testing)
