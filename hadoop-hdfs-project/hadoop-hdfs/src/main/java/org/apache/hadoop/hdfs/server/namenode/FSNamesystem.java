@@ -5353,6 +5353,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       locatedBlock = BlockManager.newLocatedBlock(
           block, file.getLastBlock(), null, -1);
+      blockManager.setBlockToken(locatedBlock,
+          BlockTokenIdentifier.AccessMode.WRITE);
     } finally {
       writeUnlock();
     }
