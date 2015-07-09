@@ -73,13 +73,14 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
@@ -429,11 +430,25 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           + ", " + nodeHealthStatus.getHealthReport());
     }
     List<ContainerStatus> containersStatuses = getContainerStatuses();
+    ResourceUtilization containersUtilization = getContainersUtilization();
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
-          createKeepAliveApplicationList(), nodeHealthStatus);
+          createKeepAliveApplicationList(), nodeHealthStatus,
+          containersUtilization);
 
     return nodeStatus;
+  }
+
+  /**
+   * Get the aggregated utilization of the containers in this node.
+   * @return Resource utilization of all the containers.
+   */
+  private ResourceUtilization getContainersUtilization() {
+    ContainerManagerImpl containerManager =
+        (ContainerManagerImpl) this.context.getContainerManager();
+    ContainersMonitor containersMonitor =
+        containerManager.getContainersMonitor();
+    return containersMonitor.getContainersUtilization();
   }
 
   // Iterate through the NMContext and clone and get all the containers'
