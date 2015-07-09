@@ -76,6 +76,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3051. Created storage oriented reader interface for fetching raw entity
     data and made the filesystem based implementation. (Varun Saxena via zjshen)
 
+    YARN-3047. [Data Serving] Set up ATS reader with basic request serving
+    structure and lifecycle (Varun Saxena via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
