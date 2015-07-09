@@ -97,8 +97,8 @@ public class GreedyReservationAgent implements ReservationAgent {
     long curDeadline = deadline;
     long oldDeadline = -1;
 
-    Map<ReservationInterval, ReservationRequest> allocations =
-        new HashMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> allocations =
+        new HashMap<ReservationInterval, Resource>();
     RLESparseResourceAllocation tempAssigned =
         new RLESparseResourceAllocation(plan.getResourceCalculator(),
             plan.getMinimumAllocation());
@@ -107,6 +107,8 @@ public class GreedyReservationAgent implements ReservationAgent {
         .getReservationResources();
     ReservationRequestInterpreter type = contract.getReservationRequests()
         .getInterpreter();
+
+    boolean hasGang = false;
 
     // Iterate the stages in backward from deadline
     for (ListIterator<ReservationRequest> li = 
@@ -117,8 +119,10 @@ public class GreedyReservationAgent implements ReservationAgent {
       // validate the RR respect basic constraints
       validateInput(plan, currentReservationStage, totalCapacity);
 
+      hasGang |= currentReservationStage.getConcurrency() > 1;
+
       // run allocation for a single stage
-      Map<ReservationInterval, ReservationRequest> curAlloc =
+      Map<ReservationInterval, Resource> curAlloc =
           placeSingleStage(plan, tempAssigned, currentReservationStage,
               earliestStart, curDeadline, oldReservation, totalCapacity);
 
@@ -178,8 +182,7 @@ public class GreedyReservationAgent implements ReservationAgent {
 
     // create reservation with above allocations if not null/empty
 
-    ReservationRequest ZERO_RES =
-        ReservationRequest.newInstance(Resource.newInstance(0, 0), 0);
+    Resource ZERO_RES = Resource.newInstance(0, 0);
 
     long firstStartTime = findEarliestTime(allocations.keySet());
     
@@ -200,7 +203,7 @@ public class GreedyReservationAgent implements ReservationAgent {
         new InMemoryReservationAllocation(reservationId, contract, user,
             plan.getQueueName(), firstStartTime,
             findLatestTime(allocations.keySet()), allocations,
-            plan.getResourceCalculator(), plan.getMinimumAllocation());
+            plan.getResourceCalculator(), plan.getMinimumAllocation(), hasGang);
     if (oldReservation != null) {
       return plan.updateReservation(capReservation);
     } else {
@@ -242,13 +245,13 @@ public class GreedyReservationAgent implements ReservationAgent {
    * previous instant in time until the time-window is exhausted or we placed
    * all the user request.
    */
-  private Map<ReservationInterval, ReservationRequest> placeSingleStage(
+  private Map<ReservationInterval, Resource> placeSingleStage(
       Plan plan, RLESparseResourceAllocation tempAssigned,
       ReservationRequest rr, long earliestStart, long curDeadline,
       ReservationAllocation oldResAllocation, final Resource totalCapacity) {
 
-    Map<ReservationInterval, ReservationRequest> allocationRequests =
-        new HashMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> allocationRequests =
+        new HashMap<ReservationInterval, Resource>();
 
     // compute the gang as a resource and get the duration
     Resource gang = Resources.multiply(rr.getCapability(), rr.getConcurrency());
@@ -322,7 +325,7 @@ public class GreedyReservationAgent implements ReservationAgent {
 
         ReservationInterval reservationInt =
             new ReservationInterval(curDeadline - dur, curDeadline);
-        ReservationRequest reservationRes =
+        ReservationRequest reservationRequest =
             ReservationRequest.newInstance(rr.getCapability(),
                 rr.getConcurrency() * maxGang, rr.getConcurrency(),
                 rr.getDuration());
@@ -331,6 +334,8 @@ public class GreedyReservationAgent implements ReservationAgent {
         // placing other ReservationRequest within the same
         // ReservationDefinition,
         // and we must avoid double-counting the available resources
+        final Resource reservationRes = ReservationSystemUtil.toResource(
+            reservationRequest);
         tempAssigned.addInterval(reservationInt, reservationRes);
         allocationRequests.put(reservationInt, reservationRes);
 
@@ -350,7 +355,7 @@ public class GreedyReservationAgent implements ReservationAgent {
       // If we are here is becasue we did not manage to satisfy this request.
       // So we need to remove unwanted side-effect from tempAssigned (needed
       // for ANY).
-      for (Map.Entry<ReservationInterval, ReservationRequest> tempAllocation :
+      for (Map.Entry<ReservationInterval, Resource> tempAllocation :
         allocationRequests.entrySet()) {
         tempAssigned.removeInterval(tempAllocation.getKey(),
             tempAllocation.getValue());

@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Map;
@@ -198,12 +197,14 @@ public class TestCapacityOverTimePolicy {
   @Test(expected = PlanningQuotaException.class)
   public void testFailAvg() throws IOException, PlanningException {
     // generate an allocation which violates the 25% average single-shot
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     long win = timeWindow / 2 + 100;
     int cont = (int) Math.ceil(0.5 * totCont);
     req.put(new ReservationInterval(initTime, initTime + win),
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), cont));
+        ReservationSystemUtil.toResource(
+            ReservationRequest.newInstance(Resource.newInstance(1024, 1),
+                cont)));
 
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
@@ -214,12 +215,13 @@ public class TestCapacityOverTimePolicy {
   @Test
   public void testFailAvgBySum() throws IOException, PlanningException {
     // generate an allocation which violates the 25% average by sum
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     long win = 86400000 / 4 + 1;
     int cont = (int) Math.ceil(0.5 * totCont);
     req.put(new ReservationInterval(initTime, initTime + win),
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), cont));
+        ReservationSystemUtil.toResource(ReservationRequest.newInstance(Resource
+            .newInstance(1024, 1), cont)));
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), null, "u1",
