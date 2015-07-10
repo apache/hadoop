@@ -369,7 +369,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Set the replication factor of this file. */
-  public final void setFileReplication(short replication) {
+  private void setFileReplication(short replication) {
     header = HeaderFormat.REPLICATION.BITS.combine(replication, header);
   }
 
@@ -413,33 +413,35 @@ public class INodeFile extends INodeWithAdditionalFields
     setStoragePolicyID(storagePolicyId);
   }
 
-  @Override
+  @Override // INodeFileAttributes
   public long getHeaderLong() {
     return header;
   }
 
   /** @return the blocks of the file. */
-  @Override
+  @Override // BlockCollection
   public BlockInfo[] getBlocks() {
     return this.blocks;
   }
 
   /** @return blocks of the file corresponding to the snapshot. */
   public BlockInfo[] getBlocks(int snapshot) {
-    if(snapshot == CURRENT_STATE_ID || getDiffs() == null)
+    if(snapshot == CURRENT_STATE_ID || getDiffs() == null) {
       return getBlocks();
+    }
     FileDiff diff = getDiffs().getDiffById(snapshot);
-    BlockInfo[] snapshotBlocks =
-        diff == null ? getBlocks() : diff.getBlocks();
-    if(snapshotBlocks != null)
+    BlockInfo[] snapshotBlocks = diff == null ? getBlocks() : diff.getBlocks();
+    if (snapshotBlocks != null) {
       return snapshotBlocks;
+    }
     // Blocks are not in the current snapshot
     // Find next snapshot with blocks present or return current file blocks
     snapshotBlocks = getDiffs().findLaterSnapshotBlocks(snapshot);
     return (snapshotBlocks == null) ? getBlocks() : snapshotBlocks;
   }
 
-  void updateBlockCollection() {
+  /** Used during concat to update the BlockCollection for each block. */
+  private void updateBlockCollection() {
     if (blocks != null) {
       for(BlockInfo b : blocks) {
         b.setBlockCollection(this);
@@ -486,8 +488,13 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Set the blocks. */
-  public void setBlocks(BlockInfo[] blocks) {
+  private void setBlocks(BlockInfo[] blocks) {
     this.blocks = blocks;
+  }
+
+  /** Clear all blocks of the file. */
+  public void clearBlocks() {
+    setBlocks(null);
   }
 
   @Override
@@ -543,7 +550,7 @@ public class INodeFile extends INodeWithAdditionalFields
         blk.setBlockCollection(null);
       }
     }
-    setBlocks(null);
+    clearBlocks();
     if (getAclFeature() != null) {
       AclStorage.removeAclFeature(getAclFeature());
     }
@@ -783,16 +790,18 @@ public class INodeFile extends INodeWithAdditionalFields
   public long collectBlocksBeyondMax(final long max,
       final BlocksMapUpdateInfo collectedBlocks) {
     final BlockInfo[] oldBlocks = getBlocks();
-    if (oldBlocks == null)
+    if (oldBlocks == null) {
       return 0;
+    }
     // find the minimum n such that the size of the first n blocks > max
     int n = 0;
     long size = 0;
     for(; n < oldBlocks.length && max > size; n++) {
       size += oldBlocks[n].getNumBytes();
     }
-    if (n >= oldBlocks.length)
+    if (n >= oldBlocks.length) {
       return size;
+    }
 
     // starting from block n, the data is beyond max.
     // resize the array.
