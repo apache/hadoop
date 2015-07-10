@@ -927,7 +927,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       throws IOException {
     GetDelegationTokenRequestProto req = GetDelegationTokenRequestProto
         .newBuilder()
-        .setRenewer(renewer.toString())
+        .setRenewer(renewer == null ? "" : renewer.toString())
         .build();
     try {
       GetDelegationTokenResponseProto resp = rpcProxy.getDelegationToken(null, req);
