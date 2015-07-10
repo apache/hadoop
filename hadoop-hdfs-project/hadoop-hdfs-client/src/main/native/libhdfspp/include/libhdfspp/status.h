@@ -45,6 +45,8 @@ class Status {
   { return Status(kUnimplemented, ""); }
   static Status Exception(const char *expception_class_name, const char *error_message)
   { return Status(kException, expception_class_name, error_message); }
+  static Status Error(const char *error_message)
+  { return Exception("Exception", error_message); }
 
   // Returns true iff the status indicates success.
   bool ok() const { return (state_ == NULL); }
@@ -71,7 +73,7 @@ class Status {
     kInvalidArgument = static_cast<unsigned>(std::errc::invalid_argument),
     kResourceUnavailable = static_cast<unsigned>(std::errc::resource_unavailable_try_again),
     kUnimplemented = static_cast<unsigned>(std::errc::function_not_supported),
-    kException = 256,
+    kException = 255,
   };
 
   explicit Status(int code, const char *msg1, const char *msg2);
