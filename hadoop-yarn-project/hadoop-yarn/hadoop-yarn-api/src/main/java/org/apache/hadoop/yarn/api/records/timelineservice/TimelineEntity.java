@@ -31,11 +31,25 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * The basic timeline entity data structure for timeline service v2. Timeline
+ * entity objects are not thread safe and should not be accessed concurrently.
+ * All collection members will be initialized into empty collections. Two
+ * timeline entities are equal iff. their type and id are identical.
+ *
+ * All non-primitive type, non-collection members will be initialized into null.
+ * User should set the type and id of a timeline entity to make it valid (can be
+ * checked by using the {@link #isValid()} method). Callers to the getters
+ * should perform null checks for non-primitive type, non-collection members.
+ *
+ * Callers are recommended not to alter the returned collection objects from the
+ * getters.
+ */
 @XmlRootElement(name = "entity")
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class TimelineEntity {
+public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
 
   @XmlRootElement(name = "identifier")
@@ -76,6 +90,41 @@ public class TimelineEntity {
       return "TimelineEntity[" +
           "type='" + type + '\'' +
           ", id='" + id + '\'' + "]";
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((id == null) ? 0 : id.hashCode());
+      result =
+        prime * result + ((type == null) ? 0 : type.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (!(obj instanceof Identifier)) {
+        return false;
+      }
+      Identifier other = (Identifier) obj;
+      if (id == null) {
+        if (other.getId() != null) {
+          return false;
+        }
+      } else if (!id.equals(other.getId())) {
+        return false;
+      }
+      if (type == null) {
+        if (other.getType() != null) {
+          return false;
+        }
+      } else if (!type.equals(other.getType())) {
+        return false;
+      }
+      return true;
     }
   }
 
@@ -468,6 +517,44 @@ public class TimelineEntity {
       this.modifiedTime = modifiedTime;
     } else {
       real.setModifiedTime(modifiedTime);
+    }
+  }
+
+  public boolean isValid() {
+    return (getId() != null && getType() != null);
+  }
+
+  // When get hashCode for a timeline entity, or check if two timeline entities
+  // are equal, we only compare their identifiers (id and type)
+  @Override
+  public int hashCode() {
+    return getIdentifier().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (!(obj instanceof TimelineEntity))
+      return false;
+    TimelineEntity other = (TimelineEntity) obj;
+    return getIdentifier().equals(other.getIdentifier());
+  }
+
+  @Override
+  public int compareTo(TimelineEntity other) {
+    int comparison = getType().compareTo(other.getType());
+    if (comparison == 0) {
+      if (getCreatedTime() > other.getCreatedTime()) {
+        // Order by created time desc
+        return -1;
+      } else if (getCreatedTime() < other.getCreatedTime()) {
+        return 1;
+      } else {
+        return getId().compareTo(other.getId());
+      }
+    } else {
+      return comparison;
     }
   }
 
