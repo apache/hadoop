@@ -62,7 +62,8 @@ public class NodeInfo {
     private NodeState state;
     private List<ContainerId> toCleanUpContainers;
     private List<ApplicationId> toCleanUpApplications;
-    
+    private List<ApplicationId> runningApplications;
+
     public FakeRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
         int cmdPort, String hostName, NodeState state) {
@@ -77,6 +78,7 @@ public class NodeInfo {
       this.state = state;
       toCleanUpApplications = new ArrayList<ApplicationId>();
       toCleanUpContainers = new ArrayList<ContainerId>();
+      runningApplications = new ArrayList<ApplicationId>();
     }
 
     public NodeId getNodeID() {
@@ -133,6 +135,10 @@ public class NodeInfo {
 
     public List<ApplicationId> getAppsToCleanup() {
       return toCleanUpApplications;
+    }
+
+    public List<ApplicationId> getRunningApps() {
+      return runningApplications;
     }
 
     public void updateNodeHeartbeatResponseForCleanup(
