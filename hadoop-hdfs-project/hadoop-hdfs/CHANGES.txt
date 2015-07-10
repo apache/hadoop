@@ -1026,6 +1026,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8729. Fix TestFileTruncate#testTruncateWithDataNodesRestartImmediately
     which occasionally failed. (Walter Su via jing9)
 
+    HDFS-8749. Fix findbugs warnings in BlockManager.java.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

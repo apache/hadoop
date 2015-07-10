@@ -3596,8 +3596,6 @@ public class BlockManager implements BlockStatsMXBean {
       String src, BlockInfo[] blocks) {
     for (BlockInfo b: blocks) {
       if (!b.isComplete()) {
-        final BlockInfoUnderConstruction uc =
-            (BlockInfoUnderConstruction)b;
         final int numNodes = b.numNodes();
         final int min = getMinStorageNum(b);
         final BlockUCState state = b.getBlockUCState();
