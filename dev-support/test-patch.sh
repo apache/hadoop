@@ -465,11 +465,13 @@ function findlargest
   local a=("$@")
   local sizeofa=${#a[@]}
   local i=0
+  local string
+  local maxlen=0
 
-  until [[ ${i} -gt ${sizeofa} ]]; do
+  until [[ ${i} -eq ${sizeofa} ]]; do
     # shellcheck disable=SC2086
     string=$( echo ${a[$i]} | cut -f$((column + 1)) -d\| )
-    if [[ ${#string} -gt $maxlen ]]; then
+    if [[ ${#string} -gt ${maxlen} ]]; then
       maxlen=${#string}
     fi
     i=$((i+1))
