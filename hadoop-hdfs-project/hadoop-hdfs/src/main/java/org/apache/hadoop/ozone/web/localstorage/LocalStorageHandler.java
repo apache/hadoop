@@ -19,12 +19,11 @@
 package org.apache.hadoop.ozone.web.localstorage;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.StorageContainerConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
+import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 
@@ -38,16 +37,10 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class LocalStorageHandler implements StorageHandler {
-  private String storageRoot = null;
-
   /**
    * Constructs LocalStorageHandler.
    */
   public LocalStorageHandler() {
-    StorageContainerConfiguration conf = new StorageContainerConfiguration();
-    storageRoot = conf.getTrimmed(
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT,
-        OzoneConfigKeys.DFS_STORAGE_LOCAL_ROOT_DEFAULT);
   }
 
   /**
@@ -59,6 +52,9 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    oz.createVolume(args);
+
   }
 
   /**
@@ -71,6 +67,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setVolumeOwner(VolumeArgs args)
       throws IOException, OzoneException {
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    oz.setVolumeProperty(args, OzoneMetadataManager.VolumeProperty.OWNER);
   }
 
   /**
@@ -84,6 +82,13 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public void setVolumeQuota(VolumeArgs args, boolean remove)
       throws IOException, OzoneException {
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+
+    if(remove) {
+      OzoneQuota quota = new OzoneQuota();
+      args.setQuota(quota);
+    }
+    oz.setVolumeProperty(args, OzoneMetadataManager.VolumeProperty.QUOTA);
   }
 
 
@@ -96,12 +101,13 @@ public class LocalStorageHandler implements StorageHandler {
    * @return - Boolean - True if the user can modify the volume.
    * This is possible for owners of the volume and admin users
    *
-   * @throws FileSystemException
+   * @throws IOException
    */
   @Override
   public boolean checkVolumeAccess(VolumeArgs args)
       throws IOException, OzoneException {
-    return true;
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    return oz.checkVolumeAccess(args);
   }
 
 
@@ -117,7 +123,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public VolumeInfo getVolumeInfo(VolumeArgs args)
       throws IOException, OzoneException {
-    return null;
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    return oz.getVolumeInfo(args);
   }
 
 
@@ -130,6 +137,9 @@ public class LocalStorageHandler implements StorageHandler {
    */
   @Override
   public void deleteVolume(VolumeArgs args) throws IOException, OzoneException {
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    oz.deleteVolume(args);
+
   }
 
   /**
@@ -144,7 +154,8 @@ public class LocalStorageHandler implements StorageHandler {
   @Override
   public ListVolumes listVolumes(UserArgs args)
       throws IOException, OzoneException {
-    return null;
+    OzoneMetadataManager oz = OzoneMetadataManager.getOzoneMetadataManager();
+    return oz.listVolumes(args);
   }
 
 }

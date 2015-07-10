@@ -43,6 +43,10 @@ public final class OzoneConsts {
   public static final String OZONE_ACL_READ_WRITE = "rw";
   public static final String OZONE_ACL_WRITE_READ = "wr";
 
+  public static final String OZONE_DATE_FORMAT =
+      "EEE, dd MMM yyyy HH:mm:ss zzz";
+  public static final String OZONE_TIME_ZONE = "GMT";
+
   private OzoneConsts() {
     // Never Constructed
   }

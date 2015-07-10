@@ -21,3 +21,6 @@
     Arpit Agarwal)
 
     HDFS-8654. OzoneHandler : Add ACL support. (Anu Engineer via Arpit Agarwal)
+
+    HDFS-8680. OzoneHandler : Add Local StorageHandler support for volumes.
+    (Anu Engineer via Arpit Agarwal)
