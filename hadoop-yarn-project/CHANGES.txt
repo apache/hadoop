@@ -607,6 +607,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3892. Fixed NPE on RMStateStore#serviceStop when
     CapacityScheduler#serviceInit fails. (Bibin A Chundatt via jianhe)
 
+    YARN-3888. ApplicationMaster link is broken in RM WebUI when appstate is NEW.
+    (Bibin A Chundatt via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

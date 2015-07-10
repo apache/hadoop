@@ -131,13 +131,15 @@ public class RMAppsBlock extends AppsBlock {
 
       String trackingURL =
           app.getTrackingUrl() == null
-              || app.getTrackingUrl().equals(UNAVAILABLE) ? null : app
-            .getTrackingUrl();
+              || app.getTrackingUrl().equals(UNAVAILABLE)
+              || app.getAppState() == YarnApplicationState.NEW ? null : app
+              .getTrackingUrl();
 
       String trackingUI =
           app.getTrackingUrl() == null
-              || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
-            .getAppState() == YarnApplicationState.FINISHED
+              || app.getTrackingUrl().equals(UNAVAILABLE)
+              || app.getAppState() == YarnApplicationState.NEW ? "Unassigned"
+              : app.getAppState() == YarnApplicationState.FINISHED
               || app.getAppState() == YarnApplicationState.FAILED
               || app.getAppState() == YarnApplicationState.KILLED ? "History"
               : "ApplicationMaster";
