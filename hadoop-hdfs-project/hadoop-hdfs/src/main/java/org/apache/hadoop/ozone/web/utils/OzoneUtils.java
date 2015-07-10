@@ -23,7 +23,6 @@ import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.headers.Header;
-import org.apache.hadoop.util.Time;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Request;
@@ -44,6 +43,10 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 public final class OzoneUtils {
+
+  private OzoneUtils() {
+    // Never constructed
+  }
 
   /**
    * verifies that bucket name / volume name is a valid DNS name.
@@ -128,7 +131,7 @@ public final class OzoneUtils {
   /**
    * Returns a random Request ID.
    *
-   * Request ID is returned to the client as well as flows thru the system
+   * Request ID is returned to the client as well as flows through the system
    * facilitating debugging on why a certain request failed.
    *
    * @return String random request ID
@@ -206,8 +209,8 @@ public final class OzoneUtils {
                                             String resource, String hostname)
       throws OzoneException {
     SimpleDateFormat format =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone("GMT"));
+        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
+    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
 
     try {
       return format.parse(dateString);
@@ -231,9 +234,9 @@ public final class OzoneUtils {
   public static Response getResponse(UserArgs args, int statusCode,
                                      String payload) {
     SimpleDateFormat format =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone("GMT"));
-    String date = format.format(new Date(Time.monotonicNow()));
+        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
+    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
+    String date = format.format(new Date(System.currentTimeMillis()));
     return Response.ok(payload)
         .header(Header.OZONE_SERVER_NAME, args.getHostName())
         .header(Header.OZONE_REQUEST_ID, args.getRequestID())
@@ -252,17 +255,13 @@ public final class OzoneUtils {
   public static Response getResponse(UserArgs args, int statusCode,
                                      InputStream stream) {
     SimpleDateFormat format =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-    format.setTimeZone(TimeZone.getTimeZone("GMT"));
-    String date = format.format(new Date(Time.monotonicNow()));
+        new SimpleDateFormat(OzoneConsts.OZONE_DATE_FORMAT, Locale.US);
+    format.setTimeZone(TimeZone.getTimeZone(OzoneConsts.OZONE_TIME_ZONE));
+    String date = format.format(new Date(System.currentTimeMillis()));
     return Response.ok(stream)
         .header(Header.OZONE_SERVER_NAME, args.getHostName())
         .header(Header.OZONE_REQUEST_ID, args.getRequestID())
         .header(HttpHeaders.DATE, date).status(statusCode)
         .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream").build();
-  }
-
-  private OzoneUtils() {
-    // Never constructed
   }
 }
