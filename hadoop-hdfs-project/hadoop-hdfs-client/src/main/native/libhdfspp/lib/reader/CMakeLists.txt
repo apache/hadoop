@@ -16,7 +16,5 @@
 # limitations under the License.
 #
 
-add_subdirectory(common)
-add_subdirectory(reader)
-add_subdirectory(rpc)
-add_subdirectory(proto)
+add_library(reader remote_block_reader.cc)
+add_dependencies(reader proto)
