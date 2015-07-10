@@ -2367,7 +2367,7 @@ function count_javac_probs
   case ${BUILDTOOL} in
     maven)
       #shellcheck disable=SC2016,SC2046
-      ${AWK} 'BEGIN {total = 0} {total += 1} END {print total}' "${warningfile}"
+      ${GREP} '\[WARNING\]' "${warningfile}" | ${AWK} '{sum+=1} END {print sum}'
     ;;
     ant)
       #shellcheck disable=SC2016
@@ -2454,15 +2454,20 @@ function check_patch_javac
 
       # if it was a new module, this won't exist.
       if [[ -f "${PATCH_DIR}/branch-javac-${fn}.txt" ]]; then
-        ${GREP} '\[WARNING\]' "${PATCH_DIR}/branch-javac-${fn}.txt" \
+        ${GREP} -i warning "${PATCH_DIR}/branch-javac-${fn}.txt" \
           > "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
       else
         touch "${PATCH_DIR}/branch-javac-${fn}.txt" \
           "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
       fi
 
-      ${GREP} '\[WARNING\]' "${PATCH_DIR}/patch-javac-${fn}.txt" \
-        > "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
+      if [[ -f "${PATCH_DIR}/patch-javac-${fn}.txt" ]]; then
+        ${GREP} -i warning "${PATCH_DIR}/patch-javac-${fn}.txt" \
+          > "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
+      else
+        touch "${PATCH_DIR}/patch-javac-${fn}.txt" \
+          "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
+      fi
 
       numbranch=$(count_javac_probs "${PATCH_DIR}/branch-javac-${fn}-warning.txt")
       numpatch=$(count_javac_probs "${PATCH_DIR}/patch-javac-${fn}-warning.txt")
@@ -2587,6 +2592,27 @@ function check_patch_javadoc
 
       fn=$(module_file_fragment "${MODULE[${i}]}")
       fn="${fn}${jdk}"
+      module_suffix=$(basename "${MODULE[${i}]}")
+      if [[ ${module_suffix} == \. ]]; then
+        module_suffix=root
+      fi
+
+      if [[ -f "${PATCH_DIR}/branch-javadoc-${fn}.txt" ]]; then
+        ${GREP} -i warning "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
+          > "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt"
+      else
+        touch "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
+          "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt"
+      fi
+
+      if [[ -f "${PATCH_DIR}/patch-javadoc-${fn}.txt" ]]; then
+        ${GREP} -i warning "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
+          > "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt"
+      else
+        touch "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
+          "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt"
+      fi
+
       numbranch=$(count_javadoc_probs "${PATCH_DIR}/branch-javadoc-${fn}.txt")
       numpatch=$(count_javadoc_probs "${PATCH_DIR}/patch-javadoc-${fn}.txt")
 
@@ -2594,25 +2620,12 @@ function check_patch_javadoc
           && -n ${numpatch}
           && ${numpatch} -gt ${numbranch} ]] ; then
 
-        if [[ -f "${PATCH_DIR}/branch-javadoc-${fn}.txt" ]]; then
-          ${GREP} -i warning "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
-            > "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt"
-        else
-          touch "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
-            "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt"
-        fi
-
-        ${GREP} -i warning "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
-          > "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt"
-
-        ${DIFF} -u "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt" \
-          "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt" \
+        ${DIFF} -u "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt" \
+          "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt" \
           > "${PATCH_DIR}/javadoc-${fn}-diff.txt"
-        rm -f "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt" \
-           "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt"
 
         module_status ${i} -1  "javadoc-${fn}-diff.txt" \
-          "Patched ${MODULE[${i}]} generated "\
+          "Patched ${module_suffix} generated "\
           "$((numpatch-numbranch)) additional warning messages${statusjdk}."
 
         ((result=result+1))
