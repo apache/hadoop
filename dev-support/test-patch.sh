@@ -2291,13 +2291,13 @@ function check_author
 
   big_console_header "Checking there are no @author tags in the patch."
 
+  start_clock
+
   if [[ ${CHANGED_FILES} =~ ${appname} ]]; then
     echo "Skipping @author checks as ${appname} has been patched."
     add_vote_table 0 @author "Skipping @author checks as ${appname} has been patched."
     return 0
   fi
-
-  start_clock
 
   authorTags=$("${GREP}" -c -i '^[^-].*@author' "${PATCH_DIR}/patch")
   echo "There appear to be ${authorTags} @author tags in the patch."
