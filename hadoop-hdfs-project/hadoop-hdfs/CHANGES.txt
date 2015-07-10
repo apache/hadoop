@@ -1029,6 +1029,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8749. Fix findbugs warnings in BlockManager.java.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-2956. calling fetchdt without a --renewer argument throws NPE
+    (vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
