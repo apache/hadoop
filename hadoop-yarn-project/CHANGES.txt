@@ -87,6 +87,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3706. Generalize native HBase writer for additional tables (Joep
     Rottinghuis via sjlee)
 
+    YARN-3836. add equals and hashCode to TimelineEntity and other classes in
+    the data model (Li Lu via sjlee)
+
   OPTIMIZATIONS
 
   BUG FIXES

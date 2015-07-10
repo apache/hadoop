@@ -124,4 +124,34 @@ public class TimelineMetric {
     this.values.clear();
     this.values.putAll(values);
   }
+
+  public boolean isValid() {
+    return (id != null);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = id.hashCode();
+    result = 31 * result + type.hashCode();
+    return result;
+  }
+
+  // Only check if type and id are equal
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof TimelineMetric))
+      return false;
+
+    TimelineMetric m = (TimelineMetric) o;
+
+    if (!id.equals(m.id)) {
+      return false;
+    }
+    if (type != m.type) {
+      return false;
+    }
+    return true;
+  }
 }

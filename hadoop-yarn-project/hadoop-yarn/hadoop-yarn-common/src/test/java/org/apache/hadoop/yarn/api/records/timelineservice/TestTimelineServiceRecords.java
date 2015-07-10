@@ -100,6 +100,13 @@ public class TestTimelineServiceRecords {
     }
     entity.addMetric(metric2);
 
+    TimelineMetric metric3 = new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
+    metric3.setId("test metric id 1");
+    metric3.addValue(4L, (short) 4);
+    Assert.assertEquals("metric3 should equal to metric2! ", metric3, metric2);
+    Assert.assertNotEquals("metric1 should not equal to metric2! ",
+        metric1, metric2);
+
     TimelineEvent event1 = new TimelineEvent();
     event1.setId("test event id 1");
     event1.addInfo("test info key 1", "test info value 1");
@@ -108,7 +115,7 @@ public class TestTimelineServiceRecords {
     event1.addInfo("test info key 3", true);
     Assert.assertTrue(
         event1.getInfo().get("test info key 3") instanceof Boolean);
-    event1.setTimestamp(0L);
+    event1.setTimestamp(1L);
     entity.addEvent(event1);
 
     TimelineEvent event2 = new TimelineEvent();
@@ -119,8 +126,17 @@ public class TestTimelineServiceRecords {
     event2.addInfo("test info key 3", true);
     Assert.assertTrue(
         event2.getInfo().get("test info key 3") instanceof Boolean);
-    event2.setTimestamp(1L);
+    event2.setTimestamp(2L);
     entity.addEvent(event2);
+
+    Assert.assertFalse("event1 should not equal to event2! ",
+        event1.equals(event2));
+    TimelineEvent event3 = new TimelineEvent();
+    event3.setId("test event id 1");
+    event3.setTimestamp(1L);
+    Assert.assertEquals("event1 should equal to event3! ", event3, event1);
+    Assert.assertNotEquals("event1 should not equal to event2! ",
+        event1, event2);
 
     entity.setCreatedTime(0L);
     entity.setModifiedTime(1L);
@@ -136,6 +152,22 @@ public class TestTimelineServiceRecords {
     TimelineEntity entity2 = new TimelineEntity();
     entities.addEntity(entity2);
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entities, true));
+
+    Assert.assertFalse("entity 1 should not be valid without type and id",
+        entity1.isValid());
+    entity1.setId("test id 2");
+    entity1.setType("test type 2");
+    entity2.setId("test id 1");
+    entity2.setType("test type 1");
+
+    Assert.assertEquals("Timeline entity should equal to entity2! ",
+        entity, entity2);
+    Assert.assertNotEquals("entity1 should not equal to entity! ",
+        entity1, entity);
+    Assert.assertEquals("entity should be less than entity1! ",
+        entity1.compareTo(entity), 1);
+    Assert.assertEquals("entity's hash code should be -28727840 but not "
+        + entity.hashCode(), entity.hashCode(), -28727840);
   }
 
   @Test
