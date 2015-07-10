@@ -1006,9 +1006,7 @@ function parse_args
 ## @return       directory containing the pom.xml. Nothing returned if not found.
 function find_pomxml_dir
 {
-  local dir
-
-  dir=$(dirname "$1")
+  local dir=$1
 
   yetus_debug "Find pom.xml dir for: ${dir}"
 
@@ -1033,9 +1031,7 @@ function find_pomxml_dir
 ## @return       directory containing the build.xml. Nothing returned if not found.
 function find_buildxml_dir
 {
-  local dir
-
-  dir=$(dirname "$1")
+  local dir=$1
 
   yetus_debug "Find build.xml dir for: ${dir}"
 
@@ -1076,18 +1072,21 @@ function find_changed_files
 ## @return       None; sets ${CHANGED_MODULES} and ${CHANGED_UNFILTERED_MODULES}
 function find_changed_modules
 {
-  # Come up with a list of changed files into ${TMP}
+  local i
+  local changed_dirs
   local pomdirs
   local pomdir
   local module
   local pommods
 
+  changed_dirs=$(for i in ${CHANGED_FILES}; do dirname "${i}"; done | sort -u)
+
   # Now find all the modules that were changed
-  for file in ${CHANGED_FILES}; do
+  for i in ${changed_dirs}; do
     case ${BUILDTOOL} in
       maven)
         #shellcheck disable=SC2086
-        pomdir=$(find_pomxml_dir ${file})
+        pomdir=$(find_pomxml_dir ${i})
         if [[ -z ${pomdir} ]]; then
           output_to_console 1
           output_to_bugsystem 1
@@ -1097,7 +1096,7 @@ function find_changed_modules
       ;;
       ant)
         #shellcheck disable=SC2086
-        pomdir=$(find_buildxml_dir ${file})
+        pomdir=$(find_buildxml_dir ${i})
         if [[ -z ${pomdir} ]]; then
           output_to_console 1
           output_to_bugsystem 1
