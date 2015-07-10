@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -31,9 +30,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -80,14 +77,11 @@ public class RLESparseResourceAllocation {
    * 
    * @param reservationInterval the interval for which the resource is to be
    *          added
-   * @param capacity the resource to be added
+   * @param totCap the resource to be added
    * @return true if addition is successful, false otherwise
    */
   public boolean addInterval(ReservationInterval reservationInterval,
-      ReservationRequest capacity) {
-    Resource totCap =
-        Resources.multiply(capacity.getCapability(),
-            (float) capacity.getNumContainers());
+      Resource totCap) {
     if (totCap.equals(ZERO_RESOURCE)) {
       return true;
     }
@@ -143,44 +137,15 @@ public class RLESparseResourceAllocation {
   }
 
   /**
-   * Add multiple resources for the specified interval
-   * 
-   * @param reservationInterval the interval for which the resource is to be
-   *          added
-   * @param ReservationRequests the resources to be added
-   * @param clusterResource the total resources in the cluster
-   * @return true if addition is successful, false otherwise
-   */
-  public boolean addCompositeInterval(ReservationInterval reservationInterval,
-      List<ReservationRequest> ReservationRequests, Resource clusterResource) {
-    ReservationRequest aggregateReservationRequest =
-        Records.newRecord(ReservationRequest.class);
-    Resource capacity = Resource.newInstance(0, 0);
-    for (ReservationRequest ReservationRequest : ReservationRequests) {
-      Resources.addTo(capacity, Resources.multiply(
-          ReservationRequest.getCapability(),
-          ReservationRequest.getNumContainers()));
-    }
-    aggregateReservationRequest.setNumContainers((int) Math.ceil(Resources
-        .divide(resourceCalculator, clusterResource, capacity, minAlloc)));
-    aggregateReservationRequest.setCapability(minAlloc);
-
-    return addInterval(reservationInterval, aggregateReservationRequest);
-  }
-
-  /**
    * Removes a resource for the specified interval
    * 
    * @param reservationInterval the interval for which the resource is to be
    *          removed
-   * @param capacity the resource to be removed
+   * @param totCap the resource to be removed
    * @return true if removal is successful, false otherwise
    */
   public boolean removeInterval(ReservationInterval reservationInterval,
-      ReservationRequest capacity) {
-    Resource totCap =
-        Resources.multiply(capacity.getCapability(),
-            (float) capacity.getNumContainers());
+      Resource totCap) {
     if (totCap.equals(ZERO_RESOURCE)) {
       return true;
     }

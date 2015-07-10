@@ -19,24 +19,48 @@ package org.apache.hadoop.yarn.server.api.records;
 
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
 
-
+/**
+ * {@code NodeStatus} is a summary of the status of the node.
+ * <p>
+ * It includes information such as:
+ * <ul>
+ *   <li>Node information and status..</li>
+ *   <li>Container status.</li>
+ * </ul>
+ */
 public abstract class NodeStatus {
-  
+
+  /**
+   * Create a new {@code NodeStatus}.
+   * @param nodeId Identifier for this node.
+   * @param responseId Identifier for the response.
+   * @param containerStatuses Status of the containers running in this node.
+   * @param keepAliveApplications Applications to keep alive.
+   * @param nodeHealthStatus Health status of the node.
+   * @param containersUtilizations Utilization of the containers in this node.
+   * @return New {@code NodeStatus} with the provided information.
+   */
   public static NodeStatus newInstance(NodeId nodeId, int responseId,
       List<ContainerStatus> containerStatuses,
       List<ApplicationId> keepAliveApplications,
-      NodeHealthStatus nodeHealthStatus) {
+      NodeHealthStatus nodeHealthStatus,
+      ResourceUtilization containersUtilization) {
     NodeStatus nodeStatus = Records.newRecord(NodeStatus.class);
     nodeStatus.setResponseId(responseId);
     nodeStatus.setNodeId(nodeId);
     nodeStatus.setContainersStatuses(containerStatuses);
     nodeStatus.setKeepAliveApplications(keepAliveApplications);
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
+    nodeStatus.setContainersUtilization(containersUtilization);
     return nodeStatus;
   }
 
@@ -55,4 +79,17 @@ public abstract class NodeStatus {
 
   public abstract void setNodeId(NodeId nodeId);
   public abstract void setResponseId(int responseId);
+
+  /**
+   * Get the <em>resource utilization</em> of the containers.
+   * @return <em>resource utilization</em> of the containers
+   */
+  @Public
+  @Stable
+  public abstract ResourceUtilization getContainersUtilization();
+
+  @Private
+  @Unstable
+  public abstract void setContainersUtilization(
+      ResourceUtilization containersUtilization);
 }

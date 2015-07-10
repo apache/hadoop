@@ -229,7 +229,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   @Override
   public float getCpuUsagePercent() {
-    return CpuTimeTracker.UNAVAILABLE;
+    return UNAVAILABLE;
   }
 
 }

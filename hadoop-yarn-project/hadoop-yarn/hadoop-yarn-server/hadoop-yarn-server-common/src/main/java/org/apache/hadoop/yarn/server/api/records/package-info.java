@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.util;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.util.SysInfoLinux;
-
-/**
- * Plugin to calculate resource information on Linux systems.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
-
-  public LinuxResourceCalculatorPlugin() {
-    super(new SysInfoLinux());
-  }
-
-}
+/** Server records. */
+package org.apache.hadoop.yarn.server.api.records;

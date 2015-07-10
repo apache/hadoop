@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -28,12 +31,18 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.FakeRenewer;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -104,5 +113,35 @@ public class TestDelegationTokenFetcher {
     // When Token returned is null, TokenFile should not exist
     Assert.assertFalse(p.getFileSystem(conf).exists(p));
 
+  }
+
+  @Test
+  public void testDelegationTokenWithoutRenewerViaRPC() throws Exception {
+    conf.setBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // Should be able to fetch token without renewer.
+      LocalFileSystem localFileSystem = FileSystem.getLocal(conf);
+      Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
+      p = localFileSystem.makeQualified(p);
+      DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
+      Credentials creds = Credentials.readTokenStorageFile(p, conf);
+      Iterator<Token<?>> itr = creds.getAllTokens().iterator();
+      assertTrue("token not exist error", itr.hasNext());
+      assertNotNull("Token should be there without renewer", itr.next());
+      try {
+        // Without renewer renewal of token should fail.
+        DelegationTokenFetcher.renewTokens(conf, p);
+        fail("Should have failed to renew");
+      } catch (AccessControlException e) {
+        GenericTestUtils.assertExceptionContains(
+            "tried to renew a token without a renewer", e);
+      }
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

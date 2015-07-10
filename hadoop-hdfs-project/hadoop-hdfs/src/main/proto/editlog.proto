@@ -15,21 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.util.SysInfoLinux;
+option java_package = "org.apache.hadoop.hdfs.protocol.proto";
+option java_outer_classname = "EditLogProtos";
+option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
 
-/**
- * Plugin to calculate resource information on Linux systems.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
+import "acl.proto";
+import "xattr.proto";
 
-  public LinuxResourceCalculatorPlugin() {
-    super(new SysInfoLinux());
-  }
+message AclEditLogProto {
+  required string src            = 1;
+  repeated AclEntryProto entries = 2;
+}
 
+message XAttrEditLogProto {
+  optional string src = 1;
+  repeated XAttrProto xAttrs = 2;
 }

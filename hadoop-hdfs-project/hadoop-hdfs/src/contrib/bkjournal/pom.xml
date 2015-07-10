@@ -112,7 +112,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <protocCommand>${protoc.path}</protocCommand>
               <imports>
                 <param>${basedir}/../../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../../../../hadoop-hdfs-project/hadoop-hdfs/src/main/proto</param>
+                <param>${basedir}/../../../../../hadoop-hdfs-project/hadoop-hdfs-client/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>

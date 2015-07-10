@@ -131,6 +131,9 @@ Release 2.8.0 - UNRELEASED
     YARN-41. The RM should handle the graceful shutdown of the NM. (Devaraj K via 
     junping_du)
 
+    YARN-1012. Report NM aggregated container resource utilization in heartbeat. 
+    (Inigo Goiri via kasha)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -319,6 +322,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3827. Migrate YARN native build to new CMake framework (Alan Burlison
     via Colin P. McCabe)
+
+    YARN-3800. Reduce storage footprint for ReservationAllocation. (Anubhav Dhoot
+    via curino)
 
   OPTIMIZATIONS
 
@@ -601,6 +607,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3892. Fixed NPE on RMStateStore#serviceStop when
     CapacityScheduler#serviceInit fails. (Bibin A Chundatt via jianhe)
 
+    YARN-3888. ApplicationMaster link is broken in RM WebUI when appstate is NEW.
+    (Bibin A Chundatt via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -620,6 +629,9 @@ Release 2.7.2 - UNRELEASED
     (Varun Saxena via wangda)
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
+
+    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for 
+    draining events on stop. (Varun Saxena via kasha)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -1665,6 +1677,9 @@ Release 2.6.0 - 2014-11-18
 
     YARN-2811. In Fair Scheduler, reservation fulfillments shouldn't ignore max
     share (Siqi Li via Sandy Ryza)
+
+    YARN-3445. Cache runningApps in RMNode for getting running apps on given
+    NodeId. (Junping Du via mingma)
 
   IMPROVEMENTS
 

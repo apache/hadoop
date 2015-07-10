@@ -146,14 +146,15 @@ public class TestSimpleCapacityReplanner {
     }
   }
 
-  private Map<ReservationInterval, ReservationRequest> generateAllocation(
+  private Map<ReservationInterval, Resource> generateAllocation(
       int startTime, int[] alloc) {
-    Map<ReservationInterval, ReservationRequest> req =
-        new TreeMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req =
+        new TreeMap<ReservationInterval, Resource>();
     for (int i = 0; i < alloc.length; i++) {
       req.put(new ReservationInterval(startTime + i, startTime + i + 1),
-          ReservationRequest.newInstance(Resource.newInstance(1024, 1),
-              alloc[i]));
+          ReservationSystemUtil.toResource(
+              ReservationRequest.newInstance(Resource.newInstance(1024, 1),
+                  alloc[i])));
     }
     return req;
   }

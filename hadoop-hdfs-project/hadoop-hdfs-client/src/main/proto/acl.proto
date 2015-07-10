@@ -61,11 +61,6 @@ message AclStatusProto {
   optional FsPermissionProto permission = 5;
 }
 
-message AclEditLogProto {
-  required string src            = 1;
-  repeated AclEntryProto entries = 2;
-}
-
 message ModifyAclEntriesRequestProto {
   required string src            = 1;
   repeated AclEntryProto aclSpec = 2;

@@ -33,6 +33,7 @@ import java.util.List;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -485,9 +486,9 @@ public class TestRMNodeTransitions {
     NodeId nodeId = node.getNodeID();
 
     // Expire a container
-		ContainerId completedContainerId = BuilderUtils.newContainerId(
-				BuilderUtils.newApplicationAttemptId(
-						BuilderUtils.newApplicationId(0, 0), 0), 0);
+    ContainerId completedContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(0, 0), 0), 0);
     node.handle(new RMNodeCleanContainerEvent(nodeId, completedContainerId));
     Assert.assertEquals(1, node.getContainersToCleanUp().size());
 
@@ -510,6 +511,35 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(completedContainerId, hbrsp.getContainersToCleanup().get(0));
     Assert.assertEquals(1, hbrsp.getApplicationsToCleanup().size());
     Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup().get(0));
+  }
+
+  @Test(timeout=20000)
+  public void testUpdateHeartbeatResponseForAppLifeCycle() {
+    RMNodeImpl node = getRunningNode();
+    NodeId nodeId = node.getNodeID();
+
+    ApplicationId runningAppId = BuilderUtils.newApplicationId(0, 1);
+    // Create a running container
+    ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+        runningAppId, 0), 0);
+
+    ContainerStatus status = ContainerStatus.newInstance(runningContainerId,
+        ContainerState.RUNNING, "", 0);
+    List<ContainerStatus> statusList = new ArrayList<ContainerStatus>();
+    statusList.add(status);
+    NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(true,
+        "", System.currentTimeMillis());
+    node.handle(new RMNodeStatusEvent(nodeId, nodeHealth,
+        statusList, null, null));
+
+    Assert.assertEquals(1, node.getRunningApps().size());
+
+    // Finish an application
+    ApplicationId finishedAppId = runningAppId;
+    node.handle(new RMNodeCleanAppEvent(nodeId, finishedAppId));
+    Assert.assertEquals(1, node.getAppsToCleanup().size());
+    Assert.assertEquals(0, node.getRunningApps().size());
   }
 
   private RMNodeImpl getRunningNode() {

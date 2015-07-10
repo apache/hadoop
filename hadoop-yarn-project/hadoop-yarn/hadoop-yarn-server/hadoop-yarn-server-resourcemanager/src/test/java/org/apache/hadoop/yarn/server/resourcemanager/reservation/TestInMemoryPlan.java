@@ -100,9 +100,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs =
+        ReservationSystemUtil.toResources(allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.addReservation(rAllocation);
@@ -132,9 +134,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs = ReservationSystemUtil.toResources
+        (allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.addReservation(rAllocation);
@@ -158,9 +162,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs = ReservationSystemUtil.toResources
+        (allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.addReservation(rAllocation);
@@ -202,9 +208,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs = ReservationSystemUtil.toResources
+        (allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.addReservation(rAllocation);
@@ -226,9 +234,12 @@ public class TestInMemoryPlan {
     rDef =
         createSimpleReservationDefinition(start, start + updatedAlloc.length,
             updatedAlloc.length, allocations.values());
+    Map<ReservationInterval, Resource> updatedAllocs =
+        ReservationSystemUtil.toResources(allocations);
     rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + updatedAlloc.length, allocations, resCalc, minAlloc);
+            start, start + updatedAlloc.length, updatedAllocs, resCalc,
+            minAlloc);
     try {
       plan.updateReservation(rAllocation);
     } catch (PlanningException e) {
@@ -260,9 +271,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs =
+        ReservationSystemUtil.toResources(allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.updateReservation(rAllocation);
@@ -290,9 +303,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef =
         createSimpleReservationDefinition(start, start + alloc.length,
             alloc.length, allocations.values());
+    Map<ReservationInterval, Resource> allocs =
+        ReservationSystemUtil.toResources(allocations);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
-            start, start + alloc.length, allocations, resCalc, minAlloc);
+            start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
       plan.addReservation(rAllocation);
@@ -359,9 +374,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef1 =
         createSimpleReservationDefinition(start, start + alloc1.length,
             alloc1.length, allocations1.values());
+    Map<ReservationInterval, Resource> allocs1 =
+        ReservationSystemUtil.toResources(allocations1);
     ReservationAllocation rAllocation =
         new InMemoryReservationAllocation(reservationID1, rDef1, user,
-            planName, start, start + alloc1.length, allocations1, resCalc,
+            planName, start, start + alloc1.length, allocs1, resCalc,
             minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID1));
     try {
@@ -388,9 +405,11 @@ public class TestInMemoryPlan {
     ReservationDefinition rDef2 =
         createSimpleReservationDefinition(start, start + alloc2.length,
             alloc2.length, allocations2.values());
+    Map<ReservationInterval, Resource> allocs2 =
+        ReservationSystemUtil.toResources(allocations2);
     rAllocation =
         new InMemoryReservationAllocation(reservationID2, rDef2, user,
-            planName, start, start + alloc2.length, allocations2, resCalc,
+            planName, start, start + alloc2.length, allocs2, resCalc,
             minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID2));
     try {

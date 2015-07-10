@@ -187,6 +187,11 @@ public class MockNodes {
     }
 
     @Override
+    public List<ApplicationId> getRunningApps() {
+      return null;
+    }
+
+    @Override
     public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response) {
     }
 

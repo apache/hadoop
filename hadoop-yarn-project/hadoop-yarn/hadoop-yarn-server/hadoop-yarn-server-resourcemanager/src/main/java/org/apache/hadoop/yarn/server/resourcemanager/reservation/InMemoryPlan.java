@@ -31,7 +31,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -110,7 +109,7 @@ class InMemoryPlan implements Plan {
 
   private void incrementAllocation(ReservationAllocation reservation) {
     assert (readWriteLock.isWriteLockedByCurrentThread());
-    Map<ReservationInterval, ReservationRequest> allocationRequests =
+    Map<ReservationInterval, Resource> allocationRequests =
         reservation.getAllocationRequests();
     // check if we have encountered the user earlier and if not add an entry
     String user = reservation.getUser();
@@ -119,7 +118,7 @@ class InMemoryPlan implements Plan {
       resAlloc = new RLESparseResourceAllocation(resCalc, minAlloc);
       userResourceAlloc.put(user, resAlloc);
     }
-    for (Map.Entry<ReservationInterval, ReservationRequest> r : allocationRequests
+    for (Map.Entry<ReservationInterval, Resource> r : allocationRequests
         .entrySet()) {
       resAlloc.addInterval(r.getKey(), r.getValue());
       rleSparseVector.addInterval(r.getKey(), r.getValue());
@@ -128,11 +127,11 @@ class InMemoryPlan implements Plan {
 
   private void decrementAllocation(ReservationAllocation reservation) {
     assert (readWriteLock.isWriteLockedByCurrentThread());
-    Map<ReservationInterval, ReservationRequest> allocationRequests =
+    Map<ReservationInterval, Resource> allocationRequests =
         reservation.getAllocationRequests();
     String user = reservation.getUser();
     RLESparseResourceAllocation resAlloc = userResourceAlloc.get(user);
-    for (Map.Entry<ReservationInterval, ReservationRequest> r : allocationRequests
+    for (Map.Entry<ReservationInterval, Resource> r : allocationRequests
         .entrySet()) {
       resAlloc.removeInterval(r.getKey(), r.getValue());
       rleSparseVector.removeInterval(r.getKey(), r.getValue());
