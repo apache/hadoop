@@ -119,6 +119,8 @@ public interface RMNode {
 
   public List<ApplicationId> getAppsToCleanup();
 
+  List<ApplicationId> getRunningApps();
+
   /**
    * Update a {@link NodeHeartbeatResponse} with the list of containers and
    * applications to clean up for this node.

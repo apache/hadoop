@@ -119,6 +119,11 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
+  public List<ApplicationId> getRunningApps() {
+    return node.getRunningApps();
+  }
+
+  @Override
   public void updateNodeHeartbeatResponseForCleanup(
           NodeHeartbeatResponse nodeHeartbeatResponse) {
     node.updateNodeHeartbeatResponseForCleanup(nodeHeartbeatResponse);
