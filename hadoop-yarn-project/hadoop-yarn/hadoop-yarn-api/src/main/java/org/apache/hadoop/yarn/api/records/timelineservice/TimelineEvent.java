@@ -32,7 +32,7 @@ import java.util.Map;
 @XmlAccessorType(XmlAccessType.NONE)
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class TimelineEvent {
+public class TimelineEvent implements Comparable<TimelineEvent> {
   private String id;
   private HashMap<String, Object> info = new HashMap<>();
   private long timestamp;
@@ -80,5 +80,44 @@ public class TimelineEvent {
 
   public void setTimestamp(long timestamp) {
     this.timestamp = timestamp;
+  }
+
+  public boolean isValid() {
+    return (id != null && timestamp != 0L);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (int) (timestamp ^ (timestamp >>> 32));
+    result = 31 * result + id.hashCode();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (!(o instanceof TimelineEvent))
+      return false;
+
+    TimelineEvent event = (TimelineEvent) o;
+
+    if (timestamp != event.timestamp)
+      return false;
+    if (!id.equals(event.id)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public int compareTo(TimelineEvent other) {
+    if (timestamp > other.timestamp) {
+      return -1;
+    } else if (timestamp < other.timestamp) {
+      return 1;
+    } else {
+      return id.compareTo(other.id);
+    }
   }
 }
