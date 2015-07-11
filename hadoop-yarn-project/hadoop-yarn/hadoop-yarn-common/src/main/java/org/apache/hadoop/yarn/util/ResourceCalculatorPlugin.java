@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,8 @@ import org.apache.hadoop.util.SysInfo;
 @InterfaceAudience.LimitedPrivate({"YARN", "MAPREDUCE"})
 @InterfaceStability.Unstable
 public class ResourceCalculatorPlugin extends Configured {
+  private static final Log LOG =
+      LogFactory.getLog(ResourceCalculatorPlugin.class);
 
   private final SysInfo sys;
 
@@ -158,9 +162,10 @@ public class ResourceCalculatorPlugin extends Configured {
     }
     try {
       return new ResourceCalculatorPlugin();
-    } catch (SecurityException e) {
-      return null;
+    } catch (Throwable t) {
+      LOG.warn(t + ": Failed to instantiate default resource calculator.", t);
     }
+    return null;
   }
 
 }
