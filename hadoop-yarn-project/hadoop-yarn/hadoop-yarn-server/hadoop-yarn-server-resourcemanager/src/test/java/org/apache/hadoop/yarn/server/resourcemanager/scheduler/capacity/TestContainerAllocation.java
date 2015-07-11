@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -286,11 +287,11 @@ public class TestContainerAllocation {
         public Token createContainerToken(ContainerId containerId,
             NodeId nodeId, String appSubmitter, Resource capability,
             Priority priority, long createTime,
-            LogAggregationContext logAggregationContext, String nodeLabelExp) {
+            LogAggregationContext logAggregationContext, String nodeLabelExp, ContainerType containerType) {
           numRetries++;
           return super.createContainerToken(containerId, nodeId, appSubmitter,
               capability, priority, createTime, logAggregationContext,
-              nodeLabelExp);
+              nodeLabelExp, containerType);
         }
       };
     }
