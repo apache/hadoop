@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
@@ -166,7 +167,7 @@ public class RMContainerTokenSecretManager extends
 
   /**
    * Helper function for creating ContainerTokens
-   * 
+   *
    * @param containerId
    * @param nodeId
    * @param appSubmitter
@@ -179,12 +180,12 @@ public class RMContainerTokenSecretManager extends
       String appSubmitter, Resource capability, Priority priority,
       long createTime) {
     return createContainerToken(containerId, nodeId, appSubmitter, capability,
-      priority, createTime, null, null);
+      priority, createTime, null, null, ContainerType.TASK);
   }
 
   /**
    * Helper function for creating ContainerTokens
-   * 
+   *
    * @param containerId
    * @param nodeId
    * @param appSubmitter
@@ -192,12 +193,14 @@ public class RMContainerTokenSecretManager extends
    * @param priority
    * @param createTime
    * @param logAggregationContext
+   * @param nodeLabelExpression
+   * @param containerType
    * @return the container-token
    */
   public Token createContainerToken(ContainerId containerId, NodeId nodeId,
       String appSubmitter, Resource capability, Priority priority,
       long createTime, LogAggregationContext logAggregationContext,
-      String nodeLabelExpression) {
+      String nodeLabelExpression, ContainerType containerType) {
     byte[] password;
     ContainerTokenIdentifier tokenIdentifier;
     long expiryTimeStamp =
@@ -211,7 +214,7 @@ public class RMContainerTokenSecretManager extends
             appSubmitter, capability, expiryTimeStamp, this.currentMasterKey
               .getMasterKey().getKeyId(),
             ResourceManager.getClusterTimeStamp(), priority, createTime,
-            logAggregationContext, nodeLabelExpression);
+            logAggregationContext, nodeLabelExpression, containerType);
       password = this.createPassword(tokenIdentifier);
 
     } finally {

@@ -134,6 +134,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1012. Report NM aggregated container resource utilization in heartbeat. 
     (Inigo Goiri via kasha)
 
+    YARN-3116. RM notifies NM whether a container is an AM container or normal
+    task container. (Giovanni Matteo Fumarola via zjshen)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

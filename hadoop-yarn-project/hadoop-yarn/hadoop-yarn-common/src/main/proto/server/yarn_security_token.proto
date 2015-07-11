@@ -50,6 +50,7 @@ message ContainerTokenIdentifierProto {
   optional int64 creationTime = 9;
   optional LogAggregationContextProto logAggregationContext = 10;
   optional string nodeLabelExpression = 11;
+  optional ContainerTypeProto containerType = 12;
 }
 
 message ClientToAMTokenIdentifierProto {
