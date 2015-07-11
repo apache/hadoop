@@ -613,6 +613,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3888. ApplicationMaster link is broken in RM WebUI when appstate is NEW.
     (Bibin A Chundatt via xgong)
 
+    YARN-3849. Too much of preemption activity causing continuos killing of
+    containers across queues. (Sunil G via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
