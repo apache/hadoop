@@ -616,6 +616,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3849. Too much of preemption activity causing continuos killing of
     containers across queues. (Sunil G via wangda)
 
+    YARN-3917. getResourceCalculatorPlugin for the default should intercept all
+    exceptions. (gera)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
