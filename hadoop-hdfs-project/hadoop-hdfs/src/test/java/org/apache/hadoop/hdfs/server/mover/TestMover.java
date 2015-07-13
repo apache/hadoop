@@ -404,7 +404,7 @@ public class TestMover {
       int rc = ToolRunner.run(conf, new Mover.Cli(),
           new String[] {"-p", file.toString()});
       Assert.assertEquals("Movement should fail after some retry",
-          ExitStatus.IO_EXCEPTION.getExitCode(), rc);
+          ExitStatus.NO_MOVE_PROGRESS.getExitCode(), rc);
     } finally {
       cluster.shutdown();
     }
