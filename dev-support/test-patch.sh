@@ -625,6 +625,14 @@ function compute_gitdiff
       IFS=${oldifs}
     fi
   done < <("${GIT}" diff --unified=0 --no-color)
+
+  if [[ ! -f ${GITDIFFLINES} ]]; then
+    touch "${GITDIFFLINES}"
+  fi
+  if [[ ! -f ${GITDIFFCONTENT} ]]; then
+    touch "${GITDIFFCONTENT}"
+  fi
+
   popd >/dev/null
 }
 
