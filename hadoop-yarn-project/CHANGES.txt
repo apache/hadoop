@@ -648,9 +648,6 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
 
-    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for 
-    draining events on stop. (Varun Saxena via kasha)
-
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
