@@ -329,6 +329,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3800. Reduce storage footprint for ReservationAllocation. (Anubhav Dhoot
     via curino)
 
+    YARN-3069. Document missing properties in yarn-default.xml.
+    (Ray Chiang via aajisaka)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

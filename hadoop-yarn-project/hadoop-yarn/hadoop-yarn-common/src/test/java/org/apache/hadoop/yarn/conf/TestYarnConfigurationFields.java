@@ -33,18 +33,19 @@ import org.apache.hadoop.conf.TestConfigurationFieldsBase;
  */
 public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
 
+  @SuppressWarnings("deprecation")
   @Override
   public void initializeMemberVariables() {
     xmlFilename = new String("yarn-default.xml");
     configurationClasses = new Class[] { YarnConfiguration.class };
-        
 
     // Allocate for usage
     configurationPropsToSkipCompare = new HashSet<String>();
+    configurationPrefixToSkipCompare = new HashSet<String>();
 
     // Set error modes
     errorIfMissingConfigProps = true;
-    errorIfMissingXmlProps = false;
+    errorIfMissingXmlProps = true;
 
     // Specific properties to skip
     configurationPropsToSkipCompare
@@ -79,6 +80,37 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration
 	    .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.DEFAULT_SCM_STORE_CLASS);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.DEFAULT_SCM_APP_CHECKER_CLASS);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.DEFAULT_SHARED_CACHE_CHECKSUM_ALGO_IMPL);
+
+    // Ignore all YARN Application Timeline Service (version 1) properties
+    configurationPrefixToSkipCompare.add("yarn.timeline-service.");
+
+    // Used as Java command line properties, not XML
+    configurationPrefixToSkipCompare.add("yarn.app.container");
+
+    // Ignore NodeManager "work in progress" variables
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_NETWORK_RESOURCE_INTERFACE);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_MBIT);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_YARN_MBIT);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.NM_DISK_RESOURCE_ENABLED);
+
+    // Set by container-executor.cfg
+    configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);
+
+    // Ignore deprecated properties
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
 
     // Allocate for usage
     xmlPropsToSkipCompare = new HashSet<String>();
@@ -94,13 +126,11 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
 
     // Used in the XML file as a variable reference internal to the XML file
     xmlPropsToSkipCompare.add("yarn.nodemanager.hostname");
-    xmlPropsToSkipCompare.add("yarn.timeline-service.hostname");
 
-    // Currently defined in TimelineAuthenticationFilterInitializer
-    xmlPrefixToSkipCompare.add("yarn.timeline-service.http-authentication");
+    // Ignore all YARN Application Timeline Service (version 1) properties
+    xmlPrefixToSkipCompare.add("yarn.timeline-service");
 
-    // Currently defined in RegistryConstants
+    // Currently defined in RegistryConstants/core-site.xml
     xmlPrefixToSkipCompare.add("hadoop.registry");
   }
-
 }
