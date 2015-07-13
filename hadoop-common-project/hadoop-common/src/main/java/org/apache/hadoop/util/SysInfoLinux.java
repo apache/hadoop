@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -94,11 +95,27 @@ public class SysInfoLinux extends SysInfo {
                "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
                "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+).*");
 
+  /**
+   * Pattern for parsing /proc/diskstats.
+   */
+  private static final String PROCFS_DISKSFILE = "/proc/diskstats";
+  private static final Pattern PROCFS_DISKSFILE_FORMAT =
+      Pattern.compile("^[ \t]*([0-9]+)[ \t]*([0-9 ]+)" +
+              "(?!([a-zA-Z]+[0-9]+))([a-zA-Z]+)" +
+              "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
+              "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)" +
+              "[ \t]*([0-9]+)[ \t]*([0-9]+)[ \t]*([0-9]+)");
+  /**
+   * Pattern for parsing /sys/block/partition_name/queue/hw_sector_size.
+   */
+  private static final Pattern PROCFS_DISKSECTORFILE_FORMAT =
+      Pattern.compile("^([0-9]+)");
 
   private String procfsMemFile;
   private String procfsCpuFile;
   private String procfsStatFile;
   private String procfsNetFile;
+  private String procfsDisksFile;
   private long jiffyLengthInMillis;
 
   private long ramSize = 0;
@@ -113,9 +130,14 @@ public class SysInfoLinux extends SysInfo {
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
   private long numNetBytesRead = 0L; // aggregated bytes read from network
   private long numNetBytesWritten = 0L; // aggregated bytes written to network
+  private long numDisksBytesRead = 0L; // aggregated bytes read from disks
+  private long numDisksBytesWritten = 0L; // aggregated bytes written to disks
 
   private boolean readMemInfoFile = false;
   private boolean readCpuInfoFile = false;
+
+  /* map for every disk its sector size */
+  private HashMap<String, Integer> perDiskSectorSize = null;
 
   public static final long PAGE_SIZE = getConf("PAGESIZE");
   public static final long JIFFY_LENGTH_IN_MILLIS =
@@ -145,7 +167,7 @@ public class SysInfoLinux extends SysInfo {
 
   public SysInfoLinux() {
     this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT,
-         PROCFS_NETFILE, JIFFY_LENGTH_IN_MILLIS);
+         PROCFS_NETFILE, PROCFS_DISKSFILE, JIFFY_LENGTH_IN_MILLIS);
   }
 
   /**
@@ -155,6 +177,7 @@ public class SysInfoLinux extends SysInfo {
    * @param procfsCpuFile fake file for /proc/cpuinfo
    * @param procfsStatFile fake file for /proc/stat
    * @param procfsNetFile fake file for /proc/net/dev
+   * @param procfsDisksFile fake file for /proc/diskstats
    * @param jiffyLengthInMillis fake jiffy length value
    */
   @VisibleForTesting
@@ -162,13 +185,16 @@ public class SysInfoLinux extends SysInfo {
                                        String procfsCpuFile,
                                        String procfsStatFile,
                                        String procfsNetFile,
+                                       String procfsDisksFile,
                                        long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
     this.procfsNetFile = procfsNetFile;
+    this.procfsDisksFile = procfsDisksFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
+    this.perDiskSectorSize = new HashMap<String, Integer>();
   }
 
   /**
@@ -411,6 +437,119 @@ public class SysInfoLinux extends SysInfo {
     }
   }
 
+  /**
+   * Read /proc/diskstats file, parse and calculate amount
+   * of bytes read and written from/to disks.
+   */
+  private void readProcDisksInfoFile() {
+
+    numDisksBytesRead = 0L;
+    numDisksBytesWritten = 0L;
+
+    // Read "/proc/diskstats" file
+    BufferedReader in;
+    try {
+      in = new BufferedReader(new InputStreamReader(
+            new FileInputStream(procfsDisksFile), Charset.forName("UTF-8")));
+    } catch (FileNotFoundException f) {
+      return;
+    }
+
+    Matcher mat;
+    try {
+      String str = in.readLine();
+      while (str != null) {
+        mat = PROCFS_DISKSFILE_FORMAT.matcher(str);
+        if (mat.find()) {
+          String diskName = mat.group(4);
+          assert diskName != null;
+          // ignore loop or ram partitions
+          if (diskName.contains("loop") || diskName.contains("ram")) {
+            str = in.readLine();
+            continue;
+          }
+
+          Integer sectorSize;
+          synchronized (perDiskSectorSize) {
+            sectorSize = perDiskSectorSize.get(diskName);
+            if (null == sectorSize) {
+              // retrieve sectorSize
+              // if unavailable or error, assume 512
+              sectorSize = readDiskBlockInformation(diskName, 512);
+              perDiskSectorSize.put(diskName, sectorSize);
+            }
+          }
+
+          String sectorsRead = mat.group(7);
+          String sectorsWritten = mat.group(11);
+          if (null == sectorsRead || null == sectorsWritten) {
+            return;
+          }
+          numDisksBytesRead += Long.parseLong(sectorsRead) * sectorSize;
+          numDisksBytesWritten += Long.parseLong(sectorsWritten) * sectorSize;
+        }
+        str = in.readLine();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error reading the stream " + procfsDisksFile, e);
+    } finally {
+      // Close the streams
+      try {
+        in.close();
+      } catch (IOException e) {
+        LOG.warn("Error closing the stream " + procfsDisksFile, e);
+      }
+    }
+  }
+
+  /**
+   * Read /sys/block/diskName/queue/hw_sector_size file, parse and calculate
+   * sector size for a specific disk.
+   * @return sector size of specified disk, or defSector
+   */
+  int readDiskBlockInformation(String diskName, int defSector) {
+
+    assert perDiskSectorSize != null && diskName != null;
+
+    String procfsDiskSectorFile =
+            "/sys/block/" + diskName + "/queue/hw_sector_size";
+
+    BufferedReader in;
+    try {
+      in = new BufferedReader(new InputStreamReader(
+            new FileInputStream(procfsDiskSectorFile),
+              Charset.forName("UTF-8")));
+    } catch (FileNotFoundException f) {
+      return defSector;
+    }
+
+    Matcher mat;
+    try {
+      String str = in.readLine();
+      while (str != null) {
+        mat = PROCFS_DISKSECTORFILE_FORMAT.matcher(str);
+        if (mat.find()) {
+          String secSize = mat.group(1);
+          if (secSize != null) {
+            return Integer.parseInt(secSize);
+          }
+        }
+        str = in.readLine();
+      }
+      return defSector;
+    } catch (IOException|NumberFormatException e) {
+      LOG.warn("Error reading the stream " + procfsDiskSectorFile, e);
+      return defSector;
+    } finally {
+      // Close the streams
+      try {
+        in.close();
+      } catch (IOException e) {
+        LOG.warn("Error closing the stream " + procfsDiskSectorFile, e);
+      }
+    }
+  }
+
   /** {@inheritDoc} */
   @Override
   public long getPhysicalMemorySize() {
@@ -492,6 +631,18 @@ public class SysInfoLinux extends SysInfo {
     return numNetBytesWritten;
   }
 
+  @Override
+  public long getStorageBytesRead() {
+    readProcDisksInfoFile();
+    return numDisksBytesRead;
+  }
+
+  @Override
+  public long getStorageBytesWritten() {
+    readProcDisksInfoFile();
+    return numDisksBytesWritten;
+  }
+
   /**
    * Test the {@link SysInfoLinux}.
    *
@@ -515,6 +666,10 @@ public class SysInfoLinux extends SysInfo {
             + plugin.getNetworkBytesRead());
     System.out.println("Total network written (bytes) : "
             + plugin.getNetworkBytesWritten());
+    System.out.println("Total storage read (bytes) : "
+            + plugin.getStorageBytesRead());
+    System.out.println("Total storage written (bytes) : "
+            + plugin.getStorageBytesWritten());
     try {
       // Sleep so we can compute the CPU usage
       Thread.sleep(500L);
