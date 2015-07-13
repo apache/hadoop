@@ -344,3 +344,6 @@
 
     HDFS-8744. Erasure Coding: the number of chunks in packet is not updated
     when writing parity data. (Li Bo)
+
+    HDFS-8669. Erasure Coding: handle missing internal block locations in
+    DFSStripedInputStream. (jing9)
