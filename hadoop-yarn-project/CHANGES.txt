@@ -625,6 +625,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3894. RM startup should fail for wrong CS xml NodeLabel capacity
     configuration. (Bibin A Chundatt via wangda)
 
+    YARN-3381. Fix typo InvalidStateTransitonException.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
