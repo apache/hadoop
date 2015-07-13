@@ -485,7 +485,7 @@ function git_apply
   echo "Applying the patch:"
   run_and_redirect "${PATCH_DIR}/apply-patch-git-apply.log" \
     "${GIT}" apply --binary -v --stat --apply "-p${PATCHPREFIX}" "${PATCH_FILE}"
-  cat "${PATCH_DIR}/apply-patch-git-apply.log"
+  ${GREP} -v "^Checking" "${PATCH_DIR}/apply-patch-git-apply.log"
 }
 
 
