@@ -145,6 +145,24 @@ public class ResourceCalculatorPlugin extends Configured {
   }
 
   /**
+   * Obtain the aggregated number of bytes read from disks.
+   *
+   * @return total number of bytes read.
+   */
+  public long getStorageBytesRead() {
+    return sys.getStorageBytesRead();
+  }
+
+  /**
+   * Obtain the aggregated number of bytes written to disks.
+   *
+   * @return total number of bytes written.
+   */
+  public long getStorageBytesWritten() {
+    return sys.getStorageBytesWritten();
+  }
+
+  /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If
    * class name is null, this method will try and return a memory calculator
    * plugin available for this system.

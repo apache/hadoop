@@ -193,4 +193,16 @@ public class SysInfoWindows extends SysInfo {
     return 0L;
   }
 
+  @Override
+  public long getStorageBytesRead() {
+    // TODO unimplemented
+    return 0L;
+  }
+
+  @Override
+  public long getStorageBytesWritten() {
+    // TODO unimplemented
+    return 0L;
+  }
+
 }

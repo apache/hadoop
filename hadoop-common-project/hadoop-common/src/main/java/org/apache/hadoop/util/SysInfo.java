@@ -120,4 +120,18 @@ public abstract class SysInfo {
    */
   public abstract long getNetworkBytesWritten();
 
+  /**
+   * Obtain the aggregated number of bytes read from disks.
+   *
+   * @return total number of bytes read.
+   */
+  public abstract long getStorageBytesRead();
+
+  /**
+   * Obtain the aggregated number of bytes written to disks.
+   *
+   * @return total number of bytes written.
+   */
+  public abstract long getStorageBytesWritten();
+
 }
