@@ -1081,6 +1081,9 @@ Release 2.7.1 - 2015-07-06
 
     HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
 
+    HDFS-8143. Mover should exit after some retry when failed to move blocks.
+    (Surendra Singh Lilhore via szetszwo)
+
   OPTIMIZATIONS
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using
     hard-links to preserve old edit logs, instead of copying them. (Zhe Zhang
