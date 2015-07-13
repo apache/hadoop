@@ -47,7 +47,15 @@ function shellcheck_private_findbash
   while read line; do
     value=$(find "${line}" ! -name '*.cmd' -type f \
       | ${GREP} -E -v '(.orig$|.rej$)')
-    list="${list} ${value}"
+
+    for i in ${value}; do
+      if [[ ! ${i} =~ \.sh(\.|$)
+          && ! $(head -n 1 "${i}") =~ ^#! ]]; then
+        yetus_debug "Shellcheck skipped: ${i}"
+        continue
+      fi
+      list="${list} ${i}"
+    done
   done < <(find . -type d -name bin -o -type d -name sbin -o -type d -name libexec -o -type d -name shellprofile.d)
   # shellcheck disable=SC2086
   echo ${list} ${SHELLCHECK_SPECIFICFILES} | tr ' ' '\n' | sort -u
@@ -137,6 +145,9 @@ function shellcheck_calcdiffs
 function shellcheck_postapply
 {
   local i
+  local numPrepatch
+  local numPostpatch
+  local diffPostpatch
 
   verify_needed_test shellcheck
   if [[ $? == 0 ]]; then
