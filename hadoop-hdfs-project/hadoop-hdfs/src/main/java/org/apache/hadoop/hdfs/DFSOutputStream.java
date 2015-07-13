@@ -419,7 +419,7 @@ public class DFSOutputStream extends FSOutputSummer
 
     currentPacket.writeChecksum(checksum, ckoff, cklen);
     currentPacket.writeData(b, offset, len);
-    currentPacket.incNumChunks();
+    currentPacket.incNumChunks(1);
     streamer.incBytesCurBlock(len);
 
     // If packet is full, enqueue it for transmission

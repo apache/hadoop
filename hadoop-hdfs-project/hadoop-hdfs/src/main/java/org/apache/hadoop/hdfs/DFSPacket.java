@@ -259,10 +259,10 @@ public class DFSPacket {
   }
 
   /**
-   * increase the number of chunks by one
+   * increase the number of chunks by n
    */
-  synchronized void incNumChunks() {
-    numChunks++;
+  synchronized void incNumChunks(int n) {
+    numChunks += n;
   }
 
   /**
