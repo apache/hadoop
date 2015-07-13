@@ -533,6 +533,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6038. A boolean may be set error in the Word Count v2.0 in
     MapReduce Tutorial. (Tsuyoshi Ozawa via cdouglas)
 
+    MAPREDUCE-6421. Fix findbugs warning in
+    RMContainerAllocator.reduceNodeLabelExpression.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
