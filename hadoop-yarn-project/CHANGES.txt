@@ -622,6 +622,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3917. getResourceCalculatorPlugin for the default should intercept all
     exceptions. (gera)
 
+    YARN-3894. RM startup should fail for wrong CS xml NodeLabel capacity
+    configuration. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
