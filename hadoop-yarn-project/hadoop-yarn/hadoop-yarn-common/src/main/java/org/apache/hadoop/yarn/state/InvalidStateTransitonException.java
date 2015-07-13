@@ -20,29 +20,20 @@ package org.apache.hadoop.yarn.state;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+
+/** @deprecated Use {@link InvalidStateTransitionException} instead. */
 
 @Public
 @Evolving
-public class InvalidStateTransitonException extends YarnRuntimeException {
+@Deprecated
+public class InvalidStateTransitonException extends
+    InvalidStateTransitionException {
 
   private static final long serialVersionUID = 8610511635996283691L;
 
-  private Enum<?> currentState;
-  private Enum<?> event;
-
   public InvalidStateTransitonException(Enum<?> currentState, Enum<?> event) {
-    super("Invalid event: " + event + " at " + currentState);
-    this.currentState = currentState;
-    this.event = event;
+    super(currentState, event);
   }
 
-  public Enum<?> getCurrentState() {
-    return currentState;
-  }
-  
-  public Enum<?> getEvent() {
-    return event;
-  }
 
 }

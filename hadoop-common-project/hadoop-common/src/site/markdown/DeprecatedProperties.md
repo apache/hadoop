@@ -276,6 +276,7 @@ The following table lists the configuration property names that are deprecated i
 | user.name | mapreduce.job.user.name |
 | webinterface.private.actions | mapreduce.jobtracker.webinterface.trusted |
 | yarn.app.mapreduce.yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts | yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts |
+| yarn.client.app-submission.poll-interval | yarn.client.application-client-protocol.poll-timeout-ms |
 
 The following table lists additional changes to some configuration properties:
 

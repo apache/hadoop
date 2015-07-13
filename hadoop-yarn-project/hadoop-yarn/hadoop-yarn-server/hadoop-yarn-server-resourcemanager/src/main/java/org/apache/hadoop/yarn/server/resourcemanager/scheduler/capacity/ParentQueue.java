@@ -147,7 +147,7 @@ public class ParentQueue extends AbstractCSQueue {
       		" for children of queue " + queueName);
     }
     // check label capacities
-    for (String nodeLabel : labelManager.getClusterNodeLabelNames()) {
+    for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
       float capacityByLabel = queueCapacities.getCapacity(nodeLabel);
       // check children's labels
       float sum = 0;

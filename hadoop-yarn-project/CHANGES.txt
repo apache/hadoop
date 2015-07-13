@@ -134,6 +134,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1012. Report NM aggregated container resource utilization in heartbeat. 
     (Inigo Goiri via kasha)
 
+    YARN-3116. RM notifies NM whether a container is an AM container or normal
+    task container. (Giovanni Matteo Fumarola via zjshen)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -325,6 +328,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3800. Reduce storage footprint for ReservationAllocation. (Anubhav Dhoot
     via curino)
+
+    YARN-3069. Document missing properties in yarn-default.xml.
+    (Ray Chiang via aajisaka)
 
   OPTIMIZATIONS
 
@@ -609,6 +615,18 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3888. ApplicationMaster link is broken in RM WebUI when appstate is NEW.
     (Bibin A Chundatt via xgong)
+
+    YARN-3849. Too much of preemption activity causing continuos killing of
+    containers across queues. (Sunil G via wangda)
+
+    YARN-3917. getResourceCalculatorPlugin for the default should intercept all
+    exceptions. (gera)
+
+    YARN-3894. RM startup should fail for wrong CS xml NodeLabel capacity
+    configuration. (Bibin A Chundatt via wangda)
+
+    YARN-3381. Fix typo InvalidStateTransitonException.
+    (Brahma Reddy Battula via aajisaka)
 
 Release 2.7.2 - UNRELEASED
 

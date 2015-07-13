@@ -829,7 +829,8 @@ public class LeafQueue extends AbstractCSQueue {
             RMAppAttempt rmAppAttempt =
                 csContext.getRMContext().getRMApps()
                     .get(application.getApplicationId()).getCurrentAppAttempt();
-            if (null == rmAppAttempt.getMasterContainer()) {
+            if (rmAppAttempt.getSubmissionContext().getUnmanagedAM() == false
+                && null == rmAppAttempt.getMasterContainer()) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Skip allocating AM container to app_attempt="
                     + application.getApplicationAttemptId()

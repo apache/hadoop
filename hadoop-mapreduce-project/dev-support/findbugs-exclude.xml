@@ -479,6 +479,7 @@
       <Field name="reduceResourceRequest" />
       <Field name="maxReduceRampupLimit" />
       <Field name="reduceSlowStart" />
+      <Field name="reduceNodeLabelExpression" />
      </Or>
      <Bug pattern="IS2_INCONSISTENT_SYNC" />
    </Match>
