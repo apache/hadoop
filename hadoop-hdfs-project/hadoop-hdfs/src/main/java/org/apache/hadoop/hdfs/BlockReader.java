@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.EnumSet;
 
@@ -31,7 +32,7 @@ import org.apache.hadoop.util.DataChecksum;
  * from a single datanode.
  */
 @InterfaceAudience.Private
-public interface BlockReader extends ByteBufferReadable {
+public interface BlockReader extends ByteBufferReadable, Closeable {
   
 
   /* same interface as inputStream java.io.InputStream#read()
@@ -63,6 +64,7 @@ public interface BlockReader extends ByteBufferReadable {
    *
    * @throws IOException
    */
+  @Override // java.io.Closeable
   void close() throws IOException;
 
   /**

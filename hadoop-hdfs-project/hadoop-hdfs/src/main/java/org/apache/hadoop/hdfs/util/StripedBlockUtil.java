@@ -83,6 +83,7 @@ public class StripedBlockUtil {
     LocatedBlock[] lbs = new LocatedBlock[dataBlkNum + parityBlkNum];
     for (short i = 0; i < locatedBGSize; i++) {
       final int idx = bg.getBlockIndices()[i];
+      // for now we do not use redundant replica of an internal block
       if (idx < (dataBlkNum + parityBlkNum) && lbs[idx] == null) {
         lbs[idx] = constructInternalBlock(bg, i, cellSize,
             dataBlkNum, idx);
@@ -212,7 +213,9 @@ public class StripedBlockUtil {
         return new StripingChunkReadResult(StripingChunkReadResult.TIMEOUT);
       }
     } catch (ExecutionException e) {
-      DFSClient.LOG.warn("ExecutionException " + e);
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("ExecutionException " + e);
+      }
       return new StripingChunkReadResult(futures.remove(future),
           StripingChunkReadResult.FAILED);
     } catch (CancellationException e) {
@@ -623,7 +626,7 @@ public class StripedBlockUtil {
             cellSize, dataBlkNum, i);
         if (internalBlkLen <= s.getOffsetInBlock()) {
           Preconditions.checkState(s.chunks[i] == null);
-          s.chunks[i] = new StripingChunk(); // chunk state is set to ALLZERO
+          s.chunks[i] = new StripingChunk(StripingChunk.ALLZERO);
         }
       }
     }
@@ -841,10 +844,10 @@ public class StripedBlockUtil {
       this.byteBuffer = buf;
     }
 
-    public StripingChunk() {
+    public StripingChunk(int state) {
       this.byteArray = null;
       this.byteBuffer = null;
-      this.state = ALLZERO;
+      this.state = state;
     }
 
     public void addByteArraySlice(int offset, int length) {

@@ -18,9 +18,16 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.web.ByteRangeInputStream;
+import org.junit.Assert;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class StripedFileTestUtil {
@@ -55,5 +62,126 @@ public class StripedFileTestUtil {
   static byte getByte(long pos) {
     final int mod = 29;
     return (byte) (pos % mod + 1);
+  }
+
+  static void verifyLength(FileSystem fs, Path srcPath, int fileLength)
+      throws IOException {
+    FileStatus status = fs.getFileStatus(srcPath);
+    Assert.assertEquals("File length should be the same", fileLength, status.getLen());
+  }
+
+  static void verifyPread(FileSystem fs, Path srcPath,  int fileLength,
+      byte[] expected, byte[] buf) throws IOException {
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      int[] startOffsets = {0, 1, cellSize - 102, cellSize, cellSize + 102,
+          cellSize * (dataBlocks - 1), cellSize * (dataBlocks - 1) + 102,
+          cellSize * dataBlocks, fileLength - 102, fileLength - 1};
+      for (int startOffset : startOffsets) {
+        startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
+        int remaining = fileLength - startOffset;
+        in.readFully(startOffset, buf, 0, remaining);
+        for (int i = 0; i < remaining; i++) {
+          Assert.assertEquals("Byte at " + (startOffset + i) + " should be the " +
+              "same", expected[startOffset + i], buf[i]);
+        }
+      }
+    }
+  }
+
+  static void verifyStatefulRead(FileSystem fs, Path srcPath, int fileLength,
+      byte[] expected, byte[] buf) throws IOException {
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      final byte[] result = new byte[fileLength];
+      int readLen = 0;
+      int ret;
+      while ((ret = in.read(buf, 0, buf.length)) >= 0) {
+        System.arraycopy(buf, 0, result, readLen, ret);
+        readLen += ret;
+      }
+      Assert.assertEquals("The length of file should be the same to write size",
+          fileLength, readLen);
+      Assert.assertArrayEquals(expected, result);
+    }
+  }
+
+  static void verifyStatefulRead(FileSystem fs, Path srcPath, int fileLength,
+      byte[] expected, ByteBuffer buf) throws IOException {
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      ByteBuffer result = ByteBuffer.allocate(fileLength);
+      int readLen = 0;
+      int ret;
+      while ((ret = in.read(buf)) >= 0) {
+        readLen += ret;
+        buf.flip();
+        result.put(buf);
+        buf.clear();
+      }
+      Assert.assertEquals("The length of file should be the same to write size",
+          fileLength, readLen);
+      Assert.assertArrayEquals(expected, result.array());
+    }
+  }
+
+  static void verifySeek(FileSystem fs, Path srcPath, int fileLength)
+      throws IOException {
+    try (FSDataInputStream in = fs.open(srcPath)) {
+      // seek to 1/2 of content
+      int pos = fileLength / 2;
+      assertSeekAndRead(in, pos, fileLength);
+
+      // seek to 1/3 of content
+      pos = fileLength / 3;
+      assertSeekAndRead(in, pos, fileLength);
+
+      // seek to 0 pos
+      pos = 0;
+      assertSeekAndRead(in, pos, fileLength);
+
+      if (fileLength > cellSize) {
+        // seek to cellSize boundary
+        pos = cellSize - 1;
+        assertSeekAndRead(in, pos, fileLength);
+      }
+
+      if (fileLength > cellSize * dataBlocks) {
+        // seek to striped cell group boundary
+        pos = cellSize * dataBlocks - 1;
+        assertSeekAndRead(in, pos, fileLength);
+      }
+
+      if (fileLength > blockSize * dataBlocks) {
+        // seek to striped block group boundary
+        pos = blockSize * dataBlocks - 1;
+        assertSeekAndRead(in, pos, fileLength);
+      }
+
+      if (!(in.getWrappedStream() instanceof ByteRangeInputStream)) {
+        try {
+          in.seek(-1);
+          Assert.fail("Should be failed if seek to negative offset");
+        } catch (EOFException e) {
+          // expected
+        }
+
+        try {
+          in.seek(fileLength + 1);
+          Assert.fail("Should be failed if seek after EOF");
+        } catch (EOFException e) {
+          // expected
+        }
+      }
+    }
+  }
+
+  static void assertSeekAndRead(FSDataInputStream fsdis, int pos,
+      int writeBytes) throws IOException {
+    fsdis.seek(pos);
+    byte[] buf = new byte[writeBytes];
+    int readLen = StripedFileTestUtil.readAll(fsdis, buf);
+    Assert.assertEquals(readLen, writeBytes - pos);
+    for (int i = 0; i < readLen; i++) {
+      Assert.assertEquals("Byte at " + i + " should be the same",
+          StripedFileTestUtil.getByte(pos + i), buf[i]);
+    }
   }
 }
