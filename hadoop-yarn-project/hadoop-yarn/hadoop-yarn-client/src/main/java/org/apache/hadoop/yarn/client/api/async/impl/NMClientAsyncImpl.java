@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -496,7 +496,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
       try {
         try {
           this.stateMachine.doTransition(event.getType(), event);
-        } catch (InvalidStateTransitonException e) {
+        } catch (InvalidStateTransitionException e) {
           LOG.error("Can't handle this event at current state", e);
         }
       } finally {

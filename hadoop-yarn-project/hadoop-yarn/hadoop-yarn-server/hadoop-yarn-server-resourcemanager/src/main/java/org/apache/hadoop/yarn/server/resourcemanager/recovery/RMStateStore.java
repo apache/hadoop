@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppR
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
-import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -841,7 +841,7 @@ public abstract class RMStateStore extends AbstractService {
             + getRMStateStoreState());
       }
 
-    } catch (InvalidStateTransitonException e) {
+    } catch (InvalidStateTransitionException e) {
       LOG.error("Can't handle this event at current state", e);
     } finally {
       this.writeLock.unlock();
