@@ -27,24 +27,15 @@ public class DrainDispatcher extends AsyncDispatcher {
     this(new LinkedBlockingQueue<Event>());
   }
 
-  public DrainDispatcher(BlockingQueue<Event> eventQueue) {
+  private DrainDispatcher(BlockingQueue<Event> eventQueue) {
     super(eventQueue);
-  }
-
-  /**
-   *  Wait till event thread enters WAITING state (i.e. waiting for new events).
-   */
-  public void waitForEventThreadToWait() {
-    while (!isEventThreadWaiting()) {
-      Thread.yield();
-    }
   }
 
   /**
    * Busy loop waiting for all queued events to drain.
    */
   public void await() {
-    while (hasPendingEvents()) {
+    while (!isDrained()) {
       Thread.yield();
     }
   }
