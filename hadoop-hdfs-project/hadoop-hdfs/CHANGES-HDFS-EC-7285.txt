@@ -341,3 +341,6 @@
 
     HDFS-8484. Erasure coding: Two contiguous blocks occupy IDs belong to same
     striped group. (Walter Su via jing9)
+
+    HDFS-8744. Erasure Coding: the number of chunks in packet is not updated
+    when writing parity data. (Li Bo)

@@ -389,11 +389,13 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       int maxBytesToPacket = p.getMaxChunks() * bytesPerChecksum;
       int toWrite = byteBuffer.remaining() > maxBytesToPacket ?
           maxBytesToPacket: byteBuffer.remaining();
-      int ckLen = ((toWrite - 1) / bytesPerChecksum + 1) * getChecksumSize();
+      int chunks = (toWrite - 1) / bytesPerChecksum + 1;
+      int ckLen = chunks * getChecksumSize();
       p.writeChecksum(checksumBuf, ckOff, ckLen);
       ckOff += ckLen;
       p.writeData(byteBuffer, toWrite);
       getCurrentStreamer().incBytesCurBlock(toWrite);
+      p.incNumChunks(chunks);
       packets.add(p);
     }
     return packets;
