@@ -44,7 +44,7 @@ public class Bzip2Factory {
    * @return <code>true</code> if native-bzip2 is loaded & initialized 
    *         and can be loaded for this job, else <code>false</code>
    */
-  public static boolean isNativeBzip2Loaded(Configuration conf) {
+  public static synchronized boolean isNativeBzip2Loaded(Configuration conf) {
     String libname = conf.get("io.compression.codec.bzip2.library", 
                               "system-native");
     if (!bzip2LibraryName.equals(libname)) {
