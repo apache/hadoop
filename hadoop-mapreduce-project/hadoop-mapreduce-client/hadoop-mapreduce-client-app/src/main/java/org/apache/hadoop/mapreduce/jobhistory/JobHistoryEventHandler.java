@@ -748,7 +748,7 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("JOB_CONF_PATH", jse.getJobConfPath());
         tEvent.addEventInfo("ACLS", jse.getJobAcls());
         tEvent.addEventInfo("JOB_QUEUE_NAME", jse.getJobQueueName());
-        tEvent.addEventInfo("WORKLFOW_ID", jse.getWorkflowId());
+        tEvent.addEventInfo("WORKFLOW_ID", jse.getWorkflowId());
         tEvent.addEventInfo("WORKFLOW_NAME", jse.getWorkflowName());
         tEvent.addEventInfo("WORKFLOW_NAME_NAME", jse.getWorkflowNodeName());
         tEvent.addEventInfo("WORKFLOW_ADJACENCIES",
