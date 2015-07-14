@@ -3878,14 +3878,53 @@ public class BlockManager implements BlockStatsMXBean {
     return toInvalidate.size();
   }
 
-  // TODO: update the enough rack logic for striped blocks
   boolean blockHasEnoughRacks(BlockInfo storedBlock, int expectedStorageNum) {
     if (!this.shouldCheckForEnoughRacks) {
       return true;
     }
-    boolean enoughRacks = false;
     Collection<DatanodeDescriptor> corruptNodes =
         corruptReplicas.getNodes(storedBlock);
+
+    if (storedBlock.isStriped()) {
+      return blockHasEnoughRacksStriped(storedBlock, corruptNodes);
+    } else {
+      return blockHashEnoughRacksContiguous(storedBlock, expectedStorageNum,
+          corruptNodes);
+    }
+  }
+
+  /**
+   * Verify whether given striped block is distributed through enough racks.
+   * As dicussed in HDFS-7613, ec file requires racks at least as many as
+   * the number of data block number.
+   */
+  boolean blockHasEnoughRacksStriped(BlockInfo storedBlock,
+      Collection<DatanodeDescriptor> corruptNodes) {
+    if (!datanodeManager.hasClusterEverBeenMultiRack()) {
+      return true;
+    }
+    boolean enoughRacks = false;
+    Set<String> rackNameSet = new HashSet<>();
+    int dataBlockNum = ((BlockInfoStriped)storedBlock).getRealDataBlockNum();
+    for (DatanodeStorageInfo storage : blocksMap.getStorages(storedBlock)) {
+      final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
+      if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
+        if ((corruptNodes == null) || !corruptNodes.contains(cur)) {
+          String rackNameNew = cur.getNetworkLocation();
+          rackNameSet.add(rackNameNew);
+          if (rackNameSet.size() >= dataBlockNum) {
+            enoughRacks = true;
+            break;
+          }
+        }
+      }
+    }
+    return enoughRacks;
+  }
+
+  boolean blockHashEnoughRacksContiguous(BlockInfo storedBlock,
+      int expectedStorageNum, Collection<DatanodeDescriptor> corruptNodes) {
+    boolean enoughRacks = false;
     String rackName = null;
     for(DatanodeStorageInfo storage : blocksMap.getStorages(storedBlock)) {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
