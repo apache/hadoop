@@ -81,8 +81,8 @@ void StubGenerator::EmitMethod(const MethodDescriptor *method,
   out->Print(
       "\n  inline void $camel_method$(const Message *req, "
       "const std::shared_ptr<Message> &resp, "
-      "Callback &&handler) {\n"
-      "    engine_->AsyncRpc(\"$method$\", req, resp, std::move(handler));\n"
+      "const Callback &handler) {\n"
+      "    engine_->AsyncRpc(\"$method$\", req, resp, handler);\n"
       "  }\n",
       "camel_method", ToCamelCase(method->name()), "method", method->name());
 }

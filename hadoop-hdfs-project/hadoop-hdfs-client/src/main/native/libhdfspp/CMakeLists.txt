@@ -19,6 +19,7 @@
 project (libhdfspp)
 
 find_package(Doxygen)
+find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Threads)
 

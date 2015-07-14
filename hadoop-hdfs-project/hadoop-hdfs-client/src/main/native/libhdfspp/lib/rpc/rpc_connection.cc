@@ -182,7 +182,8 @@ std::shared_ptr<std::string> RpcConnection::PrepareHandshakePacket() {
 
 void RpcConnection::AsyncRpc(
     const std::string &method_name, const ::google::protobuf::MessageLite *req,
-    std::shared_ptr<::google::protobuf::MessageLite> resp, Callback &&handler) {
+    std::shared_ptr<::google::protobuf::MessageLite> resp,
+    const Callback &handler) {
   std::lock_guard<std::mutex> state_lock(engine_state_lock_);
 
   auto wrapped_handler =

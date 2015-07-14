@@ -48,7 +48,7 @@ public:
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
                 std::shared_ptr<::google::protobuf::MessageLite> resp,
-                Callback &&handler);
+                const Callback &handler);
 
   void AsyncRawRpc(const std::string &method_name, const std::string &request,
                    std::shared_ptr<std::string> resp, Callback &&handler);
@@ -123,7 +123,7 @@ public:
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
                 const std::shared_ptr<::google::protobuf::MessageLite> &resp,
-                std::function<void(const Status &)> &&handler);
+                const std::function<void(const Status &)> &handler);
 
   Status Rpc(const std::string &method_name,
              const ::google::protobuf::MessageLite *req,
@@ -134,7 +134,8 @@ public:
    **/
   Status RawRpc(const std::string &method_name, const std::string &req,
                 std::shared_ptr<std::string> resp);
-  Status Connect(const std::vector<::asio::ip::tcp::endpoint> &server);
+  void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+               const std::function<void(const Status &)> &handler);
   void Start();
   void Shutdown();
 
