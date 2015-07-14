@@ -26,6 +26,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.Dom
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 
+
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -96,6 +99,14 @@ public abstract class SchedulingPolicy {
   }
   
   public void initialize(Resource clusterCapacity) {}
+
+  /**
+   * The {@link ResourceCalculator} returned by this method should be used
+   * for any calculations involving resources.
+   *
+   * @return ResourceCalculator instance to use
+   */
+  public abstract ResourceCalculator getResourceCalculator();
 
   /**
    * @return returns the name of {@link SchedulingPolicy}
