@@ -1038,6 +1038,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-2956. calling fetchdt without a --renewer argument throws NPE
     (vinayakumarb)
 
+    HDFS-7608: hdfs dfsclient newConnectedPeer has no write timeout (Xiaoyu Yao
+    via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
