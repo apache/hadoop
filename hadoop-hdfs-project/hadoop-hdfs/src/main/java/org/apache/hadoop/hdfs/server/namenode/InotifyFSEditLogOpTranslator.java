@@ -176,6 +176,10 @@ public class InotifyFSEditLogOpTranslator {
           .metadataType(Event.MetadataUpdateEvent.MetadataType.ACLS)
           .path(saOp.src)
           .acls(saOp.aclEntries).build() });
+    case OP_TRUNCATE:
+      FSEditLogOp.TruncateOp tOp = (FSEditLogOp.TruncateOp) op;
+      return new EventBatch(op.txid, new Event[] {
+          new Event.TruncateEvent(tOp.src, tOp.newLength, tOp.timestamp) });
     default:
       return null;
     }

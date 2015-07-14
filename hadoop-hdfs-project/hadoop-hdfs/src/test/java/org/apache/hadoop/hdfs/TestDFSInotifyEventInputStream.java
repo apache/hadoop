@@ -102,6 +102,8 @@ public class TestDFSInotifyEventInputStream {
       DFSTestUtil.createFile(fs, new Path("/file"), BLOCK_SIZE, (short) 1, 0L);
       DFSTestUtil.createFile(fs, new Path("/file3"), BLOCK_SIZE, (short) 1, 0L);
       DFSTestUtil.createFile(fs, new Path("/file5"), BLOCK_SIZE, (short) 1, 0L);
+      DFSTestUtil.createFile(fs, new Path("/truncate_file"),
+          BLOCK_SIZE * 2, (short) 1, 0L);
       DFSInotifyEventInputStream eis = client.getInotifyEventStream();
       client.rename("/file", "/file4", null); // RenameOp -> RenameEvent
       client.rename("/file4", "/file2"); // RenameOldOp -> RenameEvent
@@ -136,7 +138,8 @@ public class TestDFSInotifyEventInputStream {
           "user::rwx,user:foo:rw-,group::r--,other::---", true));
       client.removeAcl("/file5"); // SetAclOp -> MetadataUpdateEvent
       client.rename("/file5", "/dir"); // RenameOldOp -> RenameEvent
-
+      //TruncateOp -> TruncateEvent
+      client.truncate("/truncate_file", BLOCK_SIZE);
       EventBatch batch = null;
 
       // RenameOp
@@ -353,6 +356,18 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(re3.getDstPath().equals("/dir/file5"));
       Assert.assertTrue(re3.getSrcPath().equals("/file5"));
       Assert.assertTrue(re.getTimestamp() > 0);
+
+      // TruncateOp
+      batch = waitForNextEvents(eis);
+      Assert.assertEquals(1, batch.getEvents().length);
+      txid = checkTxid(batch, txid);
+      Assert
+          .assertTrue(batch.getEvents()[0].getEventType() ==
+          Event.EventType.TRUNCATE);
+      Event.TruncateEvent et = ((Event.TruncateEvent) batch.getEvents()[0]);
+      Assert.assertTrue(et.getPath().equals("/truncate_file"));
+      Assert.assertTrue(et.getFileSize() == BLOCK_SIZE);
+      Assert.assertTrue(et.getTimestamp() > 0);
 
       // Returns null when there are no further events
       Assert.assertTrue(eis.poll() == null);

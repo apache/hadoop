@@ -35,7 +35,7 @@ import java.util.List;
 @InterfaceStability.Unstable
 public abstract class Event {
   public static enum EventType {
-    CREATE, CLOSE, APPEND, RENAME, METADATA, UNLINK
+    CREATE, CLOSE, APPEND, RENAME, METADATA, UNLINK, TRUNCATE
   }
 
   private EventType eventType;
@@ -533,6 +533,41 @@ public abstract class Event {
 
     public String getPath() {
       return path;
+    }
+
+    /**
+     * The time when this event occurred, in milliseconds since the epoch.
+     */
+    public long getTimestamp() {
+      return timestamp;
+    }
+  }
+
+  /**
+   * Sent when a file is truncated.
+   */
+  public static class TruncateEvent extends Event {
+    private String path;
+    private long fileSize;
+    private long timestamp;
+
+
+    public TruncateEvent(String path, long fileSize, long timestamp) {
+      super(EventType.TRUNCATE);
+      this.path = path;
+      this.fileSize = fileSize;
+      this.timestamp = timestamp;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    /**
+     * The size of the truncated file in bytes.
+     */
+    public long getFileSize() {
+      return fileSize;
     }
 
     /**
