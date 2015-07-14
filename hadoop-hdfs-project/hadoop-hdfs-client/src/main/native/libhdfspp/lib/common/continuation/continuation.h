@@ -104,7 +104,7 @@ inline Pipeline<State> &Pipeline<State>::Push(Continuation *stage) {
 
 template <class State>
 inline void Pipeline<State>::Schedule(const Status &status) {
-  if (stage_ >= routines_.size()) {
+  if (!status.ok() || stage_ >= routines_.size()) {
     handler_(status, state_);
     routines_.clear();
     delete this;
@@ -118,6 +118,19 @@ inline void Pipeline<State>::Schedule(const Status &status) {
 template <class State> inline void Pipeline<State>::Run(UserHandler &&handler) {
   handler_ = std::move(handler);
   Schedule(Status::OK());
+}
+
+template <class Handler> class BindContinuation : public Continuation {
+public:
+  BindContinuation(const Handler &handler) : handler_(handler) {}
+  virtual void Run(const Next &next) override { handler_(next); }
+
+private:
+  Handler handler_;
+};
+
+template <class Handler> static inline Continuation *Bind(const Handler &handler) {
+  return new BindContinuation<Handler>(handler);
 }
 }
 }
