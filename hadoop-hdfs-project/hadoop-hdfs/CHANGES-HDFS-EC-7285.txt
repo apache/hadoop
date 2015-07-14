@@ -347,3 +347,6 @@
 
     HDFS-8669. Erasure Coding: handle missing internal block locations in
     DFSStripedInputStream. (jing9)
+
+    HDFS-8702. Erasure coding: update BlockManager.blockHasEnoughRacks(..) logic
+    for striped block. (Kai Sasaki via jing9)
