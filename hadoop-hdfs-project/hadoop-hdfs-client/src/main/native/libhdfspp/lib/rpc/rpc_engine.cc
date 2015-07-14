@@ -35,20 +35,15 @@ RpcEngine::RpcEngine(::asio::io_service *io_service,
     , conn_(new RpcConnectionImpl<::asio::ip::tcp::socket>(this))
 {}
 
-Status
-RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &servers) {
-  using ::asio::ip::tcp;
-  auto stat = std::make_shared<std::promise<Status>>();
-  std::future<Status> future(stat->get_future());
-  conn_->Connect(servers, [this, stat](const Status &status) {
-    if (!status.ok()) {
-      stat->set_value(status);
-      return;
+void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &servers,
+                        const std::function<void(const Status &)> &handler) {
+  conn_->Connect(servers, [this, handler](const Status &stat) {
+    if (!stat.ok()) {
+      handler(stat);
+    } else {
+      conn_->Handshake([handler](const Status &s) { handler(s); });
     }
-    conn_->Handshake(
-        [this, stat](const Status &status) { stat->set_value(status); });
   });
-  return future.get();
 }
 
 void RpcEngine::Start() { conn_->Start(); }
@@ -60,8 +55,8 @@ void RpcEngine::Shutdown() {
 void RpcEngine::AsyncRpc(
     const std::string &method_name, const ::google::protobuf::MessageLite *req,
     const std::shared_ptr<::google::protobuf::MessageLite> &resp,
-    std::function<void(const Status &)> &&handler) {
-  conn_->AsyncRpc(method_name, req, resp, std::move(handler));
+    const std::function<void(const Status &)> &handler) {
+  conn_->AsyncRpc(method_name, req, resp, handler);
 }
 
 Status

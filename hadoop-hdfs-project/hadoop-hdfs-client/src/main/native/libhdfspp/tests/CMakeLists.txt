@@ -25,3 +25,7 @@ add_test(remote_block_reader remote_block_reader_test)
 add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
 target_link_libraries(sasl_digest_md5_test common ${OPENSSL_LIBRARIES} gmock_main)
 add_test(sasl_digest_md5 sasl_digest_md5_test)
+
+add_executable(inputstream_test inputstream_test.cc)
+target_link_libraries(inputstream_test fs rpc reader proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main)
+add_test(inputstream inputstream_test)

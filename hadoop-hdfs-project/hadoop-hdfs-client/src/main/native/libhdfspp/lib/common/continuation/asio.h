@@ -89,6 +89,31 @@ private:
   Iterator *connected_endpoint_;
 };
 
+template <class OutputIterator>
+class ResolveContinuation : public Continuation {
+public:
+  ResolveContinuation(::asio::io_service *io_service, const std::string &server,
+                      const std::string &service, OutputIterator result)
+      : resolver_(*io_service), query_(server, service), result_(result) {}
+
+  virtual void Run(const Next &next) override {
+    using resolver = ::asio::ip::tcp::resolver;
+    auto handler =
+        [this, next](const asio::error_code &ec, resolver::iterator it) {
+          if (!ec) {
+            std::copy(it, resolver::iterator(), result_);
+          }
+          next(ToStatus(ec));
+        };
+    resolver_.async_resolve(query_, handler);
+  }
+
+private:
+  ::asio::ip::tcp::resolver resolver_;
+  ::asio::ip::tcp::resolver::query query_;
+  OutputIterator result_;
+};
+
 template <class Stream, class ConstBufferSequence>
 static inline Continuation *Write(Stream *stream,
                                   const ConstBufferSequence &buffer) {
@@ -105,6 +130,13 @@ template <class Socket, class Iterator>
 static inline Continuation *Connect(Socket *socket, Iterator begin,
                                     Iterator end) {
   return new ConnectContinuation<Socket, Iterator>(socket, begin, end, nullptr);
+}
+
+template <class OutputIterator>
+static inline Continuation *
+Resolve(::asio::io_service *io_service, const std::string &server,
+        const std::string &service, OutputIterator result) {
+  return new ResolveContinuation<OutputIterator>(io_service, server, service, result);
 }
 }
 }
