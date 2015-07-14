@@ -66,7 +66,8 @@ message AllocateRequestProto {
   optional ResourceBlacklistRequestProto blacklist_request = 3;
   optional int32 response_id = 4;
   optional float progress = 5;
-  repeated ContainerResourceIncreaseRequestProto increase_request = 6;
+  repeated ContainerResourceChangeRequestProto increase_request = 6;
+  repeated ContainerResourceChangeRequestProto decrease_request = 7;
 }
 
 message NMTokenProto {
@@ -84,8 +85,8 @@ message AllocateResponseProto {
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
   repeated NMTokenProto nm_tokens = 9;
-  repeated ContainerResourceIncreaseProto increased_containers = 10;
-  repeated ContainerResourceDecreaseProto decreased_containers = 11;
+  repeated ContainerProto increased_containers = 10;
+  repeated ContainerProto decreased_containers = 11;
   optional hadoop.common.TokenProto am_rm_token = 12;
 }
 
@@ -283,6 +284,15 @@ message GetContainerStatusesRequestProto {
 
 message GetContainerStatusesResponseProto {
   repeated ContainerStatusProto status = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message IncreaseContainersResourceRequestProto {
+  repeated hadoop.common.TokenProto increase_containers = 1;
+}
+
+message IncreaseContainersResourceResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
   repeated ContainerExceptionMapProto failed_requests = 2;
 }
 

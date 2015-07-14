@@ -200,6 +200,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3212. RMNode State Transition Update with DECOMMISSIONING state.
     (Junping Du via wangda)
 
+    YARN-3866. AM-RM protocol changes to support container resizing. (Meng Ding
+    via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

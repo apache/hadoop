@@ -19,32 +19,35 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceDecrease;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceDecreaseProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceDecreaseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceChangeRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceChangeRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
-public class ContainerResourceDecreasePBImpl extends ContainerResourceDecrease {
-  ContainerResourceDecreaseProto proto = ContainerResourceDecreaseProto
-      .getDefaultInstance();
-  ContainerResourceDecreaseProto.Builder builder = null;
+
+public class ContainerResourceChangeRequestPBImpl extends
+    ContainerResourceChangeRequest {
+  ContainerResourceChangeRequestProto proto =
+      ContainerResourceChangeRequestProto.getDefaultInstance();
+  ContainerResourceChangeRequestProto.Builder builder = null;
   boolean viaProto = false;
 
   private ContainerId existingContainerId = null;
   private Resource targetCapability = null;
 
-  public ContainerResourceDecreasePBImpl() {
-    builder = ContainerResourceDecreaseProto.newBuilder();
+  public ContainerResourceChangeRequestPBImpl() {
+    builder = ContainerResourceChangeRequestProto.newBuilder();
   }
 
-  public ContainerResourceDecreasePBImpl(ContainerResourceDecreaseProto proto) {
+  public ContainerResourceChangeRequestPBImpl(
+      ContainerResourceChangeRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public ContainerResourceDecreaseProto getProto() {
+  public ContainerResourceChangeRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -53,7 +56,8 @@ public class ContainerResourceDecreasePBImpl extends ContainerResourceDecrease {
 
   @Override
   public ContainerId getContainerId() {
-    ContainerResourceDecreaseProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerResourceChangeRequestProtoOrBuilder p = viaProto ? proto
+        : builder;
     if (this.existingContainerId != null) {
       return this.existingContainerId;
     }
@@ -74,7 +78,8 @@ public class ContainerResourceDecreasePBImpl extends ContainerResourceDecrease {
 
   @Override
   public Resource getCapability() {
-    ContainerResourceDecreaseProtoOrBuilder p = viaProto ? proto : builder;
+    ContainerResourceChangeRequestProtoOrBuilder p = viaProto ? proto
+        : builder;
     if (this.targetCapability != null) {
       return this.targetCapability;
     }
@@ -120,7 +125,7 @@ public class ContainerResourceDecreasePBImpl extends ContainerResourceDecrease {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ContainerResourceDecreaseProto.newBuilder(proto);
+      builder = ContainerResourceChangeRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
