@@ -22,6 +22,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -38,9 +41,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * <p>The protocol between an <code>ApplicationMaster</code> and a 
- * <code>NodeManager</code> to start/stop containers and to get status
- * of running containers.</p>
- * 
+ * <code>NodeManager</code> to start/stop and increase resource of containers
+ * and to get status of running containers.</p>
+ *
  * <p>If security is enabled the <code>NodeManager</code> verifies that the
  * <code>ApplicationMaster</code> has truly been allocated the container
  * by the <code>ResourceManager</code> and also verifies all interactions such 
@@ -169,5 +172,26 @@ public interface ContainerManagementProtocol {
   @Stable
   GetContainerStatusesResponse getContainerStatuses(
       GetContainerStatusesRequest request) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
+   * The API used by the <code>ApplicationMaster</code> to request for
+   * resource increase of running containers on the <code>NodeManager</code>.
+   * </p>
+   *
+   * @param request
+   *         request to increase resource of a list of containers
+   * @return response which includes a list of containerIds of containers
+   *         whose resource has been successfully increased and a
+   *         containerId-to-exception map for failed requests.
+   *
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  IncreaseContainersResourceResponse increaseContainersResource(
+      IncreaseContainersResourceRequest request) throws YarnException,
       IOException;
 }
