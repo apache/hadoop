@@ -628,6 +628,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3381. Fix typo InvalidStateTransitonException.
     (Brahma Reddy Battula via aajisaka)
 
+    YARN-3453. Ensure preemption logic in FairScheduler uses DominantResourceCalculator
+    in DRF queues to prevent unnecessary thrashing. (asuresh)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
