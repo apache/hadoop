@@ -76,7 +76,7 @@
     <curator.version>2.7.1</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
 
-    <tomcat.version>6.0.41</tomcat.version>
+    <tomcat.version>6.0.44</tomcat.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.7</javac.version>
