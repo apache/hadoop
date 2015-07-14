@@ -58,6 +58,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -950,6 +952,17 @@ public class ContainerManagerImpl extends CompositeService implements
             + context.getNodeId().toString());
     }
     return containerTokenIdentifier;
+  }
+
+  /**
+   * Increase resource of a list of containers on this NodeManager.
+   */
+  @Override
+  public IncreaseContainersResourceResponse increaseContainersResource(
+      IncreaseContainersResourceRequest requests)
+      throws YarnException, IOException {
+    // To be implemented in YARN-1645
+    return null;
   }
 
   @Private
