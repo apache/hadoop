@@ -966,6 +966,8 @@ Release 2.7.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
