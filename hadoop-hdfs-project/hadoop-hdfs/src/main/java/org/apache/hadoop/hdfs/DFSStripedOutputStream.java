@@ -254,6 +254,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private final CellBuffers cellBuffers;
   private final RawErasureEncoder encoder;
   private final List<StripedDataStreamer> streamers;
+  private final DFSPacket[] currentPackets; // current Packet of each streamer
 
   /** Size of each striping cell, must be a multiple of bytesPerChecksum */
   private final int cellSize;
@@ -301,6 +302,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       s.add(streamer);
     }
     streamers = Collections.unmodifiableList(s);
+    currentPackets = new DFSPacket[streamers.size()];
     setCurrentStreamer(0);
   }
 
@@ -316,9 +318,18 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     return (StripedDataStreamer)streamer;
   }
 
-  private synchronized StripedDataStreamer setCurrentStreamer(int i) {
-    streamer = streamers.get(i);
+  private synchronized StripedDataStreamer setCurrentStreamer(int newIdx)
+      throws IOException {
+    // backup currentPacket for current streamer
+    int oldIdx = streamers.indexOf(streamer);
+    if (oldIdx >= 0) {
+      currentPackets[oldIdx] = currentPacket;
+    }
+
+    streamer = streamers.get(newIdx);
+    currentPacket = currentPackets[newIdx];
     adjustChunkBoundary();
+
     return getCurrentStreamer();
   }
 
@@ -366,41 +377,6 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     currentPacket = null;
   }
 
-  /**
-   * Generate packets from a given buffer. This is only used for streamers
-   * writing parity blocks.
-   *
-   * @param byteBuffer the given buffer to generate packets
-   * @param checksumBuf the checksum buffer
-   * @return packets generated
-   * @throws IOException
-   */
-  private List<DFSPacket> generatePackets(
-      ByteBuffer byteBuffer, byte[] checksumBuf) throws IOException{
-    List<DFSPacket> packets = new ArrayList<>();
-    assert byteBuffer.hasArray();
-    getDataChecksum().calculateChunkedSums(byteBuffer.array(), 0,
-        byteBuffer.remaining(), checksumBuf, 0);
-    int ckOff = 0;
-    while (byteBuffer.remaining() > 0) {
-      DFSPacket p = createPacket(packetSize, chunksPerPacket,
-          getCurrentStreamer().getBytesCurBlock(),
-          getCurrentStreamer().getAndIncCurrentSeqno(), false);
-      int maxBytesToPacket = p.getMaxChunks() * bytesPerChecksum;
-      int toWrite = byteBuffer.remaining() > maxBytesToPacket ?
-          maxBytesToPacket: byteBuffer.remaining();
-      int chunks = (toWrite - 1) / bytesPerChecksum + 1;
-      int ckLen = chunks * getChecksumSize();
-      p.writeChecksum(checksumBuf, ckOff, ckLen);
-      ckOff += ckLen;
-      p.writeData(byteBuffer, toWrite);
-      getCurrentStreamer().incBytesCurBlock(toWrite);
-      p.incNumChunks(chunks);
-      packets.add(p);
-    }
-    return packets;
-  }
-
   @Override
   protected synchronized void writeChunk(byte[] bytes, int offset, int len,
       byte[] checksum, int ckoff, int cklen) throws IOException {
@@ -413,11 +389,6 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     if (!current.isFailed()) {
       try {
         super.writeChunk(bytes, offset, len, checksum, ckoff, cklen);
-
-        // cell is full and current packet has not been enqueued,
-        if (cellFull && currentPacket != null) {
-          enqueueCurrentPacketFull();
-        }
       } catch(Exception e) {
         handleStreamerFailure("offset=" + offset + ", length=" + len, e);
       }
@@ -581,10 +552,14 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     final long oldBytes = current.getBytesCurBlock();
     if (!current.isFailed()) {
       try {
-        for (DFSPacket p : generatePackets(buffer, checksumBuf)) {
-          getCurrentStreamer().waitAndQueuePacket(p);
+        DataChecksum sum = getDataChecksum();
+        sum.calculateChunkedSums(buffer.array(), 0, len, checksumBuf, 0);
+        for (int i = 0; i < len; i += sum.getBytesPerChecksum()) {
+          int chunkLen = Math.min(sum.getBytesPerChecksum(), len - i);
+          int ckOffset = i / sum.getBytesPerChecksum() * getChecksumSize();
+          super.writeChunk(buffer.array(), i, chunkLen, checksumBuf, ckOffset,
+              getChecksumSize());
         }
-        endBlock();
       } catch(Exception e) {
         handleStreamerFailure("oldBytes=" + oldBytes + ", len=" + len, e);
       }
@@ -628,15 +603,12 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       // flush from all upper layers
       try {
         flushBuffer();
-        if (currentPacket != null) {
-          enqueueCurrentPacket();
-        }
+        // if the last stripe is incomplete, generate and write parity cells
+        writeParityCellsForLastStripe();
+        enqueueAllCurrentPackets();
       } catch(Exception e) {
         handleStreamerFailure("closeImpl", e);
       }
-
-      // if the last stripe is incomplete, generate and write parity cells
-      writeParityCellsForLastStripe();
 
       for (int i = 0; i < numAllBlocks; i++) {
         final StripedDataStreamer s = setCurrentStreamer(i);
@@ -666,5 +638,16 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     } finally {
       setClosed();
     }
+  }
+
+  private void enqueueAllCurrentPackets() throws IOException {
+    int idx = streamers.indexOf(getCurrentStreamer());
+    for(int i = 0; i < streamers.size(); i++) {
+      setCurrentStreamer(i);
+      if (currentPacket != null) {
+        enqueueCurrentPacket();
+      }
+    }
+    setCurrentStreamer(idx);
   }
 }

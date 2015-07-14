@@ -350,3 +350,6 @@
 
     HDFS-8702. Erasure coding: update BlockManager.blockHasEnoughRacks(..) logic
     for striped block. (Kai Sasaki via jing9)
+
+    HDFS-8734. Erasure Coding: fix one cell need two packets. (Walter Su via
+    jing9)
