@@ -100,6 +100,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
     failure diagnostics (Chang Li via jlowe)
 
+    MAPREDUCE-5762. Port MAPREDUCE-3223 and MAPREDUCE-4695 (Remove MRv1 config
+    from mapred-default.xml) to branch-2. (aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
