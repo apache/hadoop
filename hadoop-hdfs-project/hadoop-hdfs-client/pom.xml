@@ -204,6 +204,19 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   </target>
                 </configuration>
               </execution>
+              <execution>
+                <id>native_tests</id>
+                <phase>test</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${skipTests}</skip>
+                  <target>
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="test"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
         </plugins>

@@ -51,3 +51,4 @@ include_directories(
 
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(lib)
+add_subdirectory(tests)

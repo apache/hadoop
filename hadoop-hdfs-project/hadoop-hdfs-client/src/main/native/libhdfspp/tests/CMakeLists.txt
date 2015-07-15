@@ -16,8 +16,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-
-enable_testing()
-
-add_subdirectory(libhdfspp)
+add_library(test_common OBJECT mock_connection.cc)
+add_executable(remote_block_reader_test remote_block_reader_test.cc $<TARGET_OBJECTS:test_common>)
+target_link_libraries(remote_block_reader_test reader proto common ${PROTOBUF_LIBRARIES} gmock_main)
+add_test(remote_block_reader remote_block_reader_test)
