@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -481,25 +480,24 @@ class FSDirWriteFileOp {
       long preferredBlockSize, boolean underConstruction, String clientName,
       String clientMachine, byte storagePolicyId) {
     final INodeFile newNode;
+    Preconditions.checkNotNull(existing);
     assert fsd.hasWriteLock();
-    if (underConstruction) {
-      newNode = newINodeFile(id, permissions, modificationTime,
-          modificationTime, replication, preferredBlockSize, storagePolicyId);
-      newNode.toUnderConstruction(clientName, clientMachine);
-    } else {
-      newNode = newINodeFile(id, permissions, modificationTime, atime,
-          replication, preferredBlockSize, storagePolicyId);
-    }
-
-    newNode.setLocalName(localName);
     try {
+      // check if the file is in an EC zone
+      final boolean isStriped = FSDirErasureCodingOp.isInErasureCodingZone(
+          fsd.getFSNamesystem(), existing);
+      if (underConstruction) {
+        newNode = newINodeFile(id, permissions, modificationTime,
+            modificationTime, replication, preferredBlockSize, storagePolicyId,
+            isStriped);
+        newNode.toUnderConstruction(clientName, clientMachine);
+      } else {
+        newNode = newINodeFile(id, permissions, modificationTime, atime,
+            replication, preferredBlockSize, storagePolicyId, isStriped);
+      }
+      newNode.setLocalName(localName);
       INodesInPath iip = fsd.addINode(existing, newNode);
       if (iip != null) {
-        // check if the file is in an EC zone
-        if (FSDirErasureCodingOp.isInErasureCodingZone(fsd.getFSNamesystem(),
-            iip)) {
-          newNode.addStripedBlocksFeature();
-        }
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
         }
@@ -580,21 +578,18 @@ class FSDirWriteFileOp {
       String clientName, String clientMachine)
       throws IOException {
 
+    Preconditions.checkNotNull(existing);
     long modTime = now();
-    INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
-        modTime, modTime, replication, preferredBlockSize);
-    newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
-    newNode.toUnderConstruction(clientName, clientMachine);
-
     INodesInPath newiip;
     fsd.writeLock();
     try {
+      final boolean isStriped = FSDirErasureCodingOp.isInErasureCodingZone(
+          fsd.getFSNamesystem(), existing);
+      INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
+          modTime, modTime, replication, preferredBlockSize, isStriped);
+      newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
+      newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode);
-      if (newiip != null
-          && FSDirErasureCodingOp.isInErasureCodingZone(fsd.getFSNamesystem(),
-              newiip)) {
-        newNode.addStripedBlocksFeature();
-      }
     } finally {
       fsd.writeUnlock();
     }
@@ -788,16 +783,18 @@ class FSDirWriteFileOp {
 
   private static INodeFile newINodeFile(
       long id, PermissionStatus permissions, long mtime, long atime,
-      short replication, long preferredBlockSize, byte storagePolicyId) {
+      short replication, long preferredBlockSize, byte storagePolicyId,
+      boolean isStriped) {
     return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfoContiguous.EMPTY_ARRAY, replication, preferredBlockSize,
-        storagePolicyId);
+        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
+        storagePolicyId, isStriped);
   }
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
-      long mtime, long atime, short replication, long preferredBlockSize) {
+      long mtime, long atime, short replication, long preferredBlockSize,
+      boolean isStriped) {
     return newINodeFile(id, permissions, mtime, atime, replication,
-        preferredBlockSize, (byte)0);
+        preferredBlockSize, (byte)0, isStriped);
   }
 
   /**

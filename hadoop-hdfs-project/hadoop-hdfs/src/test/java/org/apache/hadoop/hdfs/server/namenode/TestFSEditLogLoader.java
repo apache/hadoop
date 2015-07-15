@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -468,7 +469,7 @@ public class TestFSEditLogLoader {
           new Block(blkId, blkNumBytes, timestamp), testSchema, cellSize);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
-      file.getStripedBlocksFeature().addBlock(stripedBlk);
+      file.addBlock(stripedBlk);
       fns.getEditLog().logAddBlock(testFilePath, file);
       file.toCompleteFile(System.currentTimeMillis());
 
@@ -483,14 +484,14 @@ public class TestFSEditLogLoader {
 
       assertTrue(inodeLoaded.isStriped());
 
-      BlockInfoStriped[] blks = (BlockInfoStriped[])inodeLoaded.getBlocks();
+      BlockInfo[] blks = inodeLoaded.getBlocks();
       assertEquals(1, blks.length);
       assertEquals(blkId, blks[0].getBlockId());
       assertEquals(blkNumBytes, blks[0].getNumBytes());
       assertEquals(timestamp, blks[0].getGenerationStamp());
-      assertEquals(blockNum, blks[0].getDataBlockNum());
-      assertEquals(parityNum, blks[0].getParityBlockNum());
-      assertEquals(cellSize, blks[0].getCellSize());
+      assertEquals(blockNum, ((BlockInfoStriped)blks[0]).getDataBlockNum());
+      assertEquals(parityNum, ((BlockInfoStriped)blks[0]).getParityBlockNum());
+      assertEquals(cellSize, ((BlockInfoStriped)blks[0]).getCellSize());
 
       cluster.shutdown();
       cluster = null;
@@ -536,7 +537,7 @@ public class TestFSEditLogLoader {
           new Block(blkId, blkNumBytes, timestamp), testSchema, cellSize);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
-      file.getStripedBlocksFeature().addBlock(stripedBlk);
+      file.addBlock(stripedBlk);
       fns.getEditLog().logAddBlock(testFilePath, file);
       file.toCompleteFile(System.currentTimeMillis());
       fns.enterSafeMode(false);
@@ -564,14 +565,15 @@ public class TestFSEditLogLoader {
 
       assertTrue(inodeLoaded.isStriped());
 
-      BlockInfoStriped[] blks = (BlockInfoStriped[])inodeLoaded.getBlocks();
+      BlockInfo[] blks = inodeLoaded.getBlocks();
       assertEquals(1, blks.length);
+      assertTrue(blks[0].isStriped());
       assertEquals(blkId, blks[0].getBlockId());
       assertEquals(newBlkNumBytes, blks[0].getNumBytes());
       assertEquals(newTimestamp, blks[0].getGenerationStamp());
-      assertEquals(blockNum, blks[0].getDataBlockNum());
-      assertEquals(parityNum, blks[0].getParityBlockNum());
-      assertEquals(cellSize, blks[0].getCellSize());
+      assertEquals(blockNum, ((BlockInfoStriped)blks[0]).getDataBlockNum());
+      assertEquals(parityNum, ((BlockInfoStriped)blks[0]).getParityBlockNum());
+      assertEquals(cellSize, ((BlockInfoStriped)blks[0]).getCellSize());
 
       cluster.shutdown();
       cluster = null;

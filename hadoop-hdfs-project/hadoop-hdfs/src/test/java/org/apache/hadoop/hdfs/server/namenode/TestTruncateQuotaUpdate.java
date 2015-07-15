@@ -78,7 +78,7 @@ public class TestTruncateQuotaUpdate {
   @Test
   public void testTruncateWithSnapshotNoDivergence() {
     INodeFile file = createMockFile(BLOCKSIZE * 2 + BLOCKSIZE / 2, REPLICATION);
-    addSnapshotFeature(file, file.getContiguousBlocks());
+    addSnapshotFeature(file, file.getBlocks());
 
     // case 4: truncate to 1.5 blocks
     // all the blocks are in snapshot. truncate need to allocate a new block
@@ -152,7 +152,7 @@ public class TestTruncateQuotaUpdate {
     return new BlockInfoContiguous(b, replication);
   }
 
-  private static void addSnapshotFeature(INodeFile file, BlockInfoContiguous[] blocks) {
+  private static void addSnapshotFeature(INodeFile file, BlockInfo[] blocks) {
     FileDiff diff = mock(FileDiff.class);
     when(diff.getBlocks()).thenReturn(blocks);
     FileDiffList diffList = new FileDiffList();

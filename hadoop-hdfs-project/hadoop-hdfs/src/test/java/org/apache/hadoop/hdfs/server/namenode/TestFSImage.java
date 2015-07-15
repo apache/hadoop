@@ -152,9 +152,8 @@ public class TestFSImage {
     short replication = 3;
     long preferredBlockSize = 128*1024*1024;
     INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
-        blks, replication, preferredBlockSize);
+        blks, replication, preferredBlockSize, (byte) 0, true);
     ByteArrayOutputStream bs = new ByteArrayOutputStream();
-    file.addStripedBlocksFeature();
 
     //construct StripedBlocks for the INode
     BlockInfoStriped[] stripedBlks = new BlockInfoStriped[3];
@@ -164,7 +163,7 @@ public class TestFSImage {
       stripedBlks[i] = new BlockInfoStriped(
               new Block(stripedBlkId + i, preferredBlockSize, timestamp),
               testSchema, cellSize);
-      file.getStripedBlocksFeature().addBlock(stripedBlks[i]);
+      file.addBlock(stripedBlks[i]);
     }
 
     final String client = "testClient";
@@ -206,7 +205,7 @@ public class TestFSImage {
     assertEquals(isUC ? mtime : atime, fileByLoaded.getAccessTime());
     // TODO for striped blocks, we currently save and load them as contiguous
     // blocks to/from legacy fsimage
-    assertEquals(3, fileByLoaded.getContiguousBlocks().length);
+    assertEquals(3, fileByLoaded.getBlocks().length);
     assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
 
     if (isUC) {
@@ -405,13 +404,12 @@ public class TestFSImage {
       // check the information of striped blocks
       FSNamesystem fsn = cluster.getNamesystem();
       INodeFile inode = fsn.dir.getINode(file.toString()).asFile();
-      FileWithStripedBlocksFeature sb = inode.getStripedBlocksFeature();
-      assertNotNull(sb);
-      BlockInfoStriped[] blks = sb.getBlocks();
+      assertTrue(inode.isStriped());
+      BlockInfo[] blks = inode.getBlocks();
       assertEquals(1, blks.length);
       assertTrue(blks[0].isStriped());
-      assertEquals(HdfsConstants.NUM_DATA_BLOCKS, blks[0].getDataBlockNum());
-      assertEquals(HdfsConstants.NUM_PARITY_BLOCKS, blks[0].getParityBlockNum());
+      assertEquals(HdfsConstants.NUM_DATA_BLOCKS, ((BlockInfoStriped)blks[0]).getDataBlockNum());
+      assertEquals(HdfsConstants.NUM_PARITY_BLOCKS, ((BlockInfoStriped)blks[0]).getParityBlockNum());
     } finally {
       cluster.shutdown();
     }

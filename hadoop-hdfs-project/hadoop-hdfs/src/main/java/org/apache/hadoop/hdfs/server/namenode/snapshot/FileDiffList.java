@@ -56,20 +56,20 @@ public class FileDiffList extends
     final FileDiff diff =
         super.saveSelf2Snapshot(latestSnapshotId, iNodeFile, snapshotCopy);
     if (withBlocks) {  // Store blocks if this is the first update
-      BlockInfoContiguous[] blks = iNodeFile.getContiguousBlocks();
+      BlockInfo[] blks = iNodeFile.getBlocks();
       assert blks != null;
       diff.setBlocks(blks);
     }
   }
 
-  public BlockInfoContiguous[] findEarlierSnapshotBlocks(int snapshotId) {
+  public BlockInfo[] findEarlierSnapshotBlocks(int snapshotId) {
     assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
     List<FileDiff> diffs = this.asList();
     int i = Collections.binarySearch(diffs, snapshotId);
-    BlockInfoContiguous[] blocks = null;
+    BlockInfo[] blocks = null;
     for(i = i >= 0 ? i : -i-2; i >= 0; i--) {
       blocks = diffs.get(i).getBlocks();
       if(blocks != null) {
@@ -79,14 +79,14 @@ public class FileDiffList extends
     return blocks;
   }
 
-  public BlockInfoContiguous[] findLaterSnapshotBlocks(int snapshotId) {
+  public BlockInfo[] findLaterSnapshotBlocks(int snapshotId) {
     assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
     List<FileDiff> diffs = this.asList();
     int i = Collections.binarySearch(diffs, snapshotId);
-    BlockInfoContiguous[] blocks = null;
+    BlockInfo[] blocks = null;
     for (i = i >= 0 ? i+1 : -i-1; i < diffs.size(); i++) {
       blocks = diffs.get(i).getBlocks();
       if (blocks != null) {
@@ -103,7 +103,7 @@ public class FileDiffList extends
    */
   void combineAndCollectSnapshotBlocks(
       INode.ReclaimContext reclaimContext, INodeFile file, FileDiff removed) {
-    BlockInfoContiguous[] removedBlocks = removed.getBlocks();
+    BlockInfo[] removedBlocks = removed.getBlocks();
     if (removedBlocks == null) {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       assert sf != null : "FileWithSnapshotFeature is null";
@@ -117,11 +117,11 @@ public class FileDiffList extends
     if (earlierDiff != null) {
       earlierDiff.setBlocks(removedBlocks);
     }
-    BlockInfoContiguous[] earlierBlocks =
+    BlockInfo[] earlierBlocks =
         (earlierDiff == null ? new BlockInfoContiguous[]{} : earlierDiff.getBlocks());
     // Find later snapshot (or file itself) with blocks
-    BlockInfoContiguous[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
-    laterBlocks = (laterBlocks == null) ? file.getContiguousBlocks() : laterBlocks;
+    BlockInfo[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
+    laterBlocks = (laterBlocks == null) ? file.getBlocks() : laterBlocks;
     // Skip blocks, which belong to either the earlier or the later lists
     int i = 0;
     for(; i < removedBlocks.length; i++) {

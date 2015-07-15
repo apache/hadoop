@@ -29,6 +29,9 @@ public interface INodeFileAttributes extends INodeAttributes {
   /** @return the file replication. */
   public short getFileReplication();
 
+  /** @return whether the file is striped (instead of contiguous) */
+  public boolean isStriped();
+
   /** @return preferred block size in bytes */
   public long getPreferredBlockSize();
 
@@ -47,10 +50,10 @@ public interface INodeFileAttributes extends INodeAttributes {
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
         short replication, long preferredBlockSize,
-        byte storagePolicyID, XAttrFeature xAttrsFeature) {
+        byte storagePolicyID, XAttrFeature xAttrsFeature, boolean isStriped) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication,
+      header = HeaderFormat.toLong(preferredBlockSize, replication, isStriped,
           storagePolicyID);
     }
 
@@ -67,6 +70,11 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public short getFileReplication() {
       return HeaderFormat.getReplication(header);
+    }
+
+    @Override
+    public boolean isStriped() {
+      return HeaderFormat.isStriped(header);
     }
 
     @Override
