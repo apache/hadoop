@@ -272,4 +272,15 @@ public class BlockInfoStriped extends BlockInfo {
     }
     return ucBlock;
   }
+
+  @Override
+  final boolean hasNoStorage() {
+    final int len = getCapacity();
+    for(int idx = 0; idx < len; idx++) {
+      if (getStorageInfo(idx) != null) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

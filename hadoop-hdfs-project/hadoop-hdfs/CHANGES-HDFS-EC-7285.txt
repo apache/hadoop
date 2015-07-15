@@ -353,3 +353,6 @@
 
     HDFS-8734. Erasure Coding: fix one cell need two packets. (Walter Su via
     jing9)
+
+    HDFS-8619. Erasure Coding: revisit replica counting for striped blocks.
+    (Jing Zhao via yliu)
