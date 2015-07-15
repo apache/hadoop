@@ -24,7 +24,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -233,5 +237,65 @@ public class TestReadStripedFileWithDecoding {
     Assert.assertEquals("The length of file should be the same to write size",
         fileSize, readLen);
     Assert.assertArrayEquals(bytes, result.array());
+  }
+
+  /**
+   * After reading a corrupted block, make sure the client can correctly report
+   * the corruption to the NameNode.
+   */
+  @Test
+  public void testReportBadBlock() throws IOException {
+    // create file
+    final Path file = new Path("/corrupted");
+    final int length = 10; // length of "corruption"
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(fs, file, bytes);
+
+    // corrupt the first data block
+    int dnIndex = findFirstDataNode(file, cellSize * dataBlocks);
+    Assert.assertNotEquals(-1, dnIndex);
+    LocatedStripedBlock slb = (LocatedStripedBlock)fs.getClient()
+        .getLocatedBlocks(file.toString(), 0, cellSize * dataBlocks).get(0);
+    final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(slb,
+        cellSize, dataBlocks, parityBlocks);
+    // find the first block file
+    File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
+    File blkFile = MiniDFSCluster.getBlockFile(storageDir, blks[0].getBlock());
+    Assert.assertTrue("Block file does not exist", blkFile.exists());
+    // corrupt the block file
+    LOG.info("Deliberately corrupting file " + blkFile.getName());
+    try (FileOutputStream out = new FileOutputStream(blkFile)) {
+      out.write("corruption".getBytes());
+    }
+
+    // disable the heartbeat from DN so that the corrupted block record is kept
+    // in NameNode
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    }
+
+    // do stateful read
+    ByteBuffer result = ByteBuffer.allocate(length);
+    ByteBuffer buf = ByteBuffer.allocate(1024);
+    int readLen = 0;
+    int ret;
+    try (FSDataInputStream in = fs.open(file)) {
+      while ((ret = in.read(buf)) >= 0) {
+        readLen += ret;
+        buf.flip();
+        result.put(buf);
+        buf.clear();
+      }
+    }
+    Assert.assertEquals("The length of file should be the same to write size",
+        length, readLen);
+    Assert.assertArrayEquals(bytes, result.array());
+
+    // check whether the corruption has been reported to the NameNode
+    final FSNamesystem ns = cluster.getNamesystem();
+    final BlockManager bm = ns.getBlockManager();
+    BlockInfo blockInfo = (ns.getFSDirectory().getINode4Write(file.toString())
+        .asFile().getBlocks())[0];
+    Assert.assertEquals(1, bm.getCorruptReplicas(blockInfo).size());
   }
 }

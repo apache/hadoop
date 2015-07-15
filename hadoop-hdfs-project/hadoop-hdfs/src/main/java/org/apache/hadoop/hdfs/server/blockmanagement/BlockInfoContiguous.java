@@ -150,4 +150,9 @@ public class BlockInfoContiguous extends BlockInfo {
   public final boolean isStriped() {
     return false;
   }
+
+  @Override
+  final boolean hasNoStorage() {
+    return getStorageInfo(0) == null;
+  }
 }

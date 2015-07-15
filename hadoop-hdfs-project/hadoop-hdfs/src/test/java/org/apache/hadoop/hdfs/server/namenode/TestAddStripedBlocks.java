@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -325,6 +326,7 @@ public class TestAddStripedBlocks {
     final int numStripes = 4;
     final Path filePath = new Path("/corrupt");
     final FSNamesystem ns = cluster.getNameNode().getNamesystem();
+    final BlockManager bm = ns.getBlockManager();
     DFSTestUtil.createStripedFile(cluster, filePath, null,
         numBlocks, numStripes, false);
 
@@ -375,7 +377,10 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(3).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(2, ns.getCorruptReplicaBlocks());
+    // the total number of corrupted block info is still 1
+    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    // 2 internal blocks corrupted
+    Assert.assertEquals(2, bm.getCorruptReplicas(stored).size());
 
     // Now change the size of stored block, and test verifying the last
     // block size
@@ -385,9 +390,10 @@ public class TestAddStripedBlocks {
     reports = DFSTestUtil.makeReportForReceivedBlock(reported,
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, storage);
     ns.processIncrementalBlockReport(
-        cluster.getDataNodes().get(3).getDatanodeId(), reports[0]);
+        cluster.getDataNodes().get(4).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(3, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     // Now send a parity block report with correct size based on adjusted
     // size of stored block
@@ -400,16 +406,18 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(0).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(3, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     reported.setBlockId(stored.getBlockId() + 1);
     reported.setNumBytes(numStripes * BLOCK_STRIPED_CELL_SIZE + 10);
     reports = DFSTestUtil.makeReportForReceivedBlock(reported,
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, storage);
     ns.processIncrementalBlockReport(
-        cluster.getDataNodes().get(1).getDatanodeId(), reports[0]);
+        cluster.getDataNodes().get(5).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(3, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
 
     reported.setBlockId(stored.getBlockId() + NUM_DATA_BLOCKS);
     reported.setNumBytes((numStripes + 1) * BLOCK_STRIPED_CELL_SIZE);
@@ -418,7 +426,8 @@ public class TestAddStripedBlocks {
     ns.processIncrementalBlockReport(
         cluster.getDataNodes().get(2).getDatanodeId(), reports[0]);
     BlockManagerTestUtil.updateState(ns.getBlockManager());
-    Assert.assertEquals(3, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(1, ns.getCorruptReplicaBlocks());
+    Assert.assertEquals(3, bm.getCorruptReplicas(stored).size());
   }
 
 }

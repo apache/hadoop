@@ -178,6 +178,9 @@ public abstract class BlockInfo extends Block
 
   public abstract boolean isStriped();
 
+  /** @return true if there is no datanode storage associated with the block */
+  abstract boolean hasNoStorage();
+
   /**
    * Find specified DatanodeDescriptor.
    * @return index or -1 if not found.
