@@ -639,6 +639,9 @@ Release 2.7.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
+    via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
