@@ -94,7 +94,7 @@ public class TestINodeFile {
 
   private static INodeFile createINodeFile(byte storagePolicyID) {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)3, 1024L, storagePolicyID);
+        null, (short)3, 1024L, storagePolicyID, false);
   }
 
   @Test

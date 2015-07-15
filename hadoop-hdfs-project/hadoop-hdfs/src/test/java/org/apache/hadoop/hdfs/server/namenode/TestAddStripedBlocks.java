@@ -333,7 +333,7 @@ public class TestAddStripedBlocks {
     INodeFile fileNode = ns.getFSDirectory().getINode(filePath.toString()).
         asFile();
     Assert.assertTrue(fileNode.isStriped());
-    BlockInfoStriped stored = fileNode.getStripedBlocksFeature().getBlocks()[0];
+    BlockInfo stored = fileNode.getBlocks()[0];
     BlockManagerTestUtil.updateState(ns.getBlockManager());
     Assert.assertEquals(0, ns.getCorruptReplicaBlocks());
 

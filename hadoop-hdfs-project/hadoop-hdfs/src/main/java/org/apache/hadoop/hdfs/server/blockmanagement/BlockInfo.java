@@ -31,6 +31,7 @@ import org.apache.hadoop.util.LightWeightGSet;
  */
 public abstract class BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
+  public static final BlockInfo[] EMPTY_ARRAY = {};
   private BlockCollection bc;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */

@@ -356,3 +356,6 @@
 
     HDFS-8619. Erasure Coding: revisit replica counting for striped blocks.
     (Jing Zhao via yliu)
+
+    HDFS-8058. Erasure coding: use BlockInfo[] for both striped and contiguous
+    blocks in INodeFile. (Zhe Zhang and Yi Liu via zhz)

@@ -57,14 +57,13 @@ public class TestStripedINodeFile {
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)0, 1024L, HdfsServerConstants.COLD_STORAGE_POLICY_ID);
+        null, (short)0, 1024L, HdfsServerConstants.COLD_STORAGE_POLICY_ID, true);
   }
 
   @Test
   public void testBlockStripedFeature()
       throws IOException, InterruptedException{
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     assertTrue(inf.isStriped());
   }
 
@@ -80,7 +79,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedLength()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
         = new BlockInfoStriped(blk, testSchema, cellSize);
@@ -92,7 +90,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedConsumedSpace()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
         = new BlockInfoStriped(blk, testSchema, cellSize);
@@ -110,7 +107,7 @@ public class TestStripedINodeFile {
     //  a. <Cell Size> * (<Num Stripes> - 1) * <Total Block Num> = 0
     //  b. <Num Bytes> % <Num Bytes per Stripes> = 1
     //  c. <Last Stripe Length> * <Parity Block Num> = 1 * 3
-    assertEquals(4, inf.storagespaceConsumedWithStriped().getStorageSpace());
+    assertEquals(4, inf.storagespaceConsumedStriped().getStorageSpace());
     assertEquals(4, inf.storagespaceConsumed(defaultPolicy).getStorageSpace());
   }
 
@@ -118,7 +115,6 @@ public class TestStripedINodeFile {
   public void testMultipleBlockStripedConsumedSpace()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk1 = new Block(1);
     BlockInfoStriped blockInfoStriped1
         = new BlockInfoStriped(blk1, testSchema, cellSize);
@@ -130,7 +126,7 @@ public class TestStripedINodeFile {
     inf.addBlock(blockInfoStriped1);
     inf.addBlock(blockInfoStriped2);
     // This is the double size of one block in above case.
-    assertEquals(4 * 2, inf.storagespaceConsumedWithStriped().getStorageSpace());
+    assertEquals(4 * 2, inf.storagespaceConsumedStriped().getStorageSpace());
     assertEquals(4 * 2, inf.storagespaceConsumed(defaultPolicy).getStorageSpace());
   }
 
@@ -138,7 +134,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedFileSize()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
         = new BlockInfoStriped(blk, testSchema, cellSize);
@@ -154,7 +149,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedUCFileSize()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
         = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);
@@ -168,7 +162,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedComputeQuotaUsage()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
         = new BlockInfoStriped(blk, testSchema, cellSize);
@@ -190,7 +183,6 @@ public class TestStripedINodeFile {
   public void testBlockStripedUCComputeQuotaUsage()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
-    inf.addStripedBlocksFeature();
     Block blk = new Block(1);
     BlockInfoStripedUnderConstruction bInfoStripedUC
         = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);

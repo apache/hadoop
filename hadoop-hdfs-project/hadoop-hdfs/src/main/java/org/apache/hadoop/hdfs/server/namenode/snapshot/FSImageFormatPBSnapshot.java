@@ -234,7 +234,8 @@ public class FSImageFormatPBSnapshot {
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
               fileInPb.getPreferredBlockSize(),
-              (byte)fileInPb.getStoragePolicyID(), xAttrs);
+              (byte)fileInPb.getStoragePolicyID(), xAttrs,
+              fileInPb.getIsStriped());
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,

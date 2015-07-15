@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
  */
 @InterfaceAudience.Private
 public class BlockInfoContiguous extends BlockInfo {
-  public static final BlockInfoContiguous[] EMPTY_ARRAY = {};
 
   public BlockInfoContiguous(short size) {
     super(size);
