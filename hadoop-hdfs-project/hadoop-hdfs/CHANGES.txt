@@ -1044,6 +1044,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7608: hdfs dfsclient newConnectedPeer has no write timeout (Xiaoyu Yao
     via Colin P. McCabe)
 
+    HDFS-8778. TestBlockReportRateLimiting#testLeaseExpiration can deadlock.
+    (Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1059,7 +1062,7 @@ Release 2.7.2 - UNRELEASED
   HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
   BUG FIXES
-
+    
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
