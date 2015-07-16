@@ -232,6 +232,8 @@ Trunk (Unreleased)
 
     HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
 
+    HADOOP-10979. Auto-entries in hadoop_usage (aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

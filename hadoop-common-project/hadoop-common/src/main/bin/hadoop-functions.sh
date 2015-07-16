@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# we need to declare this globally as an array, which can only
+# be done outside of a function
+declare -a HADOOP_USAGE=()
+
 ## @description  Print a message to stderr
 ## @audience     public
 ## @stability    stable
@@ -34,6 +38,89 @@ function hadoop_debug
   if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
     echo "DEBUG: $*" 1>&2
   fi
+}
+
+## @description  Add a subcommand to the usage output
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        subcommand
+## @param        subcommanddesc
+function hadoop_add_subcommand
+{
+  local option=$1
+  local text=$2
+
+  HADOOP_USAGE[${HADOOP_USAGE_COUNTER}]="${option}@${text}"
+  ((HADOOP_USAGE_COUNTER=HADOOP_USAGE_COUNTER+1))
+}
+
+## @description  generate standard usage output
+## @description  and optionally takes a class
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        execname
+## @param        [true|false]
+function hadoop_generate_usage
+{
+  local cmd=$1
+  local takesclass=$2
+  local i
+  local counter
+  local line
+  local option
+  local giventext
+  local maxoptsize
+  local foldsize=75
+  declare -a tmpa
+
+  cmd=${cmd##*/}
+
+  echo "Usage: ${cmd} [OPTIONS] SUBCOMMAND [SUBCOMMAND OPTIONS]"
+  if [[ ${takesclass} = true ]]; then
+    echo " or    ${cmd} [OPTIONS] CLASSNAME [CLASSNAME OPTIONS]"
+    echo "  where CLASSNAME is a user-provided Java class"
+  fi
+  echo ""
+  echo "  OPTIONS is none or any of:"
+  echo "     --config confdir"
+  echo "     --daemon (start|stop|status)"
+  echo "     --debug"
+  echo "     --hostnames list[,of,host,names]"
+  echo "     --hosts filename"
+  echo "     --loglevel loglevel"
+  echo "     --slaves"
+  echo ""
+  echo "  SUBCOMMAND is one of:"
+
+  counter=0
+  while read -r line; do
+    tmpa[${counter}]=${line}
+    ((counter=counter+1))
+    option=$(echo "${line}" | cut -f1 -d'@')
+    if [[ ${#option} -gt ${maxoptsize} ]]; then
+      maxoptsize=${#option}
+    fi
+  done < <(for i in "${HADOOP_USAGE[@]}"; do
+    echo "${i}"
+  done | sort)
+
+  i=0
+  ((foldsize=75-maxoptsize))
+
+  until [[ $i -eq ${#tmpa[@]} ]]; do
+    option=$(echo "${tmpa[$i]}" | cut -f1 -d'@')
+    giventext=$(echo "${tmpa[$i]}" | cut -f2 -d'@')
+
+    while read -r line; do
+      printf "%-${maxoptsize}s   %-s\n" "${option}" "${line}"
+      option=" "
+    done < <(echo "${giventext}"| fold -s -w ${foldsize})
+    ((i=i+1))
+  done
+  echo ""
+  echo "Most subcommands print help when invoked w/o parameters or with -h."
 }
 
 ## @description  Replace `oldvar` with `newvar` if `oldvar` exists.
@@ -100,6 +187,9 @@ function hadoop_bootstrap
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
   # setup a default TOOL_PATH
   TOOL_PATH=${TOOL_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
+
+  # usage output set to zero
+  HADOOP_USAGE_COUNTER=0
 
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
