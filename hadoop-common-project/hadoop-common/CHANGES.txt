@@ -961,6 +961,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12200. TestCryptoStreamsWithOpensslAesCtrCryptoCodec should be
     skipped in non-native profile. (Masatake Iwasaki via aajisaka)
 
+    HADOOP-10615. FileInputStream in JenkinsHash#main() is never closed.
+    (Chen He via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
