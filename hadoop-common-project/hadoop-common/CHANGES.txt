@@ -15,6 +15,9 @@ Release 2.6.4 - UNRELEASED
     HADOOP-11252. RPC client does not time out by default.
     (Wilfred Spiegelenburg and Masatake Iwasaki via aajisaka)
 
+    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
+    (kanaka kumar avvaru via wheat9)
+
 Release 2.6.3 - 2015-12-17
 
   INCOMPATIBLE CHANGES
