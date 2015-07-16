@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 /**
@@ -40,7 +39,7 @@ public class TestBlockInfoUnderConstruction {
     DatanodeDescriptor dd3 = s3.getDatanodeDescriptor();
 
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
-    BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
+    BlockInfoUnderConstructionContiguous blockInfo = new BlockInfoUnderConstructionContiguous(
         new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
         (short) 3,
         BlockUCState.UNDER_CONSTRUCTION,

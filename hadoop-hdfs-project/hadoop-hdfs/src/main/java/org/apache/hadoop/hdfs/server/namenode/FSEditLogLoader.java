@@ -42,14 +42,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -105,7 +105,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.Holder;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 import com.google.common.base.Joiner;
@@ -992,10 +991,10 @@ public class FSEditLogLoader {
     final BlockInfo newBlockInfo;
     boolean isStriped = ecZone != null;
     if (isStriped) {
-      newBlockInfo = new BlockInfoStripedUnderConstruction(newBlock,
+      newBlockInfo = new BlockInfoUnderConstructionStriped(newBlock,
           ecZone.getSchema(), ecZone.getCellSize());
     } else {
-      newBlockInfo = new BlockInfoContiguousUnderConstruction(newBlock,
+      newBlockInfo = new BlockInfoUnderConstructionContiguous(newBlock,
           file.getPreferredBlockReplication());
     }
     fsNamesys.getBlockManager().addBlockCollectionWithCheck(newBlockInfo, file);
@@ -1078,10 +1077,10 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           if (isStriped) {
-            newBI = new BlockInfoStripedUnderConstruction(newBlock,
+            newBI = new BlockInfoUnderConstructionStriped(newBlock,
                 ecZone.getSchema(), ecZone.getCellSize());
           } else {
-            newBI = new BlockInfoContiguousUnderConstruction(newBlock,
+            newBI = new BlockInfoUnderConstructionContiguous(newBlock,
                 file.getPreferredBlockReplication());
           }
         } else {

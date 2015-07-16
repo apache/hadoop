@@ -304,8 +304,8 @@ public abstract class BlockInfo extends Block
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted to
-   * {@link BlockInfoContiguousUnderConstruction} or
-   * {@link BlockInfoStripedUnderConstruction}.
+   * {@link BlockInfoUnderConstructionContiguous} or
+   * {@link BlockInfoUnderConstructionStriped}.
    * @return {@link HdfsServerConstants.BlockUCState#COMPLETE}
    */
   public HdfsServerConstants.BlockUCState getBlockUCState() {

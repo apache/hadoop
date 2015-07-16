@@ -32,7 +32,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCSt
  * Represents a striped block that is currently being constructed.
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
+public class BlockInfoUnderConstructionStriped extends BlockInfoStriped
     implements BlockInfoUnderConstruction{
   private BlockUCState blockUCState;
 
@@ -57,7 +57,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   /**
    * Constructor with null storage targets.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
+  public BlockInfoUnderConstructionStriped(Block blk, ECSchema schema,
       int cellSize) {
     this(blk, schema, cellSize, UNDER_CONSTRUCTION, null);
   }
@@ -65,11 +65,11 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   /**
    * Create a striped block that is currently being constructed.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
+  public BlockInfoUnderConstructionStriped(Block blk, ECSchema schema,
       int cellSize, BlockUCState state, DatanodeStorageInfo[] targets) {
     super(blk, schema, cellSize);
     assert getBlockUCState() != COMPLETE :
-      "BlockInfoStripedUnderConstruction cannot be in COMPLETE state";
+      "BlockInfoUnderConstructionStriped cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(targets);
   }
@@ -188,7 +188,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     blockRecoveryId = recoveryId;
     if (replicas == null || replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
-          " BlockInfoStripedUnderConstruction.initLeaseRecovery:" +
+          " BlockInfoUnderConstructionStriped.initLeaseRecovery:" +
           " No blocks found, lease removed.");
       // sets primary node index and return.
       primaryNodeIndex = -1;

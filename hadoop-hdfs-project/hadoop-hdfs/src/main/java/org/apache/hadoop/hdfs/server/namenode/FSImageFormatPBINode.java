@@ -44,9 +44,9 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
@@ -373,10 +373,10 @@ public final class FSImageFormatPBINode {
           final BlockInfo ucBlk;
           if (isStriped) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
-            ucBlk = new BlockInfoStripedUnderConstruction(striped,
+            ucBlk = new BlockInfoUnderConstructionStriped(striped,
                 schema, (int)f.getStripingCellSize());
           } else {
-            ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk,
+            ucBlk = new BlockInfoUnderConstructionContiguous(lastBlk,
                 replication);
           }
           file.setBlock(file.numBlocks() - 1, ucBlk);

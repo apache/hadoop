@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -146,14 +146,14 @@ public class TestStripedINodeFile {
   }
 
   @Test
-  public void testBlockStripedUCFileSize()
+  public void testBlockUCStripedFileSize()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
-    BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);
-    bInfoStripedUC.setNumBytes(100);
-    inf.addBlock(bInfoStripedUC);
+    BlockInfoUnderConstructionStriped bInfoUCStriped
+        = new BlockInfoUnderConstructionStriped(blk, testSchema, cellSize);
+    bInfoUCStriped.setNumBytes(100);
+    inf.addBlock(bInfoUCStriped);
     assertEquals(100, inf.computeFileSize());
     assertEquals(0, inf.computeFileSize(false, false));
   }
@@ -180,21 +180,21 @@ public class TestStripedINodeFile {
   }
 
   @Test
-  public void testBlockStripedUCComputeQuotaUsage()
+  public void testBlockUCStripedComputeQuotaUsage()
       throws IOException, InterruptedException {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
-    BlockInfoStripedUnderConstruction bInfoStripedUC
-        = new BlockInfoStripedUnderConstruction(blk, testSchema, cellSize);
-    bInfoStripedUC.setNumBytes(100);
-    inf.addBlock(bInfoStripedUC);
+    BlockInfoUnderConstructionStriped bInfoUCStriped
+        = new BlockInfoUnderConstructionStriped(blk, testSchema, cellSize);
+    bInfoUCStriped.setNumBytes(100);
+    inf.addBlock(bInfoUCStriped);
 
     QuotaCounts counts
         = inf.computeQuotaUsageWithStriped(defaultPolicy,
               new QuotaCounts.Builder().build());
     assertEquals(1024, inf.getPreferredBlockSize());
     assertEquals(1, counts.getNameSpace());
-    // Consumed space in the case of BlockInfoStripedUC can be calculated
+    // Consumed space in the case of BlockInfoUCStriped can be calculated
     // by using preferred block size. This is 1024 and total block num
     // is 9(= 3 + 6). Consumed storage space should be 1024 * 9 = 9216.
     assertEquals(9216, counts.getStorageSpace());

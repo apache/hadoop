@@ -127,18 +127,18 @@ public class BlockInfoContiguous extends BlockInfo {
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  public BlockInfoContiguousUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoUnderConstructionContiguous convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
     if(isComplete()) {
-      BlockInfoContiguousUnderConstruction ucBlock =
-          new BlockInfoContiguousUnderConstruction(this,
+      BlockInfoUnderConstructionContiguous ucBlock =
+          new BlockInfoUnderConstructionContiguous(this,
           getBlockCollection().getPreferredBlockReplication(), s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
       return ucBlock;
     }
     // the block is already under construction
-    BlockInfoContiguousUnderConstruction ucBlock =
-        (BlockInfoContiguousUnderConstruction) this;
+    BlockInfoUnderConstructionContiguous ucBlock =
+        (BlockInfoUnderConstructionContiguous) this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
     ucBlock.setBlockCollection(getBlockCollection());

@@ -872,17 +872,17 @@ public class BlockManager {
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos) {
     if (!blk.isComplete()) {
       if (blk.isStriped()) {
-        final BlockInfoStripedUnderConstruction uc =
-            (BlockInfoStripedUnderConstruction) blk;
+        final BlockInfoUnderConstructionStriped uc =
+            (BlockInfoUnderConstructionStriped) blk;
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
         final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(),
             blk);
         return newLocatedStripedBlock(eb, storages, uc.getBlockIndices(), pos,
             false);
       } else {
-        assert blk instanceof BlockInfoContiguousUnderConstruction;
-        final BlockInfoContiguousUnderConstruction uc =
-            (BlockInfoContiguousUnderConstruction) blk;
+        assert blk instanceof BlockInfoUnderConstructionContiguous;
+        final BlockInfoUnderConstructionContiguous uc =
+            (BlockInfoUnderConstructionContiguous) blk;
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
         final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(),
             blk);
@@ -1863,8 +1863,8 @@ public class BlockManager {
     StatefulBlockInfo(BlockInfo storedBlock,
         Block reportedBlock, ReplicaState reportedState) {
       Preconditions.checkArgument(
-          storedBlock instanceof BlockInfoContiguousUnderConstruction ||
-          storedBlock instanceof BlockInfoStripedUnderConstruction);
+          storedBlock instanceof BlockInfoUnderConstructionContiguous ||
+          storedBlock instanceof BlockInfoUnderConstructionStriped);
       this.storedBlock = storedBlock;
       this.reportedBlock = reportedBlock;
       this.reportedState = reportedState;
@@ -2692,8 +2692,8 @@ public class BlockManager {
     assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
-    if (block instanceof BlockInfoContiguousUnderConstruction ||
-        block instanceof BlockInfoStripedUnderConstruction) {
+    if (block instanceof BlockInfoUnderConstructionContiguous ||
+        block instanceof BlockInfoUnderConstructionStriped) {
       //refresh our copy in case the block got completed in another thread
       storedBlock = getStoredBlock(block);
     } else {
@@ -4118,7 +4118,7 @@ public class BlockManager {
     final LocatedBlock lb;
     if (info.isStriped()) {
       lb = newLocatedStripedBlock(eb, locs,
-          ((BlockInfoStripedUnderConstruction)info).getBlockIndices(),
+          ((BlockInfoUnderConstructionStriped)info).getBlockIndices(),
           offset, false);
     } else {
       lb = newLocatedBlock(eb, locs, offset, false);

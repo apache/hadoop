@@ -256,16 +256,16 @@ public class BlockInfoStriped extends BlockInfo {
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  public BlockInfoStripedUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoUnderConstructionStriped convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
-    final BlockInfoStripedUnderConstruction ucBlock;
+    final BlockInfoUnderConstructionStriped ucBlock;
     if(isComplete()) {
-      ucBlock = new BlockInfoStripedUnderConstruction(this, schema, cellSize,
+      ucBlock = new BlockInfoUnderConstructionStriped(this, schema, cellSize,
           s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
     } else {
       // the block is already under construction
-      ucBlock = (BlockInfoStripedUnderConstruction) this;
+      ucBlock = (BlockInfoUnderConstructionStriped) this;
       ucBlock.setBlockUCState(s);
       ucBlock.setExpectedLocations(targets);
       ucBlock.setBlockCollection(getBlockCollection());

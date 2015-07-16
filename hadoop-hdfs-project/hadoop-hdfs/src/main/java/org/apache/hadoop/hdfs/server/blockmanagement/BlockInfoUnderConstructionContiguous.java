@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  * Represents a block that is currently being constructed.<br>
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
+public class BlockInfoUnderConstructionContiguous extends BlockInfoContiguous
     implements BlockInfoUnderConstruction{
   /** Block state. See {@link BlockUCState} */
   private BlockUCState blockUCState;
@@ -64,18 +64,18 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
    */
-  public BlockInfoContiguousUnderConstruction(Block blk, short replication) {
+  public BlockInfoUnderConstructionContiguous(Block blk, short replication) {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
    */
-  public BlockInfoContiguousUnderConstruction(Block blk, short replication,
+  public BlockInfoUnderConstructionContiguous(Block blk, short replication,
       BlockUCState state, DatanodeStorageInfo[] targets) {
     super(blk, replication);
     assert getBlockUCState() != BlockUCState.COMPLETE :
-      "BlockInfoContiguousUnderConstruction cannot be in COMPLETE state";
+      "BlockInfoUnderConstructionContiguous cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(targets);
   }
@@ -179,7 +179,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*"
-        + " BlockInfoContiguousUnderConstruction.initLeaseRecovery:"
+        + " BlockInfoUnderConstructionContiguous.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;

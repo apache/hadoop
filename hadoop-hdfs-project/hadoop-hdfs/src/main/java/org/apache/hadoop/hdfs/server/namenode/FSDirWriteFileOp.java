@@ -44,8 +44,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -540,7 +540,7 @@ class FSDirWriteFileOp {
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
-        blockInfo = new BlockInfoStripedUnderConstruction(block, ecSchema,
+        blockInfo = new BlockInfoUnderConstructionStriped(block, ecSchema,
             ecZone.getCellSize(),
             HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       } else {
@@ -549,7 +549,7 @@ class FSDirWriteFileOp {
             fileINode.getPreferredBlockReplication(), true);
 
         short numLocations = fileINode.getFileReplication();
-        blockInfo = new BlockInfoContiguousUnderConstruction(block,
+        blockInfo = new BlockInfoUnderConstructionContiguous(block,
             numLocations, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
             targets);
       }
