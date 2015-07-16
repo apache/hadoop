@@ -25,14 +25,30 @@
 
 package org.apache.hadoop.hdfs;
 
+import sun.nio.ch.FileChannelImpl;
+
 import java.io.*;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 
 
 public
 class NewFileInputStream extends InputStream{
 
+
+  /* File Descriptor - handle to the open file */
+  private final FileDescriptor fd;
+
+  /**
+   * The path of the referenced file
+   * (null if the stream is created with a file descriptor)
+   */
+  private final String path;
+
   private InputStream inputStream;
+  private FileChannel channel = null;
+
+
 
 
   /**
@@ -63,9 +79,38 @@ class NewFileInputStream extends InputStream{
    * @see        java.lang.SecurityManager#checkRead(java.lang.String)
    */
   public NewFileInputStream(File file) throws IOException{
-    inputStream = Files.newInputStream(file.toPath());
+    String name = (file != null ? file.getPath() : null);
 
+    inputStream = Files.newInputStream(file.toPath());
+    fd = new FileDescriptor();
+    path = name;
   }
+
+  /**
+   * Returns the unique {@link java.nio.channels.FileChannel FileChannel}
+   * object associated with this file input stream.
+   *
+   * <p> The initial {@link java.nio.channels.FileChannel#position()
+   * position} of the returned channel will be equal to the
+   * number of bytes read from the file so far.  Reading bytes from this
+   * stream will increment the channel's position.  Changing the channel's
+   * position, either explicitly or by reading, will change this stream's
+   * file position.
+   *
+   * @return  the file channel associated with this file input stream
+   *
+   * @since 1.4
+   * @spec JSR-51
+   */
+  public FileChannel getChannel() {
+    synchronized (this) {
+      if (channel == null) {
+        channel = FileChannelImpl.open(fd, path, true, false, this);
+      }
+      return channel;
+    }
+  }
+
   @Override
   public int read() throws IOException {
     return inputStream.read();
