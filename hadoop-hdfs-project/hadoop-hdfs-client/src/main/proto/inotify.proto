@@ -41,6 +41,7 @@ enum EventType {
   EVENT_RENAME = 0x3;
   EVENT_METADATA = 0x4;
   EVENT_UNLINK = 0x5;
+  EVENT_TRUNCATE = 0x6;
 }
 
 message EventProto {
@@ -82,6 +83,12 @@ message CreateEventProto {
 }
 
 message CloseEventProto {
+  required string path = 1;
+  required int64 fileSize = 2;
+  required int64 timestamp = 3;
+}
+
+message TruncateEventProto {
   required string path = 1;
   required int64 fileSize = 2;
   required int64 timestamp = 3;

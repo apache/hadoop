@@ -54,6 +54,12 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   /** cumulative number of bytes written over the network */
   public static final String NETWORK_BYTES_WRITTEN =
       "mapred.tasktracker.networkwritten.testing";
+  /** cumulative number of bytes read from disks */
+  public static final String STORAGE_BYTES_READ =
+      "mapred.tasktracker.storageread.testing";
+  /** cumulative number of bytes written to disks */
+  public static final String STORAGE_BYTES_WRITTEN =
+      "mapred.tasktracker.storagewritten.testing";
   /** process cumulative CPU usage time for testing */
   public static final String PROC_CUMULATIVE_CPU_TIME =
       "mapred.tasktracker.proccumulativecputime.testing";
@@ -130,4 +136,15 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     return getConf().getLong(NETWORK_BYTES_WRITTEN, -1);
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public long getStorageBytesRead() {
+    return getConf().getLong(STORAGE_BYTES_READ, -1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public long getStorageBytesWritten() {
+    return getConf().getLong(STORAGE_BYTES_WRITTEN, -1);
+  }
 }

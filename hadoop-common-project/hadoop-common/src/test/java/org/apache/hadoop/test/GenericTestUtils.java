@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Layout;
@@ -43,6 +44,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -409,5 +411,12 @@ public abstract class GenericTestUtils {
             Joiner.on("\n").join(info.getStackTrace()));
       }
     }
+  }
+
+  /**
+   * Skip test if native code is not loaded.
+   */
+  public static void assumeNativeCodeLoaded() {
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
   }
 }

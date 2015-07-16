@@ -716,6 +716,12 @@ Release 2.8.0 - UNRELEASED
     HDFS-8751. Remove setBlocks API from INodeFile and misc code cleanup. (Zhe
     Zhang via jing9)
 
+    HDFS-8541. Mover should exit with NO_MOVE_PROGRESS if there is no move
+    progress.  (Surendra Singh Lilhore via szetszwo)
+
+    HDFS-8742. Inotify: Support event for OP_TRUNCATE.
+    (Surendra Singh Lilhore via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1035,6 +1041,12 @@ Release 2.8.0 - UNRELEASED
     HDFS-2956. calling fetchdt without a --renewer argument throws NPE
     (vinayakumarb)
 
+    HDFS-7608: hdfs dfsclient newConnectedPeer has no write timeout (Xiaoyu Yao
+    via Colin P. McCabe)
+
+    HDFS-8778. TestBlockReportRateLimiting#testLeaseExpiration can deadlock.
+    (Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1047,8 +1059,10 @@ Release 2.7.2 - UNRELEASED
 
   OPTIMIZATIONS
 
-  BUG FIXES
+  HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
+  BUG FIXES
+    
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
@@ -1080,6 +1094,9 @@ Release 2.7.1 - 2015-07-06
     dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
 
     HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
+
+    HDFS-8143. Mover should exit after some retry when failed to move blocks.
+    (Surendra Singh Lilhore via szetszwo)
 
   OPTIMIZATIONS
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using

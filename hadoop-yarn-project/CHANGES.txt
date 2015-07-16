@@ -628,6 +628,15 @@ Release 2.8.0 - UNRELEASED
     YARN-3381. Fix typo InvalidStateTransitonException.
     (Brahma Reddy Battula via aajisaka)
 
+    YARN-3453. Ensure preemption logic in FairScheduler uses DominantResourceCalculator
+    in DRF queues to prevent unnecessary thrashing. (asuresh)
+
+    YARN-3174. Consolidate the NodeManager and NodeManagerRestart documentation 
+    into one. (Masatake Iwasaki via ozawa)
+
+    YARN-3805. Update the documentation of Disk Checker based on YARN-90.
+    (Masatake Iwasaki via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -635,6 +644,9 @@ Release 2.7.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
+    via ozawa)
 
   OPTIMIZATIONS
 
@@ -647,9 +659,6 @@ Release 2.7.2 - UNRELEASED
     (Varun Saxena via wangda)
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
-
-    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for 
-    draining events on stop. (Varun Saxena via kasha)
 
 Release 2.7.1 - 2015-07-06 
 

@@ -537,6 +537,8 @@ Release 2.8.0 - UNRELEASED
     RMContainerAllocator.reduceNodeLabelExpression.
     (Brahma Reddy Battula via aajisaka)
 
+    MAPREDUCE-6427. Fix typo in JobHistoryEventHandler. (Ray Chiang via cdouglas)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
