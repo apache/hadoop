@@ -165,9 +165,6 @@ Trunk (Unreleased)
     HDFS-5033. Bad error message for fs -put/copyFromLocal if user
     doesn't have permissions to read the source (Darrell Taylor via aw)
 
-    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
-    files rather than the entire DFSClient. (mingma)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -724,6 +721,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8742. Inotify: Support event for OP_TRUNCATE.
     (Surendra Singh Lilhore via aajisaka)
+
+    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
+    files rather than the entire DFSClient. (mingma)
 
   OPTIMIZATIONS
 
