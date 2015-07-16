@@ -631,6 +631,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3453. Ensure preemption logic in FairScheduler uses DominantResourceCalculator
     in DRF queues to prevent unnecessary thrashing. (asuresh)
 
+    YARN-3174. Consolidate the NodeManager and NodeManagerRestart documentation 
+    into one. (Masatake Iwasaki via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
