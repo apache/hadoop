@@ -637,6 +637,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3805. Update the documentation of Disk Checker based on YARN-90.
     (Masatake Iwasaki via ozawa)
 
+    YARN-3930. FileSystemNodeLabelsStore should make sure edit log file closed when 
+    exception is thrown. (Dian Fu via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
