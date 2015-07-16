@@ -987,6 +987,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12191. Bzip2Factory is not thread safe. (Brahma Reddy Battula
     via ozawa)
 
+    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
+    (kanaka kumar avvaru via wheat9)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
