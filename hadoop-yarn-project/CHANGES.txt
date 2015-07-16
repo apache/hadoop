@@ -640,6 +640,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3930. FileSystemNodeLabelsStore should make sure edit log file closed when 
     exception is thrown. (Dian Fu via wangda)
 
+    YARN-3885. ProportionalCapacityPreemptionPolicy doesn't preempt if queue is 
+    more than 2 level. (Ajith S via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
