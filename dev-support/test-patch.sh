@@ -84,8 +84,12 @@ function setup_defaults
   PATCH_BRANCH=""
   PATCH_BRANCH_DEFAULT="master"
 
-  #shellcheck disable=SC2034
+  # shellcheck disable=SC2034
   CHANGED_MODULES=""
+  # shellcheck disable=SC2034
+  CHANGED_UNFILTERED_MODULES=""
+  # shellcheck disable=SC2034
+  CHANGED_UNION_MODULES=""
   USER_MODULE_LIST=""
   OFFLINE=false
   CHANGED_FILES=""
@@ -656,10 +660,12 @@ function echo_and_redirect
 
   find "${BASEDIR}" -type d -exec chmod +x {} \;
   # to the screen
+  echo "cd $(pwd)"
   echo "${*} > ${logfile} 2>&1"
   # to the log
-  echo "${*}" > "${logfile}"
-  # the actual command
+  echo "cd $(pwd)" > "${logfile}"
+  echo "${*}" >> "${logfile}"
+  # run the actual command
   "${@}" >> "${logfile}" 2>&1
 }
 
@@ -723,6 +729,7 @@ function testpatch_usage
   echo "--project=<name>       The short name for project currently using test-patch (default 'yetus')"
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
+  echo "--skip-dirs=<list>     Skip following directories for module finding"
   echo "--skip-system-plugins  Do not load plugins from ${BINDIR}/test-patch.d"
   echo "--summarize=<bool>     Allow tests to summarize results"
   echo "--testlist=<list>      Specify which subsystem tests to use (comma delimited)"
@@ -768,6 +775,7 @@ function parse_args
 {
   local i
   local j
+  local testlist
 
   for i in "$@"; do
     case ${i} in
@@ -893,6 +901,11 @@ function parse_args
       --run-tests)
         RUN_TESTS=true
       ;;
+      --skip-dirs=*)
+        MODULE_SKIPDIRS=${i#*=}
+        MODULE_SKIPDIRS=${MODULE_SKIPDIRS//,/ }
+        yetus_debug "Setting skipdirs to ${MODULE_SKIPDIRS}"
+      ;;
       --skip-system-plugins)
         LOAD_SYSTEM_PLUGINS=false
       ;;
@@ -1007,50 +1020,28 @@ function parse_args
   GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
 }
 
-## @description  Locate the pom.xml file for a given directory
+## @description  Locate the build file for a given directory
 ## @audience     private
 ## @stability    stable
 ## @replaceable  no
-## @return       directory containing the pom.xml. Nothing returned if not found.
-function find_pomxml_dir
+## @return       directory containing the buildfile. Nothing returned if not found.
+## @params       buildfile
+## @params       directory
+function find_buildfile_dir
 {
-  local dir=$1
+  local buildfile=$1
+  local dir=$2
 
-  yetus_debug "Find pom.xml dir for: ${dir}"
+  yetus_debug "Find ${buildfile} dir for: ${dir}"
 
   while builtin true; do
-    if [[ -f "${dir}/pom.xml" ]];then
+    if [[ -f "${dir}/${buildfile}" ]];then
       echo "${dir}"
       yetus_debug "Found: ${dir}"
-      return
+      return 0
     elif [[ ${dir} == "." ]]; then
-      yetus_error "ERROR: pom.xml is not found. Make sure the target is a Maven-based project."
-      return
-    else
-      dir=$(dirname "${dir}")
-    fi
-  done
-}
-
-## @description  Locate the build.xml file for a given directory
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       directory containing the build.xml. Nothing returned if not found.
-function find_buildxml_dir
-{
-  local dir=$1
-
-  yetus_debug "Find build.xml dir for: ${dir}"
-
-  while builtin true; do
-    if [[ -f "${dir}/build.xml" ]];then
-      echo "${dir}"
-      yetus_debug "Found: ${dir}"
-      return
-    elif [[ ${dir} == "." ]]; then
-      yetus_error "ERROR: build.xml is not found. Make sure the target is a Ant-based project."
-      return
+      yetus_debug "ERROR: ${buildfile} is not found."
+      return 1
     else
       dir=$(dirname "${dir}")
     fi
@@ -1073,6 +1064,42 @@ function find_changed_files
     /^(\+\+\+|---) / { p($2) }' "${PATCH_DIR}/patch" | sort -u)
 }
 
+## @description Check for directories to skip during
+## @description changed module calcuation
+## @audience    private
+## @stability   stable
+## @replaceable no
+## @params      directory
+## @returns     0 for use
+## @returns     1 for skip
+function module_skipdir
+{
+  local dir=${1}
+  local i
+
+  yetus_debug "Checking skipdirs for ${dir}"
+
+  if [[ -z ${MODULE_SKIPDIRS} ]]; then
+    yetus_debug "Skipping skipdirs"
+    return 0
+  fi
+
+  while builtin true; do
+    for i in ${MODULE_SKIPDIRS}; do
+      if [[ ${dir} = "${i}" ]];then
+        yetus_debug "Found a skip: ${dir}"
+        return 1
+      fi
+    done
+    if [[ ${dir} == "." ]]; then
+      return 0
+    else
+      dir=$(dirname "${dir}")
+      yetus_debug "Trying to skip: ${dir}"
+    fi
+  done
+}
+
 ## @description  Find the modules of the build that ${PATCH_DIR}/patch modifies
 ## @audience     private
 ## @stability    stable
@@ -1082,60 +1109,111 @@ function find_changed_modules
 {
   local i
   local changed_dirs
-  local pomdirs
-  local pomdir
+  local builddirs
+  local builddir
   local module
-  local pommods
+  local buildmods
+  local prev_builddir
+  local i=1
+  local dir
+  local buildfile
+
+  case ${BUILDTOOL} in
+    maven)
+      buildfile=pom.xml
+    ;;
+    ant)
+      buildfile=build.xml
+    ;;
+    *)
+      yetus_error "ERROR: Unsupported build tool."
+      output_to_console 1
+      output_to_bugsystem 1
+      cleanup_and_exit 1
+    ;;
+  esac
 
   changed_dirs=$(for i in ${CHANGED_FILES}; do dirname "${i}"; done | sort -u)
 
   # Now find all the modules that were changed
   for i in ${changed_dirs}; do
-    case ${BUILDTOOL} in
-      maven)
-        #shellcheck disable=SC2086
-        pomdir=$(find_pomxml_dir ${i})
-        if [[ -z ${pomdir} ]]; then
-          output_to_console 1
-          output_to_bugsystem 1
-          cleanup_and_exit 1
-        fi
-        pomdirs="${pomdirs} ${pomdir}"
-      ;;
-      ant)
-        #shellcheck disable=SC2086
-        pomdir=$(find_buildxml_dir ${i})
-        if [[ -z ${pomdir} ]]; then
-          output_to_console 1
-          output_to_bugsystem 1
-          cleanup_and_exit 1
-        fi
-        pomdirs="${pomdirs} ${pomdir}"
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        output_to_console 1
-        output_to_bugsystem 1
-        cleanup_and_exit 1
-      ;;
-    esac
+
+    module_skipdir "${i}"
+    if [[ $? != 0 ]]; then
+      continue
+    fi
+
+    builddir=$(find_buildfile_dir ${buildfile} "${i}")
+    if [[ -z ${builddir} ]]; then
+      yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
+      output_to_console 1
+      output_to_bugsystem 1
+      cleanup_and_exit 1
+    fi
+    builddirs="${builddirs} ${builddir}"
   done
 
   #shellcheck disable=SC2086,SC2034
-  CHANGED_UNFILTERED_MODULES=$(echo ${pomdirs} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
+  CHANGED_UNFILTERED_MODULES=$(echo ${builddirs} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
+  #shellcheck disable=SC2086,SC2116
+  CHANGED_UNFILTERED_MODULES=$(echo ${CHANGED_UNFILTERED_MODULES})
 
-  if [[ ${BUILDTOOL} == maven ]]; then
+
+  if [[ ${BUILDTOOL} = maven
+    && ${QETESTMODE} = false ]]; then
     # Filter out modules without code
-    for module in ${pomdirs}; do
+    for module in ${builddirs}; do
       ${GREP} "<packaging>pom</packaging>" "${module}/pom.xml" > /dev/null
       if [[ "$?" != 0 ]]; then
-        pommods="${pommods} ${module}"
+        buildmods="${buildmods} ${module}"
       fi
     done
+  elif [[ ${QETESTMODE} = true ]]; then
+    buildmods=${builddirs}
   fi
 
   #shellcheck disable=SC2086,SC2034
-  CHANGED_MODULES=$(echo ${pommods} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
+  CHANGED_MODULES=$(echo ${buildmods} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
+
+  # turn it back into a list so that anyone printing doesn't
+  # generate multiline output
+  #shellcheck disable=SC2086,SC2116
+  CHANGED_MODULES=$(echo ${CHANGED_MODULES})
+
+  yetus_debug "Locate the union of ${CHANGED_MODULES}"
+  # shellcheck disable=SC2086
+  count=$(echo ${CHANGED_MODULES} | wc -w)
+  if [[ ${count} -lt 2 ]]; then
+    yetus_debug "Only one entry, so keeping it ${CHANGED_MODULES}"
+    # shellcheck disable=SC2034
+    CHANGED_UNION_MODULES=${CHANGED_MODULES}
+    return
+  fi
+
+  i=1
+  while [[ ${i} -lt 100 ]]
+  do
+    module=$(echo "${CHANGED_MODULES}" | tr ' ' '\n' | cut -f1-${i} -d/ | uniq)
+    count=$(echo "${module}" | wc -w)
+    if [[ ${count} -eq 1
+      && -f ${module}/${buildfile} ]]; then
+      prev_builddir=${module}
+    elif [[ ${count} -gt 1 ]]; then
+      builddir=${prev_builddir}
+      break
+    fi
+    ((i=i+1))
+  done
+
+  if [[ -z ${builddir} ]]; then
+    builddir="."
+  fi
+
+  yetus_debug "Finding union of ${builddir}"
+  builddir=$(find_buildfile_dir ${buildfile} "${builddir}" || true)
+
+  #shellcheck disable=SC2034
+  CHANGED_UNION_MODULES="${builddir}"
 }
 
 ## @description  git checkout the appropriate branch to test.  Additionally, this calls
