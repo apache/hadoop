@@ -634,6 +634,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3174. Consolidate the NodeManager and NodeManagerRestart documentation 
     into one. (Masatake Iwasaki via ozawa)
 
+    YARN-3805. Update the documentation of Disk Checker based on YARN-90.
+    (Masatake Iwasaki via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
