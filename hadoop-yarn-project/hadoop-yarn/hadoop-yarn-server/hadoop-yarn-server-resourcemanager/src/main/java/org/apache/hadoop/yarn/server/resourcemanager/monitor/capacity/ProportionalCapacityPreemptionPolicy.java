@@ -896,8 +896,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           ret.untouchableExtra = Resource.newInstance(0, 0);
         } else {
           ret.untouchableExtra =
-                Resources.subtractFrom(extra, childrensPreemptable);
+                Resources.subtract(extra, childrensPreemptable);
         }
+        ret.preemptableExtra = Resources.min(
+            rc, partitionResource, childrensPreemptable, extra);
       }
     }
     addTempQueuePartition(ret);
@@ -1127,4 +1129,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     }
   }
 
+  @VisibleForTesting
+  public Map<String, Map<String, TempQueuePerPartition>> getQueuePartitions() {
+    return queueToPartitions;
+  }
 }
