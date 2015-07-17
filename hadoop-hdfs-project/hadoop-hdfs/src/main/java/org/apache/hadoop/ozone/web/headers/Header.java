@@ -32,14 +32,14 @@ public final class Header {
   public static final String OZONE_QUOTA_REMOVE = "remove";
   public static final String OZONE_QUOTA_UNDEFINED = "undefined";
 
-  public static final String OZONE_LIST_QUERY_BUCKET = "bucket";
-
   public static final String OZONE_USER = "x-ozone-user";
   public static final String OZONE_SIMPLE_AUTHENTICATION_SCHEME = "OZONE";
   public static final String OZONE_VERSION_HEADER = "x-ozone-version";
 
   public static final String OZONE_LIST_QUERY_SERVICE = "service";
   public static final String OZONE_LIST_QUERY_VOLUME = "volume";
+  public static final String OZONE_LIST_QUERY_BUCKET ="bucket";
+  public static final String OZONE_LIST_QUERY_KEY ="key";
 
   public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
   public static final String OZONE_SERVER_NAME = "x-ozone-server-name";
