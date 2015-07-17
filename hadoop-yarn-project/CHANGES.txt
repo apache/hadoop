@@ -332,6 +332,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3069. Document missing properties in yarn-default.xml.
     (Ray Chiang via aajisaka)
 
+    YARN-3844. Make hadoop-yarn-project Native code -Wall-clean (Alan Burlison
+    via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -22,6 +22,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <inttypes.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -74,14 +75,14 @@ static int is_only_root_writable(const char *file) {
     return 0;
   }
   if (file_stat.st_uid != 0) {
-    fprintf(ERRORFILE, "File %s must be owned by root, but is owned by %d\n",
-            file, file_stat.st_uid);
+    fprintf(ERRORFILE, "File %s must be owned by root, but is owned by %" PRId64 "\n",
+            file, (int64_t)file_stat.st_uid);
     return 0;
   }
   if ((file_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
     fprintf(ERRORFILE, 
-	    "File %s must not be world or group writable, but is %03o\n",
-	    file, file_stat.st_mode & (~S_IFMT));
+	    "File %s must not be world or group writable, but is %03lo\n",
+	    file, (unsigned long)file_stat.st_mode & (~S_IFMT));
     return 0;
   }
   return 1;

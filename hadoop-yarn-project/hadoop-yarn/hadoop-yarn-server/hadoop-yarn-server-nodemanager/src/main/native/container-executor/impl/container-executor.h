@@ -217,10 +217,10 @@ int change_user(uid_t user, gid_t group);
 
 int mount_cgroup(const char *pair, const char *hierarchy);
 
-int check_dir(char* npath, mode_t st_mode, mode_t desired,
+int check_dir(const char* npath, mode_t st_mode, mode_t desired,
    int finalComponent);
 
-int create_validate_dir(char* npath, mode_t perm, char* path,
+int create_validate_dir(const char* npath, mode_t perm, const char* path,
    int finalComponent);
 
 /**
