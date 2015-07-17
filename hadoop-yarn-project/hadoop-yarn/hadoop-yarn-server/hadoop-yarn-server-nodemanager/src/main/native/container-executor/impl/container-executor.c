@@ -19,6 +19,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <inttypes.h>
 #include <libgen.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -68,7 +69,7 @@ void set_nm_uid(uid_t user, gid_t group) {
  */
 char* get_executable() {
   char buffer[PATH_MAX];
-  snprintf(buffer, PATH_MAX, "/proc/%u/exe", getpid());
+  snprintf(buffer, PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
   char *filename = malloc(PATH_MAX);
   ssize_t len = readlink(buffer, filename, PATH_MAX);
   if (len == -1) {
@@ -181,7 +182,7 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
 
   // write pid
   char pid_buf[21];
-  snprintf(pid_buf, sizeof(pid_buf), "%d", pid);
+  snprintf(pid_buf, sizeof(pid_buf), "%" PRId64, (int64_t)pid);
   ssize_t written = write(cgroup_fd, pid_buf, strlen(pid_buf));
   close(cgroup_fd);
   if (written == -1) {
@@ -222,7 +223,7 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
 
   // write pid to temp file
   char pid_buf[21];
-  snprintf(pid_buf, 21, "%d", pid);
+  snprintf(pid_buf, 21, "%" PRId64, (int64_t)pid);
   ssize_t written = write(pid_fd, pid_buf, strlen(pid_buf));
   close(pid_fd);
   if (written == -1) {
@@ -307,7 +308,7 @@ static int wait_and_get_exit_code(pid_t pid) {
   } while (waitpid_result == -1 && errno == EINTR);
 
   if (waitpid_result < 0) {
-    fprintf(LOGFILE, "error waiting for process %d - %s\n", pid, strerror(errno));
+    fprintf(LOGFILE, "error waiting for process %" PRId64 " - %s\n", (int64_t)pid, strerror(errno));
     return -1;
   }
 
@@ -316,7 +317,7 @@ static int wait_and_get_exit_code(pid_t pid) {
   } else if (WIFSIGNALED(child_status)) {
     exit_code = 0x80 + WTERMSIG(child_status);
   } else {
-    fprintf(LOGFILE, "Unable to determine exit status for pid %d\n", pid);
+    fprintf(LOGFILE, "Unable to determine exit status for pid %" PRId64 "\n", (int64_t)pid);
   }
 
   return exit_code;
@@ -510,7 +511,8 @@ int mkdirs(const char* path, mode_t perm) {
 * Give 0 or 1 to represent whether this is the final component. If it is, we
 * need to check the permission.
 */
-int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent) {
+int create_validate_dir(const char* npath, mode_t perm, const char* path,
+                        int finalComponent) {
   struct stat sb;
   if (stat(npath, &sb) != 0) {
     if (mkdir(npath, perm) != 0) {
@@ -534,7 +536,7 @@ int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent
 
 // check whether the given path is a directory
 // also check the access permissions whether it is the same as desired permissions
-int check_dir(char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
+int check_dir(const char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
   if (!S_ISDIR(st_mode)) {
     fprintf(LOGFILE, "Path %s is file not dir\n", npath);
     return -1;
@@ -1491,7 +1493,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 
 static int run_traffic_control(const char *opts[], char *command_file) {
   const int max_tc_args = 16;
-  char *args[max_tc_args];
+  const char *args[max_tc_args];
   int i = 0, j = 0;
 
   args[i++] = TC_BIN;
@@ -1517,7 +1519,7 @@ static int run_traffic_control(const char *opts[], char *command_file) {
     unlink(command_file);
     return 0;
   } else {
-    execv(TC_BIN, args);
+    execv(TC_BIN, (char**)args);
     //if we reach here, exec failed
     fprintf(LOGFILE, "failed to execute tc command! error: %s\n", strerror(errno));
     return TRAFFIC_CONTROL_EXECUTION_FAILED;
