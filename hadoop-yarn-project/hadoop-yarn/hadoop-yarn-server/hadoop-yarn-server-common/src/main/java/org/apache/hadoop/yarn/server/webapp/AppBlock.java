@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -255,10 +254,9 @@ public class AppBlock extends HtmlBlock {
       AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
       ContainerReport containerReport;
       try {
-        // AM container is always the first container of the attempt
         final GetContainerReportRequest request =
-            GetContainerReportRequest.newInstance(ContainerId.newContainerId(
-              appAttemptReport.getApplicationAttemptId(), 1));
+                GetContainerReportRequest.newInstance(
+                      appAttemptReport.getAMContainerId());
         if (callerUGI == null) {
           containerReport =
               appBaseProt.getContainerReport(request).getContainerReport();

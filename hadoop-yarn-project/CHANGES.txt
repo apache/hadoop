@@ -669,6 +669,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
 
+    YARN-3905. Application History Server UI NPEs when accessing apps run after
+    RM restart (Eric Payne via jeagles)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
