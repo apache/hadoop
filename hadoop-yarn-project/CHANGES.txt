@@ -16,6 +16,9 @@ Release 2.6.4 - UNRELEASED
 
     YARN-3857. Memory leak in ResourceManager with SIMPLE mode. (mujunchao via zxu)
 
+    YARN-3535. Scheduler must re-request container resources when RMContainer transitions
+    from ALLOCATED to KILLED. (rohithsharma and peng.zhang via asuresh)
+
 Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
