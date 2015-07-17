@@ -24,3 +24,6 @@
 
     HDFS-8680. OzoneHandler : Add Local StorageHandler support for volumes.
     (Anu Engineer via Arpit Agarwal)
+
+    HDFS-8717. OzoneHandler : Add common bucket objects. (Anu Engineer via
+    Arpit Agarwal)

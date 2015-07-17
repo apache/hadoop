@@ -47,6 +47,11 @@ public final class OzoneConsts {
       "EEE, dd MMM yyyy HH:mm:ss zzz";
   public static final String OZONE_TIME_ZONE = "GMT";
 
+  /**
+   * Supports Bucket Versioning.
+   */
+  public enum Versioning {NOT_DEFINED, ENABLED, DISABLED}
+
   private OzoneConsts() {
     // Never Constructed
   }
