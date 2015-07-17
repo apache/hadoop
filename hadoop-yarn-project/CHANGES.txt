@@ -643,6 +643,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3885. ProportionalCapacityPreemptionPolicy doesn't preempt if queue is 
     more than 2 level. (Ajith S via wangda)
 
+    YARN-3535. Scheduler must re-request container resources when RMContainer transitions
+    from ALLOCATED to KILLED (rohithsharma and peng.zhang via asuresh)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -247,7 +247,7 @@ public class TestAMRestart {
   private void waitForContainersToFinish(int expectedNum, RMAppAttempt attempt)
       throws InterruptedException {
     int count = 0;
-    while (attempt.getJustFinishedContainers().size() != expectedNum
+    while (attempt.getJustFinishedContainers().size() < expectedNum
         && count < 500) {
       Thread.sleep(100);
       count++;
