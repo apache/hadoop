@@ -38,6 +38,8 @@ import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents an HDFS block that is mmapped by the DataNode.
@@ -45,8 +47,15 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class MappableBlock implements Closeable {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MappableBlock.class);
   private MappedByteBuffer mmap;
   private final long length;
+
+  static {
+    LOG.info("org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock+++++++++++++++++++++++++++++++++++++");
+  }
 
   MappableBlock(MappedByteBuffer mmap, long length) {
     this.mmap = mmap;
@@ -75,6 +84,7 @@ public class MappableBlock implements Closeable {
   public static MappableBlock load(long length,
       FileInputStream blockIn, FileInputStream metaIn,
       String blockFileName) throws IOException {
+    LOG.info("+++++++++++++++++++++load+++++++++++++++++++++++++");
     MappableBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
     FileChannel blockChannel = null;
