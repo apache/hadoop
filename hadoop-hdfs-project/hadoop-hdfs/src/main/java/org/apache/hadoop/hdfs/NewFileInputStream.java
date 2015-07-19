@@ -32,7 +32,6 @@ import sun.nio.ch.FileChannelImpl;
 import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -57,7 +56,14 @@ public class NewFileInputStream extends InputStream{
     inputStream = Files.newInputStream(file.toPath());
     fd = new FileDescriptor();
     path = name;
+    open(name);
   }
+
+  private void open(String name) throws FileNotFoundException {
+    open0(name);
+  }
+
+  private native void open0(String name) throws FileNotFoundException;
 
   public FileChannel getChannel() {
     LOG.info("++++++++++++++++++++++++++++++++++++++++++FileChannel getChannel()++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -80,34 +86,6 @@ public class NewFileInputStream extends InputStream{
       return fd;
     }
     throw new IOException();
-  }
-
-  public NewFileInputStream(FileDescriptor fdObj) {
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++NewFileInputStream(FileDescriptor fdObj)++++++++++++++++++++++++++++++++++++++++++++++++++");
-    SecurityManager security = System.getSecurityManager();
-    if (fdObj == null) {
-      throw new NullPointerException();
-    }
-    if (security != null) {
-      security.checkRead(fdObj);
-    }
-    fd = fdObj;
-    path = null;
-
-    attach(this);
-  }
-
-  synchronized void attach(Closeable c) {
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++attach++++++++++++++++++++++++++++++++++++++++++++++++++");
-    if (parent == null) {
-      parent = c;
-    } else if (otherParents == null) {
-      otherParents = new ArrayList<>();
-      otherParents.add(parent);
-      otherParents.add(c);
-    } else {
-      otherParents.add(c);
-    }
   }
 
   @Override

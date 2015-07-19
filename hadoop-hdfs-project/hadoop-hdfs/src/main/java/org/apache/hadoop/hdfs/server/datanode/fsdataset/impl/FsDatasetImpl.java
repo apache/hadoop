@@ -57,10 +57,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -227,7 +224,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           NativeIO.getShareDeleteFileInputStream(meta),
           meta.length());
     }
-    return new LengthInputStream(new FileInputStream(meta), meta.length());
+    return new LengthInputStream(new NewFileInputStream(meta), meta.length());
   }
     
   final DataNode datanode;
@@ -978,7 +975,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       int offset = 0;
       try (InputStream dataIn = isNativeIOAvailable ?
           NativeIO.getShareDeleteFileInputStream(blockFile) :
-          new FileInputStream(blockFile)) {
+          new NewFileInputStream(blockFile)) {
 
         for (int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
           if (n > 0) {

@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -85,7 +84,7 @@ public class MappableBlock implements Closeable {
   public static MappableBlock load(long length,
       NewFileInputStream blockIn, NewFileInputStream metaIn,
       String blockFileName) throws IOException {
-    LOG.info("+++++++++++++++++++++load+++++++++++++++++++++++++");
+    LOG.info("+++++++++++++++++++++++++++++++++++++++load+++++++++++++++++++++++++++++++++++++++++++++");
     MappableBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
     FileChannel blockChannel = null;
