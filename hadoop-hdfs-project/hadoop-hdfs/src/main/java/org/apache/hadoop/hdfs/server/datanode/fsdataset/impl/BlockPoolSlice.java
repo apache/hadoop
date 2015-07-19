@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -39,6 +38,7 @@ import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.NewFileInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
@@ -633,7 +633,7 @@ class BlockPoolSlice {
         return 0;
       }
       checksumIn = new DataInputStream(
-          new BufferedInputStream(new FileInputStream(metaFile),
+          new BufferedInputStream(new NewFileInputStream(metaFile),
               ioFileBufferSize));
 
       // read and handle the common header here. For now just a version
@@ -648,7 +648,7 @@ class BlockPoolSlice {
         return 0;
       }
       IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
-      blockIn = new FileInputStream(blockFile);
+      blockIn = new NewFileInputStream(blockFile);
       long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
       IOUtils.skipFully(blockIn, lastChunkStartPos);
       int lastChunkSize = (int)Math.min(
@@ -719,9 +719,9 @@ class BlockPoolSlice {
       }
       return false;
     }
-    FileInputStream inputStream = null;
+    NewFileInputStream inputStream = null;
     try {
-      inputStream = new FileInputStream(replicaFile);
+      inputStream = new NewFileInputStream(replicaFile);
       BlockListAsLongs blocksList =  BlockListAsLongs.readFrom(inputStream);
       Iterator<BlockReportReplica> iterator = blocksList.iterator();
       while (iterator.hasNext()) {

@@ -49,6 +49,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.NewFileInputStream;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
@@ -430,7 +431,7 @@ public class FsDatasetCache {
     @Override
     public void run() {
       boolean success = false;
-      FileInputStream blockIn = null, metaIn = null;
+      NewFileInputStream blockIn = null, metaIn = null;
       MappableBlock mappableBlock = null;
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);
@@ -446,7 +447,7 @@ public class FsDatasetCache {
         }
         reservedBytes = true;
         try {
-          blockIn = (FileInputStream)dataset.getBlockInputStream(extBlk, 0);
+          blockIn = (NewFileInputStream)dataset.getBlockInputStream(extBlk, 0);
           metaIn = DatanodeUtil.getMetaDataInputStream(extBlk, dataset);
         } catch (ClassCastException e) {
           LOG.warn("Failed to cache " + key +

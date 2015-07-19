@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.NewFileInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -127,12 +128,12 @@ public class DatanodeUtil {
    * @throws ClassCastException
    *           if the underlying input stream is not a FileInputStream.
    */
-  public static FileInputStream getMetaDataInputStream(
+  public static NewFileInputStream getMetaDataInputStream(
       ExtendedBlock b, FsDatasetSpi<?> data) throws IOException {
     final LengthInputStream lin = data.getMetaDataInputStream(b);
     if (lin == null) {
       throw new FileNotFoundException("Meta file for " + b + " not found.");
     }
-    return (FileInputStream)lin.getWrappedStream();
+    return (NewFileInputStream)lin.getWrappedStream();
   }
 }
