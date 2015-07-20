@@ -32,11 +32,14 @@ import java.util.Random;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.*;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
+
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
@@ -612,4 +615,23 @@ public class TestLocalFileSystem {
     }
   }
 
+  @Test
+  public void testFileStatusPipeFile() throws Exception {
+    RawLocalFileSystem origFs = new RawLocalFileSystem();
+    RawLocalFileSystem fs = spy(origFs);
+    Configuration conf = mock(Configuration.class);
+    fs.setConf(conf);
+    Whitebox.setInternalState(fs, "useDeprecatedFileStatus", false);
+    Path path = new Path("/foo");
+    File pipe = mock(File.class);
+    when(pipe.isFile()).thenReturn(false);
+    when(pipe.isDirectory()).thenReturn(false);
+    when(pipe.exists()).thenReturn(true);
+
+    FileStatus stat = mock(FileStatus.class);
+    doReturn(pipe).when(fs).pathToFile(path);
+    doReturn(stat).when(fs).getFileStatus(path);
+    FileStatus[] stats = fs.listStatus(path);
+    assertTrue(stats != null && stats.length == 1 && stats[0] == stat);
+  }
 }

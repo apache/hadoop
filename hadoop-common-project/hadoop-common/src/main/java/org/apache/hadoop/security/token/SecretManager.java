@@ -37,7 +37,7 @@ import org.apache.hadoop.ipc.StandbyException;
  * The server-side secret manager for each token type.
  * @param <T> The type of the token identifier
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class SecretManager<T extends TokenIdentifier> {
   /**

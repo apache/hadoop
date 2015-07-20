@@ -15,55 +15,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MYNAME="${BASH_SOURCE-$0}"
+
 function hadoop_usage
 {
-  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)]"
-  echo "           [--loglevel loglevel] COMMAND"
-  echo "       where COMMAND is one of:"
-  echo "  balancer             run a cluster balancing utility"
-  echo "  cacheadmin           configure the HDFS cache"
-  echo "  classpath            prints the class path needed to get the"
-  echo "                       Hadoop jar and the required libraries"
-  echo "  crypto               configure HDFS encryption zones"
-  echo "  datanode             run a DFS datanode"
-  echo "  debug                run a Debug Admin to execute HDFS debug commands"
-  echo "  dfs                  run a filesystem command on the file system"
-  echo "  dfsadmin             run a DFS admin client"
-  echo "  fetchdt              fetch a delegation token from the NameNode"
-  echo "  fsck                 run a DFS filesystem checking utility"
-  echo "  getconf              get config values from configuration"
-  echo "  groups               get the groups which users belong to"
-  echo "  haadmin              run a DFS HA admin client"
-  echo "  jmxget               get JMX exported values from NameNode or DataNode."
-  echo "  journalnode          run the DFS journalnode"
-  echo "  lsSnapshottableDir   list all snapshottable dirs owned by the current user"
-  echo "                               Use -help to see options"
-  echo "  mover                run a utility to move block replicas across"
-  echo "                       storage types"
-  echo "  namenode             run the DFS namenode"
-  echo "                               Use -format to initialize the DFS filesystem"
-  echo "  nfs3                 run an NFS version 3 gateway"
-  echo "  oev                  apply the offline edits viewer to an edits file"
-  echo "  oiv                  apply the offline fsimage viewer to an fsimage"
-  echo "  oiv_legacy           apply the offline fsimage viewer to a legacy fsimage"
-  echo "  portmap              run a portmap service"
-  echo "  secondarynamenode    run the DFS secondary namenode"
-  echo "  snapshotDiff         diff two snapshots of a directory or diff the"
-  echo "                       current directory contents with a snapshot"
-  echo "  storagepolicies      list/get/set block storage policies"
-  echo "  version              print the version"
-  echo "  zkfc                 run the ZK Failover Controller daemon"
-  echo ""
-  echo "Most commands print help when invoked w/o parameters."
-  # There are also debug commands, but they don't show up in this listing.
+  hadoop_add_subcommand "balancer" "run a cluster balancing utility"
+  hadoop_add_subcommand "cacheadmin" "configure the HDFS cache"
+  hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "crypto" "configure HDFS encryption zones"
+  hadoop_add_subcommand "datanode" "run a DFS datanode"
+  hadoop_add_subcommand "debug" "run a Debug Admin to execute HDFS debug commands"
+  hadoop_add_subcommand "dfs" "run a filesystem command on the file system"
+  hadoop_add_subcommand "dfsadmin" "run a DFS admin client"
+  hadoop_add_subcommand "fetchdt" "fetch a delegation token from the NameNode"
+  hadoop_add_subcommand "fsck" "run a DFS filesystem checking utility"
+  hadoop_add_subcommand "getconf" "get config values from configuration"
+  hadoop_add_subcommand "groups" "get the groups which users belong to"
+  hadoop_add_subcommand "haadmin" "run a DFS HA admin client"
+  hadoop_add_subcommand "jmxget" "get JMX exported values from NameNode or DataNode."
+  hadoop_add_subcommand "journalnode" "run the DFS journalnode"
+  hadoop_add_subcommand "lsSnapshottableDir" "list all snapshottable dirs owned by the current user"
+  hadoop_add_subcommand "mover" "run a utility to move block replicas across storage types"
+  hadoop_add_subcommand "namenode" "run the DFS namenode"
+  hadoop_add_subcommand "nfs3" "run an NFS version 3 gateway"
+  hadoop_add_subcommand "oev" "apply the offline edits viewer to an edits file"
+  hadoop_add_subcommand "oiv" "apply the offline fsimage viewer to an fsimage"
+  hadoop_add_subcommand "oiv_legacy" "apply the offline fsimage viewer to a legacy fsimage"
+  hadoop_add_subcommand "portmap" "run a portmap service"
+  hadoop_add_subcommand "secondarynamenode" "run the DFS secondary namenode"
+  hadoop_add_subcommand "snapshotDiff" "diff two snapshots of a directory or diff the current directory contents with a snapshot"
+  hadoop_add_subcommand "storagepolicies" "list/get/set block storage policies"
+  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "zkfc" "run the ZK Failover Controller daemon"
+  hadoop_generate_usage "${MYNAME}"
+
 }
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then
   DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
   DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 
@@ -107,11 +99,11 @@ case ${COMMAND} in
     if [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
       secure_service="true"
       secure_user="${HADOOP_SECURE_DN_USER}"
-      
+
       # backward compatiblity
       HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_DN_PID_DIR}"
       HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_DN_LOG_DIR}"
-      
+
       hadoop_debug "Appending HADOOP_DATANODE_OPTS onto HADOOP_OPTS"
       hadoop_debug "Appending HADOOP_DN_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS} ${HADOOP_DN_SECURE_EXTRA_OPTS}"
@@ -186,11 +178,11 @@ case ${COMMAND} in
     if [[ -n "${HADOOP_PRIVILEGED_NFS_USER}" ]]; then
       secure_service="true"
       secure_user="${HADOOP_PRIVILEGED_NFS_USER}"
-      
+
       # backward compatiblity
       HADOOP_SECURE_PID_DIR="${HADOOP_SECURE_PID_DIR:-$HADOOP_SECURE_NFS3_PID_DIR}"
       HADOOP_SECURE_LOG_DIR="${HADOOP_SECURE_LOG_DIR:-$HADOOP_SECURE_NFS3_LOG_DIR}"
-      
+
       hadoop_debug "Appending HADOOP_NFS3_OPTS onto HADOOP_OPTS"
       hadoop_debug "Appending HADOOP_NFS3_SECURE_EXTRA_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NFS3_OPTS} ${HADOOP_NFS3_SECURE_EXTRA_OPTS}"

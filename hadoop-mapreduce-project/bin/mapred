@@ -15,29 +15,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MYNAME="${BASH_SOURCE-$0}"
+
 function hadoop_usage
 {
-  echo "Usage: mapred [--config confdir] [--daemon (start|stop|status)]"
-  echo "           [--loglevel loglevel] COMMAND"
-  echo "       where COMMAND is one of:"
-  
-  echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
-  echo "  classpath            prints the class path needed for running"
-  echo "                       mapreduce subcommands"
-  echo "  distcp <srcurl> <desturl> copy file or directories recursively"
-  echo "  historyserver        run job history servers as a standalone daemon"
-  echo "  hsadmin              job history server admin interface"
-  echo "  job                  manipulate MapReduce jobs"
-  echo "  pipes                run a Pipes job"
-  echo "  queue                get information regarding JobQueues"
-  echo "  sampler              sampler"
-  echo "  version              print the version"
-  echo ""
-  echo "Most commands print help when invoked w/o parameters."
+  hadoop_add_subcommand "archive" "create a hadoop archive"
+  hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
+  hadoop_add_subcommand "distcp" "copy file or directories recursively"
+  hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
+  hadoop_add_subcommand "hsadmin" "job history server admin interface"
+  hadoop_add_subcommand "job" "manipulate MapReduce jobs"
+  hadoop_add_subcommand "pipes" "run a Pipes job"
+  hadoop_add_subcommand "queue" "get information regarding JobQueues"
+  hadoop_add_subcommand "sampler" "sampler"
+  hadoop_add_subcommand "version" "print the version"
+  hadoop_generate_usage "${MYNAME}"
 }
 
-this="${BASH_SOURCE-$0}"
-bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
 
 # let's locate libexec...
 if [[ -n "${HADOOP_PREFIX}" ]]; then

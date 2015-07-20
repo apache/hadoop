@@ -215,6 +215,12 @@ public class LeaseRenewer {
     return renewal;
   }
 
+  /** Used for testing only. */
+  @VisibleForTesting
+  public synchronized void setRenewalTime(final long renewal) {
+    this.renewal = renewal;
+  }
+
   /** Add a client. */
   private synchronized void addClient(final DFSClient dfsc) {
     for(DFSClient c : dfsclients) {
@@ -453,8 +459,12 @@ public class LeaseRenewer {
               + (elapsed/1000) + " seconds.  Aborting ...", ie);
           synchronized (this) {
             while (!dfsclients.isEmpty()) {
-              dfsclients.get(0).abort();
+              DFSClient dfsClient = dfsclients.get(0);
+              dfsClient.closeAllFilesBeingWritten(true);
+              closeClient(dfsClient);
             }
+            //Expire the current LeaseRenewer thread.
+            emptyTime = 0;
           }
           break;
         } catch (IOException ie) {

@@ -16,23 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.token;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import java.util.Collection;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
+public class ContainerRescheduledEvent extends SchedulerEvent {
 
-/**
- * Select token of type T from tokens for use with named service
- * 
- * @param <T>
- *          T extends TokenIdentifier
- */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface TokenSelector<T extends TokenIdentifier> {
-  Token<T> selectToken(Text service,
-      Collection<Token<? extends TokenIdentifier>> tokens);
+  private RMContainer container;
+
+  public ContainerRescheduledEvent(RMContainer container) {
+    super(SchedulerEventType.CONTAINER_RESCHEDULED);
+    this.container = container;
+  }
+
+  public RMContainer getContainer() {
+    return container;
+  }
 }

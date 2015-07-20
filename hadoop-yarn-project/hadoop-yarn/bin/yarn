@@ -15,37 +15,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MYNAME="${BASH_SOURCE-$0}"
+
 function hadoop_usage
 {
-  echo "Usage: yarn [--config confdir] [COMMAND | CLASSNAME]"
-  echo "  CLASSNAME                             run the class named CLASSNAME"
-  echo " or"
-  echo "  where COMMAND is one of:"
-  echo "  application                           prints application(s) report/kill application"
-  echo "  applicationattempt                    prints applicationattempt(s) report"
-  echo "  classpath                             prints the class path needed to get the"
-  echo "                                        Hadoop jar and the required libraries"
-  echo "  cluster                               prints cluster information"
-  echo "  container                             prints container(s) report"
-  echo "  daemonlog                             get/set the log level for each daemon"
-  echo "  jar <jar>                             run a jar file"
-  echo "  logs                                  dump container logs"
-  echo "  node                                  prints node report(s)"
-  echo "  nodemanager                           run a nodemanager on each slave"
-  echo "  proxyserver                           run the web app proxy server"
-  echo "  queue                                 prints queue information"
-  echo "  resourcemanager                       run the ResourceManager"
-  echo "                                        Use -format-state-store for deleting the RMStateStore."
-  echo "                                        Use -remove-application-from-state-store <appId> for "
-  echo "                                            removing application from RMStateStore."
-  echo "  rmadmin                               admin tools"
-  echo "  scmadmin                              SharedCacheManager admin tools"
-  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
-  echo "  timelineserver                        run the timeline server"
-  echo "  top                                   view cluster information"
-  echo "  version                               print the version"
-  echo ""
-  echo "Most commands print help when invoked w/o parameters."
+  hadoop_add_subcommand "application" "prints application(s) report/kill application"
+  hadoop_add_subcommand "applicationattempt" "prints applicationattempt(s) report"
+  hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "cluster" "prints cluster information"
+  hadoop_add_subcommand "container" "prints container(s) report"
+  hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
+  hadoop_add_subcommand "jar <jar>" "run a jar file"
+  hadoop_add_subcommand "logs" "dump container logs"
+  hadoop_add_subcommand "node" "prints node report(s)"
+  hadoop_add_subcommand "nodemanager" "run a nodemanager on each slave"
+  hadoop_add_subcommand "proxyserver" "run the web app proxy server"
+  hadoop_add_subcommand "queue" "prints queue information"
+  hadoop_add_subcommand "resourcemanager" "run the ResourceManager"
+  hadoop_add_subcommand "rmadmin" "admin tools"
+  hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
+  hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "timelineserver" "run the timeline server"
+  hadoop_add_subcommand "top" "view cluster information"
+  hadoop_add_subcommand "version" "print the version"
+  hadoop_generate_usage "${MYNAME}" true
 }
 
 
@@ -53,8 +46,7 @@ function hadoop_usage
 if [[ -n "${HADOOP_PREFIX}" ]]; then
   DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
   DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 

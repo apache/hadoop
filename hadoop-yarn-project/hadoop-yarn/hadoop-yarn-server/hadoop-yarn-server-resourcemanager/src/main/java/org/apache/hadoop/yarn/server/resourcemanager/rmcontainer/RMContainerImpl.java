@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerRescheduledEvent;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -94,7 +95,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     .addTransition(RMContainerState.ALLOCATED, RMContainerState.EXPIRED,
         RMContainerEventType.EXPIRE, new FinishedTransition())
     .addTransition(RMContainerState.ALLOCATED, RMContainerState.KILLED,
-        RMContainerEventType.KILL, new FinishedTransition())
+        RMContainerEventType.KILL, new ContainerRescheduledTransition())
 
     // Transitions from ACQUIRED state
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RUNNING,
@@ -492,6 +493,17 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container
           .getContainerId());
+    }
+  }
+
+  private static final class ContainerRescheduledTransition extends
+      FinishedTransition {
+
+    @Override
+    public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // Tell scheduler to recover request of this container to app
+      container.eventHandler.handle(new ContainerRescheduledEvent(container));
+      super.transition(container, event);
     }
   }
 

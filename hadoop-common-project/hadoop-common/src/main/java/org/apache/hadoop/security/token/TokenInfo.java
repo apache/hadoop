@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public @interface TokenInfo {
   /** The type of TokenSelector to be used */

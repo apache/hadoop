@@ -232,6 +232,8 @@ Trunk (Unreleased)
 
     HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
 
+    HADOOP-10979. Auto-entries in hadoop_usage (aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
@@ -700,6 +702,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12153. ByteBufferReadable doesn't declare @InterfaceAudience and
     @InterfaceStability. (Brahma Reddy Battula via ozawa)
 
+    HADOOP-11893. Mark org.apache.hadoop.security.token.Token as
+    @InterfaceAudience.Public. (Brahma Reddy Battula via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -967,6 +972,18 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12240. Fix tests requiring native library to be skipped in non-native
     profile. (Masatake Iwasaki via ozawa)
 
+    HADOOP-12235 hadoop-openstack junit & mockito dependencies should be
+    "provided". (Ted Yu via stevel)
+
+    HADOOP-12209 Comparable type should be in FileStatus.
+    (Yong Zhang via stevel)
+
+    HADOOP-12088. KMSClientProvider uses equalsIgnoreCase("application/json").
+    (Brahma Reddy Battula via stevel)
+
+    HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
+    over getMessage() in logging/span events. (Varun Saxena via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -986,6 +1003,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-12191. Bzip2Factory is not thread safe. (Brahma Reddy Battula
     via ozawa)
+
+    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
+    (kanaka kumar avvaru via wheat9)
 
 Release 2.7.1 - 2015-07-06 
 

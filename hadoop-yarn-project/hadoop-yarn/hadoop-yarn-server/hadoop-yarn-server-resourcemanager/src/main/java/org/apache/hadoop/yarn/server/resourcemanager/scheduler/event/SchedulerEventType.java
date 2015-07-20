@@ -38,6 +38,9 @@ public enum SchedulerEventType {
   // Source: ContainerAllocationExpirer
   CONTAINER_EXPIRED,
 
+  // Source: RMContainer
+  CONTAINER_RESCHEDULED,
+
   // Source: SchedulingEditPolicy
   DROP_RESERVATION,
   PREEMPT_CONTAINER,

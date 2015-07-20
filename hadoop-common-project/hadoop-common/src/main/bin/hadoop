@@ -15,38 +15,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MYNAME="${BASH_SOURCE-$0}"
+
 function hadoop_usage()
 {
-  echo "Usage: hadoop [--config confdir] [COMMAND | CLASSNAME]"
-  echo "  CLASSNAME            run the class named CLASSNAME"
-  echo " or"
-  echo "  where COMMAND is one of:"
-  echo "  archive -archiveName NAME -p <parent path> <src>* <dest>"
-  echo "                       create a Hadoop archive"
-  echo "  checknative [-a|-h]  check native Hadoop and compression "
-  echo "                         libraries availability"
-  echo "  classpath            prints the class path needed to get the"
-  echo "                         Hadoop jar and the required libraries"
-  echo "  conftest             validate configuration XML files"
-  echo "  credential           interact with credential providers"
-  echo "  daemonlog            get/set the log level for each daemon"
-  echo "  distch path:owner:group:permisson"
-  echo "                       distributed metadata changer"
-  echo "  distcp <srcurl> <desturl> "
-  echo "                       copy file or directories recursively"
-  echo "  fs                   run a generic filesystem user client"
-  echo "  jar <jar>            run a jar file"
-  echo "                       note: please use \"yarn jar\" to launch"
-  echo "                             YARN applications, not this command."
-  echo "  jnipath              prints the java.library.path"
-  echo "  kerbname             show auth_to_local principal conversion"
-  echo "  key                  manage keys via the KeyProvider"
-  echo "  trace                view and modify Hadoop tracing settings"
-  echo "  version              print the version"
-  echo ""
-  echo "Most commands print help when invoked w/o parameters."
+  hadoop_add_subcommand "archive" "create a Hadoop archive"
+  hadoop_add_subcommand "checknative" "check native Hadoop and compression libraries availability"
+  hadoop_add_subcommand "classpath" "prints the class path needed to get the Hadoop jar and the required libraries"
+  hadoop_add_subcommand "conftest" "validate configuration XML files"
+  hadoop_add_subcommand "credential" "interact with credential providers"
+  hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
+  hadoop_add_subcommand "distch" "distributed metadata changer"
+  hadoop_add_subcommand "distcp" "copy file or directories recursively"
+  hadoop_add_subcommand "fs" "run a generic filesystem user client"
+  hadoop_add_subcommand "jar <jar>" "run a jar file. NOTE: please use \"yarn jar\" to launch YARN applications, not this command."
+  hadoop_add_subcommand "jnipath" "prints the java.library.path"
+  hadoop_add_subcommand "kerbname" "show auth_to_local principal conversion"
+  hadoop_add_subcommand "key" "manage keys via the KeyProvider"
+  hadoop_add_subcommand "trace" "view and modify Hadoop tracing settings"
+  hadoop_add_subcommand "version" "print the version"
+  hadoop_generate_usage "${MYNAME}" true
 }
-
 
 # This script runs the hadoop core commands.
 
@@ -54,8 +43,7 @@ function hadoop_usage()
 if [[ -n "${HADOOP_PREFIX}" ]]; then
   DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
 else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
   DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
 fi
 
@@ -98,7 +86,7 @@ case ${COMMAND} in
       exit 1
     fi
   ;;
-  
+
   #mapred commands for backwards compatibility
   pipes|job|queue|mrgroups|mradmin|jobtracker|tasktracker)
     hadoop_error "WARNING: Use of this script to execute ${COMMAND} is deprecated."

@@ -332,6 +332,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3069. Document missing properties in yarn-default.xml.
     (Ray Chiang via aajisaka)
 
+    YARN-3844. Make hadoop-yarn-project Native code -Wall-clean (Alan Burlison
+    via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -637,6 +640,12 @@ Release 2.8.0 - UNRELEASED
     YARN-3805. Update the documentation of Disk Checker based on YARN-90.
     (Masatake Iwasaki via ozawa)
 
+    YARN-3930. FileSystemNodeLabelsStore should make sure edit log file closed when 
+    exception is thrown. (Dian Fu via wangda)
+
+    YARN-3885. ProportionalCapacityPreemptionPolicy doesn't preempt if queue is 
+    more than 2 level. (Ajith S via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -659,6 +668,12 @@ Release 2.7.2 - UNRELEASED
     (Varun Saxena via wangda)
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
+
+    YARN-3905. Application History Server UI NPEs when accessing apps run after
+    RM restart (Eric Payne via jeagles)
+
+    YARN-3535. Scheduler must re-request container resources when RMContainer transitions
+    from ALLOCATED to KILLED (rohithsharma and peng.zhang via asuresh)
 
 Release 2.7.1 - 2015-07-06 
 
