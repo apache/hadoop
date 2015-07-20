@@ -92,6 +92,7 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLengt
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.Time;
@@ -989,9 +990,23 @@ public class BlockManager {
       final AccessMode mode) throws IOException {
     if (isBlockTokenEnabled()) {
       // Use cached UGI if serving RPC calls.
-      b.setBlockToken(blockTokenSecretManager.generateToken(
-          NameNode.getRemoteUser().getShortUserName(),
-          b.getBlock(), EnumSet.of(mode)));
+      if (b.isStriped()) {
+        LocatedStripedBlock sb = (LocatedStripedBlock) b;
+        int[] indices = sb.getBlockIndices();
+        Token<BlockTokenIdentifier>[] blockTokens = new Token[indices.length];
+        ExtendedBlock internalBlock = new ExtendedBlock(b.getBlock());
+        for (int i = 0; i < indices.length; i++) {
+          internalBlock.setBlockId(b.getBlock().getBlockId() + indices[i]);
+          blockTokens[i] = blockTokenSecretManager.generateToken(
+              NameNode.getRemoteUser().getShortUserName(),
+              internalBlock, EnumSet.of(mode));
+        }
+        sb.setBlockTokens(blockTokens);
+      } else {
+        b.setBlockToken(blockTokenSecretManager.generateToken(
+            NameNode.getRemoteUser().getShortUserName(),
+            b.getBlock(), EnumSet.of(mode)));
+      }
     }    
   }
 

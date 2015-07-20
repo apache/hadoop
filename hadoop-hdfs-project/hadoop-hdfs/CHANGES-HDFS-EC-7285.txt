@@ -362,3 +362,5 @@
 
     HDFS-8787. Erasure coding: rename BlockInfoContiguousUC and BlockInfoStripedUC
     to be consistent with trunk. (zhz)
+
+    HDFS-8433. Erasure coding: set blockToken in LocatedStripedBlock.(waltersu4549)

@@ -813,9 +813,12 @@ public class PBHelper {
       builder.addAllStorageIDs(Arrays.asList(storageIDs));
     }
     if (b instanceof LocatedStripedBlock) {
-      int[] indices = ((LocatedStripedBlock) b).getBlockIndices();
-      for (int index : indices) {
-        builder.addBlockIndex(index);
+      LocatedStripedBlock sb = (LocatedStripedBlock) b;
+      int[] indices = sb.getBlockIndices();
+      Token<BlockTokenIdentifier>[] blockTokens = sb.getBlockTokens();
+      for (int i = 0; i < indices.length; i++) {
+        builder.addBlockIndex(indices[i]);
+        builder.addBlockTokens(PBHelper.convert(blockTokens[i]));
       }
     }
 
@@ -872,6 +875,12 @@ public class PBHelper {
           storageIDs, storageTypes, indices, proto.getOffset(),
           proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
+      List<TokenProto> tokenProtos = proto.getBlockTokensList();
+      Token<BlockTokenIdentifier>[] blockTokens = new Token[indices.length];
+      for (int i = 0; i < indices.length; i++) {
+        blockTokens[i] = PBHelper.convert(tokenProtos.get(i));
+      }
+      ((LocatedStripedBlock) lb).setBlockTokens(blockTokens);
     }
     lb.setBlockToken(PBHelper.convert(proto.getBlockToken()));
 

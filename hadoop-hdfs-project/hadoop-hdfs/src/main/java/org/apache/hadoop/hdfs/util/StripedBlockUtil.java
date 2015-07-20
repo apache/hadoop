@@ -30,8 +30,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.security.token.Token;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -105,17 +107,22 @@ public class StripedBlockUtil {
       int idxInBlockGroup) {
     final ExtendedBlock blk = constructInternalBlock(
         bg.getBlock(), cellSize, dataBlkNum, idxInBlockGroup);
-
+    final LocatedBlock locatedBlock;
     if (idxInReturnedLocs < bg.getLocations().length) {
-      return new LocatedBlock(blk,
+      locatedBlock = new LocatedBlock(blk,
           new DatanodeInfo[]{bg.getLocations()[idxInReturnedLocs]},
           new String[]{bg.getStorageIDs()[idxInReturnedLocs]},
           new StorageType[]{bg.getStorageTypes()[idxInReturnedLocs]},
           bg.getStartOffset(), bg.isCorrupt(), null);
     } else {
-      return new LocatedBlock(blk, null, null, null,
+      locatedBlock = new LocatedBlock(blk, null, null, null,
           bg.getStartOffset(), bg.isCorrupt(), null);
     }
+    Token<BlockTokenIdentifier>[] blockTokens = bg.getBlockTokens();
+    if (idxInBlockGroup < blockTokens.length) {
+      locatedBlock.setBlockToken(blockTokens[idxInBlockGroup]);
+    }
+    return locatedBlock;
   }
 
   /**
