@@ -87,6 +87,5 @@ public class AltFileInputStream extends InputStream{
   @Override
   public void close() throws IOException {
     inputStream.close();
-    channel.close();
   }
 }
