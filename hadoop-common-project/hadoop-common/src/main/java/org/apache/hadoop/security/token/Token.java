@@ -36,7 +36,7 @@ import java.util.ServiceLoader;
 /**
  * The client-side form of the token.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Token<T extends TokenIdentifier> implements Writable {
   public static final Log LOG = LogFactory.getLog(Token.class);
