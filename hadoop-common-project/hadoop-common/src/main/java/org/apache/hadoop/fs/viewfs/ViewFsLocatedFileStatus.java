@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -120,7 +121,7 @@ class ViewFsLocatedFileStatus extends LocatedFileStatus {
   }
 
   @Override
-  public int compareTo(Object o) {
+  public int compareTo(FileStatus o) {
     return super.compareTo(o);
   }
 
