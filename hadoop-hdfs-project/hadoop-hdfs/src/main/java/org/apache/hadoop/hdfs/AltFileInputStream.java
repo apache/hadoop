@@ -49,14 +49,7 @@ public class AltFileInputStream extends InputStream{
     inputStream = Files.newInputStream(file.toPath());
     fd = new FileDescriptor();
     path = name;
-    open(name);
   }
-
-  private void open(String name) throws FileNotFoundException {
-    open0(name);
-  }
-
-  private native void open0(String name) throws FileNotFoundException;
 
   public FileChannel getChannel() {
     LOG.info("++++++++++++++++++++++++++++++++++++++++++FileChannel getChannel()++++++++++++++++++++++++++++++++++++++++++++++++++");
