@@ -35,8 +35,8 @@ import java.nio.file.Files;
 import java.util.List;
 
 
-public class NewFileInputStream extends InputStream{
-  public static final Log LOG = LogFactory.getLog(NewFileInputStream.class);
+public class AltFileInputStream extends InputStream{
+  public static final Log LOG = LogFactory.getLog(AltFileInputStream.class);
   private final FileDescriptor fd;
 
   private Closeable parent;
@@ -49,8 +49,8 @@ public class NewFileInputStream extends InputStream{
   private FileChannel channel = null;
 
 
-  public NewFileInputStream(File file) throws IOException{
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++NewFileInputStream(File file)++++++++++++++++++++++++++++++++++++++++++++++++++");
+  public AltFileInputStream(File file) throws IOException{
+    LOG.info("++++++++++++++++++++++++++++++++++++++++++AltFileInputStream(File file)++++++++++++++++++++++++++++++++++++++++++++++++++");
     String name = (file != null ? file.getPath() : null);
 
     inputStream = Files.newInputStream(file.toPath());
@@ -75,9 +75,9 @@ public class NewFileInputStream extends InputStream{
     }
   }
 
-  public NewFileInputStream(String name) throws FileNotFoundException,IOException {
+  public AltFileInputStream(String name) throws FileNotFoundException,IOException {
     this(name != null ? new File(name) : null);
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++NewFileInputStream(String name)++++++++++++++++++++++++++++++++++++++++++++++++++");
+    LOG.info("++++++++++++++++++++++++++++++++++++++++++AltFileInputStream(String name)++++++++++++++++++++++++++++++++++++++++++++++++++");
   }
 
   public final FileDescriptor getFD() throws IOException {

@@ -36,9 +36,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.AltFileInputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.NewFileInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
@@ -633,7 +633,7 @@ class BlockPoolSlice {
         return 0;
       }
       checksumIn = new DataInputStream(
-          new BufferedInputStream(new NewFileInputStream(metaFile),
+          new BufferedInputStream(new AltFileInputStream(metaFile),
               ioFileBufferSize));
 
       // read and handle the common header here. For now just a version
@@ -648,7 +648,7 @@ class BlockPoolSlice {
         return 0;
       }
       IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
-      blockIn = new NewFileInputStream(blockFile);
+      blockIn = new AltFileInputStream(blockFile);
       long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
       IOUtils.skipFully(blockIn, lastChunkStartPos);
       int lastChunkSize = (int)Math.min(
@@ -719,9 +719,9 @@ class BlockPoolSlice {
       }
       return false;
     }
-    NewFileInputStream inputStream = null;
+    AltFileInputStream inputStream = null;
     try {
-      inputStream = new NewFileInputStream(replicaFile);
+      inputStream = new AltFileInputStream(replicaFile);
       BlockListAsLongs blocksList =  BlockListAsLongs.readFrom(inputStream);
       Iterator<BlockReportReplica> iterator = blocksList.iterator();
       while (iterator.hasNext()) {

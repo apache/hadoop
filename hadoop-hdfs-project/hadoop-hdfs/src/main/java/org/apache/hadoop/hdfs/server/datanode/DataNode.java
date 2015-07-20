@@ -52,7 +52,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1591,7 +1590,7 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  NewFileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
+  AltFileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> token, int maxVersion) 
           throws ShortCircuitFdsUnsupportedException,
             ShortCircuitFdsVersionException, IOException {
@@ -1608,10 +1607,10 @@ public class DataNode extends ReconfigurableBase
         maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    NewFileInputStream fis[] = new NewFileInputStream[2];
+    AltFileInputStream fis[] = new AltFileInputStream[2];
     
     try {
-      fis[0] = (NewFileInputStream)data.getBlockInputStream(blk, 0);
+      fis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);

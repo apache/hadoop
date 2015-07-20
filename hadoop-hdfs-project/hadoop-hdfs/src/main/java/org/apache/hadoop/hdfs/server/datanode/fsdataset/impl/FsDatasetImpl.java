@@ -224,7 +224,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           NativeIO.getShareDeleteFileInputStream(meta),
           meta.length());
     }
-    return new LengthInputStream(new NewFileInputStream(meta), meta.length());
+    return new LengthInputStream(new AltFileInputStream(meta), meta.length());
   }
     
   final DataNode datanode;
@@ -975,7 +975,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       int offset = 0;
       try (InputStream dataIn = isNativeIOAvailable ?
           NativeIO.getShareDeleteFileInputStream(blockFile) :
-          new NewFileInputStream(blockFile)) {
+          new AltFileInputStream(blockFile)) {
 
         for (int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
           if (n > 0) {

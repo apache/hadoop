@@ -26,7 +26,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,9 +46,9 @@ import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.hdfs.AltFileInputStream;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.NewFileInputStream;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
@@ -431,7 +430,7 @@ public class FsDatasetCache {
     @Override
     public void run() {
       boolean success = false;
-      NewFileInputStream blockIn = null, metaIn = null;
+      AltFileInputStream blockIn = null, metaIn = null;
       MappableBlock mappableBlock = null;
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);
@@ -447,7 +446,7 @@ public class FsDatasetCache {
         }
         reservedBytes = true;
         try {
-          blockIn = (NewFileInputStream)dataset.getBlockInputStream(extBlk, 0);
+          blockIn = (AltFileInputStream)dataset.getBlockInputStream(extBlk, 0);
           metaIn = DatanodeUtil.getMetaDataInputStream(extBlk, dataset);
         } catch (ClassCastException e) {
           LOG.warn("Failed to cache " + key +
