@@ -969,6 +969,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12240. Fix tests requiring native library to be skipped in non-native
     profile. (Masatake Iwasaki via ozawa)
 
+    HADOOP-12235 hadoop-openstack junit & mockito dependencies should be
+    "provided". (Ted Yu via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
