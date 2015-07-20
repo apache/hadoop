@@ -1600,7 +1600,7 @@ public class DataNode extends ReconfigurableBase
     metrics.incrBlocksGetLocalPathInfo();
     AltFileInputStream afis[] = new AltFileInputStream[2];
     try {
-      if(AltFileInputStream.toFileInputStream()){
+      if(AltFileInputStream.toInputStream()){
         afis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
         afis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
       }else{

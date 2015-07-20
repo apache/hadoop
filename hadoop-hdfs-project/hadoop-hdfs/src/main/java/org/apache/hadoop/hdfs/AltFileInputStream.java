@@ -70,14 +70,10 @@ public class AltFileInputStream extends InputStream{
 }
 
   /**
-   * static type inference
-   * Whether AltFileInputStream can convert to FileInputStream safely.
+   * AltFileInputStream can convert to InputStream safely.
    * @return
    */
-  public static boolean toFileInputStream(){
-    /**
-     * 
-     */
+  public static boolean toInputStream(){
     return true;
   }
 

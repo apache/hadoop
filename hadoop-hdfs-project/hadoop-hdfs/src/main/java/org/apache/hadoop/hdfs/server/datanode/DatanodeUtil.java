@@ -121,16 +121,16 @@ public class DatanodeUtil {
   }
 
   /**
-   * @return the FileInputStream for the meta data of the given block.
+   * @return the AltFileInputStream for the meta data of the given block.
    * @throws FileNotFoundException
    *           if the file not found.
    * @throws ClassCastException
-   *           if the underlying input stream is not a FileInputStream.
+   *           if the underlying input stream is not a AltFileInputStream.
    */
   public static AltFileInputStream getMetaDataInputStream(
       ExtendedBlock b, FsDatasetSpi<?> data) throws IOException
   {
-    boolean flag = AltFileInputStream.toFileInputStream();
+    boolean flag = AltFileInputStream.toInputStream();
     if(!flag){
       throw new ClassCastException();
     }
