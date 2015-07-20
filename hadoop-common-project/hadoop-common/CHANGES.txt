@@ -978,6 +978,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12088. KMSClientProvider uses equalsIgnoreCase("application/json").
     (Brahma Reddy Battula via stevel)
 
+    HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
+    over getMessage() in logging/span events. (Varun Saxena via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
