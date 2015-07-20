@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -60,6 +59,11 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
    * The block source to use in the event of copy-on-write truncate.
    */
   protected Block truncateBlock;
+
+  /** The number of times all replicas will be used to attempt recovery before
+   * giving up and marking the block under construction missing.
+   */
+  private int recoveryAttemptsBeforeMarkingBlockMissing;
 
   /**
    * ReplicaUnderConstruction contains information about replicas while
@@ -174,6 +178,8 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
         "BlockInfoUnderConstruction cannot be in COMPLETE state");
     this.blockUCState = state;
     setExpectedLocations(targets);
+    this.recoveryAttemptsBeforeMarkingBlockMissing =
+      BlockManager.getMaxBlockUCRecoveries();
   }
 
   /** Set expected locations. */
@@ -271,7 +277,7 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK* " +
           "BlockInfoUnderConstruction.initLeaseRecovery: " +
-          "No blocks found, lease removed.");
+          "No replicas found.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;
     for (int i = 0; i < replicas.size(); i++) {
@@ -283,6 +289,11 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
       }
     }
     if (allLiveReplicasTriedAsPrimary) {
+      recoveryAttemptsBeforeMarkingBlockMissing--;
+      NameNode.blockStateChangeLog.info("Tried to recover " + this +" using all"
+          + " replicas. Will try " + recoveryAttemptsBeforeMarkingBlockMissing
+          + " more times");
+
       // Just set all the replicas to be chosen whether they are alive or not.
       for (int i = 0; i < replicas.size(); i++) {
         replicas.get(i).setChosenAsPrimary(false);
@@ -339,6 +350,10 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
       }
     }
     replicas.add(new ReplicaUnderConstruction(block, storage, rState));
+  }
+
+  public int getNumRecoveryAttemptsLeft() {
+    return recoveryAttemptsBeforeMarkingBlockMissing;
   }
 
   /**

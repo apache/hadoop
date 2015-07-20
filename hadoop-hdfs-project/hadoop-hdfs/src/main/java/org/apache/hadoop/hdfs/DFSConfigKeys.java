@@ -440,6 +440,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT = 10 * 1000;
   public static final String  DFS_BLOCK_INVALIDATE_LIMIT_KEY = "dfs.block.invalidate.limit";
   public static final int     DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT = 1000;
+  public static final String  DFS_BLOCK_UC_MAX_RECOVERY_ATTEMPTS = "dfs.block.uc.max.recovery.attempts";
+  public static final int     DFS_BLOCK_UC_MAX_RECOVERY_ATTEMPTS_DEFAULT = 5;
+
   public static final String  DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY = "dfs.corruptfilesreturned.max";
   public static final int     DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
   /* Maximum number of blocks to process for initializing replication queues */
