@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import sun.nio.ch.FileChannelImpl;
 
 import java.io.*;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.util.List;
@@ -37,47 +38,59 @@ public class AltFileInputStream extends InputStream{
 
   private final String path;
 
-  private BufferedInputStream bufferedInputStream;
   private InputStream inputStream;
   private FileChannel channel = null;
 
 
   public AltFileInputStream(File file) throws IOException{
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++AltFileInputStream(File file)++++++++++++++++++++++++++++++++++++++++++++++++++");
+    LOG.info("++++++++++++++AltFileInputStream(File file)+++++++++++++++++++");
     String name = (file != null ? file.getPath() : null);
-
-    inputStream = Files.newInputStream(file.toPath());
     fd = new FileDescriptor();
     path = name;
+    channel = FileChannelImpl.open(fd,path,true,false,this);
+    inputStream = Channels.newInputStream(channel);
   }
 
   public FileChannel getChannel() {
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++FileChannel getChannel()++++++++++++++++++++++++++++++++++++++++++++++++++");
-    synchronized (this) {
-      if (channel == null) {
-        channel = FileChannelImpl.open(fd, path, true, false, this);
-      }
-      return channel;
-    }
+    LOG.info("++++++++++++++++++FileChannel getChannel()+++++++++++++++++++++");
+    return channel;
   }
 
   public AltFileInputStream(String name) throws FileNotFoundException,IOException {
     this(name != null ? new File(name) : null);
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++AltFileInputStream(String name)++++++++++++++++++++++++++++++++++++++++++++++++++");
+    LOG.info("+++++++++++++++++++AltFileInputStream(String name)+++++++++++++++++++");
   }
 
   public final FileDescriptor getFD() throws IOException {
-    LOG.info("++++++++++++++++++++++++++++++++++++++++++FileDescriptor getFD()++++++++++++++++++++++++++++++++++++++++++++++++++");
+    LOG.info("+++++++++++++++++++FileDescriptor getFD()+++++++++++++++++++++++++");
     if (fd != null) {
       return fd;
     }
     throw new IOException();
+}
+
+  /**
+   * static type inference
+   * Whether AltFileInputStream can convert to FileInputStream safely.
+   * @return
+   */
+  public static boolean toFileInputStream(){
+    /**
+     * 
+     */
+    return true;
   }
+
 
   @Override
   public int read() throws IOException{
-    LOG.info("++++++++++++++++++++++++++read method +++++++++++++++++++++++++++++++++");
-    bufferedInputStream = new BufferedInputStream(inputStream);
-    return bufferedInputStream.read();
+    LOG.info("++++++++++++++++read method ++++++++++++++++++++++");
+    return inputStream.read();
+  }
+
+  @Override
+  public void close() throws IOException {
+    inputStream.close();
+    channel.close();
   }
 }

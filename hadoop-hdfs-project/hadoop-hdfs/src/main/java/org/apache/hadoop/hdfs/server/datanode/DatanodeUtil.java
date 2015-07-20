@@ -128,7 +128,12 @@ public class DatanodeUtil {
    *           if the underlying input stream is not a FileInputStream.
    */
   public static AltFileInputStream getMetaDataInputStream(
-      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException {
+      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException
+  {
+    boolean flag = AltFileInputStream.toFileInputStream();
+    if(!flag){
+      throw new ClassCastException();
+    }
     final LengthInputStream lin = data.getMetaDataInputStream(b);
     if (lin == null) {
       throw new FileNotFoundException("Meta file for " + b + " not found.");

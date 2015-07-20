@@ -46,17 +46,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -201,6 +191,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
+import sun.tools.tree.CastExpression;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -1607,17 +1598,20 @@ public class DataNode extends ReconfigurableBase
         maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    AltFileInputStream fis[] = new AltFileInputStream[2];
-    
+    AltFileInputStream afis[] = new AltFileInputStream[2];
     try {
-      fis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
-      fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
+      if(AltFileInputStream.toFileInputStream()){
+        afis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
+        afis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
+      }else{
+          throw new ClassCastException();
+      }
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
     }
-    return fis;
+    return afis;
   }
 
   @Override
