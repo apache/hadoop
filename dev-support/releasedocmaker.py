@@ -24,6 +24,7 @@ import os
 import re
 import sys
 import urllib
+import urllib2
 try:
   import json
 except ImportError:
@@ -125,7 +126,7 @@ class GetVersions:
     versions.sort()
     print "Looking for %s through %s"%(versions[0],versions[-1])
     for p in projects:
-      resp = urllib.urlopen("https://issues.apache.org/jira/rest/api/2/project/%s/versions"%p)
+      resp = urllib2.urlopen("https://issues.apache.org/jira/rest/api/2/project/%s/versions"%p)
       data = json.loads(resp.read())
       for d in data:
         if d['name'][0].isdigit and versions[0] <= d['name'] and d['name'] <= versions[-1]:
@@ -288,7 +289,7 @@ class JiraIter:
     self.projects = projects
     v=str(version).replace("-SNAPSHOT","")
 
-    resp = urllib.urlopen("https://issues.apache.org/jira/rest/api/2/field")
+    resp = urllib2.urlopen("https://issues.apache.org/jira/rest/api/2/field")
     data = json.loads(resp.read())
 
     self.fieldIdMap = {}
@@ -301,7 +302,7 @@ class JiraIter:
     count=100
     while (at < end):
       params = urllib.urlencode({'jql': "project in ('"+"' , '".join(projects)+"') and fixVersion in ('"+v+"') and resolution = Fixed", 'startAt':at, 'maxResults':count})
-      resp = urllib.urlopen("https://issues.apache.org/jira/rest/api/2/search?%s"%params)
+      resp = urllib2.urlopen("https://issues.apache.org/jira/rest/api/2/search?%s"%params)
       data = json.loads(resp.read())
       if (data.has_key('errorMessages')):
         raise Exception(data['errorMessages'])
@@ -406,6 +407,10 @@ def main():
 
   if (len(options.versions) <= 0):
     parser.error("At least one version needs to be supplied")
+
+  proxy = urllib2.ProxyHandler()
+  opener = urllib2.build_opener(proxy)
+  urllib2.install_opener(opener)
 
   projects = options.projects
 
