@@ -65,14 +65,14 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
      * The following runs will use 3 different chunkSize for inputs and outputs,
      * to verify the same encoder/decoder can process variable width of data.
      */
-    performTestCoding(baseChunkSize);
-    performTestCoding(baseChunkSize - 17);
-    performTestCoding(baseChunkSize + 16);
+    performTestCoding(baseChunkSize, true);
+    performTestCoding(baseChunkSize - 17, false);
+    performTestCoding(baseChunkSize + 16, true);
   }
 
-  private void performTestCoding(int chunkSize) {
+  private void performTestCoding(int chunkSize, boolean usingSlicedBuffer) {
     setChunkSize(chunkSize);
-
+    prepareBufferAllocator(usingSlicedBuffer);
 
     // Generate data and encode
     ECBlockGroup blockGroup = prepareBlockGroupForEncoding();

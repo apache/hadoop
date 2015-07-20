@@ -41,14 +41,14 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     checkParameters(inputs, erasedIndexes, outputs);
 
     ByteBuffer validInput = findFirstValidInput(inputs);
+    boolean usingDirectBuffer = validInput.isDirect();
     int dataLen = validInput.remaining();
     if (dataLen == 0) {
       return;
     }
-    ensureLength(inputs, true, dataLen);
-    ensureLength(outputs, false, dataLen);
+    ensureLengthAndType(inputs, true, dataLen, usingDirectBuffer);
+    ensureLengthAndType(outputs, false, dataLen, usingDirectBuffer);
 
-    boolean usingDirectBuffer = validInput.isDirect();
     if (usingDirectBuffer) {
       doDecode(inputs, erasedIndexes, outputs);
       return;
@@ -63,14 +63,14 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     for (int i = 0; i < inputs.length; ++i) {
       buffer = inputs[i];
       if (buffer != null) {
-        inputOffsets[i] = buffer.position();
+        inputOffsets[i] = buffer.arrayOffset() + buffer.position();
         newInputs[i] = buffer.array();
       }
     }
 
     for (int i = 0; i < outputs.length; ++i) {
       buffer = outputs[i];
-      outputOffsets[i] = buffer.position();
+      outputOffsets[i] = buffer.arrayOffset() + buffer.position();
       newOutputs[i] = buffer.array();
     }
 
@@ -81,7 +81,7 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
       buffer = inputs[i];
       if (buffer != null) {
         // dataLen bytes consumed
-        buffer.position(inputOffsets[i] + dataLen);
+        buffer.position(buffer.position() + dataLen);
       }
     }
   }
@@ -89,7 +89,7 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   /**
    * Perform the real decoding using Direct ByteBuffer.
    * @param inputs Direct ByteBuffers expected
-   * @param erasedIndexes
+   * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs Direct ByteBuffers expected
    */
   protected abstract void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
@@ -117,12 +117,12 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   /**
    * Perform the real decoding using bytes array, supporting offsets and
    * lengths.
-   * @param inputs
-   * @param inputOffsets
-   * @param dataLen
-   * @param erasedIndexes
-   * @param outputs
-   * @param outputOffsets
+   * @param inputs the input byte arrays to read data from
+   * @param inputOffsets offsets for the input byte arrays to read data from
+   * @param dataLen how much data are to be read from
+   * @param erasedIndexes indexes of erased units in the inputs array
+   * @param outputs the output byte arrays to write resultant data into
+   * @param outputOffsets offsets from which to write resultant data into
    */
   protected abstract void doDecode(byte[][] inputs, int[] inputOffsets,
                                    int dataLen, int[] erasedIndexes,
@@ -139,12 +139,12 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
   /**
    * Check and validate decoding parameters, throw exception accordingly. The
    * checking assumes it's a MDS code. Other code  can override this.
-   * @param inputs
-   * @param erasedIndexes
-   * @param outputs
+   * @param inputs input buffers to check
+   * @param erasedIndexes indexes of erased units in the inputs array
+   * @param outputs output buffers to check
    */
-  protected void checkParameters(Object[] inputs, int[] erasedIndexes,
-                                 Object[] outputs) {
+  protected <T> void checkParameters(T[] inputs, int[] erasedIndexes,
+                                 T[] outputs) {
     if (inputs.length != getNumParityUnits() + getNumDataUnits()) {
       throw new IllegalArgumentException("Invalid inputs length");
     }
@@ -160,8 +160,8 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     }
 
     int validInputs = 0;
-    for (int i = 0; i < inputs.length; ++i) {
-      if (inputs[i] != null) {
+    for (T input : inputs) {
+      if (input != null) {
         validInputs += 1;
       }
     }
@@ -177,7 +177,7 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
    * not to read.
    * @return indexes into inputs array
    */
-  protected int[] getErasedOrNotToReadIndexes(Object[] inputs) {
+  protected <T> int[] getErasedOrNotToReadIndexes(T[] inputs) {
     int[] invalidIndexes = new int[inputs.length];
     int idx = 0;
     for (int i = 0; i < inputs.length; i++) {
@@ -191,13 +191,13 @@ public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
 
   /**
    * Find the valid input from all the inputs.
-   * @param inputs
+   * @param inputs input buffers to look for valid input
    * @return the first valid input
    */
   protected static <T> T findFirstValidInput(T[] inputs) {
-    for (int i = 0; i < inputs.length; i++) {
-      if (inputs[i] != null) {
-        return inputs[i];
+    for (T input : inputs) {
+      if (input != null) {
+        return input;
       }
     }
 

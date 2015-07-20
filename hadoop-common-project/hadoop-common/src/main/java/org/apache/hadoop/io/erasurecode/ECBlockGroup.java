@@ -27,8 +27,8 @@ public class ECBlockGroup {
 
   /**
    * A constructor specifying data blocks and parity blocks.
-   * @param dataBlocks
-   * @param parityBlocks
+   * @param dataBlocks data blocks in the group
+   * @param parityBlocks parity blocks in the group
    */
   public ECBlockGroup(ECBlock[] dataBlocks, ECBlock[] parityBlocks) {
     this.dataBlocks = dataBlocks;
@@ -81,7 +81,7 @@ public class ECBlockGroup {
 
   /**
    * Get erased blocks count
-   * @return
+   * @return erased count of blocks
    */
   public int getErasedCount() {
     int erasedCount = 0;

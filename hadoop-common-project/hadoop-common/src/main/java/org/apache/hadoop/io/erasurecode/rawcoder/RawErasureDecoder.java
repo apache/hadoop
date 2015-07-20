@@ -33,7 +33,8 @@ public interface RawErasureDecoder extends RawErasureCoder {
   /**
    * Decode with inputs and erasedIndexes, generates outputs.
    * How to prepare for inputs:
-   * 1. Create an array containing parity units + data units;
+   * 1. Create an array containing parity units + data units. Please note the
+   *    parity units should be first or before the data units.
    * 2. Set null in the array locations specified via erasedIndexes to indicate
    *    they're erased and no data are to read from;
    * 3. Set null in the array locations for extra redundant items, as they're
@@ -48,29 +49,39 @@ public interface RawErasureDecoder extends RawErasureCoder {
    *     erasedIndexes = [5] // index of d2 into inputs array
    *     outputs = [a-writable-buffer]
    *
-   * @param inputs inputs to read data from
+   * Note, for both inputs and outputs, no mixing of on-heap buffers and direct
+   * buffers are allowed.
+   *
+   * @param inputs inputs to read data from, contents may change after the call
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes
+   *                erasedIndexes, ready for reading the result data from after
+   *                the call
    */
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
-   * @param inputs inputs to read data from
+   * @param inputs inputs to read data from, contents may change after the call
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes
+   *                erasedIndexes, ready for reading the result data from after
+   *                the call
    */
   public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
-   * @param inputs inputs to read data from
+   *
+   * Note, for both input and output ECChunks, no mixing of on-heap buffers and
+   * direct buffers are allowed.
+   *
+   * @param inputs inputs to read data from, contents may change after the call
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs outputs to write into for data generated according to
-   *                erasedIndexes
+   *                erasedIndexes, ready for reading the result data from after
+   *                the call
    */
   public void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
 

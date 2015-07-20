@@ -37,14 +37,15 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
   @Override
   public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
     checkParameters(inputs, outputs);
+
+    boolean usingDirectBuffer = inputs[0].isDirect();
     int dataLen = inputs[0].remaining();
     if (dataLen == 0) {
       return;
     }
-    ensureLength(inputs, false, dataLen);
-    ensureLength(outputs, false, dataLen);
+    ensureLengthAndType(inputs, false, dataLen, usingDirectBuffer);
+    ensureLengthAndType(outputs, false, dataLen, usingDirectBuffer);
 
-    boolean usingDirectBuffer = inputs[0].isDirect();
     if (usingDirectBuffer) {
       doEncode(inputs, outputs);
       return;
@@ -58,13 +59,13 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
     ByteBuffer buffer;
     for (int i = 0; i < inputs.length; ++i) {
       buffer = inputs[i];
-      inputOffsets[i] = buffer.position();
+      inputOffsets[i] = buffer.arrayOffset() + buffer.position();
       newInputs[i] = buffer.array();
     }
 
     for (int i = 0; i < outputs.length; ++i) {
       buffer = outputs[i];
-      outputOffsets[i] = buffer.position();
+      outputOffsets[i] = buffer.arrayOffset() + buffer.position();
       newOutputs[i] = buffer.array();
     }
 
@@ -102,11 +103,11 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
   /**
    * Perform the real encoding work using bytes array, supporting offsets
    * and lengths.
-   * @param inputs
-   * @param inputOffsets
-   * @param dataLen
-   * @param outputs
-   * @param outputOffsets
+   * @param inputs the input byte arrays to read data from
+   * @param inputOffsets offsets for the input byte arrays to read data from
+   * @param dataLen how much data are to be read from
+   * @param outputs the output byte arrays to write resultant data into
+   * @param outputOffsets offsets from which to write resultant data into
    */
   protected abstract void doEncode(byte[][] inputs, int[] inputOffsets,
                                    int dataLen, byte[][] outputs,
@@ -121,10 +122,10 @@ public abstract class AbstractRawErasureEncoder extends AbstractRawErasureCoder
 
   /**
    * Check and validate decoding parameters, throw exception accordingly.
-   * @param inputs
-   * @param outputs
+   * @param inputs input buffers to check
+   * @param outputs output buffers to check
    */
-  protected void checkParameters(Object[] inputs, Object[] outputs) {
+  protected <T> void checkParameters(T[] inputs, T[] outputs) {
     if (inputs.length != getNumDataUnits()) {
       throw new HadoopIllegalArgumentException("Invalid inputs length");
     }

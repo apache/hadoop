@@ -31,23 +31,33 @@ import java.nio.ByteBuffer;
 public interface RawErasureEncoder extends RawErasureCoder {
 
   /**
-   * Encode with inputs and generates outputs
-   * @param inputs
+   * Encode with inputs and generates outputs.
+   *
+   * Note, for both inputs and outputs, no mixing of on-heap buffers and direct
+   * buffers are allowed.
+   *
+   * @param inputs inputs to read data from, contents may change after the call
    * @param outputs
    */
   public void encode(ByteBuffer[] inputs, ByteBuffer[] outputs);
 
   /**
    * Encode with inputs and generates outputs
-   * @param inputs
-   * @param outputs
+   * @param inputs inputs to read data from, contents may change after the call
+   * @param outputs outputs to write into for data generated, ready for reading
+   *                the result data from after the call
    */
   public void encode(byte[][] inputs, byte[][] outputs);
 
   /**
-   * Encode with inputs and generates outputs
-   * @param inputs
-   * @param outputs
+   * Encode with inputs and generates outputs.
+   *
+   * Note, for both input and output ECChunks, no mixing of on-heap buffers and
+   * direct buffers are allowed.
+   *
+   * @param inputs inputs to read data from, contents may change after the call
+   * @param outputs outputs to write into for data generated, ready for reading
+   *                the result data from after the call
    */
   public void encode(ECChunk[] inputs, ECChunk[] outputs);
 

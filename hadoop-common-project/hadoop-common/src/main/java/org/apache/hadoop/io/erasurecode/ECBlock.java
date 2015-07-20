@@ -37,8 +37,8 @@ public class ECBlock {
 
   /**
    * A constructor specifying isParity and isErased.
-   * @param isParity
-   * @param isErased
+   * @param isParity is a parity block
+   * @param isErased is erased or not
    */
   public ECBlock(boolean isParity, boolean isErased) {
     this.isParity = isParity;
@@ -47,7 +47,7 @@ public class ECBlock {
 
   /**
    * Set true if it's for a parity block.
-   * @param isParity
+   * @param isParity is parity or not
    */
   public void setParity(boolean isParity) {
     this.isParity = isParity;
@@ -55,10 +55,10 @@ public class ECBlock {
 
   /**
    * Set true if the block is missing.
-   * @param isMissing
+   * @param isErased is erased or not
    */
-  public void setErased(boolean isMissing) {
-    this.isErased = isMissing;
+  public void setErased(boolean isErased) {
+    this.isErased = isErased;
   }
 
   /**
@@ -71,7 +71,7 @@ public class ECBlock {
 
   /**
    *
-   * @return true if it's missing or corrupt due to erasure, otherwise false
+   * @return true if it's erased due to erasure, otherwise false
    */
   public boolean isErased() {
     return isErased;

@@ -94,10 +94,10 @@ public final class ECSchema {
 
   /**
    * Constructor with key parameters provided.
-   * @param schemaName
-   * @param codecName
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param schemaName schema name
+   * @param codecName codec name
+   * @param numDataUnits number of data units used in the schema
+   * @param numParityUnits number os parity units used in the schema
    */
   public ECSchema(String schemaName, String codecName,
                   int numDataUnits, int numParityUnits) {
@@ -107,11 +107,11 @@ public final class ECSchema {
   /**
    * Constructor with key parameters provided. Note the extraOptions may contain
    * additional information for the erasure codec to interpret further.
-   * @param schemaName
-   * @param codecName
-   * @param numDataUnits
-   * @param numParityUnits
-   * @param extraOptions
+   * @param schemaName schema name
+   * @param codecName codec name
+   * @param numDataUnits number of data units used in the schema
+   * @param numParityUnits number os parity units used in the schema
+   * @param extraOptions extra options to configure the codec
    */
   public ECSchema(String schemaName, String codecName, int numDataUnits,
                   int numParityUnits, Map<String, String> extraOptions) {

@@ -26,16 +26,16 @@ public interface RawErasureCoderFactory {
 
   /**
    * Create raw erasure encoder.
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw erasure encoder
    */
   public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits);
 
   /**
    * Create raw erasure decoder.
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw erasure decoder
    */
   public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits);
