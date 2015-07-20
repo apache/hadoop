@@ -386,6 +386,23 @@ function finish_docker_stats
   fi
 }
 
+## @description  Put the max memory consumed by maven at the bottom of the table.
+## @audience     private
+## @stability    stable
+## @replaceable  no
+function finish_footer_table
+{
+  local maxmem
+
+  # shellcheck disable=SC2016,SC2086
+  maxmem=$(find "${PATCH_DIR}" -type f -exec ${AWK} 'match($0, /^\[INFO\] Final Memory: [0-9]+/)
+    { print substr($0, 22, RLENGTH-21) }' {} \; | sort -nr | head -n 1)
+
+  if [[ -n ${maxmem} ]]; then
+    add_footer_table "Max memory used" "${maxmem}MB"
+  fi
+}
+
 ## @description  Put the final elapsed time at the bottom of the table.
 ## @audience     private
 ## @stability    stable
@@ -3472,6 +3489,8 @@ postinstall
 runtests
 
 finish_vote_table
+
+finish_footer_table
 
 output_to_console ${RESULT}
 output_to_bugsystem ${RESULT}
