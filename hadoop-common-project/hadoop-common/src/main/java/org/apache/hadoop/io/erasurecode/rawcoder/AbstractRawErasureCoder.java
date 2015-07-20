@@ -91,37 +91,45 @@ public abstract class AbstractRawErasureCoder
   }
 
   /**
-   * Check and ensure the buffers are of the length specified by dataLen.
-   * @param buffers
-   * @param allowNull
-   * @param dataLen
+   * Check and ensure the buffers are of the length specified by dataLen, also
+   * ensure the buffers are direct buffers or not according to isDirectBuffer.
+   * @param buffers the buffers to check
+   * @param allowNull whether to allow any element to be null or not
+   * @param dataLen the length of data available in the buffer to ensure with
+   * @param isDirectBuffer is direct buffer or not to ensure with
    */
-  protected void ensureLength(ByteBuffer[] buffers,
-                              boolean allowNull, int dataLen) {
-    for (int i = 0; i < buffers.length; ++i) {
-      if (buffers[i] == null && !allowNull) {
+  protected void ensureLengthAndType(ByteBuffer[] buffers, boolean allowNull,
+                                     int dataLen, boolean isDirectBuffer) {
+    for (ByteBuffer buffer : buffers) {
+      if (buffer == null && !allowNull) {
         throw new HadoopIllegalArgumentException(
             "Invalid buffer found, not allowing null");
-      } else if (buffers[i] != null && buffers[i].remaining() != dataLen) {
-        throw new HadoopIllegalArgumentException(
-            "Invalid buffer, not of length " + dataLen);
+      } else if (buffer != null) {
+        if (buffer.remaining() != dataLen) {
+          throw new HadoopIllegalArgumentException(
+              "Invalid buffer, not of length " + dataLen);
+        }
+        if (buffer.isDirect() != isDirectBuffer) {
+          throw new HadoopIllegalArgumentException(
+              "Invalid buffer, isDirect should be " + isDirectBuffer);
+        }
       }
     }
   }
 
   /**
    * Check and ensure the buffers are of the length specified by dataLen.
-   * @param buffers
-   * @param allowNull
-   * @param dataLen
+   * @param buffers the buffers to check
+   * @param allowNull whether to allow any element to be null or not
+   * @param dataLen the length of data available in the buffer to ensure with
    */
   protected void ensureLength(byte[][] buffers,
                               boolean allowNull, int dataLen) {
-    for (int i = 0; i < buffers.length; ++i) {
-      if (buffers[i] == null && !allowNull) {
+    for (byte[] buffer : buffers) {
+      if (buffer == null && !allowNull) {
         throw new HadoopIllegalArgumentException(
             "Invalid buffer found, not allowing null");
-      } else if (buffers[i] != null && buffers[i].length != dataLen) {
+      } else if (buffer != null && buffer.length != dataLen) {
         throw new HadoopIllegalArgumentException(
             "Invalid buffer not of length " + dataLen);
       }

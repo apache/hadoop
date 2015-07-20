@@ -68,9 +68,9 @@ public abstract class TestRawCoderBase extends TestCoderBase {
      * The following runs will use 3 different chunkSize for inputs and outputs,
      * to verify the same encoder/decoder can process variable width of data.
      */
-    performTestCoding(baseChunkSize, false, false);
-    performTestCoding(baseChunkSize - 17, false, false);
-    performTestCoding(baseChunkSize + 16, false, false);
+    performTestCoding(baseChunkSize, true, false, false);
+    performTestCoding(baseChunkSize - 17, false, false, false);
+    performTestCoding(baseChunkSize + 16, true, false, false);
   }
 
   /**
@@ -82,7 +82,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     prepareCoders();
 
     try {
-      performTestCoding(baseChunkSize, true, false);
+      performTestCoding(baseChunkSize, false, true, false);
       Assert.fail("Encoding test with bad input should fail");
     } catch (Exception e) {
       // Expected
@@ -98,7 +98,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     prepareCoders();
 
     try {
-      performTestCoding(baseChunkSize, false, true);
+      performTestCoding(baseChunkSize, false, false, true);
       Assert.fail("Decoding test with bad output should fail");
     } catch (Exception e) {
       // Expected
@@ -122,9 +122,10 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     }
   }
 
-  private void performTestCoding(int chunkSize,
+  private void performTestCoding(int chunkSize, boolean usingSlicedBuffer,
                                  boolean useBadInput, boolean useBadOutput) {
     setChunkSize(chunkSize);
+    prepareBufferAllocator(usingSlicedBuffer);
 
     dumpSetting();
 

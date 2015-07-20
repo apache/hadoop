@@ -22,17 +22,17 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.rawcoder.*;
 
 /**
- * A codec utility.
+ * A codec & coder utility to help create raw coders conveniently.
  */
 public final class CodecUtil {
 
-  private CodecUtil() {}
+  private CodecUtil() { }
 
   /**
    * Create RS raw encoder according to configuration.
-   * @param conf
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param conf configuration possibly with some items to configure the coder
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw encoder
    */
   public static RawErasureEncoder createRSRawEncoder(
@@ -49,9 +49,9 @@ public final class CodecUtil {
 
   /**
    * Create RS raw decoder according to configuration.
-   * @param conf
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param conf configuration possibly with some items to configure the coder
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw decoder
    */
   public static RawErasureDecoder createRSRawDecoder(
@@ -68,9 +68,9 @@ public final class CodecUtil {
 
   /**
    * Create XOR raw encoder according to configuration.
-   * @param conf
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param conf configuration possibly with some items to configure the coder
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw encoder
    */
   public static RawErasureEncoder createXORRawEncoder(
@@ -87,9 +87,9 @@ public final class CodecUtil {
 
   /**
    * Create XOR raw decoder according to configuration.
-   * @param conf
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param conf configuration possibly with some items to configure the coder
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw decoder
    */
   public static RawErasureDecoder createXORRawDecoder(
@@ -106,11 +106,11 @@ public final class CodecUtil {
 
   /**
    * Create raw coder using specified conf and raw coder factory key.
-   * @param conf
-   * @param rawCoderFactoryKey
-   * @param isEncoder
-   * @param numDataUnits
-   * @param numParityUnits
+   * @param conf configuration possibly with some items to configure the coder
+   * @param rawCoderFactoryKey configuration key to find the raw coder factory
+   * @param isEncoder is encoder or not we're going to create
+   * @param numDataUnits number of data units in a coding group
+   * @param numParityUnits number of parity units in a coding group
    * @return raw coder
    */
   public static RawErasureCoder createRawCoder(Configuration conf,

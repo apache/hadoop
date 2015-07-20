@@ -28,7 +28,7 @@ public class ECChunk {
 
   /**
    * Wrapping a ByteBuffer
-   * @param buffer
+   * @param buffer buffer to be wrapped by the chunk
    */
   public ECChunk(ByteBuffer buffer) {
     this.chunkBuffer = buffer;
@@ -36,7 +36,7 @@ public class ECChunk {
 
   /**
    * Wrapping a bytes array
-   * @param buffer
+   * @param buffer buffer to be wrapped by the chunk
    */
   public ECChunk(byte[] buffer) {
     this.chunkBuffer = ByteBuffer.wrap(buffer);
@@ -52,7 +52,7 @@ public class ECChunk {
 
   /**
    * Convert an array of this chunks to an array of ByteBuffers
-   * @param chunks
+   * @param chunks chunks to convert into buffers
    * @return an array of ByteBuffers
    */
   public static ByteBuffer[] toBuffers(ECChunk[] chunks) {

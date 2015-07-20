@@ -43,7 +43,8 @@ import org.xml.sax.SAXException;
  * A EC schema loading utility that loads predefined EC schemas from XML file
  */
 public class SchemaLoader {
-  private static final Logger LOG = LoggerFactory.getLogger(SchemaLoader.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(
+      SchemaLoader.class.getName());
 
   /**
    * Load predefined ec schemas from configuration file. This file is

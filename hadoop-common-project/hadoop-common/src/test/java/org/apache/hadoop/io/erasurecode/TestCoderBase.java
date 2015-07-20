@@ -18,6 +18,8 @@
 package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.BufferAllocator.SimpleBufferAllocator;
+import org.apache.hadoop.io.erasurecode.BufferAllocator.SlicedBufferAllocator;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
 
 import java.nio.ByteBuffer;
@@ -40,6 +42,7 @@ public abstract class TestCoderBase {
   protected int numParityUnits;
   protected int baseChunkSize = 513;
   private int chunkSize = baseChunkSize;
+  private BufferAllocator allocator;
 
   private byte[] zeroChunkBytes;
 
@@ -68,6 +71,17 @@ public abstract class TestCoderBase {
   protected void setChunkSize(int chunkSize) {
     this.chunkSize = chunkSize;
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
+  }
+
+  protected void prepareBufferAllocator(boolean usingSlicedBuffer) {
+    if (usingSlicedBuffer) {
+      int roughEstimationSpace =
+          chunkSize * (numDataUnits + numParityUnits) * 10;
+      allocator = new SlicedBufferAllocator(usingDirectBuffer,
+          roughEstimationSpace);
+    } else {
+      allocator = new SimpleBufferAllocator(usingDirectBuffer);
+    }
   }
 
   /**
@@ -299,8 +313,7 @@ public abstract class TestCoderBase {
      */
     int startOffset = startBufferWithZero ? 0 : 11; // 11 is arbitrary
     int allocLen = startOffset + bufferLen + startOffset;
-    ByteBuffer buffer = usingDirectBuffer ?
-        ByteBuffer.allocateDirect(allocLen) : ByteBuffer.allocate(allocLen);
+    ByteBuffer buffer = allocator.allocate(allocLen);
     buffer.limit(startOffset + bufferLen);
     fillDummyData(buffer, startOffset);
     startBufferWithZero = ! startBufferWithZero;
