@@ -359,3 +359,8 @@
 
     HDFS-8058. Erasure coding: use BlockInfo[] for both striped and contiguous
     blocks in INodeFile. (Zhe Zhang and Yi Liu via zhz)
+
+    HDFS-8787. Erasure coding: rename BlockInfoContiguousUC and BlockInfoStripedUC
+    to be consistent with trunk. (zhz)
+
+    HDFS-8433. Erasure coding: set blockToken in LocatedStripedBlock.(waltersu4549)

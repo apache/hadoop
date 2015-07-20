@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.security.token.Token;
 
 import java.util.Arrays;
 
@@ -32,8 +34,10 @@ import java.util.Arrays;
 @InterfaceStability.Evolving
 public class LocatedStripedBlock extends LocatedBlock {
   private static final int[] EMPTY_INDICES = {};
+  private static final Token<BlockTokenIdentifier> EMPTY_TOKEN = new Token<>();
 
   private int[] blockIndices;
+  private Token<BlockTokenIdentifier>[] blockTokens;
 
   public LocatedStripedBlock(ExtendedBlock b, DatanodeInfo[] locs,
       String[] storageIDs, StorageType[] storageTypes, int[] indices,
@@ -45,6 +49,10 @@ public class LocatedStripedBlock extends LocatedBlock {
     } else {
       this.blockIndices = new int[indices.length];
       System.arraycopy(indices, 0, blockIndices, 0, indices.length);
+    }
+    blockTokens = new Token[blockIndices.length];
+    for (int i = 0; i < blockIndices.length; i++) {
+      blockTokens[i] = EMPTY_TOKEN;
     }
   }
 
@@ -66,5 +74,13 @@ public class LocatedStripedBlock extends LocatedBlock {
   @Override
   public boolean isStriped() {
     return true;
+  }
+
+  public Token<BlockTokenIdentifier>[] getBlockTokens() {
+    return blockTokens;
+  }
+
+  public void setBlockTokens(Token<BlockTokenIdentifier>[] tokens) {
+    this.blockTokens = tokens;
   }
 }
