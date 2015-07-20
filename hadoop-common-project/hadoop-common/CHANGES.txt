@@ -972,6 +972,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12235 hadoop-openstack junit & mockito dependencies should be
     "provided". (Ted Yu via stevel)
 
+    HADOOP-12209 Comparable type should be in FileStatus.
+    (Yong Zhang via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
