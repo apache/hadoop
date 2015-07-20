@@ -17,6 +17,11 @@
 #
 
 add_library(test_common OBJECT mock_connection.cc)
+
 add_executable(remote_block_reader_test remote_block_reader_test.cc $<TARGET_OBJECTS:test_common>)
-target_link_libraries(remote_block_reader_test reader proto common ${PROTOBUF_LIBRARIES} gmock_main)
+target_link_libraries(remote_block_reader_test reader proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main)
 add_test(remote_block_reader remote_block_reader_test)
+
+add_executable(sasl_digest_md5_test sasl_digest_md5_test.cc)
+target_link_libraries(sasl_digest_md5_test common ${OPENSSL_LIBRARIES} gmock_main)
+add_test(sasl_digest_md5 sasl_digest_md5_test)

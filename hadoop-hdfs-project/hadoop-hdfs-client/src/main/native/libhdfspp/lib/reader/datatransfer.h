@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef COMMON_DATA_TRANSFER_H_
-#define COMMON_DATA_TRANSFER_H_
+#ifndef LIB_READER_DATA_TRANSFER_H_
+#define LIB_READER_DATA_TRANSFER_H_
+
+#include "common/sasl_authenticator.h"
 
 namespace hdfs {
 
@@ -27,9 +29,35 @@ enum {
 
 enum Operation {
   kWriteBlock = 80,
-  kReadBlock  = 81,
+  kReadBlock = 81,
 };
 
+template <class Stream> class DataTransferSaslStream {
+public:
+  DataTransferSaslStream(Stream *stream, const std::string &username,
+                         const std::string &password)
+      : stream_(stream), authenticator_(username, password) {}
+
+  template <class Handler> void Handshake(const Handler &next);
+
+  template <class MutableBufferSequence, class ReadHandler>
+  void async_read_some(const MutableBufferSequence &buffers,
+                       ReadHandler &&handler);
+
+  template <class ConstBufferSequence, class WriteHandler>
+  void async_write_some(const ConstBufferSequence &buffers,
+                        WriteHandler &&handler);
+
+private:
+  DataTransferSaslStream(const DataTransferSaslStream &) = delete;
+  DataTransferSaslStream &operator=(const DataTransferSaslStream &) = delete;
+  Stream *stream_;
+  DigestMD5Authenticator authenticator_;
+  struct ReadSaslMessage;
+  struct Authenticator;
+};
 }
+
+#include "datatransfer_impl.h"
 
 #endif
