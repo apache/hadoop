@@ -51,6 +51,8 @@ Trunk - Unreleased
     YARN-2355. MAX_APP_ATTEMPTS_ENV may no longer be a useful env var
     for a container (Darrell Taylor via aw)
 
+    YARN-3915. scmadmin help message correction (Bibin A Chundatt via aw)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
