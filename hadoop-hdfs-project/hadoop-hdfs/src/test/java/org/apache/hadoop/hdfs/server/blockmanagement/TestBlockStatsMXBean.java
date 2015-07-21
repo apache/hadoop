@@ -106,7 +106,6 @@ public class TestBlockStatsMXBean {
   public void testStorageTypeStatsJMX() throws Exception {
     URL baseUrl = new URL (cluster.getHttpUri(0));
     String result = readOutput(new URL(baseUrl, "/jmx"));
-    System.out.println(result);
 
     Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
     Object[] beans =(Object[]) stat.get("beans");

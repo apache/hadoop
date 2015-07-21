@@ -155,7 +155,8 @@ public class TestApplicationLimits {
     doReturn(applicationAttemptId). when(application).getApplicationAttemptId();
     doReturn(user).when(application).getUser();
     doReturn(amResource).when(application).getAMResource();
-    when(application.compareInputOrderTo(any(FiCaSchedulerApp.class))).thenCallRealMethod(); 
+    doReturn(Priority.newInstance(0)).when(application).getPriority();
+    when(application.compareInputOrderTo(any(FiCaSchedulerApp.class))).thenCallRealMethod();
     return application;
   }
   
@@ -175,7 +176,7 @@ public class TestApplicationLimits {
     
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
     when(queue.getActiveUsersManager()).thenReturn(activeUsersManager);
-    
+
     assertEquals(Resource.newInstance(8 * GB, 1), queue.getAMResourceLimit());
     assertEquals(Resource.newInstance(4 * GB, 1),
       queue.getUserAMResourceLimit());

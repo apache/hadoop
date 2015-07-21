@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -690,5 +691,14 @@ public abstract class AbstractYarnScheduler
       return attempt.getAppSchedulingInfo().getAllResourceRequests();
     }
     return null;
+  }
+
+  @Override
+  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
+      String user, String queueName, ApplicationId applicationId)
+      throws YarnException {
+    // Dummy Implementation till Application Priority changes are done in
+    // specific scheduler.
+    return Priority.newInstance(0);
   }
 }

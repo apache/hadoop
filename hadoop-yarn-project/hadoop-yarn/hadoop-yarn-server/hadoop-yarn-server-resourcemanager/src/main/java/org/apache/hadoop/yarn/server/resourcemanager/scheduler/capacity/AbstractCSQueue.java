@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -573,5 +574,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // sorry, you cannot access
     return false;
+  }
+
+  @Override
+  public Priority getDefaultApplicationPriority() {
+    // TODO add dummy implementation
+    return null;
   }
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -329,14 +330,19 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ResourceRequest amReq =
         validateAndCreateResourceRequest(submissionContext, isRecovery);
 
+    // Verify and get the update application priority and set back to
+    // submissionContext
+    Priority appPriority = rmContext.getScheduler()
+        .checkAndGetApplicationPriority(submissionContext.getPriority(), user,
+            submissionContext.getQueue(), applicationId);
+    submissionContext.setPriority(appPriority);
+
     // Create RMApp
-    RMAppImpl application =
-        new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(), user,
-            submissionContext.getQueue(),
-            submissionContext, this.scheduler, this.masterService,
-            submitTime, submissionContext.getApplicationType(),
-            submissionContext.getApplicationTags(), amReq);
+    RMAppImpl application = new RMAppImpl(applicationId, rmContext, this.conf,
+        submissionContext.getApplicationName(), user,
+        submissionContext.getQueue(), submissionContext, this.scheduler,
+        this.masterService, submitTime, submissionContext.getApplicationType(),
+        submissionContext.getApplicationTags(), amReq);
 
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not

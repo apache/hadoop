@@ -222,6 +222,15 @@ public class SwiftNativeFileSystem extends FileSystem {
   }
 
   /**
+   * Override getCononicalServiceName because we don't support token in Swift
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    // Does not support Token
+    return null;
+  }
+
+  /**
    * Return an array containing hostnames, offset and size of
    * portions of the given file.  For a nonexistent
    * file or regions, null will be returned.

@@ -31,34 +31,30 @@ ResourceManger Restart
 Overview
 --------
 
-ResourceManager is the central authority that manages resources and schedules applications running atop of YARN. Hence, it is potentially a single point of failure in a Apache YARN cluster.
-`
-This document gives an overview of ResourceManager Restart, a feature that enhances ResourceManager to keep functioning across restarts and also makes ResourceManager down-time invisible to end-users.
+ResourceManager is the central authority that manages resources and schedules applications running on YARN. Hence, it is potentially a single point of failure in an Apache YARN cluster. This document gives an overview of ResourceManager Restart, a feature that enhances ResourceManager to keep functioning across restarts and also makes ResourceManager down-time invisible to end-users.
 
-ResourceManager Restart feature is divided into two phases: 
+There are two types of restart for ResourceManager:
 
-* **ResourceManager Restart Phase 1 (Non-work-preserving RM restart)**: Enhance RM to persist application/attempt state and other credentials information in a pluggable state-store. RM will reload this information from state-store upon restart and re-kick the previously running applications. Users are not required to re-submit the applications.
+* **Non-work-preserving RM restart**: This restart enhances RM to persist application/attempt state and other credentials information in a pluggable state-store. RM will reload this information from state-store on restart and re-kick the previously running applications. Users are not required to re-submit the applications.
 
-* **ResourceManager Restart Phase 2 (Work-preserving RM restart)**: Focus on re-constructing the running state of ResourceManager by combining the container statuses from NodeManagers and container requests from ApplicationMasters upon restart. The key difference from phase 1 is that previously running applications will not be killed after RM restarts, and so applications won't lose its work because of RM outage.
+* **Work-preserving RM restart**: This focuses on re-constructing the running state of RM by combining the container status from NodeManagers and container requests from ApplicationMasters on restart. The key difference from Non-work-preserving RM restart is that previously running applications will not be killed after RM restarts, and so applications will not lose its work because of RM outage.
 
 Feature
 -------
 
-* **Phase 1: Non-work-preserving RM restart** 
+* **Non-work-preserving RM restart**
 
-     As of Hadoop 2.4.0 release, only ResourceManager Restart Phase 1 is implemented which is described below.
+     In non-work-preserving RM restart, RM will save the application metadata (i.e. ApplicationSubmissionContext) in a pluggable state-store when client submits an application and also saves the final status of the application such as the completion state (failed, killed, or finished) and diagnostics when the application completes. Besides, RM also saves the credentials like security keys, tokens to work in a secure environment. When RM shuts down, as long as the required information (i.e.application metadata and the alongside credentials if running in a secure environment) is available in the state-store, then when RM restarts, it can pick up the application metadata from the state-store and re-submit the application. RM won't re-submit the applications if they were already completed (i.e. failed, killed, or finished) before RM went down.
 
-     The overall concept is that RM will persist the application metadata (i.e. ApplicationSubmissionContext) in a pluggable state-store when client submits an application and also saves the final status of the application such as the completion state (failed, killed, finished) and diagnostics when the application completes. Besides, RM also saves the credentials like security keys, tokens to work in a secure  environment. Any time RM shuts down, as long as the required information (i.e.application metadata and the alongside credentials if running in a secure environment) is available in the state-store, when RM restarts, it can pick up the application metadata from the state-store and re-submit the application. RM won't re-submit the applications if they were already completed (i.e. failed, killed, finished) before RM went down.
+     NodeManagers and clients during the down-time of RM will keep polling RM until RM comes up. When RM comes up, it will send a re-sync command to all the NodeManagers and ApplicationMasters it was talking to via heartbeats. The NMs will kill all its managed containers and re-register with RM. These re-registered NodeManagers are similar to the newly joining NMs. AMs (e.g. MapReduce AM) are expected to shutdown when they receive the re-sync command. After RM restarts and loads all the application metadata, credentials from state-store and populates them into memory, it will create a new attempt (i.e. ApplicationMaster) for each application that was not yet completed and re-kick that application as usual. As described before, the previously running applications' work is lost in this manner since they are essentially killed by RM via the re-sync command on restart.
 
-     NodeManagers and clients during the down-time of RM will keep polling RM until RM comes up. When RM becomes alive, it will send a re-sync command to all the NodeManagers and ApplicationMasters it was talking to via heartbeats. As of Hadoop 2.4.0 release, the behaviors for NodeManagers and ApplicationMasters to handle this command are: NMs will kill all its managed containers and re-register with RM. From the RM's perspective, these re-registered NodeManagers are similar to the newly joining NMs. AMs(e.g. MapReduce AM) are expected to shutdown when they receive the re-sync command. After RM restarts and loads all the application metadata, credentials from state-store and populates them into memory, it will create a new attempt (i.e. ApplicationMaster) for each application that was not yet completed and re-kick that application as usual. As described before, the previously running applications' work is lost in this manner since they are essentially killed by RM via the re-sync command on restart.
 
-* **Phase 2: Work-preserving RM restart** 
+* **Work-preserving RM restart**
 
-     As of Hadoop 2.6.0, we further enhanced RM restart feature to address the problem to not kill any applications running on YARN cluster if RM restarts.
+     In work-preserving RM restart, RM ensures the persistency of application state and reload that state on recovery, this restart primarily focuses on re-constructing the entire running state of YARN cluster, the majority of which is the state of the central scheduler inside RM which keeps track of all containers' life-cycle, applications' headroom and resource requests, queues' resource usage and so on. In this way, RM need not kill the AM and re-run the application from scratch as it is done in non-work-preserving RM restart. Applications can simply re-sync back with RM and resume from where it were left off.
 
-     Beyond all the groundwork that has been done in Phase 1 to ensure the persistency of application state and reload that state on recovery, Phase 2 primarily focuses on re-constructing the entire running state of YARN cluster, the majority of which is the state of the central scheduler inside RM which keeps track of all containers' life-cycle, applications' headroom and resource requests, queues' resource usage etc. In this way, RM doesn't need to kill the AM and re-run the application from scratch as it is done in Phase 1. Applications can simply re-sync back with RM and resume from where it were left off.
+     RM recovers its running state by taking advantage of the container status sent from all NMs. NM will not kill the containers when it re-syncs with the restarted RM. It continues managing the containers and sends the container status across to RM when it re-registers. RM reconstructs the container instances and the associated applications' scheduling status by absorbing these containers' information. In the meantime, AM needs to re-send the outstanding resource requests to RM because RM may lose the unfulfilled requests when it shuts down. Application writers using AMRMClient library to communicate with RM do not need to worry about the part of AM re-sending resource requests to RM on re-sync, as it is automatically taken care by the library itself.
 
-     RM recovers its runing state by taking advantage of the container statuses sent from all NMs. NM will not kill the containers when it re-syncs with the restarted RM. It continues managing the containers and send the container statuses across to RM when it re-registers. RM reconstructs the container instances and the associated applications' scheduling status by absorbing these containers' information. In the meantime, AM needs to re-send the outstanding resource requests to RM because RM may lose the unfulfilled requests when it shuts down. Application writers using AMRMClient library to communicate with RM do not need to worry about the part of AM re-sending resource requests to RM on re-sync, as it is automatically taken care by the library itself.
 
 Configurations
 --------------
@@ -103,7 +99,7 @@ This section describes the configurations involved to enable RM Restart feature.
 | `yarn.resourcemanager.fs.state-store.retry-policy-spec` | Hadoop FileSystem client retry policy specification. Hadoop FileSystem client retry is always enabled. Specified in pairs of sleep-time and number-of-retries i.e. (t0, n0), (t1, n1), ..., the first n0 retries sleep t0 milliseconds on average, the following n1 retries sleep t1 milliseconds on average, and so on. Default value is (2000, 500) |
 
 ### Configurations for ZooKeeper based state-store implementation
-  
+
 * Configure the ZooKeeper server address and the root path where the RM state is stored.
 
 | Property | Description |
@@ -145,7 +141,7 @@ ContainerId string format is changed if RM restarts with work-preserving recover
 
 It is now changed to:
 `Container_`**e{epoch}**`_{clusterTimestamp}_{appId}_{attemptId}_{containerId}`, e.g. `Container_`**e17**`_1410901177871_0001_01_000005`.
- 
+
 Here, the additional epoch number is a monotonically increasing integer which starts from 0 and is increased by 1 each time RM restarts. If epoch number is 0, it is omitted and the containerId string format stays the same as before.
 
 Sample Configurations
@@ -155,12 +151,12 @@ Below is a minimum set of configurations for enabling RM work-preserving restart
 
 
      <property>
-       <description>Enable RM to recover state after starting. If true, then 
+       <description>Enable RM to recover state after starting. If true, then
        yarn.resourcemanager.store.class must be specified</description>
        <name>yarn.resourcemanager.recovery.enabled</name>
        <value>true</value>
      </property>
-   
+
      <property>
        <description>The class to use as the persistent store.</description>
        <name>yarn.resourcemanager.store.class</name>

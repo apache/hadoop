@@ -29,6 +29,8 @@ Trunk - Unreleased
     YARN-2280. Resource manager web service fields are not accessible
     (Krisztian Horvath via aw)
 
+    YARN-3261. rewrite resourcemanager restart doc to remove roadmap bits (Gururaj Shetty via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -50,6 +52,8 @@ Trunk - Unreleased
 
     YARN-2355. MAX_APP_ATTEMPTS_ENV may no longer be a useful env var
     for a container (Darrell Taylor via aw)
+
+    YARN-3915. scmadmin help message correction (Bibin A Chundatt via aw)
 
 Release 2.8.0 - UNRELEASED
 
@@ -136,6 +140,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3116. RM notifies NM whether a container is an AM container or normal
     task container. (Giovanni Matteo Fumarola via zjshen)
+
+    YARN-2003. Support for Application priority : Changes in RM and Capacity 
+    Scheduler. (Sunil G via wangda)
 
   IMPROVEMENTS
 

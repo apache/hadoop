@@ -341,6 +341,10 @@ Trunk (Unreleased)
     HDFS-8627. NPE thrown if unable to fetch token from Namenode
     (J.Andreina via vinayakumarb)
 
+    HDFS-8657. Update docs for mSNN. (Jesse Yates via atm)
+
+    HDFS-8800. hdfs --daemon stop namenode corrupts logs (John Smith via aw)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
@@ -725,6 +729,11 @@ Release 2.8.0 - UNRELEASED
     HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
     files rather than the entire DFSClient. (mingma)
 
+    HDFS-8794. Improve CorruptReplicasMap#corruptReplicasMap. (yliu)
+
+    HDFS-7483. Display information per tier on the Namenode UI.
+    (Benoy Antony and wheat9 via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -757,9 +766,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7997. The first non-existing xattr should also throw IOException.
     (zhouyingchao via yliu)
-
-    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
-    decrement ExcessBlocks metric when the block is removed. (aajisaka)
 
     HDFS-7922. ShortCircuitCache#close is not releasing
     ScheduledThreadPoolExecutors (Rakesh R via Colin P. McCabe)
@@ -1050,6 +1056,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8778. TestBlockReportRateLimiting#testLeaseExpiration can deadlock.
     (Arpit Agarwal)
 
+    HDFS-7582. Enforce maximum number of ACL entries separately per access
+    and default. (vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1065,8 +1074,11 @@ Release 2.7.2 - UNRELEASED
   HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
   BUG FIXES
-    
-Release 2.7.1 - 2015-07-06 
+
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
+Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
 
