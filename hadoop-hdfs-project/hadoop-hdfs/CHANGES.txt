@@ -1056,9 +1056,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8778. TestBlockReportRateLimiting#testLeaseExpiration can deadlock.
     (Arpit Agarwal)
 
-    HDFS-8344. NameNode doesn't recover lease for files with missing blocks
-    (raviprak)
-
     HDFS-7582. Enforce maximum number of ACL entries separately per access
     and default. (vinayakumarb)
 

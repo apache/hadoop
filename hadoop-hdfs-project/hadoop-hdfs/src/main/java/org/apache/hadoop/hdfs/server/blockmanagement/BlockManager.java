@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
@@ -273,13 +274,6 @@ public class BlockManager implements BlockStatsMXBean {
   private BlockPlacementPolicy blockplacement;
   private final BlockStoragePolicySuite storagePolicySuite;
 
-  /** The number of times a block under construction's recovery will be
-    * attempted using all known replicas. e.g. if there are 3 replicas, each
-    * node will be tried 5 times (for a total of 15 retries across all nodes)*/
-  private static int maxBlockUCRecoveries =
-    DFSConfigKeys.DFS_BLOCK_UC_MAX_RECOVERY_ATTEMPTS_DEFAULT;
-  public static int getMaxBlockUCRecoveries() { return maxBlockUCRecoveries; }
-
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
 
@@ -288,9 +282,6 @@ public class BlockManager implements BlockStatsMXBean {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
-    maxBlockUCRecoveries = conf.getInt(
-      DFSConfigKeys.DFS_BLOCK_UC_MAX_RECOVERY_ATTEMPTS,
-      DFSConfigKeys.DFS_BLOCK_UC_MAX_RECOVERY_ATTEMPTS_DEFAULT);
 
     startupDelayBlockDeletionInMs = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
@@ -740,8 +731,7 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * Force the given block in the given file to be marked as complete,
    * regardless of whether enough replicas are present. This is necessary
-   * when tailing edit logs as a Standby or when recovering a lease on a file
-   * with missing blocks.
+   * when tailing edit logs as a Standby.
    */
   public BlockInfo forceCompleteBlock(final BlockCollection bc,
       final BlockInfoUnderConstruction block) throws IOException {

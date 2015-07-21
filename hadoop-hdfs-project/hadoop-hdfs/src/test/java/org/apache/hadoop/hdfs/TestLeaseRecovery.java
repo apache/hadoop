@@ -27,7 +27,6 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -259,81 +258,4 @@ public class TestLeaseRecovery {
       }
     }
   }
-
-  /**
-   * Test that when a client was writing to a file and died, and before the
-   * lease can be recovered, all the datanodes to which the file was written
-   * also die, after some time (5 * lease recovery times) the file is indeed
-   * closed and lease recovered.
-   * We also check that if the datanode came back after some time, the data
-   * originally written is not truncated
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testLeaseRecoveryWithMissingBlocks()
-    throws IOException, InterruptedException {
-    Configuration conf = new HdfsConfiguration();
-
-    //Start a cluster with 3 datanodes
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    cluster.setLeasePeriod(LEASE_PERIOD, LEASE_PERIOD);
-    cluster.waitActive();
-
-    //create a file (with replication 1)
-    Path file = new Path("/testRecoveryFile");
-    DistributedFileSystem dfs = cluster.getFileSystem();
-    FSDataOutputStream out = dfs.create(file, (short) 1);
-
-    //This keeps count of the number of bytes written (AND is also the data we
-    //are writing)
-    long writtenBytes = 0;
-    while (writtenBytes < 2 * 1024 * 1024) {
-      out.writeLong(writtenBytes);
-      writtenBytes += 8;
-    }
-    System.out.println("Written " + writtenBytes + " bytes");
-    out.hsync();
-    System.out.println("hsynced the data");
-
-    //Kill the datanode to which the file was written.
-    DatanodeInfo dn =
-      ((DFSOutputStream) out.getWrappedStream()).getPipeline()[0];
-    DataNodeProperties dnStopped = cluster.stopDataNode(dn.getName());
-
-    //Wait at most 20 seconds for the lease to be recovered
-    LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
-    int i = 40;
-    while(i-- > 0 && lm.countLease() != 0) {
-      System.out.println("Still got " + lm.countLease() + " lease(s)");
-      Thread.sleep(500);
-    }
-    assertTrue("The lease was not recovered", lm.countLease() == 0);
-    System.out.println("Got " + lm.countLease() + " leases");
-
-    //Make sure we can't read any data because the datanode is dead
-    FSDataInputStream in = dfs.open(file);
-    try {
-      in.readLong();
-      assertTrue("Shouldn't have reached here", false);
-    } catch(BlockMissingException bme) {
-      System.out.println("Correctly got BlockMissingException because datanode"
-        + " is still dead");
-    }
-
-    //Bring the dead datanode back.
-    cluster.restartDataNode(dnStopped);
-    System.out.println("Restart datanode");
-
-    //Make sure we can read all the data back (since we hsync'ed).
-    in = dfs.open(file);
-    int readBytes = 0;
-    while(in.available() != 0) {
-      assertEquals("Didn't read the data we wrote", in.readLong(), readBytes);
-      readBytes += 8;
-    }
-    assertEquals("Didn't get all the data", readBytes, writtenBytes);
-    System.out.println("Read back all the " + readBytes + " bytes");
-  }
-
 }
