@@ -90,7 +90,7 @@ function findbugs_runner
   personality_modules "${name}" findbugs
   case ${BUILDTOOL} in
     maven)
-      modules_workers "${name}" findbugs clean test findbugs:findbugs
+      modules_workers "${name}" findbugs test-compile findbugs:findbugs
     ;;
     ant)
       modules_workers "${name}" findbugs findbugs

@@ -64,7 +64,7 @@ function checkstyle_runner
 
     case ${BUILDTOOL} in
       maven)
-        cmd="${MVN} ${MAVEN_ARGS[*]} clean test \
+        cmd="${MVN} ${MAVEN_ARGS[*]} \
            checkstyle:checkstyle \
           -Dcheckstyle.consoleOutput=true \
           ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} -Ptest-patch"

@@ -1175,7 +1175,6 @@ function find_changed_modules
   #shellcheck disable=SC2086,SC2116
   CHANGED_UNFILTERED_MODULES=$(echo ${CHANGED_UNFILTERED_MODULES})
 
-
   if [[ ${BUILDTOOL} = maven
     && ${QETESTMODE} = false ]]; then
     # Filter out modules without code
@@ -2229,7 +2228,7 @@ function precheck_javac
     personality_modules branch javac
     case ${BUILDTOOL} in
       maven)
-        modules_workers branch javac clean compile
+        modules_workers branch javac clean test-compile
       ;;
       ant)
         modules_workers branch javac
@@ -2530,7 +2529,7 @@ function check_patch_javac
 
     case ${BUILDTOOL} in
       maven)
-        modules_workers patch javac clean compile
+        modules_workers patch javac clean test-compile
       ;;
       ant)
         modules_workers patch javac
@@ -2842,7 +2841,7 @@ function check_mvninstall
   fi
 
   personality_modules patch mvninstall
-  modules_workers patch mvninstall install -Dmaven.javadoc.skip=true
+  modules_workers patch mvninstall clean install -Dmaven.javadoc.skip=true
   result=$?
   modules_messages patch mvninstall true
   if [[ ${result} != 0 ]]; then
@@ -3276,7 +3275,8 @@ function postapply
 
   ((RESULT = RESULT + retval))
 
-  for routine in check_patch_javadoc check_site
+  # shellcheck disable=SC2043
+  for routine in check_site
   do
     verify_patchdir_still_exists
     yetus_debug "Running ${routine}"
@@ -3305,8 +3305,13 @@ function postinstall
   local plugin
 
   verify_patchdir_still_exists
-  check_mvn_eclipse
-  (( RESULT = RESULT + $? ))
+  for routine in check_patch_javadoc check_mvn_eclipse
+  do
+    verify_patchdir_still_exists
+    yetus_debug "Running ${routine}"
+    ${routine}
+    (( RESULT = RESULT + $? ))
+  done
 
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists

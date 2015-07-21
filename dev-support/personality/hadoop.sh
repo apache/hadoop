@@ -27,63 +27,107 @@ HADOOP_MODULES=""
 
 function hadoop_module_manipulation
 {
-  local need_common=0
+  local startingmodules=${1:-normal}
   local module
   local hdfs_modules
   local ordered_modules
   local tools_modules
-  local passed_modules=${CHANGED_MODULES}
+  local passed_modules
+  local flags
 
-  yetus_debug "hmm: starting list: ${passed_modules}"
+  yetus_debug "hmm in: ${startingmodules}"
 
-  # if one of our modules is ., then shortcut:
-  # ignore the rest and just set it to everything.
-  if [[ ${CHANGED_MODULES} == ' . ' ]]; then
-    HADOOP_MODULES='.'
+  if [[ ${startingmodules} = normal ]]; then
+    startingmodules=${CHANGED_MODULES}
+  elif  [[ ${startingmodules} = union ]]; then
+    startingmodules=${CHANGED_UNION_MODULES}
+  fi
+
+  yetus_debug "hmm expanded to: ${startingmodules}"
+
+  if [[ ${startingmodules} = "." ]]; then
+    yetus_debug "hmm shortcut since ."
+    HADOOP_MODULES=.
     return
   fi
 
-  # ${CHANGED_MODULES} is already sorted and uniq'd.
+  # ${startingmodules} is already sorted and uniq'd.
   # let's remove child modules if we're going to
-  # touch their parent
-  for module in ${CHANGED_MODULES}; do
+  # touch their parent.
+  passed_modules=${startingmodules}
+  for module in ${startingmodules}; do
     yetus_debug "Stripping ${module}"
     # shellcheck disable=SC2086
     passed_modules=$(echo ${passed_modules} | tr ' ' '\n' | ${GREP} -v ${module}/ )
   done
 
+  yetus_debug "hmm pre-ordering: ${startingmodules}"
+
+  # yarn will almost always be after common in the sort order
+  # so really just need to make sure that common comes before
+  # everything else and tools comes last
+
   for module in ${passed_modules}; do
     yetus_debug "Personality ordering ${module}"
-    if [[ ${module} == hadoop-hdfs-project* ]]; then
+    if [[ ${module} = "." ]]; then
+      HADOOP_MODULES=.
+      break
+    fi
+
+    if [[ ${module} = hadoop-hdfs-project* ]]; then
       hdfs_modules="${hdfs_modules} ${module}"
-      need_common=1
-    elif [[ ${module} == hadoop-common-project/hadoop-common
-      || ${module} == hadoop-common-project ]]; then
+    elif [[ ${module} = hadoop-common-project/hadoop-common
+      || ${module} = hadoop-common-project ]]; then
       ordered_modules="${ordered_modules} ${module}"
-      building_common=1
-    elif [[ ${module} == hadoop-tools* ]]; then
+    elif [[ ${module} = hadoop-tools* ]]; then
       tools_modules="${tools_modules} ${module}"
     else
       ordered_modules="${ordered_modules} ${module}"
     fi
   done
 
-  ordered_modules="${ordered_modules} ${hdfs_modules} ${tools_modules}"
+  HADOOP_MODULES="${ordered_modules} ${hdfs_modules} ${tools_modules}"
+
+  yetus_debug "hmm out: ${HADOOP_MODULES}"
+}
+
+function hadoop_unittest_prereqs
+{
+  local need_common=0
+  local building_common=0
+  local module
+  local flags
+  local fn
+
+  for module in ${HADOOP_MODULES}; do
+    if [[ ${module} = hadoop-hdfs-project* ]]; then
+      need_common=1
+    elif [[ ${module} = hadoop-common-project/hadoop-common
+      || ${module} = hadoop-common-project ]]; then
+      building_common=1
+    fi
+  done
 
   if [[ ${need_common} -eq 1
       && ${building_common} -eq 0 ]]; then
-      ordered_modules="hadoop-common-project/hadoop-common ${ordered_modules}"
+    echo "unit test pre-reqs:"
+    module="hadoop-common-project/hadoop-common"
+    fn=$(module_file_fragment "${module}")
+    flags=$(hadoop_native_flags)
+    pushd "${BASEDIR}/${module}" >/dev/null
+    # shellcheck disable=SC2086
+    echo_and_redirect "${PATCH_DIR}/maven-unit-prereq-${fn}-install.txt" \
+      "${MVN}" "${MAVEN_ARGS[@]}" install -DskipTests ${flags}
+    popd >/dev/null
   fi
-
-  yetus_debug "hmm: ${ordered_modules}"
-  HADOOP_MODULES=${ordered_modules}
 }
 
-function hadoop_javac_ordering
+function hadoop_native_flags
 {
-  local special=$1
-  local ordered_modules
-  local module
+
+  if [[ ${BUILD_NATIVE} != true ]]; then
+    return
+  fi
 
   # Based upon HADOOP-11937
   #
@@ -97,46 +141,45 @@ function hadoop_javac_ordering
   #   e.g, HADOOP-12027 for OS X. so no -Drequire.bzip2
   #
 
-  for module in ${HADOOP_MODULES}; do
-    if [[ ${JENKINS} == true
-        && ${DOCKERSUPPORT} == false ]]; then
+  # current build servers are pretty limited in
+  # what they support
+  if [[ ${JENKINS} = true
+      && ${DOCKERSUPPORT} = false ]]; then
+    # shellcheck disable=SC2086
+    echo -Pnative \
+      -Drequire.snappy -Drequire.openssl -Drequire.fuse \
+      -Drequire.test.libhadoop
+    return
+  fi
+
+  case ${OSTYPE} in
+    Linux)
       # shellcheck disable=SC2086
-      personality_enqueue_module "${module}" ${special} \
-        -Pnative \
+      echo -Pnative -Drequire.libwebhdfs \
         -Drequire.snappy -Drequire.openssl -Drequire.fuse \
         -Drequire.test.libhadoop
-    else
-      case ${OSTYPE} in
-        Linux)
-          # shellcheck disable=SC2086
-          personality_enqueue_module ${module} ${special} \
-            -Pnative -Drequire.libwebhdfs \
-            -Drequire.snappy -Drequire.openssl -Drequire.fuse \
-            -Drequire.test.libhadoop
-        ;;
-        Darwin)
-          JANSSON_INCLUDE_DIR=/usr/local/opt/jansson/include
-          JANSSON_LIBRARY=/usr/local/opt/jansson/lib
-          export JANSSON_LIBRARY JANSSON_INCLUDE_DIR
-          # shellcheck disable=SC2086
-          personality_enqueue_module ${module} ${special} \
-          -Pnative -Drequire.snappy  \
-          -Drequire.openssl \
-            -Dopenssl.prefix=/usr/local/opt/openssl/ \
-            -Dopenssl.include=/usr/local/opt/openssl/include \
-            -Dopenssl.lib=/usr/local/opt/openssl/lib \
-          -Drequire.libwebhdfs -Drequire.test.libhadoop
-        ;;
-        *)
-          # shellcheck disable=SC2086
-          personality_enqueue_module ${module} ${special} \
-            -Pnative \
-            -Drequire.snappy -Drequire.openssl \
-            -Drequire.libwebhdfs -Drequire.test.libhadoop
-        ;;
-      esac
-    fi
-  done
+    ;;
+    Darwin)
+      JANSSON_INCLUDE_DIR=/usr/local/opt/jansson/include
+      JANSSON_LIBRARY=/usr/local/opt/jansson/lib
+      export JANSSON_LIBRARY JANSSON_INCLUDE_DIR
+      # shellcheck disable=SC2086
+      echo \
+      -Pnative -Drequire.snappy  \
+      -Drequire.openssl \
+        -Dopenssl.prefix=/usr/local/opt/openssl/ \
+        -Dopenssl.include=/usr/local/opt/openssl/include \
+        -Dopenssl.lib=/usr/local/opt/openssl/lib \
+      -Drequire.libwebhdfs -Drequire.test.libhadoop
+    ;;
+    *)
+      # shellcheck disable=SC2086
+      echo \
+        -Pnative \
+        -Drequire.snappy -Drequire.openssl \
+        -Drequire.libwebhdfs -Drequire.test.libhadoop
+    ;;
+  esac
 }
 
 function personality_modules
@@ -144,6 +187,9 @@ function personality_modules
   local repostatus=$1
   local testtype=$2
   local extra=""
+  local ordering="normal"
+  local needflags=false
+  local flags
   local fn
   local i
 
@@ -152,16 +198,29 @@ function personality_modules
   clear_personality_queue
 
   case ${testtype} in
-    javac)
-      if [[ ${BUILD_NATIVE} == true ]]; then
-        hadoop_module_manipulation
-        hadoop_javac_ordering -DskipTests
-        return
-      fi
+    asflicense)
+      # this is very fast and provides the full path if we do it from
+      # the root of the source
+      personality_enqueue_module .
+      return
+    ;;
+    checkstyle)
+      ordering="union"
       extra="-DskipTests"
+    ;;
+    javac)
+      ordering="union"
+      extra="-DskipTests"
+      needflags=true
+
+      # if something in common changed, we build the whole world
+      if [[ ${CHANGED_MODULES} =~ hadoop-common ]]; then
+        yetus_debug "hadoop personality: javac + hadoop-common = ordering set to . "
+        ordering="."
+      fi
       ;;
     javadoc)
-      if [[ ${repostatus} == patch ]]; then
+      if [[ ${repostatus} = patch ]]; then
         echo "javadoc pre-reqs:"
         for i in  hadoop-project \
           hadoop-common-project/hadoop-annotations; do
@@ -177,38 +236,34 @@ function personality_modules
     ;;
     mvninstall)
       extra="-DskipTests"
-      if [[ ${repostatus} == branch ]]; then
-        HADOOP_MODULES=.
-        hadoop_javac_ordering -DskipTests
-        return
+      if [[ ${repostatus} = branch ]]; then
+        ordering=.
       fi
       ;;
-    asflicense)
-      # this is very fast and provides the full path if we do it from
-      # the root of the source
-      personality_enqueue_module .
-      return
-    ;;
     unit)
-      if [[ ${TEST_PARALLEL} == "true" ]] ; then
-        extra="-Pparallel-tests"
-        if [[ -n ${TEST_THREADS:-} ]]; then
-          extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
-        fi
-      fi
-      if [[ ${BUILD_NATIVE} == true ]]; then
-        hadoop_module_manipulation
-        # shellcheck disable=SC2086
-        hadoop_javac_ordering ${extra}
-        return
-      fi
+      # As soon as HADOOP-11984 gets committed,
+      # this code should get uncommented
+      #if [[ ${TEST_PARALLEL} = "true" ]] ; then
+      #  extra="-Pparallel-tests"
+      #  if [[ -n ${TEST_THREADS:-} ]]; then
+      #    extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
+      #  fi
+      #fi
+      needflags=true
+      hadoop_unittest_prereqs
     ;;
     *)
       extra="-DskipTests"
     ;;
   esac
 
-  hadoop_module_manipulation
+  if [[ ${needflags} = true ]]; then
+    flags=$(hadoop_native_flags)
+    extra="${extra} ${flags}"
+  fi
+
+  hadoop_module_manipulation ${ordering}
+
   for module in ${HADOOP_MODULES}; do
     # shellcheck disable=SC2086
     personality_enqueue_module ${module} ${extra}
