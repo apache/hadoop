@@ -364,3 +364,6 @@
     to be consistent with trunk. (zhz)
 
     HDFS-8433. Erasure coding: set blockToken in LocatedStripedBlock.(waltersu4549)
+
+    HDFS-8760. Erasure Coding: reuse BlockReader when reading the same block in pread.
+    (jing9)

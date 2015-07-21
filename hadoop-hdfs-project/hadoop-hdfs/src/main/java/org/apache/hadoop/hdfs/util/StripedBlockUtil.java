@@ -477,41 +477,6 @@ public class StripedBlockUtil {
   }
 
   /**
-   * Given a logical start offset in a block group, calculate the physical
-   * start offset into each stored internal block.
-   */
-  public static long[] getStartOffsetsForInternalBlocks(ECSchema ecSchema,
-      int cellSize, LocatedStripedBlock blockGroup, long rangeStartInBlockGroup) {
-    Preconditions.checkArgument(
-        rangeStartInBlockGroup < blockGroup.getBlockSize());
-    int dataBlkNum = ecSchema.getNumDataUnits();
-    int parityBlkNum = ecSchema.getNumParityUnits();
-    long[] startOffsets = new long[dataBlkNum + parityBlkNum];
-    Arrays.fill(startOffsets, -1L);
-    int firstCellIdxInBG = (int) (rangeStartInBlockGroup / cellSize);
-    StripingCell firstCell = new StripingCell(ecSchema, cellSize,
-        firstCellIdxInBG, (int) (rangeStartInBlockGroup % cellSize));
-    startOffsets[firstCell.idxInStripe] =
-        firstCell.idxInInternalBlk * cellSize + firstCell.offset;
-    long earliestStart = startOffsets[firstCell.idxInStripe];
-    for (int i = 1; i < dataBlkNum; i++) {
-      int idx = firstCellIdxInBG + i;
-      if (idx * (long) cellSize >= blockGroup.getBlockSize()) {
-        break;
-      }
-      StripingCell cell = new StripingCell(ecSchema, cellSize, idx, 0);
-      startOffsets[cell.idxInStripe] = cell.idxInInternalBlk * (long) cellSize;
-      if (startOffsets[cell.idxInStripe] < earliestStart) {
-        earliestStart = startOffsets[cell.idxInStripe];
-      }
-    }
-    for (int i = dataBlkNum; i < dataBlkNum + parityBlkNum; i++) {
-      startOffsets[i] = earliestStart;
-    }
-    return startOffsets;
-  }
-
-  /**
    * Given a logical byte range, mapped to each {@link StripingCell}, calculate
    * the physical byte range (inclusive) on each stored internal block.
    */
