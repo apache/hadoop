@@ -270,6 +270,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
 
+    MAPREDUCE-5801. Uber mode's log message is missing a vcore reason
+    (Steven Wong via aw)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
