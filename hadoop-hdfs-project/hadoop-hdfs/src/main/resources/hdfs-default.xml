@@ -425,15 +425,6 @@
 </property>
 
 <property>
-  <name>dfs.block.uc.max.recovery.attempts</name>
-  <value>5</value>
-  <description>The number of times a block under construction's recovery will be
-  attempted using all known replicas. e.g. if there are 3 replicas, each node
-  will be tried 5 times (for a total of 15 retries across all nodes).
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.data.dir</name>
   <value>file://${hadoop.tmp.dir}/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
