@@ -705,6 +705,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11893. Mark org.apache.hadoop.security.token.Token as
     @InterfaceAudience.Public. (Brahma Reddy Battula via stevel)
 
+    HADOOP-12081. Fix UserGroupInformation.java to support 64-bit zLinux.
+    (aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
