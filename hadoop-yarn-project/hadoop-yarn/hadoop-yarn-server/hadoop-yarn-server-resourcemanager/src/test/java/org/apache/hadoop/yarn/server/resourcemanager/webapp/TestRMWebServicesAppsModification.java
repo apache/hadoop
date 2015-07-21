@@ -759,10 +759,10 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     ApplicationSubmissionContextInfo appInfo = new ApplicationSubmissionContextInfo();
     appInfo.setApplicationId(appId);
     appInfo.setApplicationName(appName);
-    appInfo.setPriority(3);
     appInfo.setMaxAppAttempts(2);
     appInfo.setQueue(queueName);
     appInfo.setApplicationType(appType);
+    appInfo.setPriority(0);
     HashMap<String, LocalResourceInfo> lr =  new HashMap<>();
     LocalResourceInfo y = new LocalResourceInfo();
     y.setUrl(new URI("http://www.test.com/file.txt"));

@@ -31,7 +31,8 @@ public class MockSchedulableEntity implements SchedulableEntity {
   
   private String id;
   private long serial = 0;
-  
+  private Priority priority;
+
   public MockSchedulableEntity() { }
   
   public void setId(String id) {
@@ -74,5 +75,13 @@ public class MockSchedulableEntity implements SchedulableEntity {
     }
     return 1;//let other types go before this, if any
   }
-  
+
+  @Override
+  public Priority getPriority() {
+    return priority;
+  }
+
+  public void setApplicationPriority(Priority priority) {
+    this.priority = priority;
+  }
 }

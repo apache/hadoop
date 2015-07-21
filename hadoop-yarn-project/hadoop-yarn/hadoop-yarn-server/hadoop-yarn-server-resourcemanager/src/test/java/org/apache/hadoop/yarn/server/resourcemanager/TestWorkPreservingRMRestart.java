@@ -1056,7 +1056,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     RMApp app0 = rm1.submitApp(resource, "", UserGroupInformation
         .getCurrentUser().getShortUserName(), null, false, null,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS, null, null, true, true,
-        false, null, 0, null, true);
+        false, null, 0, null, true, null);
     MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
 
     am0.allocate("127.0.0.1", 1000, 2, new ArrayList<ContainerId>());

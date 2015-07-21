@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 
 public class AppAddedSchedulerEvent extends SchedulerEvent {
@@ -28,25 +30,35 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
   private final String user;
   private final ReservationId reservationID;
   private final boolean isAppRecovering;
+  private final Priority appPriority;
 
-  public AppAddedSchedulerEvent(
-      ApplicationId applicationId, String queue, String user) {
-    this(applicationId, queue, user, false, null);
+  public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,
+      String user) {
+    this(applicationId, queue, user, false, null, Priority.newInstance(0));
   }
 
   public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,
-      String user, ReservationId reservationID) {
-    this(applicationId, queue, user, false, reservationID);
+      String user, ReservationId reservationID, Priority appPriority) {
+    this(applicationId, queue, user, false, reservationID, appPriority);
+  }
+
+  public AppAddedSchedulerEvent(String user,
+      ApplicationSubmissionContext submissionContext, boolean isAppRecovering) {
+    this(submissionContext.getApplicationId(), submissionContext.getQueue(),
+        user, isAppRecovering, submissionContext.getReservationID(),
+        submissionContext.getPriority());
   }
 
   public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,
-      String user, boolean isAppRecovering, ReservationId reservationID) {
+      String user, boolean isAppRecovering, ReservationId reservationID,
+      Priority appPriority) {
     super(SchedulerEventType.APP_ADDED);
     this.applicationId = applicationId;
     this.queue = queue;
     this.user = user;
     this.reservationID = reservationID;
     this.isAppRecovering = isAppRecovering;
+    this.appPriority = appPriority;
   }
 
   public ApplicationId getApplicationId() {
@@ -67,5 +79,9 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
 
   public ReservationId getReservationID() {
     return reservationID;
+  }
+
+  public Priority getApplicatonPriority() {
+    return appPriority;
   }
 }

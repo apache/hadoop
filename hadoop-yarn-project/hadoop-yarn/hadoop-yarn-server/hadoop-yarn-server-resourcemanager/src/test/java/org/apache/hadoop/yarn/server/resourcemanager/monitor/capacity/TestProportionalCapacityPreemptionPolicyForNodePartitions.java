@@ -1025,6 +1025,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
       when(app.getReservedContainers()).thenReturn(reservedContainers);
       when(app.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(app.getApplicationId()).thenReturn(appId);
+      when(app.getPriority()).thenReturn(Priority.newInstance(0));
 
       // add to LeafQueue
       LeafQueue queue = (LeafQueue) nameToCSQueues.get(queueName);

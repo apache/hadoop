@@ -139,6 +139,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3116. RM notifies NM whether a container is an AM container or normal
     task container. (Giovanni Matteo Fumarola via zjshen)
 
+    YARN-2003. Support for Application priority : Changes in RM and Capacity 
+    Scheduler. (Sunil G via wangda)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
