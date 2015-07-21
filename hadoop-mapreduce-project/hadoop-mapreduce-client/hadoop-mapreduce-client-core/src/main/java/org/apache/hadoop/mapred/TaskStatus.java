@@ -217,7 +217,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
   void setShuffleFinishTime(long shuffleFinishTime) {}
 
   /**
-   * Get map phase finish time for the task. If map finsh time was
+   * Get map phase finish time for the task. If map finish time was
    * not set due to sort phase ending within same heartbeat interval,
    * it is set to finish time of next phase i.e. sort phase
    * when it is set.
