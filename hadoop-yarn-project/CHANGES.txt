@@ -29,6 +29,8 @@ Trunk - Unreleased
     YARN-2280. Resource manager web service fields are not accessible
     (Krisztian Horvath via aw)
 
+    YARN-3261. rewrite resourcemanager restart doc to remove roadmap bits (Gururaj Shetty via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
