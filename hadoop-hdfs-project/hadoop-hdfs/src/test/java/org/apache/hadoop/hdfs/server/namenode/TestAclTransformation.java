@@ -31,11 +31,8 @@ import com.google.common.collect.Lists;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclEntryScope;
-import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.server.namenode.AclTransformation;
 
 /**
  * Tests operations that modify ACLs.  All tests in this suite have been
@@ -45,10 +42,13 @@ import org.apache.hadoop.hdfs.server.namenode.AclTransformation;
 public class TestAclTransformation {
 
   private static final List<AclEntry> ACL_SPEC_TOO_LARGE;
+  private static final List<AclEntry> ACL_SPEC_DEFAULT_TOO_LARGE;
   static {
     ACL_SPEC_TOO_LARGE = Lists.newArrayListWithCapacity(33);
+    ACL_SPEC_DEFAULT_TOO_LARGE = Lists.newArrayListWithCapacity(33);
     for (int i = 0; i < 33; ++i) {
       ACL_SPEC_TOO_LARGE.add(aclEntry(ACCESS, USER, "user" + i, ALL));
+      ACL_SPEC_DEFAULT_TOO_LARGE.add(aclEntry(DEFAULT, USER, "user" + i, ALL));
     }
   }
 
@@ -349,6 +349,17 @@ public class TestAclTransformation {
       .add(aclEntry(ACCESS, OTHER, NONE))
       .build();
     filterAclEntriesByAclSpec(existing, ACL_SPEC_TOO_LARGE);
+  }
+
+  @Test(expected = AclException.class)
+  public void testFilterDefaultAclEntriesByAclSpecInputTooLarge()
+      throws AclException {
+    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+        .add(aclEntry(DEFAULT, USER, ALL))
+        .add(aclEntry(DEFAULT, GROUP, READ))
+        .add(aclEntry(DEFAULT, OTHER, NONE))
+        .build();
+    filterAclEntriesByAclSpec(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
   }
 
   @Test
@@ -720,6 +731,16 @@ public class TestAclTransformation {
   }
 
   @Test(expected=AclException.class)
+  public void testMergeAclDefaultEntriesInputTooLarge() throws AclException {
+    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+      .add(aclEntry(DEFAULT, USER, ALL))
+      .add(aclEntry(DEFAULT, GROUP, READ))
+      .add(aclEntry(DEFAULT, OTHER, NONE))
+      .build();
+    mergeAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
+  }
+
+  @Test(expected=AclException.class)
   public void testMergeAclEntriesResultTooLarge() throws AclException {
     ImmutableList.Builder<AclEntry> aclBuilder =
       new ImmutableList.Builder<AclEntry>()
@@ -734,6 +755,24 @@ public class TestAclTransformation {
     List<AclEntry> existing = aclBuilder.build();
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "bruce", READ));
+    mergeAclEntries(existing, aclSpec);
+  }
+
+  @Test(expected = AclException.class)
+  public void testMergeAclDefaultEntriesResultTooLarge() throws AclException {
+    ImmutableList.Builder<AclEntry> aclBuilder =
+        new ImmutableList.Builder<AclEntry>()
+        .add(aclEntry(DEFAULT, USER, ALL));
+    for (int i = 1; i <= 28; ++i) {
+      aclBuilder.add(aclEntry(DEFAULT, USER, "user" + i, READ));
+    }
+    aclBuilder
+    .add(aclEntry(DEFAULT, GROUP, READ))
+    .add(aclEntry(DEFAULT, MASK, READ))
+    .add(aclEntry(DEFAULT, OTHER, NONE));
+    List<AclEntry> existing = aclBuilder.build();
+    List<AclEntry> aclSpec = Lists.newArrayList(
+         aclEntry(DEFAULT, USER, "bruce", READ));
     mergeAclEntries(existing, aclSpec);
   }
 
@@ -1089,6 +1128,16 @@ public class TestAclTransformation {
       .add(aclEntry(ACCESS, OTHER, NONE))
       .build();
     replaceAclEntries(existing, ACL_SPEC_TOO_LARGE);
+  }
+
+  @Test(expected=AclException.class)
+  public void testReplaceAclDefaultEntriesInputTooLarge() throws AclException {
+    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+      .add(aclEntry(DEFAULT, USER, ALL))
+      .add(aclEntry(DEFAULT, GROUP, READ))
+      .add(aclEntry(DEFAULT, OTHER, NONE))
+      .build();
+    replaceAclEntries(existing, ACL_SPEC_DEFAULT_TOO_LARGE);
   }
 
   @Test(expected=AclException.class)
