@@ -753,8 +753,8 @@ public class TestHadoopArchives {
 
     final String harName = "foo.har";
     final String fullHarPathStr = prefix + harName;
-    final String[] args = { "-archiveName", harName, "-p", inputPathStr,
-        "-r 3", "*", archivePath.toString() };
+    final String[] args = { "-archiveName", harName, "-p", inputPathStr, "-r",
+        "3", "*", archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
     final HadoopArchives har = new HadoopArchives(conf);
