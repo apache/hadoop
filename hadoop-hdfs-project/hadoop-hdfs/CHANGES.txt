@@ -343,6 +343,8 @@ Trunk (Unreleased)
 
     HDFS-8657. Update docs for mSNN. (Jesse Yates via atm)
 
+    HDFS-8800. hdfs --daemon stop namenode corrupts logs (John Smith via aw)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
