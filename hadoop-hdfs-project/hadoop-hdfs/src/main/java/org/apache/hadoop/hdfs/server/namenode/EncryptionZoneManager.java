@@ -360,4 +360,11 @@ public class EncryptionZoneManager {
     final boolean hasMore = (numResponses < tailMap.size());
     return new BatchedListEntries<EncryptionZone>(zones, hasMore);
   }
+
+  /**
+   * @return number of encryption zones.
+   */
+  public int getNumEncryptionZones() {
+    return encryptionZones.size();
+  }
 }

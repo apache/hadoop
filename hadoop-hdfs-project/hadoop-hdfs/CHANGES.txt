@@ -734,6 +734,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7483. Display information per tier on the Namenode UI.
     (Benoy Antony and wheat9 via wheat9)
 
+    HDFS-8721. Add a metric for number of encryption zones.
+    (Rakesh R via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
