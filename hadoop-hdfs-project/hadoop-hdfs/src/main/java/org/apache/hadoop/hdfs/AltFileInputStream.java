@@ -22,29 +22,36 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import sun.nio.ch.FileChannelImpl;
 
-import java.io.*;
+import java.io.InputStream;
+import java.io.FileDescriptor;
+import java.io.File;
+import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.util.List;
 
+/**
+ * This class is substitute for FileInputStream.Cause FileInputStream cause GC
+ * pause for a long time.
+ */
+public class AltFileInputStream extends InputStream {
 
-public class AltFileInputStream extends InputStream{
   public static final Log LOG = LogFactory.getLog(AltFileInputStream.class);
   private final FileDescriptor fd;
-
-  private Closeable parent;
-  private List<Closeable> otherParents;
 
   private final String path;
 
   private InputStream inputStream;
   private FileChannel channel = null;
 
-
+  /**
+   * Constructs a inputstream with a channel.
+   * @param file
+   * @throws IOException
+   */
   public AltFileInputStream(File file) throws IOException{
-    LOG.info("++++++++++++++AltFileInputStream(File file)+++++++++++++++++++");
-    String name = (file != null ? file.getPath() : null);
+    if (null == file)
+      throw new IllegalArgumentException();
+    String name = file.getPath();
     fd = new FileDescriptor();
     path = name;
     channel = FileChannelImpl.open(fd,path,true,false,this);
@@ -52,17 +59,10 @@ public class AltFileInputStream extends InputStream{
   }
 
   public FileChannel getChannel() {
-    LOG.info("++++++++++++++++++FileChannel getChannel()+++++++++++++++++++++");
     return channel;
   }
 
-  public AltFileInputStream(String name) throws FileNotFoundException,IOException {
-    this(name != null ? new File(name) : null);
-    LOG.info("+++++++++++++++++++AltFileInputStream(String name)+++++++++++++++++++");
-  }
-
   public final FileDescriptor getFD() throws IOException {
-    LOG.info("+++++++++++++++++++FileDescriptor getFD()+++++++++++++++++++++++++");
     if (fd != null) {
       return fd;
     }
@@ -77,10 +77,14 @@ public class AltFileInputStream extends InputStream{
     return true;
   }
 
-
+  /**
+   * // have buffer ? Test between AltFileInputStream and FileInputStream,if the performance is too slowly than
+   * FileInputStream,in this case,test buffer.
+   * @return
+   * @throws IOException
+   */
   @Override
   public int read() throws IOException{
-    LOG.info("++++++++++++++++read method ++++++++++++++++++++++");
     return inputStream.read();
   }
 
