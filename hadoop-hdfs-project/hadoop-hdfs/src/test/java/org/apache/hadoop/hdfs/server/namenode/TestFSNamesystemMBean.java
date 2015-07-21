@@ -117,6 +117,11 @@ public class TestFSNamesystemMBean {
         "PendingDeletionBlocks");
       assertNotNull(pendingDeletionBlocks);
       assertTrue(pendingDeletionBlocks instanceof Long);
+
+      Object encryptionZones = mbs.getAttribute(mxbeanName,
+          "NumEncryptionZones");
+      assertNotNull(encryptionZones);
+      assertTrue(encryptionZones instanceof Integer);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

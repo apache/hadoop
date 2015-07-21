@@ -387,6 +387,13 @@ public class EncryptionZoneManager {
   }
 
   /**
+   * @return number of encryption zones.
+   */
+  public int getNumEncryptionZones() {
+    return encryptionZones.size();
+  }
+
+  /**
    * @return Whether there has been any attempt to create an encryption zone in
    * the cluster at all. If not, it is safe to quickly return null when
    * checking the encryption information of any file or directory in the

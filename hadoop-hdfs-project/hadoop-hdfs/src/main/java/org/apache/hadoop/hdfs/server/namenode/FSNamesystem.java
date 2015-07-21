@@ -4930,6 +4930,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return JSON.toString(info);
   }
 
+  @Override // FSNamesystemMBean
+  @Metric({ "NumEncryptionZones", "The number of encryption zones" })
+  public int getNumEncryptionZones() {
+    return dir.ezManager.getNumEncryptionZones();
+  }
+
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
     try {

@@ -184,4 +184,9 @@ public interface FSNamesystemMBean {
    * @return JSON string
    */
   public String getTopUserOpCounts();
+
+  /**
+   * Return the number of encryption zones in the system.
+   */
+  int getNumEncryptionZones();
 }
