@@ -29,6 +29,7 @@
       {"name": "nn",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
       {"name": "nnstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
       {"name": "fs",      "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState"},
+      {"name": "blockstats",      "url": "/jmx?qry=Hadoop:service=NameNode,name=BlockStats"},
       {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 
@@ -87,6 +88,13 @@
       guard_with_startup_progress(function(d) {
         for (var k in d) {
           data[k] = k === 'nn' ? workaround(d[k].beans[0]) : d[k].beans[0];
+        }
+
+        var blockstats = data['blockstats'];
+        for (var k in blockstats.StorageTypeStats) {
+          var b = blockstats.StorageTypeStats[k].value;
+          b.capacityUsedPercentage = b.capacityUsed * 100.0 / b.capacityTotal;
+          b.capacityRemainingPercentage = b.capacityRemaining * 100.0 / b.capacityTotal;
         }
         render();
       }),
