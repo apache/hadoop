@@ -215,6 +215,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `TotalLoad` | Current number of connections |
 | `SnapshottableDirectories` | Current number of snapshottable directories |
 | `Snapshots` | Current number of snapshots |
+| `NumEncryptionZones` | Current number of encryption zones |
 | `BlocksTotal` | Current number of allocated blocks in the system |
 | `FilesTotal` | Current number of files and directories |
 | `PendingReplicationBlocks` | Current number of blocks pending to be replicated |
