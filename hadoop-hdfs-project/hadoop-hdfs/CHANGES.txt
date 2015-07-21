@@ -1062,6 +1062,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7582. Enforce maximum number of ACL entries separately per access
     and default. (vinayakumarb)
 
+    HDFS-8773. Few FSNamesystem metrics are not documented in the Metrics page.
+    (Rakesh R via cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
