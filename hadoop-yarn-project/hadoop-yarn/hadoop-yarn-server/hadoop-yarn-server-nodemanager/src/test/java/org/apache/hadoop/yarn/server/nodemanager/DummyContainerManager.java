@@ -191,8 +191,10 @@ public class DummyContainerManager extends ContainerManagerImpl {
   }
   
   @Override
-  protected void authorizeStartRequest(NMTokenIdentifier nmTokenIdentifier,
-      ContainerTokenIdentifier containerTokenIdentifier) throws YarnException {
+  protected void authorizeStartAndResourceIncreaseRequest(
+      NMTokenIdentifier nmTokenIdentifier,
+      ContainerTokenIdentifier containerTokenIdentifier,
+      boolean startRequest) throws YarnException {
     // do nothing
   }
   
