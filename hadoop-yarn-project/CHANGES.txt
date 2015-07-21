@@ -682,6 +682,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3535. Scheduler must re-request container resources when RMContainer transitions
     from ALLOCATED to KILLED (rohithsharma and peng.zhang via asuresh)
 
+    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for
+    draining events on stop. (Varun Saxena via jianhe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
