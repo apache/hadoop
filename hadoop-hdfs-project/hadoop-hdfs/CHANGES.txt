@@ -762,9 +762,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-7997. The first non-existing xattr should also throw IOException.
     (zhouyingchao via yliu)
 
-    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
-    decrement ExcessBlocks metric when the block is removed. (aajisaka)
-
     HDFS-7922. ShortCircuitCache#close is not releasing
     ScheduledThreadPoolExecutors (Rakesh R via Colin P. McCabe)
 
@@ -1072,8 +1069,11 @@ Release 2.7.2 - UNRELEASED
   HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
   BUG FIXES
-    
-Release 2.7.1 - 2015-07-06 
+
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
+Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
 
