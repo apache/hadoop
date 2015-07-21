@@ -97,7 +97,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private boolean unmanagedAM = true;
   private boolean amRunning = false;
   private LogAggregationContext logAggregationContext;
-  
+
+  private Priority appPriority = null;
+
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
   private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);
   private AtomicLong firstContainerAllocatedTime = new AtomicLong(0);
@@ -726,7 +728,16 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public ResourceUsage getAppAttemptResourceUsage() {
     return this.attemptResourceUsage;
   }
-  
+
+  @Override
+  public Priority getPriority() {
+    return appPriority;
+  }
+
+  public void setPriority(Priority appPriority) {
+    this.appPriority = appPriority;
+  }
+
   @Override
   public String getId() {
     return getApplicationId().toString();

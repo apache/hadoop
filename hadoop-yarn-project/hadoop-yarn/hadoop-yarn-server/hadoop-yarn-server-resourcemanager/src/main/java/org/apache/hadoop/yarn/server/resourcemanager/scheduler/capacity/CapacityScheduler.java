@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -159,6 +160,9 @@ public class CapacityScheduler extends
     new Comparator<FiCaSchedulerApp>() {
     @Override
     public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
+      if (!a1.getPriority().equals(a2.getPriority())) {
+        return a1.getPriority().compareTo(a2.getPriority());
+      }
       return a1.getApplicationId().compareTo(a2.getApplicationId());
     }
   };
@@ -226,6 +230,7 @@ public class CapacityScheduler extends
   private RMNodeLabelsManager labelManager;
   private SchedulerHealth schedulerHealth = new SchedulerHealth();
   long lastNodeUpdateTime;
+  private Priority maxClusterLevelAppPriority;
   /**
    * EXPERT
    */
@@ -326,6 +331,9 @@ public class CapacityScheduler extends
     if (scheduleAsynchronously) {
       asyncSchedulerThread = new AsyncScheduleThread(this);
     }
+    maxClusterLevelAppPriority = Priority.newInstance(yarnConf.getInt(
+        YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
+        YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
 
     LOG.info("Initialized CapacityScheduler with " +
         "calculator=" + getResourceCalculator().getClass() + ", " +
@@ -692,7 +700,7 @@ public class CapacityScheduler extends
   }
 
   private synchronized void addApplication(ApplicationId applicationId,
-    String queueName, String user, boolean isAppRecovering) {
+      String queueName, String user, boolean isAppRecovering, Priority priority) {
 
     if (mappings != null && mappings.size() > 0) {
       try {
@@ -761,7 +769,7 @@ public class CapacityScheduler extends
     // update the metrics
     queue.getMetrics().submitApp(user);
     SchedulerApplication<FiCaSchedulerApp> application =
-        new SchedulerApplication<FiCaSchedulerApp>(queue, user);
+        new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
     applications.put(applicationId, application);
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", in queue: " + queueName);
@@ -783,9 +791,9 @@ public class CapacityScheduler extends
         applications.get(applicationAttemptId.getApplicationId());
     CSQueue queue = (CSQueue) application.getQueue();
 
-    FiCaSchedulerApp attempt =
-        new FiCaSchedulerApp(applicationAttemptId, application.getUser(),
-          queue, queue.getActiveUsersManager(), rmContext);
+    FiCaSchedulerApp attempt = new FiCaSchedulerApp(applicationAttemptId,
+        application.getUser(), queue, queue.getActiveUsersManager(), rmContext,
+        application.getPriority());
     if (transferStateFromPreviousAttempt) {
       attempt.transferStateFromPreviousAttempt(application
         .getCurrentAppAttempt());
@@ -1307,7 +1315,8 @@ public class CapacityScheduler extends
         addApplication(appAddedEvent.getApplicationId(),
             queueName,
             appAddedEvent.getUser(),
-            appAddedEvent.getIsAppRecovering());
+            appAddedEvent.getIsAppRecovering(),
+            appAddedEvent.getApplicatonPriority());
       }
     }
     break;
@@ -1832,5 +1841,57 @@ public class CapacityScheduler extends
 
   private synchronized void setLastNodeUpdateTime(long time) {
     this.lastNodeUpdateTime = time;
+  }
+
+  @Override
+  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
+      String user, String queueName, ApplicationId applicationId)
+      throws YarnException {
+    Priority appPriority = null;
+
+    // ToDo: Verify against priority ACLs
+
+    // Verify the scenario where priority is null from submissionContext.
+    if (null == priorityFromContext) {
+      // Get the default priority for the Queue. If Queue is non-existent, then
+      // use default priority
+      priorityFromContext = getDefaultPriorityForQueue(queueName);
+
+      LOG.info("Application '" + applicationId
+          + "' is submitted without priority "
+          + "hence considering default queue/cluster priority:"
+          + priorityFromContext.getPriority());
+    }
+
+    // Verify whether submitted priority is lesser than max priority
+    // in the cluster. If it is out of found, defining a max cap.
+    if (priorityFromContext.compareTo(getMaxClusterLevelAppPriority()) < 0) {
+      priorityFromContext = Priority
+          .newInstance(getMaxClusterLevelAppPriority().getPriority());
+    }
+
+    appPriority = priorityFromContext;
+
+    LOG.info("Priority '" + appPriority.getPriority()
+        + "' is acceptable in queue :" + queueName + "for application:"
+        + applicationId + "for the user: " + user);
+
+    return appPriority;
+  }
+
+  private Priority getDefaultPriorityForQueue(String queueName) {
+    Queue queue = getQueue(queueName);
+    if (null == queue) {
+      // Return with default application priority
+      return Priority.newInstance(CapacitySchedulerConfiguration
+          .DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
+    }
+
+    return Priority.newInstance(queue.getDefaultApplicationPriority()
+        .getPriority());
+  }
+
+  public Priority getMaxClusterLevelAppPriority() {
+    return maxClusterLevelAppPriority;
   }
 }

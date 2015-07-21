@@ -210,6 +210,12 @@ public class FifoScheduler extends
     @Override
     public void decPendingResource(String nodeLabel, Resource resourceToDec) {
     }
+
+    @Override
+    public Priority getDefaultApplicationPriority() {
+      // TODO add implementation for FIFO scheduler
+      return null;
+    }
   };
 
   public FifoScheduler() {

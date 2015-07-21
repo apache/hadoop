@@ -95,9 +95,11 @@ public class LeafQueue extends AbstractCSQueue {
   
   private int nodeLocalityDelay;
 
-  Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap = 
+  Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap =
       new HashMap<ApplicationAttemptId, FiCaSchedulerApp>();
-  
+
+  private Priority defaultAppPriorityPerQueue;
+
   Set<FiCaSchedulerApp> pendingApplications;
   
   private float minimumAllocationFactor;
@@ -220,6 +222,9 @@ public class LeafQueue extends AbstractCSQueue {
       }
     }
 
+    defaultAppPriorityPerQueue = Priority.newInstance(conf
+        .getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
+
     LOG.info("Initializing " + queueName + "\n" +
         "capacity = " + queueCapacities.getCapacity() +
         " [= (float) configuredCapacity / 100 ]" + "\n" + 
@@ -265,7 +270,8 @@ public class LeafQueue extends AbstractCSQueue {
         "nodeLocalityDelay = " +  nodeLocalityDelay + "\n" +
         "reservationsContinueLooking = " +
         reservationsContinueLooking + "\n" +
-        "preemptionDisabled = " + getPreemptionDisabled() + "\n");
+        "preemptionDisabled = " + getPreemptionDisabled() + "\n" +
+        "defaultAppPriorityPerQueue = " + defaultAppPriorityPerQueue);
   }
 
   @Override
@@ -2060,7 +2066,12 @@ public class LeafQueue extends AbstractCSQueue {
      );
     this.orderingPolicy = orderingPolicy;
   }
-  
+
+  @Override
+  public Priority getDefaultApplicationPriority() {
+    return defaultAppPriorityPerQueue;
+  }
+
   /*
    * Holds shared values used by all applications in
    * the queue to calculate headroom on demand

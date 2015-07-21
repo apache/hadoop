@@ -219,6 +219,7 @@ public class TestAppManager{
 
     rmContext = mockRMContext(1, now - 10);
     ResourceScheduler scheduler = mockResourceScheduler();
+    ((RMContextImpl)rmContext).setScheduler(scheduler);
     Configuration conf = new Configuration();
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);

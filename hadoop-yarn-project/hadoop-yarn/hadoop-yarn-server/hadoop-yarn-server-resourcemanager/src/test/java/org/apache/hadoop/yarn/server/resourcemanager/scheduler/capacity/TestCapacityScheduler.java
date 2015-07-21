@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -898,13 +899,17 @@ public class TestCapacityScheduler {
       ApplicationId id1 = ApplicationId.newInstance(1, 1);
       ApplicationId id2 = ApplicationId.newInstance(1, 2);
       ApplicationId id3 = ApplicationId.newInstance(2, 1);
+      Priority priority = Priority.newInstance(0);
       //same clusterId
       FiCaSchedulerApp app1 = Mockito.mock(FiCaSchedulerApp.class);
       when(app1.getApplicationId()).thenReturn(id1);
+      when(app1.getPriority()).thenReturn(priority);
       FiCaSchedulerApp app2 = Mockito.mock(FiCaSchedulerApp.class);
       when(app2.getApplicationId()).thenReturn(id2);
+      when(app2.getPriority()).thenReturn(priority);
       FiCaSchedulerApp app3 = Mockito.mock(FiCaSchedulerApp.class);
       when(app3.getApplicationId()).thenReturn(id3);
+      when(app3.getPriority()).thenReturn(priority);
       assertTrue(appComparator.compare(app1, app2) < 0);
       //different clusterId
       assertTrue(appComparator.compare(app1, app3) < 0);
