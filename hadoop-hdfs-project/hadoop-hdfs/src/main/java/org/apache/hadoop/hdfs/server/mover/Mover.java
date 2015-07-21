@@ -52,8 +52,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLength;
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;

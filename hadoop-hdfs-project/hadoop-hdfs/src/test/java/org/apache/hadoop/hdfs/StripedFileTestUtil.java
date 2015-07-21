@@ -79,10 +79,19 @@ public class StripedFileTestUtil {
       for (int startOffset : startOffsets) {
         startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
         int remaining = fileLength - startOffset;
-        in.readFully(startOffset, buf, 0, remaining);
-        for (int i = 0; i < remaining; i++) {
-          Assert.assertEquals("Byte at " + (startOffset + i) + " should be the " +
-              "same", expected[startOffset + i], buf[i]);
+        int offset = startOffset;
+        final byte[] result = new byte[remaining];
+        while (remaining > 0) {
+          int target = Math.min(remaining, buf.length);
+          in.readFully(offset, buf, 0, target);
+          System.arraycopy(buf, 0, result, offset - startOffset, target);
+          remaining -= target;
+          offset += target;
+        }
+        for (int i = 0; i < fileLength - startOffset; i++) {
+          Assert.assertEquals("Byte at " + (startOffset + i) + " is different, "
+                  + "the startOffset is " + startOffset,
+              expected[startOffset + i], result[i]);
         }
       }
     }
