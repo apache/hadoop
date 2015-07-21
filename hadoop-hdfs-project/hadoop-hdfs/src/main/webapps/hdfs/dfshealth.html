@@ -199,6 +199,31 @@
   {#failed}{#helper_dir_status type="Failed"/}{/failed}
   {/nn.NameDirStatuses}
 </table>
+<div class="page-header"><h1>DFS Storage Types</h1></div>
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Storage Type</th>
+      <th>Configured Capacity</th>
+      <th>Capacity Used</th>
+      <th>Capacity Remaining</th>
+      <th>Block Pool Used</th>
+      <th>Nodes In Service</th>
+    </tr>
+  </thead>
+  {#blockstats.StorageTypeStats}
+  <tr>
+    <td>{key}</td>
+    <td>{value.capacityTotal|fmt_bytes}</td>
+    <td>{value.capacityUsed|fmt_bytes} ({value.capacityUsedPercentage|fmt_percentage})</td>
+    <td>{value.capacityRemaining|fmt_bytes} ({value.capacityRemainingPercentage|fmt_percentage})</td>
+    <td>{value.blockPoolUsed|fmt_bytes}</td>
+    <td>{value.nodesInService}</td>
+  </tr>
+  {/blockstats.StorageTypeStats}
+</table>
+</small>
 </script>
 
 <script type="text/x-dust-template" id="tmpl-snapshot">
