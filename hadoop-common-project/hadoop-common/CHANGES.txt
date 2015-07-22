@@ -992,6 +992,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
     over getMessage() in logging/span events. (Varun Saxena via stevel)
 
+    HADOOP-12017. Hadoop archives command should use configurable replication
+    factor when closing (Bibin A Chundatt via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
