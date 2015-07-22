@@ -25,11 +25,12 @@ import org.apache.hadoop.conf.Configuration;
  * Configuration for ozone.
  */
 @InterfaceAudience.Private
-public class StorageContainerConfiguration extends Configuration {
+public class OzoneConfiguration extends Configuration {
   static {
     // adds the default resources
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
+    Configuration.addDefaultResource("ozone-default.xml");
     Configuration.addDefaultResource("ozone-site.xml");
   }
 }
