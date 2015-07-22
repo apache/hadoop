@@ -1360,8 +1360,12 @@ public class NativeAzureFileSystem extends FileSystem {
       String parentKey = pathToKey(parentFolder);
       FileMetadata parentMetadata = store.retrieveMetadata(parentKey);
       if (parentMetadata != null && parentMetadata.isDir() &&
-          parentMetadata.getBlobMaterialization() == BlobMaterialization.Explicit) {
-        store.updateFolderLastModifiedTime(parentKey, parentFolderLease);
+        parentMetadata.getBlobMaterialization() == BlobMaterialization.Explicit) {
+        if (parentFolderLease != null) {
+          store.updateFolderLastModifiedTime(parentKey, parentFolderLease);
+        } else {
+          updateParentFolderLastModifiedTime(key);
+        }
       } else {
         // Make sure that the parent folder exists.
         // Create it using inherited permissions from the first existing directory going up the path
