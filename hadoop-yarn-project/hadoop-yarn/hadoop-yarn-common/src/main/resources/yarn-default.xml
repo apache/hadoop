@@ -2131,4 +2131,14 @@
     <value>false</value>
   </property>
 
+  <property>
+    <description>
+    Defines maximum application priority in a cluster.
+    If an application is submitted with a priority higher than this value, it will be
+    reset to this maximum value.
+    </description>
+    <name>yarn.cluster.max-application-priority</name>
+    <value>0</value>
+  </property>
+
 </configuration>
