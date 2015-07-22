@@ -694,6 +694,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
+  @VisibleForTesting
+  public boolean containsInvalidateBlock(Block block) {
+    synchronized (invalidateBlocks) {
+      return invalidateBlocks.contains(block);
+    }
+  }
+
   /**
    * @return Approximate number of blocks currently scheduled to be written 
    */

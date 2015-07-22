@@ -783,7 +783,10 @@ public class BlockManager {
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeStorageInfo storage : targets) {
-      invalidateBlocks.remove(storage.getDatanodeDescriptor(), oldBlock);
+      final Block b = getBlockOnStorage(oldBlock, storage);
+      if (b != null) {
+        invalidateBlocks.remove(storage.getDatanodeDescriptor(), b);
+      }
     }
     
     // Adjust safe-mode totals, since under-construction blocks don't
@@ -802,12 +805,14 @@ public class BlockManager {
   /**
    * Get all valid locations of the block
    */
-  private List<DatanodeStorageInfo> getValidLocations(Block block) {
+  private List<DatanodeStorageInfo> getValidLocations(BlockInfo block) {
     final List<DatanodeStorageInfo> locations
         = new ArrayList<DatanodeStorageInfo>(blocksMap.numNodes(block));
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       // filter invalidate replicas
-      if(!invalidateBlocks.contains(storage.getDatanodeDescriptor(), block)) {
+      Block b = getBlockOnStorage(block, storage);
+      if(b != null && 
+          !invalidateBlocks.contains(storage.getDatanodeDescriptor(), b)) {
         locations.add(storage);
       }
     }
@@ -1156,7 +1161,10 @@ public class BlockManager {
     while(it.hasNext()) {
       BlockInfo block = it.next();
       removeStoredBlock(block, node);
-      invalidateBlocks.remove(node, block);
+      final Block b = getBlockOnStorage(block, storageInfo);
+      if (b != null) {
+        invalidateBlocks.remove(node, b);
+      }
     }
     namesystem.checkSafeMode();
   }
@@ -1184,7 +1192,7 @@ public class BlockManager {
     for(DatanodeStorageInfo storage : blocksMap.getStorages(storedBlock,
         State.NORMAL)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      final Block b = getBlockToInvalidate(storedBlock, storage);
+      final Block b = getBlockOnStorage(storedBlock, storage);
       if (b != null) {
         invalidateBlocks.add(b, node, false);
         datanodes.append(node).append(" ");
@@ -1196,7 +1204,7 @@ public class BlockManager {
     }
   }
 
-  private Block getBlockToInvalidate(BlockInfo storedBlock,
+  private Block getBlockOnStorage(BlockInfo storedBlock,
       DatanodeStorageInfo storage) {
     return storedBlock.isStriped() ?
         ((BlockInfoStriped) storedBlock).getBlockOnStorage(storage) : storedBlock;
@@ -2054,7 +2062,10 @@ public class BlockManager {
       // more than one storage on a datanode (and because it's a difficult
       // assumption to really enforce)
       removeStoredBlock(block, zombie.getDatanodeDescriptor());
-      invalidateBlocks.remove(zombie.getDatanodeDescriptor(), block);
+      Block b = getBlockOnStorage(block, zombie);
+      if (b != null) {
+        invalidateBlocks.remove(zombie.getDatanodeDescriptor(), b);
+      }
     }
     assert(zombie.numBlocks() == 0);
     LOG.warn("processReport 0x{}: removed {} replicas from storage {}, " +
@@ -3273,7 +3284,7 @@ public class BlockManager {
     // should be deleted.  Items are removed from the invalidate list
     // upon giving instructions to the datanodes.
     //
-    final Block blockToInvalidate = getBlockToInvalidate(storedBlock, chosen);
+    final Block blockToInvalidate = getBlockOnStorage(storedBlock, chosen);
     addToInvalidates(blockToInvalidate, chosen.getDatanodeDescriptor());
     blockLog.info("BLOCK* chooseExcessReplicates: "
         +"({}, {}) is added to invalidated blocks set", chosen, storedBlock);
@@ -3836,6 +3847,12 @@ public class BlockManager {
     blockLog.info("BLOCK* {}: ask {} to delete {}", getClass().getSimpleName(),
         dn, toInvalidate);
     return toInvalidate.size();
+  }
+
+  @VisibleForTesting
+  public boolean containsInvalidateBlock(final DatanodeInfo dn,
+      final Block block) {
+    return invalidateBlocks.contains(dn, block);
   }
 
   boolean blockHasEnoughRacks(BlockInfo storedBlock, int expectedStorageNum) {

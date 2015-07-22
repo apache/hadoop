@@ -367,3 +367,6 @@
 
     HDFS-8760. Erasure Coding: reuse BlockReader when reading the same block in pread.
     (jing9)
+
+    HDFS-8781. Erasure Coding: Correctly handle BlockManager#InvalidateBlocks for
+    striped block. (Yi Liu via jing9)
