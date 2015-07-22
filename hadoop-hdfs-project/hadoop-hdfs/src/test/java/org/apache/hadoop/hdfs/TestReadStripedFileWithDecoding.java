@@ -22,13 +22,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.junit.After;
 import org.junit.Assert;
@@ -274,28 +277,68 @@ public class TestReadStripedFileWithDecoding {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
     }
 
-    // do stateful read
-    ByteBuffer result = ByteBuffer.allocate(length);
-    ByteBuffer buf = ByteBuffer.allocate(1024);
-    int readLen = 0;
-    int ret;
-    try (FSDataInputStream in = fs.open(file)) {
-      while ((ret = in.read(buf)) >= 0) {
-        readLen += ret;
-        buf.flip();
-        result.put(buf);
-        buf.clear();
+    try {
+      // do stateful read
+      ByteBuffer result = ByteBuffer.allocate(length);
+      ByteBuffer buf = ByteBuffer.allocate(1024);
+      int readLen = 0;
+      int ret;
+      try (FSDataInputStream in = fs.open(file)) {
+        while ((ret = in.read(buf)) >= 0) {
+          readLen += ret;
+          buf.flip();
+          result.put(buf);
+          buf.clear();
+        }
+      }
+      Assert.assertEquals("The length of file should be the same to write size",
+          length, readLen);
+      Assert.assertArrayEquals(bytes, result.array());
+
+      // check whether the corruption has been reported to the NameNode
+      final FSNamesystem ns = cluster.getNamesystem();
+      final BlockManager bm = ns.getBlockManager();
+      BlockInfo blockInfo = (ns.getFSDirectory().getINode4Write(file.toString())
+          .asFile().getBlocks())[0];
+      Assert.assertEquals(1, bm.getCorruptReplicas(blockInfo).size());
+    } finally {
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
       }
     }
-    Assert.assertEquals("The length of file should be the same to write size",
-        length, readLen);
-    Assert.assertArrayEquals(bytes, result.array());
+  }
 
-    // check whether the corruption has been reported to the NameNode
-    final FSNamesystem ns = cluster.getNamesystem();
-    final BlockManager bm = ns.getBlockManager();
-    BlockInfo blockInfo = (ns.getFSDirectory().getINode4Write(file.toString())
-        .asFile().getBlocks())[0];
-    Assert.assertEquals(1, bm.getCorruptReplicas(blockInfo).size());
+  @Test
+  public void testInvalidateBlock() throws IOException {
+    final Path file = new Path("/invalidate");
+    final int length = 10;
+    final byte[] bytes = StripedFileTestUtil.generateBytes(length);
+    DFSTestUtil.writeFile(fs, file, bytes);
+
+    int dnIndex = findFirstDataNode(file, cellSize * dataBlocks);
+    Assert.assertNotEquals(-1, dnIndex);
+    LocatedStripedBlock slb = (LocatedStripedBlock)fs.getClient()
+        .getLocatedBlocks(file.toString(), 0, cellSize * dataBlocks).get(0);
+    final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(slb,
+        cellSize, dataBlocks, parityBlocks);
+    final Block b = blks[0].getBlock().getLocalBlock();
+
+    DataNode dn = cluster.getDataNodes().get(dnIndex);
+    // disable the heartbeat from DN so that the invalidated block record is kept
+    // in NameNode until heartbeat expires and NN mark the dn as dead
+    DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+
+    try {
+      // delete the file
+      fs.delete(file, true);
+      // check the block is added to invalidateBlocks
+      final FSNamesystem fsn = cluster.getNamesystem();
+      final BlockManager bm = fsn.getBlockManager();
+      DatanodeDescriptor dnd = NameNodeAdapter.getDatanode(fsn, dn.getDatanodeId());
+      Assert.assertTrue(bm.containsInvalidateBlock(
+          blks[0].getLocations()[0], b) || dnd.containsInvalidateBlock(b));
+    } finally {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+    }
   }
 }
