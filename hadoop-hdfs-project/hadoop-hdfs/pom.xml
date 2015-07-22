@@ -304,6 +304,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <tasks>
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
+                <copy file="src/main/resources/ozone-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
             </configuration>
@@ -415,6 +416,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <includes>
                 <include>configuration.xsl</include>
                 <include>hdfs-default.xml</include>
+                <include>ozone-default.xml</include>
               </includes>
               <followSymlinks>false</followSymlinks>
             </fileset>
