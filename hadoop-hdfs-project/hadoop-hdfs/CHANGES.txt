@@ -740,6 +740,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8495. Consolidate append() related implementation into a single class.
     (Rakesh R via wheat9)
 
+    HDFS-8795. Improve InvalidateBlocks#node2blocks. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
