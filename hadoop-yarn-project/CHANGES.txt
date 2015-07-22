@@ -659,6 +659,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3954. Fix TestYarnConfigurationFields#testCompareConfigurationClassAgainstXml.
     (varun saxena via rohithsharmaks)
 
+    YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
