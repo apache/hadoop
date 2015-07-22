@@ -604,6 +604,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3932. SchedulerApplicationAttempt#getResourceUsageReport and UserInfo 
     should based on total-used-resources. (Bibin A Chundatt via wangda)
 
+    YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

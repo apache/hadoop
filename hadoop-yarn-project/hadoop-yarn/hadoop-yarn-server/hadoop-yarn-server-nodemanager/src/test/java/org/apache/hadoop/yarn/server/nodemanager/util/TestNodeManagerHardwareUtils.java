@@ -30,6 +30,11 @@ import org.mockito.Mockito;
 public class TestNodeManagerHardwareUtils {
 
   static class TestResourceCalculatorPlugin extends ResourceCalculatorPlugin {
+
+    TestResourceCalculatorPlugin() {
+      super(null);
+    }
+
     @Override
     public long getVirtualMemorySize() {
       return 0;
