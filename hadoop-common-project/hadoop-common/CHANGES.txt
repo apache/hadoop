@@ -713,6 +713,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12214. Parse 'HadoopArchive' commandline using cli Options.
     (vinayakumarb)
 
+    HADOOP-12184. Remove unused Linux-specific constants in NativeIO (Martin
+    Walsh via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
