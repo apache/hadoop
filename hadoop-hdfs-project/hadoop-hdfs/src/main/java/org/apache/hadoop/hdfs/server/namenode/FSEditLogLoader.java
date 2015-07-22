@@ -392,7 +392,7 @@ public class FSEditLogLoader {
             FSNamesystem.LOG.debug("Reopening an already-closed file " +
                 "for append");
           }
-          LocatedBlock lb = fsNamesys.prepareFileForAppend(path, iip,
+          LocatedBlock lb = FSDirAppendOp.prepareFileForAppend(fsNamesys, iip,
               addCloseOp.clientName, addCloseOp.clientMachine, false, false,
               false);
           // add the op into retry cache if necessary
@@ -466,7 +466,7 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath4Write(path);
       INodeFile file = INodeFile.valueOf(iip.getLastINode(), path);
       if (!file.isUnderConstruction()) {
-        LocatedBlock lb = fsNamesys.prepareFileForAppend(path, iip,
+        LocatedBlock lb = FSDirAppendOp.prepareFileForAppend(fsNamesys, iip,
             appendOp.clientName, appendOp.clientMachine, appendOp.newBlock,
             false, false);
         // add the op into retry cache if necessary

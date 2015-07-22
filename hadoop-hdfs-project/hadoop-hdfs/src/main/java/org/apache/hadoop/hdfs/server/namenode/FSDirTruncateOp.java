@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.RecoverLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -79,11 +80,11 @@ final class FSDirTruncateOp {
     try {
       src = fsd.resolvePath(pc, srcArg, pathComponents);
       iip = fsd.getINodesInPath4Write(src, true);
-      if (fsn.isPermissionEnabled()) {
+      if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
       INodeFile file = INodeFile.valueOf(iip.getLastINode(), src);
-      final BlockStoragePolicy lpPolicy = fsn.getBlockManager()
+      final BlockStoragePolicy lpPolicy = fsd.getBlockManager()
           .getStoragePolicy("LAZY_PERSIST");
 
       if (lpPolicy != null && lpPolicy.getId() == file.getStoragePolicyID()) {
@@ -178,7 +179,7 @@ final class FSDirTruncateOp {
           "Should be the same block.";
       if (oldBlock.getBlockId() != tBlk.getBlockId()
           && !file.isBlockInLatestSnapshot(oldBlock)) {
-        fsn.getBlockManager().removeBlockFromMap(oldBlock);
+        fsd.getBlockManager().removeBlockFromMap(oldBlock);
       }
     }
     assert onBlockBoundary == (truncateBlock == null) :
@@ -223,6 +224,7 @@ final class FSDirTruncateOp {
     }
 
     BlockInfoUnderConstruction truncatedBlockUC;
+    BlockManager blockManager = fsn.getFSDirectory().getBlockManager();
     if (shouldCopyOnTruncate) {
       // Add new truncateBlock into blocksMap and
       // use oldBlock as a source for copy-on-truncate recovery
@@ -230,9 +232,8 @@ final class FSDirTruncateOp {
           file.getPreferredBlockReplication());
       truncatedBlockUC.setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
       truncatedBlockUC.setTruncateBlock(oldBlock);
-      file.setLastBlock(truncatedBlockUC,
-          fsn.getBlockManager().getStorages(oldBlock));
-      fsn.getBlockManager().addBlockCollection(truncatedBlockUC, file);
+      file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
+      blockManager.addBlockCollection(truncatedBlockUC, file);
 
       NameNode.stateChangeLog.debug(
           "BLOCK* prepareFileForTruncate: Scheduling copy-on-truncate to new"
@@ -241,8 +242,7 @@ final class FSDirTruncateOp {
           truncatedBlockUC.getTruncateBlock());
     } else {
       // Use new generation stamp for in-place truncate recovery
-      fsn.getBlockManager().convertLastBlockToUnderConstruction(file,
-          lastBlockDelta);
+      blockManager.convertLastBlockToUnderConstruction(file, lastBlockDelta);
       oldBlock = file.getLastBlock();
       assert !oldBlock.isComplete() : "oldBlock should be under construction";
       truncatedBlockUC = (BlockInfoUnderConstruction) oldBlock;
