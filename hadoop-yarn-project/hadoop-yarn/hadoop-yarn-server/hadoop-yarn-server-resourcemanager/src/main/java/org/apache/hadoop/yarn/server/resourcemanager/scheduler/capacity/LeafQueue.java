@@ -439,7 +439,7 @@ public class LeafQueue extends AbstractCSQueue {
     for (Map.Entry<String, User> entry : users.entrySet()) {
       User user = entry.getValue();
       usersToReturn.add(new UserInfo(entry.getKey(), Resources.clone(user
-          .getUsed()), user.getActiveApplications(), user
+          .getAllUsed()), user.getActiveApplications(), user
           .getPendingApplications(), Resources.clone(user
           .getConsumedAMResources()), Resources.clone(user
           .getUserResourceLimit())));
@@ -1894,7 +1894,11 @@ public class LeafQueue extends AbstractCSQueue {
     public Resource getUsed() {
       return userResourceUsage.getUsed();
     }
-    
+
+    public Resource getAllUsed() {
+      return userResourceUsage.getAllUsed();
+    }
+
     public Resource getUsed(String label) {
       return userResourceUsage.getUsed(label);
     }

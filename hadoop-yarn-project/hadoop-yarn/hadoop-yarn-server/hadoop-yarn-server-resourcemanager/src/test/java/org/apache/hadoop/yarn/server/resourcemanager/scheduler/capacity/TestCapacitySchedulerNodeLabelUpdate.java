@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -93,6 +95,68 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     CSQueue queue = scheduler.getQueue(queueName);
     Assert.assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
         .getMemory());
+  }
+
+  @Test(timeout = 60000)
+  public void testResourceUsage() throws Exception {
+    // set node -> label
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y",
+        "z"));
+
+    // set mapping:
+    // h1 -> x
+    // h2 -> y
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h2", 0), toSet("y")));
+
+    // inject node label manager
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 2048);
+    MockNM nm2 = rm.registerNode("h2:1234", 2048);
+    MockNM nm3 = rm.registerNode("h3:1234", 2048);
+
+    ContainerId containerId;
+    // launch an app to queue a1 (label = x), and check all container will
+    // be allocated in h1
+    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm3);
+    ApplicationResourceUsageReport appResourceUsageReport =
+        rm.getResourceScheduler().getAppResourceUsageReport(
+            am1.getApplicationAttemptId());
+    Assert.assertEquals(1024, appResourceUsageReport.getUsedResources()
+        .getMemory());
+    Assert.assertEquals(1, appResourceUsageReport.getUsedResources()
+        .getVirtualCores());
+    // request a container.
+    am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
+    containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
+    rm.waitForState(nm1, containerId, RMContainerState.ALLOCATED, 10 * 1000);
+    appResourceUsageReport =
+        rm.getResourceScheduler().getAppResourceUsageReport(
+            am1.getApplicationAttemptId());
+    Assert.assertEquals(2048, appResourceUsageReport.getUsedResources()
+        .getMemory());
+    Assert.assertEquals(2, appResourceUsageReport.getUsedResources()
+        .getVirtualCores());
+    LeafQueue queue =
+        (LeafQueue) ((CapacityScheduler) rm.getResourceScheduler())
+            .getQueue("a");
+    ArrayList<UserInfo> users = queue.getUsers();
+    for (UserInfo userInfo : users) {
+      if (userInfo.getUsername().equals("user")) {
+        ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
+        Assert.assertEquals(2048, resourcesUsed.getMemory());
+        Assert.assertEquals(2, resourcesUsed.getvCores());
+      }
+    }
+    rm.stop();
   }
 
   @Test (timeout = 60000)
