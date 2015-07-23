@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.io;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Shell;
 
 import java.io.*;
@@ -31,8 +29,6 @@ import java.nio.channels.FileChannel;
  * pause for a long time.
  */
 public class AltFileInputStream extends InputStream {
-  public static final Log LOG = LogFactory.getLog(AltFileInputStream.class);
-
   // For non-Windows
   private final InputStream inputStream;
   private final FileDescriptor fd;
@@ -69,21 +65,45 @@ public class AltFileInputStream extends InputStream {
     this.fileChannel = fis.getChannel();
   }
 
-  public FileDescriptor getFD() throws IOException {
-    return fd;
+  public final FileDescriptor getFD() throws IOException {
+    if (fd != null) {
+      return fd;
+    }
+    throw new IOException();
   }
 
   public FileChannel getChannel() {
     return fileChannel;
   }
 
-  @Override
-  public int read() throws IOException{
-    return inputStream.read();
+  public int read() throws IOException {
+    if (Shell.WINDOWS) {
+      return fileInputStream.read();
+    }else {
+      return inputStream.read();
+    }
   }
 
-  @Override
+  public int read(byte[] b, int off, int len) throws IOException {
+    if (Shell.WINDOWS) {
+      return fileInputStream.read(b, off, len);
+    } else {
+      return inputStream.read(b, off, len);
+    }
+  }
+
+  public int read(byte[] b) throws IOException {
+    if (Shell.WINDOWS) {
+      return fileInputStream.read(b);
+    } else {
+      return inputStream.read(b);
+    }
+  }
+
   public void close() throws IOException {
+    if (Shell.WINDOWS) {
+      fileInputStream.close();
+    }
     fileChannel.close();
     inputStream.close();
   }
