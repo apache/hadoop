@@ -719,6 +719,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12161. Add getStoragePolicy API to the FileSystem interface.
     (Brahma Reddy Battula via Arpit Agarwal)
 
+    HADOOP-12189. Improve CallQueueManager#swapQueue to make queue elements
+    drop nearly impossible. (Zhihai Xu via wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
