@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
+
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RpcClientException;
 import org.apache.hadoop.ipc.RpcServerException;
@@ -2687,6 +2688,25 @@ public class FileContext {
           throws IOException {
         fs.setStoragePolicy(path, policyName);
         return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Query the effective storage policy ID for the given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for give file.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(Path path) throws IOException {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<BlockStoragePolicySpi>() {
+      @Override
+      public BlockStoragePolicySpi next(final AbstractFileSystem fs,
+          final Path p)
+          throws IOException {
+        return fs.getStoragePolicy(p);
       }
     }.resolve(this, absF);
   }

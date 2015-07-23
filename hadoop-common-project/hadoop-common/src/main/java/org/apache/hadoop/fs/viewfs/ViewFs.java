@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -746,6 +747,20 @@ public class ViewFs extends AbstractFileSystem {
     InodeTree.ResolveResult<AbstractFileSystem> res =
         fsState.resolve(getUriPath(path), true);
     res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
+  }
+
+  /**
+   * Retrieve the storage policy for a given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for give file.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(src), true);
+    return res.targetFileSystem.getStoragePolicy(res.remainingPath);
   }
 
   /*

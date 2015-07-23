@@ -557,6 +557,25 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
+  public BlockStoragePolicySpi getStoragePolicy(Path path) throws IOException {
+    statistics.incrementReadOps(1);
+    Path absF = fixRelativePart(path);
+
+    return new FileSystemLinkResolver<BlockStoragePolicySpi>() {
+      @Override
+      public BlockStoragePolicySpi doCall(final Path p) throws IOException {
+        return getClient().getStoragePolicy(getPathName(p));
+      }
+
+      @Override
+      public BlockStoragePolicySpi next(final FileSystem fs, final Path p)
+          throws IOException, UnresolvedLinkException {
+        return fs.getStoragePolicy(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  @Override
   public Collection<BlockStoragePolicy> getAllStoragePolicies()
       throws IOException {
     return Arrays.asList(dfs.getStoragePolicies());

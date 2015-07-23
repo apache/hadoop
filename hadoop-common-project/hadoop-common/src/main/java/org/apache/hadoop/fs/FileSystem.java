@@ -2629,6 +2629,19 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Query the effective storage policy ID for the given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for give file.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getStoragePolicy");
+  }
+
+  /**
    * Retrieve all the storage policies supported by this file system.
    *
    * @return all storage policies supported by this filesystem.
