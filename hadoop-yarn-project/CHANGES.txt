@@ -144,6 +144,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2003. Support for Application priority : Changes in RM and Capacity 
     Scheduler. (Sunil G via wangda)
 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
+    in ZKRMStateStore. (Jian He via junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -653,6 +656,14 @@ Release 2.8.0 - UNRELEASED
     YARN-3885. ProportionalCapacityPreemptionPolicy doesn't preempt if queue is 
     more than 2 level. (Ajith S via wangda)
 
+    YARN-3932. SchedulerApplicationAttempt#getResourceUsageReport and UserInfo 
+    should based on total-used-resources. (Bibin A Chundatt via wangda)
+
+    YARN-3954. Fix TestYarnConfigurationFields#testCompareConfigurationClassAgainstXml.
+    (varun saxena via rohithsharmaks)
+
+    YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -681,6 +692,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3535. Scheduler must re-request container resources when RMContainer transitions
     from ALLOCATED to KILLED (rohithsharma and peng.zhang via asuresh)
+
+    YARN-3878. AsyncDispatcher can hang while stopping if it is configured for
+    draining events on stop. (Varun Saxena via jianhe)
 
 Release 2.7.1 - 2015-07-06 
 

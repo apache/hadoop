@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -65,6 +66,16 @@ public abstract class ByteRangeInputStream extends FSInputStream {
         final boolean resolved) throws IOException;
   }
 
+  static class InputStreamAndFileLength {
+    final Long length;
+    final InputStream in;
+
+    InputStreamAndFileLength(Long length, InputStream in) {
+      this.length = length;
+      this.in = in;
+    }
+  }
+
   enum StreamStatus {
     NORMAL, SEEK, CLOSED
   }
@@ -101,7 +112,9 @@ public abstract class ByteRangeInputStream extends FSInputStream {
         if (in != null) {
           in.close();
         }
-        in = openInputStream();
+        InputStreamAndFileLength fin = openInputStream(startPos);
+        in = fin.in;
+        fileLength = fin.length;
         status = StreamStatus.NORMAL;
         break;
       case CLOSED:
@@ -111,20 +124,22 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   }
 
   @VisibleForTesting
-  protected InputStream openInputStream() throws IOException {
+  protected InputStreamAndFileLength openInputStream(long startOffset)
+      throws IOException {
     // Use the original url if no resolved url exists, eg. if
     // it's the first time a request is made.
     final boolean resolved = resolvedURL.getURL() != null;
     final URLOpener opener = resolved? resolvedURL: originalURL;
 
-    final HttpURLConnection connection = opener.connect(startPos, resolved);
+    final HttpURLConnection connection = opener.connect(startOffset, resolved);
     resolvedURL.setURL(getResolvedUrl(connection));
 
     InputStream in = connection.getInputStream();
+    final Long length;
     final Map<String, List<String>> headers = connection.getHeaderFields();
     if (isChunkedTransferEncoding(headers)) {
       // file length is not known
-      fileLength = null;
+      length = null;
     } else {
       // for non-chunked transfer-encoding, get content-length
       final String cl = connection.getHeaderField(HttpHeaders.CONTENT_LENGTH);
@@ -133,14 +148,14 @@ public abstract class ByteRangeInputStream extends FSInputStream {
             + headers);
       }
       final long streamlength = Long.parseLong(cl);
-      fileLength = startPos + streamlength;
+      length = startOffset + streamlength;
 
       // Java has a bug with >2GB request streams.  It won't bounds check
       // the reads so the transfer blocks until the server times out
       in = new BoundedInputStream(in, streamlength);
     }
 
-    return in;
+    return new InputStreamAndFileLength(length, in);
   }
 
   private static boolean isChunkedTransferEncoding(
@@ -201,6 +216,36 @@ public abstract class ByteRangeInputStream extends FSInputStream {
       if (status != StreamStatus.CLOSED) {
         status = StreamStatus.SEEK;
       }
+    }
+  }
+
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    try (InputStream in = openInputStream(position).in) {
+      return in.read(buffer, offset, length);
+    }
+  }
+
+  @Override
+  public void readFully(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    final InputStreamAndFileLength fin = openInputStream(position);
+    if (fin.length != null && length + position > fin.length) {
+      throw new EOFException("The length to read " + length
+          + " exceeds the file length " + fin.length);
+    }
+    try {
+      int nread = 0;
+      while (nread < length) {
+        int nbytes = fin.in.read(buffer, offset + nread, length - nread);
+        if (nbytes < 0) {
+          throw new EOFException("End of file reached before reading fully.");
+        }
+        nread += nbytes;
+      }
+    } finally {
+      fin.in.close();
     }
   }
 
