@@ -664,6 +664,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
 
+    YARN-3941. Proportional Preemption policy should try to avoid sending duplicate PREEMPT_CONTAINER event to scheduler. (Sunil G via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

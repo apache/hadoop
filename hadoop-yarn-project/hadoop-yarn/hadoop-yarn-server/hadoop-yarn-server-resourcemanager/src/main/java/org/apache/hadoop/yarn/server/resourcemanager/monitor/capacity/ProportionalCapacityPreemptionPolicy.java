@@ -260,13 +260,16 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
                   SchedulerEventType.KILL_CONTAINER));
           preempted.remove(container);
         } else {
+          if (preempted.get(container) != null) {
+            // We already updated the information to scheduler earlier, we need
+            // not have to raise another event.
+            continue;
+          }
           //otherwise just send preemption events
           rmContext.getDispatcher().getEventHandler().handle(
               new ContainerPreemptEvent(appAttemptId, container,
                   SchedulerEventType.PREEMPT_CONTAINER));
-          if (preempted.get(container) == null) {
-            preempted.put(container, clock.getTime());
-          }
+          preempted.put(container, clock.getTime());
         }
       }
     }
