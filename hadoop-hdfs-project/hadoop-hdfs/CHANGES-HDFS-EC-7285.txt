@@ -370,3 +370,6 @@
 
     HDFS-8781. Erasure Coding: Correctly handle BlockManager#InvalidateBlocks for
     striped block. (Yi Liu via jing9)
+
+    HDFS-8813. Erasure Coding: Client no need to decode missing parity blocks.
+    (Walter Su via jing9)
