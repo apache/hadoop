@@ -10,6 +10,8 @@ Release 2.7.5 - UNRELEASED
 
     HDFS-9153. Pretty-format the output for DFSIO. (Kai Zheng via wheat9)
 
+    HDFS-8797. WebHdfsFileSystem creates too many connections for pread. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
