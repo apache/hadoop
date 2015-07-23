@@ -401,6 +401,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  public static final String YARN_FAIL_FAST = YARN_PREFIX + "fail-fast";
+  public static final boolean DEFAULT_YARN_FAIL_FAST = true;
+
+  public static final String RM_FAIL_FAST = RM_PREFIX + "fail-fast";
+
   @Private
   public static final String RM_WORK_PRESERVING_RECOVERY_ENABLED = RM_PREFIX
       + "work-preserving-recovery.enabled";
@@ -2016,6 +2021,12 @@ public class YarnConfiguration extends Configuration {
     return HttpConfig.Policy.HTTPS_ONLY == HttpConfig.Policy.fromString(conf
         .get(YARN_HTTP_POLICY_KEY,
             YARN_HTTP_POLICY_DEFAULT));
+  }
+
+  public static boolean shouldRMFailFast(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.RM_FAIL_FAST,
+        conf.getBoolean(YarnConfiguration.YARN_FAIL_FAST,
+            YarnConfiguration.DEFAULT_YARN_FAIL_FAST));
   }
 
   @Private

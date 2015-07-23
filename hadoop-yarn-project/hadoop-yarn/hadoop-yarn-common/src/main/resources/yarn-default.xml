@@ -324,6 +324,22 @@
   </property>
 
   <property>
+    <description>Should RM fail fast if it encounters any errors. By defalt, it
+      points to ${yarn.fail-fast}. Errors include:
+      1) exceptions when state-store write/read operations fails.
+    </description>
+    <name>yarn.resourcemanager.fail-fast</name>
+    <value>${yarn.fail-fast}</value>
+  </property>
+
+  <property>
+    <description>Should YARN fail fast if it encounters any errors.
+    </description>
+    <name>yarn.fail-fast</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Enable RM work preserving recovery. This configuration is private
     to YARN for experimenting the feature.
     </description>
