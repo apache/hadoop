@@ -32,11 +32,15 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class CallQueueManager<E> {
   public static final Log LOG = LogFactory.getLog(CallQueueManager.class);
+  // Number of checkpoints for empty queue.
+  private static final int CHECKPOINT_NUM = 20;
+  // Interval to check empty queue.
+  private static final long CHECKPOINT_INTERVAL_MS = 10;
 
   @SuppressWarnings("unchecked")
   static <E> Class<? extends BlockingQueue<E>> convertQueueClass(
-      Class<?> queneClass, Class<E> elementClass) {
-    return (Class<? extends BlockingQueue<E>>)queneClass;
+      Class<?> queueClass, Class<E> elementClass) {
+    return (Class<? extends BlockingQueue<E>>)queueClass;
   }
   private final boolean clientBackOffEnabled;
 
@@ -159,18 +163,23 @@ public class CallQueueManager<E> {
   }
 
   /**
-   * Checks if queue is empty by checking at two points in time.
+   * Checks if queue is empty by checking at CHECKPOINT_NUM points with
+   * CHECKPOINT_INTERVAL_MS interval.
    * This doesn't mean the queue might not fill up at some point later, but
    * it should decrease the probability that we lose a call this way.
    */
   private boolean queueIsReallyEmpty(BlockingQueue<?> q) {
-    boolean wasEmpty = q.isEmpty();
-    try {
-      Thread.sleep(10);
-    } catch (InterruptedException ie) {
-      return false;
+    for (int i = 0; i < CHECKPOINT_NUM; i++) {
+      try {
+        Thread.sleep(CHECKPOINT_INTERVAL_MS);
+      } catch (InterruptedException ie) {
+        return false;
+      }
+      if (!q.isEmpty()) {
+        return false;
+      }
     }
-    return q.isEmpty() && wasEmpty;
+    return true;
   }
 
   private String stringRepr(Object o) {
