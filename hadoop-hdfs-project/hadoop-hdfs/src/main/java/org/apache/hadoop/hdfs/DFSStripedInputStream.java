@@ -867,8 +867,13 @@ public class DFSStripedInputStream extends DFSInputStream {
       for (int i = 0; i < alignedStripe.chunks.length; i++) {
         if (alignedStripe.chunks[i] != null &&
             alignedStripe.chunks[i].state == StripingChunk.MISSING) {
-          decodeIndices[pos++] = StripedBlockUtil.convertIndex4Decode(i,
+          int  decodeIndex = StripedBlockUtil.convertIndex4Decode(i,
               dataBlkNum, parityBlkNum);
+          if (i < dataBlkNum) {
+            decodeIndices[pos++] = decodeIndex;
+          } else {
+            decodeInputs[decodeIndex] = null;
+          }
         }
       }
       decodeIndices = Arrays.copyOf(decodeIndices, pos);

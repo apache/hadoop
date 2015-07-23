@@ -326,7 +326,7 @@ public class StripedBlockUtil {
     // Step 1: prepare indices and output buffers for missing data units
     int[] decodeIndices = new int[parityBlkNum];
     int pos = 0;
-    for (int i = 0; i < alignedStripe.chunks.length; i++) {
+    for (int i = 0; i < dataBlkNum; i++) {
       if (alignedStripe.chunks[i] != null &&
           alignedStripe.chunks[i].state == StripingChunk.MISSING){
         decodeIndices[pos++] = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
