@@ -25,66 +25,56 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.*;
-import java.nio.channels.ClosedChannelException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestAltFileInputStream {
-
   private static final File TEST_DIR = PathUtils.getTestDir(TestAltFileInputStream.class);
-  private static final File TEST_FILE = new File(TEST_DIR,
-      "testAltFileInputStream.dat");
+  private static final File TEST_FILE = new File(TEST_DIR, "testAltFileInputStream.dat");
+  private static final int TEST_DATA_LEN = 7 * 1024; // 7 KB data
+  private static final byte[] TEST_DATA = DFSTestUtil.generateSequentialBytes(0, TEST_DATA_LEN);
+  private FileInputStream fileInputStream;
 
-  private static final int TEST_DATA_LEN = 7 * 1024; // 7KB test data
-  private static final byte[] TEST_DATA =
-      DFSTestUtil.generateSequentialBytes(0, TEST_DATA_LEN);
-  private AltFileInputStream altFileInputStream = null;
-  private FileInputStream fileInputStream = null;
-  private int FLAG = 0;
   @Before
   public void setup() throws IOException {
-      FileUtil.fullyDelete(TEST_DIR);
-      assertTrue(TEST_DIR.mkdirs());
-    // Write a file out
+    FileUtil.fullyDelete(TEST_DIR);
+    assertTrue(TEST_DIR.mkdirs());
     FileOutputStream fos = new FileOutputStream(TEST_FILE);
     fos.write(TEST_DATA);
     fos.close();
   }
 
   @Test
-  public void read0() throws Exception {
-    FLAG = 0;
-    altFileInputStream = new AltFileInputStream(TEST_FILE);
-    assertNotNull(altFileInputStream.getFD());
-    assertNotNull(altFileInputStream.getChannel());
+  public void readWithFileName() throws Exception {
+    AltFileInputStream inputStream = new AltFileInputStream(TEST_FILE);
+    assertNotNull(inputStream.getFD());
+    assertNotNull(inputStream.getChannel());
     long numberOfTheFileByte = 0;
-    while (altFileInputStream.read() != -1) {
-      numberOfTheFileByte++;
-    }
-    assertEquals(TEST_DATA_LEN,numberOfTheFileByte);
-    close();
-  }
-
-  @Test
-  public void read1() throws Exception {
-    FLAG = 1;
-    altFileInputStream = new AltFileInputStream(TEST_FILE);
-    altFileInputStream = new AltFileInputStream(altFileInputStream.getFD(),altFileInputStream.getChannel());
-    assertNotNull(altFileInputStream.getFD());
-    assertNotNull(altFileInputStream.getChannel());
-    long numberOfTheFileByte = 0;
-    while (altFileInputStream.read() != -1) {
+    while (inputStream.read() != -1) {
       numberOfTheFileByte++;
     }
     assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
-    close();
+    inputStream.close();
   }
 
   @Test
-  public void read2() throws Exception {
-    FLAG = 2;
+  public void readWithFdAndChannel() throws Exception {
+    RandomAccessFile raf = new RandomAccessFile(TEST_FILE, "r");
+    AltFileInputStream inputStream = new AltFileInputStream(raf.getFD(), raf.getChannel());
+    assertNotNull(inputStream.getFD());
+    assertNotNull(inputStream.getChannel());
+    long numberOfTheFileByte = 0;
+    while (inputStream.read() != -1) {
+      numberOfTheFileByte++;
+    }
+    assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
+    inputStream.close();
+  }
+
+  @Test
+  public void readWithFileByFileInputStream() throws Exception {
     fileInputStream = new FileInputStream(TEST_FILE);
     assertNotNull(fileInputStream.getChannel());
     assertNotNull(fileInputStream.getFD());
@@ -93,33 +83,6 @@ public class TestAltFileInputStream {
       numberOfTheFileByte++;
     }
     assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
-    close();
+    fileInputStream.close();
   }
-
-  public void close() throws Exception {
-    if (FLAG == 0) {
-      altFileInputStream.close();
-    } else if (FLAG == 1){
-      altFileInputStream.close();
-    } else {
-      fileInputStream.close();
-    }
-    try
-    {
-      if (FLAG == 0) {
-        altFileInputStream.read();
-      } else if (FLAG == 1) {
-        altFileInputStream.read();
-      } else {
-        fileInputStream.read();
-      }
-    } catch (IOException ex) {
-      if ( FLAG!=1 ){
-        assert (ex.getMessage().equals("Stream Closed"));
-      }
-      return;
-    }
-    throw new Exception("close failure");
-  }
-
 }
