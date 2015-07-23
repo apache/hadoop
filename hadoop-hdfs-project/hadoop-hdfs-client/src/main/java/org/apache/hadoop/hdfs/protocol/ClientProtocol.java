@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -29,14 +28,9 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
-import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -48,14 +42,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
-import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
-import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -121,9 +112,12 @@ public interface ClientProtocol {
    *
    * @return file length and array of blocks with their locations
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> does not exist
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> does not
+   *           exist
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -166,24 +160,29 @@ public interface ClientProtocol {
    *
    * @return the status of the created file, it could be null if the server
    *           doesn't support returning the file status
-   * @throws AccessControlException If access is denied
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
    * @throws AlreadyBeingCreatedException if the path does not exist.
    * @throws DSQuotaExceededException If file creation violates disk space
    *           quota restriction
-   * @throws FileAlreadyExistsException If file <code>src</code> already exists
-   * @throws FileNotFoundException If parent of <code>src</code> does not exist
-   *           and <code>createParent</code> is false
-   * @throws ParentNotDirectoryException If parent of <code>src</code> is not a
-   *           directory.
+   * @throws org.apache.hadoop.fs.FileAlreadyExistsException If file
+   *           <code>src</code> already exists
+   * @throws java.io.FileNotFoundException If parent of <code>src</code> does
+   *           not exist and <code>createParent</code> is false
+   * @throws org.apache.hadoop.fs.ParentNotDirectoryException If parent of
+   *           <code>src</code> is not a directory.
    * @throws NSQuotaExceededException If file creation violates name space
    *           quota restriction
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    *
    * RuntimeExceptions:
-   * @throws InvalidPathException Path <code>src</code> is invalid
+   * @throws org.apache.hadoop.fs.InvalidPathException Path <code>src</code> is
+   *           invalid
    * <p>
    * <em>Note that create with {@link CreateFlag#OVERWRITE} is idempotent.</em>
    */
@@ -201,19 +200,23 @@ public interface ClientProtocol {
    * @param flag indicates whether the data is appended to a new block.
    * @return wrapper with information about the last partial block and file
    *    status if any
-   * @throws AccessControlException if permission to append file is
-   * denied by the system. As usually on the client side the exception will
-   * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * @throws org.apache.hadoop.security.AccessControlException if permission to
+   * append file is denied by the system. As usually on the client side the
+   * exception will be wrapped into
+   * {@link org.apache.hadoop.ipc.RemoteException}.
    * Allows appending to an existing file if the server is
    * configured with the parameter dfs.support.append set to true, otherwise
    * throws an IOException.
    *
-   * @throws AccessControlException If permission to append to file is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.security.AccessControlException If permission to
+   *           append to file is denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
    * @throws DSQuotaExceededException If append violates disk space quota
    *           restriction
-   * @throws SafeModeException append not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException append not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred.
    *
@@ -238,12 +241,15 @@ public interface ClientProtocol {
    * @return true if successful;
    *         false if file does not exist or is a directory
    *
-   * @throws AccessControlException If access is denied
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
    * @throws DSQuotaExceededException If replication violates disk space
    *           quota restriction
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException not allowed in safemode
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -263,8 +269,10 @@ public interface ClientProtocol {
    * @param src Path of an existing file/directory.
    * @param policyName The name of the storage policy
    * @throws SnapshotAccessControlException If access is denied
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink
-   * @throws FileNotFoundException If file/dir <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink
+   * @throws java.io.FileNotFoundException If file/dir <code>src</code> is not
+   *           found
    * @throws QuotaExceededException If changes violate the quota restriction
    */
   @Idempotent
@@ -274,10 +282,13 @@ public interface ClientProtocol {
   /**
    * Set permissions for an existing file/directory.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -292,10 +303,13 @@ public interface ClientProtocol {
    * @param username If it is null, the original username remains unchanged.
    * @param groupname If it is null, the original groupname remains unchanged.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -315,9 +329,11 @@ public interface ClientProtocol {
    * @param src       The path of the file where the block resides.
    * @param holder    Lease holder.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -348,13 +364,16 @@ public interface ClientProtocol {
    *
    * @return LocatedBlock allocated block information.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws NotReplicatedYetException previous blocks of the file are not
-   *           replicated yet. Blocks cannot be added until replication
-   *           completes.
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException
+   *           previous blocks of the file are not replicated yet.
+   *           Blocks cannot be added until replication completes.
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -376,10 +395,13 @@ public interface ClientProtocol {
    *
    * @return the located block.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -414,10 +436,13 @@ public interface ClientProtocol {
    *
    * @return true if all file blocks are minimally replicated or false otherwise
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -456,8 +481,8 @@ public interface ClientProtocol {
    * @param trg existing file
    * @param srcs - list of existing files (same block size, same replication)
    * @throws IOException if some arguments are invalid
-   * @throws UnresolvedLinkException if <code>trg</code> or <code>srcs</code>
-   *           contains a symlink
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>trg</code> or
+   *           <code>srcs</code> contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
   @AtMostOnce
@@ -482,19 +507,22 @@ public interface ClientProtocol {
    * @param dst new name.
    * @param options Rename options
    *
-   * @throws AccessControlException If access is denied
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
    * @throws DSQuotaExceededException If rename violates disk space
    *           quota restriction
-   * @throws FileAlreadyExistsException If <code>dst</code> already exists and
-   *           <code>options</code> has {@link Rename#OVERWRITE} option
+   * @throws org.apache.hadoop.fs.FileAlreadyExistsException If <code>dst</code>
+   *           already exists and <code>options</code> has
+   *           {@link org.apache.hadoop.fs.Options.Rename#OVERWRITE} option
    *           false.
-   * @throws FileNotFoundException If <code>src</code> does not exist
+   * @throws java.io.FileNotFoundException If <code>src</code> does not exist
    * @throws NSQuotaExceededException If rename violates namespace
    *           quota restriction
-   * @throws ParentNotDirectoryException If parent of <code>dst</code>
-   *           is not a directory
-   * @throws SafeModeException rename not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> or
+   * @throws org.apache.hadoop.fs.ParentNotDirectoryException If parent of
+   *           <code>dst</code> is not a directory
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException rename not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code> or
    *           <code>dst</code> contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
@@ -521,10 +549,13 @@ public interface ClientProtocol {
    * @return true if client does not need to wait for block recovery,
    * false if client needs to wait for block recovery.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException truncate not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException truncate
+   *           not allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -543,10 +574,13 @@ public interface ClientProtocol {
    * @return true only if the existing file or directory was actually removed
    * from the file system.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If file <code>src</code> is not found
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws java.io.FileNotFoundException If file <code>src</code> is not found
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -564,21 +598,26 @@ public interface ClientProtocol {
    *
    * @return True if the operation success.
    *
-   * @throws AccessControlException If access is denied
-   * @throws FileAlreadyExistsException If <code>src</code> already exists
-   * @throws FileNotFoundException If parent of <code>src</code> does not exist
-   *           and <code>createParent</code> is false
+   * @throws org.apache.hadoop.security.AccessControlException If access is
+   *           denied
+   * @throws org.apache.hadoop.fs.FileAlreadyExistsException If <code>src</code>
+   *           already exists
+   * @throws java.io.FileNotFoundException If parent of <code>src</code> does
+   *           not exist and <code>createParent</code> is false
    * @throws NSQuotaExceededException If file creation violates quota
    *           restriction
-   * @throws ParentNotDirectoryException If parent of <code>src</code>
-   *           is not a directory
-   * @throws SafeModeException create not allowed in safemode
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.fs.ParentNotDirectoryException If parent of
+   *           <code>src</code> is not a directory
+   * @throws org.apache.hadoop.hdfs.server.namenode.SafeModeException create not
+   *           allowed in safemode
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred.
    *
    * RunTimeExceptions:
-   * @throws InvalidPathException If <code>src</code> is invalid
+   * @throws org.apache.hadoop.fs.InvalidPathException If <code>src</code> is
+   *           invalid
    */
   @Idempotent
   boolean mkdirs(String src, FsPermission masked, boolean createParent)
@@ -593,9 +632,10 @@ public interface ClientProtocol {
    *
    * @return a partial listing starting after startAfter
    *
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException If <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -632,7 +672,7 @@ public interface ClientProtocol {
    * the last call to renewLease(), the NameNode assumes the
    * client has died.
    *
-   * @throws AccessControlException permission denied
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -699,7 +739,8 @@ public interface ClientProtocol {
    * @param filename The name of the file
    * @return The number of bytes in each block
    * @throws IOException
-   * @throws UnresolvedLinkException if the path contains a symlink.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if the path contains
+   *           a symlink.
    */
   @Idempotent
   long getPreferredBlockSize(String filename)
@@ -789,7 +830,8 @@ public interface ClientProtocol {
    * Roll the edit log.
    * Requires superuser privileges.
    *
-   * @throws AccessControlException if the superuser privilege is violated
+   * @throws org.apache.hadoop.security.AccessControlException if the superuser
+   *           privilege is violated
    * @throws IOException if log roll fails
    * @return the txid of the new segment
    */
@@ -801,7 +843,8 @@ public interface ClientProtocol {
    * <p>
    * sets flag to enable restore of failed storage replicas
    *
-   * @throws AccessControlException if the superuser privilege is violated.
+   * @throws org.apache.hadoop.security.AccessControlException if the superuser
+   *           privilege is violated.
    */
   @Idempotent
   boolean restoreFailedStorage(String arg) throws IOException;
@@ -872,9 +915,10 @@ public interface ClientProtocol {
    *
    * @return object containing information regarding the file
    *         or null if file not found
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException if the path contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if the path contains
+   *           a symlink.
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -885,9 +929,10 @@ public interface ClientProtocol {
    * @param src The string representation of the path to the file
    *
    * @return return true if file is closed
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException if the path contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if the path contains
+   *           a symlink.
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -901,8 +946,9 @@ public interface ClientProtocol {
    * @return object containing information regarding the file
    *         or null if file not found
    *
-   * @throws AccessControlException permission denied
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -912,9 +958,10 @@ public interface ClientProtocol {
    * Get {@link ContentSummary} rooted at the specified directory.
    * @param path The string representation of the path
    *
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>path</code> is not found
-   * @throws UnresolvedLinkException if <code>path</code> contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>path</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>path</code>
+   *           contains a symlink.
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -940,12 +987,12 @@ public interface ClientProtocol {
    * the quota will not be changed, and (3) {@link HdfsConstants#QUOTA_RESET}
    * implies the quota will be reset. Any other value is a runtime error.
    *
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>path</code> is not found
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>path</code> is not found
    * @throws QuotaExceededException if the directory size
    *           is greater than the given quota
-   * @throws UnresolvedLinkException if the <code>path</code> contains
-   *           a symlink.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if the
+   *           <code>path</code> contains a symlink.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -962,9 +1009,10 @@ public interface ClientProtocol {
    * @param client The string representation of the client
    * @param lastBlockLength The length of the last block (under construction)
    *                        to be reported to NameNode
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
@@ -981,9 +1029,10 @@ public interface ClientProtocol {
    *              Setting atime to -1 means that access time should not be set
    *              by this call.
    *
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException file <code>src</code> is not found
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>src</code>
+   *           contains a symlink.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -999,13 +1048,15 @@ public interface ClientProtocol {
    * @param createParent - if true then missing parent dirs are created
    *                       if false then parent must exist
    *
-   * @throws AccessControlException permission denied
-   * @throws FileAlreadyExistsException If file <code>link</code> already exists
-   * @throws FileNotFoundException If parent of <code>link</code> does not exist
-   *           and <code>createParent</code> is false
-   * @throws ParentNotDirectoryException If parent of <code>link</code> is not a
-   *           directory.
-   * @throws UnresolvedLinkException if <code>link</code> contains a symlink.
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws org.apache.hadoop.fs.FileAlreadyExistsException If file
+   *           <code>link</code> already exists
+   * @throws java.io.FileNotFoundException If parent of <code>link</code> does
+   *           not exist and <code>createParent</code> is false
+   * @throws org.apache.hadoop.fs.ParentNotDirectoryException If parent of
+   *           <code>link</code> is not a directory.
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException if <code>link</code>
+   *           contains a symlink.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
@@ -1020,8 +1071,8 @@ public interface ClientProtocol {
    *
    * @param path The path with a link that needs resolution.
    * @return The path after resolving the first symbolic link in the path.
-   * @throws AccessControlException permission denied
-   * @throws FileNotFoundException If <code>path</code> does not exist
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException If <code>path</code> does not exist
    * @throws IOException If the given path does not refer to a symlink
    *           or an I/O error occurred
    */
@@ -1389,15 +1440,16 @@ public interface ClientProtocol {
    * Checks if the user can access a path.  The mode specifies which access
    * checks to perform.  If the requested permissions are granted, then the
    * method returns normally.  If access is denied, then the method throws an
-   * {@link AccessControlException}.
+   * {@link org.apache.hadoop.security.AccessControlException}.
    * In general, applications should avoid using this method, due to the risk of
    * time-of-check/time-of-use race conditions.  The permissions on a file may
    * change immediately after the access call returns.
    *
    * @param path Path to check
    * @param mode type of access to check
-   * @throws AccessControlException if access is denied
-   * @throws FileNotFoundException if the path does not exist
+   * @throws org.apache.hadoop.security.AccessControlException if access is
+   *           denied
+   * @throws java.io.FileNotFoundException if the path does not exist
    * @throws IOException see specific implementation
    */
   @Idempotent
