@@ -25,8 +25,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
 /**
- * This class is substitute for FileInputStream.Cause FileInputStream cause GC
- * pause for a long time.
+ * This class substitute FileInputStream.
  */
 public class AltFileInputStream extends InputStream {
   // For non-Windows
