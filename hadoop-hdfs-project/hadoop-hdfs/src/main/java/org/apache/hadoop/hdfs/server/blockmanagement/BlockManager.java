@@ -171,6 +171,10 @@ public class BlockManager implements BlockStatsMXBean {
   public int getPendingDataNodeMessageCount() {
     return pendingDNMessages.count();
   }
+  /** Used by metrics. */
+  public long getTimeOfTheOldestBlockToBeReplicated() {
+    return neededReplications.getTimeOfTheOldestBlockToBeReplicated();
+  }
 
   /**replicationRecheckInterval is how often namenode checks for new replication work*/
   private final long replicationRecheckInterval;

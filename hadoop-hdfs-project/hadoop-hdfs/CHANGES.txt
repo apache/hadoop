@@ -747,6 +747,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8730. Clean up the import statements in ClientProtocol.
     (Takanobu Asanuma via wheat9)
 
+    HDFS-6682. Add a metric to expose the timestamp of the oldest
+    under-replicated block. (aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

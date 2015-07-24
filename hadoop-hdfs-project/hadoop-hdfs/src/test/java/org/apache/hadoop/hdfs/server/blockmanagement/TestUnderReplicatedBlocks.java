@@ -28,8 +28,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import java.util.Iterator;
@@ -146,4 +148,50 @@ public class TestUnderReplicatedBlocks {
 
   }
 
+  @Test
+  public void testGetTimeOfTheOldestBlockToBeReplicated() {
+    UnderReplicatedBlocks blocks = new UnderReplicatedBlocks();
+    BlockInfo block1 = new BlockInfoContiguous(new Block(1), (short) 1);
+    BlockInfo block2 = new BlockInfoContiguous(new Block(2), (short) 1);
+
+    // if there are no under-replicated or corrupt blocks, return 0
+    assertEquals(blocks.getTimeOfTheOldestBlockToBeReplicated(), 0L);
+
+    // add block1, add block2, remove block1, remove block2
+    long time1 = Time.now();
+    blocks.add(block1, 1, 0, 3);
+    long time2 = Time.now();
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time1);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time2);
+
+    blocks.add(block2, 2, 0, 3);
+    long time3 = Time.now();
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time1);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time2);
+
+    blocks.remove(block1, UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time2);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time3);
+
+    blocks.remove(block2, UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+    assertEquals(blocks.getTimeOfTheOldestBlockToBeReplicated(), 0L);
+
+    // add block2, add block1, remove block1, remove block2
+    time1 = Time.now();
+    blocks.add(block2, 2, 0, 3);
+    time2 = Time.now();
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time1);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time2);
+
+    blocks.add(block1, 1, 0, 3);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time1);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time2);
+
+    blocks.remove(block1, UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() >= time1);
+    assertTrue(blocks.getTimeOfTheOldestBlockToBeReplicated() <= time2);
+
+    blocks.remove(block2, UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED);
+    assertEquals(blocks.getTimeOfTheOldestBlockToBeReplicated(), 0L);
+  }
 }
