@@ -1097,6 +1097,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
 
+    HDFS-8806. Inconsistent metrics: number of missing blocks with replication
+    factor 1 not properly cleared. (Zhe Zhang via aajisaka)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
