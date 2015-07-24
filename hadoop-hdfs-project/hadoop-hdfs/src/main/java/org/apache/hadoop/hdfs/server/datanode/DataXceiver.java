@@ -87,9 +87,6 @@ import org.apache.hadoop.util.Time;
 class DataXceiver extends Receiver implements Runnable {
 
   public static final Log LOG = DataNode.LOG;
-  static{
-    LOG.info("+++++++++++++++++++++++++++DataXceiver++++++++++++++++++++++++++++++");
-  }
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
   private Peer peer;
