@@ -25,7 +25,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
 /**
- * This class substitute FileInputStream.
+ * This class is substitute FileInputStream. When on windows, We are still use
+ * FileInputStream. For non-windows, we use channel and FileDescriptor to
+ * construct a stream.
  */
 public class AltFileInputStream extends InputStream {
   // For non-Windows
@@ -78,7 +80,7 @@ public class AltFileInputStream extends InputStream {
   public int read() throws IOException {
     if (fileInputStream != null) {
       return fileInputStream.read();
-    }else {
+    } else {
       return inputStream.read();
     }
   }
