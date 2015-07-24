@@ -672,6 +672,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3845. Scheduler page does not render RGBA color combinations in IE11. 
     (Contributed by Mohammad Shahid Khan)
 
+    YARN-3957. FairScheduler NPE In FairSchedulerQueueInfo causing scheduler page to 
+    return 500. (Anubhav Dhoot via kasha)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
