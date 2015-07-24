@@ -126,7 +126,7 @@ public class TwoColumnLayout extends HtmlPage {
     styles.add(join('#', tableId, "_paginate span {font-weight:normal}"));
     styles.add(join('#', tableId, " .progress {width:8em}"));
     styles.add(join('#', tableId, "_processing {top:-1.5em; font-size:1em;"));
-    styles.add("  color:#000; background:rgba(255, 255, 255, 0.8)}");
+    styles.add("  color:#000; background:#fefefe}");
     for (String style : innerStyles) {
       styles.add(join('#', tableId, " ", style));
     }
