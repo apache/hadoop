@@ -7,6 +7,7 @@ Release 2.7.4 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-12259. Utility to Dynamic port allocation (brahmareddy via rkanter)
 
   OPTIMIZATIONS
 
