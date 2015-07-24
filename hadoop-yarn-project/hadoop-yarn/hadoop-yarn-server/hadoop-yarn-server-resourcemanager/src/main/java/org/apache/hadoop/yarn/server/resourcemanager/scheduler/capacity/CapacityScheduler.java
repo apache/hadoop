@@ -1867,7 +1867,7 @@ public class CapacityScheduler extends
 
   private Priority getDefaultPriorityForQueue(String queueName) {
     Queue queue = getQueue(queueName);
-    if (null == queue) {
+    if (null == queue || null == queue.getDefaultApplicationPriority()) {
       // Return with default application priority
       return Priority.newInstance(CapacitySchedulerConfiguration
           .DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);

@@ -667,7 +667,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
 
-    YARN-3941. Proportional Preemption policy should try to avoid sending duplicate PREEMPT_CONTAINER event to scheduler. (Sunil G via wangda)
+    YARN-3941. Proportional Preemption policy should try to avoid sending duplicate 
+    PREEMPT_CONTAINER event to scheduler. (Sunil G via wangda)
 
     YARN-3900. Protobuf layout of yarn_security_token causes errors in other protos
     that include it (adhoot via rkanter)
@@ -677,6 +678,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3957. FairScheduler NPE In FairSchedulerQueueInfo causing scheduler page to 
     return 500. (Anubhav Dhoot via kasha)
+
+    YARN-3973. Recent changes to application priority management break 
+    reservation system from YARN-1051. (Carlo Curino via wangda)
 
 Release 2.7.2 - UNRELEASED
 
