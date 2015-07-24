@@ -1581,10 +1581,10 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  AltFileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
-      final Token<BlockTokenIdentifier> token, int maxVersion) 
-          throws ShortCircuitFdsUnsupportedException,
-            ShortCircuitFdsVersionException, IOException {
+  FileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
+                                                  final Token<BlockTokenIdentifier> token, int maxVersion)
+      throws ShortCircuitFdsUnsupportedException,
+      ShortCircuitFdsVersionException, IOException {
     if (fileDescriptorPassingDisabledReason != null) {
       throw new ShortCircuitFdsUnsupportedException(
           fileDescriptorPassingDisabledReason);
@@ -1593,25 +1593,22 @@ public class DataNode extends ReconfigurableBase
     int blkVersion = CURRENT_BLOCK_FORMAT_VERSION;
     if (maxVersion < blkVersion) {
       throw new ShortCircuitFdsVersionException("Your client is too old " +
-        "to read this block!  Its format version is " + 
-        blkVersion + ", but the highest format version you can read is " +
-        maxVersion);
+          "to read this block!  Its format version is " +
+          blkVersion + ", but the highest format version you can read is " +
+          maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    AltFileInputStream afis[] = new AltFileInputStream[2];
+    FileInputStream fis[] = new FileInputStream[2];
+
     try {
-      if(AltFileInputStream.toInputStream()){
-        afis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
-        afis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
-      }else{
-          throw new ClassCastException();
-      }
+      fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+      fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
     }
-    return afis;
+    return fis;
   }
 
   @Override

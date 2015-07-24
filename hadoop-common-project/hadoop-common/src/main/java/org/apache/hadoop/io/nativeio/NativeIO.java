@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.HardLink;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -773,19 +774,19 @@ public class NativeIO {
   }
 
   /**
-   * Create a FileInputStream that shares delete permission on the
+   * Create a AltFileInputStream that shares delete permission on the
    * file opened at a given offset, i.e. other process can delete
    * the file the FileInputStream is reading. Only Windows implementation
    * uses the native interface.
    */
-  public static FileInputStream getShareDeleteFileInputStream(File f, long seekOffset)
+  public static AltFileInputStream getShareDeleteFileInputStream(File f, long seekOffset)
       throws IOException {
     if (!Shell.WINDOWS) {
       RandomAccessFile rf = new RandomAccessFile(f, "r");
       if (seekOffset > 0) {
         rf.seek(seekOffset);
       }
-      return new FileInputStream(rf.getFD());
+      return new AltFileInputStream(rf.getFD(), rf.getChannel());
     } else {
       // Use Windows native interface to create a FileInputStream that
       // shares delete permission on the file opened, and set it to the
@@ -800,7 +801,7 @@ public class NativeIO {
           NativeIO.Windows.OPEN_EXISTING);
       if (seekOffset > 0)
         NativeIO.Windows.setFilePointer(fd, seekOffset, NativeIO.Windows.FILE_BEGIN);
-      return new FileInputStream(fd);
+      return new AltFileInputStream(new FileInputStream(fd));
     }
   }
 

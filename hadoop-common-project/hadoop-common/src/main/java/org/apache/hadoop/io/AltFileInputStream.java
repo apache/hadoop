@@ -76,7 +76,7 @@ public class AltFileInputStream extends InputStream {
   }
 
   public int read() throws IOException {
-    if (Shell.WINDOWS) {
+    if (fileInputStream != null) {
       return fileInputStream.read();
     }else {
       return inputStream.read();
@@ -84,7 +84,7 @@ public class AltFileInputStream extends InputStream {
   }
 
   public int read(byte[] b, int off, int len) throws IOException {
-    if (Shell.WINDOWS) {
+    if (fileInputStream != null) {
       return fileInputStream.read(b, off, len);
     } else {
       return inputStream.read(b, off, len);
@@ -92,7 +92,7 @@ public class AltFileInputStream extends InputStream {
   }
 
   public int read(byte[] b) throws IOException {
-    if (Shell.WINDOWS) {
+    if (fileInputStream != null) {
       return fileInputStream.read(b);
     } else {
       return inputStream.read(b);
@@ -100,7 +100,7 @@ public class AltFileInputStream extends InputStream {
   }
 
   public void close() throws IOException {
-    if (Shell.WINDOWS) {
+    if (fileInputStream != null) {
       fileInputStream.close();
     }
     fileChannel.close();

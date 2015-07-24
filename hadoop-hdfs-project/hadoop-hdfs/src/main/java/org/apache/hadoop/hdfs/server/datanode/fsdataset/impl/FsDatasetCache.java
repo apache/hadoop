@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,12 +47,12 @@ import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hdfs.AltFileInputStream;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -430,7 +431,8 @@ public class FsDatasetCache {
     @Override
     public void run() {
       boolean success = false;
-      AltFileInputStream blockIn = null, metaIn = null;
+      AltFileInputStream blockIn = null;
+      FileInputStream metaIn = null;
       MappableBlock mappableBlock = null;
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);

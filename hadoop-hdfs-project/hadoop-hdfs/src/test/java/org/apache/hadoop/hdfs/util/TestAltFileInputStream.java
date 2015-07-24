@@ -32,10 +32,11 @@ import static org.junit.Assert.assertTrue;
 
 public class TestAltFileInputStream {
   private static final File TEST_DIR = PathUtils.getTestDir(TestAltFileInputStream.class);
-  private static final File TEST_FILE = new File(TEST_DIR, "testAltFileInputStream.dat");
-  private static final int TEST_DATA_LEN = 7 * 1024; // 7 KB data
+  private static final File TEST_FILE = new File(TEST_DIR,
+      "testAltFileInputStream.dat");
+
+  private static final int TEST_DATA_LEN = 7 * 1024; // 7 KB test data
   private static final byte[] TEST_DATA = DFSTestUtil.generateSequentialBytes(0, TEST_DATA_LEN);
-  private FileInputStream fileInputStream;
 
   @Before
   public void setup() throws IOException {
@@ -51,12 +52,7 @@ public class TestAltFileInputStream {
     AltFileInputStream inputStream = new AltFileInputStream(TEST_FILE);
     assertNotNull(inputStream.getFD());
     assertNotNull(inputStream.getChannel());
-    long numberOfTheFileByte = 0;
-    while (inputStream.read() != -1) {
-      numberOfTheFileByte++;
-    }
-    assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
-    inputStream.close();
+    calculate(inputStream);
   }
 
   @Test
@@ -65,24 +61,23 @@ public class TestAltFileInputStream {
     AltFileInputStream inputStream = new AltFileInputStream(raf.getFD(), raf.getChannel());
     assertNotNull(inputStream.getFD());
     assertNotNull(inputStream.getChannel());
-    long numberOfTheFileByte = 0;
-    while (inputStream.read() != -1) {
-      numberOfTheFileByte++;
-    }
-    assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
-    inputStream.close();
+    calculate(inputStream);
   }
 
   @Test
   public void readWithFileByFileInputStream() throws Exception {
-    fileInputStream = new FileInputStream(TEST_FILE);
+    FileInputStream fileInputStream = new FileInputStream(TEST_FILE);
     assertNotNull(fileInputStream.getChannel());
     assertNotNull(fileInputStream.getFD());
-    long numberOfTheFileByte = 0;
-    while (fileInputStream.read() != -1) {
-      numberOfTheFileByte++;
-    }
-    assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
-    fileInputStream.close();
+    calculate(fileInputStream);
+  }
+
+  public void calculate(InputStream inputStream) throws Exception {
+   long numberOfTheFileByte = 0;
+   while (inputStream.read() != -1) {
+     numberOfTheFileByte++;
+   }
+   assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
+   inputStream.close();
   }
 }

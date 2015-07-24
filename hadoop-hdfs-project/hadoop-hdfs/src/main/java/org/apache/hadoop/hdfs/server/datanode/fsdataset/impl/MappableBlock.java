@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.BufferedInputStream;
-import java.io.Closeable;
-import java.io.DataInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -31,8 +28,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hdfs.AltFileInputStream;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -51,10 +48,6 @@ public class MappableBlock implements Closeable {
       LoggerFactory.getLogger(MappableBlock.class);
   private MappedByteBuffer mmap;
   private final long length;
-
-  static {
-    LOG.info("org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock+++++++++++++++++++++++++++++++++++++");
-  }
 
   MappableBlock(MappedByteBuffer mmap, long length) {
     this.mmap = mmap;
@@ -81,9 +74,8 @@ public class MappableBlock implements Closeable {
    * @return               The Mappable block.
    */
   public static MappableBlock load(long length,
-      AltFileInputStream blockIn, AltFileInputStream metaIn,
+      AltFileInputStream blockIn, FileInputStream metaIn,
       String blockFileName) throws IOException {
-    LOG.info("+++++++++++++++++++++++++++++++++++++++load+++++++++++++++++++++++++++++++++++++++++++++");
     MappableBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
     FileChannel blockChannel = null;
@@ -111,7 +103,7 @@ public class MappableBlock implements Closeable {
    * Verifies the block's checksum. This is an I/O intensive operation.
    */
   private static void verifyChecksum(long length,
-      AltFileInputStream metaIn, FileChannel blockChannel, String blockFileName)
+      FileInputStream metaIn, FileChannel blockChannel, String blockFileName)
           throws IOException, ChecksumException {
     // Verify the checksum from the block's meta file
     // Get the DataChecksum from the meta file header
