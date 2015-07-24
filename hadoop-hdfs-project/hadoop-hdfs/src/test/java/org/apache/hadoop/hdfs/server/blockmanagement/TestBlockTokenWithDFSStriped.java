@@ -20,13 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -46,22 +44,6 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     FILE_SIZE =  BLOCK_SIZE * dataBlocks * 3;
   }
 
-  @Before
-  public void setup() throws IOException {
-    conf = getConf();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient()
-        .createErasureCodingZone("/", null, cellSize);
-    cluster.waitActive();
-  }
-
-  @After
-  public void tearDown() {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
-  }
-
   private Configuration getConf() {
     Configuration conf = super.getConf(numDNs);
     conf.setInt("io.bytes.per.checksum", cellSize);
@@ -71,14 +53,26 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   @Test
   @Override
   public void testRead() throws Exception {
-    //TODO: DFSStripedInputStream handles token expiration
-//    doTestRead(conf, cluster, true);
+    conf = getConf();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
+    cluster.getFileSystem().getClient()
+        .createErasureCodingZone("/", null, cellSize);
+    try {
+      cluster.waitActive();
+      doTestRead(conf, cluster, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
+  /**
+   * tested at {@link org.apache.hadoop.hdfs.TestDFSStripedOutputStreamWithFailure#testBlockTokenExpired()}
+   */
   @Test
   @Override
-  public void testWrite() throws Exception {
-    //TODO: DFSStripedOutputStream handles token expiration
+  public void testWrite(){
   }
 
   @Test
@@ -90,7 +84,9 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   @Test
   @Override
   public void testEnd2End() throws Exception {
-    //TODO: DFSStripedOutputStream handles token expiration
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    new TestBalancer().integrationTestWithStripedFile(conf);
   }
 
   @Override

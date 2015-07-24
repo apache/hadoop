@@ -195,12 +195,15 @@ public class StripedDataStreamer extends DataStreamer {
         final ExtendedBlock bg = coordinator.getBlockGroup();
         final LocatedBlock updated = callUpdateBlockForPipeline(bg);
         final long newGS = updated.getBlock().getGenerationStamp();
+        final LocatedBlock[] updatedBlks = StripedBlockUtil
+            .parseStripedBlockGroup((LocatedStripedBlock) updated,
+                BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
         for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
           final ExtendedBlock bi = coordinator.getStripedDataStreamer(i).getBlock();
           if (bi != null) {
             final LocatedBlock lb = new LocatedBlock(newBlock(bi, newGS),
                 null, null, null, -1, updated.isCorrupt(), null);
-            lb.setBlockToken(updated.getBlockToken());
+            lb.setBlockToken(updatedBlks[i].getBlockToken());
             newBlocks.offer(i, lb);
           } else {
             final LocatedBlock lb = coordinator.getFollowingBlocks().peek(i);

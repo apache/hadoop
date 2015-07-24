@@ -1469,10 +1469,19 @@ public class TestBalancer {
     }
   }
 
+  public void integrationTestWithStripedFile(Configuration conf) throws Exception {
+    initConfWithStripe(conf);
+    doTestBalancerWithStripedFile(conf);
+  }
+
   @Test(timeout = 100000)
   public void testBalancerWithStripedFile() throws Exception {
     Configuration conf = new Configuration();
     initConfWithStripe(conf);
+    doTestBalancerWithStripedFile(conf);
+  }
+
+  private void doTestBalancerWithStripedFile(Configuration conf) throws Exception {
     int numOfDatanodes = dataBlocks + parityBlocks + 2;
     int numOfRacks = dataBlocks;
     long capacity = 20 * DEFAULT_STRIPE_BLOCK_SIZE;
