@@ -345,6 +345,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3844. Make hadoop-yarn-project Native code -Wall-clean (Alan Burlison
     via Colin P. McCabe)
 
+    YARN-3026. Move application-specific container allocation logic from
+    LeafQueue to FiCaSchedulerApp. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
