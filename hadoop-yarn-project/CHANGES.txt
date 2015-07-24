@@ -716,6 +716,8 @@ Release 2.7.2 - UNRELEASED
     YARN-3969. Allow jobs to be submitted to reservation that is active 
     but does not have any allocations. (subru via curino)
 
+    YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
+    log files from full disks. (zhihai xu via jlowe)
 
 Release 2.7.1 - 2015-07-06 
 
