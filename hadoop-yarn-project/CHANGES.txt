@@ -669,6 +669,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3900. Protobuf layout of yarn_security_token causes errors in other protos
     that include it (adhoot via rkanter)
 
+    YARN-3845. Scheduler page does not render RGBA color combinations in IE11. 
+    (Contributed by Mohammad Shahid Khan)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
