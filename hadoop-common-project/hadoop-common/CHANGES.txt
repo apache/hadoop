@@ -727,6 +727,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12259. Utility to Dynamic port allocation (brahmareddy via rkanter)
 
+    HADOOP-12170. hadoop-common's JNIFlags.cmake is redundant and can be
+    removed (Alan Burlison via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
