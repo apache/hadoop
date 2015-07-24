@@ -65,7 +65,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   volatile int numContainers;
   
   final Resource minimumAllocation;
-  Resource maximumAllocation;
+  volatile Resource maximumAllocation;
   QueueState state;
   final CSQueueMetrics metrics;
   protected final PrivilegedEntity queueEntity;
@@ -77,7 +77,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   Map<AccessType, AccessControlList> acls = 
       new HashMap<AccessType, AccessControlList>();
-  boolean reservationsContinueLooking;
+  volatile boolean reservationsContinueLooking;
   private boolean preemptionDisabled;
 
   // Track resource usage-by-label like used-resource/pending-resource, etc.
@@ -333,7 +333,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   @Private
-  public synchronized Resource getMaximumAllocation() {
+  public Resource getMaximumAllocation() {
     return maximumAllocation;
   }
   
@@ -448,13 +448,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   synchronized boolean canAssignToThisQueue(Resource clusterResource,
-      String nodePartition, ResourceLimits currentResourceLimits,
-      Resource nowRequired, Resource resourceCouldBeUnreserved,
+      String nodePartition, ResourceLimits currentResourceLimits, Resource resourceCouldBeUnreserved,
       SchedulingMode schedulingMode) {
-    // New total resource = used + required
-    Resource newTotalResource =
-        Resources.add(queueUsage.getUsed(nodePartition), nowRequired);
-
     // Get current limited resource: 
     // - When doing RESPECT_PARTITION_EXCLUSIVITY allocation, we will respect
     // queues' max capacity.
@@ -470,8 +465,14 @@ public abstract class AbstractCSQueue implements CSQueue {
         getCurrentLimitResource(nodePartition, clusterResource,
             currentResourceLimits, schedulingMode);
 
-    if (Resources.greaterThan(resourceCalculator, clusterResource,
-        newTotalResource, currentLimitResource)) {
+    Resource nowTotalUsed = queueUsage.getUsed(nodePartition);
+
+    // Set headroom for currentResourceLimits
+    currentResourceLimits.setHeadroom(Resources.subtract(currentLimitResource,
+        nowTotalUsed));
+
+    if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
+        nowTotalUsed, currentLimitResource)) {
 
       // if reservation continous looking enabled, check to see if could we
       // potentially use this node instead of a reserved node if the application
@@ -483,7 +484,7 @@ public abstract class AbstractCSQueue implements CSQueue {
               resourceCouldBeUnreserved, Resources.none())) {
         // resource-without-reserved = used - reserved
         Resource newTotalWithoutReservedResource =
-            Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
+            Resources.subtract(nowTotalUsed, resourceCouldBeUnreserved);
 
         // when total-used-without-reserved-resource < currentLimit, we still
         // have chance to allocate on this node by unreserving some containers
@@ -498,8 +499,6 @@ public abstract class AbstractCSQueue implements CSQueue {
                 + newTotalWithoutReservedResource + ", maxLimitCapacity: "
                 + currentLimitResource);
           }
-          currentResourceLimits.setAmountNeededUnreserve(Resources.subtract(newTotalResource,
-            currentLimitResource));
           return true;
         }
       }
