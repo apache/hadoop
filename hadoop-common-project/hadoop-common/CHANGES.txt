@@ -497,6 +497,9 @@ Trunk (Unreleased)
 
     HADOOP-11762. Enable swift distcp to secure HDFS (Chen He via aw)
 
+    HADOOP-12009. Clarify FileSystem.listStatus() sorting order & fix
+    FileSystemContractBaseTest:testListStatus. (J.Andreina via jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
