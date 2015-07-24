@@ -101,10 +101,11 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
   /**
    * Empty the queues and timestamps.
    */
-  void clear() {
+  synchronized void clear() {
     for (int i = 0; i < LEVEL; i++) {
       priorityQueues.get(i).clear();
     }
+    corruptReplOneBlocks = 0;
     timestampsMap.clear();
   }
 
