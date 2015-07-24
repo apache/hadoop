@@ -101,10 +101,11 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   /**
    * Empty the queues.
    */
-  void clear() {
+  synchronized void clear() {
     for (int i = 0; i < LEVEL; i++) {
       priorityQueues.get(i).clear();
     }
+    corruptReplOneBlocks = 0;
   }
 
   /** Return the total number of under replication blocks */
