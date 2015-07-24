@@ -1,0 +1,763 @@
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/AltFileInputStream.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/AltFileInputStream.java
+new file mode 100644
+index 0000000..4d319ec
+--- /dev/null
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/AltFileInputStream.java
+@@ -0,0 +1,109 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.io;
++
++import org.apache.hadoop.util.Shell;
++
++import java.io.*;
++import java.nio.channels.Channels;
++import java.nio.channels.FileChannel;
++
++/**
++ * This class substitute FileInputStream.
++ */
++public class AltFileInputStream extends InputStream {
++  // For non-Windows
++  private final InputStream inputStream;
++  private final FileDescriptor fd;
++  private final FileChannel fileChannel;
++
++  // For Windows
++  private FileInputStream fileInputStream;
++
++  public AltFileInputStream(File file) throws IOException {
++    if (!Shell.WINDOWS) {
++      RandomAccessFile rf = new RandomAccessFile(file, "r");
++      this.fd = rf.getFD();
++      this.fileChannel = rf.getChannel();
++      this.inputStream = Channels.newInputStream(fileChannel);
++    } else {
++      FileInputStream fis = new FileInputStream(file);
++      this.fileInputStream = fis;
++      this.inputStream = fileInputStream;
++      this.fd = fis.getFD();
++      this.fileChannel = fis.getChannel();
++    }
++  }
++
++  public AltFileInputStream(FileDescriptor fd, FileChannel fileChannel) {
++    this.fd = fd;
++    this.fileChannel = fileChannel;
++    this.inputStream = Channels.newInputStream(fileChannel);
++  }
++
++  public AltFileInputStream(FileInputStream fis) throws IOException {
++    this.fileInputStream = fis;
++    this.inputStream = fileInputStream;
++    this.fd = fis.getFD();
++    this.fileChannel = fis.getChannel();
++  }
++
++  public final FileDescriptor getFD() throws IOException {
++    if (fd != null) {
++      return fd;
++    }
++    throw new IOException();
++  }
++
++  public FileChannel getChannel() {
++    return fileChannel;
++  }
++
++  public int read() throws IOException {
++    if (fileInputStream != null) {
++      return fileInputStream.read();
++    }else {
++      return inputStream.read();
++    }
++  }
++
++  public int read(byte[] b, int off, int len) throws IOException {
++    if (fileInputStream != null) {
++      return fileInputStream.read(b, off, len);
++    } else {
++      return inputStream.read(b, off, len);
++    }
++  }
++
++  public int read(byte[] b) throws IOException {
++    if (fileInputStream != null) {
++      return fileInputStream.read(b);
++    } else {
++      return inputStream.read(b);
++    }
++  }
++
++  public void close() throws IOException {
++    if (fileInputStream != null) {
++      fileInputStream.close();
++    }
++    fileChannel.close();
++    inputStream.close();
++  }
++}
+\ No newline at end of file
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/nativeio/NativeIO.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/nativeio/NativeIO.java
+index 688b955..f39cd21 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/nativeio/NativeIO.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/nativeio/NativeIO.java
+@@ -35,6 +35,7 @@
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.fs.CommonConfigurationKeys;
+ import org.apache.hadoop.fs.HardLink;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
+ import org.apache.hadoop.util.NativeCodeLoader;
+@@ -773,19 +774,19 @@ public static FileInputStream getShareDeleteFileInputStream(File f)
+   }
+ 
+   /**
+-   * Create a FileInputStream that shares delete permission on the
++   * Create a AltFileInputStream that shares delete permission on the
+    * file opened at a given offset, i.e. other process can delete
+    * the file the FileInputStream is reading. Only Windows implementation
+    * uses the native interface.
+    */
+-  public static FileInputStream getShareDeleteFileInputStream(File f, long seekOffset)
++  public static AltFileInputStream getShareDeleteFileInputStream(File f, long seekOffset)
+       throws IOException {
+     if (!Shell.WINDOWS) {
+       RandomAccessFile rf = new RandomAccessFile(f, "r");
+       if (seekOffset > 0) {
+         rf.seek(seekOffset);
+       }
+-      return new FileInputStream(rf.getFD());
++      return new AltFileInputStream(rf.getFD(), rf.getChannel());
+     } else {
+       // Use Windows native interface to create a FileInputStream that
+       // shares delete permission on the file opened, and set it to the
+@@ -800,7 +801,7 @@ public static FileInputStream getShareDeleteFileInputStream(File f, long seekOff
+           NativeIO.Windows.OPEN_EXISTING);
+       if (seekOffset > 0)
+         NativeIO.Windows.setFilePointer(fd, seekOffset, NativeIO.Windows.FILE_BEGIN);
+-      return new FileInputStream(fd);
++      return new AltFileInputStream(new FileInputStream(fd));
+     }
+   }
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/BlockReaderLocalLegacy.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/BlockReaderLocalLegacy.java
+index c16ffdf..a15efc7 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/BlockReaderLocalLegacy.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/BlockReaderLocalLegacy.java
+@@ -45,6 +45,7 @@
+ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.ipc.RPC;
+ import org.apache.hadoop.security.UserGroupInformation;
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockMetadataHeader.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockMetadataHeader.java
+index 4977fd7..650c4b8 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockMetadataHeader.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockMetadataHeader.java
+@@ -17,15 +17,7 @@
+  */
+ package org.apache.hadoop.hdfs.server.datanode;
+ 
+-import java.io.BufferedInputStream;
+-import java.io.ByteArrayInputStream;
+-import java.io.DataInputStream;
+-import java.io.DataOutputStream;
+-import java.io.EOFException;
+-import java.io.File;
+-import java.io.FileInputStream;
+-import java.io.IOException;
+-import java.io.RandomAccessFile;
++import java.io.*;
+ import java.nio.ByteBuffer;
+ import java.nio.channels.FileChannel;
+ 
+@@ -35,6 +27,7 @@
+ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.hdfs.DFSUtil;
+ import org.apache.hadoop.hdfs.HdfsConfiguration;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.util.DataChecksum;
+ 
+@@ -153,7 +146,7 @@ public static BlockMetadataHeader readHeader(File file) throws IOException {
+     DataInputStream in = null;
+     try {
+       in = new DataInputStream(new BufferedInputStream(
+-                               new FileInputStream(file)));
++                               new AltFileInputStream(file)));
+       return readHeader(in);
+     } finally {
+       IOUtils.closeStream(in);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockSender.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockSender.java
+index 79f4dd7..0b9894e 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockSender.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockSender.java
+@@ -21,7 +21,6 @@
+ import java.io.DataInputStream;
+ import java.io.DataOutputStream;
+ import java.io.FileDescriptor;
+-import java.io.FileInputStream;
+ import java.io.FileNotFoundException;
+ import java.io.IOException;
+ import java.io.InputStream;
+@@ -41,6 +40,7 @@
+ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+ import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.LongWritable;
+ import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
+@@ -388,8 +388,8 @@
+         DataNode.LOG.debug("replica=" + replica);
+       }
+       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
+-      if (blockIn instanceof FileInputStream) {
+-        blockInFd = ((FileInputStream)blockIn).getFD();
++      if (blockIn instanceof AltFileInputStream) {
++        blockInFd = ((AltFileInputStream)blockIn).getFD();
+       } else {
+         blockInFd = null;
+       }
+@@ -579,7 +579,7 @@ private int sendPacket(ByteBuffer pkt, int maxChunks, OutputStream out,
+         sockOut.write(buf, headerOff, dataOff - headerOff);
+         
+         // no need to flush since we know out is not a buffered stream
+-        FileChannel fileCh = ((FileInputStream)blockIn).getChannel();
++        FileChannel fileCh = ((AltFileInputStream)blockIn).getChannel();
+         LongWritable waitTime = new LongWritable();
+         LongWritable transferTime = new LongWritable();
+         sockOut.transferToFully(fileCh, blockInPosition, dataLen, 
+@@ -742,9 +742,9 @@ private long doSendBlock(DataOutputStream out, OutputStream baseStream,
+       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
+       boolean transferTo = transferToAllowed && !verifyChecksum
+           && baseStream instanceof SocketOutputStream
+-          && blockIn instanceof FileInputStream;
++          && blockIn instanceof AltFileInputStream;
+       if (transferTo) {
+-        FileChannel fileChannel = ((FileInputStream)blockIn).getChannel();
++        FileChannel fileChannel = ((AltFileInputStream)blockIn).getChannel();
+         blockInPosition = fileChannel.position();
+         streamForSendChunks = baseStream;
+         maxChunksPerPacket = numberOfChunks(TRANSFERTO_BUFFER_SIZE);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
+index e265dad..f2e2ec4 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
+@@ -46,18 +46,7 @@
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
+ import static org.apache.hadoop.util.ExitUtil.terminate;
+ 
+-import java.io.BufferedOutputStream;
+-import java.io.ByteArrayInputStream;
+-import java.io.DataInputStream;
+-import java.io.DataOutputStream;
+-import java.io.EOFException;
+-import java.io.File;
+-import java.io.FileInputStream;
+-import java.io.FileNotFoundException;
+-import java.io.IOException;
+-import java.io.InputStream;
+-import java.io.OutputStream;
+-import java.io.PrintStream;
++import java.io.*;
+ import java.lang.management.ManagementFactory;
+ import java.net.InetSocketAddress;
+ import java.net.Socket;
+@@ -100,10 +89,7 @@
+ import org.apache.hadoop.fs.Path;
+ import org.apache.hadoop.fs.StorageType;
+ import org.apache.hadoop.fs.permission.FsPermission;
+-import org.apache.hadoop.hdfs.DFSConfigKeys;
+-import org.apache.hadoop.hdfs.DFSUtil;
+-import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+-import org.apache.hadoop.hdfs.HdfsConfiguration;
++import org.apache.hadoop.hdfs.*;
+ import org.apache.hadoop.hdfs.client.BlockReportOptions;
+ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+ import org.apache.hadoop.hdfs.net.DomainPeerServer;
+@@ -205,6 +191,7 @@
+ import com.google.common.cache.LoadingCache;
+ import com.google.common.collect.Lists;
+ import com.google.protobuf.BlockingService;
++import sun.tools.tree.CastExpression;
+ 
+ /**********************************************************
+  * DataNode is a class (and program) that stores a set of
+@@ -1595,9 +1582,9 @@ public ShortCircuitFdsVersionException(String msg) {
+   }
+ 
+   FileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
+-      final Token<BlockTokenIdentifier> token, int maxVersion) 
+-          throws ShortCircuitFdsUnsupportedException,
+-            ShortCircuitFdsVersionException, IOException {
++                                                  final Token<BlockTokenIdentifier> token, int maxVersion)
++      throws ShortCircuitFdsUnsupportedException,
++      ShortCircuitFdsVersionException, IOException {
+     if (fileDescriptorPassingDisabledReason != null) {
+       throw new ShortCircuitFdsUnsupportedException(
+           fileDescriptorPassingDisabledReason);
+@@ -1606,13 +1593,13 @@ public ShortCircuitFdsVersionException(String msg) {
+     int blkVersion = CURRENT_BLOCK_FORMAT_VERSION;
+     if (maxVersion < blkVersion) {
+       throw new ShortCircuitFdsVersionException("Your client is too old " +
+-        "to read this block!  Its format version is " + 
+-        blkVersion + ", but the highest format version you can read is " +
+-        maxVersion);
++          "to read this block!  Its format version is " +
++          blkVersion + ", but the highest format version you can read is " +
++          maxVersion);
+     }
+     metrics.incrBlocksGetLocalPathInfo();
+     FileInputStream fis[] = new FileInputStream[2];
+-    
++
+     try {
+       fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataXceiver.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataXceiver.java
+index 26d669c..75fa7dd 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataXceiver.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataXceiver.java
+@@ -27,17 +27,7 @@
+ import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
+ import static org.apache.hadoop.util.Time.monotonicNow;
+ 
+-import java.io.BufferedInputStream;
+-import java.io.BufferedOutputStream;
+-import java.io.DataInputStream;
+-import java.io.DataOutputStream;
+-import java.io.EOFException;
+-import java.io.FileDescriptor;
+-import java.io.FileInputStream;
+-import java.io.IOException;
+-import java.io.InputStream;
+-import java.io.InterruptedIOException;
+-import java.io.OutputStream;
++import java.io.*;
+ import java.net.InetSocketAddress;
+ import java.net.Socket;
+ import java.net.SocketException;
+@@ -50,7 +40,6 @@
+ import org.apache.hadoop.fs.StorageType;
+ import org.apache.hadoop.hdfs.DFSUtil;
+ import org.apache.hadoop.hdfs.ExtendedBlockId;
+-import org.apache.hadoop.hdfs.HdfsConfiguration;
+ import org.apache.hadoop.hdfs.net.Peer;
+ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+@@ -96,6 +85,7 @@
+  * Thread for processing incoming/outgoing data stream.
+  */
+ class DataXceiver extends Receiver implements Runnable {
++
+   public static final Log LOG = DataNode.LOG;
+   static final Log ClientTraceLog = DataNode.ClientTraceLog;
+   
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DatanodeUtil.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DatanodeUtil.java
+index 746c3f6..8de07cd 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DatanodeUtil.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DatanodeUtil.java
+@@ -121,14 +121,15 @@ public static File idToBlockDir(File root, long blockId) {
+   }
+ 
+   /**
+-   * @return the FileInputStream for the meta data of the given block.
++   * @return the AltFileInputStream for the meta data of the given block.
+    * @throws FileNotFoundException
+    *           if the file not found.
+    * @throws ClassCastException
+-   *           if the underlying input stream is not a FileInputStream.
++   *           if the underlying input stream is not a AltFileInputStream.
+    */
+   public static FileInputStream getMetaDataInputStream(
+-      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException {
++      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException
++  {
+     final LengthInputStream lin = data.getMetaDataInputStream(b);
+     if (lin == null) {
+       throw new FileNotFoundException("Meta file for " + b + " not found.");
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/ReplicaInfo.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/ReplicaInfo.java
+index 136d8a9..0188ffe 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/ReplicaInfo.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/ReplicaInfo.java
+@@ -18,7 +18,6 @@
+ package org.apache.hadoop.hdfs.server.datanode;
+ 
+ import java.io.File;
+-import java.io.FileInputStream;
+ import java.io.FileOutputStream;
+ import java.io.IOException;
+ import java.util.ArrayList;
+@@ -31,6 +30,7 @@
+ import org.apache.hadoop.fs.HardLink;
+ import org.apache.hadoop.hdfs.protocol.Block;
+ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ 
+ import com.google.common.annotations.VisibleForTesting;
+@@ -239,7 +239,7 @@ public long getOriginalBytesReserved() {
+   private void unlinkFile(File file, Block b) throws IOException {
+     File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
+     try {
+-      FileInputStream in = new FileInputStream(file);
++      AltFileInputStream in = new AltFileInputStream(file);
+       try {
+         FileOutputStream out = new FileOutputStream(tmpFile);
+         try {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/BlockPoolSlice.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/BlockPoolSlice.java
+index d1f7c5f..c5505e7 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/BlockPoolSlice.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/BlockPoolSlice.java
+@@ -17,17 +17,7 @@
+  */
+ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
+ 
+-import java.io.BufferedInputStream;
+-import java.io.DataInputStream;
+-import java.io.File;
+-import java.io.FileInputStream;
+-import java.io.FileNotFoundException;
+-import java.io.FileOutputStream;
+-import java.io.IOException;
+-import java.io.InputStream;
+-import java.io.OutputStreamWriter;
+-import java.io.RandomAccessFile;
+-import java.io.Writer;
++import java.io.*;
+ import java.util.Iterator;
+ import java.util.Scanner;
+ 
+@@ -49,6 +39,7 @@
+ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+ import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
+ import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.nativeio.NativeIO;
+ import org.apache.hadoop.util.DataChecksum;
+@@ -633,7 +624,7 @@ private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
+         return 0;
+       }
+       checksumIn = new DataInputStream(
+-          new BufferedInputStream(new FileInputStream(metaFile),
++          new BufferedInputStream(new AltFileInputStream(metaFile),
+               ioFileBufferSize));
+ 
+       // read and handle the common header here. For now just a version
+@@ -648,7 +639,7 @@ private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
+         return 0;
+       }
+       IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
+-      blockIn = new FileInputStream(blockFile);
++      blockIn = new AltFileInputStream(blockFile);
+       long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
+       IOUtils.skipFully(blockIn, lastChunkStartPos);
+       int lastChunkSize = (int)Math.min(
+@@ -719,9 +710,9 @@ private boolean readReplicasFromCache(ReplicaMap volumeMap,
+       }
+       return false;
+     }
+-    FileInputStream inputStream = null;
++    AltFileInputStream inputStream = null;
+     try {
+-      inputStream = new FileInputStream(replicaFile);
++      inputStream = new AltFileInputStream(replicaFile);
+       BlockListAsLongs blocksList =  BlockListAsLongs.readFrom(inputStream);
+       Iterator<BlockReportReplica> iterator = blocksList.iterator();
+       while (iterator.hasNext()) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetCache.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetCache.java
+index f70d4af..70ce136 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetCache.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetCache.java
+@@ -52,6 +52,7 @@
+ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+ import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.nativeio.NativeIO;
+ import org.apache.hadoop.util.Time;
+ import org.slf4j.Logger;
+@@ -430,7 +431,8 @@ long roundUpPageSize(long count) {
+     @Override
+     public void run() {
+       boolean success = false;
+-      FileInputStream blockIn = null, metaIn = null;
++      AltFileInputStream blockIn = null;
++      FileInputStream metaIn = null;
+       MappableBlock mappableBlock = null;
+       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
+           key.getBlockId(), length, genstamp);
+@@ -446,7 +448,7 @@ public void run() {
+         }
+         reservedBytes = true;
+         try {
+-          blockIn = (FileInputStream)dataset.getBlockInputStream(extBlk, 0);
++          blockIn = (AltFileInputStream)dataset.getBlockInputStream(extBlk, 0);
+           metaIn = DatanodeUtil.getMetaDataInputStream(extBlk, dataset);
+         } catch (ClassCastException e) {
+           LOG.warn("Failed to cache " + key +
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetImpl.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetImpl.java
+index a2bb2c0..22ed686 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetImpl.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/FsDatasetImpl.java
+@@ -57,10 +57,7 @@
+ import org.apache.hadoop.fs.permission.FsPermission;
+ import org.apache.hadoop.fs.Path;
+ import org.apache.hadoop.fs.StorageType;
+-import org.apache.hadoop.hdfs.DFSConfigKeys;
+-import org.apache.hadoop.hdfs.DFSUtil;
+-import org.apache.hadoop.hdfs.ExtendedBlockId;
+-import org.apache.hadoop.hdfs.HdfsConfiguration;
++import org.apache.hadoop.hdfs.*;
+ import org.apache.hadoop.hdfs.protocol.Block;
+ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
+@@ -103,6 +100,7 @@
+ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.MultipleIOException;
+ import org.apache.hadoop.io.nativeio.NativeIO;
+@@ -227,7 +225,7 @@ public LengthInputStream getMetaDataInputStream(ExtendedBlock b)
+           NativeIO.getShareDeleteFileInputStream(meta),
+           meta.length());
+     }
+-    return new LengthInputStream(new FileInputStream(meta), meta.length());
++    return new LengthInputStream(new AltFileInputStream(meta), meta.length());
+   }
+     
+   final DataNode datanode;
+@@ -729,7 +727,7 @@ private File getBlockFileNoExistsCheck(ExtendedBlock b,
+   }
+ 
+   @Override // FsDatasetSpi
+-  public InputStream getBlockInputStream(ExtendedBlock b,
++  public AltFileInputStream getBlockInputStream(ExtendedBlock b,
+       long seekOffset) throws IOException {
+     File blockFile = getBlockFileNoExistsCheck(b, true);
+     if (isNativeIOAvailable) {
+@@ -804,7 +802,7 @@ public synchronized ReplicaInputStreams getTmpInputStreams(ExtendedBlock b,
+     }
+   }
+ 
+-  private static FileInputStream openAndSeek(File file, long offset)
++  private static AltFileInputStream openAndSeek(File file, long offset)
+       throws IOException {
+     RandomAccessFile raf = null;
+     try {
+@@ -812,7 +810,7 @@ private static FileInputStream openAndSeek(File file, long offset)
+       if (offset > 0) {
+         raf.seek(offset);
+       }
+-      return new FileInputStream(raf.getFD());
++      return new AltFileInputStream(raf.getFD(), raf.getChannel());
+     } catch(IOException ioe) {
+       IOUtils.cleanup(null, raf);
+       throw ioe;
+@@ -978,7 +976,7 @@ private static void computeChecksum(File srcMeta, File dstMeta,
+       int offset = 0;
+       try (InputStream dataIn = isNativeIOAvailable ?
+           NativeIO.getShareDeleteFileInputStream(blockFile) :
+-          new FileInputStream(blockFile)) {
++          new AltFileInputStream(blockFile)) {
+ 
+         for (int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
+           if (n > 0) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/MappableBlock.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/MappableBlock.java
+index 45aa364..1862133 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/MappableBlock.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/MappableBlock.java
+@@ -18,11 +18,7 @@
+ 
+ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
+ 
+-import java.io.BufferedInputStream;
+-import java.io.Closeable;
+-import java.io.DataInputStream;
+-import java.io.FileInputStream;
+-import java.io.IOException;
++import java.io.*;
+ import java.nio.ByteBuffer;
+ import java.nio.MappedByteBuffer;
+ import java.nio.channels.FileChannel;
+@@ -33,11 +29,13 @@
+ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.fs.ChecksumException;
+ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.nativeio.NativeIO;
+ import org.apache.hadoop.util.DataChecksum;
+ 
+-import com.google.common.annotations.VisibleForTesting;
+ import com.google.common.base.Preconditions;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ 
+ /**
+  * Represents an HDFS block that is mmapped by the DataNode.
+@@ -45,6 +43,9 @@
+ @InterfaceAudience.Private
+ @InterfaceStability.Unstable
+ public class MappableBlock implements Closeable {
++
++  private static final Logger LOG =
++      LoggerFactory.getLogger(MappableBlock.class);
+   private MappedByteBuffer mmap;
+   private final long length;
+ 
+@@ -73,7 +74,7 @@ public long getLength() {
+    * @return               The Mappable block.
+    */
+   public static MappableBlock load(long length,
+-      FileInputStream blockIn, FileInputStream metaIn,
++      AltFileInputStream blockIn, FileInputStream metaIn,
+       String blockFileName) throws IOException {
+     MappableBlock mappableBlock = null;
+     MappedByteBuffer mmap = null;
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/shortcircuit/ShortCircuitReplica.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/shortcircuit/ShortCircuitReplica.java
+index 1390cf3..0616f6c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/shortcircuit/ShortCircuitReplica.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/shortcircuit/ShortCircuitReplica.java
+@@ -29,6 +29,7 @@
+ import org.apache.hadoop.hdfs.ExtendedBlockId;
+ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.nativeio.NativeIO;
+ import org.apache.hadoop.util.Time;
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/MD5FileUtils.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/MD5FileUtils.java
+index d87ffbf..406f276 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/MD5FileUtils.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/MD5FileUtils.java
+@@ -31,6 +31,7 @@
+ 
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
++import org.apache.hadoop.io.AltFileInputStream;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.MD5Hash;
+ import org.apache.hadoop.util.StringUtils;
+@@ -125,7 +126,7 @@ public static MD5Hash readStoredMd5ForFile(File dataFile) throws IOException {
+    * Read dataFile and compute its MD5 checksum.
+    */
+   public static MD5Hash computeMd5ForFile(File dataFile) throws IOException {
+-    InputStream in = new FileInputStream(dataFile);
++    InputStream in = new AltFileInputStream(dataFile);
+     try {
+       MessageDigest digester = MD5Hash.getDigester();
+       DigestInputStream dis = new DigestInputStream(in, digester);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestAltFileInputStream.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestAltFileInputStream.java
+new file mode 100644
+index 0000000..e45c027
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestAltFileInputStream.java
+@@ -0,0 +1,83 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.util;
++
++import org.apache.hadoop.fs.FileUtil;
++import org.apache.hadoop.hdfs.DFSTestUtil;
++import org.apache.hadoop.io.AltFileInputStream;
++import org.apache.hadoop.test.PathUtils;
++import org.junit.Before;
++import org.junit.Test;
++
++import java.io.*;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertNotNull;
++import static org.junit.Assert.assertTrue;
++
++public class TestAltFileInputStream {
++  private static final File TEST_DIR = PathUtils.getTestDir(TestAltFileInputStream.class);
++  private static final File TEST_FILE = new File(TEST_DIR,
++      "testAltFileInputStream.dat");
++
++  private static final int TEST_DATA_LEN = 7 * 1024; // 7 KB test data
++  private static final byte[] TEST_DATA = DFSTestUtil.generateSequentialBytes(0, TEST_DATA_LEN);
++
++  @Before
++  public void setup() throws IOException {
++    FileUtil.fullyDelete(TEST_DIR);
++    assertTrue(TEST_DIR.mkdirs());
++    FileOutputStream fos = new FileOutputStream(TEST_FILE);
++    fos.write(TEST_DATA);
++    fos.close();
++  }
++
++  @Test
++  public void readWithFileName() throws Exception {
++    AltFileInputStream inputStream = new AltFileInputStream(TEST_FILE);
++    assertNotNull(inputStream.getFD());
++    assertNotNull(inputStream.getChannel());
++    calculate(inputStream);
++  }
++
++  @Test
++  public void readWithFdAndChannel() throws Exception {
++    RandomAccessFile raf = new RandomAccessFile(TEST_FILE, "r");
++    AltFileInputStream inputStream = new AltFileInputStream(raf.getFD(), raf.getChannel());
++    assertNotNull(inputStream.getFD());
++    assertNotNull(inputStream.getChannel());
++    calculate(inputStream);
++  }
++
++  @Test
++  public void readWithFileByFileInputStream() throws Exception {
++    FileInputStream fileInputStream = new FileInputStream(TEST_FILE);
++    assertNotNull(fileInputStream.getChannel());
++    assertNotNull(fileInputStream.getFD());
++    calculate(fileInputStream);
++  }
++
++  public void calculate(InputStream inputStream) throws Exception {
++   long numberOfTheFileByte = 0;
++   while (inputStream.read() != -1) {
++     numberOfTheFileByte++;
++   }
++   assertEquals(TEST_DATA_LEN, numberOfTheFileByte);
++   inputStream.close();
++  }
++}
+\ No newline at end of file
