@@ -373,3 +373,6 @@
 
     HDFS-8813. Erasure Coding: Client no need to decode missing parity blocks.
     (Walter Su via jing9)
+
+    HDFS-8798. Erasure Coding: fix DFSStripedInputStream/DFSStripedOutputStream
+    re-fetch token when expired. (Walter Su via jing9)

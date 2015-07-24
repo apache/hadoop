@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.ReadOption;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -44,7 +43,6 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -207,44 +205,6 @@ public class DFSStripedInputStream extends DFSInputStream {
   }
 
   /**
-   * @throws IOException only when failing to refetch block token, which happens
-   * when this client cannot get located block information from NameNode. This
-   * method returns null instead of throwing exception when failing to connect
-   * to the DataNode.
-   */
-  private BlockReader getBlockReaderWithRetry(LocatedBlock targetBlock,
-      long offsetInBlock, long length, InetSocketAddress targetAddr,
-      StorageType storageType, DatanodeInfo datanode, long offsetInFile,
-      ReaderRetryPolicy retry) throws IOException {
-    // only need to get a new access token or a new encryption key once
-    while (true) {
-      try {
-        return getBlockReader(targetBlock, offsetInBlock, length, targetAddr,
-            storageType, datanode);
-      } catch (IOException e) {
-        if (e instanceof InvalidEncryptionKeyException &&
-            retry.shouldRefetchEncryptionKey()) {
-          DFSClient.LOG.info("Will fetch a new encryption key and retry, "
-              + "encryption key was invalid when connecting to " + targetAddr
-              + " : " + e);
-          dfsClient.clearDataEncryptionKey();
-          retry.refetchEncryptionKey();
-        } else if (retry.shouldRefetchToken() &&
-            tokenRefetchNeeded(e, targetAddr)) {
-          fetchBlockAt(offsetInFile);
-          retry.refetchToken();
-        } else {
-          DFSClient.LOG.warn("Failed to connect to " + targetAddr + " for block"
-              + ", add to deadNodes and continue.", e);
-          // Put chosen node into dead list, continue
-          addToDeadNodes(datanode);
-          return null;
-        }
-      }
-    }
-  }
-
-  /**
    * Extend the super method with the logic of switching between cells.
    * When reaching the end of a cell, proceed to the next cell and read it
    * with the next blockReader.
@@ -293,13 +253,13 @@ public class DFSStripedInputStream extends DFSInputStream {
     final int stripeBufOffset = (int) (offsetInBlockGroup % stripeLen);
     final int stripeLimit = (int) Math.min(currentLocatedBlock.getBlockSize()
         - (stripeIndex * stripeLen), stripeLen);
-    curStripeRange = new StripeRange(offsetInBlockGroup,
+    StripeRange stripeRange = new StripeRange(offsetInBlockGroup,
         stripeLimit - stripeBufOffset);
 
     LocatedStripedBlock blockGroup = (LocatedStripedBlock) currentLocatedBlock;
     AlignedStripe[] stripes = StripedBlockUtil.divideOneStripe(schema, cellSize,
         blockGroup, offsetInBlockGroup,
-        offsetInBlockGroup + curStripeRange.length - 1, curStripeBuf);
+        offsetInBlockGroup + stripeRange.length - 1, curStripeBuf);
     final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(
         blockGroup, cellSize, dataBlkNum, parityBlkNum);
     // read the whole stripe
@@ -311,6 +271,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
     curStripeBuf.position(stripeBufOffset);
     curStripeBuf.limit(stripeLimit);
+    curStripeRange = stripeRange;
   }
 
   private Callable<Void> readCells(final BlockReader reader,
@@ -423,7 +384,6 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
     Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap =
         new ConcurrentHashMap<>();
-    failures = 0;
     if (pos < getFileLength()) {
       try {
         if (pos > blockEnd) {
@@ -623,13 +583,46 @@ public class DFSStripedInputStream extends DFSInputStream {
 
     boolean createBlockReader(LocatedBlock block, int chunkIndex)
         throws IOException {
-      DNAddrPair dnInfo = getBestNodeDNAddrPair(block, null);
-      if (dnInfo != null) {
-        BlockReader reader = getBlockReaderWithRetry(block,
-            alignedStripe.getOffsetInBlock(),
-            block.getBlockSize() - alignedStripe.getOffsetInBlock(),
-            dnInfo.addr, dnInfo.storageType, dnInfo.info,
-            block.getStartOffset(), new ReaderRetryPolicy());
+      BlockReader reader = null;
+      final ReaderRetryPolicy retry = new ReaderRetryPolicy();
+      DNAddrPair dnInfo = new DNAddrPair(null, null, null);
+
+      while(true) {
+        try {
+          // the cached block location might have been re-fetched, so always
+          // get it from cache.
+          block = refreshLocatedBlock(block);
+          targetBlocks[chunkIndex] = block;
+
+          // internal block has one location, just rule out the deadNodes
+          dnInfo = getBestNodeDNAddrPair(block, null);
+          if (dnInfo == null) {
+            break;
+          }
+          reader = getBlockReader(block, alignedStripe.getOffsetInBlock(),
+              block.getBlockSize() - alignedStripe.getOffsetInBlock(),
+              dnInfo.addr, dnInfo.storageType, dnInfo.info);
+        } catch (IOException e) {
+          if (e instanceof InvalidEncryptionKeyException &&
+              retry.shouldRefetchEncryptionKey()) {
+            DFSClient.LOG.info("Will fetch a new encryption key and retry, "
+                + "encryption key was invalid when connecting to " + dnInfo.addr
+                + " : " + e);
+            dfsClient.clearDataEncryptionKey();
+            retry.refetchEncryptionKey();
+          } else if (retry.shouldRefetchToken() &&
+              tokenRefetchNeeded(e, dnInfo.addr)) {
+            fetchBlockAt(block.getStartOffset());
+            retry.refetchToken();
+          } else {
+            //TODO: handles connection issues
+            DFSClient.LOG.warn("Failed to connect to " + dnInfo.addr + " for " +
+                "block" + block.getBlock(), e);
+            // re-fetch the block in case the block has been moved
+            fetchBlockAt(block.getStartOffset());
+            addToDeadNodes(dnInfo.info);
+          }
+        }
         if (reader != null) {
           readerInfos[chunkIndex] = new BlockReaderInfo(reader, block,
               dnInfo.info, alignedStripe.getOffsetInBlock());

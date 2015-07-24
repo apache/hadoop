@@ -119,8 +119,8 @@ public class StripedBlockUtil {
           bg.getStartOffset(), bg.isCorrupt(), null);
     }
     Token<BlockTokenIdentifier>[] blockTokens = bg.getBlockTokens();
-    if (idxInBlockGroup < blockTokens.length) {
-      locatedBlock.setBlockToken(blockTokens[idxInBlockGroup]);
+    if (idxInReturnedLocs < blockTokens.length) {
+      locatedBlock.setBlockToken(blockTokens[idxInReturnedLocs]);
     }
     return locatedBlock;
   }
