@@ -683,6 +683,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
     via ozawa)
 
+    YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
+    (Mit Desai via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
