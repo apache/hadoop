@@ -796,7 +796,15 @@
     <name>yarn.system-metrics-publisher.enabled</name>
     <value>false</value>
   </property>
- 
+
+  <property>
+    <description>The setting that controls whether yarn container metrics is
+    published to the timeline server or not by RM. This configuration setting is
+    for ATS V2.</description>
+    <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
+    <value>false</value>
+  </property>
+
 
   <property>
     <description>Number of worker threads that send the yarn system metrics
@@ -2195,6 +2203,13 @@
       be close.
     </description>
     <value>420</value>
+  </property>
+
+  <property>
+    <description>The setting that controls how often the timeline collector
+    flushes the timeline writer.</description>
+    <name>yarn.timeline-service.writer.flush-interval-seconds</name>
+    <value>60</value>
   </property>
 
   <!--  Shared Cache Configuration -->
