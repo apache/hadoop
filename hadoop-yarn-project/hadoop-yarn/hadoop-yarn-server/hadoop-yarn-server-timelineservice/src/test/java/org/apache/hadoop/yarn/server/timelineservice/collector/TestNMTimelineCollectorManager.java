@@ -67,6 +67,11 @@ public class TestNMTimelineCollectorManager {
   }
 
   @Test
+  public void testStartingWriterFlusher() throws Exception {
+    assertTrue(collectorManager.writerFlusherRunning());
+  }
+
+  @Test
   public void testStartWebApp() throws Exception {
     assertNotNull(collectorManager.getRestServerBindAddress());
     String address = collectorManager.getRestServerBindAddress();

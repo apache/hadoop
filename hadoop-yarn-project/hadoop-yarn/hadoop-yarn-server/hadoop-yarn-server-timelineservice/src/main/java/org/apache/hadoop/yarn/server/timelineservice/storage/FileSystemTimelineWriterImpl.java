@@ -127,6 +127,11 @@ public class FileSystemTimelineWriterImpl extends AbstractService
     mkdirs(outputRoot, ENTITIES_DIR);
   }
 
+  @Override
+  public void flush() throws IOException {
+    // no op
+  }
+
   private static String mkdirs(String... dirStrs) throws IOException {
     StringBuilder path = new StringBuilder();
     for (String dirStr : dirStrs) {

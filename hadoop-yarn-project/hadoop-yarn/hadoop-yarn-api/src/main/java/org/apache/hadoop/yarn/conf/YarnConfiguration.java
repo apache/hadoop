@@ -1967,6 +1967,15 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_READER_CLASS =
       TIMELINE_SERVICE_PREFIX + "reader.class";
 
+  /** The setting that controls how often the timeline collector flushes the
+   * timeline writer.
+   */
+  public static final String TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS =
+      TIMELINE_SERVICE_PREFIX + "writer.flush-interval-seconds";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS = 60;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
