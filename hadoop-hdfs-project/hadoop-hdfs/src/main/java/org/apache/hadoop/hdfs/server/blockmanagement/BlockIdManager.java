@@ -248,4 +248,8 @@ public class BlockIdManager {
     return (int) (reportedBlock.getBlockId() &
         HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
   }
+
+  SequentialBlockGroupIdGenerator getBlockGroupIdGenerator() {
+    return blockGroupIdGenerator;
+  }
 }

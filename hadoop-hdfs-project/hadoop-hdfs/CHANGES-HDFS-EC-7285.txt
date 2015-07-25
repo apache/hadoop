@@ -376,3 +376,6 @@
 
     HDFS-8798. Erasure Coding: fix DFSStripedInputStream/DFSStripedOutputStream
     re-fetch token when expired. (Walter Su via jing9)
+
+    HDFS-8769. Erasure coding: unit test for SequentialBlockGroupIdGenerator.
+    (Rakesh R via waltersu4549)
