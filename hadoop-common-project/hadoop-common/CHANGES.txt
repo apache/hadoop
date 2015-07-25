@@ -497,6 +497,9 @@ Trunk (Unreleased)
 
     HADOOP-11762. Enable swift distcp to secure HDFS (Chen He via aw)
 
+    HADOOP-12009. Clarify FileSystem.listStatus() sorting order & fix
+    FileSystemContractBaseTest:testListStatus. (J.Andreina via jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -715,6 +718,19 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12184. Remove unused Linux-specific constants in NativeIO (Martin
     Walsh via Colin P. McCabe)
+
+    HADOOP-12161. Add getStoragePolicy API to the FileSystem interface.
+    (Brahma Reddy Battula via Arpit Agarwal)
+
+    HADOOP-12189. Improve CallQueueManager#swapQueue to make queue elements
+    drop nearly impossible. (Zhihai Xu via wang)
+
+    HADOOP-12259. Utility to Dynamic port allocation (brahmareddy via rkanter)
+
+    HADOOP-12170. hadoop-common's JNIFlags.cmake is redundant and can be
+    removed (Alan Burlison via Colin P. McCabe)
+
+    HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
 
   OPTIMIZATIONS
 

@@ -205,7 +205,7 @@
               <imports>
                 <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-common/src/main/proto/server/</param>
+                <param>${basedir}/../../hadoop-yarn-common/src/main/proto</param>
                 <param>${basedir}/../hadoop-yarn-server-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

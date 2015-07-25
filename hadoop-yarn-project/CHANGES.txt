@@ -147,6 +147,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
     in ZKRMStateStore. (Jian He via junping_du)
 
+    YARN-3656. LowCost: A Cost-Based Placement Agent for YARN Reservations. 
+    (Jonathan Yaniv and Ishai Menache via curino)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -344,6 +347,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3844. Make hadoop-yarn-project Native code -Wall-clean (Alan Burlison
     via Colin P. McCabe)
+
+    YARN-3026. Move application-specific container allocation logic from
+    LeafQueue to FiCaSchedulerApp. (Wangda Tan via jianhe)
 
   OPTIMIZATIONS
 
@@ -664,6 +670,21 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3956. Fix TestNodeManagerHardwareUtils fails on Mac (Varun Vasudev via wangda)
 
+    YARN-3941. Proportional Preemption policy should try to avoid sending duplicate 
+    PREEMPT_CONTAINER event to scheduler. (Sunil G via wangda)
+
+    YARN-3900. Protobuf layout of yarn_security_token causes errors in other protos
+    that include it (adhoot via rkanter)
+
+    YARN-3845. Scheduler page does not render RGBA color combinations in IE11. 
+    (Contributed by Mohammad Shahid Khan)
+
+    YARN-3957. FairScheduler NPE In FairSchedulerQueueInfo causing scheduler page to 
+    return 500. (Anubhav Dhoot via kasha)
+
+    YARN-3973. Recent changes to application priority management break 
+    reservation system from YARN-1051. (Carlo Curino via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -674,6 +695,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
     via ozawa)
+
+    YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
+    (Mit Desai via xgong)
 
   OPTIMIZATIONS
 
@@ -695,6 +719,12 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3878. AsyncDispatcher can hang while stopping if it is configured for
     draining events on stop. (Varun Saxena via jianhe)
+
+    YARN-3969. Allow jobs to be submitted to reservation that is active 
+    but does not have any allocations. (subru via curino)
+
+    YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
+    log files from full disks. (zhihai xu via jlowe)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -855,6 +885,7 @@ Release 2.7.1 - 2015-07-06
 
     YARN-3850. NM fails to read files from full disks which can lead to
     container logs being lost and other issues (Varun Saxena via jlowe)
+
 
 Release 2.7.0 - 2015-04-20
 

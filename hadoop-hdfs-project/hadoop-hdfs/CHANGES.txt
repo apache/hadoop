@@ -744,6 +744,15 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8797. WebHdfsFileSystem creates too many connections for pread. (jing9)
 
+    HDFS-8730. Clean up the import statements in ClientProtocol.
+    (Takanobu Asanuma via wheat9)
+
+    HDFS-6682. Add a metric to expose the timestamp of the oldest
+    under-replicated block. (aajisaka)
+
+    HDFS-8735. Inotify: All events classes should implement toString() API.
+    (Surendra Singh Lilhore via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1090,6 +1099,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
+    HDFS-8806. Inconsistent metrics: number of missing blocks with replication
+    factor 1 not properly cleared. (Zhe Zhang via aajisaka)
 
 Release 2.7.1 - 2015-07-06
 

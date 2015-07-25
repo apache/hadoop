@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMActiveServiceContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublis
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
@@ -56,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -123,6 +126,12 @@ public class TestUtils {
     
     rmContext.setNodeLabelManager(nlm);
     rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
+
+    ResourceScheduler mockScheduler = mock(ResourceScheduler.class);
+    when(mockScheduler.getResourceCalculator()).thenReturn(
+        new DefaultResourceCalculator());
+    rmContext.setScheduler(mockScheduler);
+
     return rmContext;
   }
   
@@ -165,26 +174,18 @@ public class TestUtils {
   }
   
   public static ApplicationId getMockApplicationId(int appId) {
-    ApplicationId applicationId = mock(ApplicationId.class);
-    when(applicationId.getClusterTimestamp()).thenReturn(0L);
-    when(applicationId.getId()).thenReturn(appId);
-    return applicationId;
+    return ApplicationId.newInstance(0L, appId);
   }
   
   public static ApplicationAttemptId 
   getMockApplicationAttemptId(int appId, int attemptId) {
     ApplicationId applicationId = BuilderUtils.newApplicationId(0l, appId);
-    ApplicationAttemptId applicationAttemptId = mock(ApplicationAttemptId.class);  
-    when(applicationAttemptId.getApplicationId()).thenReturn(applicationId);
-    when(applicationAttemptId.getAttemptId()).thenReturn(attemptId);
-    return applicationAttemptId;
+    return ApplicationAttemptId.newInstance(applicationId, attemptId);
   }
   
   public static FiCaSchedulerNode getMockNode(
       String host, String rack, int port, int capability) {
-    NodeId nodeId = mock(NodeId.class);
-    when(nodeId.getHost()).thenReturn(host);
-    when(nodeId.getPort()).thenReturn(port);
+    NodeId nodeId = NodeId.newInstance(host, port);
     RMNode rmNode = mock(RMNode.class);
     when(rmNode.getNodeID()).thenReturn(nodeId);
     when(rmNode.getTotalCapability()).thenReturn(
@@ -195,6 +196,8 @@ public class TestUtils {
     
     FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
     LOG.info("node = " + host + " avail=" + node.getAvailableResource());
+    
+    when(node.getNodeID()).thenReturn(nodeId);
     return node;
   }
 

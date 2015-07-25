@@ -73,6 +73,7 @@ public class ParentQueue extends AbstractCSQueue {
   final PartitionedQueueComparator partitionQueueComparator;
   volatile int numApplications;
   private final CapacitySchedulerContext scheduler;
+  private boolean needToResortQueuesAtNextAllocation = false;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -411,7 +412,7 @@ public class ParentQueue extends AbstractCSQueue {
       // This will also consider parent's limits and also continuous reservation
       // looking
       if (!super.canAssignToThisQueue(clusterResource, node.getPartition(),
-          resourceLimits, minimumAllocation, Resources.createResource(
+          resourceLimits, Resources.createResource(
               getMetrics().getReservedMB(), getMetrics()
                   .getReservedVirtualCores()), schedulingMode)) {
         break;
@@ -527,6 +528,14 @@ public class ParentQueue extends AbstractCSQueue {
   
   private Iterator<CSQueue> sortAndGetChildrenAllocationIterator(FiCaSchedulerNode node) {
     if (node.getPartition().equals(RMNodeLabelsManager.NO_LABEL)) {
+      if (needToResortQueuesAtNextAllocation) {
+        // If we skipped resort queues last time, we need to re-sort queue
+        // before allocation
+        List<CSQueue> childrenList = new ArrayList<>(childQueues);
+        childQueues.clear();
+        childQueues.addAll(childrenList);
+        needToResortQueuesAtNextAllocation = false;
+      }
       return childQueues.iterator();
     }
 
@@ -644,6 +653,11 @@ public class ParentQueue extends AbstractCSQueue {
             }
           }
         }
+        
+        // If we skipped sort queue this time, we need to resort queues to make
+        // sure we allocate from least usage (or order defined by queue policy)
+        // queues.
+        needToResortQueuesAtNextAllocation = !sortQueues;
       }
 
       // Inform the parent

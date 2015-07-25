@@ -1178,16 +1178,6 @@ public class CapacityScheduler extends
         updateSchedulerHealth(lastNodeUpdateTime, node, tmp);
         schedulerHealth.updateSchedulerFulfilledReservationCounts(1);
       }
-
-      RMContainer excessReservation = assignment.getExcessReservation();
-      if (excessReservation != null) {
-        Container container = excessReservation.getContainer();
-        queue.completedContainer(clusterResource, assignment.getApplication(),
-            node, excessReservation, SchedulerUtils
-                .createAbnormalContainerStatus(container.getId(),
-                    SchedulerUtils.UNRESERVED_CONTAINER),
-            RMContainerEventType.RELEASED, null, true);
-      }
     }
 
     // Try to schedule more if there are no reservations to fulfill
@@ -1241,10 +1231,6 @@ public class CapacityScheduler extends
                 RMNodeLabelsManager.NO_LABEL, clusterResource)),
             SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY);
         updateSchedulerHealth(lastNodeUpdateTime, node, assignment);
-        if (Resources.greaterThan(calculator, clusterResource,
-            assignment.getResource(), Resources.none())) {
-          return;
-        }
       }
     } else {
       LOG.info("Skipping scheduling since node "
@@ -1881,7 +1867,7 @@ public class CapacityScheduler extends
 
   private Priority getDefaultPriorityForQueue(String queueName) {
     Queue queue = getQueue(queueName);
-    if (null == queue) {
+    if (null == queue || null == queue.getDefaultApplicationPriority()) {
       // Return with default application priority
       return Priority.newInstance(CapacitySchedulerConfiguration
           .DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);

@@ -31,8 +31,8 @@ public class CSAssignment {
 
   final private Resource resource;
   private NodeType type;
-  private final RMContainer excessReservation;
-  private final FiCaSchedulerApp application;
+  private RMContainer excessReservation;
+  private FiCaSchedulerApp application;
   private final boolean skipped;
   private boolean fulfilledReservation;
   private final AssignmentInformation assignmentInformation;
@@ -80,8 +80,16 @@ public class CSAssignment {
     return application;
   }
 
+  public void setApplication(FiCaSchedulerApp application) {
+    this.application = application;
+  }
+
   public RMContainer getExcessReservation() {
     return excessReservation;
+  }
+
+  public void setExcessReservation(RMContainer rmContainer) {
+    excessReservation = rmContainer;
   }
 
   public boolean getSkipped() {

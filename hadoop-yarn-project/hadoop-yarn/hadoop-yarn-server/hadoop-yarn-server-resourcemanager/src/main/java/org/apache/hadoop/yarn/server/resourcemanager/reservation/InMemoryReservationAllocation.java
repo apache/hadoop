@@ -29,9 +29,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 /**
  * An in memory implementation of a reservation allocation using the
  * {@link RLESparseResourceAllocation}
- * 
+ *
  */
-class InMemoryReservationAllocation implements ReservationAllocation {
+public class InMemoryReservationAllocation implements ReservationAllocation {
 
   private final String planName;
   private final ReservationId reservationID;
@@ -45,7 +45,7 @@ class InMemoryReservationAllocation implements ReservationAllocation {
 
   private RLESparseResourceAllocation resourcesOverTime;
 
-  InMemoryReservationAllocation(ReservationId reservationID,
+  public InMemoryReservationAllocation(ReservationId reservationID,
       ReservationDefinition contract, String user, String planName,
       long startTime, long endTime,
       Map<ReservationInterval, Resource> allocations,
@@ -54,7 +54,7 @@ class InMemoryReservationAllocation implements ReservationAllocation {
         allocations, calculator, minAlloc, false);
   }
 
-  InMemoryReservationAllocation(ReservationId reservationID,
+  public InMemoryReservationAllocation(ReservationId reservationID,
       ReservationDefinition contract, String user, String planName,
       long startTime, long endTime,
       Map<ReservationInterval, Resource> allocations,

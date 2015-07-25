@@ -38,8 +38,8 @@ class DefaultSchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
   static final float WIDTH_F = 0.8f;
   static final String Q_END = "left:101%";
-  static final String OVER = "font-size:1px;background:rgba(255, 140, 0, 0.8)";
-  static final String UNDER = "font-size:1px;background:rgba(50, 205, 50, 0.8)";
+  static final String OVER = "font-size:1px;background:#FFA333";
+  static final String UNDER = "font-size:1px;background:#5BD75B";
   static final float EPSILON = 1e-8f;
 
   static class QueueInfoBlock extends HtmlBlock {

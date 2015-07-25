@@ -280,14 +280,14 @@ public class TestProportionalCapacityPreemptionPolicy {
     // requests reiterated
     when(mClock.getTime()).thenReturn(killTime / 2);
     policy.editSchedule();
-    verify(mDisp, times(20)).handle(argThat(new IsPreemptionRequestFor(appC)));
+    verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appC)));
 
     // kill req sent
     when(mClock.getTime()).thenReturn(killTime + 1);
     policy.editSchedule();
-    verify(mDisp, times(30)).handle(evtCaptor.capture());
+    verify(mDisp, times(20)).handle(evtCaptor.capture());
     List<ContainerPreemptEvent> events = evtCaptor.getAllValues();
-    for (ContainerPreemptEvent e : events.subList(20, 30)) {
+    for (ContainerPreemptEvent e : events.subList(20, 20)) {
       assertEquals(appC, e.getAppId());
       assertEquals(KILL_CONTAINER, e.getType());
     }

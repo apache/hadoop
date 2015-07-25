@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -204,6 +205,7 @@ public class FairSchedulerQueueInfo {
   }
 
   public Collection<FairSchedulerQueueInfo> getChildQueues() {
-    return childQueues.getQueueInfoList();
+    return childQueues != null ? childQueues.getQueueInfoList() :
+        new ArrayList<FairSchedulerQueueInfo>();
   }
 }

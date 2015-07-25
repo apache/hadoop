@@ -871,9 +871,25 @@ public class TestBlockStoragePolicy {
         GenericTestUtils.assertExceptionContains(invalidPath.toString(), e);
       }
 
+      try {
+        fs.getStoragePolicy(invalidPath);
+        Assert.fail("Should throw a FileNotFoundException");
+      } catch (FileNotFoundException e) {
+        GenericTestUtils.assertExceptionContains(invalidPath.toString(), e);
+      }
+
       fs.setStoragePolicy(fooFile, HdfsServerConstants.COLD_STORAGE_POLICY_NAME);
       fs.setStoragePolicy(barDir, HdfsServerConstants.WARM_STORAGE_POLICY_NAME);
       fs.setStoragePolicy(barFile2, HdfsServerConstants.HOT_STORAGE_POLICY_NAME);
+      Assert.assertEquals("File storage policy should be COLD",
+          HdfsServerConstants.COLD_STORAGE_POLICY_NAME,
+          fs.getStoragePolicy(fooFile).getName());
+      Assert.assertEquals("File storage policy should be WARM",
+          HdfsServerConstants.WARM_STORAGE_POLICY_NAME,
+          fs.getStoragePolicy(barDir).getName());
+      Assert.assertEquals("File storage policy should be HOT",
+          HdfsServerConstants.HOT_STORAGE_POLICY_NAME,
+          fs.getStoragePolicy(barFile2).getName());
 
       dirList = fs.getClient().listPaths(dir.toString(),
           HdfsFileStatus.EMPTY_NAME).getPartialListing();
@@ -1306,4 +1322,5 @@ public class TestBlockStoragePolicy {
       Assert.assertEquals(StorageType.ARCHIVE, i.next().getKey());
     }
   }
+
 }

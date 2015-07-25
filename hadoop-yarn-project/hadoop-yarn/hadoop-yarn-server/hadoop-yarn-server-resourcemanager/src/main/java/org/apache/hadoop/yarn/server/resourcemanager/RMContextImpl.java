@@ -292,7 +292,8 @@ public class RMContextImpl implements RMContext {
     activeServiceContext.setNMTokenSecretManager(nmTokenSecretManager);
   }
 
-  void setScheduler(ResourceScheduler scheduler) {
+  @VisibleForTesting
+  public void setScheduler(ResourceScheduler scheduler) {
     activeServiceContext.setScheduler(scheduler);
   }
 
