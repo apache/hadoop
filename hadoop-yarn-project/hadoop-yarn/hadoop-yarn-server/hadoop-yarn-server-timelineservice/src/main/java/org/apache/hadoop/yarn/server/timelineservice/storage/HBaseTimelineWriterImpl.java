@@ -214,6 +214,12 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     return null;
   }
 
+  @Override
+  public void flush() throws IOException {
+    // flush all buffered mutators
+    entityTable.flush();
+  }
+
   /**
    * close the hbase connections The close APIs perform flushing and release any
    * resources held

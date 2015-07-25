@@ -187,6 +187,11 @@ public class PhoenixTimelineWriterImpl extends AbstractService
 
   }
 
+  @Override
+  public void flush() throws IOException {
+    // currently no-op
+  }
+
   // Utility functions
   @Private
   @VisibleForTesting

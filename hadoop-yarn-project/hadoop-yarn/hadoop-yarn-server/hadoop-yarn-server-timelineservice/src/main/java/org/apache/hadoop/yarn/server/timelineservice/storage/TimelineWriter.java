@@ -70,4 +70,13 @@ public interface TimelineWriter extends Service {
    */
   TimelineWriteResponse aggregate(TimelineEntity data,
       TimelineAggregationTrack track) throws IOException;
+
+  /**
+   * Flushes the data to the backend storage. Whatever may be buffered will be
+   * written to the storage when the method returns. This may be a potentially
+   * time-consuming operation, and should be used judiciously.
+   *
+   * @throws IOException
+   */
+  void flush() throws IOException;
 }
