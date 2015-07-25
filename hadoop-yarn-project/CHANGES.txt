@@ -147,6 +147,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
     in ZKRMStateStore. (Jian He via junping_du)
 
+    YARN-3656. LowCost: A Cost-Based Placement Agent for YARN Reservations. 
+    (Jonathan Yaniv and Ishai Menache via curino)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

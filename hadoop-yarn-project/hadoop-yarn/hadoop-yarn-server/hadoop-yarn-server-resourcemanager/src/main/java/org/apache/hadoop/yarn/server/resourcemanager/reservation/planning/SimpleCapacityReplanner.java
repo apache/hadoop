@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.reservation;
+package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +27,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
@@ -87,8 +90,9 @@ public class SimpleCapacityReplanner implements Planner {
 
     // loop on all moment in time from now to the end of the check Zone
     // or the end of the planned sessions whichever comes first
-    for (long t = now; (t < plan.getLastEndTime() && t < (now + lengthOfCheckZone)); t +=
-        plan.getStep()) {
+    for (long t = now; 
+         (t < plan.getLastEndTime() && t < (now + lengthOfCheckZone)); 
+         t += plan.getStep()) {
       Resource excessCap =
           Resources.subtract(plan.getTotalCommittedResources(t), totCap);
       // if we are violating
@@ -98,7 +102,8 @@ public class SimpleCapacityReplanner implements Planner {
             new TreeSet<ReservationAllocation>(plan.getReservationsAtTime(t));
         for (Iterator<ReservationAllocation> resIter =
             curReservations.iterator(); resIter.hasNext()
-            && Resources.greaterThan(resCalc, totCap, excessCap, ZERO_RESOURCE);) {
+            && Resources.greaterThan(resCalc, totCap, excessCap, 
+                ZERO_RESOURCE);) {
           ReservationAllocation reservation = resIter.next();
           plan.deleteReservation(reservation.getReservationId());
           excessCap =

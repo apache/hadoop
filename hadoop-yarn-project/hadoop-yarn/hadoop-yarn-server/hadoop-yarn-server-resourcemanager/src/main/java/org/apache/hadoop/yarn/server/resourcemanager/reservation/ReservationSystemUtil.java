@@ -25,7 +25,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import java.util.HashMap;
 import java.util.Map;
 
-final class ReservationSystemUtil {
+/**
+ * Simple helper class for static methods used to transform across
+ * common formats in tests
+ */
+public final class ReservationSystemUtil {
 
   private ReservationSystemUtil() {
     // not called
