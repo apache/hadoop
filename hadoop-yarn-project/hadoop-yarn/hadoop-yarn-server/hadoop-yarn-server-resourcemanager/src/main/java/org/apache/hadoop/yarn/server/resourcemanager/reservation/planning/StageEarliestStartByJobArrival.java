@@ -16,32 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.reservation;
-
-import java.util.List;
+package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 
-public interface Planner {
+/**
+ * Sets the earliest start time of a stage as the job arrival time.
+ */
+public class StageEarliestStartByJobArrival implements StageEarliestStart {
 
-  /**
-   * Update the existing {@link Plan}, by adding/removing/updating existing
-   * reservations, and adding a subset of the reservation requests in the
-   * contracts parameter.
-   *
-   * @param plan the {@link Plan} to replan
-   * @param contracts the list of reservation requests
-   * @throws PlanningException
-   */
-  public void plan(Plan plan, List<ReservationDefinition> contracts)
-      throws PlanningException;
+  @Override
+  public long setEarliestStartTime(Plan plan,
+      ReservationDefinition reservation, int index, ReservationRequest current,
+      long stageDeadline) {
 
-  /**
-   * Initialize the replanner
-   *
-   * @param planQueueName the name of the queue for this plan
-   * @param conf the scheduler configuration
-   */
-  void init(String planQueueName, ReservationSchedulerConfiguration conf);
+    return reservation.getArrival();
+
+  }
+
 }

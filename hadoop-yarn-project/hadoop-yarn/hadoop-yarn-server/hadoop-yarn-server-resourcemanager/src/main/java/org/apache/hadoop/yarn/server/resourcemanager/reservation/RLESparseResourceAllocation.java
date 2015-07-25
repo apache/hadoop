@@ -38,7 +38,7 @@ import com.google.gson.stream.JsonWriter;
 
 /**
  * This is a run length encoded sparse data structure that maintains resource
- * allocations over time
+ * allocations over time.
  */
 public class RLESparseResourceAllocation {
 
@@ -74,7 +74,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Add a resource for the specified interval
-   * 
+   *
    * @param reservationInterval the interval for which the resource is to be
    *          added
    * @param totCap the resource to be added
@@ -138,7 +138,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Removes a resource for the specified interval
-   * 
+   *
    * @param reservationInterval the interval for which the resource is to be
    *          removed
    * @param totCap the resource to be removed
@@ -189,7 +189,7 @@ public class RLESparseResourceAllocation {
   /**
    * Returns the capacity, i.e. total resources allocated at the specified point
    * of time
-   * 
+   *
    * @param tick the time (UTC in ms) at which the capacity is requested
    * @return the resources allocated at the specified time
    */
@@ -208,7 +208,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Get the timestamp of the earliest resource allocation
-   * 
+   *
    * @return the timestamp of the first resource allocation
    */
   public long getEarliestStartTime() {
@@ -226,7 +226,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Get the timestamp of the latest resource allocation
-   * 
+   *
    * @return the timestamp of the last resource allocation
    */
   public long getLatestEndTime() {
@@ -244,7 +244,7 @@ public class RLESparseResourceAllocation {
 
   /**
    * Returns true if there are no non-zero entries
-   * 
+   *
    * @return true if there are no allocations or false otherwise
    */
   public boolean isEmpty() {
@@ -287,7 +287,7 @@ public class RLESparseResourceAllocation {
   /**
    * Returns the JSON string representation of the current resources allocated
    * over time
-   * 
+   *
    * @return the JSON string representation of the current resources allocated
    *         over time
    */
@@ -310,6 +310,45 @@ public class RLESparseResourceAllocation {
     } finally {
       readLock.unlock();
     }
+  }
+
+  /**
+   * Returns the representation of the current resources allocated over time as
+   * an interval map.
+   *
+   * @return the representation of the current resources allocated over time as
+   *         an interval map.
+   */
+  public Map<ReservationInterval, Resource> toIntervalMap() {
+
+    readLock.lock();
+    try {
+      Map<ReservationInterval, Resource> allocations =
+          new TreeMap<ReservationInterval, Resource>();
+
+      // Empty
+      if (isEmpty()) {
+        return allocations;
+      }
+
+      Map.Entry<Long, Resource> lastEntry = null;
+      for (Map.Entry<Long, Resource> entry : cumulativeCapacity.entrySet()) {
+
+        if (lastEntry != null) {
+          ReservationInterval interval =
+              new ReservationInterval(lastEntry.getKey(), entry.getKey());
+          Resource resource = lastEntry.getValue();
+
+          allocations.put(interval, resource);
+        }
+
+        lastEntry = entry;
+      }
+      return allocations;
+    } finally {
+      readLock.unlock();
+    }
+
   }
 
 }

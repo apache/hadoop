@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.AlignedPlannerWithGreedy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -89,7 +90,7 @@ public class ReservationSystemTestUtil {
     Assert.assertEquals(planQName, plan.getQueueName());
     Assert.assertEquals(8192, plan.getTotalCapacity().getMemory());
     Assert.assertTrue(
-        plan.getReservationAgent() instanceof GreedyReservationAgent);
+        plan.getReservationAgent() instanceof AlignedPlannerWithGreedy);
     Assert.assertTrue(
         plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
@@ -102,7 +103,7 @@ public class ReservationSystemTestUtil {
     Assert.assertEquals(newQ, newPlan.getQueueName());
     Assert.assertEquals(1024, newPlan.getTotalCapacity().getMemory());
     Assert
-        .assertTrue(newPlan.getReservationAgent() instanceof GreedyReservationAgent);
+        .assertTrue(newPlan.getReservationAgent() instanceof AlignedPlannerWithGreedy);
     Assert
         .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
