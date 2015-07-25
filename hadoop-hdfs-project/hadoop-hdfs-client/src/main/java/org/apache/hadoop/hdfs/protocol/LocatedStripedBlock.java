@@ -63,7 +63,7 @@ public class LocatedStripedBlock extends LocatedBlock {
         + "; corrupt=" + isCorrupt()
         + "; offset=" + getStartOffset()
         + "; locs=" + Arrays.asList(getLocations())
-        + "; indices=" + Arrays.asList(blockIndices)
+        + "; indices=" + Arrays.toString(blockIndices)
         + "}";
   }
 
