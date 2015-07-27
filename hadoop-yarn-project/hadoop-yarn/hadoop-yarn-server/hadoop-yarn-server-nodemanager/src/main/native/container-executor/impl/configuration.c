@@ -291,33 +291,36 @@ char ** get_values(const char * key) {
   return extract_values(value);
 }
 
-/**
- * Extracts array of values from the '%' separated list of values.
- */
-char ** extract_values(char *value) {
+char ** extract_values_delim(char *value, const char *delim) {
   char ** toPass = NULL;
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
   int toPassSize = MAX_SIZE;
-
   //first allocate any array of 10
   if(value != NULL) {
     toPass = (char **) malloc(sizeof(char *) * toPassSize);
-    tempTok = strtok_r((char *)value, "%", &tempstr);
+    tempTok = strtok_r((char *)value, delim, &tempstr);
     while (tempTok != NULL) {
       toPass[size++] = tempTok;
       if(size == toPassSize) {
         toPassSize += MAX_SIZE;
         toPass = (char **) realloc(toPass,(sizeof(char *) * toPassSize));
       }
-      tempTok = strtok_r(NULL, "%", &tempstr);
+      tempTok = strtok_r(NULL, delim, &tempstr);
     }
   }
   if (toPass != NULL) {
     toPass[size] = NULL;
   }
   return toPass;
+}
+
+/**
+ * Extracts array of values from the '%' separated list of values.
+ */
+char ** extract_values(char *value) {
+  extract_values_delim(value, "%");
 }
 
 // free an entry set of values
