@@ -1084,6 +1084,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8810. Correct assertions in TestDFSInotifyEventInputStream class.
     (Surendra Singh Lilhore via aajisaka)
 
+    HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
