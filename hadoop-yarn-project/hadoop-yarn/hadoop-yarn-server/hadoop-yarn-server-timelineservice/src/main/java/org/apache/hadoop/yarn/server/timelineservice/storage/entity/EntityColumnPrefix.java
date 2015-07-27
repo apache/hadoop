@@ -45,6 +45,11 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   RELATES_TO(EntityColumnFamily.INFO, "r"),
 
   /**
+   * To store TimelineEntity info values.
+   */
+  INFO(EntityColumnFamily.INFO, "i"),
+
+  /**
    * Lifecycle events for an entity
    */
   EVENT(EntityColumnFamily.INFO, "e"),
@@ -92,7 +97,7 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   /**
    * @return the column name value
    */
-  private String getColumnPrefix() {
+  public String getColumnPrefix() {
     return columnPrefix;
   }
 
@@ -150,11 +155,11 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
-   * #readTimeseriesResults(org.apache.hadoop.hbase.client.Result)
+   * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result)
    */
-  public NavigableMap<String, NavigableMap<Long, Number>> readTimeseriesResults(
-      Result result) throws IOException {
-    return column.readTimeseriesResults(result, columnPrefixBytes);
+  public <T> NavigableMap<String, NavigableMap<Long, T>>
+      readResultsWithTimestamps(Result result) throws IOException {
+    return column.readResultsWithTimestamps(result, columnPrefixBytes);
   }
 
   /**

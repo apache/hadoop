@@ -141,6 +141,13 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     EntityColumn.MODIFIED_TIME.store(rowKey, entityTable, null,
         te.getModifiedTime());
     EntityColumn.FLOW_VERSION.store(rowKey, entityTable, null, flowVersion);
+    Map<String, Object> info = te.getInfo();
+    if (info != null) {
+      for (Map.Entry<String, Object> entry : info.entrySet()) {
+        EntityColumnPrefix.INFO.store(rowKey, entityTable, entry.getKey(),
+            null, entry.getValue());
+      }
+    }
   }
 
   /**
@@ -186,6 +193,13 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         if (event != null) {
           String eventId = event.getId();
           if (eventId != null) {
+            long eventTimestamp = event.getTimestamp();
+            // if the timestamp is not set, use the current timestamp
+            if (eventTimestamp == TimelineEvent.INVALID_TIMESTAMP) {
+              LOG.warn("timestamp is not set for event " + eventId +
+                  "! Using the current timestamp");
+              eventTimestamp = System.currentTimeMillis();
+            }
             Map<String, Object> eventInfo = event.getInfo();
             if (eventInfo != null) {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
@@ -198,8 +212,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
                 // convert back to string to avoid additional API on store.
                 String compoundColumnQualifier =
                     Bytes.toString(compoundColumnQualifierBytes);
-                EntityColumnPrefix.METRIC.store(rowKey, entityTable,
-                    compoundColumnQualifier, null, info.getValue());
+                EntityColumnPrefix.EVENT.store(rowKey, entityTable,
+                    compoundColumnQualifier, eventTimestamp, info.getValue());
               } // for info: eventInfo
             }
           }

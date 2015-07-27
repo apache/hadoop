@@ -43,8 +43,10 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
+import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
@@ -83,6 +85,12 @@ public class TestHBaseTimelineWriterImpl {
     Long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
     entity.setModifiedTime(mTime);
+
+    // add the info map in Timeline Entity
+    Map<String, Object> infoMap = new HashMap<String, Object>();
+    infoMap.put("infoMapKey1", "infoMapValue1");
+    infoMap.put("infoMapKey2", 10);
+    entity.addInfo(infoMap);
 
     // add the isRelatedToEntity info
     String key = "task";
@@ -177,6 +185,14 @@ public class TestHBaseTimelineWriterImpl {
           Long mTime1 = val.longValue();
           assertEquals(mTime1, mTime);
 
+          Map<String, Object> infoColumns =
+              EntityColumnPrefix.INFO.readResults(result);
+          assertEquals(infoMap.size(), infoColumns.size());
+          for (String infoItem : infoMap.keySet()) {
+            assertEquals(infoMap.get(infoItem),
+                infoColumns.get(infoItem));
+          }
+
           // Remember isRelatedTo is of type Map<String, Set<String>>
           for (String isRelatedToKey : isRelatedTo.keySet()) {
             Object isRelatedToValue =
@@ -219,7 +235,7 @@ public class TestHBaseTimelineWriterImpl {
           }
 
           NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-              EntityColumnPrefix.METRIC.readTimeseriesResults(result);
+              EntityColumnPrefix.METRIC.readResultsWithTimestamps(result);
 
           NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
           // We got metrics back
@@ -237,7 +253,7 @@ public class TestHBaseTimelineWriterImpl {
         }
       }
       assertEquals(1, rowCount);
-      assertEquals(15, colCount);
+      assertEquals(17, colCount);
 
     } finally {
       hbi.stop();
@@ -267,13 +283,18 @@ public class TestHBaseTimelineWriterImpl {
 
   private void testAdditionalEntity() throws IOException {
     TimelineEvent event = new TimelineEvent();
-    event.setId("foo_event_id");
-    event.setTimestamp(System.currentTimeMillis());
-    event.addInfo("foo_event", "test");
+    String eventId = "foo_event_id";
+    event.setId(eventId);
+    Long expTs = 1436512802000L;
+    event.setTimestamp(expTs);
+    String expKey = "foo_event";
+    Object expVal = "test";
+    event.addInfo(expKey, expVal);
 
     final TimelineEntity entity = new TimelineEntity();
     entity.setId("attempt_1329348432655_0001_m_000008_18");
     entity.setType("FOO_ATTEMPT");
+    entity.addEvent(event);
 
     TimelineEntities entities = new TimelineEntities();
     entities.addEntity(entity);
@@ -304,6 +325,31 @@ public class TestHBaseTimelineWriterImpl {
       for (Result result : scanner) {
         if (result != null && !result.isEmpty()) {
           rowCount++;
+
+          // check the row key
+          byte[] row1 = result.getRow();
+          assertTrue(isRowKeyCorrect(row1, cluster, user, flow, runid, appName,
+              entity));
+
+          // check the events
+          NavigableMap<String, NavigableMap<Long, Object>> eventsResult =
+              EntityColumnPrefix.EVENT.readResultsWithTimestamps(result);
+          // there should be only one event
+          assertEquals(1, eventsResult.size());
+          // key name for the event
+          String valueKey = eventId + Separator.VALUES.getValue() + expKey;
+          for (Map.Entry<String, NavigableMap<Long, Object>> e :
+              eventsResult.entrySet()) {
+            // the value key must match
+            assertEquals(valueKey, e.getKey());
+            NavigableMap<Long, Object> value = e.getValue();
+            // there should be only one timestamp and value
+            assertEquals(1, value.size());
+            for (Map.Entry<Long, Object> e2: value.entrySet()) {
+              assertEquals(expTs, e2.getKey());
+              assertEquals(expVal, e2.getValue());
+            }
+          }
         }
       }
       assertEquals(1, rowCount);
