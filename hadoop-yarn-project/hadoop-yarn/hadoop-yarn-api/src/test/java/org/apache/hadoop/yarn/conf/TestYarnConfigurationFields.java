@@ -64,22 +64,22 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.DEFAULT_RM_SCHEDULER);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONCLIENT_PROTOCOL);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONCLIENT_PROTOCOL);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_PROTOCOL);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCEMANAGER_ADMINISTRATION_PROTOCOL);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCEMANAGER_ADMINISTRATION_PROTOCOL);
     configurationPropsToSkipCompare
         .add(YarnConfiguration
-	    .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL);
+            .YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER_PROTOCOL);
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_SCM_STORE_CLASS);
     configurationPropsToSkipCompare
