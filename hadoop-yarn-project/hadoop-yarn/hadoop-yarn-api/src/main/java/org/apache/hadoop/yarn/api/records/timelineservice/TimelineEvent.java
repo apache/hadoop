@@ -33,6 +33,8 @@ import java.util.Map;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class TimelineEvent implements Comparable<TimelineEvent> {
+  public static final long INVALID_TIMESTAMP = 0L;
+
   private String id;
   private HashMap<String, Object> info = new HashMap<>();
   private long timestamp;
@@ -83,7 +85,7 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
   }
 
   public boolean isValid() {
-    return (id != null && timestamp != 0L);
+    return (id != null && timestamp != INVALID_TIMESTAMP);
   }
 
   @Override

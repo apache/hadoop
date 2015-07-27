@@ -72,12 +72,13 @@ public interface ColumnPrefix<T> {
   public Map<String, Object> readResults(Result result) throws IOException;
 
   /**
-   * @param result from which to reads timeseries data
+   * @param result from which to reads data with timestamps
+   * @param <V> the type of the values. The values will be cast into that type.
    * @return the cell values at each respective time in for form
    *         {idA={timestamp1->value1}, idA={timestamp2->value2},
    *         idB={timestamp3->value3}, idC={timestamp1->value4}}
    * @throws IOException
    */
-  public NavigableMap<String, NavigableMap<Long, Number>> readTimeseriesResults(
-      Result result) throws IOException;
+  public <V> NavigableMap<String, NavigableMap<Long, V>>
+      readResultsWithTimestamps(Result result) throws IOException;
 }
