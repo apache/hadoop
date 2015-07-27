@@ -26,7 +26,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -432,7 +431,7 @@ public class FsDatasetCache {
     public void run() {
       boolean success = false;
       AltFileInputStream blockIn = null;
-      FileInputStream metaIn = null;
+      AltFileInputStream metaIn = null;
       MappableBlock mappableBlock = null;
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);

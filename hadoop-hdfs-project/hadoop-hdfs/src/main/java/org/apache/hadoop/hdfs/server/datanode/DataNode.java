@@ -148,6 +148,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -1581,7 +1582,7 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  FileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
+  AltFileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
                                                   final Token<BlockTokenIdentifier> token, int maxVersion)
       throws ShortCircuitFdsUnsupportedException,
       ShortCircuitFdsVersionException, IOException {
@@ -1598,10 +1599,10 @@ public class DataNode extends ReconfigurableBase
           maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    FileInputStream fis[] = new FileInputStream[2];
 
+    AltFileInputStream fis[] = new AltFileInputStream[2];
     try {
-      fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+      fis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);
