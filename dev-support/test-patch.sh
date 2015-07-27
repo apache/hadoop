@@ -1175,8 +1175,7 @@ function find_changed_modules
   #shellcheck disable=SC2086,SC2116
   CHANGED_UNFILTERED_MODULES=$(echo ${CHANGED_UNFILTERED_MODULES})
 
-  if [[ ${BUILDTOOL} = maven
-    && ${QETESTMODE} = false ]]; then
+  if [[ ${BUILDTOOL} = maven ]]; then
     # Filter out modules without code
     for module in ${builddirs}; do
       ${GREP} "<packaging>pom</packaging>" "${module}/pom.xml" > /dev/null
@@ -1184,8 +1183,6 @@ function find_changed_modules
         buildmods="${buildmods} ${module}"
       fi
     done
-  elif [[ ${QETESTMODE} = true ]]; then
-    buildmods=${builddirs}
   fi
 
   #shellcheck disable=SC2086,SC2034
