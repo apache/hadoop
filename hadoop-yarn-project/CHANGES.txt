@@ -153,6 +153,10 @@ Release 2.8.0 - UNRELEASED
     YARN-3852. Add docker container support to container-executor
     (Abin Shahab via vvasudev)
 
+    YARN-3853. Add docker container runtime support to LinuxContainterExecutor.
+    (Sidharta Seethana via vvasudev)
+
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

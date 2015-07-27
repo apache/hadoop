@@ -24,8 +24,10 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -39,6 +41,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -160,7 +163,7 @@ public abstract class ContainerExecutor implements Configurable {
    * @return true if container is still alive
    * @throws IOException
    */
-  public abstract boolean isContainerProcessAlive(ContainerLivenessContext ctx)
+  public abstract boolean isContainerAlive(ContainerLivenessContext ctx)
       throws IOException;
 
   /**
@@ -174,6 +177,7 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public int reacquireContainer(ContainerReacquisitionContext ctx)
       throws IOException, InterruptedException {
+    Container container = ctx.getContainer();
     String user = ctx.getUser();
     ContainerId containerId = ctx.getContainerId();
 
@@ -193,10 +197,11 @@ public abstract class ContainerExecutor implements Configurable {
     LOG.info("Reacquiring " + containerId + " with pid " + pid);
     ContainerLivenessContext livenessContext = new ContainerLivenessContext
         .Builder()
+        .setContainer(container)
         .setUser(user)
         .setPid(pid)
         .build();
-    while(isContainerProcessAlive(livenessContext)) {
+    while(isContainerAlive(livenessContext)) {
       Thread.sleep(1000);
     }
 
@@ -243,9 +248,20 @@ public abstract class ContainerExecutor implements Configurable {
     Map<Path, List<String>> resources, List<String> command) throws IOException{
     ContainerLaunch.ShellScriptBuilder sb =
       ContainerLaunch.ShellScriptBuilder.create();
+    Set<String> whitelist = new HashSet<String>();
+    whitelist.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+    whitelist.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+    whitelist.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+    whitelist.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+    whitelist.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+    whitelist.add(ApplicationConstants.Environment.JAVA_HOME.name());
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
-        sb.env(env.getKey().toString(), env.getValue().toString());
+        if (!whitelist.contains(env.getKey())) {
+          sb.env(env.getKey().toString(), env.getValue().toString());
+        } else {
+          sb.whitelistedEnv(env.getKey().toString(), env.getValue().toString());
+        }
       }
     }
     if (resources != null) {
@@ -492,6 +508,7 @@ public abstract class ContainerExecutor implements Configurable {
       try {
         Thread.sleep(delay);
         containerExecutor.signalContainer(new ContainerSignalContext.Builder()
+            .setContainer(container)
             .setUser(user)
             .setPid(pid)
             .setSignal(signal)
