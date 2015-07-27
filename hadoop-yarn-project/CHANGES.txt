@@ -150,6 +150,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3656. LowCost: A Cost-Based Placement Agent for YARN Reservations. 
     (Jonathan Yaniv and Ishai Menache via curino)
 
+    YARN-3852. Add docker container support to container-executor
+    (Abin Shahab via vvasudev)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
