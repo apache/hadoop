@@ -25,7 +25,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates information required for starting/launching containers.
@@ -35,6 +37,7 @@ import java.util.List;
 @InterfaceStability.Unstable
 public final class ContainerStartContext {
   private final Container container;
+  private final Map<Path, List<String>> localizedResources;
   private final Path nmPrivateContainerScriptPath;
   private final Path nmPrivateTokensPath;
   private final String user;
@@ -45,6 +48,7 @@ public final class ContainerStartContext {
 
   public static final class Builder {
     private Container container;
+    private Map<Path, List<String>> localizedResources;
     private Path nmPrivateContainerScriptPath;
     private Path nmPrivateTokensPath;
     private String user;
@@ -58,6 +62,12 @@ public final class ContainerStartContext {
 
     public Builder setContainer(Container container) {
       this.container = container;
+      return this;
+    }
+
+    public Builder setLocalizedResources(Map<Path,
+        List<String>> localizedResources) {
+      this.localizedResources = localizedResources;
       return this;
     }
 
@@ -104,6 +114,7 @@ public final class ContainerStartContext {
 
   private ContainerStartContext(Builder builder) {
     this.container = builder.container;
+    this.localizedResources = builder.localizedResources;
     this.nmPrivateContainerScriptPath = builder.nmPrivateContainerScriptPath;
     this.nmPrivateTokensPath = builder.nmPrivateTokensPath;
     this.user = builder.user;
@@ -115,6 +126,14 @@ public final class ContainerStartContext {
 
   public Container getContainer() {
     return this.container;
+  }
+
+  public Map<Path, List<String>> getLocalizedResources() {
+    if (this.localizedResources != null) {
+      return Collections.unmodifiableMap(this.localizedResources);
+    } else {
+      return null;
+    }
   }
 
   public Path getNmPrivateContainerScriptPath() {
@@ -138,10 +157,10 @@ public final class ContainerStartContext {
   }
 
   public List<String> getLocalDirs() {
-    return this.localDirs;
+    return Collections.unmodifiableList(this.localDirs);
   }
 
   public List<String> getLogDirs() {
-    return this.logDirs;
+    return Collections.unmodifiableList(this.logDirs);
   }
 }

@@ -147,9 +147,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
           } else {
             String error =
                 new StringBuffer("Mount point Based on mtab file: ")
-                  .append(mtab)
-                  .append(". Controller mount point not writable for: ")
-                  .append(name).toString();
+                    .append(mtab)
+                    .append(". Controller mount point not writable for: ")
+                    .append(name).toString();
 
             LOG.error(error);
             throw new ResourceHandlerException(error);
@@ -269,6 +269,12 @@ class CGroupsHandlerImpl implements CGroupsHandler {
       LOG.info("CGroup controller already mounted at: " + path);
       return;
     }
+  }
+
+  @Override
+  public String getRelativePathForCGroup(String cGroupId) {
+    return new StringBuffer(cGroupPrefix).append("/")
+        .append(cGroupId).toString();
   }
 
   @Override
