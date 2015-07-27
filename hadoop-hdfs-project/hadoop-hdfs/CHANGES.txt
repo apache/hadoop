@@ -1595,6 +1595,8 @@ Release 2.7.3 - UNRELEASED
     HDFS-9383. TestByteArrayManager#testByteArrayManager fails.
     (szetszwo via kihwal)
 
+    HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
