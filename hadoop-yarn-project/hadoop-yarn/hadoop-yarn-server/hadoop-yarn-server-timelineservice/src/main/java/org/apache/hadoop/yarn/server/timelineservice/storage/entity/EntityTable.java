@@ -54,7 +54,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineEnti
  * |            | modified_time:          |              |              |
  * |            | 1392995081012           | metricId2:   |              |
  * |            |                         | metricValue1 |              |
- * |            | r!relatesToKey:         | @timestamp2  |              |
+ * |            | i!infoKey:              | @timestamp2  |              |
+ * |            | infoValue               |              |              |
+ * |            |                         |              |              |
+ * |            | r!relatesToKey:         |              |              |
  * |            | id3?id4?id5             |              |              |
  * |            |                         |              |              |
  * |            | s!isRelatedToKey        |              |              |
@@ -62,6 +65,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineEnti
  * |            |                         |              |              |
  * |            | e!eventId?eventInfoKey: |              |              |
  * |            | eventInfoValue          |              |              |
+ * |            | @timestamp              |              |              |
  * |            |                         |              |              |
  * |            | flowVersion:            |              |              |
  * |            | versionValue            |              |              |

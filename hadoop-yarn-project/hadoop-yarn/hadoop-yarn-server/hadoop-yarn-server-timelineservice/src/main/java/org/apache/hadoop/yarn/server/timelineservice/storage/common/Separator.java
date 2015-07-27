@@ -90,6 +90,13 @@ public enum Separator {
   }
 
   /**
+   * @return the original value of the separator
+   */
+  public String getValue() {
+    return value;
+  }
+
+  /**
    * Used to make token safe to be used with this separator without collisions.
    *
    * @param token
