@@ -695,6 +695,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3958. TestYarnConfigurationFields should be moved to hadoop-yarn-api
     module. (Varun Saxena via aajisaka)
 
+    YARN-3846. RM Web UI queue filter is not working for sub queue.
+    (Mohammad Shahid Khan via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
