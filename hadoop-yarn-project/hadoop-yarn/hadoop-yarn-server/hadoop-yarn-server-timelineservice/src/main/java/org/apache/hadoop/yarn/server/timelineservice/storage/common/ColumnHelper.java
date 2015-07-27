@@ -113,19 +113,22 @@ public class ColumnHelper<T> {
   }
 
   /**
-   * @param result from which to reads timeseries data
+   * @param result from which to reads data with timestamps
    * @param columnPrefixBytes optional prefix to limit columns. If null all
    *          columns are returned.
+   * @param <V> the type of the values. The values will be cast into that type.
    * @return the cell values at each respective time in for form
    *         {idA={timestamp1->value1}, idA={timestamp2->value2},
    *         idB={timestamp3->value3}, idC={timestamp1->value4}}
    * @throws IOException
    */
-  public NavigableMap<String, NavigableMap<Long, Number>> readTimeseriesResults(
-      Result result, byte[] columnPrefixBytes) throws IOException {
+  @SuppressWarnings("unchecked")
+  public <V> NavigableMap<String, NavigableMap<Long, V>>
+      readResultsWithTimestamps(Result result, byte[] columnPrefixBytes)
+          throws IOException {
 
-    NavigableMap<String, NavigableMap<Long, Number>> results =
-        new TreeMap<String, NavigableMap<Long, Number>>();
+    NavigableMap<String, NavigableMap<Long, V>> results =
+        new TreeMap<String, NavigableMap<Long, V>>();
 
     if (result != null) {
       NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> resultMap =
@@ -157,13 +160,13 @@ public class ColumnHelper<T> {
 
           // If this column has the prefix we want
           if (columnName != null) {
-            NavigableMap<Long, Number> cellResults =
-                new TreeMap<Long, Number>();
+            NavigableMap<Long, V> cellResults =
+                new TreeMap<Long, V>();
             NavigableMap<Long, byte[]> cells = entry.getValue();
             if (cells != null) {
               for (Entry<Long, byte[]> cell : cells.entrySet()) {
-                Number value =
-                    (Number) GenericObjectMapper.read(cell.getValue());
+                V value =
+                    (V) GenericObjectMapper.read(cell.getValue());
                 cellResults.put(cell.getKey(), value);
               }
             }

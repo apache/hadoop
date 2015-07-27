@@ -115,6 +115,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3792. Test case failures in TestDistributedShell and some issue fixes
     related to ATSV2 (Naganarasimha G R via sjlee)
 
+    YARN-3908. Fixed bugs in HBaseTimelineWriterImpl. (Vrushali C and Sangjin
+    Lee via zjshen)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
