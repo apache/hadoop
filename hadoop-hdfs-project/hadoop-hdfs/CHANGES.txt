@@ -1081,6 +1081,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8773. Few FSNamesystem metrics are not documented in the Metrics page.
     (Rakesh R via cnauroth)
 
+    HDFS-8810. Correct assertions in TestDFSInotifyEventInputStream class.
+    (Surendra Singh Lilhore via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
