@@ -37,6 +37,7 @@ test-patch has the following requirements:
 * bash v3.2 or higher
 * findbugs 3.x installed
 * shellcheck installed
+* pylint installed
 * GNU diff
 * GNU patch
 * POSIX awk

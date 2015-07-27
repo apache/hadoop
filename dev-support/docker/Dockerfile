@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libjansson-dev \
     fuse libfuse-dev \
     libcurl4-openssl-dev \
-    python python2.7
+    python python2.7 pylint
 
 # Install Forrest
 RUN mkdir -p /usr/local/apache-forrest ; \
