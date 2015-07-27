@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.DataInputStream;
+import java.io.BufferedInputStream;
+import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;

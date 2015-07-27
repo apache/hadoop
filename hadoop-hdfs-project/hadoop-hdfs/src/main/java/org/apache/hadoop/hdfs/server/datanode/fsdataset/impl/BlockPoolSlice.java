@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.*;
 import java.util.Iterator;
 import java.util.Scanner;
-
+import java.io.File;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.Writer;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
+import java.io.DataInputStream;
+import java.io.InputStream;
+import java.io.BufferedInputStream;
+import java.io.RandomAccessFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

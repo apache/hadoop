@@ -17,7 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.*;
+import java.io.File;
+import java.io.DataInputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.EOFException;
+import java.io.RandomAccessFile;
+import java.io.ByteArrayInputStream;
+import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
