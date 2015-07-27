@@ -685,6 +685,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3973. Recent changes to application priority management break 
     reservation system from YARN-1051. (Carlo Curino via wangda)
 
+    YARN-3958. TestYarnConfigurationFields should be moved to hadoop-yarn-api
+    module. (Varun Saxena via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
