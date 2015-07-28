@@ -25,10 +25,6 @@ public enum ContainerEventType {
   KILL_CONTAINER,
   UPDATE_DIAGNOSTICS_MSG,
   CONTAINER_DONE,
-  CHANGE_CONTAINER_RESOURCE,
-
-  // Producer: ContainerMonitor
-  CONTAINER_RESOURCE_CHANGED,
 
   // DownloadManager
   CONTAINER_INITED,

@@ -133,6 +133,17 @@ public class NodeManagerMetrics {
     availableVCores.incr(res.getVirtualCores());
   }
 
+  public void changeContainer(Resource before, Resource now) {
+    int deltaMB = now.getMemory() - before.getMemory();
+    int deltaVCores = now.getVirtualCores() - before.getVirtualCores();
+    allocatedMB = allocatedMB + deltaMB;
+    allocatedGB.set((int)Math.ceil(allocatedMB/1024d));
+    availableMB = availableMB - deltaMB;
+    availableGB.set((int)Math.floor(availableMB/1024d));
+    allocatedVCores.incr(deltaVCores);
+    availableVCores.decr(deltaVCores);
+  }
+
   public void addResource(Resource res) {
     availableMB = availableMB + res.getMemory();
     availableGB.incr((int)Math.floor(availableMB/1024d));

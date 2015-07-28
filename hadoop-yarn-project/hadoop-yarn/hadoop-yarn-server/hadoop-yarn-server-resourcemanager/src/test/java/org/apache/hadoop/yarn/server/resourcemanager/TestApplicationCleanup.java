@@ -231,7 +231,8 @@ public class TestApplicationCleanup {
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>();
     containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(0)
-      .getId(), ContainerState.RUNNING, "nothing", 0));
+      .getId(), ContainerState.RUNNING, "nothing", 0,
+          conts.get(0).getResource()));
     containerStatuses.put(app.getApplicationId(), containerStatusList);
 
     NodeHeartbeatResponse resp = nm1.nodeHeartbeat(containerStatuses, true);
@@ -244,7 +245,8 @@ public class TestApplicationCleanup {
     containerStatuses.clear();
     containerStatusList.clear();
     containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(0)
-      .getId(), ContainerState.RUNNING, "nothing", 0));
+      .getId(), ContainerState.RUNNING, "nothing", 0,
+          conts.get(0).getResource()));
     containerStatuses.put(app.getApplicationId(), containerStatusList);
 
     resp = nm1.nodeHeartbeat(containerStatuses, true);
