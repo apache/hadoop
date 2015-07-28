@@ -698,6 +698,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3846. RM Web UI queue filter is not working for sub queue.
     (Mohammad Shahid Khan via jianhe)
 
+    YARN-3982. container-executor parsing of container-executor.cfg broken in
+    trunk and branch-2. (Varun Vasudev via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

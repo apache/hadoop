@@ -284,11 +284,11 @@ char * get_value(const char* key) {
 
 /**
  * Function to return an array of values for a key.
- * Value delimiter is assumed to be a '%'.
+ * Value delimiter is assumed to be a ','.
  */
 char ** get_values(const char * key) {
   char *value = get_value(key);
-  return extract_values(value);
+  return extract_values_delim(value, ",");
 }
 
 char ** extract_values_delim(char *value, const char *delim) {
