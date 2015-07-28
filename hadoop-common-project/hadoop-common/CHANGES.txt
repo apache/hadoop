@@ -1020,6 +1020,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12245. References to misspelled REMAINING_QUATA in
     FileSystemShell.md. (Gabor Liptak via aajisaka)
 
+    HADOOP-12175. FsShell must load SpanReceierHost to support tracing
+    (Masatake Iwasaki via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
