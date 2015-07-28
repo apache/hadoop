@@ -20,10 +20,13 @@ package org.apache.hadoop.ozone.web.localstorage;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 
@@ -158,4 +161,110 @@ public class LocalStorageHandler implements StorageHandler {
     return oz.listVolumes(args);
   }
 
+  /**
+   * true if the bucket exists and user has read access
+   * to the bucket else throws Exception.
+   *
+   * @param args Bucket args structure
+   *
+   * @throws IOException
+   */
+  @Override
+  public void checkBucketAccess(BucketArgs args)
+      throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Creates a Bucket in specified Volume.
+   *
+   * @param args BucketArgs- BucketName, UserName and Acls
+   *
+   * @throws IOException
+   */
+  @Override
+  public void createBucket(BucketArgs args) throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Adds or Removes ACLs from a Bucket.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  @Override
+  public void setBucketAcls(BucketArgs args)
+      throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Enables or disables Bucket Versioning.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  @Override
+  public void setBucketVersioning(BucketArgs args)
+      throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Sets the Storage Class of a Bucket.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  @Override
+  public void setBucketStorageClass(BucketArgs args)
+      throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Deletes a bucket if it is empty.
+   *
+   * @param args Bucket args structure
+   *
+   * @throws IOException
+   */
+  @Override
+  public void deleteBucket(BucketArgs args) throws IOException, OzoneException {
+
+  }
+
+  /**
+   * Returns all Buckets of a specified Volume.
+   *
+   * @param args --User Args
+   *
+   * @return ListAllBuckets
+   *
+   * @throws OzoneException
+   */
+  @Override
+  public ListBuckets listBuckets(VolumeArgs args)
+      throws IOException, OzoneException {
+    return null;
+  }
+
+  /**
+   * Returns Bucket's Metadata as a String.
+   *
+   * @param args Bucket args structure
+   *
+   * @return Info about the bucket
+   *
+   * @throws IOException
+   */
+  @Override
+  public BucketInfo getBucketInfo(BucketArgs args)
+      throws IOException, OzoneException {
+    return null;
+  }
 }

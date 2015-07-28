@@ -38,11 +38,21 @@ public final class Header {
 
   public static final String OZONE_LIST_QUERY_SERVICE = "service";
   public static final String OZONE_LIST_QUERY_VOLUME = "volume";
-  public static final String OZONE_LIST_QUERY_BUCKET ="bucket";
-  public static final String OZONE_LIST_QUERY_KEY ="key";
+  public static final String OZONE_LIST_QUERY_BUCKET = "bucket";
+  public static final String OZONE_LIST_QUERY_KEY = "key";
 
   public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
   public static final String OZONE_SERVER_NAME = "x-ozone-server-name";
+
+  public static final String OZONE_STORAGE_CLASS = "x-ozone-storage-type";
+
+  public static final String OZONE_BUCKET_VERSIONING =
+      "x-ozone-bucket-versioning";
+
+  public static final String OZONE_ACLS = "x-ozone-acls";
+  public static final String OZONE_ACL_ADD = "ADD";
+  public static final String OZONE_ACL_REMOVE = "REMOVE";
+
 
   private Header() {
     // Never constructed.

@@ -58,6 +58,7 @@ public final class ErrorTable {
       new OzoneException(HTTP_BAD_REQUEST, "malformedACL",
                          "Invalid ACL specified.");
 
+
   public static final OzoneException INVALID_VOLUME_NAME =
       new OzoneException(HTTP_BAD_REQUEST, "invalidVolumeName",
                          "Invalid volume name.");
@@ -80,6 +81,10 @@ public final class ErrorTable {
   public static final OzoneException MALFORMED_BUCKET_VERSION =
       new OzoneException(HTTP_BAD_REQUEST, "malformedBucketVersion",
                          "Malformed bucket version or version not unique.");
+
+  public static final OzoneException MALFORMED_STORAGE_TYPE =
+      new OzoneException(HTTP_BAD_REQUEST, "malformedStorageType",
+                         "Invalid storage Type specified.");
 
   public static final OzoneException MALFORMED_STORAGE_CLASS =
       new OzoneException(HTTP_BAD_REQUEST, "malformedStorageClass",
