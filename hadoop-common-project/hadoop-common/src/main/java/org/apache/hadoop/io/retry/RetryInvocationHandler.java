@@ -23,6 +23,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -101,7 +103,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
         Object ret = invokeMethod(method, args);
         hasMadeASuccessfulCall = true;
         return ret;
-      } catch (Exception e) {
+      } catch (Exception ex) {
         boolean isIdempotentOrAtMostOnce = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
             .isAnnotationPresent(Idempotent.class);
@@ -110,15 +112,16 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
               .getMethod(method.getName(), method.getParameterTypes())
               .isAnnotationPresent(AtMostOnce.class);
         }
-        RetryAction action = policy.shouldRetry(e, retries++,
-            invocationFailoverCount, isIdempotentOrAtMostOnce);
-        if (action.action == RetryAction.RetryDecision.FAIL) {
-          if (action.reason != null) {
+        List<RetryAction> actions = extractActions(policy, ex, retries++,
+                invocationFailoverCount, isIdempotentOrAtMostOnce);
+        RetryAction failAction = getFailAction(actions);
+        if (failAction != null) {
+          if (failAction.reason != null) {
             LOG.warn("Exception while invoking " + currentProxy.proxy.getClass()
                 + "." + method.getName() + " over " + currentProxy.proxyInfo
-                + ". Not retrying because " + action.reason, e);
+                + ". Not retrying because " + failAction.reason, ex);
           }
-          throw e;
+          throw ex;
         } else { // retry or failover
           // avoid logging the failover if this is the first call on this
           // proxy object, and we successfully achieve the failover without
@@ -126,8 +129,9 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           boolean worthLogging = 
             !(invocationFailoverCount == 0 && !hasMadeASuccessfulCall);
           worthLogging |= LOG.isDebugEnabled();
-          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY &&
-              worthLogging) {
+          RetryAction failOverAction = getFailOverAction(actions);
+          long delay = getDelayMillis(actions);
+          if (failOverAction != null && worthLogging) {
             String msg = "Exception while invoking " + method.getName()
                 + " of class " + currentProxy.proxy.getClass().getSimpleName()
                 + " over " + currentProxy.proxyInfo;
@@ -135,22 +139,22 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
             if (invocationFailoverCount > 0) {
               msg += " after " + invocationFailoverCount + " fail over attempts"; 
             }
-            msg += ". Trying to fail over " + formatSleepMessage(action.delayMillis);
-            LOG.info(msg, e);
+            msg += ". Trying to fail over " + formatSleepMessage(delay);
+            LOG.info(msg, ex);
           } else {
             if(LOG.isDebugEnabled()) {
               LOG.debug("Exception while invoking " + method.getName()
                   + " of class " + currentProxy.proxy.getClass().getSimpleName()
                   + " over " + currentProxy.proxyInfo + ". Retrying "
-                  + formatSleepMessage(action.delayMillis), e);
+                  + formatSleepMessage(delay), ex);
             }
           }
-          
-          if (action.delayMillis > 0) {
-            Thread.sleep(action.delayMillis);
+
+          if (delay > 0) {
+            Thread.sleep(delay);
           }
           
-          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
+          if (failOverAction != null) {
             // Make sure that concurrent failed method invocations only cause a
             // single actual fail over.
             synchronized (proxyProvider) {
@@ -169,7 +173,68 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       }
     }
   }
-  
+
+  /**
+   * Obtain a retry delay from list of RetryActions.
+   */
+  private long getDelayMillis(List<RetryAction> actions) {
+    long retVal = 0;
+    for (RetryAction action : actions) {
+      if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY ||
+              action.action == RetryAction.RetryDecision.RETRY) {
+        if (action.delayMillis > retVal) {
+          retVal = action.delayMillis;
+        }
+      }
+    }
+    return retVal;
+  }
+
+  /**
+   * Return the first FAILOVER_AND_RETRY action.
+   */
+  private RetryAction getFailOverAction(List<RetryAction> actions) {
+    for (RetryAction action : actions) {
+      if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
+        return action;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Return the last FAIL action.. only if there are no RETRY actions.
+   */
+  private RetryAction getFailAction(List<RetryAction> actions) {
+    RetryAction fAction = null;
+    for (RetryAction action : actions) {
+      if (action.action == RetryAction.RetryDecision.FAIL) {
+        fAction = action;
+      } else {
+        // Atleast 1 RETRY
+        return null;
+      }
+    }
+    return fAction;
+  }
+
+  private List<RetryAction> extractActions(RetryPolicy policy, Exception ex,
+                                           int i, int invocationFailoverCount,
+                                           boolean isIdempotentOrAtMostOnce)
+          throws Exception {
+    List<RetryAction> actions = new LinkedList<>();
+    if (ex instanceof MultiException) {
+      for (Exception th : ((MultiException) ex).getExceptions().values()) {
+        actions.add(policy.shouldRetry(th, i, invocationFailoverCount,
+                isIdempotentOrAtMostOnce));
+      }
+    } else {
+      actions.add(policy.shouldRetry(ex, i,
+              invocationFailoverCount, isIdempotentOrAtMostOnce));
+    }
+    return actions;
+  }
+
   private static String formatSleepMessage(long millis) {
     if (millis > 0) {
       return "after sleeping for " + millis + "ms.";
