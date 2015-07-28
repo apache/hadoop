@@ -20,8 +20,11 @@ package org.apache.hadoop.ozone.web.interfaces;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
+import org.apache.hadoop.ozone.web.response.BucketInfo;
+import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 
@@ -121,4 +124,86 @@ public interface StorageHandler {
    * @throws OzoneException
    */
   VolumeInfo getVolumeInfo(VolumeArgs args) throws IOException, OzoneException;
+
+  /**
+   * Creates a Bucket in specified Volume.
+   *
+   * @param args BucketArgs- BucketName, UserName and Acls
+   *
+   * @throws IOException
+   */
+  void createBucket(BucketArgs args) throws IOException, OzoneException;
+
+  /**
+   * Adds or Removes ACLs from a Bucket.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  void setBucketAcls(BucketArgs args) throws IOException, OzoneException;
+
+  /**
+   * Enables or disables Bucket Versioning.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  void setBucketVersioning(BucketArgs args) throws IOException, OzoneException;
+
+  /**
+   * Sets the Storage Class of a Bucket.
+   *
+   * @param args - BucketArgs
+   *
+   * @throws IOException
+   */
+  void setBucketStorageClass(BucketArgs args)
+      throws IOException, OzoneException;
+
+  /**
+   * Deletes a bucket if it is empty.
+   *
+   * @param args Bucket args structure
+   *
+   * @throws IOException
+   */
+  void deleteBucket(BucketArgs args) throws IOException, OzoneException;
+
+  /**
+   * true if the bucket exists and user has read access
+   * to the bucket else throws Exception.
+   *
+   * @param args Bucket args structure
+   *
+   * @throws IOException
+   */
+  void checkBucketAccess(BucketArgs args) throws IOException, OzoneException;
+
+
+  /**
+   * Returns all Buckets of a specified Volume.
+   *
+   * @param args --User Args
+   *
+   * @return ListAllBuckets
+   *
+   * @throws OzoneException
+   */
+  ListBuckets listBuckets(VolumeArgs args) throws IOException, OzoneException;
+
+
+  /**
+   * Returns Bucket's Metadata as a String.
+   *
+   * @param args Bucket args structure
+   *
+   * @return Info about the bucket
+   *
+   * @throws IOException
+   */
+  BucketInfo getBucketInfo(BucketArgs args) throws IOException, OzoneException;
+
+
 }

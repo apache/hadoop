@@ -164,16 +164,6 @@ public class BucketArgs extends VolumeArgs {
     return versioning;
   }
 
-  /**
-   * Converts a valid String to Enum for ease of use.
-   *
-   * @param version version string.
-   */
-  public void setVersioning(String version) {
-    if (version != null) {
-      this.versioning = OzoneConsts.Versioning.valueOf(version.toUpperCase());
-    }
-  }
 
   /**
    * SetVersioning Info.
