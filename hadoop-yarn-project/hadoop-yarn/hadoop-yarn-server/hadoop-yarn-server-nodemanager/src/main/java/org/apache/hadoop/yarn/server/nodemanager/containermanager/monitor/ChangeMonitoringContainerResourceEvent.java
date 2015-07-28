@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 
-public class ChangeContainerResourceEvent extends ContainerEvent {
+public class ChangeMonitoringContainerResourceEvent extends ContainersMonitorEvent {
+  private final Resource resource;
 
-  private Resource resource;
-
-  public ChangeContainerResourceEvent(ContainerId c, Resource resource) {
-    super(c, ContainerEventType.CHANGE_CONTAINER_RESOURCE);
+  public ChangeMonitoringContainerResourceEvent(ContainerId containerId,
+      Resource resource) {
+    super(containerId,
+        ContainersMonitorEventType.CHANGE_MONITORING_CONTAINER_RESOURCE);
     this.resource = resource;
   }
 

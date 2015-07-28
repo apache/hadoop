@@ -37,6 +37,8 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   Resource getResource();
 
+  void setResource(Resource targetResource);
+
   ContainerTokenIdentifier getContainerTokenIdentifier();
 
   String getUser();
