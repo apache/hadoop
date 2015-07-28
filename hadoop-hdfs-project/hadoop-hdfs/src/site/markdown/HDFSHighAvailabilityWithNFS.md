@@ -189,9 +189,12 @@ The order in which you set these configurations is unimportant, but the values y
 
     Configure the name of the Java class which will be used by the DFS Client to
     determine which NameNode is the current Active, and therefore which NameNode is
-    currently serving client requests. The only implementation which currently
-    ships with Hadoop is the **ConfiguredFailoverProxyProvider**, so use this
-    unless you are using a custom one. For example:
+    currently serving client requests. The two implementations which currently
+    ship with Hadoop are the **ConfiguredFailoverProxyProvider** and the
+    **RequestHedgingProxyProvider** (which, for the first call, concurrently invokes all
+    namenodes to determine the active one, and on subsequent requests, invokes the active
+    namenode until a fail-over happens), so use one of these unless you are using a custom
+    proxy provider.
 
         <property>
           <name>dfs.client.failover.proxy.provider.mycluster</name>
