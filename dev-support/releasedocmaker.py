@@ -400,12 +400,6 @@ def main():
   (options, args) = parser.parse_args()
 
   if (options.versions is None):
-    options.versions = []
-
-  if (len(args) > 2):
-    options.versions.append(args[2])
-
-  if (len(options.versions) <= 0):
     parser.error("At least one version needs to be supplied")
 
   proxy = urllib2.ProxyHandler()
@@ -413,6 +407,8 @@ def main():
   urllib2.install_opener(opener)
 
   projects = options.projects
+  if projects is None:
+    parser.error("At least one project needs to be supplied")
 
   if (options.range is True):
     versions = [ Version(v) for v in GetVersions(options.versions, projects).getlist() ]
