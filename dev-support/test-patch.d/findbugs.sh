@@ -20,13 +20,14 @@ FINDBUGS_WARNINGS_FAIL_PRECHECK=false
 
 add_plugin findbugs
 
-function findbugs_file_filter
+function findbugs_filefilter
 {
   local filename=$1
 
   if [[ ${BUILDTOOL} == maven
     || ${BUILDTOOL} == ant ]]; then
-    if [[ ${filename} =~ \.java$ ]]; then
+    if [[ ${filename} =~ \.java$
+      || ${filename} =~ (^|/)findbugs-exclude.xml$ ]]; then
       add_test findbugs
     fi
   fi
@@ -139,7 +140,7 @@ function findbugs_runner
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
       module_status ${i} -1 "" "${name}/${module} cannot run setBugDatabaseInfo from findbugs"
-      ((retval = retval + 1))
+      ((result=result+1))
       ((i=i+1))
       continue
     fi
@@ -151,7 +152,7 @@ function findbugs_runner
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
       module_status ${i} -1 "" "${name}/${module} cannot run convertXmlToText from findbugs"
-      ((result = result + 1))
+      ((result=result+1))
     fi
 
     if [[ -z ${FINDBUGS_VERSION}
@@ -182,7 +183,7 @@ function findbugs_preapply
   local i=0
   local warnings_file
   local module_findbugs_warnings
-  local results=0
+  local result=0
 
   big_console_header "Pre-patch findbugs detection"
 
@@ -199,7 +200,7 @@ function findbugs_preapply
   fi
 
   findbugs_runner branch
-  results=$?
+  result=$?
 
   if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" ]]; then
     until [[ $i -eq ${#MODULE[@]} ]]; do
@@ -222,7 +223,7 @@ function findbugs_preapply
 
       if [[ ${module_findbugs_warnings} -gt 0 ]] ; then
         module_status ${i} -1 "branch-findbugs-${fn}.html" "${module} in ${PATCH_BRANCH} cannot run convertXmlToText from findbugs"
-        ((results=results+1))
+        ((result=result+1))
       fi
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
@@ -231,7 +232,7 @@ function findbugs_preapply
     modules_messages branch findbugs true
   fi
 
-  if [[ ${results} != 0 ]]; then
+  if [[ ${result} != 0 ]]; then
     return 1
   fi
   return 0
@@ -256,7 +257,7 @@ function findbugs_postinstall
   local firstpart
   local secondpart
   local i=0
-  local results=0
+  local result=0
   local savestop
 
   big_console_header "Patch findbugs detection"
