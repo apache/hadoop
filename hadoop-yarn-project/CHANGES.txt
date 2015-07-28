@@ -150,6 +150,13 @@ Release 2.8.0 - UNRELEASED
     YARN-3656. LowCost: A Cost-Based Placement Agent for YARN Reservations. 
     (Jonathan Yaniv and Ishai Menache via curino)
 
+    YARN-3852. Add docker container support to container-executor
+    (Abin Shahab via vvasudev)
+
+    YARN-3853. Add docker container runtime support to LinuxContainterExecutor.
+    (Sidharta Seethana via vvasudev)
+
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -687,6 +694,12 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3958. TestYarnConfigurationFields should be moved to hadoop-yarn-api
     module. (Varun Saxena via aajisaka)
+
+    YARN-3846. RM Web UI queue filter is not working for sub queue.
+    (Mohammad Shahid Khan via jianhe)
+
+    YARN-3982. container-executor parsing of container-executor.cfg broken in
+    trunk and branch-2. (Varun Vasudev via xgong)
 
 Release 2.7.2 - UNRELEASED
 

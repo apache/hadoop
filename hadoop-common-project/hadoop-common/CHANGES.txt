@@ -1017,6 +1017,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12239. StorageException complaining " no lease ID" when updating
     FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
 
+    HADOOP-12245. References to misspelled REMAINING_QUATA in
+    FileSystemShell.md. (Gabor Liptak via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
