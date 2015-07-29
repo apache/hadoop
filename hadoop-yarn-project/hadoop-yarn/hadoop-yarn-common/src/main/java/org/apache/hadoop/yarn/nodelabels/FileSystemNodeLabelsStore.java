@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -92,12 +93,7 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
 
   @Override
   public void close() throws IOException {
-    try {
-      fs.close();
-      editlogOs.close();
-    } catch (IOException e) {
-      LOG.warn("Exception happened whiling shutting down,", e);
-    }
+    IOUtils.cleanup(LOG, fs, editlogOs);
   }
 
   private void setFileSystem(Configuration conf) throws IOException {
