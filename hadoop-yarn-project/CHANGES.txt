@@ -707,6 +707,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3982. container-executor parsing of container-executor.cfg broken in
     trunk and branch-2. (Varun Vasudev via xgong)
 
+    YARN-3919. NPEs' while stopping service after exception during
+    CommonNodeLabelsManager#start. (varun saxane via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
