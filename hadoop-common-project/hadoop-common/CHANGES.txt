@@ -1023,6 +1023,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12175. FsShell must load SpanReceierHost to support tracing
     (Masatake Iwasaki via Colin P. McCabe)
 
+    HADOOP-10945. 4-digit octal umask permissions throws a parse error (Chang
+    Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
