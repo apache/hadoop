@@ -1093,6 +1093,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
 
+    HDFS-8670. Better to exclude decommissioned nodes for namenode NodeUsage JMX
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

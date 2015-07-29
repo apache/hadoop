@@ -5999,6 +5999,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         new HashMap<String, Map<String,Object>>();
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+    for (Iterator<DatanodeDescriptor> it = live.iterator(); it.hasNext();) {
+      DatanodeDescriptor node = it.next();
+      if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+        it.remove();
+      }
+    }
 
     if (live.size() > 0) {
       float totalDfsUsed = 0;
