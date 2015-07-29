@@ -201,7 +201,6 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | Name | Description |
 |:---- |:---- |
 | `MissingBlocks` | Current number of missing blocks |
-| `TimeOfTheOldestBlockToBeReplicated` | The timestamp of the oldest block to be replicated. If there are no under-replicated or corrupt blocks, return 0. |
 | `ExpiredHeartbeats` | Total number of expired heartbeats |
 | `TransactionsSinceLastCheckpoint` | Total number of transactions since last checkpoint |
 | `TransactionsSinceLastLogRoll` | Total number of transactions since last edit log roll |

@@ -3770,14 +3770,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // not locking
     return blockManager.getMissingReplOneBlocksCount();
   }
-
-  @Metric({"TimeOfTheOldestBlockToBeReplicated",
-      "The timestamp of the oldest block to be replicated. If there are no" +
-      "under-replicated or corrupt blocks, return 0."})
-  public long getTimeOfTheOldestBlockToBeReplicated() {
-    return blockManager.getTimeOfTheOldestBlockToBeReplicated();
-  }
-
+  
   @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
