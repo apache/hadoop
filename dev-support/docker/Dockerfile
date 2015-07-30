@@ -44,7 +44,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libjansson-dev \
     fuse libfuse-dev \
     libcurl4-openssl-dev \
-    python python2.7 pylint
+    python python2.7 pylint \
+    ruby
 
 # Install Forrest
 RUN mkdir -p /usr/local/apache-forrest ; \
@@ -62,6 +63,9 @@ ENV FINDBUGS_HOME /opt/findbugs
 # Install shellcheck
 RUN apt-get install -y cabal-install
 RUN cabal update && cabal install shellcheck --global
+
+# Install rubocop
+RUN gem install rubocop
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
