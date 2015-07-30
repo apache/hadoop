@@ -3433,6 +3433,44 @@ function add_bugsystem
   BUGSYSTEMS="${BUGSYSTEMS} $1"
 }
 
+## @description  Calculate the differences between the specified files
+## @description  and output it to stdout.
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+function calcdiffs
+{
+  local orig=$1
+  local new=$2
+  local tmp=${PATCH_DIR}/pl.$$.${RANDOM}
+  local count=0
+  local j
+
+  # first, pull out just the errors
+  # shellcheck disable=SC2016
+  ${AWK} -F: '{print $NF}' "${orig}" > "${tmp}.branch"
+
+  # shellcheck disable=SC2016
+  ${AWK} -F: '{print $NF}' "${new}" > "${tmp}.patch"
+
+  # compare the errors, generating a string of line
+  # numbers. Sorry portability: GNU diff makes this too easy
+  ${DIFF} --unchanged-line-format="" \
+     --old-line-format="" \
+     --new-line-format="%dn " \
+     "${tmp}.branch" \
+     "${tmp}.patch" > "${tmp}.lined"
+
+  # now, pull out those lines of the raw output
+  # shellcheck disable=SC2013
+  for j in $(cat "${tmp}.lined"); do
+    # shellcheck disable=SC2086
+    head -${j} "${new}" | tail -1
+  done
+
+  rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
+}
+
 ###############################################################################
 ###############################################################################
 ###############################################################################

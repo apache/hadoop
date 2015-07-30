@@ -141,45 +141,6 @@ function checkstyle_preapply
   return 0
 }
 
-function checkstyle_calcdiffs
-{
-  local orig=$1
-  local new=$2
-  local diffout=$3
-  local tmp=${PATCH_DIR}/cs.$$.${RANDOM}
-  local count=0
-  local j
-
-  # first, pull out just the errors
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${orig}" >> "${tmp}.branch"
-
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${new}" >> "${tmp}.patch"
-
-  # compare the errors, generating a string of line
-  # numbers.  Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
-     --old-line-format="" \
-     --new-line-format="%dn " \
-     "${tmp}.branch" \
-     "${tmp}.patch" > "${tmp}.lined"
-
-  # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1 >> "${diffout}"
-  done
-
-  if [[ -f "${diffout}" ]]; then
-    # shellcheck disable=SC2016
-    count=$(wc -l "${diffout}" | ${AWK} '{print $1}' )
-  fi
-  rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
-  echo "${count}"
-}
-
 function checkstyle_postapply
 {
   local result
@@ -222,11 +183,9 @@ function checkstyle_postapply
       touch "${PATCH_DIR}/branch-checkstyle-${fn}.txt"
     fi
 
+    calcdiffs "${PATCH_DIR}/branch-checkstyle-${fn}.txt" "${PATCH_DIR}/patch-checkstyle-${fn}.txt" > "${PATCH_DIR}/diff-checkstyle-${fn}.txt"
     #shellcheck disable=SC2016
-    diffpostpatch=$(checkstyle_calcdiffs \
-      "${PATCH_DIR}/branch-checkstyle-${fn}.txt" \
-      "${PATCH_DIR}/patch-checkstyle-${fn}.txt" \
-      "${PATCH_DIR}/diff-checkstyle-${fn}.txt" )
+    diffpostpatch=$(wc -l "${PATCH_DIR}/diff-checkstyle-${fn}.txt" | ${AWK} '{print $1}')
 
     if [[ ${diffpostpatch} -gt 0 ]] ; then
       ((result = result + 1))

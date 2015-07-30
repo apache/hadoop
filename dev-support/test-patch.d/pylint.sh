@@ -71,7 +71,7 @@ function pylint_preapply
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.py$ && -f ${i} ]]; then
       ${PYLINT} --indent-string="  " --output-format=parseable --reports=n "${i}" 2>/dev/null |
-      ${AWK} '1<NR' >> "${PATCH_DIR}/branchpylint-result.txt"
+      ${AWK} '1<NR' >> "${PATCH_DIR}/branch-pylint-result.txt"
     fi
   done
   popd >/dev/null
@@ -80,49 +80,9 @@ function pylint_preapply
   return 0
 }
 
-function pylint_calcdiffs
-{
-  local orig=$1
-  local new=$2
-  local diffout=$3
-  local tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  local count=0
-  local j
-
-  # first, pull out just the errors
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${orig}" >> "${tmp}.branch"
-
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${new}" >> "${tmp}.patch"
-
-  # compare the errors, generating a string of line
-  # numbers. Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
-     --old-line-format="" \
-     --new-line-format="%dn " \
-     "${tmp}.branch" \
-     "${tmp}.patch" > "${tmp}.lined"
-
-  # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1 >> "${diffout}"
-  done
-
-  if [[ -f "${diffout}" ]]; then
-    # shellcheck disable=SC2016
-    count=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${diffout}")
-  fi
-  rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
-  echo "${count}"
-}
-
 function pylint_postapply
 {
   local i
-  local msg
   local numPrepatch
   local numPostpatch
   local diffPostpatch
@@ -152,32 +112,28 @@ function pylint_postapply
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.py$ && -f ${i} ]]; then
       ${PYLINT} --indent-string="  " --output-format=parseable --reports=n "${i}" 2>/dev/null |
-      ${AWK} '1<NR' >> "${PATCH_DIR}/patchpylint-result.txt"
+      ${AWK} '1<NR' >> "${PATCH_DIR}/patch-pylint-result.txt"
     fi
   done
   popd >/dev/null
 
   # shellcheck disable=SC2016
   PYLINT_VERSION=$(${PYLINT} --version 2>/dev/null | ${GREP} pylint | ${AWK} '{print $NF}')
-  PYLINT_VERSION=${PYLINT_VERSION%,}
-  msg="v${PYLINT_VERSION}"
-  add_footer_table pylint "${msg}"
+  add_footer_table pylint "v${PYLINT_VERSION%,}"
 
-  diffPostpatch=$(pylint_calcdiffs \
-    "${PATCH_DIR}/branchpylint-result.txt" \
-    "${PATCH_DIR}/patchpylint-result.txt" \
-    "${PATCH_DIR}/diffpatchpylint.txt")
+  calcdiffs "${PATCH_DIR}/branch-pylint-result.txt" "${PATCH_DIR}/patch-pylint-result.txt" > "${PATCH_DIR}/diff-patch-pylint.txt"
+  diffPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-pylint.txt")
 
   if [[ ${diffPostpatch} -gt 0 ]] ; then
     # shellcheck disable=SC2016
-    numPrepatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branchpylint-result.txt")
+    numPrepatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-pylint-result.txt")
 
     # shellcheck disable=SC2016
-    numPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patchpylint-result.txt")
+    numPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-pylint-result.txt")
 
     add_vote_table -1 pylint "The applied patch generated "\
-      "${diffPostpatch} new pylint (v${PYLINT_VERSION}) issues (total was ${numPrepatch}, now ${numPostpatch})."
-    add_footer_table pylint "@@BASE@@/diffpatchpylint.txt"
+      "${diffPostpatch} new pylint issues (total was ${numPrepatch}, now ${numPostpatch})."
+    add_footer_table pylint "@@BASE@@/diff-patch-pylint.txt"
     return 1
   fi
 

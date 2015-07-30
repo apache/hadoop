@@ -64,7 +64,6 @@ function shellcheck_private_findbash
 function shellcheck_preapply
 {
   local i
-  local msg
 
   verify_needed_test shellcheck
   if [[ $? == 0 ]]; then
@@ -80,21 +79,11 @@ function shellcheck_preapply
 
   start_clock
 
-  # shellcheck disable=SC2016
-  SHELLCHECK_VERSION=$(${SHELLCHECK} --version | ${GREP} version: | ${AWK} '{print $NF}')
-  msg="v${SHELLCHECK_VERSION}"
-
-  if [[ ${SHELLCHECK_VERSION} =~ 0.[0-3].[0-5] ]]; then
-    msg="${msg} (This is an old version that has serious bugs. Consider upgrading.)"
-  fi
-
-  add_footer_table shellcheck "${msg}"
-
   echo "Running shellcheck against all identifiable shell scripts"
   pushd "${BASEDIR}" >/dev/null
   for i in $(shellcheck_private_findbash); do
     if [[ -f ${i} ]]; then
-      ${SHELLCHECK} -f gcc "${i}" >> "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt"
+      ${SHELLCHECK} -f gcc "${i}" >> "${PATCH_DIR}/branch-shellcheck-result.txt"
     fi
   done
   popd > /dev/null
@@ -103,48 +92,10 @@ function shellcheck_preapply
   return 0
 }
 
-function shellcheck_calcdiffs
-{
-  local orig=$1
-  local new=$2
-  local diffout=$3
-  local tmp=${PATCH_DIR}/sc.$$.${RANDOM}
-  local count=0
-  local j
-
-  # first, pull out just the errors
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${orig}" >> "${tmp}.branch"
-
-  # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${new}" >> "${tmp}.patch"
-
-  # compare the errors, generating a string of line
-  # numbers.  Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
-     --old-line-format="" \
-     --new-line-format="%dn " \
-     "${tmp}.branch" \
-     "${tmp}.patch" > "${tmp}.lined"
-
-  # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1 >> "${diffout}"
-  done
-
-  if [[ -f "${diffout}" ]]; then
-    # shellcheck disable=SC2016
-    count=$(wc -l "${diffout}" | ${AWK} '{print $1}' )
-  fi
-  rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
-  echo "${count}"
-}
-
 function shellcheck_postapply
 {
   local i
+  local msg
   local numPrepatch
   local numPostpatch
   local diffPostpatch
@@ -171,29 +122,35 @@ function shellcheck_postapply
   echo "Running shellcheck against all identifiable shell scripts"
   # we re-check this in case one has been added
   for i in $(shellcheck_private_findbash); do
-    ${SHELLCHECK} -f gcc "${i}" >> "${PATCH_DIR}/patchshellcheck-result.txt"
+    ${SHELLCHECK} -f gcc "${i}" >> "${PATCH_DIR}/patch-shellcheck-result.txt"
   done
 
-  if [[ ! -f "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt" ]]; then
-    touch "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt"
+  if [[ ! -f "${PATCH_DIR}/branch-shellcheck-result.txt" ]]; then
+    touch "${PATCH_DIR}/branch-shellcheck-result.txt"
   fi
 
   # shellcheck disable=SC2016
-  numPrepatch=$(wc -l "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt" | ${AWK} '{print $1}')
+  SHELLCHECK_VERSION=$(${SHELLCHECK} --version | ${GREP} version: | ${AWK} '{print $NF}')
+  msg="v${SHELLCHECK_VERSION}"
+  if [[ ${SHELLCHECK_VERSION} =~ 0.[0-3].[0-5] ]]; then
+    msg="${msg} (This is an old version that has serious bugs. Consider upgrading.)"
+  fi
+  add_footer_table shellcheck "${msg}"
 
+  calcdiffs "${PATCH_DIR}/branch-shellcheck-result.txt" "${PATCH_DIR}/patch-shellcheck-result.txt" > "${PATCH_DIR}/diff-patch-shellcheck.txt"
   # shellcheck disable=SC2016
-  numPostpatch=$(wc -l "${PATCH_DIR}/patchshellcheck-result.txt" | ${AWK} '{print $1}')
-
-  diffPostpatch=$(shellcheck_calcdiffs \
-    "${PATCH_DIR}/${PATCH_BRANCH}shellcheck-result.txt" \
-    "${PATCH_DIR}/patchshellcheck-result.txt" \
-      "${PATCH_DIR}/diffpatchshellcheck.txt"
-    )
+  diffPostpatch=$(wc -l "${PATCH_DIR}/diff-patch-shellcheck.txt" | ${AWK} '{print $1}')
 
   if [[ ${diffPostpatch} -gt 0 ]] ; then
+    # shellcheck disable=SC2016
+    numPrepatch=$(wc -l "${PATCH_DIR}/branch-shellcheck-result.txt" | ${AWK} '{print $1}')
+
+    # shellcheck disable=SC2016
+    numPostpatch=$(wc -l "${PATCH_DIR}/patch-shellcheck-result.txt" | ${AWK} '{print $1}')
+
     add_vote_table -1 shellcheck "The applied patch generated "\
-      "${diffPostpatch} new shellcheck (v${SHELLCHECK_VERSION}) issues (total was ${numPrepatch}, now ${numPostpatch})."
-    add_footer_table shellcheck "@@BASE@@/diffpatchshellcheck.txt"
+      "${diffPostpatch} new shellcheck issues (total was ${numPrepatch}, now ${numPostpatch})."
+    add_footer_table shellcheck "@@BASE@@/diff-patch-shellcheck.txt"
     return 1
   fi
 
