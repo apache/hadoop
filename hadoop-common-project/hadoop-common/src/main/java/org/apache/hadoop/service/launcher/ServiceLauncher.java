@@ -21,6 +21,8 @@ package org.apache.hadoop.service.launcher;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
@@ -135,23 +137,54 @@ public class ServiceLauncher<S extends Service>
   private Configuration configuration;
 
   /**
-   * Classname for the service to create.
+   * Text description of service for messages
    */
-  private String serviceClassName;
+  private String serviceName;
+
+  /**
+   * Classname for the service to create.; empty string otherwise
+   */
+  private String serviceClassName = "";
+
+  /**
+   * List of resources to load to configuration before instantiating class
+   */
+  private List<String> confResources = new ArrayList<>();
+
+  /**
+   * List of the standard configurations to create (and so load in properties)
+   */
+  protected static final String[] defaultConfigs = {
+      "org.apache.hadoop.conf.Configuration",
+      "org.apache.hadoop.hdfs.HdfsConfiguration",
+      "org.apache.hadoop.yarn.conf.YarnConfiguration"
+  };
 
   /**
    * Create an instance of the launcher
    * @param serviceClassName classname of the service
    */
   public ServiceLauncher(String serviceClassName) {
+    this(serviceClassName, serviceClassName);
+  }
+  /**
+   * Create an instance of the launcher
+   * @param serviceName name of service for text messages
+   * @param serviceClassName classname of the service
+   */
+  public ServiceLauncher(String serviceName, String serviceClassName) {
     this.serviceClassName = serviceClassName;
+    this.serviceName = serviceName;
+    // set up initial list of configurations
+    confResources.addAll(Arrays.asList(defaultConfigs));
   }
 
   /**
    * Get the service.
    * <p>
-   * Null until and unless
-   * {@link #coreServiceLaunch(Configuration, List, boolean, boolean)} has completed
+   * Null until
+   * {@link #coreServiceLaunch(Configuration, List, boolean, boolean)}
+   * has completed
    * @return the service
    */
   public final S getService() {
@@ -178,19 +211,38 @@ public class ServiceLauncher<S extends Service>
    * The exit code from a successful service execution.
    * @return the exit code. 
    */
-  @VisibleForTesting
   public final int getServiceExitCode() {
     return serviceExitCode;
   }
 
-  @VisibleForTesting
+  /**
+   * Get the exit exception used to end this service
+   * @return an exception, which will be null until the service
+   * has exited (and <code>System.exit</code> has not been called)
+   */
   public final ExitUtil.ExitException getServiceException() {
     return serviceException;
   }
 
+  /**
+   * probe for service classname being defined
+   * @return true if the classname is set
+   */
+  private boolean isClassnameDefined() {
+    return serviceClassName != null && !serviceClassName.isEmpty();
+  }
+
   @Override
   public String toString() {
-    return "ServiceLauncher for " + serviceClassName;
+    final StringBuilder sb = new StringBuilder("\"ServiceLauncher for \"");
+    sb.append(serviceName);
+    if (serviceClassName != null && !serviceClassName.isEmpty()) {
+      sb.append("serviceClassName='").append(serviceClassName).append('\'');
+    }
+    if (service != null) {
+      sb.append(", service=").append(service);
+    }
+    return sb.toString();
   }
 
   /**
@@ -211,7 +263,7 @@ public class ServiceLauncher<S extends Service>
   public void launchServiceAndExit(List<String> args) {
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(startupShutdownMessage(serviceClassName, args));
+      LOG.debug(startupShutdownMessage(serviceName, args));
       StringBuilder builder = new StringBuilder();
       for (String arg : args) {
         builder.append('"').append(arg).append("\" ");
@@ -235,8 +287,46 @@ public class ServiceLauncher<S extends Service>
    * @return the new options.
    */
   protected Options createOptions() {
-    return new Options();
+    Options options = new Options();
+    options.addOption(null, ARG_CONF, true, ARG_CONF);
+    return options;
   }
+
+  /**
+   * Add the core Hadoop tool options, <i>except</i>
+   * those added for MR jobs: <code>libjars</code>,
+   *  <code>files</code> and <code>archives</code>
+   */
+  @SuppressWarnings("static-access")
+  protected static Options buildHadoopToolOptions(Options opts) {
+    Option fs = OptionBuilder.withArgName("filesystem URI")
+        .hasArg()
+        .withDescription("specify a filesystem")
+        .create("fs");
+    Option oconf = OptionBuilder.withArgName("configuration file")
+        .hasArg()
+        .withDescription("specify an application configuration file")
+        .create("conf");
+    Option property = OptionBuilder.withArgName("property=value")
+        .hasArg()
+        .withDescription("use value for given property")
+        .create('D');
+
+
+    // file with security tokens
+    Option tokensFile = OptionBuilder.withArgName("tokensFile")
+        .hasArg()
+        .withDescription("name of the file with the tokens")
+        .create("tokenCacheFile");
+
+    opts.addOption(fs);
+    opts.addOption(oconf);
+    opts.addOption(property);
+    opts.addOption(tokensFile);
+
+    return opts;
+  }
+
   /**
    * Override point: create the base configuration for the service.
    * <p>
@@ -248,22 +338,13 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * List of the standard configurations to create
-   */
-  protected static final String[] defaultConfigs = {
-      "org.apache.hadoop.conf.Configuration",
-      "org.apache.hadoop.hdfs.HdfsConfiguration",
-      "org.apache.hadoop.yarn.conf.YarnConfiguration"
-  };
-
-  /**
    * Override point: Get a list of configurations to create.
    * @return the array of configs to attempt to create. If any are off the
    * classpath, that is logged
    */
   @SuppressWarnings("ReturnOfCollectionOrArrayField")
-  protected String[] getConfigurationsToCreate() {
-    return defaultConfigs;
+  protected List<String> getConfigurationsToCreate() {
+    return confResources;
   }
 
   /**
@@ -276,7 +357,7 @@ public class ServiceLauncher<S extends Service>
    */
   @VisibleForTesting
   public int createDefaultConfigs() {
-    String[] toCreate = getConfigurationsToCreate();
+    List<String> toCreate = getConfigurationsToCreate();
     int loaded = 0;
     for (String classname : toCreate) {
       try {
@@ -284,7 +365,7 @@ public class ServiceLauncher<S extends Service>
         Object instance = loadClass.getConstructor().newInstance();
         if (!(instance instanceof Configuration)) {
           throw new ExitUtil.ExitException(EXIT_SERVICE_CREATION_FAILURE,
-              "Could not create "+ classname +"- it is not a Configuration");
+              "Could not create "+ classname +"- it is not a Configuration class/subclass");
         }
         loaded++;
       } catch (ClassNotFoundException e) {
@@ -301,7 +382,6 @@ public class ServiceLauncher<S extends Service>
     return loaded;
   }
 
-  
   /**
    * Launch a service catching all exceptions and downgrading them to exit codes
    * after logging.
@@ -343,15 +423,15 @@ public class ServiceLauncher<S extends Service>
           }
         }
       }
-      String serviceName = getServiceName();
+      String name = getServiceName();
 
       if (exitCode == 0) {
         exitException = new ServiceLaunchException(exitCode,
             "%s succeeded",
-            serviceName);
+            name);
       } else {
         exitException = new ServiceLaunchException(exitCode,
-            "%s failed ", serviceName);
+            "%s failed ", name);
       }
       // either the service succeeded, or an error raised during shutdown, 
       // which we don't worry that much about
@@ -407,18 +487,18 @@ public class ServiceLauncher<S extends Service>
       shutdownHook = new ServiceShutdownHook(service);
       shutdownHook.register(SHUTDOWN_PRIORITY);
     }
-    String serviceName = getServiceName();
-    LOG.debug("Launched service {}", serviceName);
+    String name = getServiceName();
+    LOG.debug("Launched service {}", name);
     LaunchableService launchableService = null;
 
     if (service instanceof LaunchableService) {
       // it's a launchedService, pass in the conf and arguments before init)
-      LOG.debug("Service {} implements LaunchedService", serviceName);
+      LOG.debug("Service {} implements LaunchedService", name);
       launchableService = (LaunchableService) service;
       if (launchableService.isInState(Service.STATE.INITED)) {
         LOG.warn("LaunchedService {}"
            + " initialized in constructor before CLI arguments passed in",
-            serviceName);
+            name);
       }
       Configuration newconf = launchableService.bindArgs(configuration, processedArgs);
       if (newconf != null) {
@@ -441,7 +521,7 @@ public class ServiceLauncher<S extends Service>
           // assume that runnable services are meant to run from here
           try {
             exitCode = launchableService.execute();
-            LOG.debug("Service {} execution returned exit code {}", serviceName, exitCode);
+            LOG.debug("Service {} execution returned exit code {}", name, exitCode);
           } finally {
             // then stop the service
             service.stop();
@@ -472,9 +552,11 @@ public class ServiceLauncher<S extends Service>
   @SuppressWarnings("unchecked")
   public Service instantiateService(Configuration conf) {
     Preconditions.checkArgument(conf != null, "null conf");
+    Preconditions.checkArgument(serviceClassName != null, "null service classname");
+    Preconditions.checkArgument(!serviceClassName.isEmpty(), "undefined service classname");
     configuration = conf;
 
-    //Instantiate the class -this requires the service to have a public
+    //Instantiate the class --this requires the service to have a public
     // zero-argument constructor
     Object instance;
     
@@ -578,7 +660,7 @@ public class ServiceLauncher<S extends Service>
       LOG.warn("{}", e, e);
     }
     Thread.setDefaultUncaughtExceptionHandler(
-      new HadoopUncaughtExceptionHandler(this));
+        new HadoopUncaughtExceptionHandler(this));
   }
 
   /**
@@ -611,7 +693,7 @@ public class ServiceLauncher<S extends Service>
     if (name != null) {
       return "service " + name;
     } else {
-      return "service classname " + serviceClassName;
+      return "service " + serviceName;
     }
   }
   
@@ -786,7 +868,8 @@ public class ServiceLauncher<S extends Service>
   }
 
   /**
-   * Parse the command arguments
+   * Parse the command arguments, extracting the service class as the last
+   * element of the list (after extracting all the rest)
    * @param conf configuration to use
    * @param options custom options; pass in an empty Options if unused
    * @param args command line argument list
@@ -805,19 +888,27 @@ public class ServiceLauncher<S extends Service>
     try {
       GenericOptionsParser parser;
       String[] argArray = args.toArray(new String[args.size()]);
-      parser = new GenericOptionsParser(
-          conf, options, argArray);
+      // parse this the standard way. This will
+      // update the configuration in the parser, and potentially
+      // patch the user credentials
+      parser = new GenericOptionsParser(conf, options, argArray);
       if (!parser.isParseSuccessful()) {
         throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
             E_PARSE_FAILED + " %s", argString);
       }
-      // for extra strictness, scan the list of configuration files
-      // and bail out if none is set
-
       CommandLine line = parser.getCommandLine();
+
+      // Scan the list of configuration files
+      // and bail out if they don't exist
       if (line.hasOption(ARG_CONF)) {
         verifyConfigurationFilesExist(line.getOptionValues(ARG_CONF));
       }
+      if (line.hasOption(ARG_CONFCLASS)) {
+        // new resources to instantiate as configurations
+        String[] confClassnames = line.getOptionValues(ARG_CONFCLASS);
+        confResources.addAll(Arrays.asList(confClassnames));
+      }
+      // then extract the remainder
       return Arrays.asList(parser.getRemainingArgs());
     } catch (IOException e) {
       // parsing problem: convert to a command argument error with
@@ -895,10 +986,13 @@ public class ServiceLauncher<S extends Service>
   public static void serviceMain(String... args) {
     serviceMain(Arrays.asList(args));
   }
-    
+
   /* ====================================================================== */
   /**
    * The real main function, which takes the arguments as a list.
+   * <ol>
+   *   <li>-conf &lt;file&gt; : configuration file</li>
+   * </ol>
    * <p>
    * Argument 0 MUST be the service classname
    * @param argsList the list of arguments

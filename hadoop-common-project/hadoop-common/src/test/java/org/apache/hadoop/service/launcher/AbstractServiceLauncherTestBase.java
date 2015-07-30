@@ -212,11 +212,8 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     File directory = new File(CONF_FILE_DIR);
     directory.mkdirs();
     File file = File.createTempFile("conf", ".xml", directory);
-    OutputStream fos = new FileOutputStream(file);
-    try {
+    try(OutputStream fos = new FileOutputStream(file)) {
       conf.writeXml(fos);
-    } finally {
-      IOUtils.closeStream(fos);
     }
     return file.getAbsolutePath();
   }
@@ -260,7 +257,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
       List<String> args,
       boolean execute) throws ExitUtil.ExitException {
     ServiceLauncher<S> serviceLauncher =
-        new ServiceLauncher<S>(serviceClass.getName());
+        new ServiceLauncher<>(serviceClass.getName());
     ExitUtil.ExitException exitException =
         serviceLauncher.launchService(conf, args, false, execute);
     if (exitException.getExitCode() == 0) {
@@ -343,7 +340,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * @param search search key
    */
   protected void assertContains(String text, String search) {
-    failif(!StringUtils.contains(text, search), "String \"%s\" not found in \"%s\"",
-        text, search);
+    failif(!StringUtils.contains(text, search),
+        "String \"%s\" not found in \"%s\"", text, search);
   }
 }

@@ -23,8 +23,8 @@ import org.junit.Test;
 
 /**
  * This test verifies that exceptions in the 
- * {@link LaunchableService#execute()} method are relayed if exit exceptions,
- * forwarded if not
+ * {@link LaunchableService#execute()} method are relayed if an instance of
+ * an exit exceptions, and forwarded if not.
  */
 public class TestServiceExceptionInExecute extends AbstractServiceLauncherTestBase {
 

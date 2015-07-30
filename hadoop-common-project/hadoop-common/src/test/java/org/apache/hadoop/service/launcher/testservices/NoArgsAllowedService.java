@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * service that does not allow any arguments
@@ -47,10 +48,15 @@ public class NoArgsAllowedService extends AbstractLaunchableService {
       Exception {
     Configuration configuration = super.bindArgs(config, args);
     if (!args.isEmpty()) {
-      LOG.error("Got {} arguments, first one: {}", args.size(), args.get(0));
+      StringBuilder argsList = new StringBuilder();
+      for (String arg : args) {
+        argsList.append('"').append(arg).append("\" ");
+      }
+      LOG.error("Got {} arguments: {}", args.size(), argsList);
       throw new ServiceLaunchException(LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR,
-          "Expected 0 arguments but got %d",
-          args.size());
+          "Expected 0 arguments but got %d: %s",
+          args.size(),
+          argsList);
     }
     return configuration;
   }

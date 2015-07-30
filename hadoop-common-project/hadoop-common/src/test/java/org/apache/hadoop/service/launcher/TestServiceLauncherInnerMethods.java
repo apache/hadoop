@@ -26,6 +26,8 @@ import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.NoArgsAllowedService;
 import org.junit.Test;
 
+import java.util.List;
+
 /**
  * Test the inner launcher methods. 
  */
@@ -75,9 +77,9 @@ public class TestServiceLauncherInnerMethods extends
   @Test
   public void testConfigLoading() throws Throwable {
     ServiceLauncher<BreakableService> launcher =
-        new ServiceLauncher<BreakableService>("BreakableService");
-    String[] configurationsToCreate = launcher.getConfigurationsToCreate();
-    assertTrue(configurationsToCreate.length > 1);
+        new ServiceLauncher<>("BreakableService");
+    List<String> configurationsToCreate = launcher.getConfigurationsToCreate();
+    assertTrue(configurationsToCreate.size() > 1);
     int created = launcher.createDefaultConfigs();
     assertEquals(1, created);
   }

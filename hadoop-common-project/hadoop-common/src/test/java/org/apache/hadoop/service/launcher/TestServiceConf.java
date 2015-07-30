@@ -84,7 +84,7 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
   @Test
   public void testConfExtraction() throws Throwable {
     ServiceLauncher<Service> launcher =
-      new ServiceLauncher<Service>(RunningService.NAME);
+      new ServiceLauncher<>(RunningService.NAME);
     Configuration conf = newConf("propagated", "true");
     assertEquals("true", conf.get("propagated", "unset"));
 
@@ -109,7 +109,7 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
   @Test
   public void testDualConfArgs() throws Throwable {
     ServiceLauncher<Service> launcher =
-        new ServiceLauncher<Service>(RunningService.NAME);
+        new ServiceLauncher<>(RunningService.NAME);
     String key1 = "key1";
     Configuration conf1 = newConf(key1, "true");
     String key2 = "file2";

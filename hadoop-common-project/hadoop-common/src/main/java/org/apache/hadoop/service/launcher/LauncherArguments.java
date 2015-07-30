@@ -28,21 +28,18 @@ public interface LauncherArguments {
    */
   String ARG_CONF = "conf";
 
-  String ARG_FS = "fs";
-  
-  String ARG_RM = "jt";
+  /**
+   * Name of a configuration class which is loaded before any
+   * attempt is made to load the class.
+   * <p>
+   * {@value}
+   */
+  String ARG_CONFCLASS = "confclass";
 
-  String ARG_DEF = "D";
-
-  String ARG_LIBJARS = "libjars";
-
-  String ARG_PATHS = "paths";
-
-  String ARG_FILES = "files";
-
-  String ARG_ARCHIVES = "archives";
-
-  String ARG_TOKEN_CACHE_FILE = "tokenCacheFile";
-
+  /**
+   * Error string on a parse failure
+   * <p>
+   * {@value}
+   */
   String E_PARSE_FAILED = "Failed to parse:";
 }

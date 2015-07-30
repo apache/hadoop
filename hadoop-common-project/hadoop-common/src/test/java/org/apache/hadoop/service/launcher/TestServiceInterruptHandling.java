@@ -53,8 +53,7 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
   @Test
   public void testInterruptEscalationShutdown() throws Throwable {
     NonExitingServiceLauncher<BreakableService> launcher =
-        new NonExitingServiceLauncher<BreakableService>(
-            BreakableService.class.getName());
+        new NonExitingServiceLauncher<>(BreakableService.class.getName());
     BreakableService service = new BreakableService();
     launcher.setService(service);
 
@@ -86,8 +85,7 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
   @Test
   public void testBlockingShutdownTimeouts() throws Throwable {
     NonExitingServiceLauncher<FailureTestService> launcher =
-        new NonExitingServiceLauncher<FailureTestService>(
-            FailureTestService.class.getName());
+        new NonExitingServiceLauncher<>(FailureTestService.class.getName());
     FailureTestService service =
         new FailureTestService(false, false, false, 2000);
     launcher.setService(service);
