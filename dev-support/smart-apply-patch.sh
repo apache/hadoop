@@ -266,7 +266,9 @@ function locate_patch
           fi
         fi
 
-        relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
+        #shellcheck disable=SC2016
+        relativePatchURL=$(${AWK} 'match($0,"\"/jira/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART+1,RLENGTH-1)}' "${PATCH_DIR}/jira" |
+          ${GREP} -v -e 'htm[l]*$' | sort | tail -1)
         PATCHURL="http://issues.apache.org${relativePatchURL}"
         if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
           notSureIfPatch=true
@@ -355,7 +357,7 @@ function verify_zero
       return 0
     fi
 
-    dir=$(dirname ${filename} 2>/dev/null)
+    dir=$(dirname "${filename}" 2>/dev/null)
     if [[ -n ${dir} && -d ${dir} ]]; then
       return 0
     fi

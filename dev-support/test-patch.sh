@@ -1621,12 +1621,15 @@ function locate_patch
           fi
         fi
 
-        relativePatchURL=$(${GREP} -o '"/jira/secure/attachment/[0-9]*/[^"]*' "${PATCH_DIR}/jira" | ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${GREP} -o '/jira/secure/attachment/[0-9]*/[^"]*')
+        #shellcheck disable=SC2016
+        relativePatchURL=$(${AWK} 'match($0,"\"/jira/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART+1,RLENGTH-1)}' "${PATCH_DIR}/jira" |
+          ${GREP} -v -e 'htm[l]*$' | sort | tail -1)
         PATCHURL="http://issues.apache.org${relativePatchURL}"
         if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
           notSureIfPatch=true
         fi
-        patchNum=$(echo "${PATCHURL}" | ${GREP} -o '[0-9]*/' | ${GREP} -o '[0-9]*')
+        #shellcheck disable=SC2016
+        patchNum=$(echo "${PATCHURL}" | ${AWK} 'match($0,"[0-9]*/"){print substr($0,RSTART,RLENGTH-1)}')
         echo "${ISSUE} patch is being downloaded at $(date) from"
       fi
     fi
