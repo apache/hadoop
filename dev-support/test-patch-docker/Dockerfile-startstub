@@ -32,7 +32,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libjansson-dev \
     fuse libfuse-dev \
     libcurl4-openssl-dev \
-    python python2.7 \
+    python python2.7 pylint \
+    ruby \
     openjdk-7-jdk
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
@@ -70,6 +71,11 @@ ENV FINDBUGS_HOME /opt/findbugs
 ####
 RUN apt-get install -y cabal-install
 RUN cabal update && cabal install shellcheck --global
+
+####
+# Install rubocop
+###
+RUN gem install rubocop
 
 #####
 # Install JIRA CLI
