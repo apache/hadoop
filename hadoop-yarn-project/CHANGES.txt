@@ -710,6 +710,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3919. NPEs' while stopping service after exception during
     CommonNodeLabelsManager#start. (varun saxane via rohithsharmaks)
 
+    YARN-3963. AddNodeLabel on duplicate label addition shows success.
+    (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

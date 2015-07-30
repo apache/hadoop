@@ -70,7 +70,22 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
 
     Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Sets.newHashSet("hello", "world", "hello1", "world1")));
-
+    try {
+      mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("hello1",
+          false)));
+      Assert.fail("IOException not thrown on exclusivity change of labels");
+    } catch (Exception e) {
+      Assert.assertTrue("IOException is expected when exclusivity is modified",
+          e instanceof IOException);
+    }
+    try {
+      mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("hello1",
+          true)));
+    } catch (Exception e) {
+      Assert.assertFalse(
+          "IOException not expected when no change in exclusivity",
+          e instanceof IOException);
+    }
     // try to remove null, empty and non-existed label, should fail
     for (String p : Arrays.asList(null, CommonNodeLabelsManager.NO_LABEL, "xx")) {
       boolean caught = false;
