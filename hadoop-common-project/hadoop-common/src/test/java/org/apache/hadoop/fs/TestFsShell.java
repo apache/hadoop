@@ -18,6 +18,12 @@
 package org.apache.hadoop.fs;
 
 import junit.framework.AssertionFailedError;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.tracing.SetSpanReceiver;
+import org.apache.hadoop.tracing.SpanReceiverHost;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.htrace.SamplerBuilder;
+import org.apache.htrace.impl.AlwaysSampler;
 import org.junit.Test;
 
 public class TestFsShell {
@@ -39,4 +45,22 @@ public class TestFsShell {
     }
   }
 
+  @Test
+  public void testTracing() throws Throwable {
+    Configuration conf = new Configuration();
+    String prefix = FsShell.SEHLL_HTRACE_PREFIX;
+    conf.set(prefix + SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
+        SetSpanReceiver.class.getName());
+    conf.set(prefix + SamplerBuilder.SAMPLER_CONF_KEY,
+        AlwaysSampler.class.getName());
+    conf.setQuietMode(false);
+    FsShell shell = new FsShell(conf);
+    int res;
+    try {
+      res = ToolRunner.run(shell, new String[]{"-help"});
+    } finally {
+      shell.close();
+    }
+    SetSpanReceiver.assertSpanNamesFound(new String[]{"help"});
+  }
 }

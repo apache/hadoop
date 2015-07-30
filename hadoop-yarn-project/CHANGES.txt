@@ -358,6 +358,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3026. Move application-specific container allocation logic from
     LeafQueue to FiCaSchedulerApp. (Wangda Tan via jianhe)
 
+    YARN-3950. Add unique SHELL_ID environment variable to DistributedShell
+    (Robert Kanter via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -374,6 +377,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3259. FairScheduler: Trigger fairShare updates on node events. 
     (Anubhav Dhoot via kasha)
+
+    YARN-2768. Avoid cloning Resource in FSAppAttempt#updateDemand.
+    (Hong Zhiguo via kasha)
 
   BUG FIXES
 
@@ -700,6 +706,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3982. container-executor parsing of container-executor.cfg broken in
     trunk and branch-2. (Varun Vasudev via xgong)
+
+    YARN-3919. NPEs' while stopping service after exception during
+    CommonNodeLabelsManager#start. (varun saxane via rohithsharmaks)
 
 Release 2.7.2 - UNRELEASED
 

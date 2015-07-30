@@ -86,7 +86,7 @@ public class SetSpanReceiver implements SpanReceiver {
     }
   }
 
-  static void assertSpanNamesFound(final String[] expectedSpanNames) {
+  public static void assertSpanNamesFound(final String[] expectedSpanNames) {
     try {
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override

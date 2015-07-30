@@ -37,6 +37,9 @@ public final class HdfsConstants {
   public static final String MEMORY_STORAGE_POLICY_NAME = "LAZY_PERSIST";
   public static final String ALLSSD_STORAGE_POLICY_NAME = "ALL_SSD";
   public static final String ONESSD_STORAGE_POLICY_NAME = "ONE_SSD";
+  public static final String HOT_STORAGE_POLICY_NAME = "HOT";
+  public static final String WARM_STORAGE_POLICY_NAME = "WARM";
+  public static final String COLD_STORAGE_POLICY_NAME = "COLD";
   // TODO should be conf injected?
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
   /**

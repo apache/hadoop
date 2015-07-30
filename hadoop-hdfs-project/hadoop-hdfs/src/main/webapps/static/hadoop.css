@@ -213,3 +213,54 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   margin-top:20px;
   display: none;
 }
+
+.dfshealth-node-capacity-bar {
+    margin-bottom:0;
+    width: 60%;
+}
+
+.dfshealth-node-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.dfshealth-node-alive:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
+.dfshealth-node-decommisioned:before {
+    color: #eea236;
+    content: "\e136";
+}
+
+.dfshealth-node-down:before {
+    color: #c7254e;
+    content: "\e101";
+}
+
+.dfshealth-node-down-decommisioned:before {
+    color: #2e6da6;
+    content: "\e017";
+}
+
+.dfshealth-node-legend {
+    list-style-type: none;
+    text-align: right;
+}
+
+.dfshealth-node-legend li {
+    display: inline;
+    padding: 10pt;
+    padding-left: 10pt;
+}
+
+.dfshealth-node-legend li:before {
+    padding-right: 5pt;
+}

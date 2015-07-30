@@ -3770,14 +3770,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // not locking
     return blockManager.getMissingReplOneBlocksCount();
   }
-
-  @Metric({"TimeOfTheOldestBlockToBeReplicated",
-      "The timestamp of the oldest block to be replicated. If there are no" +
-      "under-replicated or corrupt blocks, return 0."})
-  public long getTimeOfTheOldestBlockToBeReplicated() {
-    return blockManager.getTimeOfTheOldestBlockToBeReplicated();
-  }
-
+  
   @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
@@ -6006,6 +5999,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         new HashMap<String, Map<String,Object>>();
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+    for (Iterator<DatanodeDescriptor> it = live.iterator(); it.hasNext();) {
+      DatanodeDescriptor node = it.next();
+      if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+        it.remove();
+      }
+    }
 
     if (live.size() > 0) {
       float totalDfsUsed = 0;

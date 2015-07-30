@@ -33,7 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 class UmaskParser extends PermissionParser {
   private static Pattern chmodOctalPattern =
-    Pattern.compile("^\\s*[+]?()([0-7]{3})\\s*$"); // no leading 1 for sticky bit
+    Pattern.compile("^\\s*[+]?(0*)([0-7]{3})\\s*$"); // no leading 1 for sticky bit
   private static Pattern umaskSymbolicPattern =    /* not allow X or t */
     Pattern.compile("\\G\\s*([ugoa]*)([+=-]+)([rwx]*)([,\\s]*)\\s*");
   final short umaskMode;

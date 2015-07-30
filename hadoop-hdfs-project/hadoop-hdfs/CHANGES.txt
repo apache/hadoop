@@ -747,13 +747,20 @@ Release 2.8.0 - UNRELEASED
     HDFS-8730. Clean up the import statements in ClientProtocol.
     (Takanobu Asanuma via wheat9)
 
-    HDFS-6682. Add a metric to expose the timestamp of the oldest
-    under-replicated block. (aajisaka)
-
     HDFS-8735. Inotify: All events classes should implement toString() API.
     (Surendra Singh Lilhore via aajisaka)
 
     HDFS-7858. Improve HA Namenode Failover detection on the client. (asuresh)
+
+    HDFS-8180. AbstractFileSystem Implementation for WebHdfs. (snayak via jghoman)
+
+    HDFS-8811. Move BlockStoragePolicy name's constants from
+    HdfsServerConstants.java to HdfsConstants.java (vinayakumarb)
+
+    HDFS-8822. Add SSD storagepolicy tests in TestBlockStoragePolicy#
+    testDefaultPolicies (vinayakumarb)
+
+    HDFS-8816. Improve visualization for the Datanode tab in the NN UI. (wheat9)
 
   OPTIMIZATIONS
 
@@ -1087,6 +1094,9 @@ Release 2.8.0 - UNRELEASED
     (Surendra Singh Lilhore via aajisaka)
 
     HDFS-8785. TestDistributedFileSystem is failing in trunk. (Xiaoyu Yao)
+
+    HDFS-8670. Better to exclude decommissioned nodes for namenode NodeUsage JMX
+    (J.Andreina via vinayakumarb)
 
 Release 2.7.2 - UNRELEASED
 

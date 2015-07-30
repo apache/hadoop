@@ -20,6 +20,7 @@ package org.apache.hadoop.security;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Random;
@@ -100,6 +101,31 @@ public class TestPermission {
     conf = new Configuration();
     conf.set(FsPermission.UMASK_LABEL, "022");
     assertEquals(18, FsPermission.getUMask(conf).toShort());
+
+    // Test 5 - equivalent valid umask
+    conf = new Configuration();
+    conf.set(FsPermission.UMASK_LABEL, "0022");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+
+    // Test 6 - invalid umask
+    conf = new Configuration();
+    conf.set(FsPermission.UMASK_LABEL, "1222");
+    try {
+      FsPermission.getUMask(conf);
+      fail("expect IllegalArgumentException happen");
+    } catch (IllegalArgumentException e) {
+     //pass, exception successfully trigger
+    }
+
+    // Test 7 - invalid umask
+    conf = new Configuration();
+    conf.set(FsPermission.UMASK_LABEL, "01222");
+    try {
+      FsPermission.getUMask(conf);
+      fail("expect IllegalArgumentException happen");
+    } catch (IllegalArgumentException e) {
+     //pass, exception successfully trigger
+    }
   }
 
   @Test

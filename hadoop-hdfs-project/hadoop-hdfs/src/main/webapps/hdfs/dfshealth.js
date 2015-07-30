@@ -165,12 +165,24 @@
   }
 
   function load_datanode_info() {
-
     var HELPERS = {
-      'helper_lastcontact_tostring' : function (chunk, ctx, bodies, params) {
+      'helper_relative_time' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
-        return chunk.write('' + new Date(Date.now()-1000*Number(value)));
-      }
+        return chunk.write(moment().subtract(Number(value), 'seconds').format('YYYY-MM-DD HH:mm:ss'));
+      },
+      'helper_usage_bar' : function (chunk, ctx, bodies, params) {
+        var value = dust.helpers.tap(params.value, chunk, ctx);
+        var v = Number(value);
+        var r = null;
+        if (v < 70) {
+          r = 'progress-bar-success';
+        } else if (u.usedPercentage < 85) {
+          r = 'progress-bar-warning';
+        } else {
+          r = "progress-bar-danger";
+        }
+        return chunk.write(r);
+      },
     };
 
     function workaround(r) {
@@ -184,8 +196,34 @@
         return res;
       }
 
+      function augment_live_nodes(nodes) {
+        for (var i = 0, e = nodes.length; i < e; ++i) {
+          var n = nodes[i];
+          n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
+          if (n.adminState === "In Service") {
+            n.state = "alive";
+          } else if (nodes[i].adminState === "Decommission In Progress") {
+            n.state = "decommisioning";
+          } else if (nodes[i].adminState === "Decommissioned") {
+            n.state = "decommissioned";
+          }
+        }
+      }
+
+      function augment_dead_nodes(nodes) {
+        for (var i = 0, e = nodes.length; i < e; ++i) {
+          if (nodes[i].decommissioned) {
+            nodes[i].state = "down-decommissioned";
+          } else {
+            nodes[i].state = "down";
+          }
+        }
+      }
+
       r.LiveNodes = node_map_to_array(JSON.parse(r.LiveNodes));
+      augment_live_nodes(r.LiveNodes);
       r.DeadNodes = node_map_to_array(JSON.parse(r.DeadNodes));
+      augment_dead_nodes(r.DeadNodes);
       r.DecomNodes = node_map_to_array(JSON.parse(r.DecomNodes));
       return r;
     }
