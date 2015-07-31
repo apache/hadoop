@@ -739,6 +739,10 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
 
+    HADOOP-12183. Annotate the HTrace span created by FsShell with the
+    command-line arguments passed by the user (Masatake Iwasaki via Colin P.
+    McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -1032,6 +1036,10 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-10945. 4-digit octal umask permissions throws a parse error (Chang
     Li via jlowe)
+
+    HADOOP-7824. NativeIO.java flags and identifiers must be set correctly for
+    each platform, not hardcoded to their Linux values (Martin Walsh via Colin
+    P. McCabe)
 
 Release 2.7.2 - UNRELEASED
 

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.tracing.TraceUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.Sampler;
@@ -298,6 +299,13 @@ public class FsShell extends Configured implements Tool {
           throw new UnknownCommandException();
         }
         TraceScope scope = Trace.startSpan(instance.getCommandName(), traceSampler);
+        if (scope.getSpan() != null) {
+          String args = StringUtils.join(" ", argv);
+          if (args.length() > 2048) {
+            args = args.substring(0, 2048);
+          }
+          scope.getSpan().addKVAnnotation("args", args);
+        }
         try {
           exitCode = instance.run(Arrays.copyOfRange(argv, 1, argv.length));
         } finally {
