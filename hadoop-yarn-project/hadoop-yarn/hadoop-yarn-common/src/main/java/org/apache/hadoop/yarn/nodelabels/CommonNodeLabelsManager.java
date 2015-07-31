@@ -288,7 +288,8 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
     List<NodeLabel> newLabels = new ArrayList<NodeLabel>();
     normalizeNodeLabels(labels);
-
+    // check any mismatch in exclusivity no mismatch with skip
+    checkExclusivityMatch(labels);
     // do a check before actual adding them, will throw exception if any of them
     // doesn't meet label name requirement
     for (NodeLabel label : labels) {
@@ -928,6 +929,23 @@ public class CommonNodeLabelsManager extends AbstractService {
       throw new IOException("label name should only contains "
           + "{0-9, a-z, A-Z, -, _} and should not started with {-,_}"
           + ", now it is=" + label);
+    }
+  }
+
+  private void checkExclusivityMatch(Collection<NodeLabel> labels)
+      throws IOException {
+    ArrayList<NodeLabel> mismatchlabels = new ArrayList<NodeLabel>();
+    for (NodeLabel label : labels) {
+      RMNodeLabel rmNodeLabel = this.labelCollections.get(label.getName());
+      if (rmNodeLabel != null
+          && rmNodeLabel.getIsExclusive() != label.isExclusive()) {
+        mismatchlabels.add(label);
+      }
+    }
+    if (mismatchlabels.size() > 0) {
+      throw new IOException(
+          "Exclusivity cannot be modified for an existing label with : "
+              + StringUtils.join(mismatchlabels.iterator(), ","));
     }
   }
 
