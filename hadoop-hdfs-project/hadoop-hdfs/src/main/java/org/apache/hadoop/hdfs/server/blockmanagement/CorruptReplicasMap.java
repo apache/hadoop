@@ -80,12 +80,12 @@ public class CorruptReplicasMap{
     }
     
     if (!nodes.keySet().contains(dn)) {
-      NameNode.blockStateChangeLog.info(
+      NameNode.blockStateChangeLog.debug(
           "BLOCK NameSystem.addToCorruptReplicasMap: {} added as corrupt on "
               + "{} by {} {}", blk.getBlockName(), dn, Server.getRemoteIp(),
           reasonText);
     } else {
-      NameNode.blockStateChangeLog.info(
+      NameNode.blockStateChangeLog.debug(
           "BLOCK NameSystem.addToCorruptReplicasMap: duplicate requested for" +
               " {} to add as corrupt on {} by {} {}", blk.getBlockName(), dn,
               Server.getRemoteIp(), reasonText);
