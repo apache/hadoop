@@ -51,6 +51,8 @@ Trunk (Unreleased)
     HADOOP-7947. Validate XMLs if a relevant tool is available, when using
     scripts (Kengo Seki via aw)
 
+    HADOOP-10854. unit tests for the shell scripts (aw)
+
   IMPROVEMENTS
 
     HADOOP-11203. Allow ditscp to accept bandwitdh in fraction MegaBytes

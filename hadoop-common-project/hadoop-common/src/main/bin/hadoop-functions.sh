@@ -358,6 +358,7 @@ function hadoop_import_shellprofiles
 
   if [[ -d "${HADOOP_LIBEXEC_DIR}/shellprofile.d" ]]; then
     files1=(${HADOOP_LIBEXEC_DIR}/shellprofile.d/*.sh)
+    hadoop_debug "shellprofiles: ${files1[*]}"
   else
     hadoop_error "WARNING: ${HADOOP_LIBEXEC_DIR}/shellprofile.d doesn't exist. Functionality may not work."
   fi
@@ -368,7 +369,8 @@ function hadoop_import_shellprofiles
 
   for i in "${files1[@]}" "${files2[@]}"
   do
-    if [[ -n "${i}" ]]; then
+    if [[ -n "${i}"
+      && -f "${i}" ]]; then
       hadoop_debug "Profiles: importing ${i}"
       . "${i}"
     fi
@@ -488,6 +490,26 @@ function hadoop_basic_init
   if [[ -z "${HADOOP_MAPRED_HOME}" ]] &&
      [[ -d "${HADOOP_PREFIX}/${MAPRED_DIR}" ]]; then
     export HADOOP_MAPRED_HOME="${HADOOP_PREFIX}"
+  fi
+
+  if [[ ! -d "${HADOOP_COMMON_HOME}" ]]; then
+    hadoop_error "ERROR: Invalid HADOOP_COMMON_HOME"
+    exit 1
+  fi
+
+  if [[ ! -d "${HADOOP_HDFS_HOME}" ]]; then
+    hadoop_error "ERROR: Invalid HADOOP_HDFS_HOME"
+    exit 1
+  fi
+
+  if [[ ! -d "${HADOOP_YARN_HOME}" ]]; then
+    hadoop_error "ERROR: Invalid HADOOP_YARN_HOME"
+    exit 1
+  fi
+
+  if [[ ! -d "${HADOOP_MAPRED_HOME}" ]]; then
+    hadoop_error "ERROR: Invalid HADOOP_MAPRED_HOME"
+    exit 1
   fi
 
   HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
@@ -670,7 +692,7 @@ function hadoop_common_slave_mode_execute
   # to prevent loops
   # Also remove --hostnames and --hosts along with arg values
   local argsSize=${#argv[@]};
-  for (( i = 0; i < $argsSize; i++ ))
+  for (( i = 0; i < argsSize; i++ ))
   do
     if [[ "${argv[$i]}" =~ ^--slaves$ ]]; then
       unset argv[$i]
@@ -681,6 +703,10 @@ function hadoop_common_slave_mode_execute
       unset argv[$i];
     fi
   done
+  if [[ ${QATESTMODE} = true ]]; then
+    echo "${argv[@]}"
+    return
+  fi
   hadoop_connect_to_hosts -- "${argv[@]}"
 }
 
@@ -727,8 +753,12 @@ function hadoop_add_param
   # delimited
   #
   if [[ ! ${!1} =~ $2 ]] ; then
-    # shellcheck disable=SC2086
-    eval $1="'${!1} $3'"
+    #shellcheck disable=SC2140
+    eval "$1"="'${!1} $3'"
+    if [[ ${!1:0:1} = ' ' ]]; then
+      #shellcheck disable=SC2140
+      eval "$1"="'${!1# }'"
+    fi
     hadoop_debug "$1 accepted $3"
   else
     hadoop_debug "$1 declined $3"
@@ -766,7 +796,8 @@ function hadoop_add_classpath
   # for wildcard at end, we can
   # at least check the dir exists
   if [[ $1 =~ ^.*\*$ ]]; then
-    local mp=$(dirname "$1")
+    local mp
+    mp=$(dirname "$1")
     if [[ ! -d "${mp}" ]]; then
       hadoop_debug "Rejected CLASSPATH: $1 (not a dir)"
       return 1
@@ -825,7 +856,7 @@ function hadoop_add_colonpath
       hadoop_debug "Prepend colonpath($1): $2"
     else
       # shellcheck disable=SC2086
-      eval $1+="'$2'"
+      eval $1+=":'$2'"
       hadoop_debug "Append colonpath($1): $2"
     fi
     return 0
@@ -864,11 +895,14 @@ function hadoop_add_javalibpath
 ## @return       1 = failure (doesn't exist or some other reason)
 function hadoop_add_ldlibpath
 {
+  local status
   # specialized function for a common use case
   hadoop_add_colonpath LD_LIBRARY_PATH "$1" "$2"
+  status=$?
 
   # note that we export this
   export LD_LIBRARY_PATH
+  return ${status}
 }
 
 ## @description  Add the common/core Hadoop components to the
@@ -876,19 +910,27 @@ function hadoop_add_ldlibpath
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  yes
+## @returns      1 on failure, may exit
+## @returns      0 on success
 function hadoop_add_common_to_classpath
 {
   #
   # get all of the common jars+config in the path
   #
 
+  if [[ -z "${HADOOP_COMMON_HOME}"
+    || -z "${HADOOP_COMMON_DIR}"
+    || -z "${HADOOP_COMMON_LIB_JARS_DIR}" ]]; then
+    hadoop_debug "COMMON_HOME=${HADOOP_COMMON_HOME}"
+    hadoop_debug "COMMON_DIR=${HADOOP_COMMON_DIR}"
+    hadoop_debug "COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR}"
+    hadoop_error "ERROR: HADOOP_COMMON_HOME or related vars are not configured."
+    exit 1
+  fi
+
   # developers
   if [[ -n "${HADOOP_ENABLE_BUILD_PATHS}" ]]; then
     hadoop_add_classpath "${HADOOP_COMMON_HOME}/hadoop-common/target/classes"
-  fi
-
-  if [[ -d "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}"
   fi
 
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"'/*'
@@ -909,27 +951,27 @@ function hadoop_add_to_classpath_userpath
   # set env-var HADOOP_USER_CLASSPATH_FIRST
   # we'll also dedupe it, because we're cool like that.
   #
-  local c
-  local array
-  local i
-  local j
-  let c=0
+  declare -a array
+  declare -i c=0
+  declare -i j
+  declare -i i
+  declare idx
 
   if [[ -n "${HADOOP_CLASSPATH}" ]]; then
     # I wonder if Java runs on VMS.
-    for i in $(echo "${HADOOP_CLASSPATH}" | tr : '\n'); do
-      array[$c]=$i
-      let c+=1
+    for idx in $(echo "${HADOOP_CLASSPATH}" | tr : '\n'); do
+      array[${c}]=${idx}
+      ((c=c+1))
     done
-    let j=c-1
+    ((j=c-1))
 
     if [[ -z "${HADOOP_USE_CLIENT_CLASSLOADER}" ]]; then
       if [[ -z "${HADOOP_USER_CLASSPATH_FIRST}" ]]; then
-        for ((i=j; i>=0; i--)); do
+        for ((i=0; i<=j; i++)); do
           hadoop_add_classpath "${array[$i]}" after
         done
       else
-        for ((i=0; i<=j; i++)); do
+        for ((i=j; i>=0; i--)); do
           hadoop_add_classpath "${array[$i]}" before
         done
       fi
@@ -951,18 +993,32 @@ function hadoop_os_tricks
     Darwin)
       if [[ -z "${JAVA_HOME}" ]]; then
         if [[ -x /usr/libexec/java_home ]]; then
-          export JAVA_HOME="$(/usr/libexec/java_home)"
+          JAVA_HOME="$(/usr/libexec/java_home)"
+          export JAVA_HOME
         else
-          export JAVA_HOME=/Library/Java/Home
+          JAVA_HOME=/Library/Java/Home
+          export JAVA_HOME
         fi
       fi
     ;;
     Linux)
-      bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
+
+      # Newer versions of glibc use an arena memory allocator that
+      # causes virtual # memory usage to explode. This interacts badly
+      # with the many threads that we use in Hadoop. Tune the variable
+      # down to prevent vmem explosion.
+      export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
+      # we put this in QA test mode off so that non-Linux can test
+      if [[ "${QATESTMODE}" = true ]]; then
+        return
+      fi
 
       # NOTE! HADOOP_ALLOW_IPV6 is a developer hook.  We leave it
       # undocumented in hadoop-env.sh because we don't want users to
       # shoot themselves in the foot while devs make IPv6 work.
+
+      bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
+
       if [[ -n "${bindv6only}" ]] &&
          [[ "${bindv6only}" -eq "1" ]] &&
          [[ "${HADOOP_ALLOW_IPV6}" != "yes" ]]; then
@@ -971,11 +1027,6 @@ function hadoop_os_tricks
         hadoop_error "ERROR: For more info: http://wiki.apache.org/hadoop/HadoopIPv6"
         exit 1
       fi
-      # Newer versions of glibc use an arena memory allocator that
-      # causes virtual # memory usage to explode. This interacts badly
-      # with the many threads that we use in Hadoop. Tune the variable
-      # down to prevent vmem explosion.
-      export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
     ;;
     CYGWIN*)
       # Flag that we're running on Cygwin to trigger path translation later.
@@ -1019,7 +1070,7 @@ function hadoop_finalize_libpaths
   if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
     hadoop_translate_cygwin_path JAVA_LIBRARY_PATH
     hadoop_add_param HADOOP_OPTS java.library.path \
-    "-Djava.library.path=${JAVA_LIBRARY_PATH}"
+      "-Djava.library.path=${JAVA_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
   fi
 }
@@ -1168,6 +1219,7 @@ function hadoop_exit_with_usage
   if [[ -z $exitcode ]]; then
     exitcode=1
   fi
+  # shellcheck disable=SC2034
   if declare -F hadoop_usage >/dev/null ; then
     hadoop_usage
   elif [[ -x /usr/bin/cowsay ]]; then
@@ -1464,6 +1516,7 @@ function hadoop_start_secure_daemon
   hadoop_rotate_log "${daemonoutfile}"
   hadoop_rotate_log "${daemonerrfile}"
 
+  # shellcheck disable=SC2153
   jsvc="${JSVC_HOME}/jsvc"
   if [[ ! -f "${jsvc}" ]]; then
     hadoop_error "JSVC_HOME is not set or set incorrectly. jsvc is required to run secure"
@@ -1490,6 +1543,7 @@ function hadoop_start_secure_daemon
     hadoop_error "ERROR:  Cannot write ${daemonname} pid ${privpidfile}."
   fi
 
+  # shellcheck disable=SC2086
   exec "${jsvc}" \
     "-Dproc_${daemonname}" \
     -outfile "${daemonoutfile}" \

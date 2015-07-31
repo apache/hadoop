@@ -63,6 +63,14 @@ ENV FINDBUGS_HOME /opt/findbugs
 RUN apt-get install -y cabal-install
 RUN cabal update && cabal install shellcheck --global
 
+#####
+# bats
+#####
+
+RUN add-apt-repository ppa:duggan/bats --yes
+RUN apt-get update -qq
+RUN apt-get install -qq bats
+
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
 RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .

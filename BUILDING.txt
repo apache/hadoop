@@ -14,6 +14,8 @@ Requirements:
 * Jansson C XML parsing library ( if compiling libwebhdfs )
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above ( if compiling fuse_dfs )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
+* python (for releasedocs)
+* bats (for shell code testing)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
@@ -106,7 +108,7 @@ Maven build goals:
 
  * Clean                     : mvn clean [-Preleasedocs]
  * Compile                   : mvn compile [-Pnative]
- * Run tests                 : mvn test [-Pnative]
+ * Run tests                 : mvn test [-Pnative] [-Pshelltest]
  * Create JAR                : mvn package
  * Run findbugs              : mvn compile findbugs:findbugs
  * Run checkstyle            : mvn compile checkstyle:checkstyle
