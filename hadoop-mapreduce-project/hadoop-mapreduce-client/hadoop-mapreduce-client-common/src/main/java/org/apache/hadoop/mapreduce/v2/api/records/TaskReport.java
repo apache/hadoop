@@ -28,6 +28,7 @@ public interface TaskReport {
   public abstract long getStartTime();
   public abstract long getFinishTime();
   public abstract Counters getCounters();
+  public abstract org.apache.hadoop.mapreduce.Counters getRawCounters();
   public abstract List<TaskAttemptId> getRunningAttemptsList();
   public abstract TaskAttemptId getRunningAttempt(int index);
   public abstract int getRunningAttemptsCount();
@@ -46,7 +47,9 @@ public interface TaskReport {
   public abstract void setStartTime(long startTime);
   public abstract void setFinishTime(long finishTime);
   public abstract void setCounters(Counters counters);
-  
+  public abstract void
+      setRawCounters(org.apache.hadoop.mapreduce.Counters rCounters);
+
   public abstract void addAllRunningAttempts(List<TaskAttemptId> taskAttempts);
   public abstract void addRunningAttempt(TaskAttemptId taskAttempt);
   public abstract void removeRunningAttempt(int index);

@@ -19,6 +19,13 @@ MYNAME="${BASH_SOURCE-$0}"
 
 function hadoop_usage
 {
+  hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
+  hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "--loglevel level" "set the log4j level for this command"
+  hadoop_add_option "--hosts filename" "list of hosts to use in slave mode"
+  hadoop_add_option "--slaves" "turn on slave mode"
+
   hadoop_add_subcommand "application" "prints application(s) report/kill application"
   hadoop_add_subcommand "applicationattempt" "prints applicationattempt(s) report"
   hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"

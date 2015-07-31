@@ -19,6 +19,13 @@ MYNAME="${BASH_SOURCE-$0}"
 
 function hadoop_usage
 {
+  hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
+  hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "--loglevel level" "set the log4j level for this command"
+  hadoop_add_option "--hosts filename" "list of hosts to use in slave mode"
+  hadoop_add_option "--slaves" "turn on slave mode"
+
   hadoop_add_subcommand "balancer" "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" "configure the HDFS cache"
   hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
@@ -47,8 +54,7 @@ function hadoop_usage
   hadoop_add_subcommand "storagepolicies" "list/get/set block storage policies"
   hadoop_add_subcommand "version" "print the version"
   hadoop_add_subcommand "zkfc" "run the ZK Failover Controller daemon"
-  hadoop_generate_usage "${MYNAME}"
-
+  hadoop_generate_usage "${MYNAME}" false
 }
 
 # let's locate libexec...

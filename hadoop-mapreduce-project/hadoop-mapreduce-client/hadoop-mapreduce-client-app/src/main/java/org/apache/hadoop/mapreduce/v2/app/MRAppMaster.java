@@ -233,7 +233,7 @@ public class MRAppMaster extends CompositeService {
   JobStateInternal forcedState = null;
   private final ScheduledExecutorService logSyncer;
 
-  private long recoveredJobStartTime = 0;
+  private long recoveredJobStartTime = -1L;
   private static boolean mainStarted = false;
 
   @VisibleForTesting

@@ -357,6 +357,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-8821. Explain message "Operation category X is not supported
+    in state standby" (Gautam Gopalakrishnan via harsh)
+
     HDFS-3918. EditLogTailer shouldn't log WARN when other node
     is in standby mode (todd via harsh)
 

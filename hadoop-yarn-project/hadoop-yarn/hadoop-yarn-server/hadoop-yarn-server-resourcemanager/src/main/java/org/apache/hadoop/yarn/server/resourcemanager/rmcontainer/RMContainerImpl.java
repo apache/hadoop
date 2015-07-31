@@ -99,9 +99,9 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
     // Transitions from ACQUIRED state
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RUNNING,
-        RMContainerEventType.LAUNCHED, new LaunchedTransition())
+        RMContainerEventType.LAUNCHED)
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.COMPLETED,
-        RMContainerEventType.FINISHED, new ContainerFinishedAtAcquiredState())
+        RMContainerEventType.FINISHED, new FinishedTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED, new KillTransition())
     .addTransition(RMContainerState.ACQUIRED, RMContainerState.EXPIRED,
@@ -486,16 +486,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     }
   }
 
-  private static final class LaunchedTransition extends BaseTransition {
-
-    @Override
-    public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container
-          .getContainerId());
-    }
-  }
-
   private static final class ContainerRescheduledTransition extends
       FinishedTransition {
 
@@ -551,19 +541,6 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         rmAttempt.getRMAppAttemptMetrics()
                   .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
       }
-    }
-  }
-
-  private static final class ContainerFinishedAtAcquiredState extends
-      FinishedTransition {
-    @Override
-    public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(container
-          .getContainerId());
-
-      // Inform AppAttempt
-      super.transition(container, event);
     }
   }
 
