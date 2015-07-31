@@ -16,7 +16,8 @@
 
 # we need to declare this globally as an array, which can only
 # be done outside of a function
-declare -a HADOOP_USAGE=()
+declare -a HADOOP_SUBCMD_USAGE
+declare -a HADOOP_OPTION_USAGE
 
 ## @description  Print a message to stderr
 ## @audience     public
@@ -48,53 +49,72 @@ function hadoop_debug
 ## @param        subcommanddesc
 function hadoop_add_subcommand
 {
-  local option=$1
+  local subcmd=$1
   local text=$2
 
-  HADOOP_USAGE[${HADOOP_USAGE_COUNTER}]="${option}@${text}"
-  ((HADOOP_USAGE_COUNTER=HADOOP_USAGE_COUNTER+1))
+  HADOOP_SUBCMD_USAGE[${HADOOP_SUBCMD_USAGE_COUNTER}]="${subcmd}@${text}"
+  ((HADOOP_SUBCMD_USAGE_COUNTER=HADOOP_SUBCMD_USAGE_COUNTER+1))
 }
 
-## @description  generate standard usage output
-## @description  and optionally takes a class
+## @description  Add an option to the usage output
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-## @param        execname
-## @param        [true|false]
-function hadoop_generate_usage
+## @param        subcommand
+## @param        subcommanddesc
+function hadoop_add_option
 {
-  local cmd=$1
-  local takesclass=$2
-  local i
-  local counter
-  local line
-  local option
-  local giventext
-  local maxoptsize
-  local foldsize=75
+  local option=$1
+  local text=$2
+
+  HADOOP_OPTION_USAGE[${HADOOP_OPTION_USAGE_COUNTER}]="${option}@${text}"
+  ((HADOOP_OPTION_USAGE_COUNTER=HADOOP_OPTION_USAGE_COUNTER+1))
+}
+
+## @description  Reset the usage information to blank
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function hadoop_reset_usage
+{
+  HADOOP_SUBCMD_USAGE=()
+  HADOOP_OPTION_USAGE=()
+  HADOOP_SUBCMD_USAGE_COUNTER=0
+  HADOOP_OPTION_USAGE_COUNTER=0
+}
+
+## @description  Print a screen-size aware two-column output
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        array
+function hadoop_generic_columnprinter
+{
+  declare -a input=("$@")
+  declare -i i=0
+  declare -i counter=0
+  declare line
+  declare text
+  declare option
+  declare giventext
+  declare -i maxoptsize
+  declare -i foldsize
   declare -a tmpa
+  declare numcols
 
-  cmd=${cmd##*/}
-
-  echo "Usage: ${cmd} [OPTIONS] SUBCOMMAND [SUBCOMMAND OPTIONS]"
-  if [[ ${takesclass} = true ]]; then
-    echo " or    ${cmd} [OPTIONS] CLASSNAME [CLASSNAME OPTIONS]"
-    echo "  where CLASSNAME is a user-provided Java class"
+  if [[ -n "${COLUMNS}" ]]; then
+    numcols=${COLUMNS}
+  else
+    numcols=$(tput cols) 2>/dev/null
   fi
-  echo ""
-  echo "  OPTIONS is none or any of:"
-  echo "     --config confdir"
-  echo "     --daemon (start|stop|status)"
-  echo "     --debug"
-  echo "     --hostnames list[,of,host,names]"
-  echo "     --hosts filename"
-  echo "     --loglevel loglevel"
-  echo "     --slaves"
-  echo ""
-  echo "  SUBCOMMAND is one of:"
 
-  counter=0
+  if [[ -z "${numcols}"
+     || ! "${numcols}" =~ ^[0-9]+$ ]]; then
+    numcols=75
+  else
+    ((numcols=numcols-5))
+  fi
+
   while read -r line; do
     tmpa[${counter}]=${line}
     ((counter=counter+1))
@@ -102,12 +122,12 @@ function hadoop_generate_usage
     if [[ ${#option} -gt ${maxoptsize} ]]; then
       maxoptsize=${#option}
     fi
-  done < <(for i in "${HADOOP_USAGE[@]}"; do
-    echo "${i}"
+  done < <(for text in "${input[@]}"; do
+    echo "${text}"
   done | sort)
 
   i=0
-  ((foldsize=75-maxoptsize))
+  ((foldsize=numcols-maxoptsize))
 
   until [[ $i -eq ${#tmpa[@]} ]]; do
     option=$(echo "${tmpa[$i]}" | cut -f1 -d'@')
@@ -119,8 +139,63 @@ function hadoop_generate_usage
     done < <(echo "${giventext}"| fold -s -w ${foldsize})
     ((i=i+1))
   done
-  echo ""
-  echo "Most subcommands print help when invoked w/o parameters or with -h."
+}
+
+## @description  generate standard usage output
+## @description  and optionally takes a class
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @param        execname
+## @param        true|false
+## @param        [text to use in place of SUBCOMMAND]
+function hadoop_generate_usage
+{
+  local cmd=$1
+  local takesclass=$2
+  local subcmdtext=${3:-"SUBCOMMAND"}
+  local haveoptions
+  local optstring
+  local havesubs
+  local subcmdstring
+
+  cmd=${cmd##*/}
+
+  if [[ -n "${HADOOP_OPTION_USAGE_COUNTER}"
+        && "${HADOOP_OPTION_USAGE_COUNTER}" -gt 0 ]]; then
+    haveoptions=true
+    optstring=" [OPTIONS]"
+  fi
+
+  if [[ -n "${HADOOP_SUBCMD_USAGE_COUNTER}"
+        && "${HADOOP_SUBCMD_USAGE_COUNTER}" -gt 0 ]]; then
+    havesubs=true
+    subcmdstring=" ${subcmdtext} [${subcmdtext} OPTIONS]"
+  fi
+
+  echo "Usage: ${cmd}${optstring}${subcmdstring}"
+  if [[ ${takesclass} = true ]]; then
+    echo " or    ${cmd}${optstring} CLASSNAME [CLASSNAME OPTIONS]"
+    echo "  where CLASSNAME is a user-provided Java class"
+  fi
+
+  if [[ "${haveoptions}" = true ]]; then
+    echo ""
+    echo "  OPTIONS is none or any of:"
+    echo ""
+
+    hadoop_generic_columnprinter "${HADOOP_OPTION_USAGE[@]}"
+  fi
+
+  if [[ "${havesubs}" = true ]]; then
+    echo ""
+    echo "  ${subcmdtext} is one of:"
+    echo ""
+
+    hadoop_generic_columnprinter "${HADOOP_SUBCMD_USAGE[@]}"
+    echo ""
+    echo "${subcmdtext} may print help when invoked w/o parameters or with -h."
+  fi
 }
 
 ## @description  Replace `oldvar` with `newvar` if `oldvar` exists.
@@ -189,7 +264,7 @@ function hadoop_bootstrap
   TOOL_PATH=${TOOL_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
 
   # usage output set to zero
-  HADOOP_USAGE_COUNTER=0
+  hadoop_reset_usage
 
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
@@ -1729,4 +1804,102 @@ function hadoop_do_classpath_subcommand
     echo "${CLASSPATH}"
     exit 0
   fi
+}
+
+## @description  generic shell script opton parser.  sets
+## @description  HADOOP_PARSE_COUNTER to set number the
+## @description  caller should shift
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+## @param        [parameters, typically "$@"]
+function hadoop_parse_args
+{
+  HADOOP_DAEMON_MODE="default"
+  HADOOP_PARSE_COUNTER=0
+
+  # not all of the options supported here are supported by all commands
+  # however these are:
+  hadoop_add_option "--config dir" "Hadoop config directory"
+  hadoop_add_option "--debug" "turn on shell script debug mode"
+  hadoop_add_option "--help" "usage information"
+
+  while true; do
+    hadoop_debug "hadoop_parse_args: processing $1"
+    case $1 in
+      --buildpaths)
+        # shellcheck disable=SC2034
+        HADOOP_ENABLE_BUILD_PATHS=true
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
+      ;;
+      --config)
+        shift
+        confdir=$1
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+        if [[ -d "${confdir}" ]]; then
+          # shellcheck disable=SC2034
+          HADOOP_CONF_DIR="${confdir}"
+        elif [[ -z "${confdir}" ]]; then
+          hadoop_error "ERROR: No parameter provided for --config "
+          hadoop_exit_with_usage 1
+        else
+          hadoop_error "ERROR: Cannot find configuration directory \"${confdir}\""
+          hadoop_exit_with_usage 1
+        fi
+      ;;
+      --daemon)
+        shift
+        HADOOP_DAEMON_MODE=$1
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+        if [[ -z "${HADOOP_DAEMON_MODE}" || \
+          ! "${HADOOP_DAEMON_MODE}" =~ ^st(art|op|atus)$ ]]; then
+          hadoop_error "ERROR: --daemon must be followed by either \"start\", \"stop\", or \"status\"."
+          hadoop_exit_with_usage 1
+        fi
+      ;;
+      --debug)
+        shift
+        # shellcheck disable=SC2034
+        HADOOP_SHELL_SCRIPT_DEBUG=true
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
+      ;;
+      --help|-help|-h|help|--h|--\?|-\?|\?)
+        hadoop_exit_with_usage 0
+      ;;
+      --hostnames)
+        shift
+        # shellcheck disable=SC2034
+        HADOOP_SLAVE_NAMES="$1"
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+      ;;
+      --hosts)
+        shift
+        hadoop_populate_slaves_file "$1"
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+      ;;
+      --loglevel)
+        shift
+        # shellcheck disable=SC2034
+        HADOOP_LOGLEVEL="$1"
+        shift
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
+      ;;
+      --slaves)
+        shift
+        # shellcheck disable=SC2034
+        HADOOP_SLAVE_MODE=true
+        ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
+      ;;
+      *)
+        break
+      ;;
+    esac
+  done
+
+  hadoop_debug "hadoop_parse: asking caller to skip ${HADOOP_PARSE_COUNTER}"
 }

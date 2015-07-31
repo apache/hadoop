@@ -29,7 +29,7 @@ function hadoop_usage
   hadoop_add_subcommand "queue" "get information regarding JobQueues"
   hadoop_add_subcommand "sampler" "sampler"
   hadoop_add_subcommand "version" "print the version"
-  hadoop_generate_usage "${MYNAME}"
+  hadoop_generate_usage "${MYNAME}" true
 }
 
 bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)

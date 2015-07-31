@@ -17,8 +17,14 @@
 
 MYNAME="${BASH_SOURCE-$0}"
 
-function hadoop_usage()
+function hadoop_usage
 {
+  hadoop_add_option "buildpaths" "attempt to add class files from build tree"
+  hadoop_add_option "hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "loglevel level" "set the log4j level for this command"
+  hadoop_add_option "hosts filename" "list of hosts to use in slave mode"
+  hadoop_add_option "slaves" "turn on slave mode"
+
   hadoop_add_subcommand "archive" "create a Hadoop archive"
   hadoop_add_subcommand "checknative" "check native Hadoop and compression libraries availability"
   hadoop_add_subcommand "classpath" "prints the class path needed to get the Hadoop jar and the required libraries"
