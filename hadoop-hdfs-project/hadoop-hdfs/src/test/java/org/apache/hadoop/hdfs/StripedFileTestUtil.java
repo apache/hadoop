@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream;
 import org.junit.Assert;
@@ -29,8 +32,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class StripedFileTestUtil {
+  public static final Log LOG = LogFactory.getLog(StripedFileTestUtil.class);
+
   static int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
   static int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
 
@@ -192,5 +198,64 @@ public class StripedFileTestUtil {
       Assert.assertEquals("Byte at " + i + " should be the same",
           StripedFileTestUtil.getByte(pos + i), buf[i]);
     }
+  }
+
+  static void killDatanode(MiniDFSCluster cluster, DFSStripedOutputStream out,
+      final int dnIndex, final AtomicInteger pos) {
+    final StripedDataStreamer s = out.getStripedDataStreamer(dnIndex);
+    final DatanodeInfo datanode = getDatanodes(s);
+    LOG.info("killDatanode " + dnIndex + ": " + datanode + ", pos=" + pos);
+    cluster.stopDataNode(datanode.getXferAddr());
+  }
+
+  static DatanodeInfo getDatanodes(StripedDataStreamer streamer) {
+    for(;;) {
+      final DatanodeInfo[] datanodes = streamer.getNodes();
+      if (datanodes != null) {
+        Assert.assertEquals(1, datanodes.length);
+        Assert.assertNotNull(datanodes[0]);
+        return datanodes[0];
+      }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ignored) {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Generate n random and different numbers within
+   * specified non-negative integer range
+   * @param min minimum of the range
+   * @param max maximum of the range
+   * @param n number to be generated
+   * @return
+   */
+  public static int[] randomArray(int min, int max, int n){
+    if (n > (max - min + 1) || max < min || min < 0 || max < 0) {
+      return null;
+    }
+    int[] result = new int[n];
+    for (int i = 0; i < n; i++) {
+      result[i] = -1;
+    }
+
+    int count = 0;
+    while(count < n) {
+      int num = (int) (Math.random() * (max - min)) + min;
+      boolean flag = true;
+      for (int j = 0; j < n; j++) {
+        if(num == result[j]){
+          flag = false;
+          break;
+        }
+      }
+      if(flag){
+        result[count] = num;
+        count++;
+      }
+    }
+    return result;
   }
 }

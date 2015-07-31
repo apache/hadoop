@@ -181,7 +181,7 @@ public class TestDFSStripedOutputStreamWithFailure {
           waitTokenExpires(out);
         }
 
-        killDatanode(cluster, stripedOut, dnIndex, pos);
+        StripedFileTestUtil.killDatanode(cluster, stripedOut, dnIndex, pos);
         killed = true;
       }
 
@@ -215,30 +215,6 @@ public class TestDFSStripedOutputStreamWithFailure {
     LOG.info("getGenerationStamp returns " + gs);
     return gs;
 
-  }
-
-  static DatanodeInfo getDatanodes(StripedDataStreamer streamer) {
-    for(;;) {
-      final DatanodeInfo[] datanodes = streamer.getNodes();
-      if (datanodes != null) {
-        Assert.assertEquals(1, datanodes.length);
-        Assert.assertNotNull(datanodes[0]);
-        return datanodes[0];
-      }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException ignored) {
-        return null;
-      }
-    }
-  }
-
-  static void killDatanode(MiniDFSCluster cluster, DFSStripedOutputStream out,
-      final int dnIndex, final AtomicInteger pos) {
-    final StripedDataStreamer s = out.getStripedDataStreamer(dnIndex);
-    final DatanodeInfo datanode = getDatanodes(s);
-    LOG.info("killDatanode " + dnIndex + ": " + datanode + ", pos=" + pos);
-    cluster.stopDataNode(datanode.getXferAddr());
   }
 
   static void checkData(DistributedFileSystem dfs, String src, int length,
