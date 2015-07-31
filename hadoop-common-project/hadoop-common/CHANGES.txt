@@ -1033,6 +1033,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10945. 4-digit octal umask permissions throws a parse error (Chang
     Li via jlowe)
 
+    HADOOP-7824. NativeIO.java flags and identifiers must be set correctly for
+    each platform, not hardcoded to their Linux values (Martin Walsh via Colin
+    P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
