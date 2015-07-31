@@ -536,6 +536,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-12271. Hadoop Jar Error Should Be More Explanatory
+    (Josh Elser via harsh)
+
     HADOOP-6842. "hadoop fs -text" does not give a useful text representation
     of MapWritable objects (Akira Ajisaka via bobby)
 
