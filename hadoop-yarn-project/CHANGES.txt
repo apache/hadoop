@@ -716,6 +716,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3971. Skip RMNodeLabelsManager#checkRemoveFromClusterNodeLabelsOfQueue 
     on nodelabel recovery. (Bibin A Chundatt via wangda)
 
+    YARN-433. When RM is catching up with node updates then it should not expire
+    acquired containers. (Xuan Gong via zxu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
