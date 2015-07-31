@@ -1629,7 +1629,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     @Override
     public void transition(JobImpl job, JobEvent event) {
       JobStartEvent jse = (JobStartEvent) event;
-      if (jse.getRecoveredJobStartTime() != 0) {
+      if (jse.getRecoveredJobStartTime() != -1L) {
         job.startTime = jse.getRecoveredJobStartTime();
       } else {
         job.startTime = job.clock.getTime();
