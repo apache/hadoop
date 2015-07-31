@@ -379,3 +379,6 @@
 
     HDFS-8769. Erasure coding: unit test for SequentialBlockGroupIdGenerator.
     (Rakesh R via waltersu4549)
+
+    HDFS-8202. Improve end to end stirpping file test to add erasure recovering
+    test. (Xinwei Qin via zhz)
