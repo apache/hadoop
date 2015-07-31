@@ -18,25 +18,30 @@ test-patch
 * [Purpose](#Purpose)
 * [Pre-requisites](#Pre-requisites)
 * [Basic Usage](#Basic_Usage)
+* [Build Tool](#Build_Tool)
+* [Providing Patch Files](#Providing_Patch_Files)
+* [Project-Specific Capabilities](#Project-Specific_Capabilities)
+* [MultiJDK](#MultiJDK)
+* [Docker](#Docker)
 
-## Purpose
+# Purpose
 
-As part of Hadoop's commit process, all patches to the source base go through a precommit test that does some (usually) light checking to make sure the proposed change does not break unit tests and/or passes some other prerequisites.  This is meant as a preliminary check for committers so that the basic patch is in a known state.  This check, called test-patch, may also be used by individual developers to verify a patch prior to sending to the Hadoop QA systems.
+As part of Hadoop's commit process, all patches to the source base go through a precommit test that does some (relatively) light checking to make sure the proposed change does not break unit tests and/or passes some other prerequisites such as code formatting guidelines.  This is meant as a preliminary check for committers so that the basic patch is in a known state and for contributors to know if they have followed the project's guidelines.  This check, called test-patch, may also be used by individual developers to verify a patch prior to sending to the Hadoop QA systems.
 
 Other projects have adopted a similar methodology after seeing great success in the Hadoop model.  Some have even gone as far as forking Hadoop's precommit code and modifying it to meet their project's needs.
 
 This is a modification to Hadoop's version of test-patch so that we may bring together all of these forks under a common code base to help the community as a whole.
 
 
-## Pre-requisites
+# Pre-requisites
 
 test-patch has the following requirements:
 
 * Ant- or Maven-based project (and ant/maven installed)
-* git-based project (and git installed)
+* git-based project (and git 1.7.3 or higher installed)
 * bash v3.2 or higher
 * findbugs 3.x installed
-* shellcheck installed
+* shellcheck installed, preferably 0.3.6 or higher
 * pylint installed
 * GNU diff
 * GNU patch
@@ -57,21 +62,21 @@ Optional:
 * Apache JIRA-based issue tracking
 * JIRA cli tools
 
-The locations of these files are (mostly) assumed to be in the file path, but may be overridden via command line options.  For Solaris and Solaris-like operating systems, the default location for the POSIX binaries is in /usr/xpg4/bin.
+The locations of these files are (mostly) assumed to be in the file path, but may be overridden via command line options.  For Solaris and Solaris-like operating systems, the default location for the POSIX binaries is in /usr/xpg4/bin and the default location for the GNU binaries is /usr/gnu/bin.
 
 
-## Basic Usage
+# Basic Usage
 
-This command will execute basic patch testing against a patch file stored in filename:
+This command will execute basic patch testing against a patch file stored in "filename":
 
 ```bash
 $ cd <your repo>
 $ dev-support/test-patch.sh --dirty-workspace --project=projectname <filename>
 ```
 
-The `--dirty-workspace` flag tells test-patch that the repository is not clean and it is ok to continue.  This version command does not run the unit tests.
+The `--dirty-workspace` flag tells test-patch that the repository is not clean and it is ok to continue.  By default, unit tests are not run since they may take a significant amount of time.
 
-To do that, we need to provide the --run-tests command:
+To do turn them on, we need to provide the --run-tests option:
 
 
 ```bash
@@ -85,16 +90,34 @@ A typical configuration is to have two repositories.  One with the code you are 
 
 ```bash
 $ cd <workrepo>
-$ git diff --no-prefix trunk > /tmp/patchfile
+$ git diff master > /tmp/patchfile
 $ cd ../<testrepo>
 $ <workrepo>/dev-support/test-patch.sh --basedir=<testrepo> --resetrepo /tmp/patchfile
 ```
 
 We used two new options here.  --basedir sets the location of the repository to use for testing.  --resetrepo tells test patch that it can go into **destructive** mode.  Destructive mode will wipe out any changes made to that repository, so use it with care!
 
-After the tests have run, there is a directory that contains all of the test-patch related artifacts.  This is generally referred to as the patchprocess directory.  By default, test-patch tries to make something off of /tmp to contain this content.  Using the `--patchdir` command, one can specify exactly which directory to use.  This is helpful for automated precommit testing so that the Jenkins or other automated workflow system knows where to look to gather up the output.
+After the tests have run, there is a directory that contains all of the test-patch related artifacts.  This is generally referred to as the patchprocess directory.  By default, test-patch tries to make something off of /tmp to contain this content.  Using the `--patch-dir` option, one can specify exactly which directory to use.  This is helpful for automated precommit testing so that Jenkins or other automated workflow system knows where to look to gather up the output.
 
-## Providing Patch Files
+For example:
+
+```bash
+$ test-patch.sh --jenkins --patch-dir=${WORKSPACE}/patchprocess --basedir=${WORKSPACE}/source ${WORKSPACE}/patchfile
+```
+
+... will trigger test-patch to run in fully automated Jenkins mode, using ${WORKSPACE}/patchprocess as its scratch space, ${WORKSPACE}/source as the source repository, and ${WORKSPACE}/patchfile as the name of the patch to test against.
+
+# Build Tool
+
+Out of the box, test-patch is built to use maven.  But what if the project is built using something else, such as ant?
+
+```bash
+$ test-patch.sh (other options) --build-tool=ant
+```
+
+will tell test-patch to use ant instead of maven to drive the project.
+
+# Providing Patch Files
 
 It is a fairly common practice within the Apache community to use Apache's JIRA instance to store potential patches.  As a result, test-patch supports providing just a JIRA issue number.  test-patch will find the *last* attachment, download it, then process it.
 
@@ -106,7 +129,6 @@ $ test-patch.sh (other options) HADOOP-9905
 
 ... will process the patch file associated with this JIRA issue.
 
-
 A new practice is to use a service such as GitHub and its Pull Request (PR) feature.  Luckily, test-patch supports URLs and many services like GitHub provide ways to provide unified diffs via URLs.
 
 For example:
@@ -116,6 +138,50 @@ $ test-patch.sh (other options) https://github.com/apache/flink/pull/773.patch
 ```
 
 ... will grab a unified diff of PR #773 and process it.
+
+# Project-specific Capabilities
+
+Due to the extensible nature of the system, test-patch allows for projects to define project-specific rules which we call personalities.  (How to build those rules is covered elsewhere.) There are two ways to specify which personality to use:
+
+## Direct Method
+
+```bash
+$ test-patch.sh (other options) --personality=(filename)
+```
+
+This tells test-patch to use the personality in the given file.
+
+## Project Method
+
+However, test-patch can detect if it is a personality that is in its "personality" directory based upon the project name:
+
+```bash
+$ test-patch.sh (other options) --project=(project)
+```
+
+# MultiJDK
+
+For many projects, it is useful to test Java code against multiple versions of JDKs at the same time.  test-patch can do this with the --multijdkdirs option:
+
+```bash
+$ test-patch.sh (other options) --multijdkdirs="/j/d/k/1,/j/d/k/2"
+```
+
+Not all Java tests support this mode, but those that do will now run their tests with all of the given versions of Java consecutively (e.g., javac--the Java compliation test).  Tests that do not support MultiJDK mode (e.g., checkstyle, mvn install) will use JAVA\_HOME.
+
+NOTE: JAVA\_HOME is always appended to the list of JDKs in MultiJDK mode.  If JAVA\_HOME is in the list, it will be moved to the end.
+
+# Docker
+
+test-patch also has a mode to utilize Docker:
+
+```bash
+$ test-patch.sh (other options) --docker
+```
+
+This will do some preliminary setup and then re-execute itself inside a Docker container.  For more information on how to provide a custom Dockerfile, see the advanced guide.
+
+
 
 ## In Closing
 
