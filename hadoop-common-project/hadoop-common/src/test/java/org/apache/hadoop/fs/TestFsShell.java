@@ -24,6 +24,7 @@ import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.SamplerBuilder;
 import org.apache.htrace.impl.AlwaysSampler;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestFsShell {
@@ -57,10 +58,13 @@ public class TestFsShell {
     FsShell shell = new FsShell(conf);
     int res;
     try {
-      res = ToolRunner.run(shell, new String[]{"-help"});
+      res = ToolRunner.run(shell, new String[]{"-help", "ls", "cat"});
     } finally {
       shell.close();
     }
     SetSpanReceiver.assertSpanNamesFound(new String[]{"help"});
+    Assert.assertEquals("-help ls cat",
+        SetSpanReceiver.getMap()
+            .get("help").get(0).getKVAnnotations().get("args"));
   }
 }

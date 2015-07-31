@@ -739,6 +739,10 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11807. add a lint mode to releasedocmaker (ramtin via aw)
 
+    HADOOP-12183. Annotate the HTrace span created by FsShell with the
+    command-line arguments passed by the user (Masatake Iwasaki via Colin P.
+    McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
