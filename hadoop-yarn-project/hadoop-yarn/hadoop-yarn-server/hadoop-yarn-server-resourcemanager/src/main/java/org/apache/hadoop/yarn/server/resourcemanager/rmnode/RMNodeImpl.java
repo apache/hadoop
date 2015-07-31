@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -107,6 +108,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private long lastHealthReportTime;
   private String nodeManagerVersion;
 
+  private final ContainerAllocationExpirer containerAllocationExpirer;
   /* set of containers that have just launched */
   private final Set<ContainerId> launchedContainers =
     new HashSet<ContainerId>();
@@ -265,6 +267,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.stateMachine = stateMachineFactory.make(this);
     
     this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();
+
+    this.containerAllocationExpirer = context.getContainerAllocationExpirer();
   }
 
   @Override
@@ -953,11 +957,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           // Just launched container. RM knows about it the first time.
           launchedContainers.add(containerId);
           newlyLaunchedContainers.add(remoteContainer);
+          // Unregister from containerAllocationExpirer.
+          containerAllocationExpirer.unregister(containerId);
         }
       } else {
         // A finished container
         launchedContainers.remove(containerId);
         completedContainers.add(remoteContainer);
+        // Unregister from containerAllocationExpirer.
+        containerAllocationExpirer.unregister(containerId);
       }
     }
     if (newlyLaunchedContainers.size() != 0 || completedContainers.size() != 0) {
