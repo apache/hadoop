@@ -760,6 +760,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
     log files from full disks. (zhihai xu via jlowe)
 
+    YARN-3990. AsyncDispatcher may overloaded with RMAppNodeUpdateEvent when
+    Node is connected/disconnected (Bibin A Chundatt via jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES

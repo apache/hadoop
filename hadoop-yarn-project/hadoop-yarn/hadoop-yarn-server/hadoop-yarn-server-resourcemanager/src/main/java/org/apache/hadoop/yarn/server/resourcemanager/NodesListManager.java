@@ -178,12 +178,14 @@ public class NodesListManager extends AbstractService implements
       LOG.debug(eventNode + " reported unusable");
       unusableRMNodesConcurrentSet.add(eventNode);
       for(RMApp app: rmContext.getRMApps().values()) {
-        this.rmContext
-            .getDispatcher()
-            .getEventHandler()
-            .handle(
-                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                    RMAppNodeUpdateType.NODE_UNUSABLE));
+        if (!app.isAppFinalStateStored()) {
+          this.rmContext
+              .getDispatcher()
+              .getEventHandler()
+              .handle(
+                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                      RMAppNodeUpdateType.NODE_UNUSABLE));
+        }
       }
       break;
     case NODE_USABLE:
@@ -192,12 +194,14 @@ public class NodesListManager extends AbstractService implements
         unusableRMNodesConcurrentSet.remove(eventNode);
       }
       for (RMApp app : rmContext.getRMApps().values()) {
-        this.rmContext
-            .getDispatcher()
-            .getEventHandler()
-            .handle(
-                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                    RMAppNodeUpdateType.NODE_USABLE));
+        if (!app.isAppFinalStateStored()) {
+          this.rmContext
+              .getDispatcher()
+              .getEventHandler()
+              .handle(
+                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                      RMAppNodeUpdateType.NODE_USABLE));
+        }
       }
       break;
     default:
