@@ -113,7 +113,7 @@ class InvalidateBlocks {
     if (set.add(block)) {
       numBlocks++;
       if (log) {
-        NameNode.blockStateChangeLog.info("BLOCK* {}: add {} to {}",
+        NameNode.blockStateChangeLog.debug("BLOCK* {}: add {} to {}",
             getClass().getSimpleName(), block, datanode);
       }
     }
