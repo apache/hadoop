@@ -162,6 +162,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3850. NM fails to read files from full disks which can lead to
     container logs being lost and other issues (Varun Saxena via jlowe)
 
+    YARN-3990. AsyncDispatcher may overloaded with RMAppNodeUpdateEvent when
+    Node is connected/disconnected (Bibin A Chundatt via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
