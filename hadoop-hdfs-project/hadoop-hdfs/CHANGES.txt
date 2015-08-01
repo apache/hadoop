@@ -1106,6 +1106,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8670. Better to exclude decommissioned nodes for namenode NodeUsage JMX
     (J.Andreina via vinayakumarb)
 
+    HDFS-8847. change TestHDFSContractAppend to not override
+    testRenameFileBeingAppended method. (Zhihai Xu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
