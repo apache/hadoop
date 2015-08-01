@@ -1041,6 +1041,9 @@ Release 2.8.0 - UNRELEASED
     each platform, not hardcoded to their Linux values (Martin Walsh via Colin
     P. McCabe)
 
+    HADOOP-12268. AbstractContractAppendTest#testRenameFileBeingAppended
+    misses rename operation. (Zhihai Xu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

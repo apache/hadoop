@@ -768,6 +768,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7192. DN should ignore lazyPersist hint if the writer is
     not local. (Arpit Agarwal)
 
+    HDFS-6860. BlockStateChange logs are too noisy. (Chang Li and xyao via xyao)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1103,6 +1105,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8670. Better to exclude decommissioned nodes for namenode NodeUsage JMX
     (J.Andreina via vinayakumarb)
+
+    HDFS-8847. change TestHDFSContractAppend to not override
+    testRenameFileBeingAppended method. (Zhihai Xu)
 
 Release 2.7.2 - UNRELEASED
 
