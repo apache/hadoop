@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 
 /**
  * A Plan represents the central data structure of a reservation system that
@@ -28,7 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.Reserv
  * previously accepted will be honored.
  * 
  * {@link ReservationDefinition} submitted by the users through the RM public
- * APIs are passed to appropriate {@link ReservationAgent}s, which in turn will
+ * APIs are passed to appropriate {@code ReservationAgent}s, which in turn will
  * consult the Plan (via the {@link PlanView} interface) and try to determine
  * whether there are sufficient resources available in this Plan to satisfy the
  * temporal and resource constraints of a {@link ReservationDefinition}. If a
