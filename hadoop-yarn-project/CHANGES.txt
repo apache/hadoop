@@ -377,6 +377,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4019. Add JvmPauseMonitor to ResourceManager and NodeManager. (Robert Kanter
     via junping_du)
 
+    YARN-3974. Refactor the reservation system test cases to use parameterized 
+    base test. (subru via curino)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
