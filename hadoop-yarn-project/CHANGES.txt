@@ -361,6 +361,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3950. Add unique SHELL_ID environment variable to DistributedShell
     (Robert Kanter via jlowe)
 
+    YARN-3965. Add startup timestamp to nodemanager UI (Hong Zhiguo via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

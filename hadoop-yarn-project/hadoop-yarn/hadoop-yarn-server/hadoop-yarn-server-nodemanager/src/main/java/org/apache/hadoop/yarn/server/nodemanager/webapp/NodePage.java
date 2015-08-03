@@ -73,15 +73,17 @@ public class NodePage extends NMView {
               StringUtils.byteDesc(info.getTotalPmemAllocated() * BYTES_IN_MB))
           ._("Pmem enforcement enabled",
               info.isPmemCheckEnabled())
-           ._("Total VCores allocated for Containers",
-              String.valueOf(info.getTotalVCoresAllocated())) 
+          ._("Total VCores allocated for Containers",
+              String.valueOf(info.getTotalVCoresAllocated()))
           ._("NodeHealthyStatus",
               info.getHealthStatus())
           ._("LastNodeHealthTime", new Date(
               info.getLastNodeUpdateTime()))
           ._("NodeHealthReport",
               info.getHealthReport())
-          ._("Node Manager Version:", info.getNMBuildVersion() +
+          ._("NodeManager started on", new Date(
+              info.getNMStartupTime()))
+          ._("NodeManager Version:", info.getNMBuildVersion() +
               " on " + info.getNMVersionBuiltOn())
           ._("Hadoop Version:", info.getHadoopBuildVersion() +
               " on " + info.getHadoopVersionBuiltOn());
