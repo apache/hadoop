@@ -22,6 +22,8 @@ PATCH_BRANCH_DEFAULT=trunk
 HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
 #shellcheck disable=SC2034
 ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+#shellcheck disable=SC2034
+PYLINT_OPTIONS="--indent-string='  '"
 
 HADOOP_MODULES=""
 
