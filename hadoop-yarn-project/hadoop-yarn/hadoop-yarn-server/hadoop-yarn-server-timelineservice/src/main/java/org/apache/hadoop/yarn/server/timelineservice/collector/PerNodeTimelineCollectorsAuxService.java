@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerContext;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -119,7 +120,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   public void initializeContainer(ContainerInitializationContext context) {
     // intercept the event of the AM container being created and initialize the
     // app level collector service
-    if (isApplicationMaster(context)) {
+    if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
       addApplication(appId);
@@ -135,19 +136,11 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   public void stopContainer(ContainerTerminationContext context) {
     // intercept the event of the AM container being stopped and remove the app
     // level collector service
-    if (isApplicationMaster(context)) {
+    if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
       removeApplication(appId);
     }
-  }
-
-  private boolean isApplicationMaster(ContainerContext context) {
-    // TODO this is based on a (shaky) assumption that the container id (the
-    // last field of the full container id) for an AM is always 1
-    // we want to make this much more reliable
-    ContainerId containerId = context.getContainerId();
-    return containerId.getContainerId() == 1L;
   }
 
   @VisibleForTesting
