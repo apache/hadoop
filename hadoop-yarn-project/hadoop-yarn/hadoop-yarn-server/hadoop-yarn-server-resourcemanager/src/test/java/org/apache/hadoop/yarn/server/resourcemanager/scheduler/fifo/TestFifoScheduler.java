@@ -222,6 +222,7 @@ public class TestFifoScheduler {
         scheduler);
     ((RMContextImpl) rmContext).setSystemMetricsPublisher(
         mock(SystemMetricsPublisher.class));
+    ((RMContextImpl) rmContext).setYarnConfiguration(new YarnConfiguration());
 
     scheduler.setRMContext(rmContext);
     scheduler.init(conf);
@@ -303,6 +304,7 @@ public class TestFifoScheduler {
         scheduler);
     ((RMContextImpl) rmContext).setSystemMetricsPublisher(
         mock(SystemMetricsPublisher.class));
+    ((RMContextImpl) rmContext).setYarnConfiguration(new YarnConfiguration());
     NullRMNodeLabelsManager nlm = new NullRMNodeLabelsManager();
     nlm.init(new Configuration());
     rmContext.setNodeLabelManager(nlm);

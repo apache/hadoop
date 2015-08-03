@@ -733,6 +733,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
     (Mit Desai via xgong)
 
+    YARN-3978. Configurably turn off the saving of container info in Generic AHS
+    (Eric Payne via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES

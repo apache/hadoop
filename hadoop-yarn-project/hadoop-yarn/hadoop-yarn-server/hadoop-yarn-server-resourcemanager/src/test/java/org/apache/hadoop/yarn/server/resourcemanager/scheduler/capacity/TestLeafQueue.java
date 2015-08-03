@@ -168,6 +168,8 @@ public class TestLeafQueue {
     cs.start();
 
     when(spyRMContext.getScheduler()).thenReturn(cs);
+    when(spyRMContext.getYarnConfiguration())
+        .thenReturn(new YarnConfiguration());
     when(cs.getNumClusterNodes()).thenReturn(3);
   }
   
