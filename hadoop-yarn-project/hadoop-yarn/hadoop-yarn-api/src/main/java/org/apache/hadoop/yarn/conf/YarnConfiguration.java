@@ -1435,6 +1435,15 @@ public class YarnConfiguration extends Configuration {
   public static final String APPLICATION_HISTORY_STORE =
       APPLICATION_HISTORY_PREFIX + "store-class";
 
+  /** Save container meta-info in the application history store. */
+  @Private
+  public static final String
+      APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO =
+        APPLICATION_HISTORY_PREFIX + "save-non-am-container-meta-info";
+  @Private
+  public static final boolean
+            DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO = true;
+
   /** URI for FileSystemApplicationHistoryStore */
   @Private
   public static final String FS_APPLICATION_HISTORY_STORE_URI =

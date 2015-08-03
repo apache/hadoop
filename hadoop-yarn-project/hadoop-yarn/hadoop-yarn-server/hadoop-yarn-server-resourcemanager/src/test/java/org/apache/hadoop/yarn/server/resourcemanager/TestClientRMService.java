@@ -1172,6 +1172,7 @@ public class TestClientRMService {
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
+    when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
         yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
