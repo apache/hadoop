@@ -172,6 +172,11 @@ public class TestLeafQueue {
     cs.setRMContext(spyRMContext);
     cs.init(csConf);
     cs.start();
+
+    when(spyRMContext.getScheduler()).thenReturn(cs);
+    when(spyRMContext.getYarnConfiguration())
+        .thenReturn(new YarnConfiguration());
+    when(cs.getNumClusterNodes()).thenReturn(3);
   }
   
   private static final String A = "a";
