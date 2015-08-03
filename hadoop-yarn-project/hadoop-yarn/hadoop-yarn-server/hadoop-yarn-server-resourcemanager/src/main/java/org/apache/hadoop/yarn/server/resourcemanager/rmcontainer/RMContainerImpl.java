@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -173,6 +174,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         .currentTimeMillis(), "");
   }
 
+  private boolean saveNonAMContainerMetaInfo;
+
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, String nodeLabelExpression) {
@@ -201,9 +204,21 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
+    saveNonAMContainerMetaInfo = rmContext.getYarnConfiguration().getBoolean(
+       YarnConfiguration.APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO,
+       YarnConfiguration
+                 .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
+
     rmContext.getRMApplicationHistoryWriter().containerStarted(this);
-    rmContext.getSystemMetricsPublisher().containerCreated(
-        this, this.creationTime);
+
+    // If saveNonAMContainerMetaInfo is true, store system metrics for all
+    // containers. If false, and if this container is marked as the AM, metrics
+    // will still be published for this container, but that calculation happens
+    // later.
+    if (saveNonAMContainerMetaInfo) {
+      rmContext.getSystemMetricsPublisher().containerCreated(
+          this, this.creationTime);
+    }
   }
 
   @Override
@@ -376,6 +391,15 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     } finally {
       writeLock.unlock();
     }
+
+    // Even if saveNonAMContainerMetaInfo is not true, the AM container's system
+    // metrics still need to be saved so that the AM's logs can be accessed.
+    // This call to getSystemMetricsPublisher().containerCreated() is mutually
+    // exclusive with the one in the RMContainerImpl constructor.
+    if (!saveNonAMContainerMetaInfo && this.isAMContainer) {
+      rmContext.getSystemMetricsPublisher().containerCreated(
+          this, this.creationTime);
+    }
   }
   
   @Override
@@ -516,8 +540,19 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
       container.rmContext.getRMApplicationHistoryWriter().containerFinished(
         container);
-      container.rmContext.getSystemMetricsPublisher().containerFinished(
-          container, container.finishTime);
+
+      boolean saveNonAMContainerMetaInfo =
+          container.rmContext.getYarnConfiguration().getBoolean(
+              YarnConfiguration
+                .APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO,
+              YarnConfiguration
+                .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
+
+      if (saveNonAMContainerMetaInfo || container.isAMContainer()) {
+        container.rmContext.getSystemMetricsPublisher().containerFinished(
+            container, container.finishTime);
+      }
+
     }
 
     private static void updateAttemptMetrics(RMContainerImpl container) {
