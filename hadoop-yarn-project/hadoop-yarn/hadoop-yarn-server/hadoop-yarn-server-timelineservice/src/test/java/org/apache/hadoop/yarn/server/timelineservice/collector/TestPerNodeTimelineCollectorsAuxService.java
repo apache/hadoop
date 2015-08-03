@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.junit.After;
@@ -94,6 +95,8 @@ public class TestPerNodeTimelineCollectorsAuxService {
     ContainerTerminationContext context =
         mock(ContainerTerminationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
+    when(context.getContainerType()).thenReturn(
+        ContainerType.APPLICATION_MASTER);
     auxService.stopContainer(context);
     // auxService should not have that app
     assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()));
@@ -138,6 +141,8 @@ public class TestPerNodeTimelineCollectorsAuxService {
     ContainerInitializationContext context =
         mock(ContainerInitializationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
+    when(context.getContainerType()).thenReturn(
+        ContainerType.APPLICATION_MASTER);
     auxService.initializeContainer(context);
     return auxService;
   }
