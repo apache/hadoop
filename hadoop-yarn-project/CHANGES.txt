@@ -363,6 +363,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3965. Add startup timestamp to nodemanager UI (Hong Zhiguo via jlowe)
 
+    YARN-3543. ApplicationReport should be able to tell whether the Application
+    is AM managed or not. (Rohith Sharma K S via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

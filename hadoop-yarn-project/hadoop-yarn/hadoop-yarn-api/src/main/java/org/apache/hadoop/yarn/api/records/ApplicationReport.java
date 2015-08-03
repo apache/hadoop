@@ -92,13 +92,14 @@ public abstract class ApplicationReport {
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String applicationType, Token amRmToken,
-      Set<String> tags) {
+      Set<String> tags, boolean unmanagedApplication) {
     ApplicationReport report =
         newInstance(applicationId, applicationAttemptId, user, queue, name,
           host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
           finishTime, finalStatus, appResources, origTrackingUrl, progress,
           applicationType, amRmToken);
     report.setApplicationTags(tags);
+    report.setUnmanagedApp(unmanagedApplication);
     return report;
   }
 
@@ -393,4 +394,18 @@ public abstract class ApplicationReport {
   @Unstable
   public abstract void setLogAggregationStatus(
       LogAggregationStatus logAggregationStatus);
+
+  /**
+   * @return true if the AM is not managed by the RM
+   */
+  @Public
+  @Unstable
+  public abstract boolean isUnmanagedApp();
+
+  /**
+   * @param value true if RM should not manage the AM
+   */
+  @Public
+  @Unstable
+  public abstract void setUnmanagedApp(boolean unmanagedApplication);
 }

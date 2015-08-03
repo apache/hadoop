@@ -206,6 +206,7 @@ public class AppBlock extends HtmlBlock {
     }
     overviewTable._("Diagnostics:",
         app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
+    overviewTable._("Unmanaged Application:", app.isUnmanagedApp());
 
     Collection<ApplicationAttemptReport> attempts;
     try {
