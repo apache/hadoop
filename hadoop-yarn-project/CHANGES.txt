@@ -361,6 +361,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3950. Add unique SHELL_ID environment variable to DistributedShell
     (Robert Kanter via jlowe)
 
+    YARN-3965. Add startup timestamp to nodemanager UI (Hong Zhiguo via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -732,6 +734,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
     (Mit Desai via xgong)
+
+    YARN-3978. Configurably turn off the saving of container info in Generic AHS
+    (Eric Payne via jeagles)
 
   OPTIMIZATIONS
 

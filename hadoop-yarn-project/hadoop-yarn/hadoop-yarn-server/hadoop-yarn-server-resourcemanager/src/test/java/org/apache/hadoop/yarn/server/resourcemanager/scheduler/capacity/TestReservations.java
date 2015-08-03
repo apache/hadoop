@@ -129,7 +129,9 @@ public class TestReservations {
 
     spyRMContext = spy(rmContext);
     when(spyRMContext.getScheduler()).thenReturn(cs);
-    
+    when(spyRMContext.getYarnConfiguration())
+        .thenReturn(new YarnConfiguration());
+
     cs.setRMContext(spyRMContext);
     cs.init(csConf);
     cs.start();
@@ -642,6 +644,7 @@ public class TestReservations {
     when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
+    when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         app_0.getApplicationId(), 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
@@ -711,6 +714,7 @@ public class TestReservations {
     when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
+    when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         app_0.getApplicationId(), 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
