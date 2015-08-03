@@ -34,7 +34,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libcurl4-openssl-dev \
     python python2.7 pylint \
     ruby \
-    openjdk-7-jdk
+    openjdk-7-jdk \
+    libperl-critic-perl
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
