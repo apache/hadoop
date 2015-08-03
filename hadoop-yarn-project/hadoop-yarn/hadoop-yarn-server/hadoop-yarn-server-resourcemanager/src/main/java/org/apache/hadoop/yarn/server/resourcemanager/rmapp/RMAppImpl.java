@@ -663,8 +663,9 @@ public class RMAppImpl implements RMApp, Recoverable {
           createApplicationState(), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType, 
-          amrmToken, applicationTags);
+              amrmToken, applicationTags);
       report.setLogAggregationStatus(logAggregationStatus);
+      report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       return report;
     } finally {
       this.readLock.unlock();

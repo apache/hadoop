@@ -895,12 +895,12 @@ public class TestYarnClient {
       rmClient.start();
 
       ApplicationId appId = createApp(rmClient, false);
-      waitTillAccepted(rmClient, appId);
+      waitTillAccepted(rmClient, appId, false);
       //managed AMs don't return AMRM token
       Assert.assertNull(rmClient.getAMRMToken(appId));
 
       appId = createApp(rmClient, true);
-      waitTillAccepted(rmClient, appId);
+      waitTillAccepted(rmClient, appId, true);
       long start = System.currentTimeMillis();
       while (rmClient.getAMRMToken(appId) == null) {
         if (System.currentTimeMillis() - start > 20 * 1000) {
@@ -921,7 +921,7 @@ public class TestYarnClient {
             rmClient.init(yarnConf);
             rmClient.start();
             ApplicationId appId = createApp(rmClient, true);
-            waitTillAccepted(rmClient, appId);
+          waitTillAccepted(rmClient, appId, true);
             long start = System.currentTimeMillis();
             while (rmClient.getAMRMToken(appId) == null) {
               if (System.currentTimeMillis() - start > 20 * 1000) {
@@ -981,7 +981,8 @@ public class TestYarnClient {
     return appId;
   }
   
-  private void waitTillAccepted(YarnClient rmClient, ApplicationId appId)
+  private void waitTillAccepted(YarnClient rmClient, ApplicationId appId,
+      boolean unmanagedApplication)
     throws Exception {
     try {
       long start = System.currentTimeMillis();
@@ -994,6 +995,7 @@ public class TestYarnClient {
         Thread.sleep(200);
         report = rmClient.getApplicationReport(appId);
       }
+      Assert.assertEquals(unmanagedApplication, report.isUnmanagedApp());
     } catch (Exception ex) {
       throw new Exception(ex);
     }

@@ -1308,14 +1308,15 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "preemptedResourceVCores"),
           WebServicesTestUtils.getXmlInt(element, "numNonAMContainerPreempted"),
           WebServicesTestUtils.getXmlInt(element, "numAMContainerPreempted"),
-          WebServicesTestUtils.getXmlString(element, "logAggregationStatus"));
+          WebServicesTestUtils.getXmlString(element, "logAggregationStatus"),
+          WebServicesTestUtils.getXmlBoolean(element, "unmanagedApplication"));
     }
   }
 
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    assertEquals("incorrect number of elements", 28, info.length());
+    assertEquals("incorrect number of elements", 29, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
@@ -1331,7 +1332,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getInt("preemptedResourceVCores"),
         info.getInt("numNonAMContainerPreempted"),
         info.getInt("numAMContainerPreempted"),
-        info.getString("logAggregationStatus"));
+        info.getString("logAggregationStatus"),
+        info.getBoolean("unmanagedApplication"));
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
@@ -1342,7 +1344,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       int allocatedMB, int allocatedVCores, int numContainers,
       int preemptedResourceMB, int preemptedResourceVCores,
       int numNonAMContainerPreempted, int numAMContainerPreempted,
-      String logAggregationStatus) throws JSONException,
+      String logAggregationStatus, boolean unmanagedApplication)
+      throws JSONException,
       Exception {
 
     WebServicesTestUtils.checkStringMatch("id", app.getApplicationId()
@@ -1392,6 +1395,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("Log aggregation Status doesn't match", app
         .getLogAggregationStatusForAppReport().toString(),
         logAggregationStatus);
+    assertEquals("unmanagedApplication doesn't match", app
+        .getApplicationSubmissionContext().getUnmanagedAM(),
+        unmanagedApplication);
   }
 
   @Test

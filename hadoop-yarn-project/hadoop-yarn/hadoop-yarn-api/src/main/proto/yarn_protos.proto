@@ -195,6 +195,7 @@ message ApplicationReportProto {
   optional hadoop.common.TokenProto am_rm_token = 19;
   repeated string applicationTags = 20;
   optional LogAggregationStatusProto log_aggregation_status = 21;
+  optional bool unmanaged_application = 22 [default = false];
 }
 
 enum LogAggregationStatusProto {
