@@ -1281,9 +1281,6 @@ function git_checkout
     fi
 
     determine_branch
-    if [[ ${PATCH_BRANCH} =~ ^git ]]; then
-      PATCH_BRANCH=$(echo "${PATCH_BRANCH}" | cut -dt -f2)
-    fi
 
     # we need to explicitly fetch in case the
     # git ref hasn't been brought in tree yet
@@ -1322,9 +1319,6 @@ function git_checkout
     fi
 
     determine_branch
-    if [[ ${PATCH_BRANCH} =~ ^git ]]; then
-      PATCH_BRANCH=$(echo "${PATCH_BRANCH}" | cut -dt -f2)
-    fi
 
     currentbranch=$(${GIT} rev-parse --abbrev-ref HEAD)
     if [[ "${currentbranch}" != "${PATCH_BRANCH}" ]];then
@@ -1351,20 +1345,19 @@ function git_checkout
   return 0
 }
 
-## @description  Confirm the given branch is a member of the list of space
-## @description  delimited branches or a git ref
+## @description  Confirm the given branch is a git reference
+## @descriptoin  or a valid gitXYZ commit hash
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
 ## @param        branch
-## @param        branchlist
-## @return       0 on success
+## @return       0 on success, if gitXYZ was passed, PATCH_BRANCH=xyz
 ## @return       1 on failure
 function verify_valid_branch
 {
-  local branches=$1
-  local check=$2
+  local check=$1
   local i
+  local hash
 
   # shortcut some common
   # non-resolvable names
@@ -1372,26 +1365,22 @@ function verify_valid_branch
     return 1
   fi
 
-  if [[ ${check} == patch ]]; then
-    return 1
-  fi
-
   if [[ ${check} =~ ^git ]]; then
-    ref=$(echo "${check}" | cut -f2 -dt)
-    count=$(echo "${ref}" | wc -c | tr -d ' ')
-
-    if [[ ${count} == 8 || ${count} == 41 ]]; then
-      return 0
+    hash=$(echo "${check}" | cut -f2- -dt)
+    if [[ -n ${hash} ]]; then
+      ${GIT} cat-file -t "${hash}" >/dev/null 2>&1
+      if [[ $? -eq 0 ]]; then
+        PATCH_BRANCH=${hash}
+        return 0
+      fi
+      return 1
+    else
+      return 1
     fi
-    return 1
   fi
 
-  for i in ${branches}; do
-    if [[ "${i}" == "${check}" ]]; then
-      return 0
-    fi
-  done
-  return 1
+  ${GIT} show-ref "${check}" >/dev/null 2>&1
+  return $?
 }
 
 ## @description  Try to guess the branch being tested using a variety of heuristics
@@ -1402,10 +1391,9 @@ function verify_valid_branch
 ## @return       1 on failure, with PATCH_BRANCH updated to PATCH_BRANCH_DEFAULT
 function determine_branch
 {
-  local allbranches
   local patchnamechunk
-
-  yetus_debug "Determine branch"
+  local total
+  local count
 
   # something has already set this, so move on
   if [[ -n ${PATCH_BRANCH} ]]; then
@@ -1414,6 +1402,13 @@ function determine_branch
 
   pushd "${BASEDIR}" > /dev/null
 
+  yetus_debug "Determine branch"
+
+  # something has already set this, so move on
+  if [[ -n ${PATCH_BRANCH} ]]; then
+    return
+  fi
+
   # developer mode, existing checkout, whatever
   if [[ "${DIRTY_WORKSPACE}" == true ]];then
     PATCH_BRANCH=$(${GIT} rev-parse --abbrev-ref HEAD)
@@ -1421,50 +1416,83 @@ function determine_branch
     return
   fi
 
-  allbranches=$(${GIT} branch -r | tr -d ' ' | ${SED} -e s,origin/,,g)
-
   for j in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
+    if [[ -z "${j}" ]]; then
+      continue
+    fi
     yetus_debug "Determine branch: starting with ${j}"
-    # shellcheck disable=SC2016
-    patchnamechunk=$(echo "${j}" | ${AWK} -F/ '{print $NF}')
+    patchnamechunk=$(echo "${j}" \
+            | ${SED} -e 's,.*/\(.*\)$,\1,' \
+                     -e 's,\.txt,.,' \
+                     -e 's,.patch,.,g' \
+                     -e 's,.diff,.,g' \
+                     -e 's,\.\.,.,g' \
+                     -e 's,\.$,,g' )
 
-    # ISSUE.branch.##.patch
-    yetus_debug "Determine branch: ISSUE.branch.##.patch"
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2 -d. )
-    verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
-    if [[ $? == 0 ]]; then
-      return
-    fi
-
-    # ISSUE-branch-##.patch
-    yetus_debug "Determine branch: ISSUE-branch-##.patch"
+    # ISSUE-branch-##
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
-    verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
-    if [[ $? == 0 ]]; then
-      return
+    yetus_debug "Determine branch: ISSUE-branch-## = ${PATCH_BRANCH}"
+    if [[ -n "${PATCH_BRANCH}" ]]; then
+      verify_valid_branch  "${PATCH_BRANCH}"
+      if [[ $? == 0 ]]; then
+        return
+      fi
     fi
 
-    # ISSUE-##.patch.branch
-    yetus_debug "Determine branch: ISSUE-##.patch.branch"
-    # shellcheck disable=SC2016
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | ${AWK} -F. '{print $NF}')
-    verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
-    if [[ $? == 0 ]]; then
-      return
-    fi
+    # ISSUE-##[.##].branch
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 3 ))
+    until [[ ${total} -eq 2 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3-${total} -d.)
+      yetus_debug "Determine branch: ISSUE[.##].branch = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return
+        fi
+      fi
+    done
 
-    # ISSUE-branch.##.patch
-    yetus_debug "Determine branch: ISSUE-branch.##.patch"
-    # shellcheck disable=SC2016
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | ${AWK} -F. '{print $(NF-2)}' 2>/dev/null)
-    verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
-    if [[ $? == 0 ]]; then
-      return
-    fi
+    # ISSUE.branch.##
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 3 ))
+    until [[ ${total} -eq 2 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2-${total} -d.)
+      yetus_debug "Determine branch: ISSUE.branch[.##] = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return
+        fi
+      fi
+    done
+
+    # ISSUE-branch.##
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 1 ))
+    until [[ ${total} -eq 1 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1-${total} -d. )
+      yetus_debug "Determine branch: ISSUE-branch[.##] = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return
+        fi
+      fi
+    done
+
   done
 
   PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
-
   popd >/dev/null
 }
 
