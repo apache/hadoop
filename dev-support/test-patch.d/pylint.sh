@@ -19,11 +19,13 @@ add_plugin pylint
 PYLINT_TIMER=0
 
 PYLINT=${PYLINT:-$(which pylint 2>/dev/null)}
+PYLINT_OPTIONS=${PYLINT_OPTIONS:-}
 
 function pylint_usage
 {
   echo "Pylint specific:"
-  echo "--pylint=<path> path to pylint executable"
+  echo "--pylint=<path>         path to pylint executable"
+  echo "--pylint-options=<path> pylint options other than output-format and reports"
 }
 
 function pylint_parse_args
@@ -34,6 +36,9 @@ function pylint_parse_args
     case ${i} in
     --pylint=*)
       PYLINT=${i#*=}
+    ;;
+    --pylint-options=*)
+      PYLINT_OPTIONS=${i#*=}
     ;;
     esac
   done
@@ -70,7 +75,8 @@ function pylint_preapply
   pushd "${BASEDIR}" >/dev/null
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.py$ && -f ${i} ]]; then
-      ${PYLINT} --indent-string="  " --output-format=parseable --reports=n "${i}" 2>/dev/null |
+      # shellcheck disable=SC2086
+      eval "${PYLINT} ${PYLINT_OPTIONS} --output-format=parseable --reports=n ${i}" 2>/dev/null |
       ${AWK} '1<NR' >> "${PATCH_DIR}/branch-pylint-result.txt"
     fi
   done
@@ -111,7 +117,8 @@ function pylint_postapply
   pushd "${BASEDIR}" >/dev/null
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.py$ && -f ${i} ]]; then
-      ${PYLINT} --indent-string="  " --output-format=parseable --reports=n "${i}" 2>/dev/null |
+      # shellcheck disable=SC2086
+      eval "${PYLINT} ${PYLINT_OPTIONS} --output-format=parseable --reports=n ${i}" 2>/dev/null |
       ${AWK} '1<NR' >> "${PATCH_DIR}/patch-pylint-result.txt"
     fi
   done
@@ -122,14 +129,14 @@ function pylint_postapply
   add_footer_table pylint "v${PYLINT_VERSION%,}"
 
   calcdiffs "${PATCH_DIR}/branch-pylint-result.txt" "${PATCH_DIR}/patch-pylint-result.txt" > "${PATCH_DIR}/diff-patch-pylint.txt"
-  diffPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-pylint.txt")
+  diffPostpatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-pylint.txt")
 
   if [[ ${diffPostpatch} -gt 0 ]] ; then
     # shellcheck disable=SC2016
-    numPrepatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-pylint-result.txt")
+    numPrepatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-pylint-result.txt")
 
     # shellcheck disable=SC2016
-    numPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-pylint-result.txt")
+    numPostpatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-pylint-result.txt")
 
     add_vote_table -1 pylint "The applied patch generated "\
       "${diffPostpatch} new pylint issues (total was ${numPrepatch}, now ${numPostpatch})."
