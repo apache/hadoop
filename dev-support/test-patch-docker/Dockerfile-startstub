@@ -78,6 +78,11 @@ RUN cabal update && cabal install shellcheck --global
 ###
 RUN gem install rubocop
 
+####
+# Install ruby-lint
+###
+RUN gem install ruby-lint
+
 #####
 # Install JIRA CLI
 #####
