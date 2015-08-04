@@ -1036,7 +1036,6 @@ int initialize_app(const char *user, const char *app_id,
 }
 
 char* parse_docker_command_file(const char* command_file) {
-  int i = 0;
   size_t len = 0;
   char *line = NULL;
   ssize_t read;
@@ -1062,7 +1061,7 @@ int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
   char* docker_binary = get_value(DOCKER_BINARY_KEY);
   char* docker_command_with_binary = calloc(sizeof(char), PATH_MAX);
-  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
   char **args = extract_values_delim(docker_command_with_binary, " ");
 
   int exit_code = -1;
@@ -1208,12 +1207,15 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char *docker_command_with_binary[PATH_MAX];
-  char *docker_wait_command[PATH_MAX];
-  char *docker_inspect_command[PATH_MAX];
-  char *docker_rm_command[PATH_MAX];
+  char docker_command_with_binary[PATH_MAX];
+  char docker_wait_command[PATH_MAX];
+  char docker_logs_command[PATH_MAX];
+  char docker_inspect_command[PATH_MAX];
+  char docker_rm_command[PATH_MAX];
   int container_file_source =-1;
   int cred_file_source = -1;
+  int BUFFER_SIZE = 4096;
+  char buffer[BUFFER_SIZE];
 
   char *docker_command = parse_docker_command_file(command_file);
   char *docker_binary = get_value(DOCKER_BINARY_KEY);
@@ -1228,7 +1230,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     goto cleanup;
   }
-  uid_t user_uid = geteuid();
   gid_t user_gid = getegid();
 
   exit_code = create_local_dirs(user, app_id, container_id,
@@ -1255,7 +1256,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
 
   FILE* start_docker = popen(docker_command_with_binary, "r");
   if (pclose (start_docker) != 0)
@@ -1267,17 +1268,17 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  sprintf(docker_inspect_command,
+  snprintf(docker_inspect_command, PATH_MAX,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
   FILE* inspect_docker = popen(docker_inspect_command, "r");
   int pid = 0;
-  fscanf (inspect_docker, "%d", &pid);
-  if (pclose (inspect_docker) != 0)
+  int res = fscanf (inspect_docker, "%d", &pid);
+  if (pclose (inspect_docker) != 0 || res <= 0)
   {
     fprintf (ERRORFILE,
-     "Could not inspect docker %s.\n", docker_inspect_command);
+     "Could not inspect docker to get pid %s.\n", docker_inspect_command);
     fflush(ERRORFILE);
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
@@ -1306,19 +1307,47 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    sprintf(docker_wait_command,
+    snprintf(docker_wait_command, PATH_MAX,
       "%s wait %s", docker_binary, container_id);
 
     FILE* wait_docker = popen(docker_wait_command, "r");
-    fscanf (wait_docker, "%d", &exit_code);
-    if (pclose (wait_docker) != 0) {
+    res = fscanf (wait_docker, "%d", &exit_code);
+    if (pclose (wait_docker) != 0 || res <= 0) {
       fprintf (ERRORFILE,
-       "Could not attach to docker is container dead? %s.\n", docker_wait_command);
+       "Could not attach to docker; is container dead? %s.\n", docker_wait_command);
       fflush(ERRORFILE);
+    }
+    if(exit_code != 0) {
+      snprintf(docker_logs_command, PATH_MAX, "%s logs --tail=250 %s",
+        docker_binary, container_id);
+      FILE* logs = popen(docker_logs_command, "r");
+      if(logs != NULL) {
+        clearerr(logs);
+        res = fread(buffer, BUFFER_SIZE, 1, logs);
+        if(res < 1) {
+          fprintf(ERRORFILE, "%s %d %d\n",
+            "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
+          fflush(ERRORFILE);
+        }
+        else {
+          fprintf(ERRORFILE, "%s\n", buffer);
+          fflush(ERRORFILE);
+        }
+      }
+      else {
+        fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
+        fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
+        fprintf(ERRORFILE, "%s\n", strerror(errno));
+        fflush(ERRORFILE);
+      }
+      if(pclose(logs) != 0) {
+        fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
+        fflush(ERRORFILE);
+      }
     }
   }
 
-  sprintf(docker_rm_command,
+  snprintf(docker_rm_command, PATH_MAX,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
