@@ -743,6 +743,9 @@ Release 2.8.0 - UNRELEASED
     command-line arguments passed by the user (Masatake Iwasaki via Colin P.
     McCabe)
 
+    HADOOP-12280. Skip unit tests based on maven profile rather than
+    NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
