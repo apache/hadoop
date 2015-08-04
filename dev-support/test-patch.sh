@@ -102,6 +102,7 @@ function setup_defaults
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
   BUGSYSTEM=jira
+  TESTFORMATS=""
   JDK_TEST_LIST="javac javadoc unit"
   GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
   GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
@@ -774,7 +775,7 @@ function testpatch_usage
 
   importplugins
 
-  for plugin in ${PLUGINS} ${BUGSYSTEMS}; do
+  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
     if declare -f ${plugin}_usage >/dev/null 2>&1; then
       echo
       "${plugin}_usage"
@@ -2940,10 +2941,7 @@ function populate_test_table
 function check_unittests
 {
   local i
-  local failed_tests=""
-  local test_timeouts=""
   local test_logfile
-  local module_test_timeouts=""
   local result=0
   local -r savejavahome=${JAVA_HOME}
   local multijdkmode=false
@@ -3001,39 +2999,19 @@ function check_unittests
       fn="${fn}${jdk}"
       test_logfile="${PATCH_DIR}/patch-unit-${fn}.txt"
 
-      # shellcheck disable=2016
-      module_test_timeouts=$(${AWK} '/^Running / { array[$NF] = 1 } /^Tests run: .* in / { delete array[$NF] } END { for (x in array) { print x } }' "${test_logfile}")
-      if [[ -n "${module_test_timeouts}" ]] ; then
-        test_timeouts="${test_timeouts} ${module_test_timeouts}"
-        ((result=result+1))
-      fi
-
       pushd "${MODULE[${i}]}" >/dev/null
-      #shellcheck disable=SC2026,SC2038,SC2016
-      module_failed_tests=$(find . -name 'TEST*.xml'\
-        | xargs "${GREP}" -l -E "<failure|<error"\
-        | ${AWK} -F/ '{sub("TEST-org.apache.",""); sub(".xml",""); print $NF}')
+
+      for j in ${TESTSYSTEMS}; do
+        if declare -f ${j}_process_tests; then
+          "${j}_process_tests" "${module}" "${test_logfile}"
+          ((results=results+$?))
+        fi
+      done
 
       popd >/dev/null
 
-      if [[ -n "${module_failed_tests}" ]] ; then
-        failed_tests="${failed_tests} ${module_failed_tests}"
-        ((result=result+1))
-      fi
-
       ((i=i+1))
     done
-
-    if [[ -n "${failed_tests}" ]] ; then
-      # shellcheck disable=SC2086
-      populate_test_table "${statusjdk}Failed unit tests" ${failed_tests}
-      failed_tests=""
-    fi
-    if [[ -n "${test_timeouts}" ]] ; then
-      # shellcheck disable=SC2086
-      populate_test_table "${statusjdk}Timed out tests" ${test_timeouts}
-      test_timeouts=""
-    fi
 
   done
   JAVA_HOME=${savejavahome}
@@ -3433,7 +3411,7 @@ function importplugins
 ## @replaceable  no
 function parse_args_plugins
 {
-  for plugin in ${PLUGINS} ${BUGSYSTEMS}; do
+  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
     if declare -f ${plugin}_parse_args >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_parse_args"
       #shellcheck disable=SC2086
@@ -3452,13 +3430,22 @@ function add_plugin
   PLUGINS="${PLUGINS} $1"
 }
 
-## @description  Register test-patch.d plugins
+## @description  Register test-patch.d bugsystems
 ## @audience     public
 ## @stability    stable
 ## @replaceable  no
 function add_bugsystem
 {
   BUGSYSTEMS="${BUGSYSTEMS} $1"
+}
+
+## @description  Register test-patch.d test output formats
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function add_test_format
+{
+  TESTFORMATS="${TESTFORMATS} $1"
 }
 
 ## @description  Calculate the differences between the specified files
