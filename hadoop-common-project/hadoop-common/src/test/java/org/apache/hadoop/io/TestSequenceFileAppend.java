@@ -141,7 +141,7 @@ public class TestSequenceFileAppend {
 
   @Test(timeout = 30000)
   public void testAppendRecordCompression() throws Exception {
-    GenericTestUtils.assumeNativeCodeLoaded();
+    GenericTestUtils.assumeInNativeProfile();
 
     Path file = new Path(ROOT_PATH, "testseqappendblockcompr.seq");
     fs.delete(file, true);
@@ -175,7 +175,7 @@ public class TestSequenceFileAppend {
 
   @Test(timeout = 30000)
   public void testAppendBlockCompression() throws Exception {
-    GenericTestUtils.assumeNativeCodeLoaded();
+    GenericTestUtils.assumeInNativeProfile();
 
     Path file = new Path(ROOT_PATH, "testseqappendblockcompr.seq");
     fs.delete(file, true);
@@ -250,7 +250,7 @@ public class TestSequenceFileAppend {
 
   @Test(timeout = 30000)
   public void testAppendSort() throws Exception {
-    GenericTestUtils.assumeNativeCodeLoaded();
+    GenericTestUtils.assumeInNativeProfile();
 
     Path file = new Path(ROOT_PATH, "testseqappendSort.seq");
     fs.delete(file, true);
