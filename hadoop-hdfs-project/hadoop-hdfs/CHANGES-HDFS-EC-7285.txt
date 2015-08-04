@@ -382,3 +382,6 @@
 
     HDFS-8202. Improve end to end stirpping file test to add erasure recovering
     test. (Xinwei Qin via zhz)
+
+    HDFS-8804. Erasure Coding: use DirectBufferPool in DFSStripedInputStream for
+    buffer allocation. (jing9)
