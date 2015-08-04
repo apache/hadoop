@@ -1113,6 +1113,9 @@ Release 2.8.0 - UNRELEASED
     pool to be scanned but there are suspicious blocks. (Colin Patrick McCabe
     via yliu)
 
+    HDFS-8844. TestHDFSCLI does not cleanup the test directory (Masatake
+    Iwasaki via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
