@@ -16525,7 +16525,7 @@
         <command>-cat CLITEST_DATA/file</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user/USERNAME</command>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
         <command>rm data</command>
       </cleanup-commands>
       <comparators>
