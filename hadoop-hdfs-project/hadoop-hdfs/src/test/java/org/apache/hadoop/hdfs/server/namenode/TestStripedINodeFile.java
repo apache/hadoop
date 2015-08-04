@@ -19,16 +19,24 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -198,5 +206,79 @@ public class TestStripedINodeFile {
     // by using preferred block size. This is 1024 and total block num
     // is 9(= 3 + 6). Consumed storage space should be 1024 * 9 = 9216.
     assertEquals(9216, counts.getStorageSpace());
+  }
+
+  /**
+   * Test the behavior of striped and contiguous block deletions.
+   */
+  @Test(timeout = 60000)
+  public void testDeleteOp() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      final int len = 1024;
+      final Path parentDir = new Path("/parentDir");
+      final Path zone = new Path(parentDir, "zone");
+      final Path zoneFile = new Path(zone, "zoneFile");
+      final Path contiguousFile = new Path(parentDir, "someFile");
+      final DistributedFileSystem dfs;
+      final Configuration conf = new Configuration();
+      final short GROUP_SIZE = HdfsConstants.NUM_DATA_BLOCKS
+          + HdfsConstants.NUM_PARITY_BLOCKS;
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);
+
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
+          .build();
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNamesystem();
+      dfs = cluster.getFileSystem();
+      dfs.mkdirs(zone);
+
+      // create erasure zone
+      dfs.createErasureCodingZone(zone, null, 0);
+      DFSTestUtil.createFile(dfs, zoneFile, len, (short) 1, 0xFEED);
+      DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
+      final FSDirectory fsd = fsn.getFSDirectory();
+
+      // Case-1: Verify the behavior of striped blocks
+      // Get blocks of striped file
+      INode inodeStriped = fsd.getINode("/parentDir/zone/zoneFile");
+      assertTrue("Failed to get INodeFile for /parentDir/zone/zoneFile",
+          inodeStriped instanceof INodeFile);
+      INodeFile inodeStripedFile = (INodeFile) inodeStriped;
+      BlockInfo[] stripedBlks = inodeStripedFile.getBlocks();
+      for (BlockInfo blockInfo : stripedBlks) {
+        assertFalse("Mistakenly marked the block as deleted!",
+            blockInfo.isDeleted());
+      }
+
+      // delete erasure zone directory
+      dfs.delete(zone, true);
+      for (BlockInfo blockInfo : stripedBlks) {
+        assertTrue("Didn't mark the block as deleted!", blockInfo.isDeleted());
+      }
+
+      // Case-2: Verify the behavior of contiguous blocks
+      // Get blocks of contiguous file
+      INode inode = fsd.getINode("/parentDir/someFile");
+      assertTrue("Failed to get INodeFile for /parentDir/someFile",
+          inode instanceof INodeFile);
+      INodeFile inodeFile = (INodeFile) inode;
+      BlockInfo[] contiguousBlks = inodeFile.getBlocks();
+      for (BlockInfo blockInfo : contiguousBlks) {
+        assertFalse("Mistakenly marked the block as deleted!",
+            blockInfo.isDeleted());
+      }
+
+      // delete parent directory
+      dfs.delete(parentDir, true);
+      for (BlockInfo blockInfo : contiguousBlks) {
+        assertTrue("Didn't mark the block as deleted!", blockInfo.isDeleted());
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

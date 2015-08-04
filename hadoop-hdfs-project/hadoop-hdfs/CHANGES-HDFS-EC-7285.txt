@@ -385,3 +385,6 @@
 
     HDFS-8804. Erasure Coding: use DirectBufferPool in DFSStripedInputStream for
     buffer allocation. (jing9)
+
+    HDFS-8399. Erasure Coding: unit test the behaviour of BlockManager recovery
+    work for the deleted blocks. (Rakesh R via zhz)
