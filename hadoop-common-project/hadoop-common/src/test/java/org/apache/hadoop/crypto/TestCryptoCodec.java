@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.RandomDatum;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
@@ -69,10 +70,7 @@ public class TestCryptoCodec {
 
   @Test(timeout=120000)
   public void testJceAesCtrCryptoCodec() throws Exception {
-    if (!"true".equalsIgnoreCase(System.getProperty("runningWithNative"))) {
-      LOG.warn("Skipping since test was not run with -Pnative flag");
-      Assume.assumeTrue(false);
-    }
+    GenericTestUtils.assumeInNativeProfile();
     if (!NativeCodeLoader.buildSupportsOpenssl()) {
       LOG.warn("Skipping test since openSSL library not loaded");
       Assume.assumeTrue(false);
@@ -91,10 +89,7 @@ public class TestCryptoCodec {
   
   @Test(timeout=120000)
   public void testOpensslAesCtrCryptoCodec() throws Exception {
-    if (!"true".equalsIgnoreCase(System.getProperty("runningWithNative"))) {
-      LOG.warn("Skipping since test was not run with -Pnative flag");
-      Assume.assumeTrue(false);
-    }
+    GenericTestUtils.assumeInNativeProfile();
     if (!NativeCodeLoader.buildSupportsOpenssl()) {
       LOG.warn("Skipping test since openSSL library not loaded");
       Assume.assumeTrue(false);

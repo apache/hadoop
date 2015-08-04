@@ -352,6 +352,9 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11801. Update BUILDING.txt for Ubuntu. (Gabor Liptak via
     Arpit Agarwal)
 
+    HADOOP-12280. Skip unit tests based on maven profile rather than
+    NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
