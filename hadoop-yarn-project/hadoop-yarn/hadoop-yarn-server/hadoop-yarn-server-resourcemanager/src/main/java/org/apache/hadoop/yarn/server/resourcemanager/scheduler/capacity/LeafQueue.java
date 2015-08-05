@@ -777,7 +777,7 @@ public class LeafQueue extends AbstractCSQueue {
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(node.getPartition())) {
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
 
     // Check if this queue need more resource, simply skip allocation if this
@@ -789,7 +789,7 @@ public class LeafQueue extends AbstractCSQueue {
             + ", because it doesn't need more resource, schedulingMode="
             + schedulingMode.name() + " node-partition=" + node.getPartition());
       }
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
 
     for (Iterator<FiCaSchedulerApp> assignmentIterator =
@@ -800,7 +800,7 @@ public class LeafQueue extends AbstractCSQueue {
       if (!super.canAssignToThisQueue(clusterResource, node.getPartition(),
           currentResourceLimits, application.getCurrentReservation(),
           schedulingMode)) {
-        return NULL_ASSIGNMENT;
+        return CSAssignment.NULL_ASSIGNMENT;
       }
       
       Resource userLimit =
@@ -846,11 +846,11 @@ public class LeafQueue extends AbstractCSQueue {
       } else if (!assignment.getSkipped()) {
         // If we don't allocate anything, and it is not skipped by application,
         // we will return to respect FIFO of applications
-        return NULL_ASSIGNMENT;
+        return CSAssignment.NULL_ASSIGNMENT;
       }
     }
 
-    return NULL_ASSIGNMENT;
+    return CSAssignment.NULL_ASSIGNMENT;
   }
 
   protected Resource getHeadroom(User user, Resource queueCurrentLimit,
