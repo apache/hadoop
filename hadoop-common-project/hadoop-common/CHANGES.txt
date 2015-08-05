@@ -743,6 +743,9 @@ Release 2.8.0 - UNRELEASED
     command-line arguments passed by the user (Masatake Iwasaki via Colin P.
     McCabe)
 
+    HADOOP-12280. Skip unit tests based on maven profile rather than
+    NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -1044,6 +1047,12 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12268. AbstractContractAppendTest#testRenameFileBeingAppended
     misses rename operation. (Zhihai Xu)
 
+    HADOOP-12274. Remove direct download link from BULIDING.txt.
+    (Caleb Severn via aajisaka)
+
+    HADOOP-12302. Fix native compilation on Windows after HADOOP-7824
+    (Vinayakumar B via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1066,6 +1075,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
     (kanaka kumar avvaru via wheat9)
+
+    HADOOP-12304. Applications using FileContext fail with the default file
+    system configured to be wasb/s3/etc. (cnauroth)
 
 Release 2.7.1 - 2015-07-06 
 

@@ -534,7 +534,9 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getLogAggregationStatus() == null ? "N/A"
           : appReport.getLogAggregationStatus());
       appReportStr.print("\tDiagnostics : ");
-      appReportStr.print(appReport.getDiagnostics());
+      appReportStr.println(appReport.getDiagnostics());
+      appReportStr.print("\tUnmanaged Application : ");
+      appReportStr.print(appReport.isUnmanagedApp());
     } else {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");

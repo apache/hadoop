@@ -16,24 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
-public enum RMStateStoreEventType {
-  STORE_APP_ATTEMPT,
-  STORE_APP,
-  UPDATE_APP,
-  UPDATE_APP_ATTEMPT,
-  REMOVE_APP,
-  FENCED,
-
-  // Below events should be called synchronously
-  STORE_MASTERKEY,
-  REMOVE_MASTERKEY,
-  STORE_DELEGATION_TOKEN,
-  REMOVE_DELEGATION_TOKEN,
-  UPDATE_DELEGATION_TOKEN,
-  UPDATE_AMRM_TOKEN,
-  STORE_RESERVATION,
-  UPDATE_RESERVATION,
-  REMOVE_RESERVATION,
+public enum AllocationState {
+  APP_SKIPPED,
+  PRIORITY_SKIPPED,
+  LOCALITY_SKIPPED,
+  QUEUE_SKIPPED,
+  ALLOCATED,
+  RESERVED
 }

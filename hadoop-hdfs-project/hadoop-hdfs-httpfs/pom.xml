@@ -132,7 +132,7 @@
         </exclusion>
         <exclusion>
           <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk</artifactId>
+          <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>
@@ -175,7 +175,7 @@
         </exclusion>
         <exclusion>
           <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk</artifactId>
+          <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>

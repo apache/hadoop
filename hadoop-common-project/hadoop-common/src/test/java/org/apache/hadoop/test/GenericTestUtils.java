@@ -414,9 +414,12 @@ public abstract class GenericTestUtils {
   }
 
   /**
-   * Skip test if native code is not loaded.
+   * Skip test if native build profile of Maven is not activated.
+   * Sub-project using this must set 'runningWithNative' property to true
+   * in the definition of native profile in pom.xml.
    */
-  public static void assumeNativeCodeLoaded() {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+  public static void assumeInNativeProfile() {
+    Assume.assumeTrue(
+        Boolean.valueOf(System.getProperty("runningWithNative", "false")));
   }
 }

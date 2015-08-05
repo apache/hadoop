@@ -581,4 +581,16 @@ public class ApplicationReportPBImpl extends ApplicationReport {
       convertToProtoFormat(LogAggregationStatus s) {
     return ProtoUtils.convertToProtoFormat(s);
   }
+
+  @Override
+  public boolean isUnmanagedApp() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getUnmanagedApplication();
+  }
+
+  @Override
+  public void setUnmanagedApp(boolean unmanagedApplication) {
+    maybeInitBuilder();
+    builder.setUnmanagedApplication(unmanagedApplication);
+  }
 }
