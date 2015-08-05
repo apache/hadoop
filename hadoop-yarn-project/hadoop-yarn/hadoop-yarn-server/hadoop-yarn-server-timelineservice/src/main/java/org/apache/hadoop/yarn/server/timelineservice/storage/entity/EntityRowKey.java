@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 
 /**
  * Represents a rowkey for the entity table.
@@ -47,7 +48,7 @@ public class EntityRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(EntityRowKey.invert(flowRunId));
+    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
     byte[] third = Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId));
     return Separator.QUALIFIERS.join(first, second, third);
   }
@@ -70,24 +71,11 @@ public class EntityRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(EntityRowKey.invert(flowRunId));
+    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
     byte[] third =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, te.getType(),
             te.getId()));
     return Separator.QUALIFIERS.join(first, second, third);
-  }
-
-  /**
-   * Converts a timestamp into it's inverse timestamp to be used in (row) keys
-   * where we want to have the most recent timestamp in the top of the table
-   * (scans start at the most recent timestamp first).
-   *
-   * @param key value to be inverted so that the latest version will be first in
-   *          a scan.
-   * @return inverted long
-   */
-  public static long invert(Long key) {
-    return Long.MAX_VALUE - key;
   }
 
 }
