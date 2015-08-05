@@ -156,6 +156,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3853. Add docker container runtime support to LinuxContainterExecutor.
     (Sidharta Seethana via vvasudev)
 
+    YARN-3736. Add RMStateStore apis to store and load accepted reservations for
+    failover (adhoot via asuresh)
 
   IMPROVEMENTS
 

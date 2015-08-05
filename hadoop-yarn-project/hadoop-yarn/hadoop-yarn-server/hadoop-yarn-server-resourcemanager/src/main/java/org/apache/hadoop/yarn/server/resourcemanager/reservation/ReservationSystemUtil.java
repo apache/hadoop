@@ -18,11 +18,23 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ReservationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationDefinitionProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ResourceAllocationRequestProto;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,5 +63,93 @@ public final class ReservationSystemUtil {
           toResource(entry.getValue()));
     }
     return resources;
+  }
+
+  public static ReservationAllocationStateProto buildStateProto(
+      ReservationAllocation allocation) {
+    ReservationAllocationStateProto.Builder builder =
+        ReservationAllocationStateProto.newBuilder();
+
+    builder.setAcceptanceTimestamp(allocation.getAcceptanceTime());
+    builder.setContainsGangs(allocation.containsGangs());
+    builder.setStartTime(allocation.getStartTime());
+    builder.setEndTime(allocation.getEndTime());
+    builder.setUser(allocation.getUser());
+    ReservationDefinitionProto definitionProto = convertToProtoFormat(
+        allocation.getReservationDefinition());
+    builder.setReservationDefinition(definitionProto);
+
+    for (Map.Entry<ReservationInterval, Resource> entry :
+        allocation.getAllocationRequests().entrySet()) {
+      ResourceAllocationRequestProto p =
+          ResourceAllocationRequestProto.newBuilder()
+          .setStartTime(entry.getKey().getStartTime())
+          .setEndTime(entry.getKey().getEndTime())
+          .setResource(convertToProtoFormat(entry.getValue()))
+          .build();
+      builder.addAllocationRequests(p);
+    }
+
+    ReservationAllocationStateProto allocationProto = builder.build();
+    return allocationProto;
+  }
+
+  private static ReservationDefinitionProto convertToProtoFormat(
+      ReservationDefinition reservationDefinition) {
+    return ((ReservationDefinitionPBImpl)reservationDefinition).getProto();
+  }
+
+  public static ResourceProto convertToProtoFormat(Resource e) {
+    return YarnProtos.ResourceProto.newBuilder()
+        .setMemory(e.getMemory())
+        .setVirtualCores(e.getVirtualCores())
+        .build();
+  }
+
+  public static Map<ReservationInterval, Resource> toAllocations(
+      List<ResourceAllocationRequestProto> allocationRequestsList) {
+    Map<ReservationInterval, Resource> allocations = new HashMap<>();
+    for (ResourceAllocationRequestProto proto : allocationRequestsList) {
+      allocations.put(
+          new ReservationInterval(proto.getStartTime(), proto.getEndTime()),
+          convertFromProtoFormat(proto.getResource()));
+    }
+    return allocations;
+  }
+
+  private static ResourcePBImpl convertFromProtoFormat(ResourceProto resource) {
+    return new ResourcePBImpl(resource);
+  }
+
+  public static ReservationDefinitionPBImpl convertFromProtoFormat(
+      ReservationDefinitionProto r) {
+    return new ReservationDefinitionPBImpl(r);
+  }
+
+  public static ReservationIdPBImpl convertFromProtoFormat(
+      ReservationIdProto r) {
+    return new ReservationIdPBImpl(r);
+  }
+
+  public static ReservationId toReservationId(
+      ReservationIdProto reservationId) {
+    return new ReservationIdPBImpl(reservationId);
+  }
+
+  public static InMemoryReservationAllocation toInMemoryAllocation(
+      String planName, ReservationId reservationId,
+      ReservationAllocationStateProto allocationState, Resource minAlloc,
+      ResourceCalculator planResourceCalculator) {
+    ReservationDefinition definition =
+        convertFromProtoFormat(
+            allocationState.getReservationDefinition());
+    Map<ReservationInterval, Resource> allocations = toAllocations(
+            allocationState.getAllocationRequestsList());
+    InMemoryReservationAllocation allocation =
+        new InMemoryReservationAllocation(reservationId, definition,
+        allocationState.getUser(), planName, allocationState.getStartTime(),
+        allocationState.getEndTime(), allocations, planResourceCalculator,
+        minAlloc, allocationState.getContainsGangs());
+    return allocation;
   }
 }

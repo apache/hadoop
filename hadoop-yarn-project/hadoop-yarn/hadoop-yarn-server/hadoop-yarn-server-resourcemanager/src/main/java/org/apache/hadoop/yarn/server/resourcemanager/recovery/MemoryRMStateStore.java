@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,7 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
@@ -221,6 +224,60 @@ public class MemoryRMStateStore extends RMStateStore {
     Set<DelegationKey> rmDTMasterKeyState =
         state.rmSecretManagerState.getMasterKeyState();
     rmDTMasterKeyState.remove(delegationKey);
+  }
+
+  @Override
+  protected synchronized void storeReservationState(
+      ReservationAllocationStateProto reservationAllocation, String planName,
+      String reservationIdName) throws Exception {
+    LOG.info("Storing reservationallocation for " + reservationIdName + " " +
+            "for plan " + planName);
+    Map<ReservationId, ReservationAllocationStateProto> planState =
+        state.getReservationState().get(planName);
+    if (planState == null) {
+      planState = new HashMap<>();
+      state.getReservationState().put(planName, planState);
+    }
+    ReservationId reservationId =
+        ReservationId.parseReservationId(reservationIdName);
+    planState.put(reservationId, reservationAllocation);
+  }
+
+  @Override
+  protected synchronized void updateReservationState(
+      ReservationAllocationStateProto reservationAllocation, String planName,
+      String reservationIdName) throws Exception {
+    LOG.info("Updating reservationallocation for " + reservationIdName + " " +
+            "for plan " + planName);
+    Map<ReservationId, ReservationAllocationStateProto> planState =
+        state.getReservationState().get(planName);
+    if (planState == null) {
+      throw new YarnRuntimeException("State for plan " + planName + " does " +
+          "not exist");
+    }
+    ReservationId reservationId =
+        ReservationId.parseReservationId(reservationIdName);
+    planState.put(reservationId, reservationAllocation);
+  }
+
+  @Override
+  protected synchronized void removeReservationState(
+      String planName, String reservationIdName) throws Exception {
+    LOG.info("Removing reservationallocation " + reservationIdName
+              + " for plan " + planName);
+
+    Map<ReservationId, ReservationAllocationStateProto> planState =
+        state.getReservationState().get(planName);
+    if (planState == null) {
+      throw new YarnRuntimeException("State for plan " + planName + " does " +
+          "not exist");
+    }
+    ReservationId reservationId =
+        ReservationId.parseReservationId(reservationIdName);
+    planState.remove(reservationId);
+    if (planState.isEmpty()) {
+      state.getReservationState().remove(planName);
+    }
   }
 
   @Override
