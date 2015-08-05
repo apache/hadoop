@@ -289,6 +289,12 @@ If you do any of these: change your credentials immediately!
     </property>
 
     <property>
+      <name>fs.s3a.signing-algorithm</name>
+      <description>Override the default signing algorithm so legacy
+        implementations can still be used</description>
+    </property>
+
+    <property>
       <name>fs.s3a.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3a</value>
       <description>Comma separated list of directories that will be used to buffer file
