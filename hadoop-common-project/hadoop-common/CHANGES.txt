@@ -1044,6 +1044,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12268. AbstractContractAppendTest#testRenameFileBeingAppended
     misses rename operation. (Zhihai Xu)
 
+    HADOOP-12274. Remove direct download link from BULIDING.txt.
+    (Caleb Severn via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
