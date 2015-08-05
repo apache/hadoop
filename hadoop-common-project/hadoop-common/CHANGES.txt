@@ -1076,6 +1076,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
     (kanaka kumar avvaru via wheat9)
 
+    HADOOP-12304. Applications using FileContext fail with the default file
+    system configured to be wasb/s3/etc. (cnauroth)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
