@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
@@ -200,20 +201,32 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
                   "! Using the current timestamp");
               eventTimestamp = System.currentTimeMillis();
             }
+            byte[] columnQualifierFirst =
+                Bytes.toBytes(Separator.VALUES.encode(eventId));
+            byte[] columnQualifierWithTsBytes =
+                Separator.VALUES.join(columnQualifierFirst,
+                    Bytes.toBytes(TimelineWriterUtils.invert(eventTimestamp)));
             Map<String, Object> eventInfo = event.getInfo();
-            if (eventInfo != null) {
+            if ((eventInfo == null) || (eventInfo.size() == 0)) {
+              // add separator since event key is empty
+              byte[] compoundColumnQualifierBytes =
+                  Separator.VALUES.join(columnQualifierWithTsBytes,
+                      null);
+              String compoundColumnQualifier =
+                  Bytes.toString(compoundColumnQualifierBytes);
+              EntityColumnPrefix.EVENT.store(rowKey, entityTable,
+                  compoundColumnQualifier, null, TimelineWriterUtils.EMPTY_BYTES);
+            } else {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
                 // eventId?infoKey
-                byte[] columnQualifierFirst =
-                    Bytes.toBytes(Separator.VALUES.encode(eventId));
                 byte[] compoundColumnQualifierBytes =
-                    Separator.VALUES.join(columnQualifierFirst,
+                    Separator.VALUES.join(columnQualifierWithTsBytes,
                         Bytes.toBytes(info.getKey()));
                 // convert back to string to avoid additional API on store.
                 String compoundColumnQualifier =
                     Bytes.toString(compoundColumnQualifierBytes);
                 EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                    compoundColumnQualifier, eventTimestamp, info.getValue());
+                    compoundColumnQualifier, null, info.getValue());
               } // for info: eventInfo
             }
           }
