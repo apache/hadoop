@@ -212,6 +212,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3867. ContainerImpl changes to support container resizing. (Meng Ding 
     via jianhe)
 
+    YARN-1643. Make ContainersMonitor support changing monitoring size of an
+    allocated container. (Meng Ding and Wangda Tan)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
