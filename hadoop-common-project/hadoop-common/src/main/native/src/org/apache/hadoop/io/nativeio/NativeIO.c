@@ -132,6 +132,7 @@ static void setStaticInt(JNIEnv *env, jclass clazz, char *field,
     }
 }
 
+#ifdef UNIX
 /**
  * Initialises a list of java constants that are platform specific.
  * These are only initialized in UNIX.
@@ -187,6 +188,7 @@ static void consts_init(JNIEnv *env) {
   SET_INT_OR_RETURN(env, clazz, S_IWUSR);
   SET_INT_OR_RETURN(env, clazz, S_IXUSR);
 }
+#endif
 
 static void stat_init(JNIEnv *env, jclass nativeio_class) {
   jclass clazz = NULL;

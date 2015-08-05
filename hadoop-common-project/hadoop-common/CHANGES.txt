@@ -1050,6 +1050,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12274. Remove direct download link from BULIDING.txt.
     (Caleb Severn via aajisaka)
 
+    HADOOP-12302. Fix native compilation on Windows after HADOOP-7824
+    (Vinayakumar B via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
