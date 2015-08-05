@@ -35,4 +35,8 @@
     <value>true</value>
   </property>
   -->
+  <property>
+    <name>fs.AbstractFileSystem.wasb.impl</name>
+    <value>org.apache.hadoop.fs.azure.Wasb</value>
+  </property>
 </configuration>
