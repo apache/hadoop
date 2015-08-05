@@ -384,7 +384,7 @@ public class ParentQueue extends AbstractCSQueue {
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(node.getPartition())) {
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
     
     // Check if this queue need more resource, simply skip allocation if this
@@ -396,7 +396,7 @@ public class ParentQueue extends AbstractCSQueue {
             + ", because it doesn't need more resource, schedulingMode="
             + schedulingMode.name() + " node-partition=" + node.getPartition());
       }
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
     
     CSAssignment assignment = 
