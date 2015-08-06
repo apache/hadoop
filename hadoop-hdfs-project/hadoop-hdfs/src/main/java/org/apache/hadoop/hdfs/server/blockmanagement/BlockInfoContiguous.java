@@ -45,7 +45,7 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   @Override
-  boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
+  boolean addStorage(DatanodeStorageInfo storage) {
     return ContiguousBlockStorageOp.addStorage(this, storage);
   }
 
