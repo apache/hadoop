@@ -172,23 +172,19 @@ public abstract class  BlockInfo extends Block
   public abstract int numNodes();
 
   /**
-   * Add a {@link DatanodeStorageInfo} location for a block
-   * @param storage The storage to add
-   * @param reportedBlock The block reported from the datanode. This is only
-   *                      used by erasure coded blocks, this block's id contains
-   *                      information indicating the index of the block in the
-   *                      corresponding block group.
+   * Add a {@link DatanodeStorageInfo} location for a block.
    */
-  abstract boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock);
+  abstract boolean addStorage(DatanodeStorageInfo storage);
 
   /**
    * Remove {@link DatanodeStorageInfo} location for a block
    */
   abstract boolean removeStorage(DatanodeStorageInfo storage);
 
+
   /**
    * Replace the current BlockInfo with the new one in corresponding
-   * DatanodeStorageInfo's linked list.
+   * DatanodeStorageInfo's linked list
    */
   abstract void replaceBlock(BlockInfo newBlock);
 
