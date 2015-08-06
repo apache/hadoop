@@ -384,6 +384,9 @@ message QueueStatisticsProto {
   optional int64 allocatedVCores = 13;
   optional int64 pendingVCores = 14;
   optional int64 reservedVCores = 15;
+  optional int64 allocatedContainers = 16;
+  optional int64 pendingContainers = 17;
+  optional int64 reservedContainers = 18;
 }
 
 message QueueInfoProto {

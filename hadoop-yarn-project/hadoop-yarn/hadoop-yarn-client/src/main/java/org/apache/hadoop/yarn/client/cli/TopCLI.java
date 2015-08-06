@@ -71,7 +71,7 @@ public class TopCLI extends YarnCLI {
   private String SET_CURSOR_HOME = "\u001b[H";
   private String CHANGE_BACKGROUND = "\u001b[7m";
   private String RESET_BACKGROUND = "\u001b[0m";
-  private String SET_CURSOR_LINE_6_COLUMN_0 = "\u001b[6;0f";
+  private String SET_CURSOR_LINE_7_COLUMN_0 = "\u001b[7;0f";
 
   // guava cache for getapplications call
   protected Cache<GetApplicationsRequest, List<ApplicationReport>>
@@ -331,6 +331,9 @@ public class TopCLI extends YarnCLI {
     long allocatedVCores;
     long pendingVCores;
     long reservedVCores;
+    long allocatedContainers;
+    long reservedContainers;
+    long pendingContainers;
   }
 
   private class KeyboardMonitor extends Thread {
@@ -596,14 +599,14 @@ public class TopCLI extends YarnCLI {
     String[] tput_cursor_home = { "tput", "cup", "0", "0" };
     String[] tput_clear = { "tput", "clear" };
     String[] tput_clear_line = { "tput", "el" };
-    String[] tput_set_cursor_line_6_column_0 = { "tput", "cup", "5", "0" };
+    String[] tput_set_cursor_line_7_column_0 = { "tput", "cup", "6", "0" };
     String[] tput_change_background = { "tput", "smso" };
     String[] tput_reset_background = { "tput", "rmso" };
     SET_CURSOR_HOME = getCommandOutput(tput_cursor_home);
     CLEAR = getCommandOutput(tput_clear);
     CLEAR_LINE = getCommandOutput(tput_clear_line);
-    SET_CURSOR_LINE_6_COLUMN_0 =
-        getCommandOutput(tput_set_cursor_line_6_column_0);
+    SET_CURSOR_LINE_7_COLUMN_0 =
+        getCommandOutput(tput_set_cursor_line_7_column_0);
     CHANGE_BACKGROUND = getCommandOutput(tput_change_background);
     RESET_BACKGROUND = getCommandOutput(tput_reset_background);
   }
@@ -712,6 +715,9 @@ public class TopCLI extends YarnCLI {
         queueMetrics.allocatedVCores += stats.getAllocatedVCores();
         queueMetrics.pendingVCores += stats.getPendingVCores();
         queueMetrics.reservedVCores += stats.getReservedVCores();
+        queueMetrics.allocatedContainers += stats.getAllocatedContainers();
+        queueMetrics.pendingContainers += stats.getPendingContainers();
+        queueMetrics.reservedContainers += stats.getReservedContainers();
       }
     }
     queueMetrics.availableMemoryGB = queueMetrics.availableMemoryGB / 1024;
@@ -793,12 +799,18 @@ public class TopCLI extends YarnCLI {
       queueMetrics.availableVCores, queueMetrics.allocatedVCores,
       queueMetrics.pendingVCores, queueMetrics.reservedVCores), terminalWidth,
       true));
+
+    ret.append(CLEAR_LINE);
+    ret.append(limitLineLength(String.format(
+        "Queue(s) Containers: %d allocated, %d pending, %d reserved%n",
+            queueMetrics.allocatedContainers, queueMetrics.pendingContainers,
+            queueMetrics.reservedContainers), terminalWidth, true));
     return ret.toString();
   }
 
   String getPrintableAppInformation(List<ApplicationInformation> appsInfo) {
     StringBuilder ret = new StringBuilder();
-    int limit = terminalHeight - 8;
+    int limit = terminalHeight - 9;
     List<String> columns = new ArrayList<>();
     for (int i = 0; i < limit; ++i) {
       ret.append(CLEAR_LINE);
@@ -944,7 +956,7 @@ public class TopCLI extends YarnCLI {
     synchronized (lock) {
       printHeader(header);
       printApps(appsStr);
-      System.out.print(SET_CURSOR_LINE_6_COLUMN_0);
+      System.out.print(SET_CURSOR_LINE_7_COLUMN_0);
       System.out.print(CLEAR_LINE);
     }
   }
