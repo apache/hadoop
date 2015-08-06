@@ -142,6 +142,7 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -2790,7 +2791,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (trackBlockCounts) {
         if (b.isComplete()) {
           numRemovedComplete++;
-          if (blockManager.hasMinStorage(b)) {
+          if (blockManager.checkMinReplication(b)) {
             numRemovedSafe++;
           }
         }
@@ -3022,7 +3023,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       curBlock = blocks[nrCompleteBlocks];
       if(!curBlock.isComplete())
         break;
-      assert blockManager.hasMinStorage(curBlock) :
+      assert blockManager.checkMinReplication(curBlock) :
               "A COMPLETE block is not minimally replicated in " + src;
     }
 
@@ -3058,7 +3059,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // If penultimate block doesn't exist then its minReplication is met
     boolean penultimateBlockMinReplication = penultimateBlock == null ? true :
-        blockManager.hasMinStorage(penultimateBlock);
+        blockManager.checkMinReplication(penultimateBlock);
 
     switch(lastBlockState) {
     case COMPLETE:
@@ -3067,7 +3068,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     case COMMITTED:
       // Close file if committed blocks are minimally replicated
       if(penultimateBlockMinReplication &&
-          blockManager.hasMinStorage(lastBlock)) {
+          blockManager.checkMinReplication(lastBlock)) {
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId());
         NameNode.stateChangeLog.warn("BLOCK*"
@@ -3359,9 +3360,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 trimmedTargets.get(i).getStorageInfo(trimmedStorages.get(i));
             if (storageInfo != null) {
               if(copyTruncate) {
-                storageInfo.addBlock(truncatedBlock, truncatedBlock);
+                storageInfo.addBlock(truncatedBlock);
               } else {
-                storageInfo.addBlock(storedBlock, storedBlock);
+                storageInfo.addBlock(storedBlock);
               }
             }
           }
@@ -3377,9 +3378,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         } else {
           iFile.setLastBlock(storedBlock, trimmedStorageInfos);
           if (closeFile) {
-            blockManager.markBlockReplicasAsCorrupt(oldBlock.getLocalBlock(),
-                storedBlock, oldGenerationStamp, oldNumBytes,
-                trimmedStorageInfos);
+            blockManager.markBlockReplicasAsCorrupt(storedBlock,
+                oldGenerationStamp, oldNumBytes, trimmedStorageInfos);
           }
         }
       }
