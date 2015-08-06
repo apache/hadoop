@@ -635,9 +635,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-7923. The DataNodes should rate-limit their full block reports by
     asking the NN on heartbeat messages (cmccabe)
 
-    HDFS-8499. Refactor BlockInfo class hierarchy with static helper class.
-    (Zhe Zhang via wang)
-
     HDFS-8540.  Mover should exit with NO_MOVE_BLOCK if no block can be moved.
     (surendra singh lilhore via szetszwo)
 

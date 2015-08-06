@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 /**
@@ -172,8 +173,7 @@ public class TestHeartbeatHandling {
               dd1.getStorageInfos()[0],
               dd2.getStorageInfos()[0],
               dd3.getStorageInfos()[0]};
-          BlockInfoUnderConstruction blockInfo =
-              new BlockInfoUnderConstructionContiguous(
+          BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
@@ -195,7 +195,7 @@ public class TestHeartbeatHandling {
           // More than the default stale interval of 30 seconds.
           DFSTestUtil.resetLastUpdatesWithOffset(dd2, -40 * 1000);
           DFSTestUtil.resetLastUpdatesWithOffset(dd3, 0);
-          blockInfo = new BlockInfoUnderConstructionContiguous(
+          blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
@@ -216,7 +216,7 @@ public class TestHeartbeatHandling {
           // More than the default stale interval of 30 seconds.
           DFSTestUtil.resetLastUpdatesWithOffset(dd2, - 40 * 1000);
           DFSTestUtil.resetLastUpdatesWithOffset(dd3, - 80 * 1000);
-          blockInfo = new BlockInfoUnderConstructionContiguous(
+          blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
