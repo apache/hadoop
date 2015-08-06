@@ -112,6 +112,14 @@ message SetStoragePolicyRequestProto {
 message SetStoragePolicyResponseProto { // void response
 }
 
+message GetStoragePolicyRequestProto {
+  required string path = 1;
+}
+
+message GetStoragePolicyResponseProto {
+  required BlockStoragePolicyProto storagePolicy = 1;
+}
+
 message GetStoragePoliciesRequestProto { // void request
 }
 
@@ -725,6 +733,8 @@ service ClientNamenodeProtocol {
       returns(SetReplicationResponseProto);
   rpc setStoragePolicy(SetStoragePolicyRequestProto)
       returns(SetStoragePolicyResponseProto);
+  rpc getStoragePolicy(GetStoragePolicyRequestProto)
+      returns(GetStoragePolicyResponseProto);
   rpc getStoragePolicies(GetStoragePoliciesRequestProto)
       returns(GetStoragePoliciesResponseProto);
   rpc setPermission(SetPermissionRequestProto)

@@ -1957,6 +1957,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Get the storage policy for a file or a directory.
+   *
+   * @param src
+   *          file/directory path
+   * @return storage policy object
+   */
+  BlockStoragePolicy getStoragePolicy(String src) throws IOException {
+    checkOperation(OperationCategory.READ);
+    waitForLoadingFSImage();
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      return FSDirAttrOp.getStoragePolicy(dir, blockManager, src);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  /**
    * @return All the existing block storage policies
    */
   BlockStoragePolicy[] getStoragePolicies() throws IOException {
