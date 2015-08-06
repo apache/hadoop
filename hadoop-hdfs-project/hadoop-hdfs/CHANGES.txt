@@ -33,6 +33,8 @@ Release 2.6.1 - UNRELEASED
     HDFS-7733. NFS: readdir/readdirplus return null directory
     attribute on failure. (Arpit Agarwal)
 
+    HDFS-8486. DN startup may cause severe data loss. (daryn via cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
