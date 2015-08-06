@@ -206,6 +206,8 @@ Trunk (Unreleased)
     MAPREDUCE-6406. Update FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT
     to match mapred-default.xml. (Ray Chiang via devaraj)
 
+    MAPREDUCE-6257. Document encrypted spills (Bibin A Chundatt via aw)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
