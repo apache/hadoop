@@ -371,6 +371,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4004. container-executor should print output of docker logs if the docker
     container exits with non-0 exit status. (Varun Vasudev via xgong)
 
+    YARN-3961. Expose pending, running and reserved containers of a queue in REST
+    api and yarn top (adhoot via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

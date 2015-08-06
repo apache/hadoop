@@ -263,6 +263,42 @@ public abstract class QueueStatistics {
   public abstract void setPendingVCores(long pendingVCores);
 
   /**
+   * Get the number of pending containers.
+   * @return the number of pending containers.
+   */
+  public abstract long getPendingContainers();
+
+  /**
+   * Set the number of pending containers.
+   * @param pendingContainers the pending containers.
+   */
+  public abstract void setPendingContainers(long pendingContainers);
+
+  /**
+   * Get the number of allocated containers.
+   * @return the number of allocated containers.
+   */
+  public abstract long getAllocatedContainers();
+
+  /**
+   * Set the number of allocated containers.
+   * @param allocatedContainers the allocated containers.
+   */
+  public abstract void setAllocatedContainers(long allocatedContainers);
+
+  /**
+   * Get the number of reserved containers.
+   * @return the number of reserved containers.
+   */
+  public abstract long getReservedContainers();
+
+  /**
+   * Set the number of reserved containers.
+   * @param reservedContainers the reserved containers.
+   */
+  public abstract void setReservedContainers(long reservedContainers);
+
+  /**
    * Get the reserved vcores
    * 
    * @return the reserved vcores
