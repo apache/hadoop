@@ -280,6 +280,20 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
+   * Get the storage policy for a file/directory.
+   * @param path
+   *          Path of an existing file/directory.
+   * @throws AccessControlException
+   *           If access is denied
+   * @throws org.apache.hadoop.fs.UnresolvedLinkException
+   *           if <code>src</code> contains a symlink
+   * @throws java.io.FileNotFoundException
+   *           If file/dir <code>src</code> is not found
+   */
+  @Idempotent
+  BlockStoragePolicy getStoragePolicy(String path) throws IOException;
+
+  /**
    * Set permissions for an existing file/directory.
    *
    * @throws org.apache.hadoop.security.AccessControlException If access is
