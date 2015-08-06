@@ -104,7 +104,7 @@ public class TestYarnCLI {
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
-          null);
+          null, null, false);
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
           newApplicationReport);
@@ -131,6 +131,7 @@ public class TestYarnCLI {
           (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
       pw.println("\tLog Aggregation Status : SUCCEEDED");
       pw.println("\tDiagnostics : diagnostics");
+      pw.println("\tUnmanaged Application : false");
       pw.close();
       String appReportStr = baos.toString("UTF-8");
       Assert.assertEquals(appReportStr, sysOutStream.toString());

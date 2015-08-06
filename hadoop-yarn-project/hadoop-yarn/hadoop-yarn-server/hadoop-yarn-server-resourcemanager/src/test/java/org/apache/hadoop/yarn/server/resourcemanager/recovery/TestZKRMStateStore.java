@@ -174,6 +174,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testDeleteStore(zkTester);
     testRemoveApplication(zkTester);
     testAMRMTokenSecretManagerStateStore(zkTester);
+    testReservationStateStore(zkTester);
     ((TestZKRMStateStoreTester.TestZKRMStateStoreInternal)
         zkTester.getRMStateStore()).testRetryingCreateRootDir();
   }

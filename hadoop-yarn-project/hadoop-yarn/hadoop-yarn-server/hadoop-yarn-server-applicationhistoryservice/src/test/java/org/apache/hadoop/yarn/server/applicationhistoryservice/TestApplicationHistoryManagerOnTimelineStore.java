@@ -475,6 +475,8 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         "test app type");
     entityInfo.put(ApplicationMetricsConstants.USER_ENTITY_INFO, "user1");
     entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, "test queue");
+    entityInfo.put(
+        ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO, "false");
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         Integer.MAX_VALUE + 1L);
     entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS,123);

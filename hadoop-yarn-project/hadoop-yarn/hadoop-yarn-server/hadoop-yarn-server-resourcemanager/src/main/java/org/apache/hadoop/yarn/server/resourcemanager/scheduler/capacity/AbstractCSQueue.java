@@ -53,13 +53,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
-  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);
-  
-  static final CSAssignment NULL_ASSIGNMENT =
-      new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
-  
-  static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
-  
+  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
   CSQueue parent;
   final String queueName;
   volatile int numContainers;

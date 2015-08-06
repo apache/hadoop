@@ -30,7 +30,7 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
   
   @BeforeClass
   public static void init() throws Exception {
-    GenericTestUtils.assumeNativeCodeLoaded();
+    GenericTestUtils.assumeInNativeProfile();
     Configuration conf = new Configuration();
     conf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY,

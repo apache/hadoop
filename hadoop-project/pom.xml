@@ -657,8 +657,8 @@
       </dependency>
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk</artifactId>
-        <version>1.7.4</version>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>1.10.6</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>

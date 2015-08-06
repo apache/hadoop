@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -44,12 +45,14 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.AMRMTokenSecretManagerStateProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ReservationAllocationStateProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
@@ -76,6 +79,8 @@ import com.google.common.annotations.VisibleForTesting;
  * Changes from 1.1 to 1.2, AMRMTokenSecretManager state has been saved
  * separately. The currentMasterkey and nextMasterkey have been stored.
  * Also, AMRMToken has been removed from ApplicationAttemptState.
+ *
+ * Changes from 1.2 to 1.3, Addition of ReservationSystem state.
  */
 public class FileSystemRMStateStore extends RMStateStore {
 
@@ -83,7 +88,7 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
-    .newInstance(1, 2);
+    .newInstance(1, 3);
   protected static final String AMRMTOKEN_SECRET_MANAGER_NODE =
       "AMRMTokenSecretManagerNode";
 
@@ -108,6 +113,8 @@ public class FileSystemRMStateStore extends RMStateStore {
   Path fsWorkingPath;
 
   Path amrmTokenSecretManagerRoot;
+  private Path reservationRoot;
+
   @Override
   public synchronized void initInternal(Configuration conf)
       throws Exception{
@@ -117,6 +124,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     rmAppRoot = new Path(rootDirPath, RM_APP_ROOT);
     amrmTokenSecretManagerRoot =
         new Path(rootDirPath, AMRMTOKEN_SECRET_MANAGER_ROOT);
+    reservationRoot = new Path(rootDirPath, RESERVATION_SYSTEM_ROOT);
     fsNumRetries =
         conf.getInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES,
             YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_NUM_RETRIES);
@@ -153,6 +161,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     mkdirsWithRetries(rmDTSecretManagerRoot);
     mkdirsWithRetries(rmAppRoot);
     mkdirsWithRetries(amrmTokenSecretManagerRoot);
+    mkdirsWithRetries(reservationRoot);
   }
 
   @Override
@@ -222,7 +231,22 @@ public class FileSystemRMStateStore extends RMStateStore {
     loadRMAppState(rmState);
     // recover AMRMTokenSecretManager
     loadAMRMTokenSecretManagerState(rmState);
+    // recover reservation state
+    loadReservationSystemState(rmState);
     return rmState;
+  }
+
+  private void loadReservationSystemState(RMState rmState) throws Exception {
+    try {
+      final ReservationStateFileProcessor fileProcessor = new
+          ReservationStateFileProcessor(rmState);
+      final Path rootDirectory = this.reservationRoot;
+
+      processDirectoriesOfFiles(fileProcessor, rootDirectory);
+    } catch (Exception e) {
+      LOG.error("Failed to load state.", e);
+      throw e;
+    }
   }
 
   private void loadAMRMTokenSecretManagerState(RMState rmState)
@@ -248,50 +272,12 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   private void loadRMAppState(RMState rmState) throws Exception {
     try {
-      List<ApplicationAttemptStateData> attempts =
-          new ArrayList<ApplicationAttemptStateData>();
+      List<ApplicationAttemptStateData> attempts = new ArrayList<>();
+      final RMAppStateFileProcessor rmAppStateFileProcessor =
+          new RMAppStateFileProcessor(rmState, attempts);
+      final Path rootDirectory = this.rmAppRoot;
 
-      for (FileStatus appDir : listStatusWithRetries(rmAppRoot)) {
-        checkAndResumeUpdateOperation(appDir.getPath());
-        for (FileStatus childNodeStatus :
-            listStatusWithRetries(appDir.getPath())) {
-          assert childNodeStatus.isFile();
-          String childNodeName = childNodeStatus.getPath().getName();
-          if (checkAndRemovePartialRecordWithRetries(
-              childNodeStatus.getPath())) {
-            continue;
-          }
-          byte[] childData = readFileWithRetries(childNodeStatus.getPath(),
-                  childNodeStatus.getLen());
-          // Set attribute if not already set
-          setUnreadableBySuperuserXattrib(childNodeStatus.getPath());
-          if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
-            // application
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Loading application from node: " + childNodeName);
-            }
-            ApplicationStateDataPBImpl appState =
-                new ApplicationStateDataPBImpl(
-                  ApplicationStateDataProto.parseFrom(childData));
-            ApplicationId appId =
-                appState.getApplicationSubmissionContext().getApplicationId();
-            rmState.appState.put(appId, appState);
-          } else if (childNodeName
-            .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
-            // attempt
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Loading application attempt from node: "
-                  + childNodeName);
-            }
-            ApplicationAttemptStateDataPBImpl attemptState =
-                new ApplicationAttemptStateDataPBImpl(
-                  ApplicationAttemptStateDataProto.parseFrom(childData));
-            attempts.add(attemptState);
-          } else {
-            LOG.info("Unknown child node with name: " + childNodeName);
-          }
-        }
-      }
+      processDirectoriesOfFiles(rmAppStateFileProcessor, rootDirectory);
 
       // go through all attempts and add them to their apps, Ideally, each
       // attempt node must have a corresponding app node, because remove
@@ -306,6 +292,29 @@ public class FileSystemRMStateStore extends RMStateStore {
     } catch (Exception e) {
       LOG.error("Failed to load state.", e);
       throw e;
+    }
+  }
+
+  private void processDirectoriesOfFiles(
+      RMStateFileProcessor rmAppStateFileProcessor, Path rootDirectory)
+    throws Exception {
+    for (FileStatus dir : listStatusWithRetries(rootDirectory)) {
+      checkAndResumeUpdateOperation(dir.getPath());
+      String dirName = dir.getPath().getName();
+      for (FileStatus fileNodeStatus : listStatusWithRetries(dir.getPath())) {
+        assert fileNodeStatus.isFile();
+        String fileName = fileNodeStatus.getPath().getName();
+        if (checkAndRemovePartialRecordWithRetries(fileNodeStatus.getPath())) {
+          continue;
+        }
+        byte[] fileData = readFileWithRetries(fileNodeStatus.getPath(),
+                fileNodeStatus.getLen());
+        // Set attribute if not already set
+        setUnreadableBySuperuserXattrib(fileNodeStatus.getPath());
+
+        rmAppStateFileProcessor.processChildNode(dirName, fileName,
+            fileData);
+      }
     }
   }
 
@@ -843,6 +852,41 @@ public class FileSystemRMStateStore extends RMStateStore {
     }
   }
 
+  @Override
+  protected void storeReservationState(
+      ReservationAllocationStateProto reservationAllocation, String planName,
+      String reservationIdName) throws Exception {
+    Path planCreatePath = getNodePath(reservationRoot, planName);
+    mkdirsWithRetries(planCreatePath);
+    Path reservationPath = getNodePath(planCreatePath, reservationIdName);
+    LOG.info("Storing state for reservation " + reservationIdName + " from " +
+        "plan " + planName + " at path " + reservationPath);
+    byte[] reservationData = reservationAllocation.toByteArray();
+    writeFileWithRetries(reservationPath, reservationData, true);
+  }
+
+  @Override
+  protected void updateReservationState(
+      ReservationAllocationStateProto reservationAllocation, String planName,
+      String reservationIdName) throws Exception {
+    Path planCreatePath = getNodePath(reservationRoot, planName);
+    Path reservationPath = getNodePath(planCreatePath, reservationIdName);
+    LOG.info("Updating state for reservation " + reservationIdName + " from " +
+        "plan " + planName + " at path " + reservationPath);
+    byte[] reservationData = reservationAllocation.toByteArray();
+    updateFile(reservationPath, reservationData, true);
+  }
+
+  @Override
+  protected void removeReservationState(
+      String planName, String reservationIdName) throws Exception {
+    Path planCreatePath = getNodePath(reservationRoot, planName);
+    Path reservationPath = getNodePath(planCreatePath, reservationIdName);
+    LOG.info("Removing state for reservation " + reservationIdName + " from " +
+        "plan " + planName + " at path " + reservationPath);
+    deleteFileWithRetries(reservationPath);
+  }
+
   @VisibleForTesting
   public int getNumRetries() {
     return fsNumRetries;
@@ -853,13 +897,84 @@ public class FileSystemRMStateStore extends RMStateStore {
     return fsRetryInterval;
   }
 
-  private void setUnreadableBySuperuserXattrib(Path p)
-          throws IOException {
+  private void setUnreadableBySuperuserXattrib(Path p) throws IOException {
     if (fs.getScheme().toLowerCase().contains("hdfs")
         && intermediateEncryptionEnabled
         && !fs.getXAttrs(p).containsKey(UNREADABLE_BY_SUPERUSER_XATTRIB)) {
       fs.setXAttr(p, UNREADABLE_BY_SUPERUSER_XATTRIB, null,
         EnumSet.of(XAttrSetFlag.CREATE));
     }
+  }
+
+  private static class ReservationStateFileProcessor implements
+      RMStateFileProcessor {
+    private RMState rmState;
+    public ReservationStateFileProcessor(RMState state) {
+      this.rmState = state;
+    }
+
+    @Override
+    public void processChildNode(String planName, String childNodeName,
+        byte[] childData) throws IOException {
+      ReservationAllocationStateProto allocationState =
+          ReservationAllocationStateProto.parseFrom(childData);
+      if (!rmState.getReservationState().containsKey(planName)) {
+        rmState.getReservationState().put(planName,
+            new HashMap<ReservationId, ReservationAllocationStateProto>());
+      }
+      ReservationId reservationId =
+          ReservationId.parseReservationId(childNodeName);
+      rmState.getReservationState().get(planName).put(reservationId,
+          allocationState);
+    }
+  }
+
+  private static class RMAppStateFileProcessor implements RMStateFileProcessor {
+    private RMState rmState;
+    private List<ApplicationAttemptStateData> attempts;
+
+    public RMAppStateFileProcessor(RMState rmState,
+        List<ApplicationAttemptStateData> attempts) {
+      this.rmState = rmState;
+      this.attempts = attempts;
+    }
+
+    @Override
+    public void processChildNode(String appDirName, String childNodeName,
+        byte[] childData)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
+        // application
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading application from node: " + childNodeName);
+        }
+        ApplicationStateDataPBImpl appState =
+            new ApplicationStateDataPBImpl(
+                ApplicationStateDataProto.parseFrom(childData));
+        ApplicationId appId =
+            appState.getApplicationSubmissionContext().getApplicationId();
+        rmState.appState.put(appId, appState);
+      } else if (childNodeName.startsWith(
+          ApplicationAttemptId.appAttemptIdStrPrefix)) {
+        // attempt
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading application attempt from node: "
+              + childNodeName);
+        }
+        ApplicationAttemptStateDataPBImpl attemptState =
+            new ApplicationAttemptStateDataPBImpl(
+                ApplicationAttemptStateDataProto.parseFrom(childData));
+        attempts.add(attemptState);
+      } else {
+        LOG.info("Unknown child node with name: " + childNodeName);
+      }
+    }
+  }
+
+  // Interface for common state processing of directory of file layout
+  private interface RMStateFileProcessor {
+    void processChildNode(String appDirName, String childNodeName,
+        byte[] childData)
+        throws IOException;
   }
 }

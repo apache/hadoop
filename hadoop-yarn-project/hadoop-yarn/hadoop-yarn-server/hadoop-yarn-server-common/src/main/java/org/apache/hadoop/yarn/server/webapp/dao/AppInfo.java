@@ -60,6 +60,7 @@ public class AppInfo {
   protected String applicationTags;
   private int allocatedCpuVcores;
   private int allocatedMemoryMB;
+  protected boolean unmanagedApplication;
 
   public AppInfo() {
     // JAXB needs this
@@ -99,6 +100,7 @@ public class AppInfo {
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
     }
+    unmanagedApplication = app.isUnmanagedApp();
   }
 
   public String getAppId() {
@@ -187,5 +189,9 @@ public class AppInfo {
 
   public String getApplicationTags() {
     return applicationTags;
+  }
+
+  public boolean isUnmanagedApp() {
+    return unmanagedApplication;
   }
 }

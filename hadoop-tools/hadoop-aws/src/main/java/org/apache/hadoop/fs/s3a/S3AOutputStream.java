@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -41,6 +42,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import static com.amazonaws.event.ProgressEventType.TRANSFER_COMPLETED_EVENT;
+import static com.amazonaws.event.ProgressEventType.TRANSFER_PART_STARTED_EVENT;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
 public class S3AOutputStream extends OutputStream {
@@ -52,7 +55,7 @@ public class S3AOutputStream extends OutputStream {
   private TransferManager transfers;
   private Progressable progress;
   private long partSize;
-  private int partSizeThreshold;
+  private long partSizeThreshold;
   private S3AFileSystem fs;
   private CannedAccessControlList cannedACL;
   private FileSystem.Statistics statistics;
@@ -76,7 +79,8 @@ public class S3AOutputStream extends OutputStream {
     this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
 
     partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    partSizeThreshold = conf.getInt(MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
+    partSizeThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
+        DEFAULT_MIN_MULTIPART_THRESHOLD);
 
     if (conf.get(BUFFER_DIR, null) != null) {
       lDirAlloc = new LocalDirAllocator(BUFFER_DIR);
@@ -116,7 +120,7 @@ public class S3AOutputStream extends OutputStream {
     try {
       final ObjectMetadata om = new ObjectMetadata();
       if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-        om.setServerSideEncryption(serverSideEncryptionAlgorithm);
+        om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
       }
       PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, backupFile);
       putObjectRequest.setCannedAcl(cannedACL);
@@ -184,8 +188,9 @@ public class S3AOutputStream extends OutputStream {
       }
 
       // There are 3 http ops here, but this should be close enough for now
-      if (progressEvent.getEventCode() == ProgressEvent.PART_STARTED_EVENT_CODE ||
-          progressEvent.getEventCode() == ProgressEvent.COMPLETED_EVENT_CODE) {
+      ProgressEventType pet = progressEvent.getEventType();
+      if (pet == TRANSFER_PART_STARTED_EVENT ||
+          pet == TRANSFER_COMPLETED_EVENT) {
         statistics.incrementWriteOps(1);
       }
 
