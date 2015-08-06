@@ -373,6 +373,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
     failure diagnostics (Chang Li via jlowe)
 
+    MAPREDUCE-6443. Add JvmPauseMonitor to JobHistoryServer. (Robert Kanter
+    via junping_du)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
