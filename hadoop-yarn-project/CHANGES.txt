@@ -374,6 +374,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3961. Expose pending, running and reserved containers of a queue in REST
     api and yarn top (adhoot via asuresh)
 
+    YARN-4019. Add JvmPauseMonitor to ResourceManager and NodeManager. (Robert Kanter
+    via junping_du)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -39,6 +39,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -157,6 +158,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private WebApp webApp;
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
+  private JvmPauseMonitor pauseMonitor;
 
   @VisibleForTesting
   protected String webAppAddress;
@@ -511,7 +513,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmContext.setResourceTrackerService(resourceTracker);
 
       DefaultMetricsSystem.initialize("ResourceManager");
-      JvmMetrics.initSingleton("ResourceManager", null);
+      JvmMetrics jm = JvmMetrics.initSingleton("ResourceManager", null);
+      pauseMonitor = new JvmPauseMonitor(conf);
+      jm.setPauseMonitor(pauseMonitor);
 
       // Initialize the Reservation system
       if (conf.getBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
@@ -566,6 +570,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       // need events to move to further states.
       rmStore.start();
 
+      pauseMonitor.start();
+
       if(recoveryEnabled) {
         try {
           LOG.info("Recovery started");
@@ -591,6 +597,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     protected void serviceStop() throws Exception {
 
       DefaultMetricsSystem.shutdown();
+      if (pauseMonitor != null) {
+        pauseMonitor.stop();
+      }
 
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
