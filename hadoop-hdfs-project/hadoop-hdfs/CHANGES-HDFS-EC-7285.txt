@@ -388,3 +388,6 @@
 
     HDFS-8399. Erasure Coding: unit test the behaviour of BlockManager recovery
     work for the deleted blocks. (Rakesh R via zhz)
+
+    HDFS-8857. Erasure Coding: Fix ArrayIndexOutOfBoundsException in
+    TestWriteStripedFileWithFailure. (Li Bo)

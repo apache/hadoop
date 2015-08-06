@@ -37,7 +37,7 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.parityBlocks;
 
 public class TestWriteStripedFileWithFailure {
   public static final Log LOG = LogFactory
-      .getLog(TestReadStripedFileWithMissingBlocks.class);
+      .getLog(TestWriteStripedFileWithFailure.class);
   private static MiniDFSCluster cluster;
   private static FileSystem fs;
   private static Configuration conf = new HdfsConfiguration();
@@ -114,7 +114,7 @@ public class TestWriteStripedFileWithFailure {
         dataDNFailureNum);
     Assert.assertNotNull(dataDNFailureIndices);
     int[] parityDNFailureIndices = StripedFileTestUtil.randomArray(dataBlocks,
-        dataBlocks + parityBlocks, dataDNFailureNum);
+        dataBlocks + parityBlocks, parityDNFailureNum);
     Assert.assertNotNull(parityDNFailureIndices);
 
     int[] failedDataNodes = new int[dataDNFailureNum + parityDNFailureNum];
