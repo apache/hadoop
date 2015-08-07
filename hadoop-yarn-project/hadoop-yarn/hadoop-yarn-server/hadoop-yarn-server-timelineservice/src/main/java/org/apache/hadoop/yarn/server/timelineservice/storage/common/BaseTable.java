@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -91,6 +93,20 @@ public abstract class BaseTable<T> {
       Connection conn, Scan scan) throws IOException {
     Table table = conn.getTable(getTableName(hbaseConf));
     return table.getScanner(scan);
+  }
+
+  /**
+   *
+   * @param hbaseConf used to read settings that override defaults
+   * @param conn used to create table from
+   * @param get that specifies what single row you want to get from this table
+   * @return result of get operation
+   * @throws IOException
+   */
+  public Result getResult(Configuration hbaseConf, Connection conn, Get get)
+      throws IOException {
+    Table table = conn.getTable(getTableName(hbaseConf));
+    return table.get(get);
   }
 
   /**

@@ -15,34 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
+package org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 
 /**
- * Represents the entity table column families.
+ * Represents the app_flow table column families.
  */
-public enum EntityColumnFamily implements ColumnFamily<EntityTable> {
-
+public enum AppToFlowColumnFamily implements ColumnFamily<AppToFlowTable> {
   /**
-   * Info column family houses known columns, specifically ones included in
-   * columnfamily filters.
+   * Mapping column family houses known columns such as flowId and flowRunId
    */
-  INFO("i"),
-
-  /**
-   * Configurations are in a separate column family for two reasons: a) the size
-   * of the config values can be very large and b) we expect that config values
-   * are often separately accessed from other metrics and info columns.
-   */
-  CONFIGS("c"),
-
-  /**
-   * Metrics have a separate column family, because they have a separate TTL.
-   */
-  METRICS("m");
+  MAPPING("m");
 
   /**
    * Byte representation of this column family.
@@ -53,7 +39,7 @@ public enum EntityColumnFamily implements ColumnFamily<EntityTable> {
    * @param value create a column family with this name. Must be lower case and
    *          without spaces.
    */
-  EntityColumnFamily(String value) {
+  AppToFlowColumnFamily(String value) {
     // column families should be lower case and not contain any spaces.
     this.bytes = Bytes.toBytes(Separator.SPACE.encode(value));
   }
