@@ -64,7 +64,7 @@ public interface ColumnPrefix<T> {
   public Object readResult(Result result, String qualifier) throws IOException;
 
   /**
-   * @param resultfrom which to read columns
+   * @param result from which to read columns
    * @return the latest values of columns in the column family with this prefix
    *         (or all of them if the prefix value is null).
    * @throws IOException

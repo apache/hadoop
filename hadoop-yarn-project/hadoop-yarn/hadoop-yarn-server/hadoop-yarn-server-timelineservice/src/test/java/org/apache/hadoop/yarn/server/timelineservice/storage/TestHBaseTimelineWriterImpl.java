@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -38,11 +39,15 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
+import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
@@ -70,6 +75,8 @@ public class TestHBaseTimelineWriterImpl {
 
   private static void createSchema() throws IOException {
     new EntityTable()
+        .createTable(util.getHBaseAdmin(), util.getConfiguration());
+    new AppToFlowTable()
         .createTable(util.getHBaseAdmin(), util.getConfiguration());
   }
 
@@ -138,10 +145,15 @@ public class TestHBaseTimelineWriterImpl {
     te.addEntity(entity);
 
     HBaseTimelineWriterImpl hbi = null;
+    HBaseTimelineReaderImpl hbr = null;
     try {
       Configuration c1 = util.getConfiguration();
       hbi = new HBaseTimelineWriterImpl(c1);
       hbi.init(c1);
+      hbi.start();
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
       String cluster = "cluster1";
       String user = "user1";
       String flow = "some_flow_name";
@@ -255,9 +267,22 @@ public class TestHBaseTimelineWriterImpl {
       assertEquals(1, rowCount);
       assertEquals(17, colCount);
 
+      TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
+          entity.getType(), entity.getId(), EnumSet.of(TimelineReader.Field.ALL));
+      Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
+          appName, entity.getType(), null, null, null, null, null, null, null,
+          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
+      assertNotNull(e1);
+      assertEquals(1, es1.size());
     } finally {
-      hbi.stop();
-      hbi.close();
+      if (hbi != null) {
+        hbi.stop();
+        hbi.close();
+      }
+      if (hbr != null) {
+        hbr.stop();
+        hbr.close();
+      }
     }
 
     // Somewhat of a hack, not a separate test in order not to have to deal with
@@ -283,7 +308,7 @@ public class TestHBaseTimelineWriterImpl {
 
   private void testAdditionalEntity() throws IOException {
     TimelineEvent event = new TimelineEvent();
-    String eventId = "foo_event_id";
+    String eventId = ApplicationMetricsConstants.CREATED_EVENT_TYPE;
     event.setId(eventId);
     Long expTs = 1436512802000L;
     event.setTimestamp(expTs);
@@ -291,19 +316,23 @@ public class TestHBaseTimelineWriterImpl {
     Object expVal = "test";
     event.addInfo(expKey, expVal);
 
-    final TimelineEntity entity = new TimelineEntity();
-    entity.setId("attempt_1329348432655_0001_m_000008_18");
-    entity.setType("FOO_ATTEMPT");
+    final TimelineEntity entity = new ApplicationEntity();
+    entity.setId(ApplicationId.newInstance(0, 1).toString());
     entity.addEvent(event);
 
     TimelineEntities entities = new TimelineEntities();
     entities.addEntity(entity);
 
     HBaseTimelineWriterImpl hbi = null;
+    HBaseTimelineReaderImpl hbr = null;
     try {
       Configuration c1 = util.getConfiguration();
       hbi = new HBaseTimelineWriterImpl(c1);
       hbi.init(c1);
+      hbi.start();
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
       String cluster = "cluster2";
       String user = "user2";
       String flow = "other_flow_name";
@@ -352,9 +381,31 @@ public class TestHBaseTimelineWriterImpl {
       }
       assertEquals(1, rowCount);
 
+      TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
+          entity.getType(), entity.getId(), EnumSet.of(TimelineReader.Field.ALL));
+      TimelineEntity e2 = hbr.getEntity(user, cluster, null, null, appName,
+          entity.getType(), entity.getId(), EnumSet.of(TimelineReader.Field.ALL));
+      Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
+          appName, entity.getType(), null, null, null, null, null, null, null,
+          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
+      Set<TimelineEntity> es2 = hbr.getEntities(user, cluster, null, null,
+          appName, entity.getType(), null, null, null, null, null, null, null,
+          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
+      assertNotNull(e1);
+      assertNotNull(e2);
+      assertEquals(e1, e2);
+      assertEquals(1, es1.size());
+      assertEquals(1, es2.size());
+      assertEquals(es1, es2);
     } finally {
-      hbi.stop();
-      hbi.close();
+      if (hbi != null) {
+        hbi.stop();
+        hbi.close();
+      }
+      if (hbr != null) {
+        hbr.stop();
+        hbr.close();
+      }
     }
   }
 
@@ -375,10 +426,15 @@ public class TestHBaseTimelineWriterImpl {
     entities.addEntity(entity);
 
     HBaseTimelineWriterImpl hbi = null;
+    HBaseTimelineReaderImpl hbr = null;
     try {
       Configuration c1 = util.getConfiguration();
       hbi = new HBaseTimelineWriterImpl(c1);
       hbi.init(c1);
+      hbi.start();
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
       String cluster = "cluster_emptyeventkey";
       String user = "user_emptyeventkey";
       String flow = "other_flow_name";
@@ -430,12 +486,20 @@ public class TestHBaseTimelineWriterImpl {
       }
       assertEquals(1, rowCount);
 
+      TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
+          entity.getType(), entity.getId(), EnumSet.of(TimelineReader.Field.ALL));
+      Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
+          appName, entity.getType(), null, null, null, null, null, null, null,
+          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
+      assertNotNull(e1);
+      assertEquals(1, es1.size());
     } finally {
       hbi.stop();
       hbi.close();
+      hbr.stop();;
+      hbr.close();
     }
   }
-
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {

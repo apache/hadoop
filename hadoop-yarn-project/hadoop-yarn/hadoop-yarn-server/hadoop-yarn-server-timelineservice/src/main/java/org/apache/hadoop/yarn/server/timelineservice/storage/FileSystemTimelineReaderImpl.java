@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineReaderUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -119,59 +120,32 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private static void fillFields(TimelineEntity finalEntity,
       TimelineEntity real, EnumSet<Field> fields) {
     if (fields.contains(Field.ALL)) {
-      finalEntity.setConfigs(real.getConfigs());
-      finalEntity.setMetrics(real.getMetrics());
-      finalEntity.setInfo(real.getInfo());
-      finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-      finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-      finalEntity.setEvents(real.getEvents());
-      return;
+      fields = EnumSet.allOf(Field.class);
     }
     for (Field field : fields) {
       switch(field) {
-      case CONFIGS:
-        finalEntity.setConfigs(real.getConfigs());
-        break;
-      case METRICS:
-        finalEntity.setMetrics(real.getMetrics());
-        break;
-      case INFO:
-        finalEntity.setInfo(real.getInfo());
-        break;
-      case IS_RELATED_TO:
-        finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-        break;
-      case RELATES_TO:
-        finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
-        break;
-      case EVENTS:
-        finalEntity.setEvents(real.getEvents());
-        break;
-      default:
-        continue;
+        case CONFIGS:
+          finalEntity.setConfigs(real.getConfigs());
+          break;
+        case METRICS:
+          finalEntity.setMetrics(real.getMetrics());
+          break;
+        case INFO:
+          finalEntity.setInfo(real.getInfo());
+          break;
+        case IS_RELATED_TO:
+          finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
+          break;
+        case RELATES_TO:
+          finalEntity.setIsRelatedToEntities(real.getIsRelatedToEntities());
+          break;
+        case EVENTS:
+          finalEntity.setEvents(real.getEvents());
+          break;
+        default:
+          continue;
       }
     }
-  }
-
-  private static boolean matchFilter(Object infoValue, Object filterValue) {
-    return infoValue.equals(filterValue);
-  }
-
-  private static boolean matchFilters(Map<String, ? extends Object> entityInfo,
-      Map<String, ? extends Object> filters) {
-    if (entityInfo == null || entityInfo.isEmpty()) {
-      return false;
-    }
-    for (Map.Entry<String, ? extends Object> filter : filters.entrySet()) {
-      Object infoValue = entityInfo.get(filter.getKey());
-      if (infoValue == null) {
-        return false;
-      }
-      if (!matchFilter(infoValue, filter.getValue())) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private String getFlowRunPath(String userId, String clusterId, String flowId,
@@ -186,10 +160,10 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     String appFlowMappingFile = rootPath + "/" +  ENTITIES_DIR + "/" +
         clusterId + "/" + APP_FLOW_MAPPING_FILE;
     try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(
-            new FileInputStream(
-                appFlowMappingFile), Charset.forName("UTF-8")));
-        CSVParser parser = new CSVParser(reader, csvFormat)) {
+             new BufferedReader(new InputStreamReader(
+                 new FileInputStream(
+                     appFlowMappingFile), Charset.forName("UTF-8")));
+         CSVParser parser = new CSVParser(reader, csvFormat)) {
       for (CSVRecord record : parser.getRecords()) {
         if (record.size() < 4) {
           continue;
@@ -207,36 +181,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     throw new IOException("Unable to get flow info");
   }
 
-  private static boolean matchMetricFilters(Set<TimelineMetric> metrics,
-      Set<String> metricFilters) {
-    Set<String> tempMetrics = new HashSet<String>();
-    for (TimelineMetric metric : metrics) {
-      tempMetrics.add(metric.getId());
-    }
-
-    for (String metricFilter : metricFilters) {
-      if (!tempMetrics.contains(metricFilter)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private static boolean matchEventFilters(Set<TimelineEvent> entityEvents,
-      Set<String> eventFilters) {
-    Set<String> tempEvents = new HashSet<String>();
-    for (TimelineEvent event : entityEvents) {
-      tempEvents.add(event.getId());
-    }
-
-    for (String eventFilter : eventFilters) {
-      if (!tempEvents.contains(eventFilter)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   private static TimelineEntity createEntityToBeReturned(TimelineEntity entity,
       EnumSet<Field> fieldsToRetrieve) {
     TimelineEntity entityToBeReturned = new TimelineEntity();
@@ -252,23 +196,6 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private static boolean isTimeInRange(Long time, Long timeBegin,
       Long timeEnd) {
     return (time >= timeBegin) && (time <= timeEnd);
-  }
-
-  private static boolean matchRelations(
-      Map<String, Set<String>> entityRelations,
-      Map<String, Set<String>> relations) {
-    for (Map.Entry<String, Set<String>> relation : relations.entrySet()) {
-      Set<String> ids = entityRelations.get(relation.getKey());
-      if (ids == null) {
-        return false;
-      }
-      for (String id : relation.getValue()) {
-        if (!ids.contains(id)) {
-          return false;
-        }
-      }
-    }
-    return true;
   }
 
   private static void mergeEntities(TimelineEntity entity1,
@@ -364,22 +291,22 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     // First sort the selected entities based on created/start time.
     Map<Long, Set<TimelineEntity>> sortedEntities =
         new TreeMap<>(
-          new Comparator<Long>() {
-            @Override
-            public int compare(Long l1, Long l2) {
-              return l2.compareTo(l1);
+            new Comparator<Long>() {
+              @Override
+              public int compare(Long l1, Long l2) {
+                return l2.compareTo(l1);
+              }
             }
-          }
         );
     for (File entityFile : dir.listFiles()) {
       if (!entityFile.getName().contains(TIMELINE_SERVICE_STORAGE_EXTENSION)) {
         continue;
       }
       try (BufferedReader reader =
-          new BufferedReader(
-              new InputStreamReader(
-                  new FileInputStream(
-                      entityFile), Charset.forName("UTF-8")))) {
+               new BufferedReader(
+                   new InputStreamReader(
+                       new FileInputStream(
+                           entityFile), Charset.forName("UTF-8")))) {
         TimelineEntity entity = readEntityFromFile(reader);
         if (!entity.getType().equals(entityType)) {
           continue;
@@ -393,27 +320,32 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           continue;
         }
         if (relatesTo != null && !relatesTo.isEmpty() &&
-            !matchRelations(entity.getRelatesToEntities(), relatesTo)) {
+            !TimelineReaderUtils
+                .matchRelations(entity.getRelatesToEntities(), relatesTo)) {
           continue;
         }
         if (isRelatedTo != null && !isRelatedTo.isEmpty() &&
-            !matchRelations(entity.getIsRelatedToEntities(), isRelatedTo)) {
+            !TimelineReaderUtils
+                .matchRelations(entity.getIsRelatedToEntities(), isRelatedTo)) {
           continue;
         }
         if (infoFilters != null && !infoFilters.isEmpty() &&
-            !matchFilters(entity.getInfo(), infoFilters)) {
+            !TimelineReaderUtils.matchFilters(entity.getInfo(), infoFilters)) {
           continue;
         }
         if (configFilters != null && !configFilters.isEmpty() &&
-            !matchFilters(entity.getConfigs(), configFilters)) {
+            !TimelineReaderUtils.matchFilters(
+                entity.getConfigs(), configFilters)) {
           continue;
         }
         if (metricFilters != null && !metricFilters.isEmpty() &&
-            !matchMetricFilters(entity.getMetrics(), metricFilters)) {
+            !TimelineReaderUtils.matchMetricFilters(
+                entity.getMetrics(), metricFilters)) {
           continue;
         }
         if (eventFilters != null && !eventFilters.isEmpty() &&
-            !matchEventFilters(entity.getEvents(), eventFilters)) {
+            !TimelineReaderUtils.matchEventFilters(
+                entity.getEvents(), eventFilters)) {
           continue;
         }
         TimelineEntity entityToBeReturned =
@@ -461,8 +393,8 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     File entityFile =
         new File(dir, entityId + TIMELINE_SERVICE_STORAGE_EXTENSION);
     try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(
-            new FileInputStream(entityFile), Charset.forName("UTF-8")))) {
+             new BufferedReader(new InputStreamReader(
+                 new FileInputStream(entityFile), Charset.forName("UTF-8")))) {
       TimelineEntity entity = readEntityFromFile(reader);
       return createEntityToBeReturned(entity, fieldsToRetrieve);
     }

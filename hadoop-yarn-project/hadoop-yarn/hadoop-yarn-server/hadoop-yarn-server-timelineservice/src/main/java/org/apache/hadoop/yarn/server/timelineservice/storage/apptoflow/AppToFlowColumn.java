@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
+package org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow;
 
-import java.io.IOException;
 
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -27,49 +26,36 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 
+import java.io.IOException;
+
 /**
- * Identifies fully qualified columns for the {@link EntityTable}.
+ * Identifies fully qualified columns for the {@link AppToFlowTable}.
  */
-public enum EntityColumn implements Column<EntityTable> {
+public enum AppToFlowColumn implements Column<AppToFlowTable> {
 
   /**
-   * Identifier for the entity.
+   * The flow ID
    */
-  ID(EntityColumnFamily.INFO, "id"),
+  FLOW_ID(AppToFlowColumnFamily.MAPPING, "flow_id"),
 
   /**
-   * The type of entity
+   * The flow run ID
    */
-  TYPE(EntityColumnFamily.INFO, "type"),
+  FLOW_RUN_ID(AppToFlowColumnFamily.MAPPING, "flow_run_id");
 
-  /**
-   * When the entity was created.
-   */
-  CREATED_TIME(EntityColumnFamily.INFO, "created_time"),
-
-  /**
-   * When it was modified.
-   */
-  MODIFIED_TIME(EntityColumnFamily.INFO, "modified_time"),
-
-  /**
-   * The version of the flow that this entity belongs to.
-   */
-  FLOW_VERSION(EntityColumnFamily.INFO, "flow_version");
-
-  private final ColumnHelper<EntityTable> column;
-  private final ColumnFamily<EntityTable> columnFamily;
+  private final ColumnHelper<AppToFlowTable> column;
+  private final ColumnFamily<AppToFlowTable> columnFamily;
   private final String columnQualifier;
   private final byte[] columnQualifierBytes;
 
-  EntityColumn(ColumnFamily<EntityTable> columnFamily,
+  AppToFlowColumn(ColumnFamily<AppToFlowTable> columnFamily,
       String columnQualifier) {
     this.columnFamily = columnFamily;
     this.columnQualifier = columnQualifier;
     // Future-proof by ensuring the right column prefix hygiene.
     this.columnQualifierBytes =
         Bytes.toBytes(Separator.SPACE.encode(columnQualifier));
-    this.column = new ColumnHelper<EntityTable>(columnFamily);
+    this.column = new ColumnHelper<AppToFlowTable>(columnFamily);
   }
 
   /**
@@ -80,7 +66,7 @@ public enum EntityColumn implements Column<EntityTable> {
   }
 
   public void store(byte[] rowKey,
-      TypedBufferedMutator<EntityTable> tableMutator, Long timestamp,
+      TypedBufferedMutator<AppToFlowTable> tableMutator, Long timestamp,
       Object inputValue) throws IOException {
     column.store(rowKey, tableMutator, columnQualifierBytes, timestamp,
         inputValue);
@@ -91,17 +77,17 @@ public enum EntityColumn implements Column<EntityTable> {
   }
 
   /**
-   * Retrieve an {@link EntityColumn} given a name, or null if there is no
+   * Retrieve an {@link AppToFlowColumn} given a name, or null if there is no
    * match. The following holds true: {@code columnFor(x) == columnFor(y)} if
    * and only if {@code x.equals(y)} or {@code (x == y == null)}
    *
    * @param columnQualifier Name of the column to retrieve
-   * @return the corresponding {@link EntityColumn} or null
+   * @return the corresponding {@link AppToFlowColumn} or null
    */
-  public static final EntityColumn columnFor(String columnQualifier) {
+  public static final AppToFlowColumn columnFor(String columnQualifier) {
 
     // Match column based on value, assume column family matches.
-    for (EntityColumn ec : EntityColumn.values()) {
+    for (AppToFlowColumn ec : AppToFlowColumn.values()) {
       // Find a match based only on name.
       if (ec.getColumnQualifier().equals(columnQualifier)) {
         return ec;
@@ -113,20 +99,20 @@ public enum EntityColumn implements Column<EntityTable> {
   }
 
   /**
-   * Retrieve an {@link EntityColumn} given a name, or null if there is no
+   * Retrieve an {@link AppToFlowColumn} given a name, or null if there is no
    * match. The following holds true: {@code columnFor(a,x) == columnFor(b,y)}
    * if and only if {@code a.equals(b) & x.equals(y)} or
    * {@code (x == y == null)}
    *
    * @param columnFamily The columnFamily for which to retrieve the column.
    * @param name Name of the column to retrieve
-   * @return the corresponding {@link EntityColumn} or null if both arguments
+   * @return the corresponding {@link AppToFlowColumn} or null if both arguments
    *         don't match.
    */
-  public static final EntityColumn columnFor(EntityColumnFamily columnFamily,
-      String name) {
+  public static final AppToFlowColumn columnFor(
+      AppToFlowColumnFamily columnFamily, String name) {
 
-    for (EntityColumn ec : EntityColumn.values()) {
+    for (AppToFlowColumn ec : AppToFlowColumn.values()) {
       // Find a match based column family and on name.
       if (ec.columnFamily.equals(columnFamily)
           && ec.getColumnQualifier().equals(name)) {
@@ -137,5 +123,4 @@ public enum EntityColumn implements Column<EntityTable> {
     // Default to null
     return null;
   }
-
 }
