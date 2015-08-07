@@ -33,9 +33,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
@@ -55,6 +60,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
   private Connection conn;
   private TypedBufferedMutator<EntityTable> entityTable;
+  private TypedBufferedMutator<AppToFlowTable> appToFlowTable;
 
   private static final Log LOG = LogFactory
       .getLog(HBaseTimelineWriterImpl.class);
@@ -77,6 +83,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     Configuration hbaseConf = HBaseConfiguration.create(conf);
     conn = ConnectionFactory.createConnection(hbaseConf);
     entityTable = new EntityTable().getTableMutator(hbaseConf, conn);
+    appToFlowTable = new AppToFlowTable().getTableMutator(hbaseConf, conn);
   }
 
   /**
@@ -97,7 +104,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
       byte[] rowKey =
           EntityRowKey.getRowKey(clusterId, userId, flowName, flowRunId, appId,
-              te);
+              te.getType(), te.getId());
 
       storeInfo(rowKey, te, flowVersion);
       storeEvents(rowKey, te.getEvents());
@@ -107,9 +114,35 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
           EntityColumnPrefix.IS_RELATED_TO);
       storeRelations(rowKey, te.getRelatesToEntities(),
           EntityColumnPrefix.RELATES_TO);
-    }
 
+      if (isApplicationCreated(te)) {
+        onApplicationCreated(
+            clusterId, userId, flowName, flowVersion, flowRunId, appId, te);
+      }
+    }
     return putStatus;
+  }
+
+  private static boolean isApplicationCreated(TimelineEntity te) {
+    if (te.getType().equals(TimelineEntityType.YARN_APPLICATION.toString())) {
+      boolean isAppCreated = false;
+      for (TimelineEvent event : te.getEvents()) {
+        if (event.getId().equals(
+            ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private void onApplicationCreated(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRunId, String appId,
+      TimelineEntity te) throws IOException {
+    byte[] rowKey = AppToFlowRowKey.getRowKey(clusterId, appId);
+    AppToFlowColumn.FLOW_ID.store(rowKey, appToFlowTable, null, flowName);
+    AppToFlowColumn.FLOW_RUN_ID.store(
+        rowKey, appToFlowTable, null, flowRunId);
   }
 
   /**
@@ -245,6 +278,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public void flush() throws IOException {
     // flush all buffered mutators
     entityTable.flush();
+    appToFlowTable.flush();
   }
 
   /**
@@ -257,6 +291,11 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       LOG.info("closing entity table");
       // The close API performs flushing and releases any resources held
       entityTable.close();
+    }
+    if (appToFlowTable != null) {
+      LOG.info("closing app_flow table");
+      // The close API performs flushing and releases any resources held
+      appToFlowTable.close();
     }
     if (conn != null) {
       LOG.info("closing the hbase Connection");
