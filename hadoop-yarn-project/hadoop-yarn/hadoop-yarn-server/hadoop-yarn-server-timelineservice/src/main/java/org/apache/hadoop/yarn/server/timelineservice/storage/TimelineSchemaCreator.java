@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 
 /**
@@ -70,6 +71,11 @@ public class TimelineSchemaCreator {
       int metricsTTL = Integer.parseInt(entityTableTTLMetrics);
       new EntityTable().setMetricsTTL(metricsTTL, hbaseConf);
     }
+    // Grab the appToflowTableName argument
+    String appToflowTableName = commandLine.getOptionValue("a2f");
+    if (StringUtils.isNotBlank(appToflowTableName)) {
+      hbaseConf.set(AppToFlowTable.TABLE_NAME_CONF_NAME, appToflowTableName);
+    }
     createAllTables(hbaseConf);
   }
 
@@ -92,6 +98,11 @@ public class TimelineSchemaCreator {
 
     o = new Option("m", "metricsTTL", true, "TTL for metrics column family");
     o.setArgName("metricsTTL");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option("a2f", "appToflowTableName", true, "app to flow table name");
+    o.setArgName("appToflowTableName");
     o.setRequired(false);
     options.addOption(o);
 
@@ -120,6 +131,7 @@ public class TimelineSchemaCreator {
         throw new IOException("Cannot create table since admin is null");
       }
       new EntityTable().createTable(admin, hbaseConf);
+      new AppToFlowTable().createTable(admin, hbaseConf);
     } finally {
       if (conn != null) {
         conn.close();

@@ -29,7 +29,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The basic timeline entity data structure for timeline service v2. Timeline
@@ -133,7 +135,8 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private HashMap<String, Object> info = new HashMap<>();
   private HashMap<String, String> configs = new HashMap<>();
   private Set<TimelineMetric> metrics = new HashSet<>();
-  private Set<TimelineEvent> events = new HashSet<>();
+  // events should be sorted by timestamp in descending order
+  private NavigableSet<TimelineEvent> events = new TreeSet<>();
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
   private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
   private long createdTime;
@@ -334,7 +337,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @XmlElement(name = "events")
-  public Set<TimelineEvent> getEvents() {
+  public NavigableSet<TimelineEvent> getEvents() {
     if (real == null) {
       return events;
     } else {
@@ -342,7 +345,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
     }
   }
 
-  public void setEvents(Set<TimelineEvent> events) {
+  public void setEvents(NavigableSet<TimelineEvent> events) {
     if (real == null) {
       this.events = events;
     } else {

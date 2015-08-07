@@ -80,7 +80,7 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    * @param columnFamily that this column is stored in.
    * @param columnPrefix for this column.
    */
-  private EntityColumnPrefix(ColumnFamily<EntityTable> columnFamily,
+  EntityColumnPrefix(ColumnFamily<EntityTable> columnFamily,
       String columnPrefix) {
     column = new ColumnHelper<EntityTable>(columnFamily);
     this.columnFamily = columnFamily;

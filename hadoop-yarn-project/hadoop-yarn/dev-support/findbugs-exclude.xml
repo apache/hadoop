@@ -506,4 +506,10 @@
     </Or>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
   </Match>
+
+  <!-- Object cast is based on the event type -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.AbstractTimelineServicePublisher" />
+     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 </FindBugsFilter>
