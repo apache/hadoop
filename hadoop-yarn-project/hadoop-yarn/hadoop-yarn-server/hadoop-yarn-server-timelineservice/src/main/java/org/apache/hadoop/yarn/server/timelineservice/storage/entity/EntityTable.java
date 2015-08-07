@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineEntitySchemaConstants;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
 
 /**
  * The entity table as column families info, config and metrics. Info stores
@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineEnti
 public class EntityTable extends BaseTable<EntityTable> {
   /** entity prefix */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".entity";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "entity";
 
   /** config param name that specifies the entity table name */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
@@ -146,9 +146,9 @@ public class EntityTable extends BaseTable<EntityTable> {
     entityTableDescp
         .setRegionSplitPolicyClassName("org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
     entityTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
-        TimelineEntitySchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
+        TimelineHBaseSchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
     admin.createTable(entityTableDescp,
-        TimelineEntitySchemaConstants.getUsernameSplits());
+        TimelineHBaseSchemaConstants.getUsernameSplits());
     LOG.info("Status of table creation for " + table.getNameAsString() + "="
         + admin.tableExists(table));
   }
