@@ -382,6 +382,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3974. Refactor the reservation system test cases to use parameterized 
     base test. (subru via curino)
 
+    YARN-3966. Fix excessive loggings in CapacityScheduler. (Jian He via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

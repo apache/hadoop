@@ -1125,12 +1125,8 @@ public class LeafQueue extends AbstractCSQueue {
           // Inform the ordering policy
           orderingPolicy.containerReleased(application, rmContainer);
           
-          releaseResource(clusterResource, application,
-              container.getResource(), node.getPartition(), rmContainer);
-          LOG.info("completedContainer" +
-              " container=" + container +
-              " queue=" + this +
-              " cluster=" + clusterResource);
+          releaseResource(clusterResource, application, container.getResource(),
+              node.getPartition(), rmContainer);
         }
       }
 
@@ -1203,10 +1199,12 @@ public class LeafQueue extends AbstractCSQueue {
     User user = getUser(userName);
     user.releaseContainer(resource, nodePartition);
     metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
-      
-    LOG.info(getQueueName() + 
-        " used=" + queueUsage.getUsed() + " numContainers=" + numContainers + 
-        " user=" + userName + " user-resources=" + user.getUsed());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getQueueName() +
+          " used=" + queueUsage.getUsed() + " numContainers=" + numContainers +
+          " user=" + userName + " user-resources=" + user.getUsed());
+    }
   }
   
   private void updateAbsoluteCapacityResource(Resource clusterResource) {
