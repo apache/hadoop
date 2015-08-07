@@ -17,19 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.rules.Timeout;
 
 import java.util.ArrayList;
 
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 public class TestLeaseManager {
+  @Rule
+  public Timeout timeout = new Timeout(300000);
+
   @Test
   public void testRemoveLeases() throws Exception {
     FSNamesystem fsn = mock(FSNamesystem.class);
@@ -52,14 +61,9 @@ public class TestLeaseManager {
    * leases, the Namenode does't enter an infinite loop while holding the FSN
    * write lock and thus become unresponsive
    */
-  @Test (timeout=1000)
+  @Test
   public void testCheckLeaseNotInfiniteLoop() {
-    FSDirectory dir = Mockito.mock(FSDirectory.class);
-    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
-    Mockito.when(fsn.isRunning()).thenReturn(true);
-    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
-    Mockito.when(fsn.getFSDirectory()).thenReturn(dir);
-    LeaseManager lm = new LeaseManager(fsn);
+    LeaseManager lm = new LeaseManager(makeMockFsNameSystem());
 
     //Make sure the leases we are going to add exceed the hard limit
     lm.setLeasePeriod(0, 0);
@@ -72,5 +76,50 @@ public class TestLeaseManager {
 
     //Initiate a call to checkLease. This should exit within the test timeout
     lm.checkLeases();
+  }
+
+
+  @Test
+  public void testCountPath() {
+    LeaseManager lm = new LeaseManager(makeMockFsNameSystem());
+
+    lm.addLease("holder1", 1);
+    assertThat(lm.countPath(), is(1L));
+
+    lm.addLease("holder2", 2);
+    assertThat(lm.countPath(), is(2L));
+    lm.addLease("holder2", 2);                   // Duplicate addition
+    assertThat(lm.countPath(), is(2L));
+
+    assertThat(lm.countPath(), is(2L));
+
+    // Remove a couple of non-existing leases. countPath should not change.
+    lm.removeLease("holder2", stubInodeFile(3));
+    lm.removeLease("InvalidLeaseHolder", stubInodeFile(1));
+    assertThat(lm.countPath(), is(2L));
+
+    INodeFile file = stubInodeFile(1);
+    lm.reassignLease(lm.getLease(file), file, "holder2");
+    assertThat(lm.countPath(), is(2L));          // Count unchanged on reassign
+
+    lm.removeLease("holder2", stubInodeFile(2)); // Remove existing
+    assertThat(lm.countPath(), is(1L));
+  }
+
+  private static FSNamesystem makeMockFsNameSystem() {
+    FSDirectory dir = mock(FSDirectory.class);
+    FSNamesystem fsn = mock(FSNamesystem.class);
+    when(fsn.isRunning()).thenReturn(true);
+    when(fsn.hasWriteLock()).thenReturn(true);
+    when(fsn.getFSDirectory()).thenReturn(dir);
+    return fsn;
+  }
+
+  private static INodeFile stubInodeFile(long inodeId) {
+    PermissionStatus p = new PermissionStatus(
+        "dummy", "dummy", new FsPermission((short) 0777));
+    return new INodeFile(
+        inodeId, "/foo".getBytes(), p, 0L, 0L,
+        BlockInfo.EMPTY_ARRAY, (short) 1, 1L);
   }
 }
