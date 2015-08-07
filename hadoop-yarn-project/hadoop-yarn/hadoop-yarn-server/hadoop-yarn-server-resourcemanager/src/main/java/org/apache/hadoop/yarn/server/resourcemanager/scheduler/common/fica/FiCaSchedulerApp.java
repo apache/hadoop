@@ -140,13 +140,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     // Inform the container
     rmContainer.handle(
-        new RMContainerFinishedEvent(
-            containerId,
-            containerStatus, 
-            event)
-        );
-    LOG.info("Completed container: " + rmContainer.getContainerId() + 
-        " in state: " + rmContainer.getState() + " event:" + event);
+        new RMContainerFinishedEvent(containerId, containerStatus, event));
 
     containersToPreempt.remove(rmContainer.getContainerId());
 
