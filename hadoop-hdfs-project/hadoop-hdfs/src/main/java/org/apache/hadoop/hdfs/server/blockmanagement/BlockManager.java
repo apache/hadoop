@@ -3181,14 +3181,13 @@ public class BlockManager implements BlockStatsMXBean {
     assert namesystem.hasWriteLock();
     // first form a rack to datanodes map and
     BlockCollection bc = getBlockCollection(storedBlock);
-    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
-        bc.getStoragePolicyID());
-    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
-        replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
     if (storedBlock.isStriped()) {
-      chooseExcessReplicasStriped(bc, nonExcess, storedBlock, delNodeHint,
-          excessTypes);
+      chooseExcessReplicasStriped(bc, nonExcess, storedBlock, delNodeHint);
     } else {
+      final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
+          bc.getStoragePolicyID());
+      final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+          replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
       chooseExcessReplicasContiguous(bc, nonExcess, storedBlock,
           replication, addedNode, delNodeHint, excessTypes);
     }
@@ -3262,8 +3261,7 @@ public class BlockManager implements BlockStatsMXBean {
   private void chooseExcessReplicasStriped(BlockCollection bc,
       final Collection<DatanodeStorageInfo> nonExcess,
       BlockInfo storedBlock,
-      DatanodeDescriptor delNodeHint,
-      List<StorageType> excessTypes) {
+      DatanodeDescriptor delNodeHint) {
     assert storedBlock instanceof BlockInfoStriped;
     BlockInfoStriped sblk = (BlockInfoStriped) storedBlock;
     short groupSize = sblk.getTotalBlockNum();
@@ -3283,6 +3281,14 @@ public class BlockManager implements BlockStatsMXBean {
       found.set(index);
       storage2index.put(storage, index);
     }
+    // the number of target left replicas equals to the of number of the found
+    // indices.
+    int numOfTarget = found.cardinality();
+
+    final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(
+        bc.getStoragePolicyID());
+    final List<StorageType> excessTypes = storagePolicy.chooseExcess(
+        (short)numOfTarget, DatanodeStorageInfo.toStorageTypes(nonExcess));
 
     // use delHint only if delHint is duplicated
     final DatanodeStorageInfo delStorageHint =
