@@ -1118,6 +1118,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8844. TestHDFSCLI does not cleanup the test directory (Masatake
     Iwasaki via Colin P. McCabe)
 
+    HDFS-8866. Typo in docs: Rumtime -> Runtime. (Gabor Liptak via jghoman)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
