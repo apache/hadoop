@@ -55,17 +55,18 @@ public class EntityRowKey {
 
   /**
    * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowId!flowRunId!AppId}
+   * {@code userName!clusterId!flowId!flowRunId!AppId!entityType!}
    *
    * @param clusterId
    * @param userId
    * @param flowId
    * @param flowRunId
    * @param appId
+   * @param entityType
    * @return byte array with the row key prefix
    */
-  public static byte[] getRowKey(String clusterId, String userId,
-      String flowId, Long flowRunId, String appId, TimelineEntity te) {
+  public static byte[] getRowKeyPrefix(String clusterId, String userId,
+      String flowId, Long flowRunId, String appId, String entityType) {
     byte[] first =
         Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
             flowId));
@@ -73,8 +74,35 @@ public class EntityRowKey {
     // time.
     byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
     byte[] third =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, te.getType(),
-            te.getId()));
+        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, entityType, ""));
+    return Separator.QUALIFIERS.join(first, second, third);
+  }
+
+  /**
+   * Constructs a row key for the entity table as follows:
+   * {@code userName!clusterId!flowId!flowRunId!AppId!entityType!entityId}
+   *
+   * @param clusterId
+   * @param userId
+   * @param flowId
+   * @param flowRunId
+   * @param appId
+   * @param entityType
+   * @param entityId
+   * @return byte array with the row key
+   */
+  public static byte[] getRowKey(String clusterId, String userId,
+      String flowId, Long flowRunId, String appId, String entityType,
+      String entityId) {
+    byte[] first =
+        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
+            flowId));
+    // Note that flowRunId is a long, so we can't encode them all at the same
+    // time.
+    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
+    byte[] third =
+        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, entityType,
+            entityId));
     return Separator.QUALIFIERS.join(first, second, third);
   }
 

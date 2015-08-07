@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineEntitySchemaConstants {
+public class TimelineHBaseSchemaConstants {
 
   /**
    * Used to create a pre-split for tables starting with a username in the
