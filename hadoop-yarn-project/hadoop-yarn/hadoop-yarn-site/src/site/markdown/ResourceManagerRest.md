@@ -1382,6 +1382,7 @@ Response Body:
           "memorySeconds" : 151730,
           "vcoreSeconds" : 103,
           "unmanagedApplication":"false"
+          "applicationPriority":0
        },
        {
           "finishedTime" : 1326815789546,
@@ -1408,6 +1409,7 @@ Response Body:
           "memorySeconds" : 640064,
           "vcoreSeconds" : 442
           "unmanagedApplication":"false"
+          "applicationPriority":0
        }
     ]
   }
@@ -1458,6 +1460,7 @@ Response Body:
     <memorySeconds>151730</memorySeconds>
     <vcoreSeconds>103</vcoreSeconds>
     <unmanagedApplication>false</unmanagedApplication>
+    <applicationPriority>0</applicationPriority>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1484,6 +1487,7 @@ Response Body:
     <memorySeconds>640064</memorySeconds>
     <vcoreSeconds>442</vcoreSeconds>
     <unmanagedApplication>false</unmanagedApplication>
+    <applicationPriority>0</applicationPriority>
   </app>
 </apps>
 ```
@@ -1644,6 +1648,7 @@ Note that depending on security settings a user might not be able to see all the
 | memorySeconds | long | The amount of memory the application has allocated (megabyte-seconds) |
 | vcoreSeconds | long | The amount of CPU resources the application has allocated (virtual core-seconds) |
 | unmanagedApplication | boolean | Is the application unmanaged. |
+| applicationPriority | int | priority of the submitted application |
 
 ### Response Examples
 
@@ -1685,6 +1690,7 @@ Response Body:
       "memorySeconds" : 151730,
       "vcoreSeconds" : 103,
       "unmanagedApplication":"false"
+      "applicationPriority":0
    }
 }
 ```
@@ -1727,6 +1733,7 @@ Response Body:
   <memorySeconds>151730</memorySeconds>
   <vcoreSeconds>103</vcoreSeconds>
   <unmanagedApplication>false</unmanagedApplication>
+  <applicationPriority>0</applicationPriority>
 </app>
 ```
 
