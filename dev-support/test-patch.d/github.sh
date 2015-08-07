@@ -16,16 +16,79 @@
 
 add_bugsystem github
 
+GITHUBURL="https://github.com"
+GITHUBREPO="apache/hadoop"
+
+function github_usage
+{
+  echo "GITHUB Options:"
+  echo "--github-base-url=<url>  The URL of the JIRA server (default:'${GITHUBURL}')"
+  echo "--github-password=<pw>   Github password"
+  echo "--github-repo=<repo>     github repo to use (default:'${GITHUBREPO}')"
+  echo "--github-token=<token>   The token to use to write to github"
+  echo "--github-user=<user>     Github user"
+
+}
+
+function github_parse_args
+{
+  declare i
+
+  for i in "$@"; do
+    case ${i} in
+      --github-base-url=*)
+        GITHUBURL=${i#*=}
+      ;;
+      --github-repo=*)
+        GITHUBREPO=${i#*=}
+      ;;
+      --github-token=*)
+        GITHUB_TOKEN=${i#*=}
+      ;;
+      --github-password=*)
+        GITHUB_PASSWD=${i#*=}
+      ;;
+      --github-user=*)
+        GITHUB_USER=${i#*=}
+      ;;
+    esac
+  done
+}
+
+function github_locate_patch
+{
+  declare input=$1
+  declare output=$2
+
+  if [[ "${OFFLINE}" == true ]]; then
+    yetus_debug "github_locate_patch: offline, skipping"
+    return 1
+  fi
+
+  ${WGET} -q -O "${output}" "${GITHUBURL}/${GITHUBREPO}/pull/${input}.patch"
+  if [[ $? != 0 ]]; then
+    yetus_debug "github_locate_patch: not a github pull request."
+    return 1
+  fi
+
+  # https://api.github.com/repos/apache/hadoop/pulls/25
+  # base->sha?
+
+  GITHUBISSUE=${input}
+  GITHUBCOMMITID=""
+  return 0
+}
+
 ## @description Write the contents of a file to github
 ## @params filename
 ## @stability stable
 ## @audience public
 function github_write_comment
 {
-  local -r commentfile=${1}
+  declare -r commentfile=${1}
   shift
 
-  local retval=1
+  declare retval=1
 
   return ${retval}
 }
@@ -38,14 +101,17 @@ function github_write_comment
 ## @param        runresult
 function github_finalreport
 {
-  local result=$1
-  local i
-  local commentfile=${PATCH_DIR}/commentfile
-  local comment
+  declare result=$1
+  declare i
+  declare commentfile=${PATCH_DIR}/commentfile
+  declare comment
+
+  # TODO: There really should be a reference to the JIRA issue, as needed
 
   rm "${commentfile}" 2>/dev/null
 
-  if [[ ${JENKINS} != "true" ]] ; then
+  if [[ ${JENKINS} != "true"
+    || -z ${GITHUBISSUE} ]] ; then
     return 0
   fi
 

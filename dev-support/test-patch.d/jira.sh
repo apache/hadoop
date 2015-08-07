@@ -94,12 +94,22 @@ function jira_locate_patch
 
   yetus_debug "jira_locate_patch: trying ${JIRAURL}/browse/${input}"
 
+  if [[ "${OFFLINE}" == true ]]; then
+    yetus_debug "jira_locate_patch: offline, skipping"
+    return 1
+  fi
+
   jira_http_fetch "browse/${input}" "${PATCH_DIR}/jira"
 
   if [[ $? != 0 ]]; then
     yetus_debug "jira_locate_patch: not a JIRA."
     return 1
   fi
+
+  # TODO: we should check for a gitbub-based pull request here
+  # if we find one, call the github plug-in directly with the
+  # appropriate bits so that it gets setup to write a comment
+  # to the PR
 
   if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
     if [[ ${JENKINS} == true ]]; then
@@ -131,6 +141,7 @@ function jira_locate_patch
     yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
     cleanup_and_exit 1
   fi
+  return 0
 }
 
 ## @description Write the contents of a file to JIRA
@@ -144,7 +155,6 @@ function jira_write_comment
   shift
 
   declare retval=0
-
 
   if [[ -n ${JIRA_PASSWD}
      && -n ${JIRA_USER} ]]; then
@@ -182,7 +192,8 @@ function jira_finalreport
 
   rm "${commentfile}" 2>/dev/null
 
-  if [[ ${JENKINS} != "true" ]] ; then
+  if [[ ${JENKINS} != "true"
+      || ${OFFLINE} == true ]] ; then
     return 0
   fi
 
