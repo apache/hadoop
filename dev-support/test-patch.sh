@@ -96,7 +96,6 @@ function setup_defaults
   REEXECED=false
   RESETREPO=false
   ISSUE=""
-  ISSUE_RE='^(YETUS)-[0-9]+$'
   TIMER=$(date +"%s")
   PATCHURL=""
   OSTYPE=$(uname -s)
@@ -735,7 +734,6 @@ function testpatch_usage
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--docker               Spawn a docker container"
   echo "--dockerfile=<file>    Dockerfile fragment to use as the base"
-  echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${ISSUE_RE}\')"
   echo "--java-home=<path>     Set JAVA_HOME (In Docker mode, this should be local to the image)"
   echo "--multijdkdirs=<paths> Comma delimited lists of JDK paths to use for multi-JDK tests"
   echo "--multijdktests=<list> Comma delimited tests to use when multijdkdirs is used. (default: javac,javadoc,unit)"
@@ -860,9 +858,6 @@ function parse_args
       --help|-help|-h|help|--h|--\?|-\?|\?)
         testpatch_usage
         exit 0
-      ;;
-      --issue-re=*)
-        ISSUE_RE=${i#*=}
       ;;
       --java-home=*)
         JAVA_HOME=${i#*=}
@@ -1445,7 +1440,7 @@ function determine_branch
     count="${PATCH_BRANCH//[^.]}"
     total=${#count}
     ((total = total + 3 ))
-    until [[ ${total} -eq 2 ]]; do
+    until [[ ${total} -lt 2 ]]; do
       PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3-${total} -d.)
       yetus_debug "Determine branch: ISSUE[.##].branch = ${PATCH_BRANCH}"
       ((total=total-1))
@@ -1462,7 +1457,7 @@ function determine_branch
     count="${PATCH_BRANCH//[^.]}"
     total=${#count}
     ((total = total + 3 ))
-    until [[ ${total} -eq 2 ]]; do
+    until [[ ${total} -lt 2 ]]; do
       PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2-${total} -d.)
       yetus_debug "Determine branch: ISSUE.branch[.##] = ${PATCH_BRANCH}"
       ((total=total-1))
@@ -1507,26 +1502,21 @@ function determine_issue
 {
   local patchnamechunk
   local maybeissue
+  local bugsys
 
   yetus_debug "Determine issue"
 
-  # we can shortcut jenkins
-  if [[ ${JENKINS} == true ]]; then
-    ISSUE=${PATCH_OR_ISSUE}
-    return 0
-  fi
-
-  # shellcheck disable=SC2016
-  patchnamechunk=$(echo "${PATCH_OR_ISSUE}" | ${AWK} -F/ '{print $NF}')
-
-  maybeissue=$(echo "${patchnamechunk}" | cut -f1,2 -d-)
-
-  if [[ ${maybeissue} =~ ${ISSUE_RE} ]]; then
-    ISSUE=${maybeissue}
-    return 0
-  fi
-
   ISSUE="Unknown"
+
+  for bugsys in ${BUGSYSTEMS}; do
+    if declare -f ${bugsys}_determine_issue >/dev/null; then
+      "${bugsys}_determine_issue" "${PATCH_OR_URL}"
+      if [[ $? == 0 ]]; then
+        yetus_debug "${bugsys} says ${ISSUE}"
+        return 0
+      fi
+    fi
+  done
   return 1
 }
 
@@ -1599,100 +1589,38 @@ function determine_needed_tests
 ## @return       1 on failure, may exit
 function locate_patch
 {
-  local notSureIfPatch=false
+  local bugsys
+  local patchfile=""
+
   yetus_debug "locate patch"
 
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
-    PATCH_FILE="${PATCH_OR_ISSUE}"
+    patchfile="${PATCH_OR_ISSUE}"
   else
-    if [[ ${PATCH_OR_ISSUE} =~ ^http ]]; then
-      echo "Patch is being downloaded at $(date) from"
-      PATCHURL="${PATCH_OR_ISSUE}"
-    else
-      ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
-
-      case $? in
-        0)
-        ;;
-        2)
-          yetus_error "ERROR: .wgetrc/.netrc parsing error."
-          cleanup_and_exit 1
-        ;;
-        3)
-          yetus_error "ERROR: File IO error."
-          cleanup_and_exit 1
-        ;;
-        4)
-          yetus_error "ERROR: URL ${PATCH_OR_ISSUE} is unreachable."
-          cleanup_and_exit 1
-        ;;
-        *)
-          # we want to try and do as much as we can in docker mode,
-          # but if the patch was passed as a file, then we may not
-          # be able to continue.
-          if [[ ${REEXECED} == true
-              && -f "${PATCH_DIR}/patch" ]]; then
-            PATCH_FILE="${PATCH_DIR}/patch"
-          else
-            yetus_error "ERROR: Unable to fetch ${PATCH_OR_ISSUE}."
-            cleanup_and_exit 1
-          fi
-          ;;
-      esac
-
-      if [[ -z "${PATCH_FILE}" ]]; then
-        if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
-          if [[ ${JENKINS} == true ]]; then
-            yetus_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
-            cleanup_and_exit 1
-          else
-            yetus_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
-          fi
+    for bugsys in ${BUGSYSTEMS}; do
+      if declare -f ${bugsys}_locate_patch >/dev/null 2>&1; then
+        "${bugsys}_locate_patch" "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"
+        if [[ $? == 0 ]]; then
+          break;
         fi
-
-        #shellcheck disable=SC2016
-        relativePatchURL=$(${AWK} 'match($0,"\"/jira/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART+1,RLENGTH-1)}' "${PATCH_DIR}/jira" |
-          ${GREP} -v -e 'htm[l]*$' | sort | tail -1)
-        PATCHURL="http://issues.apache.org${relativePatchURL}"
-        if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
-          notSureIfPatch=true
-        fi
-        #shellcheck disable=SC2016
-        patchNum=$(echo "${PATCHURL}" | ${AWK} 'match($0,"[0-9]*/"){print substr($0,RSTART,RLENGTH-1)}')
-        echo "${ISSUE} patch is being downloaded at $(date) from"
       fi
-    fi
-    if [[ -z "${PATCH_FILE}" ]]; then
-      echo "${PATCHURL}"
-      add_footer_table "Patch URL" "${PATCHURL}"
-      ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
-      if [[ $? != 0 ]];then
-        yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
-        cleanup_and_exit 1
-      fi
-      PATCH_FILE="${PATCH_DIR}/patch"
-    fi
+    done
   fi
 
-  if [[ ! -f "${PATCH_DIR}/patch" ]]; then
-    cp "${PATCH_FILE}" "${PATCH_DIR}/patch"
+  if [[ ! -f "${PATCH_DIR}/patch"  ]]; then
+    cp "${patchfile}" "${PATCH_DIR}/patch"
     if [[ $? == 0 ]] ; then
-      echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
+      echo "Patch file ${patchfile} copied to ${PATCH_DIR}"
     else
-      yetus_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      yetus_error "ERROR: Could not copy ${patchfile} to ${PATCH_DIR}"
       cleanup_and_exit 1
     fi
   fi
 
-  if [[ ${notSureIfPatch} == "true" ]]; then
-    guess_patch_file "${PATCH_DIR}/patch"
-    if [[ $? != 0 ]]; then
-      yetus_error "ERROR: ${PATCHURL} is not a patch file."
-      cleanup_and_exit 1
-    else
-      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
-      add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
-    fi
+  guess_patch_file "${PATCH_DIR}/patch"
+  if [[ $? != 0 ]]; then
+    yetus_error "ERROR: ${PATCHURL} is not a patch file."
+    cleanup_and_exit 1
   fi
 }
 

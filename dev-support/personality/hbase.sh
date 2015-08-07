@@ -17,7 +17,7 @@
 #shellcheck disable=SC2034
 PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
-ISSUE_RE='^HBASE-[0-9]+$'
+JIRA_ISSUE_RE='^HBASE-[0-9]+$'
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 

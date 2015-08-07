@@ -17,7 +17,7 @@
 #shellcheck disable=SC2034
 PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
-ISSUE_RE='^TAJO-[0-9]+$'
+JIRA_ISSUE_RE='^TAJO-[0-9]+$'
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE="https://cwiki.apache.org/confluence/display/TAJO/How+to+Contribute+to+Tajo"
 
