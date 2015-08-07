@@ -1139,7 +1139,6 @@ function find_changed_modules
     ;;
     *)
       yetus_error "ERROR: Unsupported build tool."
-      # output_to_console 1
       output_to_bugsystem 1
       cleanup_and_exit 1
     ;;
@@ -1158,7 +1157,6 @@ function find_changed_modules
     builddir=$(find_buildfile_dir ${buildfile} "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
-      # output_to_console 1
       output_to_bugsystem 1
       cleanup_and_exit 1
     fi
@@ -1692,7 +1690,6 @@ function apply_patch_file
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "The patch command could not apply the patch."
-    # output_to_console 1
     output_to_bugsystem 1
     cleanup_and_exit 1
   fi
@@ -3034,7 +3031,6 @@ function postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
-        # output_to_console 1
         output_to_bugsystem 1
         cleanup_and_exit 1
       fi
@@ -3091,7 +3087,6 @@ function postapply
   check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
-    # output_to_console 1
     output_to_bugsystem 1
     cleanup_and_exit 1
   fi
@@ -3367,6 +3362,5 @@ finish_vote_table
 
 finish_footer_table
 
-# output_to_console ${RESULT}
 output_to_bugsystem ${RESULT}
 cleanup_and_exit ${RESULT}
