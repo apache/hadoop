@@ -391,3 +391,6 @@
 
     HDFS-8857. Erasure Coding: Fix ArrayIndexOutOfBoundsException in
     TestWriteStripedFileWithFailure. (Li Bo)
+
+    HDFS-8827. Erasure Coding: Fix NPE when NameNode processes over-replicated
+    striped blocks. (Walter Su and Takuya Fukudome via jing9)
