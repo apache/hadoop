@@ -100,7 +100,6 @@ function setup_defaults
   PATCHURL=""
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
-  BUGSYSTEM=jira
   TESTFORMATS=""
   JDK_TEST_LIST="javac javadoc unit"
   GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
@@ -239,6 +238,7 @@ function offset_clock
 ## @param        string
 function add_header_line
 {
+  # shellcheck disable=SC2034
   TP_HEADER[${TP_HEADER_COUNTER}]="$*"
   ((TP_HEADER_COUNTER=TP_HEADER_COUNTER+1 ))
 }
@@ -419,6 +419,7 @@ function finish_vote_table
   echo "Total Elapsed time: ${calctime}"
   echo ""
 
+  # shellcheck disable=SC2034
   TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| | | ${calctime} | |"
   ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1 ))
 }
@@ -436,6 +437,7 @@ function add_footer_table
   local subsystem=$1
   shift 1
 
+  # shellcheck disable=SC2034
   TP_FOOTER_TABLE[${TP_FOOTER_COUNTER}]="| ${subsystem} | $* |"
   ((TP_FOOTER_COUNTER=TP_FOOTER_COUNTER+1 ))
 }
@@ -451,6 +453,7 @@ function add_test_table
   local failure=$1
   shift 1
 
+  # shellcheck disable=SC2034
   TP_TEST_TABLE[${TP_TEST_COUNTER}]="| ${failure} | $* |"
   ((TP_TEST_COUNTER=TP_TEST_COUNTER+1 ))
 }
@@ -534,24 +537,25 @@ function find_java_home
   return 0
 }
 
-## @description Write the contents of a file to jenkins
+## @description Write the contents of a file to all of the bug systems
+## @description (so content should avoid special formatting)
 ## @params filename
 ## @stability stable
 ## @audience public
-## @returns ${JIRACLI} exit code
 function write_comment
 {
   local -r commentfile=${1}
   shift
+  declare bug
+  declare retval
 
   local retval=0
 
-  if [[ ${OFFLINE} == false
-     && ${JENKINS} == true ]]; then
-    ${BUGSYSTEM}_write_comment "${commentfile}"
-    retval=$?
-  fi
-  return ${retval}
+  for bug in ${BUGSYSTEMS}; do
+    if declare -f ${bug}_write_comment >/dev/null; then
+       "${bug}_write_comment" "${commentfile}"
+    fi
+  done
 }
 
 ## @description Verify that the patch directory is still in working order
@@ -725,8 +729,6 @@ function testpatch_usage
   echo "--basedir=<dir>        The directory to apply the patch to (default current directory)"
   echo "--branch=<ref>         Forcibly set the branch"
   echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'master')"
-  #not quite working yet
-  #echo "--bugsystem=<type>     The bug system in use ('jira', the default, or 'github')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
   echo "--build-tool=<tool>    Pick which build tool to focus around (maven, ant)"
   echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default: ${HOW_TO_CONTRIBUTE} )"
@@ -809,9 +811,6 @@ function parse_args
       ;;
       --branch-default=*)
         PATCH_BRANCH_DEFAULT=${i#*=}
-      ;;
-      --bugsystem=*)
-        BUGSYSTEM=${i#*=}
       ;;
       --build-native=*)
         BUILD_NATIVE=${i#*=}
@@ -1140,7 +1139,7 @@ function find_changed_modules
     ;;
     *)
       yetus_error "ERROR: Unsupported build tool."
-      output_to_console 1
+      # output_to_console 1
       output_to_bugsystem 1
       cleanup_and_exit 1
     ;;
@@ -1159,7 +1158,7 @@ function find_changed_modules
     builddir=$(find_buildfile_dir ${buildfile} "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
-      output_to_console 1
+      # output_to_console 1
       output_to_bugsystem 1
       cleanup_and_exit 1
     fi
@@ -1327,8 +1326,6 @@ function git_checkout
   determine_issue
 
   GIT_REVISION=$(${GIT} rev-parse --verify --short HEAD)
-  # shellcheck disable=SC2034
-  VERSION=${GIT_REVISION}_${ISSUE}_PATCH-${patchNum}
 
   if [[ "${ISSUE}" == 'Unknown' ]]; then
     echo "Testing patch on ${PATCH_BRANCH}."
@@ -1500,8 +1497,6 @@ function determine_branch
 ## @return       1 on failure, with ISSUE updated to "Unknown"
 function determine_issue
 {
-  local patchnamechunk
-  local maybeissue
   local bugsys
 
   yetus_debug "Determine issue"
@@ -1697,7 +1692,7 @@ function apply_patch_file
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "The patch command could not apply the patch."
-    output_to_console 1
+    # output_to_console 1
     output_to_bugsystem 1
     cleanup_and_exit 1
   fi
@@ -2970,7 +2965,13 @@ function check_unittests
 ## @replaceable  no
 function output_to_bugsystem
 {
-  "${BUGSYSTEM}_finalreport" "${@}"
+  declare bugs
+
+  for bugs in ${BUGSYSTEMS}; do
+    if declare -f ${bugs}_finalreport >/dev/null;then
+      "${bugs}_finalreport" "${@}"
+    fi
+  done
 }
 
 ## @description  Clean the filesystem as appropriate and then exit
@@ -3033,7 +3034,7 @@ function postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
-        output_to_console 1
+        # output_to_console 1
         output_to_bugsystem 1
         cleanup_and_exit 1
       fi
@@ -3090,7 +3091,7 @@ function postapply
   check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
-    output_to_console 1
+    # output_to_console 1
     output_to_bugsystem 1
     cleanup_and_exit 1
   fi
@@ -3366,6 +3367,6 @@ finish_vote_table
 
 finish_footer_table
 
-output_to_console ${RESULT}
+# output_to_console ${RESULT}
 output_to_bugsystem ${RESULT}
 cleanup_and_exit ${RESULT}

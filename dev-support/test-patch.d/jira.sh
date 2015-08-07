@@ -15,7 +15,7 @@
 # limitations under the License.
 
 JIRACLI=${JIRA:-jira}
-JIRAURL=${JIRAURL:-"http://issues.apache.org/jira"}
+JIRA_URL=${JIRA_URL:-"http://issues.apache.org/jira"}
 JIRA_ISSUE_RE='^(YETUS)-[0-9]+$'
 
 add_bugsystem jira
@@ -26,7 +26,7 @@ function jira_usage
   echo "--jira-issue-re=<expr> Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${JIRA_ISSUE_RE}\')"
   echo "--jira-cmd=<cmd>       The 'jira' command to use (default '${JIRACLI}')"
   echo "--jira-password=<pw>   The password for the 'jira' command"
-  echo "--jira-base-url=<url>  The URL of the JIRA server (default:'${JIRAURL}')"
+  echo "--jira-base-url=<url>  The URL of the JIRA server (default:'${JIRA_URL}')"
   echo "--jira-user=<user>     The user for the 'jira' command"
 }
 
@@ -81,9 +81,9 @@ function jira_http_fetch
 
   if [[ -n "${JIRA_USER}"
      && -n "${JIRA_PASSWD}" ]]; then
-    ${WGET} --user="${JIRA_USER}" --password="${JIRA_PASSWD}" -q -O "${output}" "${JIRAURL}/${input}"
+    ${WGET} --user="${JIRA_USER}" --password="${JIRA_PASSWD}" -q -O "${output}" "${JIRA_URL}/${input}"
   else
-    ${WGET} -q -O "${output}" "${JIRAURL}/${input}"
+    ${WGET} -q -O "${output}" "${JIRA_URL}/${input}"
   fi
 }
 
@@ -92,7 +92,7 @@ function jira_locate_patch
   declare input=$1
   declare fileloc=$2
 
-  yetus_debug "jira_locate_patch: trying ${JIRAURL}/browse/${input}"
+  yetus_debug "jira_locate_patch: trying ${JIRA_URL}/browse/${input}"
 
   if [[ "${OFFLINE}" == true ]]; then
     yetus_debug "jira_locate_patch: offline, skipping"
@@ -123,7 +123,7 @@ function jira_locate_patch
   #shellcheck disable=SC2016
   relativePatchURL=$(${AWK} 'match($0,"/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART,RLENGTH)}' "${PATCH_DIR}/jira" |
     ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${SED} -e 's,[ ]*$,,g')
-  PATCHURL="${JIRAURL}${relativePatchURL}"
+  PATCHURL="${JIRA_URL}${relativePatchURL}"
   if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
     guess_patch_file "${PATCH_DIR}/patch"
     if [[ $? == 0 ]]; then
@@ -131,8 +131,6 @@ function jira_locate_patch
       add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
-  #shellcheck disable=SC2016
-  patchNum=$(echo "${PATCHURL}" | ${AWK} 'match($0,"[0-9]*/"){print substr($0,RSTART,RLENGTH-1)}')
   echo "${ISSUE} patch is being downloaded at $(date) from"
   echo "${PATCHURL}"
   add_footer_table "JIRA Patch URL" "${PATCHURL}"
@@ -156,16 +154,20 @@ function jira_write_comment
 
   declare retval=0
 
+  if [[ "${OFFLINE}" == true ]]; then
+    return 0
+  fi
+
   if [[ -n ${JIRA_PASSWD}
      && -n ${JIRA_USER} ]]; then
     # shellcheck disable=SC2086
     ${JIRACLI} --comment "$(cat ${commentfile})" \
-               -s "${JIRAURL}" \
+               -s "${JIRA_URL}" \
                -a addcomment -u ${JIRA_USER} \
                -p "${JIRA_PASSWD}" \
                --issue "${ISSUE}"
     retval=$?
-    ${JIRACLI} -s "${JIRAURL}" \
+    ${JIRACLI} -s "${JIRA_URL}" \
                -a logout -u "${JIRA_USER}" \
                -p "${JIRA_PASSWD}"
   fi

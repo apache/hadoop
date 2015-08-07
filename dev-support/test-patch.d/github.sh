@@ -19,6 +19,12 @@ add_bugsystem github
 GITHUBURL="https://github.com"
 GITHUBREPO="apache/hadoop"
 
+GITHUB_PASSWD=""
+GITHUB_TOKEN=""
+GITHUB_USER=""
+GITHUB_COMMITID=""
+GITHUB_ISSUE=""
+
 function github_usage
 {
   echo "GITHUB Options:"
@@ -74,8 +80,8 @@ function github_locate_patch
   # https://api.github.com/repos/apache/hadoop/pulls/25
   # base->sha?
 
-  GITHUBISSUE=${input}
-  GITHUBCOMMITID=""
+  GITHUB_ISSUE=${input}
+  GITHUB_COMMITID=""
   return 0
 }
 
@@ -90,6 +96,11 @@ function github_write_comment
 
   declare retval=1
 
+  if [[ "${OFFLINE}" == true ]]; then
+    return 0
+  fi
+
+  yetus_debug "${GITHUB_USER} ${GITHUB_PASSWD} ${GITHUB_TOKEN} ${GITHUB_COMMITID}"
   return ${retval}
 }
 
@@ -111,7 +122,7 @@ function github_finalreport
   rm "${commentfile}" 2>/dev/null
 
   if [[ ${JENKINS} != "true"
-    || -z ${GITHUBISSUE} ]] ; then
+    || -z ${GITHUB_ISSUE} ]] ; then
     return 0
   fi
 
