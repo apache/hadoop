@@ -660,10 +660,10 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationReport report = BuilderUtils.newApplicationReport(
           this.applicationId, currentApplicationAttemptId, this.user,
           this.queue, this.name, host, rpcPort, clientToAMToken,
-          createApplicationState(), diags,
-          trackingUrl, this.startTime, this.finishTime, finishState,
-          appUsageReport, origTrackingUrl, progress, this.applicationType, 
-              amrmToken, applicationTags);
+          createApplicationState(), diags, trackingUrl, this.startTime,
+          this.finishTime, finishState, appUsageReport, origTrackingUrl,
+          progress, this.applicationType, amrmToken, applicationTags,
+          this.submissionContext.getPriority());
       report.setLogAggregationStatus(logAggregationStatus);
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       return report;

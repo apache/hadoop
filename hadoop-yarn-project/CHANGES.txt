@@ -159,6 +159,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3736. Add RMStateStore apis to store and load accepted reservations for
     failover (adhoot via asuresh)
 
+    YARN-3948. Display Application Priority in RM Web UI.(Sunil G via rohithsharmaks)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
