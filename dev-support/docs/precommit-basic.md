@@ -48,7 +48,7 @@ test-patch has the following requirements:
 * POSIX awk
 * POSIX grep
 * POSIX sed
-* wget
+* curl
 * file command
 * smart-apply-patch.sh
 
@@ -59,8 +59,8 @@ Maven plugins requirements:
 
 Optional:
 
-* Apache JIRA-based issue tracking
-* JIRA cli tools
+* JIRA-based issue tracking
+* GitHub-based issue tracking
 
 The locations of these files are (mostly) assumed to be in the file path, but may be overridden via command line options.  For Solaris and Solaris-like operating systems, the default location for the POSIX binaries is in /usr/xpg4/bin and the default location for the GNU binaries is /usr/gnu/bin.
 
