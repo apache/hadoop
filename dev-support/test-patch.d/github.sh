@@ -71,7 +71,10 @@ function github_locate_patch
     return 1
   fi
 
-  ${WGET} -q -O "${output}" "${GITHUBURL}/${GITHUBREPO}/pull/${input}.patch"
+  ${CURL} --silent --fail \
+          --output "${output}" \
+         "${GITHUBURL}/${GITHUBREPO}/pull/${input}.patch"
+
   if [[ $? != 0 ]]; then
     yetus_debug "github_locate_patch: not a github pull request."
     return 1
@@ -114,7 +117,7 @@ function github_finalreport
 {
   declare result=$1
   declare i
-  declare commentfile=${PATCH_DIR}/commentfile
+  declare commentfile=${PATCH_DIR}/gitcommentfile.$$
   declare comment
 
   # TODO: There really should be a reference to the JIRA issue, as needed
@@ -131,9 +134,9 @@ function github_finalreport
   add_footer_table "Console output" "${BUILD_URL}console"
 
   if [[ ${result} == 0 ]]; then
-    add_header_line ":confetti_ball: **+1 overall**"
+    echo ":confetti_ball: **+1 overall**" >> ${commentfile}
   else
-    add_header_line ":broken_heart: **-1 overall**"
+    echo ":broken_heart: **-1 overall**" >> ${commentfile}
   fi
 
   printf "\n\n\n\n" >>  "${commentfile}"

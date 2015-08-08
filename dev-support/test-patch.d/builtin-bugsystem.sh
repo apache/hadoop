@@ -28,7 +28,9 @@ function generic_locate_patch
     return 1
   fi
 
-  ${WGET} -q -O "${output}" "${JIRAURL}/${input}"
+  ${CURL} --silent \
+          --output "${output}" \
+         "${input}"
   if [[ $? != 0 ]]; then
     yetus_debug "jira_locate_patch: not a JIRA."
     return 1

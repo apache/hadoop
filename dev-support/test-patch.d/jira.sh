@@ -15,7 +15,7 @@
 # limitations under the License.
 
 JIRACLI=${JIRA:-jira}
-JIRA_URL=${JIRA_URL:-"http://issues.apache.org/jira"}
+JIRA_URL=${JIRA_URL:-"https://issues.apache.org/jira"}
 JIRA_ISSUE_RE='^(YETUS)-[0-9]+$'
 
 add_bugsystem jira
@@ -68,6 +68,7 @@ function jira_determine_issue
 
   if [[ ${maybeissue} =~ ${JIRA_ISSUE_RE} ]]; then
     ISSUE=${maybeissue}
+    add_footer_table "JIRA Issue" "${ISSUE}"
     return 0
   fi
 
@@ -81,9 +82,16 @@ function jira_http_fetch
 
   if [[ -n "${JIRA_USER}"
      && -n "${JIRA_PASSWD}" ]]; then
-    ${WGET} --user="${JIRA_USER}" --password="${JIRA_PASSWD}" -q -O "${output}" "${JIRA_URL}/${input}"
+     ${CURL} --silent --fail \
+             --user "${JIRA_USER}:${JIRA_PASSWD}" \
+             --output "${output}" \
+             --location \
+            "${JIRA_URL}/${input}"
   else
-    ${WGET} -q -O "${output}" "${JIRA_URL}/${input}"
+    ${CURL} --silent --fail \
+            --output "${output}" \
+            --location \
+           "${JIRA_URL}/${input}"
   fi
 }
 
@@ -160,16 +168,24 @@ function jira_write_comment
 
   if [[ -n ${JIRA_PASSWD}
      && -n ${JIRA_USER} ]]; then
-    # shellcheck disable=SC2086
-    ${JIRACLI} --comment "$(cat ${commentfile})" \
-               -s "${JIRA_URL}" \
-               -a addcomment -u ${JIRA_USER} \
-               -p "${JIRA_PASSWD}" \
-               --issue "${ISSUE}"
+
+    echo "{\"body\":\"" > "${PATCH_DIR}/jiracomment.$$"
+    sed -e 's,\\,\\\\,g' \
+        -e 's,\",\\\",g' \
+        -e 's,$,\\r\\n,g' "${commentfile}" \
+    | tr -d '\n'>> "${PATCH_DIR}/jiracomment.$$"
+    echo "\"}" >> "${PATCH_DIR}/jiracomment.$$"
+
+    ${CURL} -X POST \
+         -H "Accept: application/json" \
+         -H "Content-Type: application/json" \
+         -u "${JIRA_USER}:${JIRA_PASSWD}" \
+         -d @"${PATCH_DIR}/jiracomment.$$" \
+         --silent --location \
+           "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
+          >/dev/null
     retval=$?
-    ${JIRACLI} -s "${JIRA_URL}" \
-               -a logout -u "${JIRA_USER}" \
-               -p "${JIRA_PASSWD}"
+    #rm "${PATCH_DIR}/jiracomment.$$"
   fi
   return ${retval}
 }
@@ -183,7 +199,7 @@ function jira_finalreport
 {
   declare result=$1
   declare i
-  declare commentfile=${PATCH_DIR}/commentfile
+  declare commentfile=${PATCH_DIR}/jiracommentfile
   declare comment
   declare vote
   declare ourstring
@@ -204,12 +220,12 @@ function jira_finalreport
   add_footer_table "Console output" "${BUILD_URL}console"
 
   if [[ ${result} == 0 ]]; then
-    add_header_line "| (/) *{color:green}+1 overall{color}* |"
+    echo "| (/) *{color:green}+1 overall{color}* |" >> ${commentfile}
   else
-    add_header_line "| (x) *{color:red}-1 overall{color}* |"
+    echo "| (x) *{color:red}-1 overall{color}* |" >> ${commentfile}
   fi
 
-  { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
+  echo "\\\\" >>  "${commentfile}"
 
   i=0
   until [[ $i -eq ${#TP_HEADER[@]} ]]; do
@@ -217,7 +233,7 @@ function jira_finalreport
     ((i=i+1))
   done
 
-  { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
+  echo "\\\\" >>  "${commentfile}"
 
   echo "|| Vote || Subsystem || Runtime || Comment ||" >> "${commentfile}"
 

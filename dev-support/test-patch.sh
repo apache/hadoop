@@ -23,6 +23,8 @@ if [[ -z "${BASH_VERSINFO}" ]] \
   exit 1
 fi
 
+set -x
+
 ### BUILD_URL is set by Hudson if it is run by patch process
 
 this="${BASH_SOURCE-$0}"
@@ -110,7 +112,7 @@ function setup_defaults
     SunOS)
       AWK=${AWK:-/usr/xpg4/bin/awk}
       SED=${SED:-/usr/xpg4/bin/sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-/usr/xpg4/bin/grep}
       PATCH=${PATCH:-/usr/gnu/bin/patch}
@@ -120,7 +122,7 @@ function setup_defaults
     *)
       AWK=${AWK:-awk}
       SED=${SED:-sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-grep}
       PATCH=${PATCH:-patch}
@@ -757,6 +759,7 @@ function testpatch_usage
   echo "Shell binary overrides:"
   echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
+  echo "--curl-cmd=<cmd>       The 'wget' command to use (default 'curl')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
@@ -771,7 +774,6 @@ function testpatch_usage
   echo "--build-url            Set the build location web page"
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
-  echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
 
   importplugins
 
@@ -823,6 +825,9 @@ function parse_args
       ;;
       --contrib-guide=*)
         HOW_TO_CONTRIBUTE=${i#*=}
+      ;;
+      --curl-cmd=*)
+        CURL=${i#*=}
       ;;
       --debug)
         TP_SHELL_SCRIPT_DEBUG=true
@@ -944,9 +949,6 @@ function parse_args
       ;;
       --tpreexectimer=*)
         REEXECLAUNCHTIMER=${i#*=}
-      ;;
-      --wget-cmd=*)
-        WGET=${i#*=}
       ;;
       --*)
         ## PATCH_OR_ISSUE can't be a --.  So this is probably
@@ -1503,7 +1505,7 @@ function determine_issue
 
   for bugsys in ${BUGSYSTEMS}; do
     if declare -f ${bugsys}_determine_issue >/dev/null; then
-      "${bugsys}_determine_issue" "${PATCH_OR_URL}"
+      "${bugsys}_determine_issue" "${PATCH_OR_ISSUE}"
       if [[ $? == 0 ]]; then
         yetus_debug "${bugsys} says ${ISSUE}"
         return 0
