@@ -56,7 +56,7 @@ function shellcheck_private_findbash
       fi
       list="${list} ${i}"
     done
-  done < <(find . -type d -name bin -o -type d -name sbin -o -type d -name libexec -o -type d -name shellprofile.d)
+  done < <(find . -type d -name bin -o -type d -name sbin -o -type d -name scripts -o -type d -name libexec -o -type d -name shellprofile.d)
   # shellcheck disable=SC2086
   echo ${list} ${SHELLCHECK_SPECIFICFILES} | tr ' ' '\n' | sort -u
 }

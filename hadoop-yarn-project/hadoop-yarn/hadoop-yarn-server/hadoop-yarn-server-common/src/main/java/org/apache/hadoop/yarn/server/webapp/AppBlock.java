@@ -167,6 +167,7 @@ public class AppBlock extends HtmlBlock {
       ._("Application Type:", app.getType())
       ._("Application Tags:",
         app.getApplicationTags() == null ? "" : app.getApplicationTags())
+      ._("Application Priority:", clarifyAppPriority(app.getPriority()))
       ._(
         "YarnApplicationState:",
         app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
@@ -340,6 +341,10 @@ public class AppBlock extends HtmlBlock {
     default:
       return ret;
     }
+  }
+
+  private String clarifyAppPriority(int priority) {
+    return priority + " (Higher Integer value indicates higher priority)";
   }
 
   private String clairfyAppFinalStatus(FinalApplicationStatus status) {

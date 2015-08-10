@@ -18,12 +18,11 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -32,15 +31,15 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  * Represents a block that is currently being constructed.<br>
  * This is usually the last block of a file opened for write or append.
  */
-public abstract class BlockInfoUnderConstruction extends BlockInfo {
+public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   /** Block state. See {@link BlockUCState} */
-  protected BlockUCState blockUCState;
+  private BlockUCState blockUCState;
 
   /**
    * Block replicas as assigned when the block was allocated.
    * This defines the pipeline order.
    */
-  protected List<ReplicaUnderConstruction> replicas;
+  private List<ReplicaUnderConstruction> replicas;
 
   /**
    * Index of the primary data node doing the recovery. Useful for log
@@ -58,12 +57,12 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
   /**
    * The block source to use in the event of copy-on-write truncate.
    */
-  protected Block truncateBlock;
+  private Block truncateBlock;
 
   /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.
-   * The GS, the length and the state of the replica is as reported by
+   * The GS, the length and the state of the replica is as reported by 
    * the data-node.
    * It is not guaranteed, but expected, that data-nodes actually have
    * corresponding replicas.
@@ -144,7 +143,7 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
       appendStringTo(b);
       return b.toString();
     }
-
+    
     @Override
     public void appendStringTo(StringBuilder sb) {
       sb.append("ReplicaUC[")
@@ -159,24 +158,45 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
    */
-  public BlockInfoUnderConstruction(Block blk, short replication) {
+  public BlockInfoContiguousUnderConstruction(Block blk, short replication) {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
    */
-  public BlockInfoUnderConstruction(Block blk, short replication,
+  public BlockInfoContiguousUnderConstruction(Block blk, short replication,
       BlockUCState state, DatanodeStorageInfo[] targets) {
     super(blk, replication);
-    Preconditions.checkState(getBlockUCState() != BlockUCState.COMPLETE,
-        "BlockInfoUnderConstruction cannot be in COMPLETE state");
+    assert getBlockUCState() != BlockUCState.COMPLETE :
+      "BlockInfoUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(targets);
   }
 
-  /** Set expected locations. */
-  public abstract void setExpectedLocations(DatanodeStorageInfo[] targets);
+  /**
+   * Convert an under construction block to a complete block.
+   * 
+   * @return BlockInfo - a complete block.
+   * @throws IOException if the state of the block 
+   * (the generation stamp and the length) has not been committed by 
+   * the client or it does not have at least a minimal number of replicas 
+   * reported from data-nodes. 
+   */
+  BlockInfo convertToCompleteBlock() throws IOException {
+    assert getBlockUCState() != BlockUCState.COMPLETE :
+      "Trying to convert a COMPLETE block";
+    return new BlockInfoContiguous(this);
+  }
+
+  /** Set expected locations */
+  public void setExpectedLocations(DatanodeStorageInfo[] targets) {
+    int numLocations = targets == null ? 0 : targets.length;
+    this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
+    for(int i = 0; i < numLocations; i++)
+      replicas.add(
+        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+  }
 
   /**
    * Create array of expected replica locations
@@ -185,13 +205,12 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
   public DatanodeStorageInfo[] getExpectedStorageLocations() {
     int numLocations = replicas == null ? 0 : replicas.size();
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[numLocations];
-    for(int i = 0; i < numLocations; i++) {
+    for(int i = 0; i < numLocations; i++)
       storages[i] = replicas.get(i).getExpectedStorageLocation();
-    }
     return storages;
   }
 
-  /** Get the number of expected locations. */
+  /** Get the number of expected locations */
   public int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.size();
   }
@@ -209,15 +228,19 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
     blockUCState = s;
   }
 
-  /** Get block recovery ID. */
+  /** Get block recovery ID */
   public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
-  /** Get recover block. */
-  public abstract Block getTruncateBlock();
+  /** Get recover block */
+  public Block getTruncateBlock() {
+    return truncateBlock;
+  }
 
-  public abstract void setTruncateBlock(Block recoveryBlock);
+  public void setTruncateBlock(Block recoveryBlock) {
+    this.truncateBlock = recoveryBlock;
+  }
 
   /**
    * Process the recorded replicas. When about to commit or finish the
@@ -227,9 +250,8 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
   public void setGenerationStampAndVerifyReplicas(long genStamp) {
     // Set the generation stamp for the block.
     setGenerationStamp(genStamp);
-    if (replicas == null) {
+    if (replicas == null)
       return;
-    }
 
     // Remove the replicas with wrong gen stamp.
     // The replica list is unchanged.
@@ -245,14 +267,13 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
   /**
    * Commit block's length and generation stamp as reported by the client.
    * Set block state to {@link BlockUCState#COMMITTED}.
-   * @param block - contains client reported block length and generation
+   * @param block - contains client reported block length and generation 
    * @throws IOException if block ids are inconsistent.
    */
   void commitBlock(Block block) throws IOException {
-    if(getBlockId() != block.getBlockId()) {
+    if(getBlockId() != block.getBlockId())
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
-    }
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
     // Sort out invalid replicas.
@@ -268,17 +289,16 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
-      NameNode.blockStateChangeLog.warn("BLOCK* " +
-          "BlockInfoUnderConstruction.initLeaseRecovery: " +
-          "No blocks found, lease removed.");
+      NameNode.blockStateChangeLog.warn("BLOCK*"
+        + " BlockInfoUnderConstruction.initLeaseRecovery:"
+        + " No blocks found, lease removed.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;
     for (int i = 0; i < replicas.size(); i++) {
       // Check if all replicas have been tried or not.
       if (replicas.get(i).isAlive()) {
         allLiveReplicasTriedAsPrimary =
-            (allLiveReplicasTriedAsPrimary &&
-                replicas.get(i).getChosenAsPrimary());
+            (allLiveReplicasTriedAsPrimary && replicas.get(i).getChosenAsPrimary());
       }
     }
     if (allLiveReplicasTriedAsPrimary) {
@@ -292,8 +312,7 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
     primaryNodeIndex = -1;
     for(int i = 0; i < replicas.size(); i++) {
       // Skip alive replicas which have been chosen for recovery.
-      if (!(replicas.get(i).isAlive() &&
-          !replicas.get(i).getChosenAsPrimary())) {
+      if (!(replicas.get(i).isAlive() && !replicas.get(i).getChosenAsPrimary())) {
         continue;
       }
       final ReplicaUnderConstruction ruc = replicas.get(i);
@@ -306,8 +325,7 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
       }
     }
     if (primary != null) {
-      primary.getExpectedStorageLocation().
-          getDatanodeDescriptor().addBlockToBeRecovered(this);
+      primary.getExpectedStorageLocation().getDatanodeDescriptor().addBlockToBeRecovered(this);
       primary.setChosenAsPrimary(true);
       NameNode.blockStateChangeLog.debug(
           "BLOCK* {} recovery started, primary={}", this, primary);
@@ -338,25 +356,6 @@ public abstract class BlockInfoUnderConstruction extends BlockInfo {
       }
     }
     replicas.add(new ReplicaUnderConstruction(block, storage, rState));
-  }
-
-  /**
-   * Convert an under construction block to a complete block.
-   *
-   * @return a complete block.
-   * @throws IOException
-   *           if the state of the block (the generation stamp and the length)
-   *           has not been committed by the client or it does not have at
-   *           least a minimal number of replicas reported from data-nodes.
-   */
-  public abstract BlockInfo convertToCompleteBlock();
-
-  @Override
-  BlockInfoUnderConstruction convertCompleteBlockToUC
-      (HdfsServerConstants.BlockUCState s, DatanodeStorageInfo[] targets) {
-    BlockManager.LOG.error("convertCompleteBlockToUC should only be applied " +
-        "on complete blocks.");
-    return null;
   }
 
   @Override // BlockInfo

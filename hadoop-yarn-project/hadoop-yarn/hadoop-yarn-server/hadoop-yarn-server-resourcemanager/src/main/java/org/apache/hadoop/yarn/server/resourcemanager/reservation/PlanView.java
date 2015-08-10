@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import java.util.Set;
-
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
+
+import java.util.Set;
 
 /**
  * This interface provides a read-only view on the allocations made in this
- * plan. This methods are used for example by {@link ReservationAgent}s to
+ * plan. This methods are used for example by {@code ReservationAgent}s to
  * determine the free resources in a certain point in time, and by
  * PlanFollowerPolicy to publish this plan to the scheduler.
  */
@@ -66,7 +65,7 @@ public interface PlanView extends PlanContext {
    * @return the total {@link Resource} reserved for all users at the specified
    *         time
    */
-  public Resource getTotalCommittedResources(long tick);
+  Resource getTotalCommittedResources(long tick);
 
   /**
    * Returns the total {@link Resource} reserved for a given user at the
@@ -88,7 +87,7 @@ public interface PlanView extends PlanContext {
    * @return the overall capacity in terms of {@link Resource} assigned to this
    *         plan
    */
-  public Resource getTotalCapacity();
+  Resource getTotalCapacity();
 
   /**
    * Gets the time (UTC in ms) at which the first reservation starts
