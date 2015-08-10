@@ -161,6 +161,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3948. Display Application Priority in RM Web UI.(Sunil G via rohithsharmaks)
 
+    YARN-3873. PendingApplications in LeafQueue should also use OrderingPolicy. 
+    (Sunil G via wangda)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
