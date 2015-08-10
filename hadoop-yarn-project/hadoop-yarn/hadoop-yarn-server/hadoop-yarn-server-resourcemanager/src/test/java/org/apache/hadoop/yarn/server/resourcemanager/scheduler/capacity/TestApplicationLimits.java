@@ -93,8 +93,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
         thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
-    when(csContext.getApplicationComparator()).
-        thenReturn(CapacityScheduler.applicationComparator);
     when(csContext.getNonPartitionedQueueComparator()).
         thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).
@@ -255,8 +253,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 16));
-    when(csContext.getApplicationComparator()).
-        thenReturn(CapacityScheduler.applicationComparator);
     when(csContext.getNonPartitionedQueueComparator()).
         thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
@@ -499,7 +495,7 @@ public class TestApplicationLimits {
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(1, queue.getNumPendingApplications(user_0));
-    assertTrue(queue.pendingApplications.contains(app_2));
+    assertTrue(queue.getPendingApplications().contains(app_2));
 
     // Submit fourth application, should remain pending
     FiCaSchedulerApp app_3 = getMockApplication(APPLICATION_ID++, user_0,
@@ -509,7 +505,7 @@ public class TestApplicationLimits {
     assertEquals(2, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(2, queue.getNumPendingApplications(user_0));
-    assertTrue(queue.pendingApplications.contains(app_3));
+    assertTrue(queue.getPendingApplications().contains(app_3));
 
     // Kill 3rd pending application
     queue.finishApplicationAttempt(app_2, A);
@@ -517,7 +513,7 @@ public class TestApplicationLimits {
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(1, queue.getNumPendingApplications(user_0));
-    assertFalse(queue.pendingApplications.contains(app_2));
+    assertFalse(queue.getPendingApplications().contains(app_2));
     assertFalse(queue.getApplications().contains(app_2));
 
     // Finish 1st application, app_3 should become active
@@ -527,7 +523,7 @@ public class TestApplicationLimits {
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(0, queue.getNumPendingApplications(user_0));
     assertTrue(queue.getApplications().contains(app_3));
-    assertFalse(queue.pendingApplications.contains(app_3));
+    assertFalse(queue.getPendingApplications().contains(app_3));
     assertFalse(queue.getApplications().contains(app_0));
 
     // Finish 2nd application
@@ -562,8 +558,6 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB));
-    when(csContext.getApplicationComparator()).
-        thenReturn(CapacityScheduler.applicationComparator);
     when(csContext.getNonPartitionedQueueComparator()).
         thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
