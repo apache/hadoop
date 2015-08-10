@@ -253,6 +253,26 @@ function personality_modules
       #fi
       needflags=true
       hadoop_unittest_prereqs
+
+      verify_needed_test javac
+      if [[ $? == 0 ]]; then
+        yetus_debug "hadoop: javac not requested"
+        verify_needed_test native
+        if [[ $? == 0 ]]; then
+          yetus_debug "hadoop: native not requested"
+          yetus_debug "hadoop: adding -DskipTests to unit test"
+          extra="-DskipTests"
+        fi
+      fi
+
+      verify_needed_test shellcheck
+      if [[ $? == 0
+          && ! ${CHANGED_FILES} =~ \.bats ]]; then
+        yetus_debug "hadoop: NO shell code change detected; disabling shelltest profile"
+        extra="${extra} -P!shelltest"
+      else
+        extra="${extra} -Pshelltest"
+      fi
     ;;
     *)
       extra="-DskipTests"
@@ -272,3 +292,57 @@ function personality_modules
   done
 }
 
+function personality_file_tests
+{
+  local filename=$1
+
+  yetus_debug "Using Hadoop-specific personality_file_tests"
+
+  if [[ ${filename} =~ src/main/webapp ]]; then
+    yetus_debug "tests/webapp: ${filename}"
+  elif [[ ${filename} =~ \.sh
+       || ${filename} =~ \.cmd
+       || ${filename} =~ src/scripts
+       || ${filename} =~ src/test/scripts
+       ]]; then
+    yetus_debug "tests/shell: ${filename}"
+    add_test unit
+  elif [[ ${filename} =~ \.md$
+       || ${filename} =~ \.md\.vm$
+       || ${filename} =~ src/site
+       ]]; then
+    yetus_debug "tests/site: ${filename}"
+    add_test site
+  elif [[ ${filename} =~ \.c$
+       || ${filename} =~ \.cc$
+       || ${filename} =~ \.h$
+       || ${filename} =~ \.hh$
+       || ${filename} =~ \.proto$
+       || ${filename} =~ \.cmake$
+       || ${filename} =~ CMakeLists.txt
+       ]]; then
+    yetus_debug "tests/units: ${filename}"
+    add_test cc
+    add_test unit
+    add_test javac
+  elif [[ ${filename} =~ build.xml$
+       || ${filename} =~ pom.xml$
+       || ${filename} =~ \.java$
+       || ${filename} =~ src/main
+       ]]; then
+      yetus_debug "tests/javadoc+units: ${filename}"
+      add_test javac
+      add_test javadoc
+      add_test mvninstall
+      add_test unit
+  fi
+
+  if [[ ${filename} =~ src/test ]]; then
+    yetus_debug "tests"
+    add_test unit
+  fi
+
+  if [[ ${filename} =~ \.java$ ]]; then
+    add_test findbugs
+  fi
+}
