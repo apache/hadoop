@@ -23,11 +23,11 @@ add_bugsystem jira
 function jira_usage
 {
   echo "JIRA Options:"
-  echo "--jira-issue-re=<expr> Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${JIRA_ISSUE_RE}\')"
-  echo "--jira-cmd=<cmd>       The 'jira' command to use (default '${JIRACLI}')"
-  echo "--jira-password=<pw>   The password for the 'jira' command"
-  echo "--jira-base-url=<url>  The URL of the JIRA server (default:'${JIRA_URL}')"
-  echo "--jira-user=<user>     The user for the 'jira' command"
+  echo "--jira-issue-re=<expr>  Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${JIRA_ISSUE_RE}\')"
+  echo "--jira-cmd=<cmd>        The 'jira' command to use (default '${JIRACLI}')"
+  echo "--jira-password=<pw>    The password for the 'jira' command"
+  echo "--jira-base-url=<url>   The URL of the JIRA server (default:'${JIRA_URL}')"
+  echo "--jira-user=<user>      The user for the 'jira' command"
 }
 
 function jira_parse_args
@@ -99,6 +99,7 @@ function jira_locate_patch
 {
   declare input=$1
   declare fileloc=$2
+  declare githuburl
 
   yetus_debug "jira_locate_patch: trying ${JIRA_URL}/browse/${input}"
 
@@ -119,13 +120,16 @@ function jira_locate_patch
   # appropriate bits so that it gets setup to write a comment
   # to the PR
 
-  if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
+  if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]]; then
     if [[ ${JENKINS} == true ]]; then
       yetus_error "ERROR: ${input} is not \"Patch Available\"."
       cleanup_and_exit 1
     else
       yetus_error "WARNING: ${input} is not \"Patch Available\"."
     fi
+  elif [[ ${GREP} -c '^.*[https://github.com/.*patch].*$' "${PATCH_DIR}/jira" ]]; then
+    github_jira_bridge
+    return $?
   fi
 
   #shellcheck disable=SC2016

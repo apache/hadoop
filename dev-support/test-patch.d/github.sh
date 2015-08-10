@@ -61,6 +61,14 @@ function github_parse_args
   done
 }
 
+## @description this gets called when JIRA thinks this
+## @description issue is just a pointer to github
+function github_jira_bridge
+{
+
+
+}
+
 function github_locate_patch
 {
   declare input=$1
