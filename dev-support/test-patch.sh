@@ -23,8 +23,6 @@ if [[ -z "${BASH_VERSINFO}" ]] \
   exit 1
 fi
 
-set -x
-
 ### BUILD_URL is set by Hudson if it is run by patch process
 
 this="${BASH_SOURCE-$0}"
