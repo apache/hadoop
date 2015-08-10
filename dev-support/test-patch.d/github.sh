@@ -16,8 +16,8 @@
 
 add_bugsystem github
 
-GITHUBURL="https://github.com"
-GITHUBREPO="apache/hadoop"
+GITHUB_URL="https://github.com"
+GITHUB_REPO="apache/hadoop"
 
 GITHUB_PASSWD=""
 GITHUB_TOKEN=""
@@ -28,9 +28,9 @@ GITHUB_ISSUE=""
 function github_usage
 {
   echo "GITHUB Options:"
-  echo "--github-base-url=<url>  The URL of the JIRA server (default:'${GITHUBURL}')"
+  echo "--github-base-url=<url>  The URL of the JIRA server (default:'${GITHUB_URL}')"
   echo "--github-password=<pw>   Github password"
-  echo "--github-repo=<repo>     github repo to use (default:'${GITHUBREPO}')"
+  echo "--github-repo=<repo>     github repo to use (default:'${GITHUB_REPO}')"
   echo "--github-token=<token>   The token to use to write to github"
   echo "--github-user=<user>     Github user"
 
@@ -43,10 +43,10 @@ function github_parse_args
   for i in "$@"; do
     case ${i} in
       --github-base-url=*)
-        GITHUBURL=${i#*=}
+        GITHUB_URL=${i#*=}
       ;;
       --github-repo=*)
-        GITHUBREPO=${i#*=}
+        GITHUB_REPO=${i#*=}
       ;;
       --github-token=*)
         GITHUB_TOKEN=${i#*=}
@@ -65,8 +65,52 @@ function github_parse_args
 ## @description issue is just a pointer to github
 function github_jira_bridge
 {
+  declare fileloc=$1
+  declare urlfromjira
+  declare count
+  declare pos1
+  declare pos2
+
+  # the JIRA issue has already been downloaded.  So let's
+  # find the URL.  This is currently hard-coded to github.com
+  # Sorry Github Enterprise users. :(
+
+  # shellcheck disable=SC2016
+  urlfromjira=$(${AWK} 'match($0,"https://github.com/.*patch"){print $1}' "${PATCH_DIR}/jira" | tail -1)
+  count=${urlfromjira//[^\/]}
+  count=${#count}
+  ((pos2=count-3))
+  ((pos1=pos2))
+
+  GITHUB_URL=$(echo "${urlfromjira}" | cut -f1-${pos2} -d/)
+
+  ((pos1=pos1+1))
+  ((pos2=pos1+1))
+
+  GITHUB_REPO=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/)
+
+  ((pos1=pos2+2))
+  unset pos2
+
+  GITHUB_ISSUE=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
+
+  github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
+}
+
+function github_determine_issue
+{
+  declare input=$1
+  declare patchnamechunk
+  declare maybeissue
 
 
+  if [[ ${input} =~ ^[0-9]+$
+    && -n ${GITHUB_REPO} ]]; then
+    ISSUE=${input}
+    return 0
+  fi
+
+  return 1
 }
 
 function github_locate_patch
@@ -79,9 +123,19 @@ function github_locate_patch
     return 1
   fi
 
+  if [[ ! ${input} =~ ^[0-9]+$ ]]; then
+    yetus_debug "github: ${input} is not a pull request #"
+    return 1
+  fi
+
+  PATCHURL="${GITHUB_URL}/${GITHUB_REPO}/pull/${input}.patch"
+  echo "GITHUB PR #${input} is being downloaded at $(date) from"
+  echo "${PATCHURL}"
+
   ${CURL} --silent --fail \
           --output "${output}" \
-         "${GITHUBURL}/${GITHUBREPO}/pull/${input}.patch"
+          --location \
+         "${PATCHURL}"
 
   if [[ $? != 0 ]]; then
     yetus_debug "github_locate_patch: not a github pull request."
@@ -93,6 +147,9 @@ function github_locate_patch
 
   GITHUB_ISSUE=${input}
   GITHUB_COMMITID=""
+
+  add_footer_table "GITHUB PR" "${GITHUB_URL}/${GITHUB_REPO}/pull/${input}"
+
   return 0
 }
 
@@ -105,11 +162,55 @@ function github_write_comment
   declare -r commentfile=${1}
   shift
 
+  declare retval=0
+
+  if [[ "${OFFLINE}" == true ]]; then
+    return 0
+  fi
+
+  echo "{\"body\":\"" > "${PATCH_DIR}/ghcomment.$$"
+  sed -e 's,\\,\\\\,g' \
+      -e 's,\",\\\",g' \
+  | tr -d '\n'>> "${PATCH_DIR}/ghcomment.$$"
+  echo "\"}" >> "${PATCH_DIR}/ghcomment.$$"
+
+  if [[ -n ${GITHUB_USER}
+     && -n ${GITHUB_PASSWD} ]]; then
+    githubauth="-u \"${GITHUB_USER}:${GITHUB_PASSWD}\""
+  elif [[ -n ${GITHUB_TOKEN} ]]; then
+    githubauth="-H \"Authorization: token ${GITHUB_TOKEN}\""
+  else
+    return 0
+  fi
+
+  ${CURL} -X POST \
+       -H "Accept: application/json" \
+       -H "Content-Type: application/json" \
+       -u "${GITHUB_USER}:${GITHUB_PASSWD}" \
+       -d @"${PATCH_DIR}/jiracomment.$$" \
+       --silent --location \
+         "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
+        >/dev/null
+
+    retval=$?
+    rm "${PATCH_DIR}/jiracomment.$$"
+  fi
+  return ${retval}
+}
+
+
+function github_write_comment
+{
+  declare -r commentfile=${1}
+  shift
+
   declare retval=1
 
   if [[ "${OFFLINE}" == true ]]; then
     return 0
   fi
+
+
 
   yetus_debug "${GITHUB_USER} ${GITHUB_PASSWD} ${GITHUB_TOKEN} ${GITHUB_COMMITID}"
   return ${retval}
@@ -142,9 +243,9 @@ function github_finalreport
   add_footer_table "Console output" "${BUILD_URL}console"
 
   if [[ ${result} == 0 ]]; then
-    echo ":confetti_ball: **+1 overall**" >> ${commentfile}
+    echo ":confetti_ball: **+1 overall**" >> "${commentfile}"
   else
-    echo ":broken_heart: **-1 overall**" >> ${commentfile}
+    echo ":broken_heart: **-1 overall**" >> "${commentfile}"
   fi
 
   printf "\n\n\n\n" >>  "${commentfile}"

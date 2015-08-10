@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-JIRACLI=${JIRA:-jira}
 JIRA_URL=${JIRA_URL:-"https://issues.apache.org/jira"}
 JIRA_ISSUE_RE='^(YETUS)-[0-9]+$'
 
@@ -24,7 +23,6 @@ function jira_usage
 {
   echo "JIRA Options:"
   echo "--jira-issue-re=<expr>  Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${JIRA_ISSUE_RE}\')"
-  echo "--jira-cmd=<cmd>        The 'jira' command to use (default '${JIRACLI}')"
   echo "--jira-password=<pw>    The password for the 'jira' command"
   echo "--jira-base-url=<url>   The URL of the JIRA server (default:'${JIRA_URL}')"
   echo "--jira-user=<user>      The user for the 'jira' command"
@@ -36,9 +34,6 @@ function jira_parse_args
 
   for i in "$@"; do
     case ${i} in
-      --jira-cmd=*)
-        JIRACLI=${i#*=}
-      ;;
       --jira-base-url=*)
         JIRA_URL=${i#*=}
       ;;
@@ -99,7 +94,7 @@ function jira_locate_patch
 {
   declare input=$1
   declare fileloc=$2
-  declare githuburl
+  declare relativeurl
 
   yetus_debug "jira_locate_patch: trying ${JIRA_URL}/browse/${input}"
 
@@ -115,27 +110,24 @@ function jira_locate_patch
     return 1
   fi
 
-  # TODO: we should check for a gitbub-based pull request here
-  # if we find one, call the github plug-in directly with the
-  # appropriate bits so that it gets setup to write a comment
-  # to the PR
-
-  if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]]; then
+  # Sorry enterprise github users.  Currently hard-coded to github.com
+  if [[ $(${GREP} -c 'https://github.com/.*patch' "${PATCH_DIR}/jira") != 0 ]]; then
+    echo "${input} appears to be a Github PR. Switching Modes."
+    github_jira_bridge "${fileloc}"
+    return $?
+  elif [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]]; then
     if [[ ${JENKINS} == true ]]; then
       yetus_error "ERROR: ${input} is not \"Patch Available\"."
       cleanup_and_exit 1
     else
       yetus_error "WARNING: ${input} is not \"Patch Available\"."
     fi
-  elif [[ ${GREP} -c '^.*[https://github.com/.*patch].*$' "${PATCH_DIR}/jira" ]]; then
-    github_jira_bridge
-    return $?
   fi
 
   #shellcheck disable=SC2016
-  relativePatchURL=$(${AWK} 'match($0,"/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART,RLENGTH)}' "${PATCH_DIR}/jira" |
+  relativeurl=$(${AWK} 'match($0,"/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART,RLENGTH)}' "${PATCH_DIR}/jira" |
     ${GREP} -v -e 'htm[l]*$' | sort | tail -1 | ${SED} -e 's,[ ]*$,,g')
-  PATCHURL="${JIRA_URL}${relativePatchURL}"
+  PATCHURL="${JIRA_URL}${relativeurl}"
   if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
     guess_patch_file "${PATCH_DIR}/patch"
     if [[ $? == 0 ]]; then
@@ -143,12 +135,12 @@ function jira_locate_patch
       add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
-  echo "${ISSUE} patch is being downloaded at $(date) from"
+  echo "${input} patch is being downloaded at $(date) from"
   echo "${PATCHURL}"
   add_footer_table "JIRA Patch URL" "${PATCHURL}"
-  jira_http_fetch "${relativePatchURL}" "${fileloc}"
+  jira_http_fetch "${relativeurl}" "${fileloc}"
   if [[ $? != 0 ]];then
-    yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
+    yetus_error "ERROR: ${input}/${PATCHURL} could not be downloaded."
     cleanup_and_exit 1
   fi
   return 0
@@ -158,7 +150,7 @@ function jira_locate_patch
 ## @params filename
 ## @stability stable
 ## @audience public
-## @returns ${JIRACLI} exit code
+## @returns ${CURL} exit code
 function jira_write_comment
 {
   declare -r commentfile=${1}
@@ -189,7 +181,7 @@ function jira_write_comment
            "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
           >/dev/null
     retval=$?
-    #rm "${PATCH_DIR}/jiracomment.$$"
+    rm "${PATCH_DIR}/jiracomment.$$"
   fi
   return ${retval}
 }
@@ -224,9 +216,9 @@ function jira_finalreport
   add_footer_table "Console output" "${BUILD_URL}console"
 
   if [[ ${result} == 0 ]]; then
-    echo "| (/) *{color:green}+1 overall{color}* |" >> ${commentfile}
+    echo "| (/) *{color:green}+1 overall{color}* |" >> "${commentfile}"
   else
-    echo "| (x) *{color:red}-1 overall{color}* |" >> ${commentfile}
+    echo "| (x) *{color:red}-1 overall{color}* |" >> "${commentfile}"
   fi
 
   echo "\\\\" >>  "${commentfile}"
