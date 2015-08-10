@@ -35,6 +35,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -172,9 +173,6 @@ public class Balancer {
 
   static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
-  private static final long GB = 1L << 30; //1GB
-  private static final long MAX_SIZE_TO_MOVE = 10*GB;
-
   private static final String USAGE = "Usage: hdfs balancer"
       + "\n\t[-policy <policy>]\tthe balancing policy: "
       + BalancingPolicy.Node.INSTANCE.getName() + " or "
@@ -190,7 +188,8 @@ public class Balancer {
   private final Dispatcher dispatcher;
   private final BalancingPolicy policy;
   private final double threshold;
-  
+  private final long maxSizeToMove;
+
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
   private final Collection<Source> aboveAvgUtilized = new LinkedList<Source>();
@@ -211,6 +210,24 @@ public class Balancer {
     }
   }
 
+  static long getLong(Configuration conf, String key, long defaultValue) {
+    final long v = conf.getLong(key, defaultValue);
+    LOG.info(key + " = " + v + " (default=" + defaultValue + ")");
+    if (v <= 0) {
+      throw new HadoopIllegalArgumentException(key + " = " + v  + " <= " + 0);
+    }
+    return v;
+  }
+
+  static int getInt(Configuration conf, String key, int defaultValue) {
+    final int v = conf.getInt(key, defaultValue);
+    LOG.info(key + " = " + v + " (default=" + defaultValue + ")");
+    if (v <= 0) {
+      throw new HadoopIllegalArgumentException(key + " = " + v  + " <= " + 0);
+    }
+    return v;
+  }
+
   /**
    * Construct a balancer.
    * Initialize balancer. It sets the value of the threshold, and 
@@ -219,16 +236,16 @@ public class Balancer {
    * when connection fails.
    */
   Balancer(NameNodeConnector theblockpool, Parameters p, Configuration conf) {
-    final long movedWinWidth = conf.getLong(
+    final long movedWinWidth = getLong(conf,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_DEFAULT);
-    final int moverThreads = conf.getInt(
+    final int moverThreads = getInt(conf,
         DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_KEY,
         DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_DEFAULT);
-    final int dispatcherThreads = conf.getInt(
+    final int dispatcherThreads = getInt(conf,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_DEFAULT);
-    final int maxConcurrentMovesPerNode = conf.getInt(
+    final int maxConcurrentMovesPerNode = getInt(conf,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
 
@@ -237,6 +254,10 @@ public class Balancer {
         maxConcurrentMovesPerNode, conf);
     this.threshold = p.threshold;
     this.policy = p.policy;
+
+    this.maxSizeToMove = getLong(conf,
+        DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
+        DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_DEFAULT);
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -290,7 +311,7 @@ public class Balancer {
         final double utilizationDiff = utilization - policy.getAvgUtilization(t);
         final double thresholdDiff = Math.abs(utilizationDiff) - threshold;
         final long maxSize2Move = computeMaxSize2Move(capacity,
-            getRemaining(r, t), utilizationDiff, threshold);
+            getRemaining(r, t), utilizationDiff, threshold, maxSizeToMove);
 
         final StorageGroup g;
         if (utilizationDiff > 0) {
@@ -327,13 +348,13 @@ public class Balancer {
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
-      final double utilizationDiff, final double threshold) {
+      final double utilizationDiff, final double threshold, final long max) {
     final double diff = Math.min(threshold, Math.abs(utilizationDiff));
     long maxSizeToMove = precentage2bytes(diff, capacity);
     if (utilizationDiff < 0) {
       maxSizeToMove = Math.min(remaining, maxSizeToMove);
     }
-    return Math.min(MAX_SIZE_TO_MOVE, maxSizeToMove);
+    return Math.min(max, maxSizeToMove);
   }
 
   private static long precentage2bytes(double precentage, long capacity) {
@@ -383,6 +404,7 @@ public class Balancer {
     /* first step: match each overUtilized datanode (source) to
      * one or more underUtilized datanodes (targets).
      */
+    LOG.info("chooseStorageGroups for " + matcher + ": overUtilized => underUtilized");
     chooseStorageGroups(overUtilized, underUtilized, matcher);
     
     /* match each remaining overutilized datanode (source) to 
@@ -390,6 +412,7 @@ public class Balancer {
      * Note only overutilized datanodes that haven't had that max bytes to move
      * satisfied in step 1 are selected
      */
+    LOG.info("chooseStorageGroups for " + matcher + ": overUtilized => belowAvgUtilized");
     chooseStorageGroups(overUtilized, belowAvgUtilized, matcher);
 
     /* match each remaining underutilized datanode (target) to 
@@ -397,6 +420,7 @@ public class Balancer {
      * Note only underutilized datanodes that have not had that max bytes to
      * move satisfied in step 1 are selected.
      */
+    LOG.info("chooseStorageGroups for " + matcher + ": underUtilized => aboveAvgUtilized");
     chooseStorageGroups(underUtilized, aboveAvgUtilized, matcher);
   }
 
