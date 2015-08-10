@@ -196,6 +196,7 @@ message ApplicationReportProto {
   repeated string applicationTags = 20;
   optional LogAggregationStatusProto log_aggregation_status = 21;
   optional bool unmanaged_application = 22 [default = false];
+  optional PriorityProto priority = 23;
 }
 
 enum LogAggregationStatusProto {
@@ -384,6 +385,9 @@ message QueueStatisticsProto {
   optional int64 allocatedVCores = 13;
   optional int64 pendingVCores = 14;
   optional int64 reservedVCores = 15;
+  optional int64 allocatedContainers = 16;
+  optional int64 pendingContainers = 17;
+  optional int64 reservedContainers = 18;
 }
 
 message QueueInfoProto {

@@ -159,6 +159,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3736. Add RMStateStore apis to store and load accepted reservations for
     failover (adhoot via asuresh)
 
+    YARN-3948. Display Application Priority in RM Web UI.(Sunil G via rohithsharmaks)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -370,6 +372,17 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4004. container-executor should print output of docker logs if the docker
     container exits with non-0 exit status. (Varun Vasudev via xgong)
+
+    YARN-3961. Expose pending, running and reserved containers of a queue in REST
+    api and yarn top (adhoot via asuresh)
+
+    YARN-4019. Add JvmPauseMonitor to ResourceManager and NodeManager. (Robert Kanter
+    via junping_du)
+
+    YARN-3974. Refactor the reservation system test cases to use parameterized 
+    base test. (subru via curino)
+
+    YARN-3966. Fix excessive loggings in CapacityScheduler. (Jian He via wangda)
 
   OPTIMIZATIONS
 
@@ -731,6 +744,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-433. When RM is catching up with node updates then it should not expire
     acquired containers. (Xuan Gong via zxu)
+
+    YARN-3992. TestApplicationPriority.testApplicationPriorityAllocation fails 
+    intermittently. (Contributed by Sunil G)
 
 Release 2.7.2 - UNRELEASED
 

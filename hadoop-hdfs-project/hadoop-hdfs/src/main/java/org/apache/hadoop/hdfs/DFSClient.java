@@ -1574,21 +1574,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * @param path file/directory name
    * @return Get the storage policy for specified path
    */
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
-    HdfsFileStatus status = getFileInfo(path);
-    if (status == null) {
-      throw new FileNotFoundException("File does not exist: " + path);
+    checkOpen();
+    TraceScope scope = getPathTraceScope("getStoragePolicy", path);
+    try {
+      return namenode.getStoragePolicy(path);
+    } catch (RemoteException e) {
+      throw e.unwrapRemoteException(AccessControlException.class,
+                                    FileNotFoundException.class,
+                                    SafeModeException.class,
+                                    UnresolvedPathException.class);
+    } finally {
+      scope.close();
     }
-    byte storagePolicyId = status.getStoragePolicy();
-    BlockStoragePolicy[] policies = getStoragePolicies();
-    for (BlockStoragePolicy policy : policies) {
-      if (policy.getId() == storagePolicyId) {
-        return policy;
-      }
-    }
-    return null;
   }
 
   /**

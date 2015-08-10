@@ -58,6 +58,7 @@ public class AppInfo {
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
+  protected int priority;
   private int allocatedCpuVcores;
   private int allocatedMemoryMB;
   protected boolean unmanagedApplication;
@@ -86,6 +87,10 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
+    priority = 0;
+    if (app.getPriority() != null) {
+      priority = app.getPriority().getPriority();
+    }
     if (app.getApplicationResourceUsageReport() != null) {
       runningContainers = app.getApplicationResourceUsageReport()
           .getNumUsedContainers();
@@ -193,5 +198,9 @@ public class AppInfo {
 
   public boolean isUnmanagedApp() {
     return unmanagedApplication;
+  }
+
+  public int getPriority() {
+    return priority;
   }
 }

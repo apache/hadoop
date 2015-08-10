@@ -260,4 +260,10 @@ Encrypted Intermediate Data Spill files
 This capability allows encryption of the intermediate files generated during the merge and shuffle phases.
 It can be enabled by setting the `mapreduce.job.encrypted-intermediate-data` job property to `true`.
 
+|               Name |  Type |                                                           Description |
+|:---- |:---- |:---- |
+| mapreduce.job.encrypted-intermediate-data | boolean | Enable or disable encrypt intermediate mapreduce spill files.Default is false. |
+| mapreduce.job.encrypted-intermediate-data-key-size-bits | int | The key length used by keygenerator to encrypt data spilled to disk. |
+| mapreduce.job.encrypted-intermediate-data.buffer.kb | int | The buffer size in kb for stream written to disk after encryption. |
+
 **NOTE:** Currently, enabling encrypted intermediate data spills would restrict the number of attempts of the job to 1.

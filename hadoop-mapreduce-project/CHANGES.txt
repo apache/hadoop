@@ -206,6 +206,8 @@ Trunk (Unreleased)
     MAPREDUCE-6406. Update FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT
     to match mapred-default.xml. (Ray Chiang via devaraj)
 
+    MAPREDUCE-6257. Document encrypted spills (Bibin A Chundatt via aw)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
@@ -372,6 +374,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
     failure diagnostics (Chang Li via jlowe)
+
+    MAPREDUCE-6443. Add JvmPauseMonitor to JobHistoryServer. (Robert Kanter
+    via junping_du)
 
   OPTIMIZATIONS
 

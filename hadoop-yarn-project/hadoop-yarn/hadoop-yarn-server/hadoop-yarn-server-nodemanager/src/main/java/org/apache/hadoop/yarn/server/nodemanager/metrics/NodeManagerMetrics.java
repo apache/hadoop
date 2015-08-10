@@ -57,17 +57,26 @@ public class NodeManagerMetrics {
   @Metric("Disk utilization % on good log dirs")
       MutableGaugeInt goodLogDirsDiskUtilizationPerc;
 
+  private JvmMetrics jvmMetrics = null;
 
   private long allocatedMB;
   private long availableMB;
+
+  public NodeManagerMetrics(JvmMetrics jvmMetrics) {
+    this.jvmMetrics = jvmMetrics;
+  }
 
   public static NodeManagerMetrics create() {
     return create(DefaultMetricsSystem.instance());
   }
 
   static NodeManagerMetrics create(MetricsSystem ms) {
-    JvmMetrics.create("NodeManager", null, ms);
-    return ms.register(new NodeManagerMetrics());
+    JvmMetrics jm = JvmMetrics.create("NodeManager", null, ms);
+    return ms.register(new NodeManagerMetrics(jm));
+  }
+
+  public JvmMetrics getJvmMetrics() {
+    return jvmMetrics;
   }
 
   // Potential instrumentation interface methods

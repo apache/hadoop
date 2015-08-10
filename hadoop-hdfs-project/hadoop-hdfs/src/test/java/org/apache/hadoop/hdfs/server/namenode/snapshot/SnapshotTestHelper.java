@@ -44,7 +44,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
@@ -177,7 +177,7 @@ public class SnapshotTestHelper {
    * Specific information for different types of INode: 
    * {@link INodeDirectory}:childrenSize 
    * {@link INodeFile}: fileSize, block list. Check {@link BlockInfo#toString()}
-   * and {@link BlockInfoUnderConstruction#toString()} for detailed information.
+   * and {@link BlockInfoContiguousUnderConstruction#toString()} for detailed information.
    * {@link FileWithSnapshot}: next link
    * </pre>
    * @see INode#dumpTreeRecursively()

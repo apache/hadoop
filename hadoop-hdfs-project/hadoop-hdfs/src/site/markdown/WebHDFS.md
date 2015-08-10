@@ -1002,7 +1002,7 @@ When an operation fails, the server may throw an exception. The JSON schema of e
 | `SecurityException ` | `401 Unauthorized ` |
 | `IOException ` | `403 Forbidden ` |
 | `FileNotFoundException ` | `404 Not Found ` |
-| `RumtimeException ` | `500 Internal Server Error` |
+| `RuntimeException ` | `500 Internal Server Error` |
 
 Below are examples of exception responses.
 
