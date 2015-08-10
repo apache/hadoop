@@ -165,8 +165,8 @@ function github_write_comment
 
   echo "{\"body\":\"" > "${PATCH_DIR}/ghcomment.$$"
   sed -e 's,\\,\\\\,g' \
-      -e 's,\",\\\",g' \
-  | tr -d '\n'>> "${PATCH_DIR}/ghcomment.$$"
+      -e 's,\",\\\",g' "${PATCH_DIR}/ghcomment.$$" \
+    >> "${PATCH_DIR}/ghcomment.$$"
   echo "\"}" >> "${PATCH_DIR}/ghcomment.$$"
 
   if [[ -n ${GITHUB_USER}
@@ -272,5 +272,5 @@ function github_finalreport
 
   printf "\n\nThis message was automatically generated.\n\n" >> "${commentfile}"
 
-  write_to_github "${commentfile}"
+  github_write_comment "${commentfile}"
 }
