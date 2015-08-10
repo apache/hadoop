@@ -30,6 +30,8 @@ BINDIR=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 STARTINGDIR=$(pwd)
 USER_PARAMS=("$@")
 GLOBALTIMER=$(date +"%s")
+#shellcheck disable=SC2034
+QATESTMODE=false
 
 # global arrays
 declare -a MAVEN_ARGS=("--batch-mode")
@@ -1177,6 +1179,7 @@ function find_changed_modules
   #shellcheck disable=SC2086,SC2116
   CHANGED_UNFILTERED_MODULES=$(echo ${CHANGED_UNFILTERED_MODULES})
 
+
   if [[ ${BUILDTOOL} = maven ]]; then
     # Filter out modules without code
     for module in ${builddirs}; do
@@ -1786,7 +1789,7 @@ function copytpbits
 
   # if we've already copied, then don't bother doing it again
   if [[ ${STARTDIR} == ${PATCH_DIR}/precommit ]]; then
-    hadoop_debug "Skipping copytpbits; already copied once"
+    yetus_debug "Skipping copytpbits; already copied once"
     return
   fi
 
@@ -2942,6 +2945,7 @@ function populate_test_table
 function check_unittests
 {
   local i
+  local testsys
   local test_logfile
   local result=0
   local -r savejavahome=${JAVA_HOME}
@@ -2949,6 +2953,9 @@ function check_unittests
   local jdk=""
   local jdkindex=0
   local statusjdk
+  local formatresult=0
+  local needlog
+  local unitlogs
 
   big_console_header "Running unit tests"
 
@@ -2976,7 +2983,7 @@ function check_unittests
     personality_modules patch unit
     case ${BUILDTOOL} in
       maven)
-        modules_workers patch unit clean install -fae
+        modules_workers patch unit clean test -fae
       ;;
       ant)
         modules_workers patch unit
@@ -3002,12 +3009,22 @@ function check_unittests
 
       pushd "${MODULE[${i}]}" >/dev/null
 
-      for j in ${TESTSYSTEMS}; do
-        if declare -f ${j}_process_tests; then
-          "${j}_process_tests" "${module}" "${test_logfile}"
-          ((results=results+$?))
+      needlog=0
+      for testsys in ${TESTFORMATS}; do
+        if declare -f ${testsys}_process_tests >/dev/null; then
+          yetus_debug "Calling ${testsys}_process_tests"
+          "${testsys}_process_tests" "${module}" "${test_logfile}" "${fn}"
+          formatresult=$?
+          ((results=results+formatresult))
+          if [[ "${formatresult}" != 0 ]]; then
+            needlog=1
+          fi
         fi
       done
+
+      if [[ ${needlog} == 1 ]]; then
+        unitlogs="${unitlogs} @@BASE@@/patch-unit-${fn}.txt"
+      fi
 
       popd >/dev/null
 
@@ -3017,9 +3034,20 @@ function check_unittests
   done
   JAVA_HOME=${savejavahome}
 
+  if [[ -n "${unitlogs}" ]]; then
+    add_footer_table "unit test logs" "${unitlogs}"
+  fi
+
   if [[ ${JENKINS} == true ]]; then
     add_footer_table "${statusjdk} Test Results" "${BUILD_URL}testReport/"
   fi
+
+  for testsys in ${TESTFORMATS}; do
+    if declare -f ${testsys}_finalize_results >/dev/null; then
+      yetus_debug "Calling ${testsys}_finalize_results"
+      "${testsys}_finalize_results" "${statusjdk}"
+    fi
+  done
 
   if [[ ${result} -gt 0 ]]; then
     return 1
