@@ -169,16 +169,17 @@ function github_write_comment
   fi
 
   echo "{\"body\":\"" > "${PATCH_DIR}/ghcomment.$$"
-  sed -e 's,\\,\\\\,g' \
-      -e 's,\",\\\",g' "${PATCH_DIR}/ghcomment.$$" \
-    >> "${PATCH_DIR}/ghcomment.$$"
+  ${SED} -e 's,\\,\\\\,g' \
+      -e 's,\",\\\",g' \
+      -e 's,$,\\r\\n,g' "${commentfile}" \
+  | tr -d '\n'>> "${PATCH_DIR}/ghcomment.$$"
   echo "\"}" >> "${PATCH_DIR}/ghcomment.$$"
 
   if [[ -n ${GITHUB_USER}
      && -n ${GITHUB_PASSWD} ]]; then
-    githubauth="-u \"${GITHUB_USER}:${GITHUB_PASSWD}\""
+    githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
   elif [[ -n ${GITHUB_TOKEN} ]]; then
-    githubauth="-H \"Authorization: token ${GITHUB_TOKEN}\""
+    githubauth="Authorization: token ${GITHUB_TOKEN}"
   else
     return 0
   fi
@@ -186,14 +187,14 @@ function github_write_comment
   ${CURL} -X POST \
        -H "Accept: application/json" \
        -H "Content-Type: application/json" \
-       ${githubauth} \
+       -H "${githubauth}" \
        -d @"${PATCH_DIR}/ghcomment.$$" \
        --silent --location \
          "${GITHUB_API_URL}/repos/${GITHUB_REPO}/issues/${ISSUE}/comments" \
         >/dev/null
 
   retval=$?
-  #rm "${PATCH_DIR}/ghcomment.$$"
+  rm "${PATCH_DIR}/ghcomment.$$"
   return ${retval}
 }
 

@@ -167,7 +167,7 @@ function jira_write_comment
      && -n ${JIRA_USER} ]]; then
 
     echo "{\"body\":\"" > "${PATCH_DIR}/jiracomment.$$"
-    sed -e 's,\\,\\\\,g' \
+    ${SED} -e 's,\\,\\\\,g' \
         -e 's,\",\\\",g' \
         -e 's,$,\\r\\n,g' "${commentfile}" \
     | tr -d '\n'>> "${PATCH_DIR}/jiracomment.$$"
