@@ -279,7 +279,7 @@ function locate_patch
       fi
     fi
     if [[ -z "${PATCH_FILE}" ]]; then
-      ${CURL} -q --location -O "${PATCH_DIR}/patch" "${PATCHURL}"
+      ${CURL} -q --location --output "${PATCH_DIR}/patch" "${PATCHURL}"
       if [[ $? != 0 ]];then
         yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
         cleanup_and_exit 1
