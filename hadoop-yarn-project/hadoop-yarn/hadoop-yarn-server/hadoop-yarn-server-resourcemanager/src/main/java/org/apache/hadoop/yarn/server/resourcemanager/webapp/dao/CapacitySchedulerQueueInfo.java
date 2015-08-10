@@ -57,6 +57,9 @@ public class CapacitySchedulerQueueInfo {
   protected ResourceInfo resourcesUsed;
   private boolean hideReservationQueues = false;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
+  protected long allocatedContainers;
+  protected long reservedContainers;
+  protected long pendingContainers;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -81,6 +84,9 @@ public class CapacitySchedulerQueueInfo {
     absoluteUsedCapacity =
         cap(qCapacities.getAbsoluteUsedCapacity(nodeLabel), 0f, 1f) * 100;
     numApplications = q.getNumApplications();
+    allocatedContainers = q.getMetrics().getAllocatedContainers();
+    pendingContainers = q.getMetrics().getPendingContainers();
+    reservedContainers = q.getMetrics().getReservedContainers();
     queueName = q.getQueueName();
     state = q.getState();
     resourcesUsed = new ResourceInfo(queueResourceUsage.getUsed(nodeLabel));
@@ -122,6 +128,18 @@ public class CapacitySchedulerQueueInfo {
 
   public int getNumApplications() {
     return numApplications;
+  }
+
+  public long getAllocatedContainers() {
+    return allocatedContainers;
+  }
+
+  public long getReservedContainers() {
+    return reservedContainers;
+  }
+
+  public long getPendingContainers() {
+    return pendingContainers;
   }
 
   public String getQueueName() {

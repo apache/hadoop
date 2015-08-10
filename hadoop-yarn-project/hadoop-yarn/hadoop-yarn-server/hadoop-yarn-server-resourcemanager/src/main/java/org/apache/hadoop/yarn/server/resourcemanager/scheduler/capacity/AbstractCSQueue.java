@@ -323,6 +323,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
     stats.setPendingVCores(getMetrics().getPendingVirtualCores());
     stats.setReservedVCores(getMetrics().getReservedVirtualCores());
+    stats.setPendingContainers(getMetrics().getPendingContainers());
+    stats.setAllocatedContainers(getMetrics().getAllocatedContainers());
+    stats.setReservedContainers(getMetrics().getReservedContainers());
     return stats;
   }
   

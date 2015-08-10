@@ -309,16 +309,20 @@ public class MockAM {
   public ApplicationAttemptId getApplicationAttemptId() {
     return this.attemptId;
   }
-  
+
   public List<Container> allocateAndWaitForContainers(int nContainer,
       int memory, MockNM nm) throws Exception {
+    return allocateAndWaitForContainers("ANY", nContainer, memory, nm);
+  }
+
+  public List<Container> allocateAndWaitForContainers(String host,
+      int nContainer, int memory, MockNM nm) throws Exception {
     // AM request for containers
-    allocate("ANY", memory, nContainer, null);
+    allocate(host, memory, nContainer, null);
     // kick the scheduler
     nm.nodeHeartbeat(true);
-    List<Container> conts =
-        allocate(new ArrayList<ResourceRequest>(), null)
-            .getAllocatedContainers();
+    List<Container> conts = allocate(new ArrayList<ResourceRequest>(), null)
+        .getAllocatedContainers();
     while (conts.size() < nContainer) {
       nm.nodeHeartbeat(true);
       conts.addAll(allocate(new ArrayList<ResourceRequest>(),

@@ -61,7 +61,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.commons.logging.Log;
@@ -86,6 +88,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -114,6 +117,7 @@ import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -2386,7 +2390,31 @@ public class MiniDFSCluster {
 
     client.close();
   }
-  
+
+  /** Wait until the given namenode gets first block reports from all the datanodes */
+  public void waitFirstBRCompleted(int nnIndex, int timeout) throws
+      IOException, TimeoutException, InterruptedException {
+    if (namenodes.size() == 0 || getNN(nnIndex) == null || getNN(nnIndex).nameNode == null) {
+      return;
+    }
+
+    final FSNamesystem ns = getNamesystem(nnIndex);
+    final DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<DatanodeDescriptor> nodes = dm.getDatanodeListForReport
+            (DatanodeReportType.LIVE);
+        for (DatanodeDescriptor node : nodes) {
+          if (!node.checkBlockReportReceived()) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }, 100, timeout);
+  }
+
   /**
    * Wait until the cluster is active and running.
    */

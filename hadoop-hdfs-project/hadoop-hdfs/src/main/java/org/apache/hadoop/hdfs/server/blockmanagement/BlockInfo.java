@@ -51,7 +51,7 @@ public abstract class  BlockInfo extends Block
    * per replica is 42 bytes (LinkedList#Entry object per replica) versus 16
    * bytes using the triplets.
    */
-  Object[] triplets;
+  protected Object[] triplets;
 
   /**
    * Construct an entry for blocksmap
@@ -172,23 +172,19 @@ public abstract class  BlockInfo extends Block
   public abstract int numNodes();
 
   /**
-   * Add a {@link DatanodeStorageInfo} location for a block
-   * @param storage The storage to add
-   * @param reportedBlock The block reported from the datanode. This is only
-   *                      used by erasure coded blocks, this block's id contains
-   *                      information indicating the index of the block in the
-   *                      corresponding block group.
+   * Add a {@link DatanodeStorageInfo} location for a block.
    */
-  abstract boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock);
+  abstract boolean addStorage(DatanodeStorageInfo storage);
 
   /**
    * Remove {@link DatanodeStorageInfo} location for a block
    */
   abstract boolean removeStorage(DatanodeStorageInfo storage);
 
+
   /**
    * Replace the current BlockInfo with the new one in corresponding
-   * DatanodeStorageInfo's linked list.
+   * DatanodeStorageInfo's linked list
    */
   abstract void replaceBlock(BlockInfo newBlock);
 
@@ -299,7 +295,7 @@ public abstract class  BlockInfo extends Block
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted
-   * to {@link BlockInfoUnderConstruction}.
+   * to {@link BlockInfoContiguousUnderConstruction}.
    * @return {@link BlockUCState#COMPLETE}
    */
   public BlockUCState getBlockUCState() {
@@ -316,28 +312,26 @@ public abstract class  BlockInfo extends Block
   }
 
   /**
-   * Convert a block to an under construction block.
+   * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoContiguousUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
     if(isComplete()) {
-      return convertCompleteBlockToUC(s, targets);
+      BlockInfoContiguousUnderConstruction ucBlock =
+          new BlockInfoContiguousUnderConstruction(this,
+          getBlockCollection().getPreferredBlockReplication(), s, targets);
+      ucBlock.setBlockCollection(getBlockCollection());
+      return ucBlock;
     }
     // the block is already under construction
-    BlockInfoUnderConstruction ucBlock =
-        (BlockInfoUnderConstruction)this;
+    BlockInfoContiguousUnderConstruction ucBlock =
+        (BlockInfoContiguousUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
     ucBlock.setBlockCollection(getBlockCollection());
     return ucBlock;
   }
-
-  /**
-   * Convert a complete block to an under construction block.
-   */
-  abstract BlockInfoUnderConstruction convertCompleteBlockToUC(
-      BlockUCState s, DatanodeStorageInfo[] targets);
 
   @Override
   public int hashCode() {

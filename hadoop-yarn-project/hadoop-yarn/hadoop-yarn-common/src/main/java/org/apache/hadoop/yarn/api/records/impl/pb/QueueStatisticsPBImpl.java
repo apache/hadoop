@@ -254,4 +254,40 @@ public class QueueStatisticsPBImpl extends QueueStatistics {
     maybeInitBuilder();
     builder.setReservedVCores(reservedVCores);
   }
+
+  @Override
+  public long getPendingContainers() {
+    QueueStatisticsProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasPendingContainers()) ? p.getPendingContainers() : -1;
+  }
+
+  @Override
+  public void setPendingContainers(long pendingContainers) {
+    maybeInitBuilder();
+    builder.setPendingContainers(pendingContainers);
+  }
+
+  @Override
+  public long getAllocatedContainers() {
+    QueueStatisticsProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasAllocatedContainers()) ? p.getAllocatedContainers() : -1;
+  }
+
+  @Override
+  public void setAllocatedContainers(long allocatedContainers) {
+    maybeInitBuilder();
+    builder.setAllocatedContainers(allocatedContainers);
+  }
+
+  @Override
+  public long getReservedContainers() {
+    QueueStatisticsProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasReservedContainers()) ? p.getReservedContainers() : -1;
+  }
+
+  @Override
+  public void setReservedContainers(long reservedContainers) {
+    maybeInitBuilder();
+    builder.setReservedContainers(reservedContainers);
+  }
 }

@@ -635,9 +635,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-7923. The DataNodes should rate-limit their full block reports by
     asking the NN on heartbeat messages (cmccabe)
 
-    HDFS-8499. Refactor BlockInfo class hierarchy with static helper class.
-    (Zhe Zhang via wang)
-
     HDFS-8540.  Mover should exit with NO_MOVE_BLOCK if no block can be moved.
     (surendra singh lilhore via szetszwo)
 
@@ -688,9 +685,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8651. Make hadoop-hdfs-project Native code -Wall-clean (Alan Burlison
     via Colin P. McCabe)
-
-    HDFS-8623. Refactor NameNode handling of invalid, corrupt, and under-recovery
-    blocks. (Zhe Zhang via jing9)
 
     HDFS-8653. Code cleanup for DatanodeManager, DatanodeDescriptor and
     DatanodeStorageInfo. (Zhe Zhang via wang)
@@ -769,6 +763,14 @@ Release 2.8.0 - UNRELEASED
     not local. (Arpit Agarwal)
 
     HDFS-6860. BlockStateChange logs are too noisy. (Chang Li and xyao via xyao)
+
+    HDFS-8815. DFS getStoragePolicy implementation using single RPC call
+    (Surendra Singh Lilhore via vinayakumarb)
+
+    HDFS-8856. Make LeaseManager#countPath O(1). (Arpit Agarwal)
+
+    HDFS-8772. Fix TestStandbyIsHot#testDatanodeRestarts which occasionally fails.
+    (Walter Su via wang)
 
   OPTIMIZATIONS
 
@@ -1115,6 +1117,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8844. TestHDFSCLI does not cleanup the test directory (Masatake
     Iwasaki via Colin P. McCabe)
+
+    HDFS-8866. Typo in docs: Rumtime -> Runtime. (Gabor Liptak via jghoman)
 
 Release 2.7.2 - UNRELEASED
 

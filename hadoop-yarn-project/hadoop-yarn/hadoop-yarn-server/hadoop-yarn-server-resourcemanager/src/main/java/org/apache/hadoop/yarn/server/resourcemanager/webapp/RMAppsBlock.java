@@ -56,7 +56,8 @@ public class RMAppsBlock extends AppsBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".starttime", "StartTime")
+          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".starttime", "StartTime")
           .th(".finishtime", "FinishTime").th(".state", "State")
           .th(".finalstatus", "FinalStatus")
           .th(".runningcontainer", "Running Containers")
@@ -106,7 +107,9 @@ public class RMAppsBlock extends AppsBlock {
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
-            .getQueue()))).append("\",\"").append(app.getStartedTime())
+             .getQueue()))).append("\",\"").append(String
+             .valueOf(app.getPriority()))
+        .append("\",\"").append(app.getStartedTime())
         .append("\",\"").append(app.getFinishedTime())
         .append("\",\"")
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())

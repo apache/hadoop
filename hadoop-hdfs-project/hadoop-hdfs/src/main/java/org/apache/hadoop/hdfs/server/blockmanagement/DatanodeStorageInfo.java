@@ -24,7 +24,6 @@ import java.util.List;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
@@ -234,7 +233,7 @@ public class DatanodeStorageInfo {
     return blockPoolUsed;
   }
 
-  public AddBlockResult addBlock(BlockInfo b, Block reportedBlock) {
+  public AddBlockResult addBlock(BlockInfo b) {
     // First check whether the block belongs to a different storage
     // on the same DN.
     AddBlockResult result = AddBlockResult.ADDED;
@@ -253,18 +252,10 @@ public class DatanodeStorageInfo {
     }
 
     // add to the head of the data-node list
-    b.addStorage(this, reportedBlock);
-    insertToList(b);
-    return result;
-  }
-
-  AddBlockResult addBlock(BlockInfo b) {
-    return addBlock(b, b);
-  }
-
-  public void insertToList(BlockInfo b) {
+    b.addStorage(this);
     blockList = b.listInsert(blockList, this);
     numBlocks++;
+    return result;
   }
 
   public boolean removeBlock(BlockInfo b) {
