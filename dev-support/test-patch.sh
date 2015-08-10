@@ -395,9 +395,10 @@ function finish_footer_table
 {
   local maxmem
 
+  # `sort | head` can cause a broken pipe error, but we can ignore it just like compute_gitdiff.
   # shellcheck disable=SC2016,SC2086
   maxmem=$(find "${PATCH_DIR}" -type f -exec ${AWK} 'match($0, /^\[INFO\] Final Memory: [0-9]+/)
-    { print substr($0, 22, RLENGTH-21) }' {} \; | sort -nr | head -n 1)
+    { print substr($0, 22, RLENGTH-21) }' {} \; | sort -nr 2>/dev/null | head -n 1)
 
   if [[ -n ${maxmem} ]]; then
     add_footer_table "Max memory used" "${maxmem}MB"
