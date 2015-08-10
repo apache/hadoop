@@ -63,6 +63,7 @@ function jira_determine_issue
 
   if [[ ${maybeissue} =~ ${JIRA_ISSUE_RE} ]]; then
     ISSUE=${maybeissue}
+    JIRA_ISSUE=${maybeissue}
     add_footer_table "JIRA Issue" "${ISSUE}"
     return 0
   fi
@@ -208,6 +209,10 @@ function jira_finalreport
 
   if [[ ${JENKINS} != "true"
       || ${OFFLINE} == true ]] ; then
+    return 0
+  fi
+
+  if [[ -z "${JIRA_ISSUE}" ]]; then
     return 0
   fi
 

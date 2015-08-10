@@ -22,7 +22,6 @@ GITHUB_REPO="apache/hadoop"
 GITHUB_PASSWD=""
 GITHUB_TOKEN=""
 GITHUB_USER=""
-GITHUB_COMMITID=""
 GITHUB_ISSUE=""
 
 function github_usage
@@ -100,12 +99,9 @@ function github_jira_bridge
 function github_determine_issue
 {
   declare input=$1
-  declare patchnamechunk
-  declare maybeissue
-
 
   if [[ ${input} =~ ^[0-9]+$
-    && -n ${GITHUB_REPO} ]]; then
+     && -n ${GITHUB_REPO} ]]; then
     ISSUE=${input}
     return 0
   fi
@@ -146,7 +142,6 @@ function github_locate_patch
   # base->sha?
 
   GITHUB_ISSUE=${input}
-  GITHUB_COMMITID=""
 
   add_footer_table "GITHUB PR" "${GITHUB_URL}/${GITHUB_REPO}/pull/${input}"
 
@@ -186,36 +181,16 @@ function github_write_comment
   ${CURL} -X POST \
        -H "Accept: application/json" \
        -H "Content-Type: application/json" \
-       -u "${GITHUB_USER}:${GITHUB_PASSWD}" \
+       ${githubauth} \
        -d @"${PATCH_DIR}/jiracomment.$$" \
        --silent --location \
          "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
         >/dev/null
 
-    retval=$?
-    rm "${PATCH_DIR}/jiracomment.$$"
-  fi
+  retval=$?
+  rm "${PATCH_DIR}/jiracomment.$$"
   return ${retval}
 }
-
-
-function github_write_comment
-{
-  declare -r commentfile=${1}
-  shift
-
-  declare retval=1
-
-  if [[ "${OFFLINE}" == true ]]; then
-    return 0
-  fi
-
-
-
-  yetus_debug "${GITHUB_USER} ${GITHUB_PASSWD} ${GITHUB_TOKEN} ${GITHUB_COMMITID}"
-  return ${retval}
-}
-
 
 ## @description  Print out the finished details to the Github PR
 ## @audience     private
