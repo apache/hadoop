@@ -235,6 +235,7 @@ function locate_patch
     else
       ${CURL} --silent \
               --output "${PATCH_DIR}/jira" \
+              --location \
              "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
       case $? in
         0)
@@ -278,7 +279,7 @@ function locate_patch
       fi
     fi
     if [[ -z "${PATCH_FILE}" ]]; then
-      ${CURL} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
+      ${CURL} -q --location -O "${PATCH_DIR}/patch" "${PATCHURL}"
       if [[ $? != 0 ]];then
         yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
         cleanup_and_exit 1
