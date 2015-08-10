@@ -16,7 +16,8 @@
 
 add_bugsystem github
 
-GITHUB_URL="https://github.com"
+GITHUB_BASE_URL="https://github.com"
+GITHUB_API_URL="https://api.github.com"
 GITHUB_REPO="apache/hadoop"
 
 GITHUB_PASSWD=""
@@ -27,7 +28,8 @@ GITHUB_ISSUE=""
 function github_usage
 {
   echo "GITHUB Options:"
-  echo "--github-base-url=<url>  The URL of the JIRA server (default:'${GITHUB_URL}')"
+  echo "--github-api-url=<url>   The URL of the API for github (default: '${GITHUB_API_URL}')"
+  echo "--github-base-url=<url>  The URL of the github server (default:'${GITHUB_BASE_URL}')"
   echo "--github-password=<pw>   Github password"
   echo "--github-repo=<repo>     github repo to use (default:'${GITHUB_REPO}')"
   echo "--github-token=<token>   The token to use to write to github"
@@ -41,8 +43,11 @@ function github_parse_args
 
   for i in "$@"; do
     case ${i} in
+      --github-api-url=*)
+        GITHUB_API_URL=${i#*=}
+      ;;
       --github-base-url=*)
-        GITHUB_URL=${i#*=}
+        GITHUB_BASE_URL=${i#*=}
       ;;
       --github-repo=*)
         GITHUB_REPO=${i#*=}
@@ -81,7 +86,7 @@ function github_jira_bridge
   ((pos2=count-3))
   ((pos1=pos2))
 
-  GITHUB_URL=$(echo "${urlfromjira}" | cut -f1-${pos2} -d/)
+  GITHUB_BASE_URL=$(echo "${urlfromjira}" | cut -f1-${pos2} -d/)
 
   ((pos1=pos1+1))
   ((pos2=pos1+1))
@@ -124,7 +129,7 @@ function github_locate_patch
     return 1
   fi
 
-  PATCHURL="${GITHUB_URL}/${GITHUB_REPO}/pull/${input}.patch"
+  PATCHURL="${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}.patch"
   echo "GITHUB PR #${input} is being downloaded at $(date) from"
   echo "${PATCHURL}"
 
@@ -143,7 +148,7 @@ function github_locate_patch
 
   GITHUB_ISSUE=${input}
 
-  add_footer_table "GITHUB PR" "${GITHUB_URL}/${GITHUB_REPO}/pull/${input}"
+  add_footer_table "GITHUB PR" "${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}"
 
   return 0
 }
@@ -182,13 +187,13 @@ function github_write_comment
        -H "Accept: application/json" \
        -H "Content-Type: application/json" \
        ${githubauth} \
-       -d @"${PATCH_DIR}/jiracomment.$$" \
+       -d @"${PATCH_DIR}/ghcomment.$$" \
        --silent --location \
-         "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
+         "${GITHUB_API_URL}/repos/${GITHUB_REPO}/issues/${ISSUE}/comments" \
         >/dev/null
 
   retval=$?
-  rm "${PATCH_DIR}/jiracomment.$$"
+  #rm "${PATCH_DIR}/ghcomment.$$"
   return ${retval}
 }
 
