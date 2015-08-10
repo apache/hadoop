@@ -434,7 +434,7 @@ def main():
         elif options.usetoday:
             reldate = strftime("%Y-%m-%d", gmtime())
         else:
-            reldate = "Unreleased"
+            reldate = "Unreleased (as of %s)" % strftime("%Y-%m-%d", gmtime())
 
         if not os.path.exists(vstr):
             os.mkdir(vstr)
