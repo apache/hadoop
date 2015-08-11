@@ -99,7 +99,7 @@ function setup_defaults
   RESETREPO=false
   ISSUE=""
   TIMER=$(date +"%s")
-  PATCHURL=""
+  PATCH_URL=""
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
   TESTFORMATS=""
@@ -278,8 +278,10 @@ function add_vote_table
   fi
 
   if [[ -z ${value} ]]; then
+    # shellcehck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="|  | ${subsystem} | | ${*:-} |"
   else
+    # shellcehck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| ${value} | ${subsystem} | ${calctime} | $* |"
   fi
   ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1))

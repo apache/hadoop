@@ -297,7 +297,7 @@ function jira_finalreport
 
   rm "${commentfile}" 2>/dev/null
 
-  if [[ ${JENKINS} != "true"
+  if [[ ${JENKINS} == "false"
       || ${OFFLINE} == true ]] ; then
     return 0
   fi

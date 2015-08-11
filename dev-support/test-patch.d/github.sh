@@ -163,7 +163,7 @@ function github_determine_issue
     fi
   fi
 
-  if [[ -n ${ISSUE} ]]; then
+  if [[ -n ${GITHUB_ISSUE} ]]; then
     return 0
   fi
 
