@@ -18,33 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineReaderUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -58,6 +31,40 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineReaderUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+
+import com.google.common.base.Preconditions;
+
 public class HBaseTimelineReaderImpl
     extends AbstractService implements TimelineReader {
 
@@ -70,6 +77,7 @@ public class HBaseTimelineReaderImpl
   private Connection conn;
   private EntityTable entityTable;
   private AppToFlowTable appToFlowTable;
+  private ApplicationTable applicationTable;
 
   public HBaseTimelineReaderImpl() {
     super(HBaseTimelineReaderImpl.class.getName());
@@ -82,6 +90,7 @@ public class HBaseTimelineReaderImpl
     conn = ConnectionFactory.createConnection(hbaseConf);
     entityTable = new EntityTable();
     appToFlowTable = new AppToFlowTable();
+    applicationTable = new ApplicationTable();
   }
 
   @Override
@@ -109,14 +118,24 @@ public class HBaseTimelineReaderImpl
       fieldsToRetrieve = EnumSet.noneOf(Field.class);
     }
 
-    byte[] rowKey = EntityRowKey.getRowKey(
-        clusterId, userId, flowId, flowRunId, appId, entityType, entityId);
+    boolean isApplication = isApplicationEntity(entityType);
+    byte[] rowKey = isApplication ?
+        ApplicationRowKey.getRowKey(clusterId, userId, flowId, flowRunId,
+            appId) :
+        EntityRowKey.getRowKey(clusterId, userId, flowId, flowRunId, appId,
+            entityType, entityId);
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
-    return parseEntity(
-        entityTable.getResult(hbaseConf, conn, get), fieldsToRetrieve,
+    Result result = isApplication ?
+        applicationTable.getResult(hbaseConf, conn, get) :
+        entityTable.getResult(hbaseConf, conn, get);
+    return parseEntity(result, fieldsToRetrieve,
         false, DEFAULT_BEGIN_TIME, DEFAULT_END_TIME, false, DEFAULT_BEGIN_TIME,
-        DEFAULT_END_TIME, null, null, null, null, null, null);
+        DEFAULT_END_TIME, null, null, null, null, null, null, isApplication);
+  }
+
+  private static boolean isApplicationEntity(String entityType) {
+    return TimelineEntityType.YARN_APPLICATION.toString().equals(entityType);
   }
 
   @Override
@@ -155,26 +174,46 @@ public class HBaseTimelineReaderImpl
     }
 
     NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    // Scan through part of the table to find the entities belong to one app and
-    // one type
-    Scan scan = new Scan();
-    scan.setRowPrefixFilter(EntityRowKey.getRowKeyPrefix(
-        clusterId, userId, flowId, flowRunId, appId, entityType));
-    scan.setMaxVersions(Integer.MAX_VALUE);
-    ResultScanner scanner = entityTable.getResultScanner(hbaseConf, conn, scan);
-    for (Result result : scanner) {
+    boolean isApplication = isApplicationEntity(entityType);
+    if (isApplication) {
+      // If getEntities() is called for an application, there can be at most
+      // one entity. If the entity passes the filter, it is returned. Otherwise,
+      // an empty set is returned.
+      byte[] rowKey = ApplicationRowKey.getRowKey(clusterId, userId, flowId,
+          flowRunId, appId);
+      Get get = new Get(rowKey);
+      get.setMaxVersions(Integer.MAX_VALUE);
+      Result result = applicationTable.getResult(hbaseConf, conn, get);
       TimelineEntity entity = parseEntity(result, fieldsToRetrieve,
-          true, createdTimeBegin, createdTimeEnd,
-          true, modifiedTimeBegin, modifiedTimeEnd,
-          isRelatedTo, relatesTo, infoFilters, configFilters, eventFilters,
-          metricFilters);
-      if (entity == null) {
-        continue;
+          true, createdTimeBegin, createdTimeEnd, true, modifiedTimeBegin,
+          modifiedTimeEnd, isRelatedTo, relatesTo, infoFilters, configFilters,
+          eventFilters, metricFilters, isApplication);
+      if (entity != null) {
+        entities.add(entity);
       }
-      if (entities.size() > limit) {
-        entities.pollLast();
+    } else {
+      // Scan through part of the table to find the entities belong to one app
+      // and one type
+      Scan scan = new Scan();
+      scan.setRowPrefixFilter(EntityRowKey.getRowKeyPrefix(
+          clusterId, userId, flowId, flowRunId, appId, entityType));
+      scan.setMaxVersions(Integer.MAX_VALUE);
+      ResultScanner scanner =
+          entityTable.getResultScanner(hbaseConf, conn, scan);
+      for (Result result : scanner) {
+        TimelineEntity entity = parseEntity(result, fieldsToRetrieve,
+            true, createdTimeBegin, createdTimeEnd,
+            true, modifiedTimeBegin, modifiedTimeEnd,
+            isRelatedTo, relatesTo, infoFilters, configFilters, eventFilters,
+            metricFilters, isApplication);
+        if (entity == null) {
+          continue;
+        }
+        if (entities.size() > limit) {
+          entities.pollLast();
+        }
+        entities.add(entity);
       }
-      entities.add(entity);
     }
     return entities;
   }
@@ -221,26 +260,37 @@ public class HBaseTimelineReaderImpl
       boolean checkModifiedTime, long modifiedTimeBegin, long modifiedTimeEnd,
       Map<String, Set<String>> isRelatedTo, Map<String, Set<String>> relatesTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
-      Set<String> eventFilters, Set<String> metricFilters)
+      Set<String> eventFilters, Set<String> metricFilters,
+      boolean isApplication)
           throws IOException {
     if (result == null || result.isEmpty()) {
       return null;
     }
     TimelineEntity entity = new TimelineEntity();
-    entity.setType(EntityColumn.TYPE.readResult(result).toString());
-    entity.setId(EntityColumn.ID.readResult(result).toString());
+    String entityType = isApplication ?
+        TimelineEntityType.YARN_APPLICATION.toString() :
+        EntityColumn.TYPE.readResult(result).toString();
+    entity.setType(entityType);
+    String entityId = isApplication ?
+        ApplicationColumn.ID.readResult(result).toString() :
+        EntityColumn.ID.readResult(result).toString();
+    entity.setId(entityId);
 
     // fetch created time
-    entity.setCreatedTime(
-        ((Number) EntityColumn.CREATED_TIME.readResult(result)).longValue());
+    Number createdTime = isApplication ?
+        (Number)ApplicationColumn.CREATED_TIME.readResult(result) :
+        (Number)EntityColumn.CREATED_TIME.readResult(result);
+    entity.setCreatedTime(createdTime.longValue());
     if (checkCreatedTime && (entity.getCreatedTime() < createdTimeBegin ||
         entity.getCreatedTime() > createdTimeEnd)) {
       return null;
     }
 
     // fetch modified time
-    entity.setCreatedTime(
-        ((Number) EntityColumn.MODIFIED_TIME.readResult(result)).longValue());
+    Number modifiedTime = isApplication ?
+        (Number)ApplicationColumn.MODIFIED_TIME.readResult(result) :
+        (Number)EntityColumn.MODIFIED_TIME.readResult(result);
+    entity.setModifiedTime(modifiedTime.longValue());
     if (checkModifiedTime && (entity.getModifiedTime() < modifiedTimeBegin ||
         entity.getModifiedTime() > modifiedTimeEnd)) {
       return null;
@@ -250,7 +300,13 @@ public class HBaseTimelineReaderImpl
     boolean checkIsRelatedTo = isRelatedTo != null && isRelatedTo.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.IS_RELATED_TO) || checkIsRelatedTo) {
-      readRelationship(entity, result, EntityColumnPrefix.IS_RELATED_TO);
+      if (isApplication) {
+        readRelationship(entity, result, ApplicationColumnPrefix.IS_RELATED_TO,
+            true);
+      } else {
+        readRelationship(entity, result, EntityColumnPrefix.IS_RELATED_TO,
+            true);
+      }
       if (checkIsRelatedTo && !TimelineReaderUtils.matchRelations(
           entity.getIsRelatedToEntities(), isRelatedTo)) {
         return null;
@@ -265,7 +321,12 @@ public class HBaseTimelineReaderImpl
     boolean checkRelatesTo = relatesTo != null && relatesTo.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.RELATES_TO) || checkRelatesTo) {
-      readRelationship(entity, result, EntityColumnPrefix.RELATES_TO);
+      if (isApplication) {
+        readRelationship(entity, result, ApplicationColumnPrefix.RELATES_TO,
+            false);
+      } else {
+        readRelationship(entity, result, EntityColumnPrefix.RELATES_TO, false);
+      }
       if (checkRelatesTo && !TimelineReaderUtils.matchRelations(
           entity.getRelatesToEntities(), relatesTo)) {
         return null;
@@ -280,7 +341,11 @@ public class HBaseTimelineReaderImpl
     boolean checkInfo = infoFilters != null && infoFilters.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.INFO) || checkInfo) {
-      readKeyValuePairs(entity, result, EntityColumnPrefix.INFO);
+      if (isApplication) {
+        readKeyValuePairs(entity, result, ApplicationColumnPrefix.INFO, false);
+      } else {
+        readKeyValuePairs(entity, result, EntityColumnPrefix.INFO, false);
+      }
       if (checkInfo &&
           !TimelineReaderUtils.matchFilters(entity.getInfo(), infoFilters)) {
         return null;
@@ -295,7 +360,11 @@ public class HBaseTimelineReaderImpl
     boolean checkConfigs = configFilters != null && configFilters.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.CONFIGS) || checkConfigs) {
-      readKeyValuePairs(entity, result, EntityColumnPrefix.CONFIG);
+      if (isApplication) {
+        readKeyValuePairs(entity, result, ApplicationColumnPrefix.CONFIG, true);
+      } else {
+        readKeyValuePairs(entity, result, EntityColumnPrefix.CONFIG, true);
+      }
       if (checkConfigs && !TimelineReaderUtils.matchFilters(
           entity.getConfigs(), configFilters)) {
         return null;
@@ -310,7 +379,7 @@ public class HBaseTimelineReaderImpl
     boolean checkEvents = eventFilters != null && eventFilters.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.EVENTS) || checkEvents) {
-      readEvents(entity, result);
+      readEvents(entity, result, isApplication);
       if (checkEvents && !TimelineReaderUtils.matchEventFilters(
           entity.getEvents(), eventFilters)) {
         return null;
@@ -325,7 +394,7 @@ public class HBaseTimelineReaderImpl
     boolean checkMetrics = metricFilters != null && metricFilters.size() > 0;
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.METRICS) || checkMetrics) {
-      readMetrics(entity, result);
+      readMetrics(entity, result, isApplication);
       if (checkMetrics && !TimelineReaderUtils.matchMetricFilters(
           entity.getMetrics(), metricFilters)) {
         return null;
@@ -338,15 +407,15 @@ public class HBaseTimelineReaderImpl
     return entity;
   }
 
-  private static void readRelationship(
-      TimelineEntity entity, Result result, EntityColumnPrefix prefix)
-          throws IOException {
+  private static <T> void readRelationship(
+      TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
+      boolean isRelatedTo) throws IOException {
     // isRelatedTo and relatesTo are of type Map<String, Set<String>>
     Map<String, Object> columns = prefix.readResults(result);
     for (Map.Entry<String, Object> column : columns.entrySet()) {
       for (String id : Separator.VALUES.splitEncoded(
           column.getValue().toString())) {
-        if (prefix.equals(EntityColumnPrefix.IS_RELATED_TO)) {
+        if (isRelatedTo) {
           entity.addIsRelatedToEntity(column.getKey(), id);
         } else {
           entity.addRelatesToEntity(column.getKey(), id);
@@ -355,12 +424,12 @@ public class HBaseTimelineReaderImpl
     }
   }
 
-  private static void readKeyValuePairs(
-      TimelineEntity entity, Result result, EntityColumnPrefix prefix)
-          throws IOException {
+  private static <T> void readKeyValuePairs(
+      TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
+      boolean isConfig) throws IOException {
     // info and configuration are of type Map<String, Object or String>
     Map<String, Object> columns = prefix.readResults(result);
-    if (prefix.equals(EntityColumnPrefix.CONFIG)) {
+    if (isConfig) {
       for (Map.Entry<String, Object> column : columns.entrySet()) {
         entity.addConfig(column.getKey(), column.getKey().toString());
       }
@@ -369,10 +438,11 @@ public class HBaseTimelineReaderImpl
     }
   }
 
-  private static void readEvents(TimelineEntity entity, Result result)
-      throws IOException {
+  private static void readEvents(TimelineEntity entity, Result result,
+      boolean isApplication) throws IOException {
     Map<String, TimelineEvent> eventsMap = new HashMap<>();
-    Map<String, Object> eventsResult =
+    Map<String, Object> eventsResult = isApplication ?
+        ApplicationColumnPrefix.EVENT.readResults(result) :
         EntityColumnPrefix.EVENT.readResults(result);
     for (Map.Entry<String,Object> eventResult : eventsResult.entrySet()) {
       Collection<String> tokens =
@@ -405,10 +475,16 @@ public class HBaseTimelineReaderImpl
     entity.addEvents(eventsSet);
   }
 
-  private static void readMetrics(TimelineEntity entity, Result result)
-      throws IOException {
-    NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-        EntityColumnPrefix.METRIC.readResultsWithTimestamps(result);
+  private static void readMetrics(TimelineEntity entity, Result result,
+      boolean isApplication) throws IOException {
+    NavigableMap<String, NavigableMap<Long, Number>> metricsResult;
+    if (isApplication) {
+      metricsResult =
+          ApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result);
+    } else {
+      metricsResult =
+          EntityColumnPrefix.METRIC.readResultsWithTimestamps(result);
+    }
     for (Map.Entry<String, NavigableMap<Long, Number>> metricResult:
         metricsResult.entrySet()) {
       TimelineMetric metric = new TimelineMetric();

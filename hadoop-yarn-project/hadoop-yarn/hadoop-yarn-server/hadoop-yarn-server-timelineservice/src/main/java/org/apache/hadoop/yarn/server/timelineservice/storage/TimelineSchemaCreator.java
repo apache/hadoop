@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 
@@ -76,6 +77,12 @@ public class TimelineSchemaCreator {
     if (StringUtils.isNotBlank(appToflowTableName)) {
       hbaseConf.set(AppToFlowTable.TABLE_NAME_CONF_NAME, appToflowTableName);
     }
+    // Grab the applicationTableName argument
+    String applicationTableName = commandLine.getOptionValue("a");
+    if (StringUtils.isNotBlank(applicationTableName)) {
+      hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
+          applicationTableName);
+    }
     createAllTables(hbaseConf);
   }
 
@@ -103,6 +110,8 @@ public class TimelineSchemaCreator {
 
     o = new Option("a2f", "appToflowTableName", true, "app to flow table name");
     o.setArgName("appToflowTableName");
+    o = new Option("a", "applicationTableName", true, "application table name");
+    o.setArgName("applicationTableName");
     o.setRequired(false);
     options.addOption(o);
 
@@ -132,6 +141,7 @@ public class TimelineSchemaCreator {
       }
       new EntityTable().createTable(admin, hbaseConf);
       new AppToFlowTable().createTable(admin, hbaseConf);
+      new ApplicationTable().createTable(admin, hbaseConf);
     } finally {
       if (conn != null) {
         conn.close();
