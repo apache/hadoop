@@ -85,6 +85,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3049. [Storage Implementation] Implement storage reader interface to
     fetch raw data from HBase backend (Zhijie Shen via sjlee)
 
+    YARN-3906. Split the application table from the entity table. (Sangjin Lee 
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
