@@ -1561,7 +1561,7 @@ function locate_patch
 
   guess_patch_file "${PATCH_DIR}/patch"
   if [[ $? != 0 ]]; then
-    yetus_error "ERROR: ${PATCHURL} is not a patch file."
+    yetus_error "ERROR: Unsure how to process ${PATCH_OR_ISSUE}."
     cleanup_and_exit 1
   fi
 }

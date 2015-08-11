@@ -97,17 +97,17 @@ function github_breakup_url
   ((pos2=count-3))
   ((pos1=pos2))
 
-  GITHUB_BASE_URL=$(echo "${urlfromjira}" | cut -f1-${pos2} -d/)
+  GITHUB_BASE_URL=$(echo "${url}" | cut -f1-${pos2} -d/)
 
   ((pos1=pos1+1))
   ((pos2=pos1+1))
 
-  GITHUB_REPO=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/)
+  GITHUB_REPO=$(echo "${url}" | cut -f${pos1}-${pos2} -d/)
 
   ((pos1=pos2+2))
   unset pos2
 
-  GITHUB_ISSUE=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
+  GITHUB_ISSUE=$(echo "${url}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
 }
 
 function github_find_jira_title
@@ -116,7 +116,7 @@ function github_find_jira_title
   declare maybe
   declare retval
 
-  if [[ -f "${PATCH_DIR}/github-pull.json" ]]; then
+  if [[ ! -f "${PATCH_DIR}/github-pull.json" ]]; then
     return 1
   fi
 
@@ -151,7 +151,9 @@ function github_determine_issue
   if [[ ${input} =~ ^[0-9]+$
      && -n ${GITHUB_REPO} ]]; then
     ISSUE=${input}
-    return 0
+    if [[ -z ${GITHUB_ISSUE} ]]; then
+      GITHUB_ISSUE=${input}
+    fi
   fi
 
   if [[ ${GITHUB_BRIDGED} == false ]]; then
@@ -160,6 +162,11 @@ function github_determine_issue
       return 0
     fi
   fi
+
+  if [[ -n ${ISSUE} ]]; then
+    return 0
+  fi
+
   return 1
 }
 
@@ -199,8 +206,13 @@ function github_locate_patch
     return 1
   fi
 
+  if [[ ${input} =~ ^${GITHUB_BASE_URL}.*/pulls/[0-9]+$ ]]; then
+    github_breakup_url "${input}.patch"
+    input=${GITHUB_ISSUE}
+  fi
+
   if [[ ${input} =~ ^${GITHUB_BASE_URL}.*patch$ ]]; then
-    github_breakup_url "${GITHUB_BASE_URL}"
+    github_breakup_url "${input}"
     input=${GITHUB_ISSUE}
   fi
 

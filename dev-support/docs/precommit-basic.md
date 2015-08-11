@@ -119,6 +119,8 @@ will tell test-patch to use ant instead of maven to drive the project.
 
 # Providing Patch Files
 
+## JIRA
+
 It is a fairly common practice within the Apache community to use Apache's JIRA instance to store potential patches.  As a result, test-patch supports providing just a JIRA issue number.  test-patch will find the *last* attachment, download it, then process it.
 
 For example:
@@ -129,15 +131,47 @@ $ test-patch.sh (other options) HADOOP-9905
 
 ... will process the patch file associated with this JIRA issue.
 
-A new practice is to use a service such as GitHub and its Pull Request (PR) feature.  Luckily, test-patch supports URLs and many services like GitHub provide ways to provide unified diffs via URLs.
+If the Apache JIRA system is not in use, then override options may be provided on the command line (or via the Personality.  See the advanced guide.)
+
+```bash
+$ test-patch.sh --jira-issue-re='^PROJECT-[0-9]+$' --jira-base-url='https://example.com/jira' PROJECT-90
+```
+
+... will process the patch file attached to PROJECT-90 on the JIRA instance located on the example.com server.
+
+## GITHUB
+
+A new practice within the ASF is to use a service such as GitHub and its Pull Request (PR) feature.  test-patch supports many forms of providing PR support.
+
+```bash
+$ test-patch.sh --github-repo=apache/pig 99
+```
+
+or
+
+```bash
+$ test-patch.sh https://github.com/apache/pig/pulls/99
+```
+
+or
+
+```bash
+$ test-patch.sh https://github.com/apache/pig/pulls/99.patch
+```
+
+... will process PR #99 on the apache/pig repo.
+
+## Generic URLs
+
+Luckily, test-patch supports  provide ways to provide unified diffs via URLs.
 
 For example:
 
 ```bash
-$ test-patch.sh (other options) https://github.com/apache/flink/pull/773.patch
+$ test-patch.sh (other options) https://example.com/webserver/file.patch
 ```
 
-... will grab a unified diff of PR #773 and process it.
+... will download and process the file.patch from the example.com webserver.
 
 # Project-specific Capabilities
 
