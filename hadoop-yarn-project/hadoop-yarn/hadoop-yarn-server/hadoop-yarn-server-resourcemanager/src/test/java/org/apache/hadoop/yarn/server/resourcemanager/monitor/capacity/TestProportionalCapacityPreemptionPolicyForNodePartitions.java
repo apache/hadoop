@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1127,8 +1128,13 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
         when(parentQueue.getChildQueues()).thenReturn(children);
       } else {
         LeafQueue leafQueue = mock(LeafQueue.class);
-        final TreeSet<FiCaSchedulerApp> apps =
-            new TreeSet<>(CapacityScheduler.applicationComparator);
+        final TreeSet<FiCaSchedulerApp> apps = new TreeSet<>(
+            new Comparator<FiCaSchedulerApp>() {
+              @Override
+              public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
+                return a1.getApplicationId().compareTo(a2.getApplicationId());
+              }
+            });
         when(leafQueue.getApplications()).thenReturn(apps);
         OrderingPolicy<FiCaSchedulerApp> so = mock(OrderingPolicy.class);
         when(so.getPreemptionIterator()).thenAnswer(new Answer() {
