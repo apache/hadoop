@@ -150,6 +150,7 @@ function github_determine_issue
 
   if [[ ${input} =~ ^[0-9]+$
      && -n ${GITHUB_REPO} ]]; then
+    # shellcheck disable=SC2034
     ISSUE=${input}
     if [[ -z ${GITHUB_ISSUE} ]]; then
       GITHUB_ISSUE=${input}

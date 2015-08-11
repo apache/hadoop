@@ -99,7 +99,6 @@ function setup_defaults
   RESETREPO=false
   ISSUE=""
   TIMER=$(date +"%s")
-  PATCH_URL=""
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
   TESTFORMATS=""
