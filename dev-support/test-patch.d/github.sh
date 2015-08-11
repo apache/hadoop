@@ -301,7 +301,7 @@ function github_write_comment
        -H "${githubauth}" \
        -d @"${PATCH_DIR}/ghcomment.$$" \
        --silent --location \
-         "${GITHUB_API_URL}/repos/${GITHUB_REPO}/issues/${ISSUE}/comments" \
+         "${GITHUB_API_URL}/repos/${GITHUB_REPO}/issues/${GITHUB_ISSUE}/comments" \
         >/dev/null
 
   retval=$?
