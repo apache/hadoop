@@ -269,7 +269,7 @@ function jira_write_comment
          -u "${JIRA_USER}:${JIRA_PASSWD}" \
          -d @"${PATCH_DIR}/jiracomment.$$" \
          --silent --location \
-           "${JIRA_URL}/rest/api/2/issue/${ISSUE}/comment" \
+           "${JIRA_URL}/rest/api/2/issue/${JIRA_ISSUE}/comment" \
           >/dev/null
     retval=$?
     rm "${PATCH_DIR}/jiracomment.$$"
