@@ -1440,8 +1440,6 @@ function determine_issue
 
   yetus_debug "Determine issue"
 
-  ISSUE="Unknown"
-
   for bugsys in ${BUGSYSTEMS}; do
     if declare -f ${bugsys}_determine_issue >/dev/null; then
       "${bugsys}_determine_issue" "${PATCH_OR_ISSUE}"
