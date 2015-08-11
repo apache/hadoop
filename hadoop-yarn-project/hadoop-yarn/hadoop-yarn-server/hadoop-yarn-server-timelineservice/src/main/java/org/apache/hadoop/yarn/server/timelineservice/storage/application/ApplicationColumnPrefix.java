@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
+package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
 import java.io.IOException;
 import java.util.Map;
@@ -30,42 +30,42 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 
 /**
- * Identifies partially qualified columns for the entity table.
+ * Identifies partially qualified columns for the application table.
  */
-public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
+public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
 
   /**
    * To store TimelineEntity getIsRelatedToEntities values.
    */
-  IS_RELATED_TO(EntityColumnFamily.INFO, "s"),
+  IS_RELATED_TO(ApplicationColumnFamily.INFO, "s"),
 
   /**
    * To store TimelineEntity getRelatesToEntities values.
    */
-  RELATES_TO(EntityColumnFamily.INFO, "r"),
+  RELATES_TO(ApplicationColumnFamily.INFO, "r"),
 
   /**
    * To store TimelineEntity info values.
    */
-  INFO(EntityColumnFamily.INFO, "i"),
+  INFO(ApplicationColumnFamily.INFO, "i"),
 
   /**
-   * Lifecycle events for an entity
+   * Lifecycle events for an application
    */
-  EVENT(EntityColumnFamily.INFO, "e"),
+  EVENT(ApplicationColumnFamily.INFO, "e"),
 
   /**
    * Config column stores configuration with config key as the column name.
    */
-  CONFIG(EntityColumnFamily.CONFIGS, null),
+  CONFIG(ApplicationColumnFamily.CONFIGS, null),
 
   /**
    * Metrics are stored with the metric name as the column name.
    */
-  METRIC(EntityColumnFamily.METRICS, null);
+  METRIC(ApplicationColumnFamily.METRICS, null);
 
-  private final ColumnHelper<EntityTable> column;
-  private final ColumnFamily<EntityTable> columnFamily;
+  private final ColumnHelper<ApplicationTable> column;
+  private final ColumnFamily<ApplicationTable> columnFamily;
 
   /**
    * Can be null for those cases where the provided column qualifier is the
@@ -80,9 +80,9 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    * @param columnFamily that this column is stored in.
    * @param columnPrefix for this column.
    */
-  EntityColumnPrefix(ColumnFamily<EntityTable> columnFamily,
+  private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
       String columnPrefix) {
-    column = new ColumnHelper<EntityTable>(columnFamily);
+    column = new ColumnHelper<ApplicationTable>(columnFamily);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
     if (columnPrefix == null) {
@@ -97,7 +97,7 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   /**
    * @return the column name value
    */
-  public String getColumnPrefix() {
+  private String getColumnPrefix() {
     return columnPrefix;
   }
 
@@ -111,7 +111,7 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    * TypedBufferedMutator, java.lang.String, java.lang.Long, java.lang.Object)
    */
   public void store(byte[] rowKey,
-      TypedBufferedMutator<EntityTable> tableMutator, String qualifier,
+      TypedBufferedMutator<ApplicationTable> tableMutator, String qualifier,
       Long timestamp, Object inputValue) throws IOException {
 
     // Null check
@@ -163,20 +163,20 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   }
 
   /**
-   * Retrieve an {@link EntityColumnPrefix} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(x) == columnFor(y)} if
-   * and only if {@code x.equals(y)} or {@code (x == y == null)}
+   * Retrieve an {@link ApplicationColumnPrefix} given a name, or null if there
+   * is no match. The following holds true: {@code columnFor(x) == columnFor(y)}
+   * if and only if {@code x.equals(y)} or {@code (x == y == null)}
    *
    * @param columnPrefix Name of the column to retrieve
-   * @return the corresponding {@link EntityColumnPrefix} or null
+   * @return the corresponding {@link ApplicationColumnPrefix} or null
    */
-  public static final EntityColumnPrefix columnFor(String columnPrefix) {
+  public static final ApplicationColumnPrefix columnFor(String columnPrefix) {
 
     // Match column based on value, assume column family matches.
-    for (EntityColumnPrefix ecp : EntityColumnPrefix.values()) {
+    for (ApplicationColumnPrefix acp : ApplicationColumnPrefix.values()) {
       // Find a match based only on name.
-      if (ecp.getColumnPrefix().equals(columnPrefix)) {
-        return ecp;
+      if (acp.getColumnPrefix().equals(columnPrefix)) {
+        return acp;
       }
     }
 
@@ -185,28 +185,28 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   }
 
   /**
-   * Retrieve an {@link EntityColumnPrefix} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(a,x) == columnFor(b,y)}
-   * if and only if {@code (x == y == null)} or
-   * {@code a.equals(b) & x.equals(y)}
+   * Retrieve an {@link ApplicationColumnPrefix} given a name, or null if there
+   * is no match. The following holds true:
+   * {@code columnFor(a,x) == columnFor(b,y)} if and only if
+   * {@code (x == y == null)} or {@code a.equals(b) & x.equals(y)}
    *
    * @param columnFamily The columnFamily for which to retrieve the column.
    * @param columnPrefix Name of the column to retrieve
-   * @return the corresponding {@link EntityColumnPrefix} or null if both
+   * @return the corresponding {@link ApplicationColumnPrefix} or null if both
    *         arguments don't match.
    */
-  public static final EntityColumnPrefix columnFor(
-      EntityColumnFamily columnFamily, String columnPrefix) {
+  public static final ApplicationColumnPrefix columnFor(
+      ApplicationColumnFamily columnFamily, String columnPrefix) {
 
     // TODO: needs unit test to confirm and need to update javadoc to explain
     // null prefix case.
 
-    for (EntityColumnPrefix ecp : EntityColumnPrefix.values()) {
+    for (ApplicationColumnPrefix acp : ApplicationColumnPrefix.values()) {
       // Find a match based column family and on name.
-      if (ecp.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (ecp.getColumnPrefix() == null)) || (ecp
+      if (acp.columnFamily.equals(columnFamily)
+          && (((columnPrefix == null) && (acp.getColumnPrefix() == null)) || (acp
               .getColumnPrefix().equals(columnPrefix)))) {
-        return ecp;
+        return acp;
       }
     }
 
