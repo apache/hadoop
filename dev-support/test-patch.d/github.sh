@@ -321,8 +321,6 @@ function github_finalreport
   declare commentfile=${PATCH_DIR}/gitcommentfile.$$
   declare comment
 
-  # TODO: There really should be a reference to the JIRA issue, as needed
-
   rm "${commentfile}" 2>/dev/null
 
   if [[ ${JENKINS} != "true"
