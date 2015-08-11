@@ -130,7 +130,6 @@ function github_determine_issue
 function github_determine_branch
 {
   declare reflist
-  declare ref
 
   if [[ ! -f "${PATCH_DIR}/github-pull.json" ]]; then
     return 1
@@ -139,6 +138,7 @@ function github_determine_branch
   reflist=$(${AWK} 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/github-pull.json"\
      | cut -f2 -d\"  )
 
+  # shellcheck disable=SC2016
   for PATCH_BRANCH in ${reflist}; do
     yetus_debug "Determine branch: starting with ${PATCH_BRANCH}"
 
