@@ -111,8 +111,8 @@ function jira_locate_patch
     return 1
   fi
 
-  # Sorry enterprise github users.  Currently hard-coded to github.com
-  if [[ $(${GREP} -c 'https://github.com/.*patch' "${PATCH_DIR}/jira") != 0 ]]; then
+  if [[ -n "${GITHUB_BASE_URL}"
+      && $(${GREP} -c  "${GITHUB_BASE_URL}"'.*patch' "${PATCH_DIR}/jira") != 0 ]]; then
     echo "${input} appears to be a Github PR. Switching Modes."
     github_jira_bridge "${fileloc}"
     return $?

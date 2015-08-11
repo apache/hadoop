@@ -25,6 +25,8 @@ GITHUB_TOKEN=""
 GITHUB_USER=""
 GITHUB_ISSUE=""
 
+GITHUB_BRIDGED=false
+
 function github_usage
 {
   echo "GITHUB Options:"
@@ -34,7 +36,6 @@ function github_usage
   echo "--github-repo=<repo>     github repo to use (default:'${GITHUB_REPO}')"
   echo "--github-token=<token>   The token to use to write to github"
   echo "--github-user=<user>     Github user"
-
 }
 
 function github_parse_args
@@ -72,16 +73,16 @@ function github_jira_bridge
   declare fileloc=$1
   declare urlfromjira
 
-
   # the JIRA issue has already been downloaded.  So let's
   # find the URL.  This is currently hard-coded to github.com
   # Sorry Github Enterprise users. :(
+
+  GITHUB_BRIDGED=true
 
   # shellcheck disable=SC2016
   urlfromjira=$(${AWK} 'match($0,"https://github.com/.*patch"){print $1}' "${PATCH_DIR}/jira" | tail -1)
   github_breakup_url "${urlfromjira}"
   github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
-
 }
 
 function github_breakup_url
@@ -109,6 +110,40 @@ function github_breakup_url
   GITHUB_ISSUE=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
 }
 
+function github_find_jira_title
+{
+  declare title
+  declare maybe
+  declare retval
+
+  if [[ -f "${PATCH_DIR}/github-pull.json" ]]; then
+    return 1
+  fi
+
+  title=$(GREP title "${PATCH_DIR}/github-pull.json" \
+    | cut -f4 -d\")
+
+  # people typically do two types:  JIRA-ISSUE: and [JIRA-ISSUE]
+  # JIRA_ISSUE_RE is pretty strict so we need to chop that stuff
+  # out first
+
+  maybe=$(echo "${title}" | cut -f2 -d\[ | cut -f1 -d\])
+  jira_determine_issue "${maybe}"
+  retval=$?
+
+  if [[ ${retval} == 0 ]]; then
+    return 0
+  fi
+
+  maybe=$(echo "${title}" | cut -f1 -d:)
+  jira_determine_issue "${maybe}"
+  retval=$?
+
+  if [[ ${retval} == 0 ]]; then
+    return 0
+  fi
+}
+
 function github_determine_issue
 {
   declare input=$1
@@ -119,6 +154,12 @@ function github_determine_issue
     return 0
   fi
 
+  if [[ ${GITHUB_BRIDGED} == false ]]; then
+    github_find_jira_title
+    if [[ $? == 0 ]]; then
+      return 0
+    fi
+  fi
   return 1
 }
 
@@ -129,27 +170,23 @@ function github_determine_issue
 ## @return       0 on success, with PATCH_BRANCH updated appropriately
 function github_determine_branch
 {
-  declare reflist
-
   if [[ ! -f "${PATCH_DIR}/github-pull.json" ]]; then
     return 1
   fi
 
-  reflist=$(${AWK} 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/github-pull.json"\
-     | cut -f2 -d\"  )
-
   # shellcheck disable=SC2016
-  for PATCH_BRANCH in ${reflist}; do
-    yetus_debug "Determine branch: starting with ${PATCH_BRANCH}"
+  PATCH_BRANCH=$(${AWK} 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/github-pull.json"\
+     | cut -f2 -d\"\
+     | tail -1  )
 
-    verify_valid_branch  "${PATCH_BRANCH}"
-    if [[ $? == 0 ]]; then
-      return 0
-    fi
-  done
+  yetus_debug "Github determine branch: starting with ${PATCH_BRANCH}"
+
+  verify_valid_branch  "${PATCH_BRANCH}"
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
   return 1
 }
-
 
 function github_locate_patch
 {
@@ -192,7 +229,6 @@ function github_locate_patch
           --output "${PATCH_DIR}/github-pull.json" \
           --location \
          "${GITHUB_API_URL}/repos/${GITHUB_REPO}/pulls/${input}"
-
 
   echo "Patch from GITHUB PR #${input} is being downloaded at $(date) from"
   echo "${PATCHURL}"
