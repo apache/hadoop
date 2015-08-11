@@ -306,4 +306,15 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
       String user, String queueName, ApplicationId applicationId)
       throws YarnException;
+
+  /**
+   *
+   * Change application priority of a submitted application at runtime
+   *
+   * @param newPriority Submitted Application priority.
+   *
+   * @param applicationId Application ID
+   */
+  public void updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId) throws YarnException;
 }

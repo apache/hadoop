@@ -98,7 +98,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private boolean amRunning = false;
   private LogAggregationContext logAggregationContext;
 
-  private Priority appPriority = null;
+  private volatile Priority appPriority = null;
 
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
   private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);

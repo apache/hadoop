@@ -706,6 +706,11 @@ public abstract class RMStateStore extends AbstractService {
     dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
+  public void updateApplicationStateSynchronously(
+      ApplicationStateData appState) {
+    handleStoreEvent(new RMStateUpdateAppEvent(appState));
+  }
+
   public void updateFencedState() {
     handleStoreEvent(new RMStateStoreEvent(RMStateStoreEventType.FENCED));
   }

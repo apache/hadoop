@@ -701,4 +701,11 @@ public abstract class AbstractYarnScheduler
     // specific scheduler.
     return Priority.newInstance(0);
   }
+
+  @Override
+  public void updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId) throws YarnException {
+    // Dummy Implementation till Application Priority changes are done in
+    // specific scheduler.
+  }
 }

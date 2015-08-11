@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -155,17 +156,6 @@ public class CapacityScheduler extends
   
   static final PartitionedQueueComparator partitionedQueueComparator =
       new PartitionedQueueComparator();
-
-  public static final Comparator<FiCaSchedulerApp> applicationComparator =
-    new Comparator<FiCaSchedulerApp>() {
-    @Override
-    public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
-      if (!a1.getPriority().equals(a2.getPriority())) {
-        return a1.getPriority().compareTo(a2.getPriority());
-      }
-      return a1.getApplicationId().compareTo(a2.getApplicationId());
-    }
-  };
 
   @Override
   public void setConf(Configuration conf) {
@@ -272,11 +262,6 @@ public class CapacityScheduler extends
   public synchronized RMContainerTokenSecretManager 
   getContainerTokenSecretManager() {
     return this.rmContext.getContainerTokenSecretManager();
-  }
-
-  @Override
-  public Comparator<FiCaSchedulerApp> getApplicationComparator() {
-    return applicationComparator;
   }
 
   @Override
@@ -1633,7 +1618,7 @@ public class CapacityScheduler extends
     if (disposableLeafQueue.getNumApplications() > 0) {
       throw new SchedulerDynamicEditException("The queue " + queueName
           + " is not empty " + disposableLeafQueue.getApplications().size()
-          + " active apps " + disposableLeafQueue.pendingApplications.size()
+          + " active apps " + disposableLeafQueue.getPendingApplications().size()
           + " pending apps");
     }
 
@@ -1865,5 +1850,53 @@ public class CapacityScheduler extends
 
   public Priority getMaxClusterLevelAppPriority() {
     return maxClusterLevelAppPriority;
+  }
+
+  @Override
+  public synchronized void updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId) throws YarnException {
+    Priority appPriority = null;
+    SchedulerApplication<FiCaSchedulerApp> application = applications
+        .get(applicationId);
+
+    if (application == null) {
+      throw new YarnException("Application '" + applicationId
+          + "' is not present, hence could not change priority.");
+    }
+
+    if (application.getPriority().equals(newPriority)) {
+      return;
+    }
+
+    RMApp rmApp = rmContext.getRMApps().get(applicationId);
+    appPriority = checkAndGetApplicationPriority(newPriority, rmApp.getUser(),
+        rmApp.getQueue(), applicationId);
+
+    // Update new priority in Submission Context to keep track in HA
+    rmApp.getApplicationSubmissionContext().setPriority(appPriority);
+
+    // Update to state store
+    ApplicationStateData appState = ApplicationStateData.newInstance(
+        rmApp.getSubmitTime(), rmApp.getStartTime(),
+        rmApp.getApplicationSubmissionContext(), rmApp.getUser());
+    rmContext.getStateStore().updateApplicationStateSynchronously(appState);
+
+    // As we use iterator over a TreeSet for OrderingPolicy, once we change
+    // priority then reinsert back to make order correct.
+    LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
+    synchronized (queue) {
+      queue.getOrderingPolicy().removeSchedulableEntity(
+          application.getCurrentAppAttempt());
+
+      // Update new priority in SchedulerApplication
+      application.setPriority(appPriority);
+
+      queue.getOrderingPolicy().addSchedulableEntity(
+          application.getCurrentAppAttempt());
+    }
+
+    LOG.info("Priority '" + appPriority + "' is updated in queue :"
+        + rmApp.getQueue() + "for application:" + applicationId
+        + "for the user: " + rmApp.getUser());
   }
 }
