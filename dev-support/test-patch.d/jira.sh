@@ -147,6 +147,96 @@ function jira_locate_patch
   return 0
 }
 
+## @description  Try to guess the branch being tested using a variety of heuristics
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success, with PATCH_BRANCH updated appropriately
+function jira_determine_branch
+{
+  declare patchnamechunk
+  declare total
+  declare count
+  declare hinttype
+
+  for hinttype in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
+    if [[ -z "${hinttype}" ]]; then
+      continue
+    fi
+    yetus_debug "Determine branch: starting with ${hinttype}"
+    patchnamechunk=$(echo "${hinttype}" \
+            | ${SED} -e 's,.*/\(.*\)$,\1,' \
+                     -e 's,\.txt,.,' \
+                     -e 's,.patch,.,g' \
+                     -e 's,.diff,.,g' \
+                     -e 's,\.\.,.,g' \
+                     -e 's,\.$,,g' )
+
+    # ISSUE-branch-##
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
+    yetus_debug "Determine branch: ISSUE-branch-## = ${PATCH_BRANCH}"
+    if [[ -n "${PATCH_BRANCH}" ]]; then
+      verify_valid_branch  "${PATCH_BRANCH}"
+      if [[ $? == 0 ]]; then
+        return 0
+      fi
+    fi
+
+    # ISSUE-##[.##].branch
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 3 ))
+    until [[ ${total} -lt 2 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3-${total} -d.)
+      yetus_debug "Determine branch: ISSUE[.##].branch = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return 0
+        fi
+      fi
+    done
+
+    # ISSUE.branch.##
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 3 ))
+    until [[ ${total} -lt 2 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2-${total} -d.)
+      yetus_debug "Determine branch: ISSUE.branch[.##] = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return 0
+        fi
+      fi
+    done
+
+    # ISSUE-branch.##
+    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1- -d. )
+    count="${PATCH_BRANCH//[^.]}"
+    total=${#count}
+    ((total = total + 1 ))
+    until [[ ${total} -eq 1 ]]; do
+      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1-${total} -d. )
+      yetus_debug "Determine branch: ISSUE-branch[.##] = ${PATCH_BRANCH}"
+      ((total=total-1))
+      if [[ -n "${PATCH_BRANCH}" ]]; then
+        verify_valid_branch  "${PATCH_BRANCH}"
+        if [[ $? == 0 ]]; then
+          return 0
+        fi
+      fi
+    done
+  done
+
+  return 1
+}
+
 ## @description Write the contents of a file to JIRA
 ## @params filename
 ## @stability stable

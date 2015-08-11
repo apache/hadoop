@@ -1386,9 +1386,8 @@ function verify_valid_branch
 ## @return       1 on failure, with PATCH_BRANCH updated to PATCH_BRANCH_DEFAULT
 function determine_branch
 {
-  local patchnamechunk
-  local total
-  local count
+  declare bugs
+  declare retval=1
 
   # something has already set this, so move on
   if [[ -n ${PATCH_BRANCH} ]]; then
@@ -1411,83 +1410,19 @@ function determine_branch
     return
   fi
 
-  for j in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
-    if [[ -z "${j}" ]]; then
-      continue
-    fi
-    yetus_debug "Determine branch: starting with ${j}"
-    patchnamechunk=$(echo "${j}" \
-            | ${SED} -e 's,.*/\(.*\)$,\1,' \
-                     -e 's,\.txt,.,' \
-                     -e 's,.patch,.,g' \
-                     -e 's,.diff,.,g' \
-                     -e 's,\.\.,.,g' \
-                     -e 's,\.$,,g' )
-
-    # ISSUE-branch-##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
-    yetus_debug "Determine branch: ISSUE-branch-## = ${PATCH_BRANCH}"
-    if [[ -n "${PATCH_BRANCH}" ]]; then
-      verify_valid_branch  "${PATCH_BRANCH}"
-      if [[ $? == 0 ]]; then
-        return
+  for bugs in ${BUGSYSTEMS}; do
+    if declare -f ${bugs}_determine_branch >/dev/null;then
+      "${bugs}_determine_branch"
+      retval=$?
+      if [[ ${retval} == 0 ]]; then
+        break
       fi
     fi
-
-    # ISSUE-##[.##].branch
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 3 ))
-    until [[ ${total} -lt 2 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3-${total} -d.)
-      yetus_debug "Determine branch: ISSUE[.##].branch = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
-    # ISSUE.branch.##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 3 ))
-    until [[ ${total} -lt 2 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2-${total} -d.)
-      yetus_debug "Determine branch: ISSUE.branch[.##] = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
-    # ISSUE-branch.##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 1 ))
-    until [[ ${total} -eq 1 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1-${total} -d. )
-      yetus_debug "Determine branch: ISSUE-branch[.##] = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
   done
 
-  PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
+  if [[ ${retval} != 0 ]]; then
+    PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
+  fi
   popd >/dev/null
 }
 

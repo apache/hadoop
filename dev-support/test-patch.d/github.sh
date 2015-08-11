@@ -71,9 +71,7 @@ function github_jira_bridge
 {
   declare fileloc=$1
   declare urlfromjira
-  declare count
-  declare pos1
-  declare pos2
+
 
   # the JIRA issue has already been downloaded.  So let's
   # find the URL.  This is currently hard-coded to github.com
@@ -81,7 +79,19 @@ function github_jira_bridge
 
   # shellcheck disable=SC2016
   urlfromjira=$(${AWK} 'match($0,"https://github.com/.*patch"){print $1}' "${PATCH_DIR}/jira" | tail -1)
-  count=${urlfromjira//[^\/]}
+  github_breakup_url "${urlfromjira}"
+  github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
+
+}
+
+function github_breakup_url
+{
+  declare url=$1
+  declare count
+  declare pos1
+  declare pos2
+
+  count=${url//[^\/]}
   count=${#count}
   ((pos2=count-3))
   ((pos1=pos2))
@@ -97,8 +107,6 @@ function github_jira_bridge
   unset pos2
 
   GITHUB_ISSUE=$(echo "${urlfromjira}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
-
-  github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
 }
 
 function github_determine_issue
@@ -114,14 +122,49 @@ function github_determine_issue
   return 1
 }
 
+## @description  Try to guess the branch being tested using a variety of heuristics
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success, with PATCH_BRANCH updated appropriately
+function github_determine_branch
+{
+  declare reflist
+  declare ref
+
+  if [[ ! -f "${PATCH_DIR}/github-pull.json" ]]; then
+    return 1
+  fi
+
+  reflist=$(${AWK} 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/github-pull.json"\
+     | cut -f2 -d\"  )
+
+  for PATCH_BRANCH in ${reflist}; do
+    yetus_debug "Determine branch: starting with ${PATCH_BRANCH}"
+
+    verify_valid_branch  "${PATCH_BRANCH}"
+    if [[ $? == 0 ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+
 function github_locate_patch
 {
   declare input=$1
   declare output=$2
+  declare githubauth
 
   if [[ "${OFFLINE}" == true ]]; then
     yetus_debug "github_locate_patch: offline, skipping"
     return 1
+  fi
+
+  if [[ ${input} =~ ^${GITHUB_BASE_URL}.*patch$ ]]; then
+    github_breakup_url "${GITHUB_BASE_URL}"
+    input=${GITHUB_ISSUE}
   fi
 
   if [[ ! ${input} =~ ^[0-9]+$ ]]; then
@@ -131,20 +174,40 @@ function github_locate_patch
 
   PATCHURL="${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}.patch"
   echo "GITHUB PR #${input} is being downloaded at $(date) from"
+  echo "${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}"
+
+  if [[ -n ${GITHUB_USER}
+     && -n ${GITHUB_PASSWD} ]]; then
+    githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
+  elif [[ -n ${GITHUB_TOKEN} ]]; then
+    githubauth="Authorization: token ${GITHUB_TOKEN}"
+  else
+    githubauth="X-ignore-me: fake"
+  fi
+
+  # Let's pull the PR JSON for later use
+  ${CURL} --silent --fail \
+          -H "Accept: application/json" \
+          -H "${githubauth}" \
+          --output "${PATCH_DIR}/github-pull.json" \
+          --location \
+         "${GITHUB_API_URL}/repos/${GITHUB_REPO}/pulls/${input}"
+
+
+  echo "Patch from GITHUB PR #${input} is being downloaded at $(date) from"
   echo "${PATCHURL}"
 
+  # the actual patch file
   ${CURL} --silent --fail \
           --output "${output}" \
           --location \
+          -H "${githubauth}" \
          "${PATCHURL}"
 
   if [[ $? != 0 ]]; then
     yetus_debug "github_locate_patch: not a github pull request."
     return 1
   fi
-
-  # https://api.github.com/repos/apache/hadoop/pulls/25
-  # base->sha?
 
   GITHUB_ISSUE=${input}
 
