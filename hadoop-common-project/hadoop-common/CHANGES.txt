@@ -746,6 +746,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12280. Skip unit tests based on maven profile rather than
     NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
 
+    HADOOP-12318. Expose underlying LDAP exceptions in SaslPlainServer. (Mike
+    Yoder via atm)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
