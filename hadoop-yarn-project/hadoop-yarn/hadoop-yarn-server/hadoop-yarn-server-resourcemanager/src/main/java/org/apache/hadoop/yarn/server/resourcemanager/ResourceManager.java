@@ -250,7 +250,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
-    
+
     rmContext.setYarnConfiguration(conf);
     
     createAndInitActiveServices();
@@ -258,6 +258,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
                       YarnConfiguration.RM_BIND_HOST,
                       WebAppUtils.getRMWebAppURLWithoutScheme(this.conf));
+
+    RMApplicationHistoryWriter rmApplicationHistoryWriter =
+        createRMApplicationHistoryWriter();
+    addService(rmApplicationHistoryWriter);
+    rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
+
+    SystemMetricsPublisher systemMetricsPublisher = createSystemMetricsPublisher();
+    addService(systemMetricsPublisher);
+    rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
   }
@@ -411,7 +420,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmContext.setActiveServiceContext(activeServiceContext);
 
       conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
-
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
 
@@ -467,15 +475,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         delegationTokenRenewer = createDelegationTokenRenewer();
         rmContext.setDelegationTokenRenewer(delegationTokenRenewer);
       }
-
-      RMApplicationHistoryWriter rmApplicationHistoryWriter =
-          createRMApplicationHistoryWriter();
-      addService(rmApplicationHistoryWriter);
-      rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
-
-      SystemMetricsPublisher systemMetricsPublisher = createSystemMetricsPublisher();
-      addService(systemMetricsPublisher);
-      rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);
@@ -596,11 +595,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     @Override
     protected void serviceStop() throws Exception {
 
-      DefaultMetricsSystem.shutdown();
+      super.serviceStop();
+
       if (pauseMonitor != null) {
         pauseMonitor.stop();
       }
 
+      DefaultMetricsSystem.shutdown();
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
         try {
@@ -610,7 +611,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         }
       }
 
-      super.serviceStop();
     }
 
     protected void createPolicyMonitors() {
@@ -1033,12 +1033,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     LOG.info("Transitioning to standby state");
-    if (rmContext.getHAServiceState() ==
-        HAServiceProtocol.HAServiceState.ACTIVE) {
+    HAServiceState state = rmContext.getHAServiceState();
+    rmContext.setHAServiceState(HAServiceProtocol.HAServiceState.STANDBY);
+    if (state == HAServiceProtocol.HAServiceState.ACTIVE) {
       stopActiveServices();
       reinitialize(initialize);
     }
-    rmContext.setHAServiceState(HAServiceProtocol.HAServiceState.STANDBY);
     LOG.info("Transitioned to standby state");
   }
 
