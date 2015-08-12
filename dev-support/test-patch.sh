@@ -105,6 +105,7 @@ function setup_defaults
   JDK_TEST_LIST="javac javadoc unit"
   GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
   GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
+  GITUNIDIFFLINES="${PATCH_DIR}/gitdiffunilines.txt"
 
   # Solaris needs POSIX, not SVID
   case ${OSTYPE} in
@@ -662,7 +663,51 @@ function compute_gitdiff
     touch "${GITDIFFCONTENT}"
   fi
 
+  if [[ -s "${GITDIFFLINES}" ]]
+    compute_unidiff
+  fi
+
   popd >/dev/null
+}
+
+## @description generate an index of unified diff lines vs. modified/added lines
+## @description ${GITDIFFLINES} must exist.
+## @audience    private
+## @stability   stable
+## @replaceable no
+function compute_unidiff
+{
+  declare fn
+  declare tmpfile=${PATCH_DIR}/gitdifflinenumber.$$
+
+  # now that we know what lines are where, we can deal
+  # with github's pain-in-the-butt API. It requires
+  # that the client provides the line number of the
+  # unified diff on a per file basis.
+
+  # First, build a per-file unified diff, pulling
+  # out the 'extra' lines, grabbing the adds with
+  # the line number in the diff file along the way,
+  # finally rewriting the line so that it is in
+  # './filename:diff line:content' format.
+  for fn in ${CHANGED_FILES}; do
+    ${GIT} diff ${file} > ${PATCH_DIR}/${file}.$$ \
+      | ${GREP} -vE '^(@|\+\+\+|\-\-\-|diff|index)' \
+      | ${GREP} -n '^+' \
+      | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
+               -e s,^,./${fn}:,g >> "${tmpfile}"
+  done
+
+  # at this point, tmpfile should be in the same format
+  # as gitdiffcontent, just with different line numbers.
+  # let's do a merge:
+
+  # ./filename:real number:diff number
+  paste -d: "${GITDIFFLINES}" "${tmpflie}" \
+    | ${AWK} -F: '{print $1":"$2":"$5}' \
+    > "${GITUNIDIFFLINES}"
+
+  rm "${tmpfile}"
 }
 
 ## @description  Print the command to be executing to the screen. Then

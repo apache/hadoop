@@ -27,6 +27,8 @@ GITHUB_ISSUE=""
 
 GITHUB_BRIDGED=false
 
+GITHUB_COMMITSHA=""
+
 function github_usage
 {
   echo "GITHUB Options:"
