@@ -907,11 +907,9 @@ public class FSImage implements Closeable {
             + " quota = " + ssQuota + " < consumed = " + ssConsumed);
       }
 
-      final EnumCounters<StorageType> typeSpaces =
-          new EnumCounters<StorageType>(StorageType.class);
+      final EnumCounters<StorageType> typeSpaces = counts.getTypeSpaces();
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
-        final long typeSpace = counts.getTypeSpaces().get(t) -
-            parentTypeSpaces.get(t);
+        final long typeSpace = typeSpaces.get(t) - parentTypeSpaces.get(t);
         final long typeQuota = q.getTypeSpaces().get(t);
         if (Quota.isViolated(typeQuota, typeSpace)) {
           LOG.warn("Storage type quota violation in image for "

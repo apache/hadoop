@@ -1128,6 +1128,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8866. Typo in docs: Rumtime -> Runtime. (Gabor Liptak via jghoman)
 
+    HDFS-8879. Quota by storage type usage incorrectly initialized upon namenode
+    restart. (xyao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
