@@ -57,11 +57,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^[ \t]*Create a zone to encode files using a specified schema( )*</expected-output>
+          <expected-output>^[ \t]*Create a zone to encode files using a specified policy( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-createZone \[-s &lt;schemaName&gt;\] \[-c &lt;cellSize&gt;\] &lt;path&gt;(.)*</expected-output>
+          <expected-output>^-createZone \[-s &lt;policyName&gt;\] &lt;path&gt;(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -86,20 +86,20 @@
     </test>
 
     <test>
-      <description>help: listSchemas command</description>
+      <description>help: listPolicies command</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -help listSchemas</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -help listPolicies</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Get the list of ECSchemas supported</expected-output>
+          <expected-output>Get the list of erasure coding policies supported</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-listSchemas (.)*</expected-output>
+          <expected-output>^-listPolicies (.)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -109,7 +109,7 @@
       <description>createZone : create a zone to encode files</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /eczone</command>
@@ -141,7 +141,7 @@
     </test>
 
     <test>
-      <description>createZone : default schema</description>
+      <description>createZone : default policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
         <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
@@ -153,7 +153,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -179,7 +179,7 @@
       <description>getZone : get information about the EC zone at specified path</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
         <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -188,7 +188,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -197,7 +197,7 @@
       <description>getZone : get EC zone at specified file path</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3 /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
         <command>-fs NAMENODE -touchz /eczone/ecfile</command>
         <ec-admin-command>-fs NAMENODE -getZone /eczone/ecfile</ec-admin-command>
       </test-commands>
@@ -208,15 +208,15 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Schema: ECSchema=[Name=RS-6-3</expected-output>
+          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>listSchemas : get the list of ECSchemas supported</description>
+      <description>listPolicies : get the list of ECPolicies supported</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -listSchemas</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -listPolicies</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
@@ -247,7 +247,7 @@
     </test>
 
     <test>
-      <description>createZone : illegal parameters - schema name is missing</description>
+      <description>createZone : illegal parameters - policy name is missing</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
         <ec-admin-command>-fs NAMENODE -createZone -s</ec-admin-command>
@@ -281,10 +281,10 @@
     </test>
 
     <test>
-      <description>createZone : illegal parameters - invalidschema</description>
+      <description>createZone : illegal parameters - invalidpolicy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s invalidschema /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -createZone -s invalidpolicy /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /eczone</command>
@@ -292,7 +292,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Schema 'invalidschema' does not match any of the supported schemas. Please select any one of [RS-6-3]</expected-output>
+          <expected-output>Policy 'invalidpolicy' does not match any of the supported policies. Please select any one of [RS-6-3-64k]</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -359,16 +359,16 @@
     </test>
 
     <test>
-      <description>listSchemas : illegal parameters - too many parameters</description>
+      <description>listPolicies : illegal parameters - too many parameters</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -listSchemas /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -listPolicies /eczone</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>-listSchemas: Too many parameters</expected-output>
+          <expected-output>-listPolicies: Too many parameters</expected-output>
         </comparator>
       </comparators>
     </test>

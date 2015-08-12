@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /** 
  * Interface that represents the over the wire information
@@ -60,10 +59,10 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
       long access_time, FsPermission permission, String owner, String group,
       byte[] symlink, byte[] path, long fileId, LocatedBlocks locations,
       int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy,
-      ECSchema schema, int stripeCellSize) {
+      ErasureCodingPolicy ecPolicy) {
     super(length, isdir, block_replication, blocksize, modification_time,
         access_time, permission, owner, group, symlink, path, fileId,
-        childrenNum, feInfo, storagePolicy, schema, stripeCellSize);
+        childrenNum, feInfo, storagePolicy, ecPolicy);
     this.locations = locations;
   }
 

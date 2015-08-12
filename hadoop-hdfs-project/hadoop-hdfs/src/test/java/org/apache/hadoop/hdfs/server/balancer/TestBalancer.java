@@ -1581,7 +1581,7 @@ public class TestBalancer {
       cluster.waitActive();
       client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
-      client.createErasureCodingZone("/", null, 0);
+      client.createErasureCodingZone("/", null);
 
       long totalCapacity = sum(capacities);
 

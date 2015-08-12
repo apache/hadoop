@@ -19,10 +19,9 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
@@ -45,11 +44,10 @@ public class TestBlockInfoStriped {
   private static final int TOTAL_NUM_BLOCKS = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
   private static final long BASE_ID = -1600;
   private static final Block baseBlock = new Block(BASE_ID);
-  private static final ECSchema testSchema
-      = ErasureCodingSchemaManager.getSystemDefaultSchema();
-  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private static final ErasureCodingPolicy testECPolicy
+      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
   private final BlockInfoStriped info = new BlockInfoStriped(baseBlock,
-      testSchema, cellSize);
+      testECPolicy);
 
   private Block[] createReportedBlocks(int num) {
     Block[] blocks = new Block[num];
@@ -237,7 +235,7 @@ public class TestBlockInfoStriped {
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutput out = new DataOutputStream(byteStream);
     BlockInfoStriped blk = new BlockInfoStriped(new Block(blkID, numBytes,
-        generationStamp), testSchema, cellSize);
+        generationStamp), testECPolicy);
 
     try {
       blk.write(out);

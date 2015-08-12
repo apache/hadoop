@@ -24,7 +24,6 @@ import java.util.Comparator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * Collection of blocks with their locations and the file length.
@@ -38,8 +37,7 @@ public class LocatedBlocks {
   private final LocatedBlock lastLocatedBlock;
   private final boolean isLastBlockComplete;
   private final FileEncryptionInfo fileEncryptionInfo;
-  private final ECSchema ecSchema;
-  private final int stripeCellSize;
+  private final ErasureCodingPolicy ecPolicy;
 
   public LocatedBlocks() {
     fileLength = 0;
@@ -48,22 +46,20 @@ public class LocatedBlocks {
     lastLocatedBlock = null;
     isLastBlockComplete = false;
     fileEncryptionInfo = null;
-    ecSchema = null;
-    stripeCellSize = 0;
+    ecPolicy = null;
   }
 
   public LocatedBlocks(long flength, boolean isUnderConstuction,
       List<LocatedBlock> blks, LocatedBlock lastBlock,
       boolean isLastBlockCompleted, FileEncryptionInfo feInfo,
-      ECSchema ecSchema, int stripeCellSize) {
+      ErasureCodingPolicy ecPolicy) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
     this.fileEncryptionInfo = feInfo;
-    this.ecSchema = ecSchema;
-    this.stripeCellSize = stripeCellSize;
+    this.ecPolicy = ecPolicy;
   }
 
   /**
@@ -120,17 +116,10 @@ public class LocatedBlocks {
   }
 
   /**
-   * @return The ECSchema for ErasureCoded file, null otherwise.
+   * @return The ECPolicy for ErasureCoded file, null otherwise.
    */
-  public ECSchema getECSchema() {
-    return ecSchema;
-  }
-
-  /**
-   * @return Stripe Cell size for ErasureCoded file, 0 otherwise.
-   */
-  public int getStripeCellSize() {
-    return stripeCellSize;
+  public ErasureCodingPolicy getErasureCodingPolicy() {
+    return ecPolicy;
   }
 
   /**

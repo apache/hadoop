@@ -141,7 +141,6 @@ message INodeSection {
     optional XAttrFeatureProto xAttrs = 9;
     optional uint32 storagePolicyID = 10;
     optional bool isStriped = 11;
-    optional uint64 stripingCellSize = 12;
   }
 
   message QuotaByStorageTypeEntryProto {

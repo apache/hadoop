@@ -21,7 +21,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import java.io.IOException;
 
@@ -57,17 +57,16 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   /**
    * Constructor with null storage targets.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
-      int cellSize) {
-    this(blk, schema, cellSize, UNDER_CONSTRUCTION, null);
+  public BlockInfoStripedUnderConstruction(Block blk, ErasureCodingPolicy ecPolicy) {
+    this(blk, ecPolicy, UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a striped block that is currently being constructed.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ECSchema schema,
-      int cellSize, BlockUCState state, DatanodeStorageInfo[] targets) {
-    super(blk, schema, cellSize);
+  public BlockInfoStripedUnderConstruction(Block blk, ErasureCodingPolicy ecPolicy,
+      BlockUCState state, DatanodeStorageInfo[] targets) {
+    super(blk, ecPolicy);
     assert getBlockUCState() != COMPLETE :
       "BlockInfoStripedUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;

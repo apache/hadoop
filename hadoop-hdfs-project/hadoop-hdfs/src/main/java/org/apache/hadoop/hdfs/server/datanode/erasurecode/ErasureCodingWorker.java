@@ -69,8 +69,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -267,10 +266,10 @@ public final class ErasureCodingWorker {
         new ExecutorCompletionService<>(STRIPED_READ_THREAD_POOL);
 
     ReconstructAndTransferBlock(BlockECRecoveryInfo recoveryInfo) {
-      ECSchema schema = recoveryInfo.getECSchema();
-      dataBlkNum = schema.getNumDataUnits();
-      parityBlkNum = schema.getNumParityUnits();
-      cellSize = recoveryInfo.getCellSize();
+      ErasureCodingPolicy ecPolicy = recoveryInfo.getErasureCodingPolicy();
+      dataBlkNum = ecPolicy.getNumDataUnits();
+      parityBlkNum = ecPolicy.getNumParityUnits();
+      cellSize = ecPolicy.getCellSize();
 
       blockGroup = recoveryInfo.getExtendedBlock();
       final int cellsNum = (int)((blockGroup.getNumBytes() - 1) / cellSize + 1);

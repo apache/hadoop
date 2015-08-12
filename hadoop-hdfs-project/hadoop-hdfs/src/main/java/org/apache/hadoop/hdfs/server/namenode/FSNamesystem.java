@@ -176,6 +176,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -256,7 +257,6 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.Server;
@@ -420,7 +420,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final BlockManager blockManager;
   private final SnapshotManager snapshotManager;
   private final CacheManager cacheManager;
-  private final ErasureCodingSchemaManager ecSchemaManager;
+  private final ErasureCodingPolicyManager ecPolicyManager;
   private final DatanodeStatistics datanodeStatistics;
 
   private String nameserviceId;
@@ -597,7 +597,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     leaseManager.removeAllLeases();
     snapshotManager.clearSnapshottableDirs();
     cacheManager.clear();
-    ecSchemaManager.clear();
+    ecPolicyManager.clear();
     setImageLoaded(false);
     blockManager.clear();
   }
@@ -835,7 +835,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(dir);
       this.cacheManager = new CacheManager(this, conf, blockManager);
-      this.ecSchemaManager = new ErasureCodingSchemaManager();
+      this.ecPolicyManager = new ErasureCodingPolicyManager();
       this.safeMode = new SafeModeInfo(conf);
       this.topConf = new TopConf(conf);
       this.auditLoggers = initAuditLoggers(conf);
@@ -3210,16 +3210,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (fileINode.isStriped()) {
       final ErasureCodingZone ecZone = FSDirErasureCodingOp
           .getErasureCodingZone(this, iip);
-      final ECSchema ecSchema = ecZone.getSchema();
-      final short numDataUnits = (short) ecSchema.getNumDataUnits();
-      final short numParityUnits = (short) ecSchema.getNumParityUnits();
+      final ErasureCodingPolicy ecPolicy = ecZone.getErasureCodingPolicy();
+      final short numDataUnits = (short) ecPolicy.getNumDataUnits();
+      final short numParityUnits = (short) ecPolicy.getNumParityUnits();
 
       final long numBlocks = numDataUnits + numParityUnits;
       final long fullBlockGroupSize =
           fileINode.getPreferredBlockSize() * numBlocks;
 
       final BlockInfoStriped striped = new BlockInfoStriped(commitBlock,
-          ecSchema, ecZone.getCellSize());
+          ecPolicy);
       final long actualBlockGroupSize = striped.spaceConsumed();
 
       diff = fullBlockGroupSize - actualBlockGroupSize;
@@ -6211,9 +6211,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return cacheManager;
   }
 
-  /** @return the ErasureCodingSchemaManager. */
-  public ErasureCodingSchemaManager getErasureCodingSchemaManager() {
-    return ecSchemaManager;
+  /** @return the ErasureCodingPolicyManager. */
+  public ErasureCodingPolicyManager getErasureCodingPolicyManager() {
+    return ecPolicyManager;
   }
 
   /** @return the ErasureCodingZoneManager. */
@@ -7170,14 +7170,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Create an erasure coding zone on directory src.
    * @param srcArg  the path of a directory which will be the root of the
    *                erasure coding zone. The directory must be empty.
-   * @param schema  ECSchema for the erasure coding zone
-   * @param cellSize Cell size of stripe 
+   * @param ecPolicy  erasure coding policy for the erasure coding zone
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void createErasureCodingZone(final String srcArg, final ECSchema schema,
-      int cellSize, final boolean logRetryCache) throws IOException,
+  void createErasureCodingZone(final String srcArg, final ErasureCodingPolicy
+      ecPolicy, final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
@@ -7188,7 +7187,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create erasure coding zone on " + srcArg);
       resultingStat = FSDirErasureCodingOp.createErasureCodingZone(this,
-          srcArg, schema, cellSize, logRetryCache);
+          srcArg, ecPolicy, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
@@ -7216,30 +7215,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get available erasure coding schemas
+   * Get available erasure coding polices
    */
-  ECSchema[] getErasureCodingSchemas() throws IOException {
+  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
     checkOperation(OperationCategory.READ);
     waitForLoadingFSImage();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingSchemas(this);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
-   * Get the ECSchema specified by the name
-   */
-  ECSchema getErasureCodingSchema(String schemaName) throws IOException {
-    checkOperation(OperationCategory.READ);
-    waitForLoadingFSImage();
-    readLock();
-    try {
-      checkOperation(OperationCategory.READ);
-      return FSDirErasureCodingOp.getErasureCodingSchema(this, schemaName);
+      return FSDirErasureCodingOp.getErasureCodingPolicies(this);
     } finally {
       readUnlock();
     }

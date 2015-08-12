@@ -30,12 +30,6 @@ public final class ECSchema {
   public static final String CODEC_NAME_KEY = "codec";
 
   /**
-   * A friendly and understandable name that can mean what's it, also serves as
-   * the identifier that distinguish it from other schemas.
-   */
-  private final String schemaName;
-
-  /**
    * The erasure codec name associated.
    */
   private final String codecName;
@@ -59,14 +53,9 @@ public final class ECSchema {
   /**
    * Constructor with schema name and provided all options. Note the options may
    * contain additional information for the erasure codec to interpret further.
-   * @param schemaName schema name
    * @param allOptions all schema options
    */
-  public ECSchema(String schemaName, Map<String, String> allOptions) {
-    assert (schemaName != null && ! schemaName.isEmpty());
-
-    this.schemaName = schemaName;
-
+  public ECSchema(Map<String, String> allOptions) {
     if (allOptions == null || allOptions.isEmpty()) {
       throw new IllegalArgumentException("No schema options are provided");
     }
@@ -94,33 +83,27 @@ public final class ECSchema {
 
   /**
    * Constructor with key parameters provided.
-   * @param schemaName schema name
    * @param codecName codec name
    * @param numDataUnits number of data units used in the schema
    * @param numParityUnits number os parity units used in the schema
    */
-  public ECSchema(String schemaName, String codecName,
-                  int numDataUnits, int numParityUnits) {
-    this(schemaName, codecName, numDataUnits, numParityUnits, null);
+  public ECSchema(String codecName, int numDataUnits, int numParityUnits) {
+    this(codecName, numDataUnits, numParityUnits, null);
   }
 
   /**
    * Constructor with key parameters provided. Note the extraOptions may contain
    * additional information for the erasure codec to interpret further.
-   * @param schemaName schema name
    * @param codecName codec name
    * @param numDataUnits number of data units used in the schema
    * @param numParityUnits number os parity units used in the schema
    * @param extraOptions extra options to configure the codec
    */
-  public ECSchema(String schemaName, String codecName, int numDataUnits,
-                  int numParityUnits, Map<String, String> extraOptions) {
-
-    assert (schemaName != null && ! schemaName.isEmpty());
+  public ECSchema(String codecName, int numDataUnits, int numParityUnits,
+      Map<String, String> extraOptions) {
     assert (codecName != null && ! codecName.isEmpty());
     assert (numDataUnits > 0 && numParityUnits > 0);
 
-    this.schemaName = schemaName;
     this.codecName = codecName;
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
@@ -151,14 +134,6 @@ public final class ECSchema {
     }
 
     return result;
-  }
-
-  /**
-   * Get the schema name
-   * @return schema name
-   */
-  public String getSchemaName() {
-    return schemaName;
   }
 
   /**
@@ -201,7 +176,6 @@ public final class ECSchema {
   public String toString() {
     StringBuilder sb = new StringBuilder("ECSchema=[");
 
-    sb.append("Name=" + schemaName + ", ");
     sb.append("Codec=" + codecName + ", ");
     sb.append(NUM_DATA_UNITS_KEY + "=" + numDataUnits + ", ");
     sb.append(NUM_PARITY_UNITS_KEY + "=" + numParityUnits);
@@ -235,9 +209,6 @@ public final class ECSchema {
     if (numParityUnits != ecSchema.numParityUnits) {
       return false;
     }
-    if (!schemaName.equals(ecSchema.schemaName)) {
-      return false;
-    }
     if (!codecName.equals(ecSchema.codecName)) {
       return false;
     }
@@ -246,8 +217,7 @@ public final class ECSchema {
 
   @Override
   public int hashCode() {
-    int result = schemaName.hashCode();
-    result = 31 * result + codecName.hashCode();
+    int result = codecName.hashCode();
     result = 31 * result + extraOptions.hashCode();
     result = 31 * result + numDataUnits;
     result = 31 * result + numParityUnits;

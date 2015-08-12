@@ -16,21 +16,17 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import org.apache.hadoop.io.erasurecode.ECSchema;
-
 /**
  * Information about the EC Zone at the specified path.
  */
 public class ErasureCodingZone {
 
   private String dir;
-  private ECSchema schema;
-  private int cellSize;
+  private ErasureCodingPolicy ecPolicy;
 
-  public ErasureCodingZone(String dir, ECSchema schema, int cellSize) {
+  public ErasureCodingZone(String dir, ErasureCodingPolicy ecPolicy) {
     this.dir = dir;
-    this.schema = schema;
-    this.cellSize = cellSize;
+    this.ecPolicy = ecPolicy;
   }
 
   /**
@@ -43,24 +39,16 @@ public class ErasureCodingZone {
   }
 
   /**
-   * Get the schema for the EC Zone
+   * Get the erasure coding policy for the EC Zone
    * 
    * @return
    */
-  public ECSchema getSchema() {
-    return schema;
-  }
-
-  /**
-   * Get cellSize for the EC Zone
-   */
-  public int getCellSize() {
-    return cellSize;
+  public ErasureCodingPolicy getErasureCodingPolicy() {
+    return ecPolicy;
   }
 
   @Override
   public String toString() {
-    return "Dir: " + getDir() + ", Schema: " + schema + ", cellSize: "
-        + cellSize;
+    return "Dir: " + getDir() + ", Policy: " + ecPolicy;
   }
 }
