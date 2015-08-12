@@ -92,7 +92,7 @@ public abstract class ApplicationReport {
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String applicationType, Token amRmToken,
-      Set<String> tags, boolean unmanagedApplication) {
+      Set<String> tags, boolean unmanagedApplication, Priority priority) {
     ApplicationReport report =
         newInstance(applicationId, applicationAttemptId, user, queue, name,
           host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
@@ -100,6 +100,7 @@ public abstract class ApplicationReport {
           applicationType, amRmToken);
     report.setApplicationTags(tags);
     report.setUnmanagedApp(unmanagedApplication);
+    report.setPriority(priority);
     return report;
   }
 
