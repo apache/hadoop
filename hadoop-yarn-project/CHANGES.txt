@@ -396,6 +396,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4026. Refactored ContainerAllocator to accept a list of priorites
     rather than a single priority. (Wangda Tan via jianhe)
 
+   YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
+   WebAppProxyServer (djp via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
