@@ -103,9 +103,6 @@ function setup_defaults
   BUILDTOOL=maven
   TESTFORMATS=""
   JDK_TEST_LIST="javac javadoc unit"
-  GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
-  GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
-  GITUNIDIFFLINES="${PATCH_DIR}/gitdiffunilines.txt"
 
   # Solaris needs POSIX, not SVID
   case ${OSTYPE} in
@@ -692,7 +689,7 @@ function compute_unidiff
   # finally rewriting the line so that it is in
   # './filename:diff line:content' format.
   for fn in ${CHANGED_FILES}; do
-    ${GIT} diff ${fn} > ${PATCH_DIR}/${fn}.$$ \
+    ${GIT} diff ${fn} \
       | ${GREP} -vE '^(@|\+\+\+|\-\-\-|diff|index)' \
       | ${GREP} -n '^+' \
       | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
@@ -701,10 +698,10 @@ function compute_unidiff
 
   # at this point, tmpfile should be in the same format
   # as gitdiffcontent, just with different line numbers.
-  # let's do a merge:
+  # let's do a merge (using gitdifflines because it's easier):
 
   # ./filename:real number:diff number
-  paste -d: "${GITDIFFLINES}" "${tmpflie}" \
+  paste -d: "${GITDIFFLINES}" "${tmpfile}" \
     | ${AWK} -F: '{print $1":"$2":"$5}' \
     > "${GITUNIDIFFLINES}"
 
@@ -1080,6 +1077,8 @@ function parse_args
 
   GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
   GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
+  GITUNIDIFFLINES="${PATCH_DIR}/gitdiffunilines.txt"
+
 }
 
 ## @description  Locate the build file for a given directory
@@ -1189,7 +1188,7 @@ function find_changed_modules
     ;;
     *)
       yetus_error "ERROR: Unsupported build tool."
-      output_to_bugsystem 1
+      bugsystem_output 1
       cleanup_and_exit 1
     ;;
   esac
@@ -1207,7 +1206,7 @@ function find_changed_modules
     builddir=$(find_buildfile_dir ${buildfile} "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
-      output_to_bugsystem 1
+      bugsystem_output 1
       cleanup_and_exit 1
     fi
     builddirs="${builddirs} ${builddir}"
@@ -1674,7 +1673,7 @@ function apply_patch_file
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "The patch command could not apply the patch."
-    output_to_bugsystem 1
+    bugsystem_output 1
     cleanup_and_exit 1
   fi
   return 0
@@ -2965,11 +2964,32 @@ function check_unittests
   return 0
 }
 
+function bugsystem_linecomments
+{
+  declare fn=$1
+  declare line
+  declare bugs
+
+  while read line;do
+    file=$(echo ${line} | cut -f1 -d:)
+    realline=$(echo ${line} | cut -f2 -d:)
+    text=$(echo ${line} | cut -f3- -d:)
+    idxline="${file}:${realline}:"
+    uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d:)
+
+    for bugs in ${BUGSYSTEMS}; do
+      if declare -f ${bugs}_linecomments >/dev/null;then
+        "${bugs}_linecomments" "${file}" "${realline}" "${uniline}" "${text}"
+      fi
+    done
+  done < "${fn}"
+}
+
 ## @description  Write the final output to the selected bug system
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-function output_to_bugsystem
+function bugsystem_output
 {
   declare bugs
 
@@ -3024,7 +3044,7 @@ function postcheckout
 
     (( RESULT = RESULT + $? ))
     if [[ ${RESULT} != 0 ]] ; then
-      output_to_bugsystem 1
+      bugsystem_output 1
       cleanup_and_exit 1
     fi
   done
@@ -3040,7 +3060,7 @@ function postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
-        output_to_bugsystem 1
+        bugsystem_output 1
         cleanup_and_exit 1
       fi
     fi
@@ -3096,7 +3116,7 @@ function postapply
   check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
-    output_to_bugsystem 1
+    bugsystem_output 1
     cleanup_and_exit 1
   fi
 
@@ -3371,5 +3391,5 @@ finish_vote_table
 
 finish_footer_table
 
-output_to_bugsystem ${RESULT}
+bugsystem_output ${RESULT}
 cleanup_and_exit ${RESULT}

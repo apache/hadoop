@@ -267,6 +267,56 @@ function github_locate_patch
   return 0
 }
 
+function github_linecomments
+{
+  declare file=$1
+  declare realline=$2
+  declare uniline=$3
+  declare text=$4
+  declare commitsha
+
+  if [[ ${file} =~ ^./ ]]; then
+    file=${file##./}
+  fi
+
+  commitsha=$(${GREP} \"sha\" "${PATCH_DIR}/github-pull.json" 2>/dev/null \
+    | head -1 \
+    | cut -f4 -d\")
+
+  {
+    printf "{\"body\":\""
+    echo "${text}" \
+      | ${SED} -e 's,\\,\\\\,g' \
+        -e 's,\",\\\",g' \
+        -e 's,$,\\r\\n,g' \
+      | tr -d '\n'
+    echo "\","
+    echo "\"commit_id\":\"${commitsha}\","
+    echo "\"path\":\"${file}\","
+    echo "\"position\":${uniline},"
+    echo "}"
+  } > "${PATCH_DIR}/ghcomment.$$"
+
+  if [[ -n ${GITHUB_USER}
+     && -n ${GITHUB_PASSWD} ]]; then
+    githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
+  elif [[ -n ${GITHUB_TOKEN} ]]; then
+    githubauth="Authorization: token ${GITHUB_TOKEN}"
+  else
+    return 0
+  fi
+
+  ${CURL} -X POST \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -H "${githubauth}" \
+    -d @"${PATCH_DIR}/ghcomment.$$" \
+    --silent --location \
+    "${GITHUB_API_URL}/repos/${GITHUB_REPO}/pulls/${GITHUB_ISSUE}/comments" \
+    >/dev/null
+  rm "${PATCH_DIR}/ghcomment.$$"
+}
+
 ## @description Write the contents of a file to github
 ## @params filename
 ## @stability stable
