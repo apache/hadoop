@@ -83,11 +83,13 @@ public class JvmPauseMonitor {
   
   public void stop() {
     shouldRun = false;
-    monitorThread.interrupt();
-    try {
-      monitorThread.join();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+    if (monitorThread != null) {
+      monitorThread.interrupt();
+      try {
+        monitorThread.join();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 

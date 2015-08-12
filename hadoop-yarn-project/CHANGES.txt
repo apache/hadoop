@@ -200,6 +200,8 @@ Release 2.6.1 - UNRELEASED
     YARN-2918. RM should not fail on startup if queue's configured labels do
     not exist in cluster-node-labels. (Wangda Tan via jianhe)
 
+    YARN-3999. RM hangs on draing events. (Jian He via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
