@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Public
+@Deprecated
 public class BlockStorageLocation extends BlockLocation {
 
   private final VolumeId[] volumeIds;

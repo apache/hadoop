@@ -234,6 +234,11 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * This API has been deprecated since the NameNode now tracks datanode
+   * storages separately. Storage IDs can be gotten from {@link
+   * BlockLocation#getStorageIds()}, which are functionally equivalent to
+   * the volume IDs returned here (although a String rather than a byte[]).
+   *
    * Used to query storage location information for a list of blocks. This list
    * of blocks is normally constructed via a series of calls to
    * {@link DistributedFileSystem#getFileBlockLocations(Path, long, long)} to
@@ -257,6 +262,7 @@ public class DistributedFileSystem extends FileSystem {
    *         information for each replica of each block.
    */
   @InterfaceStability.Unstable
+  @Deprecated
   public BlockStorageLocation[] getFileBlockStorageLocations(
       List<BlockLocation> blocks) throws IOException, 
       UnsupportedOperationException, InvalidBlockTokenException {
