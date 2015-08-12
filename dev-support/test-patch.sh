@@ -659,11 +659,12 @@ function compute_gitdiff
   if [[ ! -f ${GITDIFFLINES} ]]; then
     touch "${GITDIFFLINES}"
   fi
+
   if [[ ! -f ${GITDIFFCONTENT} ]]; then
     touch "${GITDIFFCONTENT}"
   fi
 
-  if [[ -s "${GITDIFFLINES}" ]]
+  if [[ -s "${GITDIFFLINES}" ]]; then
     compute_unidiff
   fi
 
