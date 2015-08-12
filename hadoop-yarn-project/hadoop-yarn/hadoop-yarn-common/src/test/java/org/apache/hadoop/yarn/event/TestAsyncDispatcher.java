@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.yarn.event;
 
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.*;
 
 public class TestAsyncDispatcher {
 
@@ -56,6 +55,24 @@ public class TestAsyncDispatcher {
     // Queue should be empty and dispatcher should not hang on close
     Assert.assertTrue("Event Queue should have been empty",
         eventQueue.isEmpty());
+    disp.close();
+  }
+
+  // Test dispatcher should timeout on draining events.
+  @Test(timeout=10000)
+  public void testDispatchStopOnTimeout() throws Exception {
+    BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<Event>();
+    eventQueue = spy(eventQueue);
+    // simulate dispatcher is not drained.
+    when(eventQueue.isEmpty()).thenReturn(false);
+
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 2000);
+    DrainDispatcher disp = new DrainDispatcher(eventQueue);
+    disp.init(conf);
+    disp.setDrainEventsOnStop();
+    disp.start();
+    disp.waitForEventThreadToWait();
     disp.close();
   }
 }
