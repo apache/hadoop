@@ -622,16 +622,9 @@ public class TestLeafQueue {
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
-        new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
+        new FiCaSchedulerApp(appAttemptId_1, user_1, a, 
             a.getActiveUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app_1, user_0);  // same user
-
-    final ApplicationAttemptId appAttemptId_2 = 
-        TestUtils.getMockApplicationAttemptId(2, 0); 
-    FiCaSchedulerApp app_2 = 
-        new FiCaSchedulerApp(appAttemptId_2, user_1, a, 
-            a.getActiveUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app_2, user_1);
+    a.submitApplicationAttempt(app_1, user_1); // different user
 
     // Setup some nodes
     String host_0 = "127.0.0.1";
@@ -647,7 +640,7 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, true,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 2, true,
                 priority, recordFactory)));
 
     app_1.updateResourceRequests(Collections.singletonList(
@@ -662,39 +655,38 @@ public class TestLeafQueue {
     a.setUserLimit(50);
     a.setUserLimitFactor(2);
     
-    // Now, only user_0 should be active since he is the only one with
-    // outstanding requests
-    assertEquals("There should only be 1 active user!", 
-        1, a.getActiveUsersManager().getNumActiveUsers());
-
-    // This commented code is key to test 'activeUsers'. 
-    // It should fail the test if uncommented since
-    // it would increase 'activeUsers' to 2 and stop user_2
-    // Pre MAPREDUCE-3732 this test should fail without this block too
-//    app_2.updateResourceRequests(Collections.singletonList(
-//        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, priority,
-//            recordFactory)));
+    // There're two active users
+    assertEquals(2, a.getActiveUsersManager().getNumActiveUsers());
 
     // 1 container to user_0
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2*GB, a.getUsedResources().getMemory());
-    assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(3*GB, a.getUsedResources().getMemory());
+    assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
 
-    // Again one to user_0 since he hasn't exceeded user limit yet
+    // Allocate one container to app_1. Even if app_0
+    // submit earlier, it cannot get this container assigned since user_0
+    // exceeded user-limit already. 
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(3*GB, a.getUsedResources().getMemory());
-    assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(4*GB, a.getUsedResources().getMemory());
+    assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
 
-    // One more to user_0 since he is the only active user
+    // Allocate one container to app_0, before allocating this container,
+    // user-limit = ceil((4 + 1) / 2) = 3G. app_0's used resource (3G) <=
+    // user-limit.
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(4*GB, a.getUsedResources().getMemory());
-    assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(2*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(7*GB, a.getUsedResources().getMemory());
+    assertEquals(6*GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
+
+    // app_0 doesn't have outstanding resources, there's only one active user.
+    assertEquals("There should only be 1 active user!", 
+        1, a.getActiveUsersManager().getNumActiveUsers());
+
   }
 
   @Test
@@ -2568,6 +2560,96 @@ public class TestLeafQueue {
     a.assignContainers(clusterResource, node_0_0, new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     Assert.assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
 
+  }
+  
+  @Test
+  public void testLocalityDelaySkipsApplication() throws Exception {
+
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+
+    // User
+    String user_0 = "user_0";
+    
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 = 
+        TestUtils.getMockApplicationAttemptId(0, 0); 
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_0, a,
+            mock(ActiveUsersManager.class), spyRMContext);
+    a.submitApplicationAttempt(app_0, user_0);
+    final ApplicationAttemptId appAttemptId_1 = 
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_0, a,
+            mock(ActiveUsersManager.class), spyRMContext);
+    a.submitApplicationAttempt(app_1, user_0);
+
+    // Setup some nodes and racks
+    String host_0 = "127.0.0.1";
+    String rack_0 = "rack_0";
+    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, rack_0, 0, 8*GB);
+    
+    String host_1 = "127.0.0.2";
+    String rack_1 = "rack_1";
+    FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, rack_1, 0, 8*GB);
+    
+    String host_2 = "127.0.0.3";
+    String rack_2 = "rack_2";
+    FiCaSchedulerNode node_2 = TestUtils.getMockNode(host_2, rack_2, 0, 8*GB);
+
+    final int numNodes = 3;
+    Resource clusterResource = 
+        Resources.createResource(numNodes * (8*GB), numNodes * 16);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    
+    // Setup resource-requests and submit
+    // App0 has node local request for host_0/host_1, and app1 has node local
+    // request for host2.
+    Priority priority = TestUtils.createMockPriority(1);
+    List<ResourceRequest> app_0_requests_0 = new ArrayList<ResourceRequest>();
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(host_0, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(rack_0, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(host_1, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_0_requests_0.add(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, // one extra
+            true, priority, recordFactory));
+    app_0.updateResourceRequests(app_0_requests_0);
+
+    List<ResourceRequest> app_1_requests_0 = new ArrayList<ResourceRequest>();
+    app_1_requests_0.add(
+        TestUtils.createResourceRequest(host_2, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_1_requests_0.add(
+        TestUtils.createResourceRequest(rack_2, 1*GB, 1, 
+            true, priority, recordFactory));
+    app_1_requests_0.add(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // one extra
+            true, priority, recordFactory));
+    app_1.updateResourceRequests(app_1_requests_0);
+
+    // Start testing...
+    // When doing allocation, even if app_0 submit earlier than app_1, app_1 can
+    // still get allocated because app_0 is waiting for node-locality-delay
+    CSAssignment assignment = null;
+    
+    // Check app_0's scheduling opportunities increased and app_1 get allocated
+    assignment = a.assignContainers(clusterResource, node_2,
+        new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    verifyContainerAllocated(assignment, NodeType.NODE_LOCAL);
+    assertEquals(1, app_0.getSchedulingOpportunities(priority));
+    assertEquals(3, app_0.getTotalRequiredResources(priority));
+    assertEquals(0, app_0.getLiveContainers().size());
+    assertEquals(1, app_1.getLiveContainers().size());
   }
 
   private List<FiCaSchedulerApp> createListOfApps(int noOfApps, String user,
