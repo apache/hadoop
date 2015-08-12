@@ -393,6 +393,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3966. Fix excessive loggings in CapacityScheduler. (Jian He via wangda)
 
+    YARN-4026. Refactored ContainerAllocator to accept a list of priorites
+    rather than a single priority. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
