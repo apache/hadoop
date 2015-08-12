@@ -692,7 +692,7 @@ function compute_unidiff
   # finally rewriting the line so that it is in
   # './filename:diff line:content' format.
   for fn in ${CHANGED_FILES}; do
-    ${GIT} diff ${file} > ${PATCH_DIR}/${file}.$$ \
+    ${GIT} diff ${fn} > ${PATCH_DIR}/${fn}.$$ \
       | ${GREP} -vE '^(@|\+\+\+|\-\-\-|diff|index)' \
       | ${GREP} -n '^+' \
       | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
