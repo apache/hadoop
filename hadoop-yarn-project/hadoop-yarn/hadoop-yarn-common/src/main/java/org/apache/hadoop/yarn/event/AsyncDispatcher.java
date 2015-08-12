@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -138,6 +139,10 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     if (drainEventsOnStop) {
       blockNewEvents = true;
       LOG.info("AsyncDispatcher is draining to stop, igonring any new events.");
+      long endTime = System.currentTimeMillis() + getConfig()
+          .getLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT,
+              YarnConfiguration.DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT);
+
       synchronized (waitForDrained) {
         while (!drained && eventHandlingThread.isAlive()) {
           waitForDrained.wait(1000);

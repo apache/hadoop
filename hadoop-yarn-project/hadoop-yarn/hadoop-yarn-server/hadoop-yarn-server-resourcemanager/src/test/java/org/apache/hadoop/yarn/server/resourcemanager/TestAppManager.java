@@ -118,7 +118,7 @@ public class TestAppManager{
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext context = new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null, null, null, null, writer) {
+        null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -126,7 +126,8 @@ public class TestAppManager{
     };
     ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
     metricsPublisher = mock(SystemMetricsPublisher.class);
-    ((RMContextImpl)context).setSystemMetricsPublisher(metricsPublisher);
+    context.setSystemMetricsPublisher(metricsPublisher);
+    context.setRMApplicationHistoryWriter(writer);
     return context;
   }
 
