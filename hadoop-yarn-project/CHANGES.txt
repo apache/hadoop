@@ -167,6 +167,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3887. Support changing Application priority during runtime. (Sunil G
     via jianhe)
 
+    YARN-4023. Publish Application Priority to TimelineServer. (Sunil G 
+    via rohithsharmaks)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
