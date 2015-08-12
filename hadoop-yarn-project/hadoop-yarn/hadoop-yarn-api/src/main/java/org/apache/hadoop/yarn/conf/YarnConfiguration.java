@@ -1300,6 +1300,11 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS
       = 30 * 1000;
 
+  public static final String DISPATCHER_DRAIN_EVENTS_TIMEOUT =
+      YARN_PREFIX + "dispatcher.drain-events.timeout";
+
+  public static final long DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT = 300000;
+
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
    * entries
