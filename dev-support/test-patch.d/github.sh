@@ -274,6 +274,7 @@ function github_linecomments
   declare uniline=$3
   declare text=$4
   declare commitsha
+  declare tempfile="${PATCH_DIR}/ghcomment.$$.${RANDOM}"
 
   if [[ ${file} =~ ^./ ]]; then
     file=${file##./}
@@ -293,9 +294,9 @@ function github_linecomments
     echo "\","
     echo "\"commit_id\":\"${commitsha}\","
     echo "\"path\":\"${file}\","
-    echo "\"position\":${uniline},"
+    echo "\"position\":${uniline}"
     echo "}"
-  } > "${PATCH_DIR}/ghcomment.$$"
+  } > "${tempfile}"
 
   if [[ -n ${GITHUB_USER}
      && -n ${GITHUB_PASSWD} ]]; then
@@ -310,11 +311,11 @@ function github_linecomments
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -H "${githubauth}" \
-    -d @"${PATCH_DIR}/ghcomment.$$" \
+    -d @"${tempfile}" \
     --silent --location \
     "${GITHUB_API_URL}/repos/${GITHUB_REPO}/pulls/${GITHUB_ISSUE}/comments" \
     >/dev/null
-  rm "${PATCH_DIR}/ghcomment.$$"
+  #rm "${tempfile}"
 }
 
 ## @description Write the contents of a file to github

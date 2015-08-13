@@ -275,10 +275,10 @@ function add_vote_table
   fi
 
   if [[ -z ${value} ]]; then
-    # shellcehck disable=SC2034
+    # shellcheck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="|  | ${subsystem} | | ${*:-} |"
   else
-    # shellcehck disable=SC2034
+    # shellcheck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| ${value} | ${subsystem} | ${calctime} | $* |"
   fi
   ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1))
@@ -676,36 +676,55 @@ function compute_gitdiff
 function compute_unidiff
 {
   declare fn
-  declare tmpfile=${PATCH_DIR}/gitdifflinenumber.$$
+  declare tmpfile1="${PATCH_DIR}/tmp.$$.${RANDOM}"
+  declare tmpfile2="${PATCH_DIR}/tmp.$$.${RANDOM}"
+  declare linepos
+  declare offset
 
   # now that we know what lines are where, we can deal
   # with github's pain-in-the-butt API. It requires
   # that the client provides the line number of the
   # unified diff on a per file basis.
 
-  # First, build a per-file unified diff, pulling
+
+  # Now build a per-file unified diff, pulling
   # out the 'extra' lines, grabbing the adds with
   # the line number in the diff file along the way,
   # finally rewriting the line so that it is in
-  # './filename:diff line:content' format.
+  # './filename:diff line:content' format
+  # while also dealing with offsets...
+
   for fn in ${CHANGED_FILES}; do
-    ${GIT} diff ${fn} \
-      | ${GREP} -vE '^(@|\+\+\+|\-\-\-|diff|index)' \
+    filen=${fn##./}
+
+    ${GIT} diff ${filen} \
       | ${GREP} -n '^+' \
+      | ${GREP} -vE '^[0-9]*:\+\+\+' \
       | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
-               -e s,^,./${fn}:,g >> "${tmpfile}"
+            >  "${tmpfile1}"
+
+    # now rewrite the file with the offset
+    while read -r line; do
+      ll=$(echo ${line} | cut -f1 -d:)
+      content=$(echo ${line} | cut -f2- -d:)
+      ((ll=ll-5))
+      echo "${fn}:${ll}:${content}" >> "${tmpfile2}"
+    done < "${tmpfile1}"
+
+    # at this point, tmpfile should be in the same format
+    # as gitdiffcontent, just with different line numbers.
+    # let's do a merge (using gitdifflines because it's easier):
+
+
+
   done
 
-  # at this point, tmpfile should be in the same format
-  # as gitdiffcontent, just with different line numbers.
-  # let's do a merge (using gitdifflines because it's easier):
-
   # ./filename:real number:diff number
-  paste -d: "${GITDIFFLINES}" "${tmpfile}" \
-    | ${AWK} -F: '{print $1":"$2":"$5}' \
-    > "${GITUNIDIFFLINES}"
+  paste -d: "${GITDIFFLINES}" "${tmpfile2}" \
+    | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
+    >> "${GITUNIDIFFLINES}"
+  rm "${tmpfile1}" "${tmpfile2}"
 
-  rm "${tmpfile}"
 }
 
 ## @description  Print the command to be executing to the screen. Then
