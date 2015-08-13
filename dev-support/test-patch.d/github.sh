@@ -270,6 +270,7 @@ function github_locate_patch
 function github_linecomments
 {
   declare file=$1
+  # shellcheck disable=SC2034
   declare realline=$2
   declare uniline=$3
   declare text=$4
