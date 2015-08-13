@@ -432,7 +432,7 @@ class FSDirWriteFileOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
           src + " inode " + newNode.getId() + " " + holder);
     }
-    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath, true);
+    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath);
   }
 
   static EncryptionKeyInfo getEncryptionKeyInfo(FSNamesystem fsn,

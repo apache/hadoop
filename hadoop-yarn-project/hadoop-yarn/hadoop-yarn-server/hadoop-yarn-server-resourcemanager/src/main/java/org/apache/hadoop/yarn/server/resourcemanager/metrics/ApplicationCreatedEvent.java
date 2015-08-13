@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
 
 public class ApplicationCreatedEvent extends
     SystemMetricsEvent {
@@ -33,6 +34,7 @@ public class ApplicationCreatedEvent extends
   private long submittedTime;
   private Set<String> appTags;
   private boolean unmanagedApplication;
+  private Priority applicationPriority;
 
   public ApplicationCreatedEvent(ApplicationId appId,
       String name,
@@ -42,7 +44,8 @@ public class ApplicationCreatedEvent extends
       long submittedTime,
       long createdTime,
       Set<String> appTags,
-      boolean unmanagedApplication) {
+      boolean unmanagedApplication,
+      Priority applicationPriority) {
     super(SystemMetricsEventType.APP_CREATED, createdTime);
     this.appId = appId;
     this.name = name;
@@ -52,6 +55,7 @@ public class ApplicationCreatedEvent extends
     this.submittedTime = submittedTime;
     this.appTags = appTags;
     this.unmanagedApplication = unmanagedApplication;
+    this.applicationPriority = applicationPriority;
   }
 
   @Override
@@ -89,5 +93,9 @@ public class ApplicationCreatedEvent extends
 
   public boolean isUnmanagedApp() {
     return unmanagedApplication;
+  }
+
+  public Priority getApplicationPriority() {
+    return applicationPriority;
   }
 }

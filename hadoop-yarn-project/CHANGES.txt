@@ -167,6 +167,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3887. Support changing Application priority during runtime. (Sunil G
     via jianhe)
 
+    YARN-4023. Publish Application Priority to TimelineServer. (Sunil G 
+    via rohithsharmaks)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -389,6 +392,12 @@ Release 2.8.0 - UNRELEASED
     base test. (subru via curino)
 
     YARN-3966. Fix excessive loggings in CapacityScheduler. (Jian He via wangda)
+
+    YARN-4026. Refactored ContainerAllocator to accept a list of priorites
+    rather than a single priority. (Wangda Tan via jianhe)
+
+   YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
+   WebAppProxyServer (djp via rkanter)
 
   OPTIMIZATIONS
 
@@ -771,6 +780,7 @@ Release 2.7.2 - UNRELEASED
     YARN-3978. Configurably turn off the saving of container info in Generic AHS
     (Eric Payne via jeagles)
 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -800,6 +810,8 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3990. AsyncDispatcher may overloaded with RMAppNodeUpdateEvent when
     Node is connected/disconnected (Bibin A Chundatt via jlowe)
+
+    YARN-3999. RM hangs on draing events. (Jian He via xgong)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -1711,6 +1723,18 @@ Release 2.7.0 - 2015-04-20
 
     YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
     renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
+
+Release 2.6.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.6.0 - 2014-11-18
 

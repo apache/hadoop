@@ -107,6 +107,9 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
     case "LISTXATTRS":
       content = image.listXAttrs(path);
       break;
+    case "GETCONTENTSUMMARY":
+      content = image.getContentSummary(path);
+      break;
     default:
       throw new IllegalArgumentException("Invalid value for webhdfs parameter"
           + " \"op\"");

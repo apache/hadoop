@@ -146,7 +146,7 @@ function hbaseprotoc_postapply
   local module
   local logfile
   local count
-  local results
+  local result
 
   big_console_header "Patch HBase protoc plugin"
 
@@ -159,7 +159,7 @@ function hbaseprotoc_postapply
   fi
 
   personality_modules patch hbaseprotoc
-  modules_workers patch hbaseprotoc -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  modules_workers patch hbaseprotoc compile -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
   until [[ $i -eq ${#MODULE[@]} ]]; do
@@ -177,13 +177,13 @@ function hbaseprotoc_postapply
     if [[ ${count} -gt 0 ]]; then
       module_status ${i} -1 "patch-hbaseprotoc-${fn}.txt" "Patch generated "\
         "${count} new protoc errors in ${module}."
-      ((results=results+1))
+      ((result=result+1))
     fi
     ((i=i+1))
   done
 
   modules_messages patch hbaseprotoc true
-  if [[ ${results} -gt 0 ]]; then
+  if [[ ${result} -gt 0 ]]; then
     return 1
   fi
   return 0

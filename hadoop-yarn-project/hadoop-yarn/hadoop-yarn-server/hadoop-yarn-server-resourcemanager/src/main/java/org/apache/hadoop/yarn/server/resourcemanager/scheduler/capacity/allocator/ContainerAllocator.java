@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
-import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -36,6 +39,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * extensible.
  */
 public abstract class ContainerAllocator {
+  private static final Log LOG = LogFactory.getLog(ContainerAllocator.class);
+
   FiCaSchedulerApp application;
   final ResourceCalculator rc;
   final RMContext rmContext;
@@ -46,27 +51,8 @@ public abstract class ContainerAllocator {
     this.rc = rc;
     this.rmContext = rmContext;
   }
-  
-  /**
-   * preAllocation is to perform checks, etc. to see if we can/cannot allocate
-   * container. It will put necessary information to returned
-   * {@link ContainerAllocation}. 
-   */
-  abstract ContainerAllocation preAllocation(
-      Resource clusterResource, FiCaSchedulerNode node,
-      SchedulingMode schedulingMode, ResourceLimits resourceLimits,
-      Priority priority, RMContainer reservedContainer);
-  
-  /**
-   * doAllocation is to update application metrics, create containers, etc.
-   * According to allocating conclusion decided by preAllocation.
-   */
-  abstract ContainerAllocation doAllocation(
-      ContainerAllocation allocationResult, Resource clusterResource,
-      FiCaSchedulerNode node, SchedulingMode schedulingMode, Priority priority,
-      RMContainer reservedContainer);
-  
-  boolean checkHeadroom(Resource clusterResource,
+
+  protected boolean checkHeadroom(Resource clusterResource,
       ResourceLimits currentResourceLimits, Resource required,
       FiCaSchedulerNode node) {
     // If headroom + currentReservation < required, we cannot allocate this
@@ -83,6 +69,68 @@ public abstract class ContainerAllocator {
         currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
         required);
   }
+
+  protected CSAssignment getCSAssignmentFromAllocateResult(
+      Resource clusterResource, ContainerAllocation result,
+      RMContainer rmContainer) {
+    // Handle skipped
+    boolean skipped =
+        (result.getAllocationState() == AllocationState.APP_SKIPPED);
+    CSAssignment assignment = new CSAssignment(skipped);
+    assignment.setApplication(application);
+    
+    // Handle excess reservation
+    assignment.setExcessReservation(result.getContainerToBeUnreserved());
+
+    // If we allocated something
+    if (Resources.greaterThan(rc, clusterResource,
+        result.getResourceToBeAllocated(), Resources.none())) {
+      Resource allocatedResource = result.getResourceToBeAllocated();
+      Container updatedContainer = result.getUpdatedContainer();
+
+      assignment.setResource(allocatedResource);
+      assignment.setType(result.getContainerNodeType());
+
+      if (result.getAllocationState() == AllocationState.RESERVED) {
+        // This is a reserved container
+        LOG.info("Reserved container " + " application="
+            + application.getApplicationId() + " resource=" + allocatedResource
+            + " queue=" + this.toString() + " cluster=" + clusterResource);
+        assignment.getAssignmentInformation().addReservationDetails(
+            updatedContainer.getId(),
+            application.getCSLeafQueue().getQueuePath());
+        assignment.getAssignmentInformation().incrReservations();
+        Resources.addTo(assignment.getAssignmentInformation().getReserved(),
+            allocatedResource);
+      } else if (result.getAllocationState() == AllocationState.ALLOCATED){
+        // This is a new container
+        // Inform the ordering policy
+        LOG.info("assignedContainer" + " application attempt="
+            + application.getApplicationAttemptId() + " container="
+            + updatedContainer.getId() + " queue=" + this + " clusterResource="
+            + clusterResource);
+
+        application
+            .getCSLeafQueue()
+            .getOrderingPolicy()
+            .containerAllocated(application,
+                application.getRMContainer(updatedContainer.getId()));
+
+        assignment.getAssignmentInformation().addAllocationDetails(
+            updatedContainer.getId(),
+            application.getCSLeafQueue().getQueuePath());
+        assignment.getAssignmentInformation().incrAllocations();
+        Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
+            allocatedResource);
+        
+        if (rmContainer != null) {
+          assignment.setFulfilledReservation(true);
+        }
+      }
+    }
+    
+    return assignment;
+  }
   
   /**
    * allocate needs to handle following stuffs:
@@ -96,20 +144,7 @@ public abstract class ContainerAllocator {
    * container, this will also update metrics</li>
    * </ul>
    */
-  public ContainerAllocation allocate(Resource clusterResource,
+  public abstract CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, SchedulingMode schedulingMode,
-      ResourceLimits resourceLimits, Priority priority,
-      RMContainer reservedContainer) {
-    ContainerAllocation result =
-        preAllocation(clusterResource, node, schedulingMode,
-            resourceLimits, priority, reservedContainer);
-    
-    if (AllocationState.ALLOCATED == result.state
-        || AllocationState.RESERVED == result.state) {
-      result = doAllocation(result, clusterResource, node,
-          schedulingMode, priority, reservedContainer);
-    }
-    
-    return result;
-  }
+      ResourceLimits resourceLimits, RMContainer reservedContainer);
 }

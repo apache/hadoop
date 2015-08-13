@@ -34,6 +34,7 @@ import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
@@ -650,13 +651,22 @@ public class RawLocalFileSystem extends FileSystem {
     private boolean isPermissionLoaded() {
       return !super.getOwner().isEmpty(); 
     }
-    
+
+    private static long getLastAccessTime(File f) throws IOException {
+      long accessTime;
+      try {
+        accessTime = Files.readAttributes(f.toPath(),
+            BasicFileAttributes.class).lastAccessTime().toMillis();
+      } catch (NoSuchFileException e) {
+        throw new FileNotFoundException("File " + f + " does not exist");
+      }
+      return accessTime;
+    }
+
     DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs)
       throws IOException {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-          f.lastModified(),
-          Files.readAttributes(f.toPath(),
-            BasicFileAttributes.class).lastAccessTime().toMillis(),
+          f.lastModified(), getLastAccessTime(f),
           null, null, null,
           new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
@@ -773,17 +783,21 @@ public class RawLocalFileSystem extends FileSystem {
    * Sets the {@link Path}'s last modified time and last access time to
    * the given valid times.
    *
-   * @param mtime the modification time to set (only if greater than zero).
-   * @param atime the access time to set (only if greater than zero).
+   * @param mtime the modification time to set (only if no less than zero).
+   * @param atime the access time to set (only if no less than zero).
    * @throws IOException if setting the times fails.
    */
   @Override
   public void setTimes(Path p, long mtime, long atime) throws IOException {
-    BasicFileAttributeView view = Files.getFileAttributeView(
-        pathToFile(p).toPath(), BasicFileAttributeView.class);
-    FileTime fmtime = (mtime >= 0) ? FileTime.fromMillis(mtime) : null;
-    FileTime fatime = (atime >= 0) ? FileTime.fromMillis(atime) : null;
-    view.setTimes(fmtime, fatime, null);
+    try {
+      BasicFileAttributeView view = Files.getFileAttributeView(
+          pathToFile(p).toPath(), BasicFileAttributeView.class);
+      FileTime fmtime = (mtime >= 0) ? FileTime.fromMillis(mtime) : null;
+      FileTime fatime = (atime >= 0) ? FileTime.fromMillis(atime) : null;
+      view.setTimes(fmtime, fatime, null);
+    } catch (NoSuchFileException e) {
+      throw new FileNotFoundException("File " + p + " does not exist");
+    }
   }
 
   @Override
