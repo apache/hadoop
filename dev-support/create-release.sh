@@ -141,7 +141,4 @@ echo "The artifacts for this run are available at ${ARTIFACTS_DIR}:"
 run ls -1 ${ARTIFACTS_DIR}
 echo 
 echo "Remember to sign them before staging them on the open"
-echo     
-	
-#tab -^
-
+echo
