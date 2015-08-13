@@ -371,6 +371,7 @@ function github_write_comment
   declare restfile="${PATCH_DIR}/ghcomment.$$"
 
   if [[ "${OFFLINE}" == true ]]; then
+    echo "Github Plugin: Running in offline, comment skipped."
     return 0
   fi
 
@@ -389,6 +390,7 @@ function github_write_comment
   elif [[ -n ${GITHUB_TOKEN} ]]; then
     githubauth="Authorization: token ${GITHUB_TOKEN}"
   else
+    echo "Github Plugin: no credentials provided to write a comment."
     return 0
   fi
 

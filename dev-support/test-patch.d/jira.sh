@@ -271,18 +271,22 @@ function jira_write_comment
   declare retval=0
 
   if [[ "${OFFLINE}" == true ]]; then
+    echo "JIRA Plugin: Running in offline, comment skipped."
     return 0
   fi
 
   if [[ -n ${JIRA_PASSWD}
      && -n ${JIRA_USER} ]]; then
 
-    echo "{\"body\":\"" > "${PATCH_DIR}/jiracomment.$$"
-    ${SED} -e 's,\\,\\\\,g' \
-        -e 's,\",\\\",g' \
-        -e 's,$,\\r\\n,g' "${commentfile}" \
-    | tr -d '\n'>> "${PATCH_DIR}/jiracomment.$$"
-    echo "\"}" >> "${PATCH_DIR}/jiracomment.$$"
+    # RESTify the comment
+    {
+      echo "{\"body\":\""
+      ${SED} -e 's,\\,\\\\,g' \
+          -e 's,\",\\\",g' \
+          -e 's,$,\\r\\n,g' "${commentfile}" \
+      | tr -d '\n'
+      echo "\"}"
+    } > "${PATCH_DIR}/jiracomment.$$"
 
     ${CURL} -X POST \
          -H "Accept: application/json" \
@@ -294,6 +298,8 @@ function jira_write_comment
           >/dev/null
     retval=$?
     rm "${PATCH_DIR}/jiracomment.$$"
+  else
+    echo "JIRA Plugin: no credentials provided to write a comment."
   fi
   return ${retval}
 }
