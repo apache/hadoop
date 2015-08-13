@@ -91,6 +91,15 @@
   </property>
 
   <property>
+    <description>Timeout in milliseconds when YARN dispatcher tries to drain the
+      events. Typically, this happens when service is stopping. e.g. RM drains
+      the ATS events dispatcher when stopping.
+    </description>
+    <name>yarn.dispatcher.drain-events.timeout</name>
+    <value>300000</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>

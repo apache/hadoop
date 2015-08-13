@@ -251,6 +251,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     long createdTime = 0;
     long finishedTime = 0;
     float progress = 0.0f;
+    int applicationPriority = 0;
     ApplicationAttemptId latestApplicationAttemptId = null;
     String diagnosticsInfo = null;
     FinalApplicationStatus finalStatus = FinalApplicationStatus.UNDEFINED;
@@ -276,10 +277,11 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       if (field == ApplicationReportField.USER_AND_ACLS) {
         return new ApplicationReportExt(ApplicationReport.newInstance(
             ConverterUtils.toApplicationId(entity.getEntityId()),
-            latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-            diagnosticsInfo, null, createdTime, finishedTime, finalStatus, null,
-            null, progress, type, null, appTags,
-            unmanagedApplication), appViewACLs);
+            latestApplicationAttemptId, user, queue, name, null, -1, null,
+            state, diagnosticsInfo, null, createdTime, finishedTime,
+            finalStatus, null, null, progress, type, null, appTags,
+            unmanagedApplication, Priority.newInstance(applicationPriority)),
+            appViewACLs);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)) {
         queue =
@@ -302,6 +304,11 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             Boolean.parseBoolean(entityInfo.get(
                 ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO)
                 .toString());
+      }
+      if (entityInfo
+          .containsKey(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO)) {
+        applicationPriority = Integer.parseInt(entityInfo.get(
+            ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO).toString());
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
         long vcoreSeconds=Long.parseLong(entityInfo.get(
@@ -373,8 +380,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     return new ApplicationReportExt(ApplicationReport.newInstance(
         ConverterUtils.toApplicationId(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus, appResources,
-        null, progress, type, null, appTags, unmanagedApplication), appViewACLs);
+        diagnosticsInfo, null, createdTime, finishedTime, finalStatus,
+        appResources, null, progress, type, null, appTags,
+        unmanagedApplication, Priority.newInstance(applicationPriority)),
+        appViewACLs);
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(

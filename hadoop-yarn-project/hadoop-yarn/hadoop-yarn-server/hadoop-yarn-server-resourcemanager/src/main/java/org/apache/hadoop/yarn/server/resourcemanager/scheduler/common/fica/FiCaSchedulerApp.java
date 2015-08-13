@@ -57,10 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.RegularContainerAllocator;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocation;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -280,7 +278,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return ret;
   }
 
-  public synchronized void addPreemptContainer(ContainerId cont){
+  public synchronized void addPreemptContainer(ContainerId cont) {
     // ignore already completed containers
     if (liveContainers.containsKey(cont)) {
       containersToPreempt.add(cont);
@@ -430,112 +428,19 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   public LeafQueue getCSLeafQueue() {
     return (LeafQueue)queue;
   }
-
-  private CSAssignment getCSAssignmentFromAllocateResult(
-      Resource clusterResource, ContainerAllocation result) {
-    // Handle skipped
-    boolean skipped =
-        (result.getAllocationState() == AllocationState.APP_SKIPPED);
-    CSAssignment assignment = new CSAssignment(skipped);
-    assignment.setApplication(this);
-    
-    // Handle excess reservation
-    assignment.setExcessReservation(result.getContainerToBeUnreserved());
-
-    // If we allocated something
-    if (Resources.greaterThan(rc, clusterResource,
-        result.getResourceToBeAllocated(), Resources.none())) {
-      Resource allocatedResource = result.getResourceToBeAllocated();
-      Container updatedContainer = result.getUpdatedContainer();
-      
-      assignment.setResource(allocatedResource);
-      assignment.setType(result.getContainerNodeType());
-
-      if (result.getAllocationState() == AllocationState.RESERVED) {
-        // This is a reserved container
-        LOG.info("Reserved container " + " application=" + getApplicationId()
-            + " resource=" + allocatedResource + " queue="
-            + this.toString() + " cluster=" + clusterResource);
-        assignment.getAssignmentInformation().addReservationDetails(
-            updatedContainer.getId(), getCSLeafQueue().getQueuePath());
-        assignment.getAssignmentInformation().incrReservations();
-        Resources.addTo(assignment.getAssignmentInformation().getReserved(),
-            allocatedResource);
-        assignment.setFulfilledReservation(true);
-      } else {
-        // This is a new container
-        // Inform the ordering policy
-        LOG.info("assignedContainer" + " application attempt="
-            + getApplicationAttemptId() + " container="
-            + updatedContainer.getId() + " queue=" + this + " clusterResource="
-            + clusterResource);
-
-        getCSLeafQueue().getOrderingPolicy().containerAllocated(this,
-            getRMContainer(updatedContainer.getId()));
-
-        assignment.getAssignmentInformation().addAllocationDetails(
-            updatedContainer.getId(), getCSLeafQueue().getQueuePath());
-        assignment.getAssignmentInformation().incrAllocations();
-        Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
-            allocatedResource);
-      }
-    }
-    
-    return assignment;
-  }
   
   public CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, ResourceLimits currentResourceLimits,
-      SchedulingMode schedulingMode) {
+      SchedulingMode schedulingMode, RMContainer reservedContainer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pre-assignContainers for application "
           + getApplicationId());
       showRequests();
     }
 
-    // Check if application needs more resource, skip if it doesn't need more.
-    if (!hasPendingResourceRequest(rc,
-        node.getPartition(), clusterResource, schedulingMode)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skip app_attempt=" + getApplicationAttemptId()
-            + ", because it doesn't need more resource, schedulingMode="
-            + schedulingMode.name() + " node-label=" + node.getPartition());
-      }
-      return CSAssignment.SKIP_ASSIGNMENT;
-    }
-
     synchronized (this) {
-      // Schedule in priority order
-      for (Priority priority : getPriorities()) {
-        ContainerAllocation allocationResult =
-            containerAllocator.allocate(clusterResource, node,
-                schedulingMode, currentResourceLimits, priority, null);
-
-        // If it's a skipped allocation
-        AllocationState allocationState = allocationResult.getAllocationState();
-
-        if (allocationState == AllocationState.PRIORITY_SKIPPED) {
-          continue;
-        }
-        return getCSAssignmentFromAllocateResult(clusterResource,
-            allocationResult);
-      }
+      return containerAllocator.assignContainers(clusterResource, node,
+          schedulingMode, currentResourceLimits, reservedContainer);
     }
-
-    // We will reach here if we skipped all priorities of the app, so we will
-    // skip the app.
-    return CSAssignment.SKIP_ASSIGNMENT;
-  }
-
-
-  public synchronized CSAssignment assignReservedContainer(
-      FiCaSchedulerNode node, RMContainer rmContainer,
-      Resource clusterResource, SchedulingMode schedulingMode) {
-    ContainerAllocation result =
-        containerAllocator.allocate(clusterResource, node,
-            schedulingMode, new ResourceLimits(Resources.none()),
-            rmContainer.getReservedPriority(), rmContainer);
-
-    return getCSAssignmentFromAllocateResult(clusterResource, result);
   }
 }

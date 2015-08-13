@@ -763,8 +763,9 @@ public class LeafQueue extends AbstractCSQueue {
       FiCaSchedulerApp application =
           getApplication(reservedContainer.getApplicationAttemptId());
       synchronized (application) {
-        CSAssignment assignment = application.assignReservedContainer(node, reservedContainer,
-            clusterResource, schedulingMode);
+        CSAssignment assignment =
+            application.assignContainers(clusterResource, node,
+                currentResourceLimits, schedulingMode, reservedContainer);
         handleExcessReservedContainer(clusterResource, assignment);
         return assignment;
       }
@@ -812,7 +813,7 @@ public class LeafQueue extends AbstractCSQueue {
       // Try to schedule
       CSAssignment assignment =
           application.assignContainers(clusterResource, node,
-              currentResourceLimits, schedulingMode);
+              currentResourceLimits, schedulingMode, null);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("post-assignContainers for application "

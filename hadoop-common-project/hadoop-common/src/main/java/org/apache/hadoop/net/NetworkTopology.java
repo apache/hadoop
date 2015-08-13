@@ -166,10 +166,11 @@ public class NetworkTopology {
      * @return true if the node is added; false otherwise
      */
     boolean add(Node n) {
-      if (!isAncestor(n))
-        throw new IllegalArgumentException(n.getName()+", which is located at "
-                +n.getNetworkLocation()+", is not a decendent of "
-                +getPath(this));
+      if (!isAncestor(n)) {
+        throw new IllegalArgumentException(n.getName()
+            + ", which is located at " + n.getNetworkLocation()
+            + ", is not a descendent of " + getPath(this));
+      }
       if (isParent(n)) {
         // this node is the parent of n; add n directly
         n.setParent(this);
@@ -227,12 +228,11 @@ public class NetworkTopology {
      * @return true if the node is deleted; false otherwise
      */
     boolean remove(Node n) {
-      String parent = n.getNetworkLocation();
-      String currentPath = getPath(this);
-      if (!isAncestor(n))
+      if (!isAncestor(n)) {
         throw new IllegalArgumentException(n.getName()
-                                           +", which is located at "
-                                           +parent+", is not a descendent of "+currentPath);
+            + ", which is located at " + n.getNetworkLocation()
+            + ", is not a descendent of " + getPath(this));
+      }
       if (isParent(n)) {
         // this node is the parent of n; remove n directly
         if (childrenMap.containsKey(n.getName())) {
@@ -250,15 +250,8 @@ public class NetworkTopology {
       } else {
         // find the next ancestor node: the parent node
         String parentName = getNextAncestorName(n);
-        InnerNode parentNode = null;
-        int i;
-        for(i=0; i<children.size(); i++) {
-          if (children.get(i).getName().equals(parentName)) {
-            parentNode = (InnerNode)children.get(i);
-            break;
-          }
-        }
-        if (parentNode==null) {
+        InnerNode parentNode = (InnerNode)childrenMap.get(parentName);
+        if (parentNode == null) {
           return false;
         }
         // remove n from the parent node
@@ -266,8 +259,13 @@ public class NetworkTopology {
         // if the parent node has no children, remove the parent node too
         if (isRemoved) {
           if (parentNode.getNumOfChildren() == 0) {
-            Node prev = children.remove(i);
-            childrenMap.remove(prev.getName());
+            for(int i=0; i < children.size(); i++) {
+              if (children.get(i).getName().equals(parentName)) {
+                children.remove(i);
+                childrenMap.remove(parentName);
+                break;
+              }
+            }
           }
           numOfLeaves--;
         }
