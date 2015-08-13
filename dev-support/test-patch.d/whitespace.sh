@@ -20,12 +20,12 @@ add_plugin whitespace
 function whitespace_linecomment_reporter
 {
   local file=$1
-  local comment=$@
+  local comment=$*
   local tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
 
   while read -r line; do
     {
-      printf "${line}" | cut -f1-2 -d:
+      printf "%s" $(echo "${line}" | cut -f1-2 -d:)
       echo ":${comment}"
     } >> "${tmpfile}"
   done < "${file}"
