@@ -707,6 +707,7 @@ function compute_unidiff
   # let's do a merge (using gitdifflines because it's easier)
 
   # ./filename:real number:diff number
+  # shellcheck disable=SC2016
   paste -d: "${GITDIFFLINES}" "${tmpfile}" \
     | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
     >> "${GITUNIDIFFLINES}"
@@ -2976,10 +2977,10 @@ function bugsystem_linecomments
   declare line
   declare bugs
 
-  while read line;do
-    file=$(echo ${line} | cut -f1 -d:)
-    realline=$(echo ${line} | cut -f2 -d:)
-    text=$(echo ${line} | cut -f3- -d:)
+  while read -r line;do
+    file=$(echo "${line}" | cut -f1 -d:)
+    realline=$(echo "${line}" | cut -f2 -d:)
+    text=$(echo "${line}" | cut -f3- -d:)
     idxline="${file}:${realline}:"
     uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d:)
 

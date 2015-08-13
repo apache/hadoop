@@ -281,9 +281,11 @@ function github_linecomments
     file=${file##./}
   fi
 
-  commitsha=$(${GREP} \"sha\" "${PATCH_DIR}/github-pull.json" 2>/dev/null \
-    | head -1 \
-    | cut -f4 -d\")
+  if [[ -z "${GITHUB_COMMITSHA}" ]]; then
+    GITHUB_COMMITSHA=$(${GREP} \"sha\" "${PATCH_DIR}/github-pull.json" 2>/dev/null \
+      | head -1 \
+      | cut -f4 -d\")
+  fi
 
   {
     printf "{\"body\":\""
@@ -293,7 +295,7 @@ function github_linecomments
         -e 's,$,\\r\\n,g' \
       | tr -d '\n'
     echo "\","
-    echo "\"commit_id\":\"${commitsha}\","
+    echo "\"commit_id\":\"${GITHUB_COMMITSHA}\","
     echo "\"path\":\"${file}\","
     echo "\"position\":${uniline}"
     echo "}"
