@@ -676,55 +676,43 @@ function compute_gitdiff
 function compute_unidiff
 {
   declare fn
-  declare tmpfile1="${PATCH_DIR}/tmp.$$.${RANDOM}"
-  declare tmpfile2="${PATCH_DIR}/tmp.$$.${RANDOM}"
-  declare linepos
-  declare offset
+  declare filen
+  declare tmpfile="${PATCH_DIR}/tmp.$$.${RANDOM}"
 
   # now that we know what lines are where, we can deal
   # with github's pain-in-the-butt API. It requires
   # that the client provides the line number of the
   # unified diff on a per file basis.
 
-
-  # Now build a per-file unified diff, pulling
+  # First, build a per-file unified diff, pulling
   # out the 'extra' lines, grabbing the adds with
   # the line number in the diff file along the way,
   # finally rewriting the line so that it is in
   # './filename:diff line:content' format
-  # while also dealing with offsets...
 
   for fn in ${CHANGED_FILES}; do
     filen=${fn##./}
 
     ${GIT} diff ${filen} \
+      | tail -n +6 \
       | ${GREP} -n '^+' \
       | ${GREP} -vE '^[0-9]*:\+\+\+' \
       | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
-            >  "${tmpfile1}"
-
-    # now rewrite the file with the offset
-    while read -r line; do
-      ll=$(echo ${line} | cut -f1 -d:)
-      content=$(echo ${line} | cut -f2- -d:)
-      ((ll=ll-5))
-      echo "${fn}:${ll}:${content}" >> "${tmpfile2}"
-    done < "${tmpfile1}"
-
-    # at this point, tmpfile should be in the same format
-    # as gitdiffcontent, just with different line numbers.
-    # let's do a merge (using gitdifflines because it's easier):
-
-
-
+        -e s,^,./${filen}:,g \
+            >>  "${tmpfile}"
   done
 
+  # at this point, tmpfile should be in the same format
+  # as gitdiffcontent, just with different line numbers.
+  # let's do a merge (using gitdifflines because it's easier)
+
   # ./filename:real number:diff number
-  paste -d: "${GITDIFFLINES}" "${tmpfile2}" \
+  paste -d: "${GITDIFFLINES}" "${tmpfile}" \
     | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
     >> "${GITUNIDIFFLINES}"
-  rm "${tmpfile1}" "${tmpfile2}"
 
+  rm "${tmpfile1}"
+  exit
 }
 
 ## @description  Print the command to be executing to the screen. Then
