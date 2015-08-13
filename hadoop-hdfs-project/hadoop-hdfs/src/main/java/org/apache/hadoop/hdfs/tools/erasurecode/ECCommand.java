@@ -31,9 +31,8 @@ import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -49,7 +48,7 @@ public abstract class ECCommand extends Command {
     factory.addClass(CreateECZoneCommand.class, "-" + CreateECZoneCommand.NAME);
     factory.addClass(GetECZoneCommand.class, "-"
         + GetECZoneCommand.NAME);
-    factory.addClass(ListECSchemas.class, "-" + ListECSchemas.NAME);
+    factory.addClass(ListPolicies.class, "-" + ListPolicies.NAME);
   }
 
   @Override
@@ -77,35 +76,24 @@ public abstract class ECCommand extends Command {
   }
 
   /**
-   * Create EC encoding zone command. Zones are created to use specific EC
-   * encoding schema, other than default while encoding the files under some
-   * specific directory.
+   * A command to create an EC zone for a path, with a erasure coding policy name.
    */
   static class CreateECZoneCommand extends ECCommand {
     public static final String NAME = "createZone";
-    public static final String USAGE = "[-s <schemaName>] [-c <cellSize>] <path>";
+    public static final String USAGE = "[-s <policyName>] <path>";
     public static final String DESCRIPTION = 
-        "Create a zone to encode files using a specified schema\n"
+        "Create a zone to encode files using a specified policy\n"
         + "Options :\n"
-        + "  -s <schemaName> : EC schema name to encode files. "
-        + "If not passed default schema will be used\n"
-        + "  -c <cellSize> : cell size to use for striped encoding files."
-        + " If not passed default cellsize of "
-        + HdfsConstants.BLOCK_STRIPED_CELL_SIZE + " will be used\n"
+        + "  -s <policyName> : erasure coding policy name to encode files. "
+        + "If not passed the default policy will be used\n"
         + "  <path>  : Path to an empty directory. Under this directory "
-        + "files will be encoded using specified schema";
-    private String schemaName;
-    private int cellSize = 0;
-    private ECSchema schema = null;
+        + "files will be encoded using specified erasure coding policy";
+    private String ecPolicyName;
+    private ErasureCodingPolicy ecPolicy = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      schemaName = StringUtils.popOptionWithArgument("-s", args);
-      String cellSizeStr = StringUtils.popOptionWithArgument("-c", args);
-      if (cellSizeStr != null) {
-        cellSize = (int) StringUtils.TraditionalBinaryPrefix
-            .string2long(cellSizeStr);
-      }
+      ecPolicyName = StringUtils.popOptionWithArgument("-s", args);
       if (args.isEmpty()) {
         throw new HadoopIllegalArgumentException("<path> is missing");
       }
@@ -119,29 +107,29 @@ public abstract class ECCommand extends Command {
       super.processPath(item);
       DistributedFileSystem dfs = (DistributedFileSystem) item.fs;
       try {
-        if (schemaName != null) {
-          ECSchema[] ecSchemas = dfs.getClient().getECSchemas();
-          for (ECSchema ecSchema : ecSchemas) {
-            if (schemaName.equals(ecSchema.getSchemaName())) {
-              schema = ecSchema;
+        if (ecPolicyName != null) {
+          ErasureCodingPolicy[] ecPolicies = dfs.getClient().getErasureCodingPolicies();
+          for (ErasureCodingPolicy ecPolicy : ecPolicies) {
+            if (ecPolicyName.equals(ecPolicy.getName())) {
+              this.ecPolicy = ecPolicy;
               break;
             }
           }
-          if (schema == null) {
+          if (ecPolicy == null) {
             StringBuilder sb = new StringBuilder();
-            sb.append("Schema '");
-            sb.append(schemaName);
-            sb.append("' does not match any of the supported schemas.");
+            sb.append("Policy '");
+            sb.append(ecPolicyName);
+            sb.append("' does not match any of the supported policies.");
             sb.append(" Please select any one of ");
-            List<String> schemaNames = new ArrayList<String>();
-            for (ECSchema ecSchema : ecSchemas) {
-              schemaNames.add(ecSchema.getSchemaName());
+            List<String> ecPolicyNames = new ArrayList<String>();
+            for (ErasureCodingPolicy ecPolicy : ecPolicies) {
+              ecPolicyNames.add(ecPolicy.getName());
             }
-            sb.append(schemaNames);
+            sb.append(ecPolicyNames);
             throw new HadoopIllegalArgumentException(sb.toString());
           }
         }
-        dfs.createErasureCodingZone(item.path, schema, cellSize);
+        dfs.createErasureCodingZone(item.path, ecPolicy);
         out.println("EC Zone created successfully at " + item.path);
       } catch (IOException e) {
         throw new IOException("Unable to create EC zone for the path "
@@ -188,13 +176,13 @@ public abstract class ECCommand extends Command {
   }
 
   /**
-   * List all supported EC Schemas
+   * List all supported erasure coding policies
    */
-  static class ListECSchemas extends ECCommand {
-    public static final String NAME = "listSchemas";
+  static class ListPolicies extends ECCommand {
+    public static final String NAME = "listPolicies";
     public static final String USAGE = "";
     public static final String DESCRIPTION = 
-        "Get the list of ECSchemas supported\n";
+        "Get the list of erasure coding policies supported\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -209,14 +197,14 @@ public abstract class ECCommand extends Command {
       }
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
 
-      ECSchema[] ecSchemas = dfs.getClient().getECSchemas();
+      ErasureCodingPolicy[] ecPolicies = dfs.getClient().getErasureCodingPolicies();
       StringBuilder sb = new StringBuilder();
       int i = 0;
-      while (i < ecSchemas.length) {
-        ECSchema ecSchema = ecSchemas[i];
-        sb.append(ecSchema.getSchemaName());
+      while (i < ecPolicies.length) {
+        ErasureCodingPolicy ecPolicy = ecPolicies[i];
+        sb.append(ecPolicy.getName());
         i++;
-        if (i < ecSchemas.length) {
+        if (i < ecPolicies.length) {
           sb.append(", ");
         }
       }

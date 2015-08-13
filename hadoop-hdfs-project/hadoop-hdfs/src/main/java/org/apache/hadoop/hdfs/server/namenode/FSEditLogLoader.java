@@ -992,7 +992,7 @@ public class FSEditLogLoader {
     boolean isStriped = ecZone != null;
     if (isStriped) {
       newBlockInfo = new BlockInfoUnderConstructionStriped(newBlock,
-          ecZone.getSchema(), ecZone.getCellSize());
+          ecZone.getErasureCodingPolicy());
     } else {
       newBlockInfo = new BlockInfoUnderConstructionContiguous(newBlock,
           file.getPreferredBlockReplication());
@@ -1078,7 +1078,7 @@ public class FSEditLogLoader {
           // until several blocks in?
           if (isStriped) {
             newBI = new BlockInfoUnderConstructionStriped(newBlock,
-                ecZone.getSchema(), ecZone.getCellSize());
+                ecZone.getErasureCodingPolicy());
           } else {
             newBI = new BlockInfoUnderConstructionContiguous(newBlock,
                 file.getPreferredBlockReplication());
@@ -1088,11 +1088,9 @@ public class FSEditLogLoader {
           // is only executed when loading edits written by prior
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
-          // TODO: ECSchema can be restored from persisted file (HDFS-7859).
           if (isStriped) {
             newBI = new BlockInfoStriped(newBlock,
-                ErasureCodingSchemaManager.getSystemDefaultSchema(),
-                ecZone.getCellSize());
+                ErasureCodingPolicyManager.getSystemDefaultPolicy());
           } else {
             newBI = new BlockInfoContiguous(newBlock,
                 file.getPreferredBlockReplication());

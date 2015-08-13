@@ -199,8 +199,8 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathR
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CreateErasureCodingZoneRequestProto;
@@ -220,7 +220,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
@@ -1403,10 +1403,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, CreateErasureCodingZoneRequestProto req)
       throws ServiceException {
     try {
-      ECSchema schema = req.hasSchema() ? PBHelper.convertECSchema(req
-          .getSchema()) : null;
-      int cellSize = req.hasCellSize() ? req.getCellSize() : 0;
-      server.createErasureCodingZone(req.getSrc(), schema, cellSize);
+      ErasureCodingPolicy ecPolicy = req.hasEcPolicy() ? PBHelper.convertErasureCodingPolicy(req
+          .getEcPolicy()) : null;
+      server.createErasureCodingZone(req.getSrc(), ecPolicy);
       return CreateErasureCodingZoneResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1522,14 +1521,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetECSchemasResponseProto getECSchemas(RpcController controller,
-      GetECSchemasRequestProto request) throws ServiceException {
+  public GetErasureCodingPoliciesResponseProto getErasureCodingPolicies(RpcController controller,
+      GetErasureCodingPoliciesRequestProto request) throws ServiceException {
     try {
-      ECSchema[] ecSchemas = server.getECSchemas();
-      GetECSchemasResponseProto.Builder resBuilder = GetECSchemasResponseProto
+      ErasureCodingPolicy[] ecPolicies = server.getErasureCodingPolicies();
+      GetErasureCodingPoliciesResponseProto.Builder resBuilder = GetErasureCodingPoliciesResponseProto
           .newBuilder();
-      for (ECSchema ecSchema : ecSchemas) {
-        resBuilder.addSchemas(PBHelper.convertECSchema(ecSchema));
+      for (ErasureCodingPolicy ecPolicy : ecPolicies) {
+        resBuilder.addEcPolicies(PBHelper.convertErasureCodingPolicy(ecPolicy));
       }
       return resBuilder.build();
     } catch (IOException e) {

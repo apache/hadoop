@@ -680,12 +680,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_DEFAULT =
       false;
 
-  public static final String DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_SIZE =
-      "dfs.client.striped.read.threadpool.size";
-  // With default 3+2 schema, each normal read could span 3 DNs. So this
-  // default value accommodates 6 read streams
-  public static final int DFS_CLIENT_STRIPED_READ_THREADPOOL_MAX_DEFAULT_SIZE = 18;
-
   // Slow io warning log threshold settings for dfsclient and datanode.
   public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
     "dfs.datanode.slow.io.warning.threshold.ms";

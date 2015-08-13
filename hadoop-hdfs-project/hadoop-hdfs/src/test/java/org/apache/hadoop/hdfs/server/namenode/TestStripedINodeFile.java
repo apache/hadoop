@@ -35,13 +35,13 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import org.junit.Test;
 
@@ -59,9 +59,8 @@ public class TestStripedINodeFile {
   private final BlockStoragePolicy defaultPolicy =
       defaultSuite.getDefaultPolicy();
 
-  private static final ECSchema testSchema
-      = ErasureCodingSchemaManager.getSystemDefaultSchema();
-  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private static final ErasureCodingPolicy testECPolicy
+      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
@@ -79,7 +78,7 @@ public class TestStripedINodeFile {
   public void testBlockStripedTotalBlockCount() {
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema, cellSize);
+        = new BlockInfoStriped(blk, testECPolicy);
     assertEquals(9, blockInfoStriped.getTotalBlockNum());
   }
 
@@ -89,7 +88,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema, cellSize);
+        = new BlockInfoStriped(blk, testECPolicy);
     inf.addBlock(blockInfoStriped);
     assertEquals(1, inf.getBlocks().length);
   }
@@ -100,7 +99,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema, cellSize);
+        = new BlockInfoStriped(blk, testECPolicy);
     blockInfoStriped.setNumBytes(1);
     inf.addBlock(blockInfoStriped);
     //   0. Calculate the total bytes per stripes <Num Bytes per Stripes>
@@ -125,11 +124,11 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk1 = new Block(1);
     BlockInfoStriped blockInfoStriped1
-        = new BlockInfoStriped(blk1, testSchema, cellSize);
+        = new BlockInfoStriped(blk1, testECPolicy);
     blockInfoStriped1.setNumBytes(1);
     Block blk2 = new Block(2);
     BlockInfoStriped blockInfoStriped2
-        = new BlockInfoStriped(blk2, testSchema, cellSize);
+        = new BlockInfoStriped(blk2, testECPolicy);
     blockInfoStriped2.setNumBytes(1);
     inf.addBlock(blockInfoStriped1);
     inf.addBlock(blockInfoStriped2);
@@ -144,7 +143,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema, cellSize);
+        = new BlockInfoStriped(blk, testECPolicy);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
     // Compute file size should return actual data
@@ -159,7 +158,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoUnderConstructionStriped bInfoUCStriped
-        = new BlockInfoUnderConstructionStriped(blk, testSchema, cellSize);
+        = new BlockInfoUnderConstructionStriped(blk, testECPolicy);
     bInfoUCStriped.setNumBytes(100);
     inf.addBlock(bInfoUCStriped);
     assertEquals(100, inf.computeFileSize());
@@ -172,7 +171,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoStriped blockInfoStriped
-        = new BlockInfoStriped(blk, testSchema, cellSize);
+        = new BlockInfoStriped(blk, testECPolicy);
     blockInfoStriped.setNumBytes(100);
     inf.addBlock(blockInfoStriped);
 
@@ -193,7 +192,7 @@ public class TestStripedINodeFile {
     INodeFile inf = createStripedINodeFile();
     Block blk = new Block(1);
     BlockInfoUnderConstructionStriped bInfoUCStriped
-        = new BlockInfoUnderConstructionStriped(blk, testSchema, cellSize);
+        = new BlockInfoUnderConstructionStriped(blk, testECPolicy);
     bInfoUCStriped.setNumBytes(100);
     inf.addBlock(bInfoUCStriped);
 
@@ -235,7 +234,7 @@ public class TestStripedINodeFile {
       dfs.mkdirs(zone);
 
       // create erasure zone
-      dfs.createErasureCodingZone(zone, null, 0);
+      dfs.createErasureCodingZone(zone, null);
       DFSTestUtil.createFile(dfs, zoneFile, len, (short) 1, 0xFEED);
       DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
       final FSDirectory fsd = fsn.getFSDirectory();

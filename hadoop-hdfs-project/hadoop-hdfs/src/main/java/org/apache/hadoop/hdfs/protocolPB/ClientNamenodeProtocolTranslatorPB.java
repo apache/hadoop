@@ -165,12 +165,12 @@ import org.apache.hadoop.hdfs.protocol.proto.*;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECSchemasResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CreateErasureCodingZoneRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrRequestProto;
@@ -182,7 +182,7 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
@@ -240,8 +240,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   VOID_GET_STORAGE_POLICIES_REQUEST =
       GetStoragePoliciesRequestProto.newBuilder().build();
 
-  private final static GetECSchemasRequestProto
-  VOID_GET_ECSCHEMAS_REQUEST = GetECSchemasRequestProto
+  private final static GetErasureCodingPoliciesRequestProto
+  VOID_GET_EC_POLICIES_REQUEST = GetErasureCodingPoliciesRequestProto
       .newBuilder().build();
 
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
@@ -1419,16 +1419,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void createErasureCodingZone(String src, ECSchema schema, int cellSize)
+  public void createErasureCodingZone(String src, ErasureCodingPolicy ecPolicy)
       throws IOException {
     final CreateErasureCodingZoneRequestProto.Builder builder =
         CreateErasureCodingZoneRequestProto.newBuilder();
     builder.setSrc(src);
-    if (schema != null) {
-      builder.setSchema(PBHelper.convertECSchema(schema));
-    }
-    if (cellSize > 0) {
-      builder.setCellSize(cellSize);
+    if (ecPolicy != null) {
+      builder.setEcPolicy(PBHelper.convertErasureCodingPolicy(ecPolicy));
     }
     CreateErasureCodingZoneRequestProto req = builder.build();
     try {
@@ -1550,16 +1547,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ECSchema[] getECSchemas() throws IOException {
+  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
     try {
-      GetECSchemasResponseProto response = rpcProxy.getECSchemas(null,
-          VOID_GET_ECSCHEMAS_REQUEST);
-      ECSchema[] schemas = new ECSchema[response.getSchemasCount()];
+      GetErasureCodingPoliciesResponseProto response = rpcProxy
+          .getErasureCodingPolicies(null, VOID_GET_EC_POLICIES_REQUEST);
+      ErasureCodingPolicy[] ecPolicies =
+          new ErasureCodingPolicy[response.getEcPoliciesCount()];
       int i = 0;
-      for (ECSchemaProto schemaProto : response.getSchemasList()) {
-        schemas[i++] = PBHelper.convertECSchema(schemaProto);
+      for (ErasureCodingPolicyProto ecPolicyProto : response.getEcPoliciesList()) {
+        ecPolicies[i++] = PBHelper.convertErasureCodingPolicy(ecPolicyProto);
       }
-      return schemas;
+      return ecPolicies;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

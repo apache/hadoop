@@ -71,7 +71,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -88,7 +88,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -682,8 +682,7 @@ public class TestPBHelper {
     short[] liveBlkIndices0 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo0 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0, ErasureCodingSchemaManager.getSystemDefaultSchema(),
-        64 * 1024);
+        liveBlkIndices0, ErasureCodingPolicyManager.getSystemDefaultPolicy());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -697,8 +696,7 @@ public class TestPBHelper {
     short[] liveBlkIndices1 = new short[2];
     BlockECRecoveryInfo blkECRecoveryInfo1 = new BlockECRecoveryInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1, ErasureCodingSchemaManager.getSystemDefaultSchema(),
-        64 * 1024);
+        liveBlkIndices1, ErasureCodingPolicyManager.getSystemDefaultPolicy());
     List<BlockECRecoveryInfo> blkRecoveryInfosList = new ArrayList<BlockECRecoveryInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
@@ -740,18 +738,18 @@ public class TestPBHelper {
       assertEquals(liveBlockIndices1[i], liveBlockIndices2[i]);
     }
     
-    ECSchema ecSchema1 = blkECRecoveryInfo1.getECSchema();
-    ECSchema ecSchema2 = blkECRecoveryInfo2.getECSchema();
-    // Compare ECSchemas same as default ECSchema as we used system default
-    // ECSchema used in this test
-    compareECSchemas(ErasureCodingSchemaManager.getSystemDefaultSchema(), ecSchema1);
-    compareECSchemas(ErasureCodingSchemaManager.getSystemDefaultSchema(), ecSchema2);
+    ErasureCodingPolicy ecPolicy1 = blkECRecoveryInfo1.getErasureCodingPolicy();
+    ErasureCodingPolicy ecPolicy2 = blkECRecoveryInfo2.getErasureCodingPolicy();
+    // Compare ECPolicies same as default ECPolicy as we used system default
+    // ECPolicy used in this test
+    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy1);
+    compareECPolicies(ErasureCodingPolicyManager.getSystemDefaultPolicy(), ecPolicy2);
   }
 
-  private void compareECSchemas(ECSchema ecSchema1, ECSchema ecSchema2) {
-    assertEquals(ecSchema1.getSchemaName(), ecSchema2.getSchemaName());
-    assertEquals(ecSchema1.getNumDataUnits(), ecSchema2.getNumDataUnits());
-    assertEquals(ecSchema1.getNumParityUnits(), ecSchema2.getNumParityUnits());
+  private void compareECPolicies(ErasureCodingPolicy ecPolicy1, ErasureCodingPolicy ecPolicy2) {
+    assertEquals(ecPolicy1.getName(), ecPolicy2.getName());
+    assertEquals(ecPolicy1.getNumDataUnits(), ecPolicy2.getNumDataUnits());
+    assertEquals(ecPolicy1.getNumParityUnits(), ecPolicy2.getNumParityUnits());
   }
 
   private void assertDnInfosEqual(DatanodeInfo[] dnInfos1,

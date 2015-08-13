@@ -863,8 +863,8 @@ service ClientNamenodeProtocol {
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
       returns(GetEditsFromTxidResponseProto);
-  rpc getECSchemas(GetECSchemasRequestProto)
-      returns(GetECSchemasResponseProto);
+  rpc getErasureCodingPolicies(GetErasureCodingPoliciesRequestProto)
+      returns(GetErasureCodingPoliciesResponseProto);
   rpc getErasureCodingZone(GetErasureCodingZoneRequestProto)
       returns(GetErasureCodingZoneResponseProto);
 }

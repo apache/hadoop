@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,31 +77,28 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
     private String[] targetStorageIDs;
     private StorageType[] targetStorageTypes;
     private final short[] liveBlockIndices;
-    private final ECSchema ecSchema;
-    private final int cellSize;
+    private final ErasureCodingPolicy ecPolicy;
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeStorageInfo[] targetDnStorageInfo, short[] liveBlockIndices,
-        ECSchema ecSchema, int cellSize) {
+        ErasureCodingPolicy ecPolicy) {
       this(block, sources, DatanodeStorageInfo
           .toDatanodeInfos(targetDnStorageInfo), DatanodeStorageInfo
           .toStorageIDs(targetDnStorageInfo), DatanodeStorageInfo
-          .toStorageTypes(targetDnStorageInfo), liveBlockIndices, ecSchema,
-          cellSize);
+          .toStorageTypes(targetDnStorageInfo), liveBlockIndices, ecPolicy);
     }
 
     public BlockECRecoveryInfo(ExtendedBlock block, DatanodeInfo[] sources,
         DatanodeInfo[] targets, String[] targetStorageIDs,
         StorageType[] targetStorageTypes, short[] liveBlockIndices,
-        ECSchema ecSchema, int cellSize) {
+        ErasureCodingPolicy ecPolicy) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
       this.targetStorageIDs = targetStorageIDs;
       this.targetStorageTypes = targetStorageTypes;
       this.liveBlockIndices = liveBlockIndices;
-      this.ecSchema = ecSchema;
-      this.cellSize = cellSize;
+      this.ecPolicy = ecPolicy;
     }
 
     public ExtendedBlock getExtendedBlock() {
@@ -128,12 +125,8 @@ public class BlockECRecoveryCommand extends DatanodeCommand {
       return liveBlockIndices;
     }
     
-    public ECSchema getECSchema() {
-      return ecSchema;
-    }
-
-    public int getCellSize() {
-      return cellSize;
+    public ErasureCodingPolicy getErasureCodingPolicy() {
+      return ecPolicy;
     }
 
     @Override

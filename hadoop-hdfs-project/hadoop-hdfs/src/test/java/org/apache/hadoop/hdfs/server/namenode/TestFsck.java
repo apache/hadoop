@@ -1202,7 +1202,7 @@ public class TestFsck {
 
     HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
         blockSize, modTime, accessTime, perms, owner, group, symlink,
-        path, fileId, numChildren, null, storagePolicy, null, 0);
+        path, fileId, numChildren, null, storagePolicy, null);
     Result replRes = new ReplicationResult(conf);
     Result ecRes = new ErasureCodingResult(conf);
 
@@ -1644,8 +1644,8 @@ public class TestFsck {
       final long precision = 1L;
       conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
       conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-      int totalSize = ErasureCodingSchemaManager.getSystemDefaultSchema().getNumDataUnits()
-                      + ErasureCodingSchemaManager.getSystemDefaultSchema().getNumParityUnits();
+      int totalSize = ErasureCodingPolicyManager.getSystemDefaultPolicy().getNumDataUnits()
+                      + ErasureCodingPolicyManager.getSystemDefaultPolicy().getNumParityUnits();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
 

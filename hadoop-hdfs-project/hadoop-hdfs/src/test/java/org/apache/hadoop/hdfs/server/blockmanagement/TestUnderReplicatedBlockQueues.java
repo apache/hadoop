@@ -19,9 +19,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -31,17 +30,15 @@ import static org.junit.Assert.fail;
 
 public class TestUnderReplicatedBlockQueues {
 
-  private final ECSchema ecSchema =
-      ErasureCodingSchemaManager.getSystemDefaultSchema();
-  private final int CELLSIZE = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
 
   private BlockInfo genBlockInfo(long id) {
     return new BlockInfoContiguous(new Block(id), (short) 3);
   }
 
   private BlockInfo genStripedBlockInfo(long id, long numBytes) {
-    BlockInfoStriped sblk =  new BlockInfoStriped(new Block(id), ecSchema,
-        CELLSIZE);
+    BlockInfoStriped sblk =  new BlockInfoStriped(new Block(id), ecPolicy);
     sblk.setNumBytes(numBytes);
     return sblk;
   }
@@ -101,8 +98,8 @@ public class TestUnderReplicatedBlockQueues {
 
   @Test
   public void testStripedBlockPriorities() throws Throwable {
-    int dataBlkNum = ecSchema.getNumDataUnits();
-    int parityBlkNUm = ecSchema.getNumParityUnits();
+    int dataBlkNum = ecPolicy.getNumDataUnits();
+    int parityBlkNUm = ecPolicy.getNumParityUnits();
     doTestStripedBlockPriorities(1, parityBlkNUm);
     doTestStripedBlockPriorities(dataBlkNum, parityBlkNUm);
   }
@@ -110,7 +107,7 @@ public class TestUnderReplicatedBlockQueues {
   private void doTestStripedBlockPriorities(int dataBlkNum, int parityBlkNum)
       throws Throwable {
     int groupSize = dataBlkNum + parityBlkNum;
-    long numBytes = CELLSIZE * dataBlkNum;
+    long numBytes = ecPolicy.getCellSize() * dataBlkNum;
     UnderReplicatedBlocks queues = new UnderReplicatedBlocks();
 
     // add a striped block which been left NUM_DATA_BLOCKS internal blocks

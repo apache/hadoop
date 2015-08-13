@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
@@ -276,10 +276,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       LOG.debug("Creating DFSStripedOutputStream for " + src);
     }
 
-    final ECSchema schema = stat.getECSchema();
-    final int numParityBlocks = schema.getNumParityUnits();
-    cellSize = stat.getStripeCellSize();
-    numDataBlocks = schema.getNumDataUnits();
+    final ErasureCodingPolicy ecPolicy = stat.getErasureCodingPolicy();
+    final int numParityBlocks = ecPolicy.getNumParityUnits();
+    cellSize = ecPolicy.getCellSize();
+    numDataBlocks = ecPolicy.getNumDataUnits();
     numAllBlocks = numDataBlocks + numParityBlocks;
 
     encoder = CodecUtil.createRSRawEncoder(dfsClient.getConfiguration(),

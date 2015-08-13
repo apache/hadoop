@@ -306,8 +306,7 @@ message LocatedBlocksProto {
   optional FileEncryptionInfoProto fileEncryptionInfo = 6;
 
   // Optional field for erasure coding
-  optional ECSchemaProto eCSchema = 7;
-  optional uint32 stripeCellSize = 8;
+  optional ErasureCodingPolicyProto ecPolicy = 7;
 }
 
 /**
@@ -322,11 +321,16 @@ message ECSchemaOptionEntryProto {
  * ECSchema for erasurecoding
  */
 message ECSchemaProto {
-  required string schemaName = 1;
-  required string codecName = 2;
-  required uint32 dataUnits = 3;
-  required uint32 parityUnits = 4;
-  repeated ECSchemaOptionEntryProto options = 5;
+  required string codecName = 1;
+  required uint32 dataUnits = 2;
+  required uint32 parityUnits = 3;
+  repeated ECSchemaOptionEntryProto options = 4;
+}
+
+message ErasureCodingPolicyProto {
+  required string name = 1;
+  required ECSchemaProto schema = 2;
+  required uint32 cellSize = 3;
 }
 
 /**
@@ -365,8 +369,7 @@ message HdfsFileStatusProto {
   optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
 
   // Optional field for erasure coding
-  optional ECSchemaProto ecSchema = 17;
-  optional uint32 stripeCellSize = 18;
+  optional ErasureCodingPolicyProto ecPolicy = 17;
 }
 
 /**

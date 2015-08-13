@@ -165,7 +165,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -1194,10 +1194,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       LocatedBlocks locatedBlocks = getLocatedBlocks(src, 0);
       if (locatedBlocks != null) {
-        ECSchema schema = locatedBlocks.getECSchema();
-        if (schema != null) {
-          return new DFSStripedInputStream(this, src, verifyChecksum, schema,
-              locatedBlocks.getStripeCellSize(), locatedBlocks);
+        ErasureCodingPolicy ecPolicy = locatedBlocks.getErasureCodingPolicy();
+        if (ecPolicy != null) {
+          return new DFSStripedInputStream(this, src, verifyChecksum, ecPolicy,
+              locatedBlocks);
         }
         return new DFSInputStream(this, src, verifyChecksum, locatedBlocks);
       } else {
@@ -3011,12 +3011,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return new EncryptionZoneIterator(namenode, traceSampler);
   }
 
-  public void createErasureCodingZone(String src, ECSchema schema, int cellSize)
+  public void createErasureCodingZone(String src, ErasureCodingPolicy ecPolicy)
       throws IOException {
     checkOpen();
     TraceScope scope = getPathTraceScope("createErasureCodingZone", src);
     try {
-      namenode.createErasureCodingZone(src, schema, cellSize);
+      namenode.createErasureCodingZone(src, ecPolicy);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,
@@ -3138,11 +3138,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public ECSchema[] getECSchemas() throws IOException {
+  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
     checkOpen();
-    TraceScope scope = Trace.startSpan("getECSchemas", traceSampler);
+    TraceScope scope = Trace.startSpan("getErasureCodingPolicies", traceSampler);
     try {
-      return namenode.getECSchemas();
+      return namenode.getErasureCodingPolicies();
     } finally {
       scope.close();
     }

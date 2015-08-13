@@ -26,7 +26,6 @@ public class TestECSchema {
 
   @Test
   public void testGoodSchema() {
-    String schemaName = "goodSchema";
     int numDataUnits = 6;
     int numParityUnits = 3;
     String codec = "rs";
@@ -39,10 +38,9 @@ public class TestECSchema {
     options.put(ECSchema.CODEC_NAME_KEY, codec);
     options.put(extraOption, extraOptionValue);
 
-    ECSchema schema = new ECSchema(schemaName, options);
+    ECSchema schema = new ECSchema(options);
     System.out.println(schema.toString());
-    
-    assertEquals(schemaName, schema.getSchemaName());
+
     assertEquals(numDataUnits, schema.getNumDataUnits());
     assertEquals(numParityUnits, schema.getNumParityUnits());
     assertEquals(codec, schema.getCodecName());

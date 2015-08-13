@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.security.token.Token;
 
@@ -318,7 +318,7 @@ public class StripedBlockUtil {
   }
 
   /**
-   * Decode based on the given input buffers and schema.
+   * Decode based on the given input buffers and erasure coding policy.
    */
   public static void decodeAndFillBuffer(final byte[][] decodeInputs,
       AlignedStripe alignedStripe, int dataBlkNum, int parityBlkNum,
@@ -355,20 +355,20 @@ public class StripedBlockUtil {
    * by stateful read and uses ByteBuffer as reading target buffer. Besides the
    * read range is within a single stripe thus the calculation logic is simpler.
    */
-  public static AlignedStripe[] divideOneStripe(ECSchema ecSchema,
+  public static AlignedStripe[] divideOneStripe(ErasureCodingPolicy ecPolicy,
       int cellSize, LocatedStripedBlock blockGroup, long rangeStartInBlockGroup,
       long rangeEndInBlockGroup, ByteBuffer buf) {
-    final int dataBlkNum = ecSchema.getNumDataUnits();
+    final int dataBlkNum = ecPolicy.getNumDataUnits();
     // Step 1: map the byte range to StripingCells
-    StripingCell[] cells = getStripingCellsOfByteRange(ecSchema, cellSize,
+    StripingCell[] cells = getStripingCellsOfByteRange(ecPolicy, cellSize,
         blockGroup, rangeStartInBlockGroup, rangeEndInBlockGroup);
 
     // Step 2: get the unmerged ranges on each internal block
-    VerticalRange[] ranges = getRangesForInternalBlocks(ecSchema, cellSize,
+    VerticalRange[] ranges = getRangesForInternalBlocks(ecPolicy, cellSize,
         cells);
 
     // Step 3: merge into stripes
-    AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecSchema, ranges);
+    AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecPolicy, ranges);
 
     // Step 4: calculate each chunk's position in destination buffer. Since the
     // whole read range is within a single stripe, the logic is simpler here.
@@ -400,7 +400,7 @@ public class StripedBlockUtil {
   /**
    * This method divides a requested byte range into an array of inclusive
    * {@link AlignedStripe}.
-   * @param ecSchema The codec schema for the file, which carries the numbers
+   * @param ecPolicy The codec policy for the file, which carries the numbers
    *                 of data / parity blocks
    * @param cellSize Cell size of stripe
    * @param blockGroup The striped block group
@@ -412,24 +412,24 @@ public class StripedBlockUtil {
    * At most 5 stripes will be generated from each logical range, as
    * demonstrated in the header of {@link AlignedStripe}.
    */
-  public static AlignedStripe[] divideByteRangeIntoStripes(ECSchema ecSchema,
+  public static AlignedStripe[] divideByteRangeIntoStripes(ErasureCodingPolicy ecPolicy,
       int cellSize, LocatedStripedBlock blockGroup,
       long rangeStartInBlockGroup, long rangeEndInBlockGroup, byte[] buf,
       int offsetInBuf) {
 
     // Step 0: analyze range and calculate basic parameters
-    final int dataBlkNum = ecSchema.getNumDataUnits();
+    final int dataBlkNum = ecPolicy.getNumDataUnits();
 
     // Step 1: map the byte range to StripingCells
-    StripingCell[] cells = getStripingCellsOfByteRange(ecSchema, cellSize,
+    StripingCell[] cells = getStripingCellsOfByteRange(ecPolicy, cellSize,
         blockGroup, rangeStartInBlockGroup, rangeEndInBlockGroup);
 
     // Step 2: get the unmerged ranges on each internal block
-    VerticalRange[] ranges = getRangesForInternalBlocks(ecSchema, cellSize,
+    VerticalRange[] ranges = getRangesForInternalBlocks(ecPolicy, cellSize,
         cells);
 
     // Step 3: merge into at most 5 stripes
-    AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecSchema, ranges);
+    AlignedStripe[] stripes = mergeRangesForInternalBlocks(ecPolicy, ranges);
 
     // Step 4: calculate each chunk's position in destination buffer
     calcualteChunkPositionsInBuf(cellSize, stripes, cells, buf, offsetInBuf);
@@ -446,7 +446,7 @@ public class StripedBlockUtil {
    * used by {@link DFSStripedOutputStream} in encoding
    */
   @VisibleForTesting
-  private static StripingCell[] getStripingCellsOfByteRange(ECSchema ecSchema,
+  private static StripingCell[] getStripingCellsOfByteRange(ErasureCodingPolicy ecPolicy,
       int cellSize, LocatedStripedBlock blockGroup,
       long rangeStartInBlockGroup, long rangeEndInBlockGroup) {
     Preconditions.checkArgument(
@@ -461,16 +461,16 @@ public class StripedBlockUtil {
     final int firstCellOffset = (int) (rangeStartInBlockGroup % cellSize);
     final int firstCellSize =
         (int) Math.min(cellSize - (rangeStartInBlockGroup % cellSize), len);
-    cells[0] = new StripingCell(ecSchema, firstCellSize, firstCellIdxInBG,
+    cells[0] = new StripingCell(ecPolicy, firstCellSize, firstCellIdxInBG,
         firstCellOffset);
     if (lastCellIdxInBG != firstCellIdxInBG) {
       final int lastCellSize = (int) (rangeEndInBlockGroup % cellSize) + 1;
-      cells[numCells - 1] = new StripingCell(ecSchema, lastCellSize,
+      cells[numCells - 1] = new StripingCell(ecPolicy, lastCellSize,
           lastCellIdxInBG, 0);
     }
 
     for (int i = 1; i < numCells - 1; i++) {
-      cells[i] = new StripingCell(ecSchema, cellSize, i + firstCellIdxInBG, 0);
+      cells[i] = new StripingCell(ecPolicy, cellSize, i + firstCellIdxInBG, 0);
     }
 
     return cells;
@@ -481,10 +481,10 @@ public class StripedBlockUtil {
    * the physical byte range (inclusive) on each stored internal block.
    */
   @VisibleForTesting
-  private static VerticalRange[] getRangesForInternalBlocks(ECSchema ecSchema,
+  private static VerticalRange[] getRangesForInternalBlocks(ErasureCodingPolicy ecPolicy,
       int cellSize, StripingCell[] cells) {
-    int dataBlkNum = ecSchema.getNumDataUnits();
-    int parityBlkNum = ecSchema.getNumParityUnits();
+    int dataBlkNum = ecPolicy.getNumDataUnits();
+    int parityBlkNum = ecPolicy.getNumParityUnits();
 
     VerticalRange ranges[] = new VerticalRange[dataBlkNum + parityBlkNum];
 
@@ -521,9 +521,9 @@ public class StripedBlockUtil {
    * {@link AlignedStripe} instances.
    */
   private static AlignedStripe[] mergeRangesForInternalBlocks(
-      ECSchema ecSchema, VerticalRange[] ranges) {
-    int dataBlkNum = ecSchema.getNumDataUnits();
-    int parityBlkNum = ecSchema.getNumParityUnits();
+      ErasureCodingPolicy ecPolicy, VerticalRange[] ranges) {
+    int dataBlkNum = ecPolicy.getNumDataUnits();
+    int parityBlkNum = ecPolicy.getNumParityUnits();
     List<AlignedStripe> stripes = new ArrayList<>();
     SortedSet<Long> stripePoints = new TreeSet<>();
     for (VerticalRange r : ranges) {
@@ -628,7 +628,7 @@ public class StripedBlockUtil {
    */
   @VisibleForTesting
   static class StripingCell {
-    final ECSchema schema;
+    final ErasureCodingPolicy ecPolicy;
     /** Logical order in a block group, used when doing I/O to a block group */
     final int idxInBlkGroup;
     final int idxInInternalBlk;
@@ -642,13 +642,13 @@ public class StripedBlockUtil {
     final int offset;
     final int size;
 
-    StripingCell(ECSchema ecSchema, int cellSize, int idxInBlkGroup,
+    StripingCell(ErasureCodingPolicy ecPolicy, int cellSize, int idxInBlkGroup,
         int offset) {
-      this.schema = ecSchema;
+      this.ecPolicy = ecPolicy;
       this.idxInBlkGroup = idxInBlkGroup;
-      this.idxInInternalBlk = idxInBlkGroup / ecSchema.getNumDataUnits();
+      this.idxInInternalBlk = idxInBlkGroup / ecPolicy.getNumDataUnits();
       this.idxInStripe = idxInBlkGroup -
-          this.idxInInternalBlk * ecSchema.getNumDataUnits();
+          this.idxInInternalBlk * ecPolicy.getNumDataUnits();
       this.offset = offset;
       this.size = cellSize;
     }

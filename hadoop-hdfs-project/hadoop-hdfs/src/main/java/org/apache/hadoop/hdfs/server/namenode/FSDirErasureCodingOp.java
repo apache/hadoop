@@ -22,9 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * Helper class to perform erasure coding related operations.
@@ -43,15 +43,14 @@ final class FSDirErasureCodingOp {
    * @param fsn namespace
    * @param srcArg the path of a directory which will be the root of the
    *          erasure coding zone. The directory must be empty.
-   * @param schema ECSchema for the erasure coding zone
-   * @param cellSize Cell size of stripe
+   * @param ecPolicy erasure coding policy for the erasure coding zone
    * @param logRetryCache whether to record RPC ids in editlog for retry
    *          cache rebuilding
    * @return {@link HdfsFileStatus}
    * @throws IOException
    */
   static HdfsFileStatus createErasureCodingZone(final FSNamesystem fsn,
-      final String srcArg, final ECSchema schema, final int cellSize,
+      final String srcArg, final ErasureCodingPolicy ecPolicy,
       final boolean logRetryCache) throws IOException {
     assert fsn.hasWriteLock();
 
@@ -68,7 +67,7 @@ final class FSDirErasureCodingOp {
     try {
       iip = fsd.getINodesInPath4Write(src, false);
       xAttrs = fsn.getErasureCodingZoneManager().createErasureCodingZone(
-          iip, schema, cellSize);
+          iip, ecPolicy);
     } finally {
       fsd.writeUnlock();
     }
@@ -120,7 +119,7 @@ final class FSDirErasureCodingOp {
     assert fsn.hasReadLock();
 
     final INodesInPath iip = getINodesInPath(fsn, srcArg);
-    return getErasureCodingSchemaForPath(fsn, iip) != null;
+    return getErasureCodingPolicyForPath(fsn, iip) != null;
   }
 
   /**
@@ -133,49 +132,35 @@ final class FSDirErasureCodingOp {
    */
   static boolean isInErasureCodingZone(final FSNamesystem fsn,
       final INodesInPath iip) throws IOException {
-    return getErasureCodingSchema(fsn, iip) != null;
+    return getErasureCodingPolicy(fsn, iip) != null;
   }
 
   /**
-   * Get erasure coding schema.
+   * Get the erasure coding policy.
    *
    * @param fsn namespace
    * @param iip inodes in the path containing the file
-   * @return {@link ECSchema}
+   * @return {@link ErasureCodingPolicy}
    * @throws IOException
    */
-  static ECSchema getErasureCodingSchema(final FSNamesystem fsn,
+  static ErasureCodingPolicy getErasureCodingPolicy(final FSNamesystem fsn,
       final INodesInPath iip) throws IOException {
     assert fsn.hasReadLock();
 
-    return getErasureCodingSchemaForPath(fsn, iip);
+    return getErasureCodingPolicyForPath(fsn, iip);
   }
 
   /**
-   * Get available erasure coding schemas.
+   * Get available erasure coding polices.
    *
    * @param fsn namespace
-   * @return {@link ECSchema} array
+   * @return {@link ErasureCodingPolicy} array
    */
-  static ECSchema[] getErasureCodingSchemas(final FSNamesystem fsn)
+  static ErasureCodingPolicy[] getErasureCodingPolicies(final FSNamesystem fsn)
       throws IOException {
     assert fsn.hasReadLock();
 
-    return fsn.getErasureCodingSchemaManager().getSchemas();
-  }
-
-  /**
-   * Get the ECSchema specified by the name.
-   *
-   * @param fsn namespace
-   * @param schemaName schema name
-   * @return {@link ECSchema}
-   */
-  static ECSchema getErasureCodingSchema(final FSNamesystem fsn,
-      final String schemaName) throws IOException {
-    assert fsn.hasReadLock();
-
-    return fsn.getErasureCodingSchemaManager().getSchema(schemaName);
+    return fsn.getErasureCodingPolicyManager().getPolicies();
   }
 
   private static INodesInPath getINodesInPath(final FSNamesystem fsn,
@@ -204,12 +189,12 @@ final class FSDirErasureCodingOp {
     }
   }
 
-  private static ECSchema getErasureCodingSchemaForPath(final FSNamesystem fsn,
+  private static ErasureCodingPolicy getErasureCodingPolicyForPath(final FSNamesystem fsn,
       final INodesInPath iip) throws IOException {
     final FSDirectory fsd = fsn.getFSDirectory();
     fsd.readLock();
     try {
-      return fsn.getErasureCodingZoneManager().getErasureCodingSchema(iip);
+      return fsn.getErasureCodingZoneManager().getErasureCodingPolicy(iip);
     } finally {
       fsd.readUnlock();
     }

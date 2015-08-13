@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -532,16 +532,15 @@ class FSDirWriteFileOp {
       if (isStriped) {
         ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
             fsd.getFSNamesystem(), inodesInPath);
-        ECSchema ecSchema = ecZone.getSchema();
-        short numDataUnits = (short) ecSchema.getNumDataUnits();
-        short numParityUnits = (short) ecSchema.getNumParityUnits();
+        ErasureCodingPolicy ecPolicy = ecZone.getErasureCodingPolicy();
+        short numDataUnits = (short) ecPolicy.getNumDataUnits();
+        short numParityUnits = (short) ecPolicy.getNumParityUnits();
         short numLocations = (short) (numDataUnits + numParityUnits);
 
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
-        blockInfo = new BlockInfoUnderConstructionStriped(block, ecSchema,
-            ecZone.getCellSize(),
+        blockInfo = new BlockInfoUnderConstructionStriped(block, ecPolicy,
             HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       } else {
         // check quota limits and updated space consumed

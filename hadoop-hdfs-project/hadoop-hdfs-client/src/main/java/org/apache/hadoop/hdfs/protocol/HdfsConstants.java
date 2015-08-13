@@ -77,8 +77,8 @@ public final class HdfsConstants {
 
   /*
    * These values correspond to the values used by the system default erasure
-   * coding schema.
-   * TODO: to be removed once all places use schema.
+   * coding policy.
+   * TODO: get these values from ec policy of the associated INodeFile
    */
 
   public static final byte NUM_DATA_BLOCKS = 6;

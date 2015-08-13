@@ -26,11 +26,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,10 +44,10 @@ import java.io.IOException;
 public class TestQuotaWithStripedBlocks {
   private static final int BLOCK_SIZE = 1024 * 1024;
   private static final long DISK_QUOTA = BLOCK_SIZE * 10;
-  private static final ECSchema ecSchema =
-      ErasureCodingSchemaManager.getSystemDefaultSchema();
-  private static final int NUM_DATA_BLOCKS = ecSchema.getNumDataUnits();
-  private static final int NUM_PARITY_BLOCKS = ecSchema.getNumParityUnits();
+  private static final ErasureCodingPolicy ecPolicy =
+      ErasureCodingPolicyManager.getSystemDefaultPolicy();
+  private static final int NUM_DATA_BLOCKS = ecPolicy.getNumDataUnits();
+  private static final int NUM_PARITY_BLOCKS = ecPolicy.getNumParityUnits();
   private static final int GROUP_SIZE = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
   private static final Path ecDir = new Path("/ec");
 
@@ -66,7 +66,7 @@ public class TestQuotaWithStripedBlocks {
     dfs = cluster.getFileSystem();
 
     dfs.mkdirs(ecDir);
-    dfs.getClient().createErasureCodingZone(ecDir.toString(), ecSchema, 0);
+    dfs.getClient().createErasureCodingZone(ecDir.toString(), ecPolicy);
     dfs.setQuota(ecDir, Long.MAX_VALUE - 1, DISK_QUOTA);
     dfs.setQuotaByStorageType(ecDir, StorageType.DISK, DISK_QUOTA);
     dfs.setStoragePolicy(ecDir, HdfsServerConstants.HOT_STORAGE_POLICY_NAME);

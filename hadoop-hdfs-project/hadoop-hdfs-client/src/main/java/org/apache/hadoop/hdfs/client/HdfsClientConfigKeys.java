@@ -183,8 +183,8 @@ public interface HdfsClientConfigKeys {
 
     String  THREADPOOL_SIZE_KEY = PREFIX + "threadpool.size";
     /**
-     * With default 6+3 schema, each normal read could span 6 DNs. So this
-     * default value accommodates 3 read streams
+     * With default RS-6-3-64k erasure coding policy, each normal read could span
+     * 6 DNs, so this default value accommodates 3 read streams
      */
     int     THREADPOOL_SIZE_DEFAULT = 18;
   }

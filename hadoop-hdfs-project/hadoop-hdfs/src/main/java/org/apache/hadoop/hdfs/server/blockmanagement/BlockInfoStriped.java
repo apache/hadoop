@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
@@ -38,8 +38,7 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_S
  * array to record the block index for each triplet.
  */
 public class BlockInfoStriped extends BlockInfo {
-  private final ECSchema schema;
-  private final int cellSize;
+  private final ErasureCodingPolicy ecPolicy;
   /**
    * Always the same size with triplets. Record the block index for each triplet
    * TODO: actually this is only necessary for over-replicated block. Thus can
@@ -47,36 +46,34 @@ public class BlockInfoStriped extends BlockInfo {
    */
   private byte[] indices;
 
-  public BlockInfoStriped(Block blk, ECSchema schema, int cellSize) {
-    super(blk, (short) (schema.getNumDataUnits() + schema.getNumParityUnits()));
-    indices = new byte[schema.getNumDataUnits() + schema.getNumParityUnits()];
+  public BlockInfoStriped(Block blk, ErasureCodingPolicy ecPolicy) {
+    super(blk, (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()));
+    indices = new byte[ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()];
     initIndices();
-    this.schema = schema;
-    this.cellSize = cellSize;
+    this.ecPolicy = ecPolicy;
   }
 
   BlockInfoStriped(BlockInfoStriped b) {
-    this(b, b.getSchema(), b.getCellSize());
+    this(b, b.getErasureCodingPolicy());
     this.setBlockCollection(b.getBlockCollection());
   }
 
   public short getTotalBlockNum() {
-    return (short) (this.schema.getNumDataUnits()
-        + this.schema.getNumParityUnits());
+    return (short) (ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
   }
 
   public short getDataBlockNum() {
-    return (short) this.schema.getNumDataUnits();
+    return (short) ecPolicy.getNumDataUnits();
   }
 
   public short getParityBlockNum() {
-    return (short) this.schema.getNumParityUnits();
+    return (short) ecPolicy.getNumParityUnits();
   }
 
   /**
    * If the block is committed/completed and its length is less than a full
    * stripe, it returns the the number of actual data blocks.
-   * Otherwise it returns the number of data units specified by schema.
+   * Otherwise it returns the number of data units specified by erasure coding policy.
    */
   public short getRealDataBlockNum() {
     if (isComplete() || getBlockUCState() == BlockUCState.COMMITTED) {
@@ -91,12 +88,8 @@ public class BlockInfoStriped extends BlockInfo {
     return (short) (getRealDataBlockNum() + getParityBlockNum());
   }
 
-  public ECSchema getSchema() {
-    return schema;
-  }
-
-  public int getCellSize() {
-    return cellSize;
+  public ErasureCodingPolicy getErasureCodingPolicy() {
+    return ecPolicy;
   }
 
   private void initIndices() {
@@ -230,7 +223,7 @@ public class BlockInfoStriped extends BlockInfo {
     // be the total of data blocks and parity blocks because
     // `getNumBytes` is the total of actual data block size.
     return StripedBlockUtil.spaceConsumedByStripedBlock(getNumBytes(),
-        this.schema.getNumDataUnits(), this.schema.getNumParityUnits(),
+        ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits(),
         BLOCK_STRIPED_CELL_SIZE);
     }
 
@@ -260,7 +253,7 @@ public class BlockInfoStriped extends BlockInfo {
       BlockUCState s, DatanodeStorageInfo[] targets) {
     final BlockInfoUnderConstructionStriped ucBlock;
     if(isComplete()) {
-      ucBlock = new BlockInfoUnderConstructionStriped(this, schema, cellSize,
+      ucBlock = new BlockInfoUnderConstructionStriped(this, ecPolicy,
           s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
     } else {

@@ -110,7 +110,7 @@ public class TestDFSUtil {
     l2.setCorrupt(true);
 
     List<LocatedBlock> ls = Arrays.asList(l1, l2);
-    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null, null, 0);
+    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null, null);
 
     BlockLocation[] bs = DFSUtilClient.locatedBlocks2Locations(lbs);
 

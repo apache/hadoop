@@ -23,11 +23,10 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -60,9 +59,9 @@ public class ErasureCodingZoneManager {
     this.dir = dir;
   }
 
-  ECSchema getErasureCodingSchema(INodesInPath iip) throws IOException {
+  ErasureCodingPolicy getErasureCodingPolicy(INodesInPath iip) throws IOException {
     ErasureCodingZone ecZone = getErasureCodingZone(iip);
-    return ecZone == null ? null : ecZone.getSchema();
+    return ecZone == null ? null : ecZone.getErasureCodingPolicy();
   }
 
   ErasureCodingZone getErasureCodingZone(INodesInPath iip) throws IOException {
@@ -88,12 +87,11 @@ public class ErasureCodingZoneManager {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
           ByteArrayInputStream bIn=new ByteArrayInputStream(xAttr.getValue());
           DataInputStream dIn=new DataInputStream(bIn);
-          int cellSize = WritableUtils.readVInt(dIn);
-          String schemaName = WritableUtils.readString(dIn);
-          ECSchema schema = dir.getFSNamesystem()
-              .getErasureCodingSchemaManager().getSchema(schemaName);
+          String ecPolicyName = WritableUtils.readString(dIn);
+          ErasureCodingPolicy ecPolicy = dir.getFSNamesystem()
+              .getErasureCodingPolicyManager().getPolicy(ecPolicyName);
           return new ErasureCodingZone(dir.getInode(inode.getId())
-              .getFullPathName(), schema, cellSize);
+              .getFullPathName(), ecPolicy);
         }
       }
     }
@@ -101,7 +99,7 @@ public class ErasureCodingZoneManager {
   }
 
   List<XAttr> createErasureCodingZone(final INodesInPath srcIIP,
-      ECSchema schema, int cellSize) throws IOException {
+      ErasureCodingPolicy ecPolicy) throws IOException {
     assert dir.hasWriteLock();
     Preconditions.checkNotNull(srcIIP, "INodes cannot be null");
     String src = srcIIP.getPath();
@@ -115,29 +113,22 @@ public class ErasureCodingZoneManager {
       throw new IOException("Attempt to create an erasure coding zone " +
           "for a file " + src);
     }
-    if (getErasureCodingSchema(srcIIP) != null) {
+    if (getErasureCodingPolicy(srcIIP) != null) {
       throw new IOException("Directory " + src + " is already in an " +
           "erasure coding zone.");
     }
 
-    // System default schema will be used since no specified.
-    if (schema == null) {
-      schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
+    // System default erasure coding policy will be used since no specified.
+    if (ecPolicy == null) {
+      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
     }
 
-    if (cellSize <= 0) {
-      cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-    }
-
-    // Write the cellsize first and then schema name
     final XAttr ecXAttr;
     DataOutputStream dOut = null;
     try {
       ByteArrayOutputStream bOut = new ByteArrayOutputStream();
       dOut = new DataOutputStream(bOut);
-      WritableUtils.writeVInt(dOut, cellSize);
-      // Now persist the schema name in xattr
-      WritableUtils.writeString(dOut, schema.getSchemaName());
+      WritableUtils.writeString(dOut, ecPolicy.getName());
       ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_ZONE,
           bOut.toByteArray());
     } finally {
@@ -158,10 +149,12 @@ public class ErasureCodingZoneManager {
     if (srcZone != null && srcZone.getDir().equals(src) && dstZone == null) {
       return;
     }
-    final ECSchema srcSchema = (srcZone != null) ? srcZone.getSchema() : null;
-    final ECSchema dstSchema = (dstZone != null) ? dstZone.getSchema() : null;
-    if ((srcSchema != null && !srcSchema.equals(dstSchema)) ||
-        (dstSchema != null && !dstSchema.equals(srcSchema))) {
+    final ErasureCodingPolicy srcECPolicy =
+        srcZone != null ? srcZone.getErasureCodingPolicy() : null;
+    final ErasureCodingPolicy dstECPolicy =
+        dstZone != null ? dstZone.getErasureCodingPolicy() : null;
+    if (srcECPolicy != null && !srcECPolicy.equals(dstECPolicy) ||
+        dstECPolicy != null && !dstECPolicy.equals(srcECPolicy)) {
       throw new IOException(
           src + " can't be moved because the source and destination have " +
               "different erasure coding policies.");

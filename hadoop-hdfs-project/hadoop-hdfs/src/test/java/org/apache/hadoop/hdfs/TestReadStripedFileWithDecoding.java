@@ -64,8 +64,7 @@ public class TestReadStripedFileWithDecoding {
   public void setup() throws IOException {
     cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
         .numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().createErasureCodingZone("/",
-        null, cellSize);
+    cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
     fs = cluster.getFileSystem();
   }
 

@@ -45,7 +45,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -177,7 +177,7 @@ public class Mover {
   }
 
   DBlock newDBlock(LocatedBlock lb, List<MLocation> locations,
-                   ECSchema ecSchema) {
+                   ErasureCodingPolicy ecPolicy) {
     Block blk = lb.getBlock().getLocalBlock();
     DBlock db;
     if (lb.isStriped()) {
@@ -186,7 +186,7 @@ public class Mover {
       for (int i = 0; i < indices.length; i++) {
         indices[i] = (byte) lsb.getBlockIndices()[i];
       }
-      db = new DBlockStriped(blk, indices, (short) ecSchema.getNumDataUnits());
+      db = new DBlockStriped(blk, indices, (short) ecPolicy.getNumDataUnits());
     } else {
       db = new DBlock(blk);
     }
@@ -373,7 +373,7 @@ public class Mover {
       List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
 
-      final ECSchema ecSchema = status.getECSchema();
+      final ErasureCodingPolicy ecPolicy = status.getErasureCodingPolicy();
       final LocatedBlocks locatedBlocks = status.getBlockLocations();
       boolean hasRemaining = false;
       final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
@@ -390,7 +390,7 @@ public class Mover {
         final StorageTypeDiff diff = new StorageTypeDiff(types,
             lb.getStorageTypes());
         if (!diff.removeOverlap(true)) {
-          if (scheduleMoves4Block(diff, lb, ecSchema)) {
+          if (scheduleMoves4Block(diff, lb, ecPolicy)) {
             hasRemaining |= (diff.existing.size() > 1 &&
                 diff.expected.size() > 1);
           }
@@ -400,12 +400,12 @@ public class Mover {
     }
 
     boolean scheduleMoves4Block(StorageTypeDiff diff, LocatedBlock lb,
-                                ECSchema ecSchema) {
+                                ErasureCodingPolicy ecPolicy) {
       final List<MLocation> locations = MLocation.toLocations(lb);
       if (!(lb instanceof LocatedStripedBlock)) {
         Collections.shuffle(locations);
       }
-      final DBlock db = newDBlock(lb, locations, ecSchema);
+      final DBlock db = newDBlock(lb, locations, ecPolicy);
 
       for (final StorageType t : diff.existing) {
         for (final MLocation ml : locations) {

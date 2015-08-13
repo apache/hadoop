@@ -29,8 +29,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.*;
 
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -84,8 +84,8 @@ public class TestStripedBlockUtil {
   private final int FULL_STRIPE_SIZE = DATA_BLK_NUM * CELLSIZE;
   /** number of full stripes in a full block group */
   private final int BLK_GROUP_STRIPE_NUM = 16;
-  private final ECSchema SCEHMA = ErasureCodingSchemaManager.
-      getSystemDefaultSchema();
+  private final ErasureCodingPolicy ECPOLICY = ErasureCodingPolicyManager.
+      getSystemDefaultPolicy();
   private final Random random = new Random();
 
   private int[] blockGroupSizes;
@@ -152,7 +152,7 @@ public class TestStripedBlockUtil {
     int done = 0;
     while (done < bgSize) {
       Preconditions.checkState(done % CELLSIZE == 0);
-      StripingCell cell = new StripingCell(SCEHMA, CELLSIZE, done / CELLSIZE, 0);
+      StripingCell cell = new StripingCell(ECPOLICY, CELLSIZE, done / CELLSIZE, 0);
       int idxInStripe = cell.idxInStripe;
       int size = Math.min(CELLSIZE, bgSize - done);
       for (int i = 0; i < size; i++) {
@@ -245,7 +245,7 @@ public class TestStripedBlockUtil {
           if (brStart + brSize > bgSize) {
             continue;
           }
-          AlignedStripe[] stripes = divideByteRangeIntoStripes(SCEHMA,
+          AlignedStripe[] stripes = divideByteRangeIntoStripes(ECPOLICY,
               CELLSIZE, blockGroup, brStart, brStart + brSize - 1, assembled, 0);
 
           for (AlignedStripe stripe : stripes) {

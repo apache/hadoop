@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
@@ -66,7 +67,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 
 @InterfaceAudience.Private
 public final class FSImageFormatPBINode {
@@ -327,17 +327,13 @@ public final class FSImageFormatPBINode {
       short replication = (short) f.getReplication();
       boolean isStriped = f.getIsStriped();
       LoaderContext state = parent.getLoaderContext();
-      ECSchema schema = ErasureCodingSchemaManager.getSystemDefaultSchema();
+      ErasureCodingPolicy ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
 
-      if (isStriped) {
-        Preconditions.checkState(f.hasStripingCellSize());
-      }
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0; i < bp.size(); ++i) {
         BlockProto b = bp.get(i);
         if (isStriped) {
-          blocks[i] = new BlockInfoStriped(PBHelper.convert(b), schema,
-              (int)f.getStripingCellSize());
+          blocks[i] = new BlockInfoStriped(PBHelper.convert(b), ecPolicy);
         } else {
           blocks[i] = new BlockInfoContiguous(PBHelper.convert(b),
               replication);
@@ -373,8 +369,7 @@ public final class FSImageFormatPBINode {
           final BlockInfo ucBlk;
           if (isStriped) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
-            ucBlk = new BlockInfoUnderConstructionStriped(striped,
-                schema, (int)f.getStripingCellSize());
+            ucBlk = new BlockInfoUnderConstructionStriped(striped, ecPolicy);
           } else {
             ucBlk = new BlockInfoUnderConstructionContiguous(lastBlk,
                 replication);
@@ -653,16 +648,6 @@ public final class FSImageFormatPBINode {
       if (blocks != null) {
         for (Block block : n.getBlocks()) {
           b.addBlocks(PBHelper.convert(block));
-        }
-      }
-
-      if (n.isStriped()) {
-        if (blocks != null && blocks.length > 0) {
-          BlockInfo firstBlock = blocks[0];
-          Preconditions.checkState(firstBlock.isStriped());
-          b.setStripingCellSize(((BlockInfoStriped)firstBlock).getCellSize());
-        } else {
-          b.setStripingCellSize(HdfsConstants.BLOCK_STRIPED_CELL_SIZE);
         }
       }
 

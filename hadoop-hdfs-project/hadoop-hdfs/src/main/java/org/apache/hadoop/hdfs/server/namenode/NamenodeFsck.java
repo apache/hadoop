@@ -572,7 +572,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
       // count expected replicas
       short targetFileReplication;
-      if (file.getECSchema() != null) {
+      if (file.getErasureCodingPolicy() != null) {
         assert storedBlock instanceof BlockInfoStriped;
         targetFileReplication = ((BlockInfoStriped) storedBlock)
             .getRealTotalBlockNum();
@@ -1158,11 +1158,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   @VisibleForTesting
   static class ErasureCodingResult extends Result {
-    final String defaultSchema;
+    final String defaultECPolicy;
 
     ErasureCodingResult(Configuration conf) {
-      defaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema()
-          .getSchemaName();
+      defaultECPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy()
+          .getName();
     }
 
     @Override
@@ -1239,7 +1239,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks))
             .append(" %)");
       }
-      res.append("\n Default schema:\t\t").append(defaultSchema)
+      res.append("\n Default ecPolicy:\t\t").append(defaultECPolicy)
           .append("\n Average block group size:\t").append(
           getReplicationFactor()).append("\n Missing block groups:\t\t").append(
           missingIds.size()).append("\n Corrupt block groups:\t\t").append(

@@ -36,7 +36,7 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResu
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.util.DirectBufferPool;
@@ -147,7 +147,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   /** the buffer for a complete stripe */
   private ByteBuffer curStripeBuf;
   private ByteBuffer parityBuf;
-  private final ECSchema schema;
+  private final ErasureCodingPolicy ecPolicy;
   private final RawErasureDecoder decoder;
 
   /**
@@ -158,15 +158,15 @@ public class DFSStripedInputStream extends DFSInputStream {
   private final CompletionService<Void> readingService;
 
   DFSStripedInputStream(DFSClient dfsClient, String src,
-      boolean verifyChecksum, ECSchema schema, int cellSize,
+      boolean verifyChecksum, ErasureCodingPolicy ecPolicy,
       LocatedBlocks locatedBlocks) throws IOException {
     super(dfsClient, src, verifyChecksum, locatedBlocks);
 
-    assert schema != null;
-    this.schema = schema;
-    this.cellSize = cellSize;
-    dataBlkNum = (short) schema.getNumDataUnits();
-    parityBlkNum = (short) schema.getNumParityUnits();
+    assert ecPolicy != null;
+    this.ecPolicy = ecPolicy;
+    this.cellSize = ecPolicy.getCellSize();
+    dataBlkNum = (short) ecPolicy.getNumDataUnits();
+    parityBlkNum = (short) ecPolicy.getNumParityUnits();
     groupSize = dataBlkNum + parityBlkNum;
     blockReaders = new BlockReaderInfo[groupSize];
     curStripeRange = new StripeRange(0, 0);
@@ -282,7 +282,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         stripeLimit - stripeBufOffset);
 
     LocatedStripedBlock blockGroup = (LocatedStripedBlock) currentLocatedBlock;
-    AlignedStripe[] stripes = StripedBlockUtil.divideOneStripe(schema, cellSize,
+    AlignedStripe[] stripes = StripedBlockUtil.divideOneStripe(ecPolicy, cellSize,
         blockGroup, offsetInBlockGroup,
         offsetInBlockGroup + stripeRange.length - 1, curStripeBuf);
     final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(
@@ -510,7 +510,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     LocatedStripedBlock blockGroup = getBlockGroupAt(block.getStartOffset());
 
     AlignedStripe[] stripes = StripedBlockUtil.divideByteRangeIntoStripes(
-        schema, cellSize, blockGroup, start, end, buf, offset);
+        ecPolicy, cellSize, blockGroup, start, end, buf, offset);
     CompletionService<Void> readService = new ExecutorCompletionService<>(
         dfsClient.getStripedReadsThreadPool());
     final LocatedBlock[] blks = StripedBlockUtil.parseStripedBlockGroup(

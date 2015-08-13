@@ -22,10 +22,10 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.ErasureCodingSchemaManager;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,7 +65,7 @@ public class TestErasureCodingZones {
     fs.mkdir(testDir, FsPermission.getDirDefault());
 
     /* Normal creation of an erasure coding zone */
-    fs.getClient().createErasureCodingZone(testDir.toString(), null, 0);
+    fs.getClient().createErasureCodingZone(testDir.toString(), null);
 
     /* Verify files under the zone are striped */
     final Path ECFilePath = new Path(testDir, "foo");
@@ -78,7 +78,7 @@ public class TestErasureCodingZones {
     fs.mkdir(notEmpty, FsPermission.getDirDefault());
     fs.create(new Path(notEmpty, "foo"));
     try {
-      fs.getClient().createErasureCodingZone(notEmpty.toString(), null, 0);
+      fs.getClient().createErasureCodingZone(notEmpty.toString(), null);
       fail("Erasure coding zone on non-empty dir");
     } catch (IOException e) {
       assertExceptionContains("erasure coding zone for a non-empty directory", e);
@@ -88,10 +88,10 @@ public class TestErasureCodingZones {
     final Path zone1 = new Path("/zone1");
     final Path zone2 = new Path(zone1, "zone2");
     fs.mkdir(zone1, FsPermission.getDirDefault());
-    fs.getClient().createErasureCodingZone(zone1.toString(), null, 0);
+    fs.getClient().createErasureCodingZone(zone1.toString(), null);
     fs.mkdir(zone2, FsPermission.getDirDefault());
     try {
-      fs.getClient().createErasureCodingZone(zone2.toString(), null, 0);
+      fs.getClient().createErasureCodingZone(zone2.toString(), null);
       fail("Nested erasure coding zones");
     } catch (IOException e) {
       assertExceptionContains("already in an erasure coding zone", e);
@@ -101,7 +101,7 @@ public class TestErasureCodingZones {
     final Path fPath = new Path("/file");
     fs.create(fPath);
     try {
-      fs.getClient().createErasureCodingZone(fPath.toString(), null, 0);
+      fs.getClient().createErasureCodingZone(fPath.toString(), null);
       fail("Erasure coding zone on file");
     } catch (IOException e) {
       assertExceptionContains("erasure coding zone for a file", e);
@@ -114,8 +114,8 @@ public class TestErasureCodingZones {
     final Path dstECDir = new Path("/dstEC");
     fs.mkdir(srcECDir, FsPermission.getDirDefault());
     fs.mkdir(dstECDir, FsPermission.getDirDefault());
-    fs.getClient().createErasureCodingZone(srcECDir.toString(), null, 0);
-    fs.getClient().createErasureCodingZone(dstECDir.toString(), null, 0);
+    fs.getClient().createErasureCodingZone(srcECDir.toString(), null);
+    fs.getClient().createErasureCodingZone(dstECDir.toString(), null);
     final Path srcFile = new Path(srcECDir, "foo");
     fs.create(srcFile);
 
@@ -160,7 +160,7 @@ public class TestErasureCodingZones {
   public void testReplication() throws IOException {
     final Path testDir = new Path("/ec");
     fs.mkdir(testDir, FsPermission.getDirDefault());
-    fs.createErasureCodingZone(testDir, null, 0);
+    fs.createErasureCodingZone(testDir, null);
     final Path fooFile = new Path(testDir, "foo");
     // create ec file with replication=0
     fs.create(fooFile, FsPermission.getFileDefault(), true,
@@ -177,47 +177,47 @@ public class TestErasureCodingZones {
   }
 
   @Test
-  public void testGetErasureCodingInfoWithSystemDefaultSchema() throws Exception {
+  public void testGetErasureCodingInfoWithSystemDefaultECPolicy() throws Exception {
     String src = "/ec";
     final Path ecDir = new Path(src);
     fs.mkdir(ecDir, FsPermission.getDirDefault());
     // dir ECInfo before creating ec zone
-    assertNull(fs.getClient().getFileInfo(src).getECSchema());
+    assertNull(fs.getClient().getFileInfo(src).getErasureCodingPolicy());
     // dir ECInfo after creating ec zone
-    fs.getClient().createErasureCodingZone(src, null, 0); //Default one will be used.
-    ECSchema sysDefaultSchema = ErasureCodingSchemaManager.getSystemDefaultSchema();
-    verifyErasureCodingInfo(src, sysDefaultSchema);
+    fs.getClient().createErasureCodingZone(src, null); //Default one will be used.
+    ErasureCodingPolicy sysDefaultECPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    verifyErasureCodingInfo(src, sysDefaultECPolicy);
     fs.create(new Path(ecDir, "child1")).close();
     // verify for the files in ec zone
-    verifyErasureCodingInfo(src + "/child1", sysDefaultSchema);
+    verifyErasureCodingInfo(src + "/child1", sysDefaultECPolicy);
   }
 
   @Test
   public void testGetErasureCodingInfo() throws Exception {
-    ECSchema[] sysSchemas = ErasureCodingSchemaManager.getSystemSchemas();
-    assertTrue("System schemas should be of only 1 for now",
-        sysSchemas.length == 1);
+    ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager.getSystemPolices();
+    assertTrue("System ecPolicies should be of only 1 for now",
+        sysECPolicies.length == 1);
 
-    ECSchema usingSchema = sysSchemas[0];
+    ErasureCodingPolicy usingECPolicy = sysECPolicies[0];
     String src = "/ec2";
     final Path ecDir = new Path(src);
     fs.mkdir(ecDir, FsPermission.getDirDefault());
     // dir ECInfo before creating ec zone
-    assertNull(fs.getClient().getFileInfo(src).getECSchema());
+    assertNull(fs.getClient().getFileInfo(src).getErasureCodingPolicy());
     // dir ECInfo after creating ec zone
-    fs.getClient().createErasureCodingZone(src, usingSchema, 0);
-    verifyErasureCodingInfo(src, usingSchema);
+    fs.getClient().createErasureCodingZone(src, usingECPolicy);
+    verifyErasureCodingInfo(src, usingECPolicy);
     fs.create(new Path(ecDir, "child1")).close();
     // verify for the files in ec zone
-    verifyErasureCodingInfo(src + "/child1", usingSchema);
+    verifyErasureCodingInfo(src + "/child1", usingECPolicy);
   }
 
   private void verifyErasureCodingInfo(
-      String src, ECSchema usingSchema) throws IOException {
+      String src, ErasureCodingPolicy usingECPolicy) throws IOException {
     HdfsFileStatus hdfsFileStatus = fs.getClient().getFileInfo(src);
-    ECSchema schema = hdfsFileStatus.getECSchema();
-    assertNotNull(schema);
-    assertEquals("Actually used schema should be equal with target schema",
-        usingSchema, schema);
+    ErasureCodingPolicy ecPolicy = hdfsFileStatus.getErasureCodingPolicy();
+    assertNotNull(ecPolicy);
+    assertEquals("Actually used ecPolicy should be equal with target ecPolicy",
+        usingECPolicy, ecPolicy);
   }
 }

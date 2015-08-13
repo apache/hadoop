@@ -90,7 +90,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
@@ -2280,18 +2280,17 @@ public class DistributedFileSystem extends FileSystem {
    * Create the erasurecoding zone
    * 
    * @param path Directory to create the ec zone
-   * @param schema ECSchema for the zone. If not specified default will be used.
-   * @param cellSize Cellsize for the striped erasure coding
+   * @param ecPolicy erasure coding policy for the zone. If not specified default will be used.
    * @throws IOException
    */
-  public void createErasureCodingZone(final Path path, final ECSchema schema,
-      final int cellSize) throws IOException {
+  public void createErasureCodingZone(final Path path, final ErasureCodingPolicy ecPolicy)
+      throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        dfs.createErasureCodingZone(getPathName(p), schema, cellSize);
+        dfs.createErasureCodingZone(getPathName(p), ecPolicy);
         return null;
       }
 
@@ -2299,7 +2298,7 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          myDfs.createErasureCodingZone(p, schema, cellSize);
+          myDfs.createErasureCodingZone(p, ecPolicy);
           return null;
         }
         throw new UnsupportedOperationException(

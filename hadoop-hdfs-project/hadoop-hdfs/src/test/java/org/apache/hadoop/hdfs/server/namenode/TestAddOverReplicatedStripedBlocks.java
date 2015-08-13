@@ -70,7 +70,7 @@ public class TestAddOverReplicatedStripedBlocks {
     cluster.waitActive();
     fs = cluster.getFileSystem();
     fs.mkdirs(dirPath);
-    fs.getClient().createErasureCodingZone(dirPath.toString(), null, CELLSIZE);
+    fs.getClient().createErasureCodingZone(dirPath.toString(), null);
   }
 
   @After
@@ -180,7 +180,7 @@ public class TestAddOverReplicatedStripedBlocks {
     long groupId = bg.getBlock().getBlockId();
     Block blk = new Block(groupId, BLOCK_SIZE, gs);
     BlockInfoStriped blockInfo = new BlockInfoStriped(blk,
-        ErasureCodingSchemaManager.getSystemDefaultSchema(), CELLSIZE);
+        ErasureCodingPolicyManager.getSystemDefaultPolicy());
     for (int i = 0; i < GROUP_SIZE; i++) {
       blk.setBlockId(groupId + i);
       cluster.injectBlocks(i, Arrays.asList(blk), bpid);

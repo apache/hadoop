@@ -45,7 +45,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -57,7 +57,6 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -76,8 +75,8 @@ public class TestFSEditLogLoader {
 
   private static final int NUM_DATA_NODES = 0;
 
-  private static final ECSchema testSchema
-      = ErasureCodingSchemaManager.getSystemDefaultSchema();
+  private static final ErasureCodingPolicy testECPolicy
+      = ErasureCodingPolicyManager.getSystemDefaultPolicy();
   
   @Test
   public void testDisplayRecentEditLogOpCodes() throws IOException {
@@ -450,11 +449,10 @@ public class TestFSEditLogLoader {
       long timestamp = 1426222918;
       short blockNum = HdfsConstants.NUM_DATA_BLOCKS;
       short parityNum = HdfsConstants.NUM_PARITY_BLOCKS;
-      int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.getClient().getNamenode().createErasureCodingZone(testDir, null, 0);
+      fs.getClient().getNamenode().createErasureCodingZone(testDir, null);
 
       // Create a file with striped block
       Path p = new Path(testFilePath);
@@ -466,7 +464,7 @@ public class TestFSEditLogLoader {
 
       // Add a striped block to the file
       BlockInfoStriped stripedBlk = new BlockInfoStriped(
-          new Block(blkId, blkNumBytes, timestamp), testSchema, cellSize);
+          new Block(blkId, blkNumBytes, timestamp), testECPolicy);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(stripedBlk);
@@ -491,7 +489,6 @@ public class TestFSEditLogLoader {
       assertEquals(timestamp, blks[0].getGenerationStamp());
       assertEquals(blockNum, ((BlockInfoStriped)blks[0]).getDataBlockNum());
       assertEquals(parityNum, ((BlockInfoStriped)blks[0]).getParityBlockNum());
-      assertEquals(cellSize, ((BlockInfoStriped)blks[0]).getCellSize());
 
       cluster.shutdown();
       cluster = null;
@@ -524,17 +521,16 @@ public class TestFSEditLogLoader {
       long timestamp = 1426222918;
       short blockNum = HdfsConstants.NUM_DATA_BLOCKS;
       short parityNum = HdfsConstants.NUM_PARITY_BLOCKS;
-      int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.getClient().getNamenode().createErasureCodingZone(testDir, null, 0);
+      fs.getClient().getNamenode().createErasureCodingZone(testDir, null);
 
       //create a file with striped blocks
       Path p = new Path(testFilePath);
       DFSTestUtil.createFile(fs, p, 0, (short) 1, 1);
       BlockInfoStriped stripedBlk = new BlockInfoStriped(
-          new Block(blkId, blkNumBytes, timestamp), testSchema, cellSize);
+          new Block(blkId, blkNumBytes, timestamp), testECPolicy);
       INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
       file.toUnderConstruction(clientName, clientMachine);
       file.addBlock(stripedBlk);
@@ -573,7 +569,6 @@ public class TestFSEditLogLoader {
       assertEquals(newTimestamp, blks[0].getGenerationStamp());
       assertEquals(blockNum, ((BlockInfoStriped)blks[0]).getDataBlockNum());
       assertEquals(parityNum, ((BlockInfoStriped)blks[0]).getParityBlockNum());
-      assertEquals(cellSize, ((BlockInfoStriped)blks[0]).getCellSize());
 
       cluster.shutdown();
       cluster = null;

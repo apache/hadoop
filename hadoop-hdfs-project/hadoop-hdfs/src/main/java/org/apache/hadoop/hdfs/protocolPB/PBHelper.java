@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -137,6 +138,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecovery
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ErasureCodingZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaOptionEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
@@ -1348,8 +1350,7 @@ public class PBHelper {
             PBHelper.convertLocatedBlockProto(lb.getLastBlock()) : null,
         lb.getIsLastBlockComplete(),
         lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) : null,
-        lb.hasECSchema() ? convertECSchema(lb.getECSchema()) : null,
-        lb.hasStripeCellSize() ? lb.getStripeCellSize() : 0);
+        lb.hasEcPolicy() ? convertErasureCodingPolicy(lb.getEcPolicy()) : null);
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1365,11 +1366,8 @@ public class PBHelper {
     if (lb.getFileEncryptionInfo() != null) {
       builder.setFileEncryptionInfo(convert(lb.getFileEncryptionInfo()));
     }
-    if (lb.getECSchema() != null) {
-      builder.setECSchema(convertECSchema(lb.getECSchema()));
-    }
-    if (lb.getStripeCellSize() != 0) {
-      builder.setStripeCellSize(lb.getStripeCellSize());
+    if (lb.getErasureCodingPolicy() != null) {
+      builder.setEcPolicy(convertErasureCodingPolicy(lb.getErasureCodingPolicy()));
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
@@ -1514,8 +1512,7 @@ public class PBHelper {
         fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
             : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-        fs.hasEcSchema() ? PBHelper.convertECSchema(fs.getEcSchema()) : null,
-        fs.hasStripeCellSize() ? fs.getStripeCellSize() : 0);
+        fs.hasEcPolicy() ? PBHelper.convertErasureCodingPolicy(fs.getEcPolicy()) : null);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1576,10 +1573,9 @@ public class PBHelper {
         builder.setLocations(PBHelper.convert(locations));
       }
     }
-    if(fs.getECSchema() != null) {
-      builder.setEcSchema(PBHelper.convertECSchema(fs.getECSchema()));
+    if(fs.getErasureCodingPolicy() != null) {
+      builder.setEcPolicy(PBHelper.convertErasureCodingPolicy(fs.getErasureCodingPolicy()));
     }
-    builder.setStripeCellSize(fs.getStripeCellSize());
     return builder.build();
   }
   
@@ -3137,13 +3133,12 @@ public class PBHelper {
     for (ECSchemaOptionEntryProto option : optionsList) {
       options.put(option.getKey(), option.getValue());
     }
-    return new ECSchema(schema.getSchemaName(), schema.getCodecName(),
-        schema.getDataUnits(), schema.getParityUnits(), options);
+    return new ECSchema(schema.getCodecName(), schema.getDataUnits(),
+        schema.getParityUnits(), options);
   }
 
   public static ECSchemaProto convertECSchema(ECSchema schema) {
     ECSchemaProto.Builder builder = ECSchemaProto.newBuilder()
-        .setSchemaName(schema.getSchemaName())
         .setCodecName(schema.getCodecName())
         .setDataUnits(schema.getNumDataUnits())
         .setParityUnits(schema.getNumParityUnits());
@@ -3155,17 +3150,34 @@ public class PBHelper {
     return builder.build();
   }
 
+  public static ErasureCodingPolicy convertErasureCodingPolicy(
+      ErasureCodingPolicyProto policy) {
+    return new ErasureCodingPolicy(policy.getName(),
+        convertECSchema(policy.getSchema()),
+        policy.getCellSize());
+  }
+
+  public static ErasureCodingPolicyProto convertErasureCodingPolicy(
+      ErasureCodingPolicy policy) {
+    ErasureCodingPolicyProto.Builder builder = ErasureCodingPolicyProto
+        .newBuilder()
+        .setName(policy.getName())
+        .setSchema(convertECSchema(policy.getSchema()))
+        .setCellSize(policy.getCellSize());
+    return builder.build();
+  }
+
   public static ErasureCodingZoneProto convertErasureCodingZone(
       ErasureCodingZone ecZone) {
     return ErasureCodingZoneProto.newBuilder().setDir(ecZone.getDir())
-        .setSchema(convertECSchema(ecZone.getSchema()))
-        .setCellSize(ecZone.getCellSize()).build();
+        .setEcPolicy(convertErasureCodingPolicy(ecZone.getErasureCodingPolicy()))
+        .build();
   }
 
   public static ErasureCodingZone convertErasureCodingZone(
       ErasureCodingZoneProto ecZoneProto) {
     return new ErasureCodingZone(ecZoneProto.getDir(),
-        convertECSchema(ecZoneProto.getSchema()), ecZoneProto.getCellSize());
+        convertErasureCodingPolicy(ecZoneProto.getEcPolicy()));
   }
   
   public static BlockECRecoveryInfo convertBlockECRecoveryInfo(
@@ -3198,12 +3210,11 @@ public class PBHelper {
       liveBlkIndices[i] = liveBlockIndicesList.get(i).shortValue();
     }
 
-    ECSchema ecSchema = convertECSchema(blockEcRecoveryInfoProto.getEcSchema());
-    int cellSize = blockEcRecoveryInfoProto.getCellSize();
+    ErasureCodingPolicy ecPolicy =
+        convertErasureCodingPolicy(blockEcRecoveryInfoProto.getEcPolicy());
 
     return new BlockECRecoveryInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecSchema,
-        cellSize);
+        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
   }
 
   public static BlockECRecoveryInfoProto convertBlockECRecoveryInfo(
@@ -3228,8 +3239,8 @@ public class PBHelper {
     short[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
     builder.addAllLiveBlockIndices(convertIntArray(liveBlockIndices));
 
-    builder.setEcSchema(convertECSchema(blockEcRecoveryInfo.getECSchema()));
-    builder.setCellSize(blockEcRecoveryInfo.getCellSize());
+    builder.setEcPolicy(convertErasureCodingPolicy(blockEcRecoveryInfo
+        .getErasureCodingPolicy()));
 
     return builder.build();
   }
