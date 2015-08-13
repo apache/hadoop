@@ -20,6 +20,7 @@ add_plugin whitespace
 function whitespace_linecomment_reporter
 {
   local file=$1
+  shift
   local comment=$*
   local tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
 
@@ -31,7 +32,7 @@ function whitespace_linecomment_reporter
   done < "${file}"
 
   bugsystem_linecomments "whitespace:" "${tmpfile}"
-  rm "${tmpfile}"
+  #rm "${tmpfile}"
 }
 
 function whitespace_postapply
