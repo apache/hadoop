@@ -766,6 +766,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4005. Completed container whose app is finished is possibly not
     removed from NMStateStore. (Jun Gong via jianhe)
 
+    YARN-4047. ClientRMService getApplications has high scheduler lock contention.
+    (Jason Lowe via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
