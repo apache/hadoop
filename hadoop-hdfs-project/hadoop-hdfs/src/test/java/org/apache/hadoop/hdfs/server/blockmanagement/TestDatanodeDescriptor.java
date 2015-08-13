@@ -63,16 +63,16 @@ public class TestDatanodeDescriptor {
     DatanodeStorageInfo[] storages = dd.getStorageInfos();
     assertTrue(storages.length > 0);
     // add first block
-    assertTrue(storages[0].addBlock(blk) == AddBlockResult.ADDED);
+    assertTrue(storages[0].addBlock(blk, blk) == AddBlockResult.ADDED);
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
     assertFalse(dd.removeBlock(blk1));
     assertEquals(1, dd.numBlocks());
     // add an existent block
-    assertFalse(storages[0].addBlock(blk) == AddBlockResult.ADDED);
+    assertFalse(storages[0].addBlock(blk, blk) == AddBlockResult.ADDED);
     assertEquals(1, dd.numBlocks());
     // add second block
-    assertTrue(storages[0].addBlock(blk1) == AddBlockResult.ADDED);
+    assertTrue(storages[0].addBlock(blk1, blk1) == AddBlockResult.ADDED);
     assertEquals(2, dd.numBlocks());
     // remove first block
     assertTrue(dd.removeBlock(blk));

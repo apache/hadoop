@@ -93,12 +93,12 @@ public class TestBlockInfo {
     // Create a few dummy blocks and add them to the first storage.
     for (int i = 0; i < NUM_BLOCKS; ++i) {
       blockInfos[i] = new BlockInfoContiguous((short) 3);
-      storage1.addBlock(blockInfos[i]);
+      storage1.addBlock(blockInfos[i], blockInfos[i]);
     }
 
     // Try to move one of the blocks to a different storage.
-    boolean added =
-        storage2.addBlock(blockInfos[NUM_BLOCKS / 2]) == AddBlockResult.ADDED;
+    boolean added = storage2.addBlock(blockInfos[NUM_BLOCKS / 2],
+        blockInfos[NUM_BLOCKS / 2]) == AddBlockResult.ADDED;
     Assert.assertThat(added, is(false));
     Assert.assertThat(blockInfos[NUM_BLOCKS/2].getStorageInfo(0), is(storage2));
   }
@@ -119,7 +119,7 @@ public class TestBlockInfo {
     for (int i = 0; i < MAX_BLOCKS; i++) {
       blockList.add(new Block(i, 0, GenerationStamp.LAST_RESERVED_STAMP));
       blockInfoList.add(new BlockInfoContiguous(blockList.get(i), (short) 3));
-      dd.addBlock(blockInfoList.get(i));
+      dd.addBlock(blockInfoList.get(i), blockInfoList.get(i));
 
       // index of the datanode should be 0
       assertEquals("Find datanode should be 0", 0, blockInfoList.get(i)

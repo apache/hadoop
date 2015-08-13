@@ -182,10 +182,12 @@ class FSDirStatAndListingOp {
 
       final FileEncryptionInfo feInfo = isReservedName ? null
           : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
+      final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+          fsd.getFSNamesystem(), iip);
 
       final LocatedBlocks blocks = bm.createLocatedBlocks(
           inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
-          length, needBlockToken, iip.isSnapshot(), feInfo);
+          length, needBlockToken, iip.isSnapshot(), feInfo, ecZone);
 
       // Set caching information for the located blocks.
       for (LocatedBlock lb : blocks.getLocatedBlocks()) {

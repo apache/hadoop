@@ -701,7 +701,7 @@ public class Dispatcher {
       if (LOG.isTraceEnabled()) {
         LOG.trace("getBlocks(" + getDatanodeInfo() + ", "
             + StringUtils.TraditionalBinaryPrefix.long2String(size, "B", 2)
-            + ") returns " + newBlocks.getBlocks().length + " blocks.");
+            + ") returns " + newBlksLocs.getBlocks().length + " blocks.");
       }
 
       long bytesReceived = 0;
