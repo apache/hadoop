@@ -50,7 +50,7 @@ test-patch has the following requirements:
 * POSIX sed
 * curl
 * file command
-* smart-apply-patch.sh
+* smart-apply-patch.sh (included!)
 
 Maven plugins requirements:
 
@@ -131,7 +131,7 @@ $ test-patch.sh (other options) HADOOP-9905
 
 ... will process the patch file associated with this JIRA issue.
 
-If the Apache JIRA system is not in use, then override options may be provided on the command line (or via the Personality.  See the advanced guide.)
+If the Apache JIRA system is not in use, then override options may be provided on the command line to point to a different JIRA instance.
 
 ```bash
 $ test-patch.sh --jira-issue-re='^PROJECT-[0-9]+$' --jira-base-url='https://example.com/jira' PROJECT-90
@@ -214,8 +214,6 @@ $ test-patch.sh (other options) --docker
 ```
 
 This will do some preliminary setup and then re-execute itself inside a Docker container.  For more information on how to provide a custom Dockerfile, see the advanced guide.
-
-
 
 ## In Closing
 

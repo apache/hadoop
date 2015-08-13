@@ -103,34 +103,34 @@ Similar to tests, the ability to add support for bug tracking systems is also ha
 
     - executed when the help message is displayed. This is used to display the plug-in specific options for the user.
 
-* pluginname_parse_args
+* pluginname\_parse\_args
 
     - executed prior to any other above functions except for pluginname_usage. This is useful for parsing the arguments passed from the user and setting up the execution environment.
 
 
 * pluginname\_locate\_patch
 
-Given input from the user, download the patch if possible.
+    - Given input from the user, download the patch if possible.
 
 * pluginname\_determine\_branch
 
-Using any heuristics available, return the branch to process, if possible.
+    - Using any heuristics available, return the branch to process, if possible.
 
 * pluginname\_determine\_issue
 
-Using any heuristics available, set the issue, bug number, etc, for this bug system, if possible.  This is typically used to fill in supplementary information in the final output table.
+    - Using any heuristics available, set the issue, bug number, etc, for this bug system, if possible.  This is typically used to fill in supplementary information in the final output table.
 
 * pluginname_writecomment
 
-Given text input, write this output to the bug system as a comment.  NOTE: It is the bug system's responsibility to format appropriately.
+    - Given text input, write this output to the bug system as a comment.  NOTE: It is the bug system's responsibility to format appropriately.
 
 * pluginname\_linecomments
 
-This function allows for the system to write specific comments on specific lines if the bug system supports code review comments.
+    - This function allows for the system to write specific comments on specific lines if the bug system supports code review comments.
 
 * pluginname_finalreport
 
-Write the final result table to the bug system.
+    - Write the final result table to the bug system.
 
 # Configuring for Other Projects
 
@@ -216,7 +216,7 @@ This function will tell test-patch that when the javadoc test is being run, do t
 
 # Important Variables
 
-There are a handful of extremely important variables that make life easier for personality and plug-in writers:
+There are a handful of extremely important system variables that make life easier for personality and plug-in writers.  Other variables may be provided by individual plug-ins.  Check their development documentation for more information.
 
 * BUILD\_NATIVE will be set to true if the system has requested that non-JVM-based code be built (e.g., JNI or other compiled C code). Under Jenkins, this is always true.
 

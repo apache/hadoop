@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# This bug system handles the output on the screen.
+
 add_bugsystem console
 
 # we always call this one last

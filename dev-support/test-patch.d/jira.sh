@@ -14,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# this bug system handles JIRA.  Personalities
+# can override the following variables:
+
+# base JIRA URL
 JIRA_URL=${JIRA_URL:-"https://issues.apache.org/jira"}
+
+# Issue regex to help identify the project
 JIRA_ISSUE_RE='^(YETUS)-[0-9]+$'
 
 add_bugsystem jira
@@ -50,6 +56,8 @@ function jira_parse_args
   done
 }
 
+## @description provides issue determination based upon the URL and more.
+## @description WARNING: called from the github plugin!
 function jira_determine_issue
 {
   declare input=$1
@@ -78,11 +86,11 @@ function jira_http_fetch
 
   if [[ -n "${JIRA_USER}"
      && -n "${JIRA_PASSWD}" ]]; then
-     ${CURL} --silent --fail \
-             --user "${JIRA_USER}:${JIRA_PASSWD}" \
-             --output "${output}" \
-             --location \
-            "${JIRA_URL}/${input}"
+    ${CURL} --silent --fail \
+            --user "${JIRA_USER}:${JIRA_PASSWD}" \
+            --output "${output}" \
+            --location \
+           "${JIRA_URL}/${input}"
   else
     ${CURL} --silent --fail \
             --output "${output}" \
@@ -111,6 +119,8 @@ function jira_locate_patch
     return 1
   fi
 
+  # if github is configured and we see what looks like a URL,
+  # send this to the github plugin to process.
   if [[ -n "${GITHUB_BASE_URL}"
       && $(${GREP} -c  "${GITHUB_BASE_URL}"'[^ ]*patch' "${PATCH_DIR}/jira") != 0 ]]; then
     echo "${input} appears to be a Github PR. Switching Modes."
@@ -163,6 +173,17 @@ function jira_determine_branch
     if [[ -z "${hinttype}" ]]; then
       continue
     fi
+
+    # If one of these matches the JIRA issue regex
+    # then we don't want it to trigger the branch
+    # detection since that's almost certainly not
+    # intended.  In other words, if ISSUE-99 is the
+    # name of a branch, you want to test ISSUE-99
+    # against master, not ISSUE-99's branch
+    if [[ ${hinttype} =~ ${JIRA_ISSUE_RE} ]]; then
+      continue
+    fi
+
     yetus_debug "Determine branch: starting with ${hinttype}"
     patchnamechunk=$(echo "${hinttype}" \
             | ${SED} -e 's,.*/\(.*\)$,\1,' \

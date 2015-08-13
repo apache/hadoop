@@ -14,19 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This bug system provides github integration
+
 add_bugsystem github
 
-GITHUB_BASE_URL="https://github.com"
-GITHUB_API_URL="https://api.github.com"
-GITHUB_REPO="apache/hadoop"
+# personalities can override the following settings:
 
+# Web interface URL.
+GITHUB_BASE_URL="https://github.com"
+
+# API interface URL.
+GITHUB_API_URL="https://api.github.com"
+
+# user/repo
+GITHUB_REPO="apache/yetus"
+
+# user settings
 GITHUB_PASSWD=""
 GITHUB_TOKEN=""
 GITHUB_USER=""
 GITHUB_ISSUE=""
 
+# private globals...
 GITHUB_BRIDGED=false
-
 GITHUB_COMMITSHA=""
 
 function github_usage
@@ -70,6 +80,7 @@ function github_parse_args
 
 ## @description this gets called when JIRA thinks this
 ## @description issue is just a pointer to github
+## @description WARNING: Called from JIRA plugin!
 function github_jira_bridge
 {
   declare fileloc=$1
@@ -87,6 +98,9 @@ function github_jira_bridge
   github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
 }
 
+## @description given a URL, break it up into github plugin globals
+## @description this will *override* any personality or yetus defaults
+## @params url
 function github_breakup_url
 {
   declare url=$1
@@ -112,6 +126,8 @@ function github_breakup_url
   GITHUB_ISSUE=$(echo "${url}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
 }
 
+
+## @description based upon a github PR, attempt to link back to JIRA
 function github_find_jira_title
 {
   declare title
@@ -159,6 +175,7 @@ function github_determine_issue
     fi
   fi
 
+  # if JIRA didn't call us, should we call it?
   if [[ ${GITHUB_BRIDGED} == false ]]; then
     github_find_jira_title
     if [[ $? == 0 ]]; then
@@ -178,6 +195,7 @@ function github_determine_issue
 ## @stability    evolving
 ## @replaceable  no
 ## @return       0 on success, with PATCH_BRANCH updated appropriately
+## @return       1 on failure
 function github_determine_branch
 {
   if [[ ! -f "${PATCH_DIR}/github-pull.json" ]]; then
@@ -209,21 +227,36 @@ function github_locate_patch
     return 1
   fi
 
+
+  # https://github.com/your/repo/pulls/##
   if [[ ${input} =~ ^${GITHUB_BASE_URL}.*/pulls/[0-9]+$ ]]; then
     github_breakup_url "${input}.patch"
     input=${GITHUB_ISSUE}
   fi
 
+  # https://github.com/your/repo/pulls/##.patch
   if [[ ${input} =~ ^${GITHUB_BASE_URL}.*patch$ ]]; then
     github_breakup_url "${input}"
     input=${GITHUB_ISSUE}
   fi
 
+  # https://github.com/your/repo/pulls/##.diff
+  if [[ ${input} =~ ^${GITHUB_BASE_URL}.*diff$ ]]; then
+    github_breakup_url "${input}"
+    input=${GITHUB_ISSUE}
+  fi
+
+  # if it isn't a number at this point, no idea
+  # how to process
   if [[ ! ${input} =~ ^[0-9]+$ ]]; then
     yetus_debug "github: ${input} is not a pull request #"
     return 1
   fi
 
+  # we always pull the .patch version (even if .diff was given)
+  # with the assumption that this way binary files work.
+  # The downside of this is that the patch files are
+  # significantly larger and therefore take longer to process
   PATCHURL="${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}.patch"
   echo "GITHUB PR #${input} is being downloaded at $(date) from"
   echo "${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}"
@@ -262,6 +295,7 @@ function github_locate_patch
 
   GITHUB_ISSUE=${input}
 
+  # github will translate this to be #(xx) !
   add_footer_table "GITHUB PR" "${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}"
 
   return 0
@@ -291,6 +325,7 @@ function github_linecomments
     return
   fi
 
+  # build our REST post
   {
     printf "{\"body\":\""
     echo "${plugin}: ${text}" \
@@ -332,20 +367,21 @@ function github_linecomments
 function github_write_comment
 {
   declare -r commentfile=${1}
-  shift
-
   declare retval=0
+  declare restfile="${PATCH_DIR}/ghcomment.$$"
 
   if [[ "${OFFLINE}" == true ]]; then
     return 0
   fi
 
-  echo "{\"body\":\"" > "${PATCH_DIR}/ghcomment.$$"
-  ${SED} -e 's,\\,\\\\,g' \
-      -e 's,\",\\\",g' \
-      -e 's,$,\\r\\n,g' "${commentfile}" \
-  | tr -d '\n'>> "${PATCH_DIR}/ghcomment.$$"
-  echo "\"}" >> "${PATCH_DIR}/ghcomment.$$"
+  {
+    printf "{\"body\":\""
+    ${SED} -e 's,\\,\\\\,g' \
+        -e 's,\",\\\",g' \
+        -e 's,$,\\r\\n,g' "${commentfile}" \
+    | tr -d '\n'
+    echo "\"}"
+  } > "${restfile}"
 
   if [[ -n ${GITHUB_USER}
      && -n ${GITHUB_PASSWD} ]]; then
@@ -360,13 +396,13 @@ function github_write_comment
        -H "Accept: application/json" \
        -H "Content-Type: application/json" \
        -H "${githubauth}" \
-       -d @"${PATCH_DIR}/ghcomment.$$" \
+       -d @"${restfile}" \
        --silent --location \
          "${GITHUB_API_URL}/repos/${GITHUB_REPO}/issues/${GITHUB_ISSUE}/comments" \
         >/dev/null
 
   retval=$?
-  rm "${PATCH_DIR}/ghcomment.$$"
+  rm "${restfile}"
   return ${retval}
 }
 
