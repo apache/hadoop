@@ -229,8 +229,8 @@ function github_locate_patch
   fi
 
 
-  # https://github.com/your/repo/pulls/##
-  if [[ ${input} =~ ^${GITHUB_BASE_URL}.*/pulls/[0-9]+$ ]]; then
+  # https://github.com/your/repo/pull/##
+  if [[ ${input} =~ ^${GITHUB_BASE_URL}.*/pull/[0-9]+$ ]]; then
     github_breakup_url "${input}.patch"
     input=${GITHUB_ISSUE}
   fi
