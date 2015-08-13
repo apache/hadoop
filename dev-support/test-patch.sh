@@ -711,8 +711,7 @@ function compute_unidiff
     | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
     >> "${GITUNIDIFFLINES}"
 
-  rm "${tmpfile1}"
-  exit
+  rm "${tmpfile}"
 }
 
 ## @description  Print the command to be executing to the screen. Then
