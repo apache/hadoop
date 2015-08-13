@@ -274,7 +274,6 @@ function github_linecomments
   declare realline=$2
   declare uniline=$3
   declare text=$4
-  declare commitsha
   declare tempfile="${PATCH_DIR}/ghcomment.$$.${RANDOM}"
 
   if [[ ${file} =~ ^./ ]]; then
