@@ -947,6 +947,12 @@ function git_checkout
     # we need to explicitly fetch in case the
     # git ref hasn't been brought in tree yet
     if [[ ${OFFLINE} == false ]]; then
+
+      if [[ -f .git/rebase-apply ]]; then
+        hadoop_error "ERROR: previous rebase failed. Aborting it."
+        ${GIT} rebase --abort
+      fi
+
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
         hadoop_error "ERROR: git pull is failing"

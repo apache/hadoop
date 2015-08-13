@@ -504,6 +504,8 @@ Trunk (Unreleased)
     HADOOP-12009. Clarify FileSystem.listStatus() sorting order & fix
     FileSystemContractBaseTest:testListStatus. (J.Andreina via jghoman)
 
+    HADOOP-12244. recover broken rebase during precommit (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
