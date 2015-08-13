@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
@@ -308,6 +309,95 @@ class FSImageLoader {
       list.add(getFileStatus(inode, false));
     }
     return list;
+  }
+
+  /**
+   * Return the JSON formatted ContentSummary of the specified path.
+   * @param path a path specifies a file or directory
+   * @return JSON formatted ContentSummary
+   * @throws IOException if failed to serialize ContentSummary to JSON.
+   */
+  String getContentSummary(String path) throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    return "{\"ContentSummary\":\n"
+        + mapper.writeValueAsString(getContentSummaryMap(path)) + "\n}\n";
+  }
+
+  private Map<String, Object> getContentSummaryMap(String path)
+      throws IOException {
+    long id = lookup(path);
+    INode inode = fromINodeId(id);
+    long spaceQuota = 0;
+    long nsQuota = 0;
+    long[] data = new long[4];
+    FsImageProto.INodeSection.INodeFile f = inode.getFile();
+    switch (inode.getType()) {
+    case FILE:
+      data[0] = 0;
+      data[1] = 1;
+      data[2] = getFileSize(f);
+      nsQuota = -1;
+      data[3] = data[2] * f.getReplication();
+      spaceQuota = -1;
+      return fillSummaryMap(spaceQuota, nsQuota, data);
+    case DIRECTORY:
+      fillDirSummary(id, data);
+      nsQuota = inode.getDirectory().getNsQuota();
+      spaceQuota = inode.getDirectory().getDsQuota();
+      return fillSummaryMap(spaceQuota, nsQuota, data);
+    case SYMLINK:
+      data[0] = 0;
+      data[1] = 1;
+      data[2] = 0;
+      nsQuota = -1;
+      data[3] = 0;
+      spaceQuota = -1;
+      return fillSummaryMap(spaceQuota, nsQuota, data);
+    default:
+      return null;
+    }
+
+  }
+
+  private Map<String, Object> fillSummaryMap(long spaceQuota,
+      long nsQuota, long[] data) {
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("directoryCount", data[0]);
+    map.put("fileCount", data[1]);
+    map.put("length", data[2]);
+    map.put("quota", nsQuota);
+    map.put("spaceConsumed", data[3]);
+    map.put("spaceQuota", spaceQuota);
+    return map;
+  }
+
+  private void fillDirSummary(long id, long[] data) throws IOException {
+    data[0]++;
+    long[] children = dirmap.get(id);
+    if (children == null) {
+      return;
+    }
+
+    for (long cid : children) {
+      INode node = fromINodeId(cid);
+      switch (node.getType()) {
+      case DIRECTORY:
+        fillDirSummary(cid, data);
+        break;
+      case FILE:
+        FsImageProto.INodeSection.INodeFile f = node.getFile();
+        long curLength = getFileSize(f);
+        data[1]++;
+        data[2] += curLength;
+        data[3] += (curLength) * (f.getReplication());
+        break;
+      case SYMLINK:
+        data[1]++;
+        break;
+      default:
+        break;
+      }
+    }
   }
 
   /**
