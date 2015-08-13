@@ -474,12 +474,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           if (!isContainerRecentlyStopped(containerId)) {
             pendingCompletedContainers.put(containerId, containerStatus);
-            // Adding to finished containers cache. Cache will keep it around at
-            // least for #durationToTrackStoppedContainers duration. In the
-            // subsequent call to stop container it will get removed from cache.
-            addCompletedContainer(containerId);
           }
         }
+        // Adding to finished containers cache. Cache will keep it around at
+        // least for #durationToTrackStoppedContainers duration. In the
+        // subsequent call to stop container it will get removed from cache.
+        addCompletedContainer(containerId);
       } else {
         containerStatuses.add(containerStatus);
       }

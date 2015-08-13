@@ -763,6 +763,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3992. TestApplicationPriority.testApplicationPriorityAllocation fails 
     intermittently. (Contributed by Sunil G)
 
+    YARN-4005. Completed container whose app is finished is possibly not
+    removed from NMStateStore. (Jun Gong via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
