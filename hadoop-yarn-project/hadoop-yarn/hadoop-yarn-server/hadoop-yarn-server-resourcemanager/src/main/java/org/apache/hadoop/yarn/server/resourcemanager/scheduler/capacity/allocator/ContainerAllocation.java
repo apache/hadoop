@@ -25,18 +25,31 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerAllocation {
+  /**
+   * Skip the locality (e.g. node-local, rack-local, any), and look at other
+   * localities of the same priority
+   */
+  public static final ContainerAllocation LOCALITY_SKIPPED =
+      new ContainerAllocation(null, null, AllocationState.LOCALITY_SKIPPED);
+
+  /**
+   * Skip the priority, and look at other priorities of the same application
+   */
   public static final ContainerAllocation PRIORITY_SKIPPED =
       new ContainerAllocation(null, null, AllocationState.PRIORITY_SKIPPED);
-  
+
+  /**
+   * Skip the application, and look at other applications of the same queue
+   */
   public static final ContainerAllocation APP_SKIPPED =
       new ContainerAllocation(null, null, AllocationState.APP_SKIPPED);
 
+  /**
+   * Skip the leaf-queue, and look at other queues of the same parent queue
+   */
   public static final ContainerAllocation QUEUE_SKIPPED =
       new ContainerAllocation(null, null, AllocationState.QUEUE_SKIPPED);
-  
-  public static final ContainerAllocation LOCALITY_SKIPPED =
-      new ContainerAllocation(null, null, AllocationState.LOCALITY_SKIPPED);
-  
+
   RMContainer containerToBeUnreserved;
   private Resource resourceToBeAllocated = Resources.none();
   AllocationState state;
@@ -50,26 +63,26 @@ public class ContainerAllocation {
     this.resourceToBeAllocated = resourceToBeAllocated;
     this.state = state;
   }
-  
+
   public RMContainer getContainerToBeUnreserved() {
     return containerToBeUnreserved;
   }
-  
+
   public Resource getResourceToBeAllocated() {
     if (resourceToBeAllocated == null) {
       return Resources.none();
     }
     return resourceToBeAllocated;
   }
-  
+
   public AllocationState getAllocationState() {
     return state;
   }
-  
+
   public NodeType getContainerNodeType() {
     return containerNodeType;
   }
-  
+
   public Container getUpdatedContainer() {
     return updatedContainer;
   }

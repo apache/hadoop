@@ -87,9 +87,9 @@ public class TestRMAppLogAggregationStatus {
 
     rmContext =
         new RMContextImpl(rmDispatcher, null, null, null,
-          null, null, null, null, null,
-          new RMApplicationHistoryWriter());
+          null, null, null, null, null);
     rmContext.setSystemMetricsPublisher(new SystemMetricsPublisher());
+    rmContext.setRMApplicationHistoryWriter(mock(RMApplicationHistoryWriter.class));
 
     scheduler = mock(YarnScheduler.class);
     doAnswer(

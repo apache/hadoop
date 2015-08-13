@@ -144,10 +144,10 @@ public class AppsBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".starttime", "StartTime")
-          .th(".finishtime", "FinishTime").th(".state", "State")
-          .th(".finalstatus", "FinalStatus").th(".progress", "Progress")
-          .th(".ui", "Tracking UI")._()._().tbody();
+          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".starttime", "StartTime").th(".finishtime", "FinishTime")
+          .th(".state", "State").th(".finalstatus", "FinalStatus")
+          .th(".progress", "Progress").th(".ui", "Tracking UI")._()._().tbody();
 
     StringBuilder appsTableData = new StringBuilder("[\n");
     for (ApplicationReport appReport : appReports) {
@@ -180,7 +180,9 @@ public class AppsBlock extends HtmlBlock {
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
-            .getQueue()))).append("\",\"").append(app.getStartedTime())
+            .getQueue()))).append("\",\"").append(String
+                .valueOf(app.getPriority()))
+        .append("\",\"").append(app.getStartedTime())
         .append("\",\"").append(app.getFinishedTime())
         .append("\",\"")
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())

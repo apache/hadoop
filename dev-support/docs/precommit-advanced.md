@@ -28,6 +28,8 @@ By default, test-patch runs in the same shell where it was launched.  It can alt
 
 The `--docker` parameter tells test-patch to run in Docker mode. The `--dockerfile` parameter allows one to provide a custom Dockerfile. The Dockerfile should contain all of the necessary binaries and tooling needed to run the test.  However be aware that test-patch will copy this file and append its necessary hooks to re-launch itself prior to executing docker.
 
+NOTE: If you are using Boot2Docker, you must use directories under /Users (OSX) or C:\Users (Windows) as the base and patchprocess directories (specified by the --basedir and --patch-dir options respectively), because automatically mountable directories are limited to them. See [the Docker documentation](https://docs.docker.com/userguide/dockervolumes/#mount-a-host-directory-as-a-data-volume).
+
 Dockerfile images will be named with a test-patch prefix and suffix with either a date or a git commit hash. By using this information, test-patch will automatically manage broken/stale container images that are hanging around if it is run in --jenkins mode.  In this way, if Docker fails to build the image, the disk space should eventually be cleaned and returned back to the system.
 
 # Maven Specific

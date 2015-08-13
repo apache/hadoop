@@ -135,7 +135,7 @@ final class FSDirAppendOp {
     }
 
     HdfsFileStatus stat = FSDirStatAndListingOp.getFileInfo(fsd, src, false,
-        FSDirectory.isReservedRawName(srcArg), true);
+        FSDirectory.isReservedRawName(srcArg));
     if (lb != null) {
       NameNode.stateChangeLog.debug(
           "DIR* NameSystem.appendFile: file {} for {} at {} block {} block"

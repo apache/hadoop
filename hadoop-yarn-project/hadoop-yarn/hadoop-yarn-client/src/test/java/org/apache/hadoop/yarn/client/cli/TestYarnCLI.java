@@ -104,7 +104,7 @@ public class TestYarnCLI {
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
-          null, null, false);
+          null, null, false, Priority.newInstance(0));
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       newApplicationReport.setPriority(Priority.newInstance(0));
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
