@@ -154,7 +154,7 @@ function shellcheck_postapply
     add_vote_table -1 shellcheck "The applied patch generated "\
       "${diffPostpatch} new shellcheck issues (total was ${numPrepatch}, now ${numPostpatch})."
     add_footer_table shellcheck "@@BASE@@/diff-patch-shellcheck.txt"
-    bugsystem_linecomments "${PATCH_DIR}/diff-patch-shellcheck.txt"
+    bugsystem_linecomments "shellcheck" "${PATCH_DIR}/diff-patch-shellcheck.txt"
     return 1
   fi
 

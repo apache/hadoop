@@ -269,11 +269,12 @@ function github_locate_patch
 
 function github_linecomments
 {
-  declare file=$1
+  declare plugin=$1
+  declare file=$2
   # shellcheck disable=SC2034
-  declare realline=$2
-  declare uniline=$3
-  declare text=$4
+  declare realline=$3
+  declare uniline=$4
+  declare text=$5
   declare tempfile="${PATCH_DIR}/ghcomment.$$.${RANDOM}"
 
   if [[ ${file} =~ ^./ ]]; then
@@ -286,9 +287,13 @@ function github_linecomments
       | cut -f4 -d\")
   fi
 
+  if [[ -z "${uniline}" ]]; then
+    return
+  fi
+
   {
     printf "{\"body\":\""
-    echo "${text}" \
+    echo "${plugin}: ${text}" \
       | ${SED} -e 's,\\,\\\\,g' \
         -e 's,\",\\\",g' \
         -e 's,$,\\r\\n,g' \
@@ -317,7 +322,7 @@ function github_linecomments
     --silent --location \
     "${GITHUB_API_URL}/repos/${GITHUB_REPO}/pulls/${GITHUB_ISSUE}/comments" \
     >/dev/null
-  #rm "${tempfile}"
+  rm "${tempfile}"
 }
 
 ## @description Write the contents of a file to github

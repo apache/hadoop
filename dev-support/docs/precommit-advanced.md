@@ -124,6 +124,10 @@ Using any heuristics available, set the issue, bug number, etc, for this bug sys
 
 Given text input, write this output to the bug system as a comment.  NOTE: It is the bug system's responsibility to format appropriately.
 
+* pluginname\_linecomments
+
+This function allows for the system to write specific comments on specific lines if the bug system supports code review comments.
+
 * pluginname_finalreport
 
 Write the final result table to the bug system.

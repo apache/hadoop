@@ -2971,22 +2971,33 @@ function check_unittests
   return 0
 }
 
+## @description  Write comments onto bug systems that have code review support.
+## @description  File should be in the form of "file:line:comment"
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        filename
 function bugsystem_linecomments
 {
-  declare fn=$1
+  declare title=$1
+  declare fn=$2
   declare line
   declare bugs
+
+  if [[ ! -f "${GITUNIDIFFLINES}" ]]; then
+    return
+  fi
 
   while read -r line;do
     file=$(echo "${line}" | cut -f1 -d:)
     realline=$(echo "${line}" | cut -f2 -d:)
     text=$(echo "${line}" | cut -f3- -d:)
     idxline="${file}:${realline}:"
-    uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d:)
+    uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d: )
 
     for bugs in ${BUGSYSTEMS}; do
       if declare -f ${bugs}_linecomments >/dev/null;then
-        "${bugs}_linecomments" "${file}" "${realline}" "${uniline}" "${text}"
+        "${bugs}_linecomments" "${title}" "${file}" "${realline}" "${uniline}" "${text}"
       fi
     done
   done < "${fn}"
