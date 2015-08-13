@@ -173,6 +173,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11813. releasedocmaker.py should use today's date instead of
     unreleased (Darrell Taylor via aw)
 
+    HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
+
   BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
