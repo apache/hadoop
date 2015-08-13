@@ -769,6 +769,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4047. ClientRMService getApplications has high scheduler lock contention.
     (Jason Lowe via jianhe)
 
+    YARN-3987. Send AM container completed msg to NM once AM finishes.
+    (sandflee via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
