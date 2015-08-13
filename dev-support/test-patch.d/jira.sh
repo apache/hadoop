@@ -21,7 +21,7 @@
 JIRA_URL=${JIRA_URL:-"https://issues.apache.org/jira"}
 
 # Issue regex to help identify the project
-JIRA_ISSUE_RE='^(YETUS)-[0-9]+$'
+JIRA_ISSUE_RE=''
 
 add_bugsystem jira
 

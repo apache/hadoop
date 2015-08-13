@@ -19,6 +19,8 @@ PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
 JIRA_ISSUE_RE='^HBASE-[0-9]+$'
 #shellcheck disable=SC2034
+GITHUB_REPO="apache/hbase"
+#shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 
 # All supported Hadoop versions that we want to test the compilation with

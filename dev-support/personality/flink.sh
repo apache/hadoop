@@ -19,6 +19,8 @@ PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
 JIRA_ISSUE_RE='^FLINK-[0-9]+$'
 #shellcheck disable=SC2034
+GITHUB_REPO="apache/flink"
+#shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 
 add_plugin flinklib

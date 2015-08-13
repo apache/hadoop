@@ -27,7 +27,7 @@ GITHUB_BASE_URL="https://github.com"
 GITHUB_API_URL="https://api.github.com"
 
 # user/repo
-GITHUB_REPO="apache/yetus"
+GITHUB_REPO=""
 
 # user settings
 GITHUB_PASSWD=""
