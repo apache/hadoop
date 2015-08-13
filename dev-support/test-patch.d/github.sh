@@ -86,11 +86,12 @@ function github_jira_bridge
   declare fileloc=$1
   declare urlfromjira
 
+  # we use this to prevent loops later on
+  GITHUB_BRIDGED=true
+
   # the JIRA issue has already been downloaded.  So let's
   # find the URL.  This is currently hard-coded to github.com
   # Sorry Github Enterprise users. :(
-
-  GITHUB_BRIDGED=true
 
   # shellcheck disable=SC2016
   urlfromjira=$(${AWK} 'match($0,"https://github.com/.*patch"){print $1}' "${PATCH_DIR}/jira" | tail -1)
@@ -261,10 +262,10 @@ function github_locate_patch
   echo "GITHUB PR #${input} is being downloaded at $(date) from"
   echo "${GITHUB_BASE_URL}/${GITHUB_REPO}/pull/${input}"
 
-  if [[ -n ${GITHUB_USER}
-     && -n ${GITHUB_PASSWD} ]]; then
+  if [[ -n "${GITHUB_USER}"
+     && -n "${GITHUB_PASSWD}" ]]; then
     githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
-  elif [[ -n ${GITHUB_TOKEN} ]]; then
+  elif [[ -n "${GITHUB_TOKEN}" ]]; then
     githubauth="Authorization: token ${GITHUB_TOKEN}"
   else
     githubauth="X-ignore-me: fake"
@@ -272,7 +273,7 @@ function github_locate_patch
 
   # Let's pull the PR JSON for later use
   ${CURL} --silent --fail \
-          -H "Accept: application/json" \
+          -H "Accept: application/vnd.github.v3.full+json" \
           -H "${githubauth}" \
           --output "${PATCH_DIR}/github-pull.json" \
           --location \
@@ -310,8 +311,9 @@ function github_linecomments
   declare uniline=$4
   declare text=$5
   declare tempfile="${PATCH_DIR}/ghcomment.$$.${RANDOM}"
+  declare githubauth
 
-  if [[ ${file} =~ ^./ ]]; then
+  if [[ "${file}" =~ ^./ ]]; then
     file=${file##./}
   fi
 
@@ -340,17 +342,17 @@ function github_linecomments
     echo "}"
   } > "${tempfile}"
 
-  if [[ -n ${GITHUB_USER}
-     && -n ${GITHUB_PASSWD} ]]; then
+  if [[ -n "${GITHUB_USER}"
+     && -n "${GITHUB_PASSWD}" ]]; then
     githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
-  elif [[ -n ${GITHUB_TOKEN} ]]; then
+  elif [[ -n "${GITHUB_TOKEN}" ]]; then
     githubauth="Authorization: token ${GITHUB_TOKEN}"
   else
     return 0
   fi
 
   ${CURL} -X POST \
-    -H "Accept: application/json" \
+    -H "Accept: application/vnd.github.v3.full+json" \
     -H "Content-Type: application/json" \
     -H "${githubauth}" \
     -d @"${tempfile}" \
@@ -369,6 +371,7 @@ function github_write_comment
   declare -r commentfile=${1}
   declare retval=0
   declare restfile="${PATCH_DIR}/ghcomment.$$"
+  declare githubauth
 
   if [[ "${OFFLINE}" == true ]]; then
     echo "Github Plugin: Running in offline, comment skipped."
@@ -384,10 +387,10 @@ function github_write_comment
     echo "\"}"
   } > "${restfile}"
 
-  if [[ -n ${GITHUB_USER}
-     && -n ${GITHUB_PASSWD} ]]; then
+  if [[ -n "${GITHUB_USER}"
+     && -n "${GITHUB_PASSWD}" ]]; then
     githubauth="${GITHUB_USER}:${GITHUB_PASSWD}"
-  elif [[ -n ${GITHUB_TOKEN} ]]; then
+  elif [[ -n "${GITHUB_TOKEN}" ]]; then
     githubauth="Authorization: token ${GITHUB_TOKEN}"
   else
     echo "Github Plugin: no credentials provided to write a comment."
@@ -395,7 +398,7 @@ function github_write_comment
   fi
 
   ${CURL} -X POST \
-       -H "Accept: application/json" \
+       -H "Accept: application/vnd.github.v3.full+json" \
        -H "Content-Type: application/json" \
        -H "${githubauth}" \
        -d @"${restfile}" \
@@ -440,7 +443,7 @@ function github_finalreport
   printf "\n\n\n\n" >>  "${commentfile}"
 
   i=0
-  until [[ $i -eq ${#TP_HEADER[@]} ]]; do
+  until [[ ${i} -eq ${#TP_HEADER[@]} ]]; do
     printf "%s\n\n" "${TP_HEADER[${i}]}" >> "${commentfile}"
     ((i=i+1))
   done
@@ -452,7 +455,7 @@ function github_finalreport
   } >> "${commentfile}"
 
   i=0
-  until [[ $i -eq ${#TP_VOTE_TABLE[@]} ]]; do
+  until [[ ${i} -eq ${#TP_VOTE_TABLE[@]} ]]; do
     echo "${TP_VOTE_TABLE[${i}]}" >> "${commentfile}"
     ((i=i+1))
   done
@@ -464,7 +467,7 @@ function github_finalreport
       echo "|-------:|:------|"
     } >> "${commentfile}"
     i=0
-    until [[ $i -eq ${#TP_TEST_TABLE[@]} ]]; do
+    until [[ ${i} -eq ${#TP_TEST_TABLE[@]} ]]; do
       echo "${TP_TEST_TABLE[${i}]}" >> "${commentfile}"
       ((i=i+1))
     done

@@ -142,7 +142,7 @@ function jira_locate_patch
   if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
     guess_patch_file "${PATCH_DIR}/patch"
     if [[ $? == 0 ]]; then
-      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
+      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. Proceeding, but issue/branch matching might go awry."
       add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
@@ -266,8 +266,6 @@ function jira_determine_branch
 function jira_write_comment
 {
   declare -r commentfile=${1}
-  shift
-
   declare retval=0
 
   if [[ "${OFFLINE}" == true ]]; then

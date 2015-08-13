@@ -547,11 +547,7 @@ function find_java_home
 function write_comment
 {
   local -r commentfile=${1}
-  shift
   declare bug
-  declare retval
-
-  local retval=0
 
   for bug in ${BUGSYSTEMS}; do
     if declare -f ${bug}_write_comment >/dev/null; then
@@ -613,7 +609,7 @@ function compute_gitdiff
 
   pushd "${BASEDIR}" >/dev/null
   ${GIT} add --all --intent-to-add
-  while read line; do
+  while read -r line; do
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
       continue
@@ -653,16 +649,18 @@ function compute_gitdiff
     fi
   done < <("${GIT}" diff --unified=0 --no-color)
 
-  if [[ ! -f ${GITDIFFLINES} ]]; then
+  if [[ ! -f "${GITDIFFLINES}" ]]; then
     touch "${GITDIFFLINES}"
   fi
 
-  if [[ ! -f ${GITDIFFCONTENT} ]]; then
+  if [[ ! -f "${GITDIFFCONTENT}" ]]; then
     touch "${GITDIFFCONTENT}"
   fi
 
   if [[ -s "${GITDIFFLINES}" ]]; then
     compute_unidiff
+  else
+    touch "${GITUNIDIFFLINES}"
   fi
 
   popd >/dev/null
@@ -1195,7 +1193,7 @@ function find_changed_modules
     ;;
     *)
       yetus_error "ERROR: Unsupported build tool."
-      bugsystem_output 1
+      bugsystem_finalreport 1
       cleanup_and_exit 1
     ;;
   esac
@@ -1213,7 +1211,7 @@ function find_changed_modules
     builddir=$(find_buildfile_dir ${buildfile} "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
-      bugsystem_output 1
+      bugsystem_finalreport 1
       cleanup_and_exit 1
     fi
     builddirs="${builddirs} ${builddir}"
@@ -1290,6 +1288,7 @@ function git_checkout
 {
   local currentbranch
   local exemptdir
+  local status
 
   big_console_header "Confirming git environment"
 
@@ -1548,6 +1547,7 @@ function verify_needed_test
 function determine_needed_tests
 {
   local i
+  local plugin
 
   for i in ${CHANGED_FILES}; do
     yetus_debug "Determining needed tests for ${i}"
@@ -1578,9 +1578,11 @@ function locate_patch
 
   yetus_debug "locate patch"
 
+  # it's a locally provided file
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
     patchfile="${PATCH_OR_ISSUE}"
   else
+    # run through the bug systems.  maybe they know?
     for bugsys in ${BUGSYSTEMS}; do
       if declare -f ${bugsys}_locate_patch >/dev/null 2>&1; then
         "${bugsys}_locate_patch" "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"
@@ -1594,6 +1596,7 @@ function locate_patch
       fi
     done
 
+    # ok, none of the bug systems know. let's see how smart we are
     if [[ ${gotit} == false ]]; then
       generic_locate_patch "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"
     fi
@@ -1627,6 +1630,10 @@ function guess_patch_file
 {
   local patch=$1
   local fileOutput
+
+  if [[ ! -f ${patch} ]]; then
+    return 1
+  fi
 
   yetus_debug "Trying to guess is ${patch} is a patch file."
   fileOutput=$("${FILE}" "${patch}")
@@ -1680,7 +1687,7 @@ function apply_patch_file
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "The patch command could not apply the patch."
-    bugsystem_output 1
+    bugsystem_finalreport 1
     cleanup_and_exit 1
   fi
   return 0
@@ -2983,6 +2990,10 @@ function bugsystem_linecomments
   declare fn=$2
   declare line
   declare bugs
+  declare realline
+  declare text
+  declare idxline
+  declare uniline
 
   if [[ ! -f "${GITUNIDIFFLINES}" ]]; then
     return
@@ -3007,7 +3018,7 @@ function bugsystem_linecomments
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-function bugsystem_output
+function bugsystem_finalreport
 {
   declare bugs
 
@@ -3062,7 +3073,7 @@ function postcheckout
 
     (( RESULT = RESULT + $? ))
     if [[ ${RESULT} != 0 ]] ; then
-      bugsystem_output 1
+      bugsystem_finalreport 1
       cleanup_and_exit 1
     fi
   done
@@ -3078,7 +3089,7 @@ function postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
-        bugsystem_output 1
+        bugsystem_finalreport 1
         cleanup_and_exit 1
       fi
     fi
@@ -3134,7 +3145,7 @@ function postapply
   check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
-    bugsystem_output 1
+    bugsystem_finalreport 1
     cleanup_and_exit 1
   fi
 
@@ -3409,5 +3420,5 @@ finish_vote_table
 
 finish_footer_table
 
-bugsystem_output ${RESULT}
+bugsystem_finalreport ${RESULT}
 cleanup_and_exit ${RESULT}
