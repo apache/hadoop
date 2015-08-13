@@ -27,12 +27,12 @@ function whitespace_linecomment_reporter
   while read -r line; do
     {
       printf "%s" $(echo "${line}" | cut -f1-2 -d:)
-      echo ":${comment}"
+      echo "${comment}"
     } >> "${tmpfile}"
   done < "${file}"
 
   bugsystem_linecomments "whitespace:" "${tmpfile}"
-  #rm "${tmpfile}"
+  rm "${tmpfile}"
 }
 
 function whitespace_postapply
