@@ -49,7 +49,7 @@ function tap_process_tests
   declare module_failed_tests
   declare filenames
 
-  filenames=$(find "${TAP_LOG_DIR}" -type f -exec "${GREP}" -l -E "not ok " {} \;)
+  filenames=$(find "${TAP_LOG_DIR}" -type f -exec "${GREP}" -l -E "^not ok" {} \;)
 
   if [[ -n "${filenames}" ]]; then
     module_failed_tests=$(echo "${filenames}" \
@@ -73,7 +73,7 @@ function tap_finalize_results
 
   if [[ -n "${TAP_FAILED_TESTS}" ]] ; then
     # shellcheck disable=SC2086
-    populate_test_table "${jdk}Failed junit tests" ${TAP_FAILED_TESTS}
+    populate_test_table "${jdk}Failed TAP tests" ${TAP_FAILED_TESTS}
     TAP_FAILED_TESTS=""
     add_footer_table "TAP logs" "${TAP_LOGS}"
   fi
