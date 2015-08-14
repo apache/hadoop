@@ -1848,9 +1848,6 @@ Release 2.7.0 - 2015-04-20
     HDFS-7406. SimpleHttpProxyHandler puts incorrect "Connection: Close"
     header. (wheat9)
 
-    HDFS-7225. Remove stale block invalidation work when DN re-registers with
-    different UUID. (Zhe Zhang and Andrew Wang)
-
     HDFS-7374. Allow decommissioning of dead DataNodes. (Zhe Zhang)
 
     HDFS-7403. Inaccurate javadoc of BlockUCState#COMPLETE state. (
@@ -2338,6 +2335,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7263. Snapshot read can reveal future bytes for appended files.
     (Tao Luo via shv)
+
+    HDFS-7225. Remove stale block invalidation work when DN re-registers with
+    different UUID. (Zhe Zhang and Andrew Wang)
 
 Release 2.6.0 - 2014-11-18
 
