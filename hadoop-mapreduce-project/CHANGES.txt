@@ -75,6 +75,9 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6670. TestJobListCache#testEviction sometimes fails on Windows
     with timeout. (Gergely Novák via junping_du)
 
+    MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
+    reducers are completed. (Sangjin Lee via kasha)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
