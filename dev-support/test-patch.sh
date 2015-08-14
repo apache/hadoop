@@ -98,23 +98,18 @@ function setup_defaults
   REEXECED=false
   RESETREPO=false
   ISSUE=""
-  ISSUE_RE='^(YETUS)-[0-9]+$'
   TIMER=$(date +"%s")
-  PATCHURL=""
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
-  BUGSYSTEM=jira
   TESTFORMATS=""
   JDK_TEST_LIST="javac javadoc unit"
-  GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
-  GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
 
   # Solaris needs POSIX, not SVID
   case ${OSTYPE} in
     SunOS)
       AWK=${AWK:-/usr/xpg4/bin/awk}
       SED=${SED:-/usr/xpg4/bin/sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-/usr/xpg4/bin/grep}
       PATCH=${PATCH:-/usr/gnu/bin/patch}
@@ -124,7 +119,7 @@ function setup_defaults
     *)
       AWK=${AWK:-awk}
       SED=${SED:-sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-grep}
       PATCH=${PATCH:-patch}
@@ -242,6 +237,7 @@ function offset_clock
 ## @param        string
 function add_header_line
 {
+  # shellcheck disable=SC2034
   TP_HEADER[${TP_HEADER_COUNTER}]="$*"
   ((TP_HEADER_COUNTER=TP_HEADER_COUNTER+1 ))
 }
@@ -279,8 +275,10 @@ function add_vote_table
   fi
 
   if [[ -z ${value} ]]; then
+    # shellcheck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="|  | ${subsystem} | | ${*:-} |"
   else
+    # shellcheck disable=SC2034
     TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| ${value} | ${subsystem} | ${calctime} | $* |"
   fi
   ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1))
@@ -423,6 +421,7 @@ function finish_vote_table
   echo "Total Elapsed time: ${calctime}"
   echo ""
 
+  # shellcheck disable=SC2034
   TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| | | ${calctime} | |"
   ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1 ))
 }
@@ -440,6 +439,7 @@ function add_footer_table
   local subsystem=$1
   shift 1
 
+  # shellcheck disable=SC2034
   TP_FOOTER_TABLE[${TP_FOOTER_COUNTER}]="| ${subsystem} | $* |"
   ((TP_FOOTER_COUNTER=TP_FOOTER_COUNTER+1 ))
 }
@@ -455,6 +455,7 @@ function add_test_table
   local failure=$1
   shift 1
 
+  # shellcheck disable=SC2034
   TP_TEST_TABLE[${TP_TEST_COUNTER}]="| ${failure} | $* |"
   ((TP_TEST_COUNTER=TP_TEST_COUNTER+1 ))
 }
@@ -538,24 +539,21 @@ function find_java_home
   return 0
 }
 
-## @description Write the contents of a file to jenkins
+## @description Write the contents of a file to all of the bug systems
+## @description (so content should avoid special formatting)
 ## @params filename
 ## @stability stable
 ## @audience public
-## @returns ${JIRACLI} exit code
 function write_comment
 {
   local -r commentfile=${1}
-  shift
+  declare bug
 
-  local retval=0
-
-  if [[ ${OFFLINE} == false
-     && ${JENKINS} == true ]]; then
-    ${BUGSYSTEM}_write_comment "${commentfile}"
-    retval=$?
-  fi
-  return ${retval}
+  for bug in ${BUGSYSTEMS}; do
+    if declare -f ${bug}_write_comment >/dev/null; then
+       "${bug}_write_comment" "${commentfile}"
+    fi
+  done
 }
 
 ## @description Verify that the patch directory is still in working order
@@ -611,7 +609,7 @@ function compute_gitdiff
 
   pushd "${BASEDIR}" >/dev/null
   ${GIT} add --all --intent-to-add
-  while read line; do
+  while read -r line; do
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
       continue
@@ -651,14 +649,68 @@ function compute_gitdiff
     fi
   done < <("${GIT}" diff --unified=0 --no-color)
 
-  if [[ ! -f ${GITDIFFLINES} ]]; then
+  if [[ ! -f "${GITDIFFLINES}" ]]; then
     touch "${GITDIFFLINES}"
   fi
-  if [[ ! -f ${GITDIFFCONTENT} ]]; then
+
+  if [[ ! -f "${GITDIFFCONTENT}" ]]; then
     touch "${GITDIFFCONTENT}"
   fi
 
+  if [[ -s "${GITDIFFLINES}" ]]; then
+    compute_unidiff
+  else
+    touch "${GITUNIDIFFLINES}"
+  fi
+
   popd >/dev/null
+}
+
+## @description generate an index of unified diff lines vs. modified/added lines
+## @description ${GITDIFFLINES} must exist.
+## @audience    private
+## @stability   stable
+## @replaceable no
+function compute_unidiff
+{
+  declare fn
+  declare filen
+  declare tmpfile="${PATCH_DIR}/tmp.$$.${RANDOM}"
+
+  # now that we know what lines are where, we can deal
+  # with github's pain-in-the-butt API. It requires
+  # that the client provides the line number of the
+  # unified diff on a per file basis.
+
+  # First, build a per-file unified diff, pulling
+  # out the 'extra' lines, grabbing the adds with
+  # the line number in the diff file along the way,
+  # finally rewriting the line so that it is in
+  # './filename:diff line:content' format
+
+  for fn in ${CHANGED_FILES}; do
+    filen=${fn##./}
+
+    ${GIT} diff ${filen} \
+      | tail -n +6 \
+      | ${GREP} -n '^+' \
+      | ${GREP} -vE '^[0-9]*:\+\+\+' \
+      | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
+        -e s,^,./${filen}:,g \
+            >>  "${tmpfile}"
+  done
+
+  # at this point, tmpfile should be in the same format
+  # as gitdiffcontent, just with different line numbers.
+  # let's do a merge (using gitdifflines because it's easier)
+
+  # ./filename:real number:diff number
+  # shellcheck disable=SC2016
+  paste -d: "${GITDIFFLINES}" "${tmpfile}" \
+    | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
+    >> "${GITUNIDIFFLINES}"
+
+  rm "${tmpfile}"
 }
 
 ## @description  Print the command to be executing to the screen. Then
@@ -729,16 +781,13 @@ function testpatch_usage
   echo "--basedir=<dir>        The directory to apply the patch to (default current directory)"
   echo "--branch=<ref>         Forcibly set the branch"
   echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'master')"
-  #not quite working yet
-  #echo "--bugsystem=<type>     The bug system in use ('jira', the default, or 'github')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
-  echo "--build-tool=<tool>    Pick which build tool to focus around (maven, ant)"
+  echo "--build-tool=<tool>    Pick which build tool to focus around (ant, gradle, maven)"
   echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default: ${HOW_TO_CONTRIBUTE} )"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--docker               Spawn a docker container"
   echo "--dockerfile=<file>    Dockerfile fragment to use as the base"
-  echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default: \'${ISSUE_RE}\')"
   echo "--java-home=<path>     Set JAVA_HOME (In Docker mode, this should be local to the image)"
   echo "--multijdkdirs=<paths> Comma delimited lists of JDK paths to use for multi-JDK tests"
   echo "--multijdktests=<list> Comma delimited tests to use when multijdkdirs is used. (default: javac,javadoc,unit)"
@@ -760,6 +809,7 @@ function testpatch_usage
   echo "Shell binary overrides:"
   echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
+  echo "--curl-cmd=<cmd>       The 'wget' command to use (default 'curl')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
@@ -774,7 +824,6 @@ function testpatch_usage
   echo "--build-url            Set the build location web page"
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
-  echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
 
   importplugins
 
@@ -815,9 +864,6 @@ function parse_args
       --branch-default=*)
         PATCH_BRANCH_DEFAULT=${i#*=}
       ;;
-      --bugsystem=*)
-        BUGSYSTEM=${i#*=}
-      ;;
       --build-native=*)
         BUILD_NATIVE=${i#*=}
       ;;
@@ -829,6 +875,9 @@ function parse_args
       ;;
       --contrib-guide=*)
         HOW_TO_CONTRIBUTE=${i#*=}
+      ;;
+      --curl-cmd=*)
+        CURL=${i#*=}
       ;;
       --debug)
         TP_SHELL_SCRIPT_DEBUG=true
@@ -863,9 +912,6 @@ function parse_args
       --help|-help|-h|help|--h|--\?|-\?|\?)
         testpatch_usage
         exit 0
-      ;;
-      --issue-re=*)
-        ISSUE_RE=${i#*=}
       ;;
       --java-home=*)
         JAVA_HOME=${i#*=}
@@ -954,9 +1000,6 @@ function parse_args
       --tpreexectimer=*)
         REEXECLAUNCHTIMER=${i#*=}
       ;;
-      --wget-cmd=*)
-        WGET=${i#*=}
-      ;;
       --*)
         ## PATCH_OR_ISSUE can't be a --.  So this is probably
         ## a plugin thing.
@@ -1039,6 +1082,8 @@ function parse_args
 
   GITDIFFLINES="${PATCH_DIR}/gitdifflines.txt"
   GITDIFFCONTENT="${PATCH_DIR}/gitdiffcontent.txt"
+  GITUNIDIFFLINES="${PATCH_DIR}/gitdiffunilines.txt"
+
 }
 
 ## @description  Locate the build file for a given directory
@@ -1139,20 +1184,13 @@ function find_changed_modules
   local dir
   local buildfile
 
-  case ${BUILDTOOL} in
-    maven)
-      buildfile=pom.xml
-    ;;
-    ant)
-      buildfile=build.xml
-    ;;
-    *)
-      yetus_error "ERROR: Unsupported build tool."
-      output_to_console 1
-      output_to_bugsystem 1
-      cleanup_and_exit 1
-    ;;
-  esac
+  buildfile=$(${BUILDTOOL}_buildfile)
+
+  if [[ $? != 0 ]]; then
+    yetus_error "ERROR: Unsupported build tool."
+    bugsystem_finalreport 1
+    cleanup_and_exit 1
+  fi
 
   changed_dirs=$(for i in ${CHANGED_FILES}; do dirname "${i}"; done | sort -u)
 
@@ -1167,8 +1205,7 @@ function find_changed_modules
     builddir=$(find_buildfile_dir ${buildfile} "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
-      output_to_console 1
-      output_to_bugsystem 1
+      bugsystem_finalreport 1
       cleanup_and_exit 1
     fi
     builddirs="${builddirs} ${builddir}"
@@ -1245,6 +1282,7 @@ function git_checkout
 {
   local currentbranch
   local exemptdir
+  local status
 
   big_console_header "Confirming git environment"
 
@@ -1342,8 +1380,6 @@ function git_checkout
   determine_issue
 
   GIT_REVISION=$(${GIT} rev-parse --verify --short HEAD)
-  # shellcheck disable=SC2034
-  VERSION=${GIT_REVISION}_${ISSUE}_PATCH-${patchNum}
 
   if [[ "${ISSUE}" == 'Unknown' ]]; then
     echo "Testing patch on ${PATCH_BRANCH}."
@@ -1402,9 +1438,8 @@ function verify_valid_branch
 ## @return       1 on failure, with PATCH_BRANCH updated to PATCH_BRANCH_DEFAULT
 function determine_branch
 {
-  local patchnamechunk
-  local total
-  local count
+  declare bugs
+  declare retval=1
 
   # something has already set this, so move on
   if [[ -n ${PATCH_BRANCH} ]]; then
@@ -1427,83 +1462,19 @@ function determine_branch
     return
   fi
 
-  for j in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
-    if [[ -z "${j}" ]]; then
-      continue
-    fi
-    yetus_debug "Determine branch: starting with ${j}"
-    patchnamechunk=$(echo "${j}" \
-            | ${SED} -e 's,.*/\(.*\)$,\1,' \
-                     -e 's,\.txt,.,' \
-                     -e 's,.patch,.,g' \
-                     -e 's,.diff,.,g' \
-                     -e 's,\.\.,.,g' \
-                     -e 's,\.$,,g' )
-
-    # ISSUE-branch-##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
-    yetus_debug "Determine branch: ISSUE-branch-## = ${PATCH_BRANCH}"
-    if [[ -n "${PATCH_BRANCH}" ]]; then
-      verify_valid_branch  "${PATCH_BRANCH}"
-      if [[ $? == 0 ]]; then
-        return
+  for bugs in ${BUGSYSTEMS}; do
+    if declare -f ${bugs}_determine_branch >/dev/null;then
+      "${bugs}_determine_branch"
+      retval=$?
+      if [[ ${retval} == 0 ]]; then
+        break
       fi
     fi
-
-    # ISSUE-##[.##].branch
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 3 ))
-    until [[ ${total} -eq 2 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3-${total} -d.)
-      yetus_debug "Determine branch: ISSUE[.##].branch = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
-    # ISSUE.branch.##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 3 ))
-    until [[ ${total} -eq 2 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2-${total} -d.)
-      yetus_debug "Determine branch: ISSUE.branch[.##] = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
-    # ISSUE-branch.##
-    PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1- -d. )
-    count="${PATCH_BRANCH//[^.]}"
-    total=${#count}
-    ((total = total + 1 ))
-    until [[ ${total} -eq 1 ]]; do
-      PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1-${total} -d. )
-      yetus_debug "Determine branch: ISSUE-branch[.##] = ${PATCH_BRANCH}"
-      ((total=total-1))
-      if [[ -n "${PATCH_BRANCH}" ]]; then
-        verify_valid_branch  "${PATCH_BRANCH}"
-        if [[ $? == 0 ]]; then
-          return
-        fi
-      fi
-    done
-
   done
 
-  PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
+  if [[ ${retval} != 0 ]]; then
+    PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
+  fi
   popd >/dev/null
 }
 
@@ -1515,28 +1486,19 @@ function determine_branch
 ## @return       1 on failure, with ISSUE updated to "Unknown"
 function determine_issue
 {
-  local patchnamechunk
-  local maybeissue
+  local bugsys
 
   yetus_debug "Determine issue"
 
-  # we can shortcut jenkins
-  if [[ ${JENKINS} == true ]]; then
-    ISSUE=${PATCH_OR_ISSUE}
-    return 0
-  fi
-
-  # shellcheck disable=SC2016
-  patchnamechunk=$(echo "${PATCH_OR_ISSUE}" | ${AWK} -F/ '{print $NF}')
-
-  maybeissue=$(echo "${patchnamechunk}" | cut -f1,2 -d-)
-
-  if [[ ${maybeissue} =~ ${ISSUE_RE} ]]; then
-    ISSUE=${maybeissue}
-    return 0
-  fi
-
-  ISSUE="Unknown"
+  for bugsys in ${BUGSYSTEMS}; do
+    if declare -f ${bugsys}_determine_issue >/dev/null; then
+      "${bugsys}_determine_issue" "${PATCH_OR_ISSUE}"
+      if [[ $? == 0 ]]; then
+        yetus_debug "${bugsys} says ${ISSUE}"
+        return 0
+      fi
+    fi
+  done
   return 1
 }
 
@@ -1585,6 +1547,7 @@ function verify_needed_test
 function determine_needed_tests
 {
   local i
+  local plugin
 
   for i in ${CHANGED_FILES}; do
     yetus_debug "Determining needed tests for ${i}"
@@ -1609,100 +1572,51 @@ function determine_needed_tests
 ## @return       1 on failure, may exit
 function locate_patch
 {
-  local notSureIfPatch=false
+  local bugsys
+  local patchfile=""
+  local gotit=false
+
   yetus_debug "locate patch"
 
+  # it's a locally provided file
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
-    PATCH_FILE="${PATCH_OR_ISSUE}"
+    patchfile="${PATCH_OR_ISSUE}"
   else
-    if [[ ${PATCH_OR_ISSUE} =~ ^http ]]; then
-      echo "Patch is being downloaded at $(date) from"
-      PATCHURL="${PATCH_OR_ISSUE}"
-    else
-      ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
-
-      case $? in
-        0)
-        ;;
-        2)
-          yetus_error "ERROR: .wgetrc/.netrc parsing error."
-          cleanup_and_exit 1
-        ;;
-        3)
-          yetus_error "ERROR: File IO error."
-          cleanup_and_exit 1
-        ;;
-        4)
-          yetus_error "ERROR: URL ${PATCH_OR_ISSUE} is unreachable."
-          cleanup_and_exit 1
-        ;;
-        *)
-          # we want to try and do as much as we can in docker mode,
-          # but if the patch was passed as a file, then we may not
-          # be able to continue.
-          if [[ ${REEXECED} == true
-              && -f "${PATCH_DIR}/patch" ]]; then
-            PATCH_FILE="${PATCH_DIR}/patch"
-          else
-            yetus_error "ERROR: Unable to fetch ${PATCH_OR_ISSUE}."
-            cleanup_and_exit 1
-          fi
-          ;;
-      esac
-
-      if [[ -z "${PATCH_FILE}" ]]; then
-        if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
-          if [[ ${JENKINS} == true ]]; then
-            yetus_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
-            cleanup_and_exit 1
-          else
-            yetus_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+    # run through the bug systems.  maybe they know?
+    for bugsys in ${BUGSYSTEMS}; do
+      if declare -f ${bugsys}_locate_patch >/dev/null 2>&1; then
+        "${bugsys}_locate_patch" "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"
+        if [[ $? == 0 ]]; then
+          guess_patch_file "${PATCH_DIR}/patch"
+          if [[ $? == 0 ]]; then
+            gotit=true
+            break;
           fi
         fi
+      fi
+    done
 
-        #shellcheck disable=SC2016
-        relativePatchURL=$(${AWK} 'match($0,"\"/jira/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART+1,RLENGTH-1)}' "${PATCH_DIR}/jira" |
-          ${GREP} -v -e 'htm[l]*$' | sort | tail -1)
-        PATCHURL="http://issues.apache.org${relativePatchURL}"
-        if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
-          notSureIfPatch=true
-        fi
-        #shellcheck disable=SC2016
-        patchNum=$(echo "${PATCHURL}" | ${AWK} 'match($0,"[0-9]*/"){print substr($0,RSTART,RLENGTH-1)}')
-        echo "${ISSUE} patch is being downloaded at $(date) from"
-      fi
-    fi
-    if [[ -z "${PATCH_FILE}" ]]; then
-      echo "${PATCHURL}"
-      add_footer_table "Patch URL" "${PATCHURL}"
-      ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
-      if [[ $? != 0 ]];then
-        yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
-        cleanup_and_exit 1
-      fi
-      PATCH_FILE="${PATCH_DIR}/patch"
+    # ok, none of the bug systems know. let's see how smart we are
+    if [[ ${gotit} == false ]]; then
+      generic_locate_patch "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"
     fi
   fi
 
-  if [[ ! -f "${PATCH_DIR}/patch" ]]; then
-    cp "${PATCH_FILE}" "${PATCH_DIR}/patch"
+  if [[ ! -f "${PATCH_DIR}/patch"
+      && -f "${patchfile}" ]]; then
+    cp "${patchfile}" "${PATCH_DIR}/patch"
     if [[ $? == 0 ]] ; then
-      echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
+      echo "Patch file ${patchfile} copied to ${PATCH_DIR}"
     else
-      yetus_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      yetus_error "ERROR: Could not copy ${patchfile} to ${PATCH_DIR}"
       cleanup_and_exit 1
     fi
   fi
 
-  if [[ ${notSureIfPatch} == "true" ]]; then
-    guess_patch_file "${PATCH_DIR}/patch"
-    if [[ $? != 0 ]]; then
-      yetus_error "ERROR: ${PATCHURL} is not a patch file."
-      cleanup_and_exit 1
-    else
-      yetus_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
-      add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
-    fi
+  guess_patch_file "${PATCH_DIR}/patch"
+  if [[ $? != 0 ]]; then
+    yetus_error "ERROR: Unsure how to process ${PATCH_OR_ISSUE}."
+    cleanup_and_exit 1
   fi
 }
 
@@ -1716,6 +1630,10 @@ function guess_patch_file
 {
   local patch=$1
   local fileOutput
+
+  if [[ ! -f ${patch} ]]; then
+    return 1
+  fi
 
   yetus_debug "Trying to guess is ${patch} is a patch file."
   fileOutput=$("${FILE}" "${patch}")
@@ -1769,8 +1687,7 @@ function apply_patch_file
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "The patch command could not apply the patch."
-    output_to_console 1
-    output_to_bugsystem 1
+    bugsystem_finalreport 1
     cleanup_and_exit 1
   fi
   return 0
@@ -2097,7 +2014,7 @@ function module_status
   fi
 }
 
-## @description  run the maven tests for the queued modules
+## @description  run the tests for the queued modules
 ## @audience     public
 ## @stability    evolving
 ## @replaceable  no
@@ -2154,26 +2071,10 @@ function modules_workers
       continue
     fi
 
-    case ${BUILDTOOL} in
-      maven)
-        #shellcheck disable=SC2086
-        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
-          ${MVN} "${MAVEN_ARGS[@]}" \
-            "${@//@@@MODULEFN@@@/${fn}}" \
-             ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} -Ptest-patch
-      ;;
-      ant)
-        #shellcheck disable=SC2086
-        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
-          "${ANT}" "${ANT_ARGS[@]}" \
-          ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} \
-          "${@//@@@MODULEFN@@@/${fn}}"
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
+      $("${BUILDTOOL}_executor") \
+      ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} \
+      "${@//@@@MODULEFN@@@/${fn}}"
 
     if [[ $? == 0 ]] ; then
       module_status \
@@ -2265,18 +2166,7 @@ function precheck_javac
     fi
 
     personality_modules branch javac
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers branch javac clean test-compile
-      ;;
-      ant)
-        modules_workers branch javac
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    "${BUILDTOOL}_modules_worker" branch javac
 
     ((result=result + $?))
     modules_messages branch javac true
@@ -2322,18 +2212,7 @@ function precheck_javadoc
     fi
 
     personality_modules branch javadoc
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers branch javadoc clean javadoc:javadoc
-      ;;
-      ant)
-        modules_workers branch javadoc clean javadoc
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    ${BUILDTOOL}_modules_worker branch javadoc
 
     ((result=result + $?))
     modules_messages branch javadoc true
@@ -2342,38 +2221,6 @@ function precheck_javadoc
   JAVA_HOME=${savejavahome}
 
   if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Confirm site pre-patch
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_site
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Pre-patch ${PATCH_BRANCH} site verification"
-
-  verify_needed_test site
-  if [[ $? == 0 ]];then
-    echo "Patch does not appear to need site tests."
-    return 0
-  fi
-
-  personality_modules branch site
-  modules_workers branch site clean site site:stage
-  result=$?
-  modules_messages branch site true
-  if [[ ${result} != 0 ]]; then
     return 1
   fi
   return 0
@@ -2389,10 +2236,11 @@ function precheck_without_patch
 {
   local result=0
 
-  precheck_mvninstall
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
+  if declare -f ${BUILDTOOL}_precheck_install >/dev/null; then
+    "${BUILDTOOL}_precheck_install"
+    if [[ $? -gt 0 ]]; then
+      ((result = result +1 ))
+    fi
   fi
 
   precheck_javac
@@ -2494,33 +2342,6 @@ function check_modified_unittests
   return 0
 }
 
-## @description  Helper for check_patch_javac
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function count_javac_probs
-{
-  local warningfile=$1
-  local val1
-  local val2
-
-  case ${BUILDTOOL} in
-    maven)
-      #shellcheck disable=SC2016,SC2046
-      ${GREP} '\[WARNING\]' "${warningfile}" | ${AWK} '{sum+=1} END {print sum}'
-    ;;
-    ant)
-      #shellcheck disable=SC2016
-      val1=$(${GREP} -E "\[javac\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      #shellcheck disable=SC2016
-      val2=$(${GREP} -E "\[javac\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      echo $((val1+val2))
-    ;;
-  esac
-}
-
 ## @description  Count and compare the number of javac warnings pre- and post- patch
 ## @audience     private
 ## @stability    evolving
@@ -2565,19 +2386,7 @@ function check_patch_javac
     fi
 
     personality_modules patch javac
-
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch javac clean test-compile
-      ;;
-      ant)
-        modules_workers patch javac
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    ${BUILDTOOL}_modules_worker patch javac
 
     i=0
     until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2611,8 +2420,8 @@ function check_patch_javac
           "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
       fi
 
-      numbranch=$(count_javac_probs "${PATCH_DIR}/branch-javac-${fn}-warning.txt")
-      numpatch=$(count_javac_probs "${PATCH_DIR}/patch-javac-${fn}-warning.txt")
+      numbranch=$(${BUILDTOOL}_count_javac_probs "${PATCH_DIR}/branch-javac-${fn}-warning.txt")
+      numpatch=$(${BUILDTOOL}_count_javac_probs "${PATCH_DIR}/patch-javac-${fn}-warning.txt")
 
       if [[ -n ${numbranch}
           && -n ${numpatch}
@@ -2639,33 +2448,6 @@ function check_patch_javac
     return 1
   fi
   return 0
-}
-
-## @description  Helper for check_patch_javadoc
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function count_javadoc_probs
-{
-  local warningfile=$1
-  local val1
-  local val2
-
-  case ${BUILDTOOL} in
-    maven)
-      #shellcheck disable=SC2016,SC2046
-      ${GREP} -E "^[0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}'
-    ;;
-    ant)
-      #shellcheck disable=SC2016
-      val1=$(${GREP} -E "\[javadoc\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      #shellcheck disable=SC2016
-      val2=$(${GREP} -E "\[javadoc\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      echo $((val1+val2))
-    ;;
-  esac
 }
 
 ## @description  Count and compare the number of JavaDoc warnings pre- and post- patch
@@ -2711,18 +2493,7 @@ function check_patch_javadoc
     fi
 
     personality_modules patch javadoc
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch javadoc clean javadoc:javadoc
-      ;;
-      ant)
-        modules_workers patch javadoc clean javadoc
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    ${BUILDTOOL}_modules_workers patch javadoc
 
     i=0
     until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2755,8 +2526,8 @@ function check_patch_javadoc
           "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt"
       fi
 
-      numbranch=$(count_javadoc_probs "${PATCH_DIR}/branch-javadoc-${fn}.txt")
-      numpatch=$(count_javadoc_probs "${PATCH_DIR}/patch-javadoc-${fn}.txt")
+      numbranch=$(${BUILDTOOL}_count_javadoc_probs "${PATCH_DIR}/branch-javadoc-${fn}.txt")
+      numpatch=$(${BUILDTOOL}_count_javadoc_probs "${PATCH_DIR}/patch-javadoc-${fn}.txt")
 
       if [[ -n ${numbranch}
           && -n ${numpatch}
@@ -2780,140 +2551,6 @@ function check_patch_javadoc
   JAVA_HOME=${savejavahome}
 
   if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Make sure site still compiles
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_site
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Determining number of patched site errors"
-
-  verify_needed_test site
-  if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need site tests."
-    return 0
-  fi
-
-  personality_modules patch site
-  modules_workers patch site clean site site:stage -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages patch site true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Verify mvn install works
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_mvninstall
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn install works"
-
-  verify_needed_test javadoc
-  retval=$?
-
-  verify_needed_test javac
-  ((retval = retval + $? ))
-  if [[ ${retval} == 0 ]]; then
-    echo "This patch does not appear to need mvn install checks."
-    return 0
-  fi
-
-  personality_modules branch mvninstall
-  modules_workers branch mvninstall -fae clean install -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages branch mvninstall true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Verify mvn install works
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_mvninstall
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn install still works"
-
-  verify_needed_test javadoc
-  retval=$?
-
-  verify_needed_test javac
-  ((retval = retval + $? ))
-  if [[ ${retval} == 0 ]]; then
-    echo "This patch does not appear to need mvn install checks."
-    return 0
-  fi
-
-  personality_modules patch mvninstall
-  modules_workers patch mvninstall clean install -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages patch mvninstall true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Make sure Maven's eclipse generation works.
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_mvn_eclipse
-{
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn eclipse:eclipse still works"
-
-  verify_needed_test javac
-  if [[ $? == 0 ]]; then
-    echo "Patch does not touch any java files. Skipping mvn eclipse:eclipse"
-    return 0
-  fi
-
-  personality_modules patch eclipse
-  modules_workers patch eclipse eclipse:eclipse
-  result=$?
-  modules_messages patch eclipse true
-  if [[ ${result} != 0 ]]; then
     return 1
   fi
   return 0
@@ -2987,18 +2624,8 @@ function check_unittests
     fi
 
     personality_modules patch unit
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch unit clean test -fae
-      ;;
-      ant)
-        modules_workers patch unit
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    ${BUILDTOOL}_modules_workers patch unit
+
     ((result=result+$?))
 
     modules_messages patch unit false
@@ -3061,134 +2688,55 @@ function check_unittests
   return 0
 }
 
-## @description  Print out the finished details on the console
-## @audience     private
+## @description  Write comments onto bug systems that have code review support.
+## @description  File should be in the form of "file:line:comment"
+## @audience     public
 ## @stability    evolving
 ## @replaceable  no
-## @param        runresult
-## @return       0 on success
-## @return       1 on failure
-function output_to_console
+## @param        filename
+function bugsystem_linecomments
 {
-  local result=$1
-  shift
-  local i=0
-  local ourstring
-  local vote
-  local subs
-  local ela
-  local comment
-  local commentfile1="${PATCH_DIR}/comment.1"
-  local commentfile2="${PATCH_DIR}/comment.2"
-  local normaltop
-  local line
-  local seccoladj=0
-  local spcfx=${PATCH_DIR}/spcl.txt
+  declare title=$1
+  declare fn=$2
+  declare line
+  declare bugs
+  declare realline
+  declare text
+  declare idxline
+  declare uniline
 
-  if [[ ${result} == 0 ]]; then
-    if [[ ${JENKINS} == false ]]; then
-      {
-        printf "IF9fX19fX19fX18gCjwgU3VjY2VzcyEgPgogLS0tLS0tLS0tLSAKIFwgICAg";
-        printf "IC9cICBfX18gIC9cCiAgXCAgIC8vIFwvICAgXC8gXFwKICAgICAoKCAgICBP";
-        printf "IE8gICAgKSkKICAgICAgXFwgLyAgICAgXCAvLwogICAgICAgXC8gIHwgfCAg";
-        printf "XC8gCiAgICAgICAgfCAgfCB8ICB8ICAKICAgICAgICB8ICB8IHwgIHwgIAog";
-        printf "ICAgICAgIHwgICBvICAgfCAgCiAgICAgICAgfCB8ICAgfCB8ICAKICAgICAg";
-        printf "ICB8bXwgICB8bXwgIAo"
-      } > "${spcfx}"
-    fi
-    printf "\n\n+1 overall\n\n"
-  else
-    if [[ ${JENKINS} == false ]]; then
-      {
-        printf "IF9fX19fICAgICBfIF8gICAgICAgICAgICAgICAgXyAKfCAgX19ffF8gXyhf";
-        printf "KSB8XyAgIF8gXyBfXyBfX198IHwKfCB8XyAvIF9gIHwgfCB8IHwgfCB8ICdf";
-        printf "Xy8gXyBcIHwKfCAgX3wgKF98IHwgfCB8IHxffCB8IHwgfCAgX18vX3wKfF98";
-        printf "ICBcX18sX3xffF98XF9fLF98X3wgIFxfX18oXykKICAgICAgICAgICAgICAg";
-        printf "ICAgICAgICAgICAgICAgICAK"
-      } > "${spcfx}"
-    fi
-    printf "\n\n-1 overall\n\n"
+  if [[ ! -f "${GITUNIDIFFLINES}" ]]; then
+    return
   fi
 
-  if [[ -f ${spcfx} ]]; then
-    if which base64 >/dev/null 2>&1; then
-      base64 --decode "${spcfx}" 2>/dev/null
-    elif which openssl >/dev/null 2>&1; then
-      openssl enc -A -d -base64 -in "${spcfx}" 2>/dev/null
-    fi
-    echo
-    echo
-    rm "${spcfx}"
-  fi
+  while read -r line;do
+    file=$(echo "${line}" | cut -f1 -d:)
+    realline=$(echo "${line}" | cut -f2 -d:)
+    text=$(echo "${line}" | cut -f3- -d:)
+    idxline="${file}:${realline}:"
+    uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d: )
 
-  seccoladj=$(findlargest 2 "${TP_VOTE_TABLE[@]}")
-  if [[ ${seccoladj} -lt 10 ]]; then
-    seccoladj=10
-  fi
-
-  seccoladj=$((seccoladj + 2 ))
-  i=0
-  until [[ $i -eq ${#TP_HEADER[@]} ]]; do
-    printf "%s\n" "${TP_HEADER[${i}]}"
-    ((i=i+1))
-  done
-
-  printf "| %s | %*s |  %s   | %s\n" "Vote" ${seccoladj} Subsystem Runtime "Comment"
-  echo "============================================================================"
-  i=0
-  until [[ $i -eq ${#TP_VOTE_TABLE[@]} ]]; do
-    ourstring=$(echo "${TP_VOTE_TABLE[${i}]}" | tr -s ' ')
-    vote=$(echo "${ourstring}" | cut -f2 -d\|)
-    subs=$(echo "${ourstring}"  | cut -f3 -d\|)
-    ela=$(echo "${ourstring}" | cut -f4 -d\|)
-    comment=$(echo "${ourstring}"  | cut -f5 -d\|)
-
-    echo "${comment}" | fold -s -w $((78-seccoladj-22)) > "${commentfile1}"
-    normaltop=$(head -1 "${commentfile1}")
-    ${SED} -e '1d' "${commentfile1}"  > "${commentfile2}"
-
-    printf "| %4s | %*s | %-10s |%-s\n" "${vote}" ${seccoladj} \
-      "${subs}" "${ela}" "${normaltop}"
-    while read line; do
-      printf "|      | %*s |            | %-s\n" ${seccoladj} " " "${line}"
-    done < "${commentfile2}"
-
-    ((i=i+1))
-    rm "${commentfile2}" "${commentfile1}" 2>/dev/null
-  done
-
-  if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
-    seccoladj=$(findlargest 1 "${TP_TEST_TABLE[@]}")
-    printf "\n\n%*s | Tests\n" "${seccoladj}" "Reason"
-    i=0
-    until [[ $i -eq ${#TP_TEST_TABLE[@]} ]]; do
-      ourstring=$(echo "${TP_TEST_TABLE[${i}]}" | tr -s ' ')
-      vote=$(echo "${ourstring}" | cut -f2 -d\|)
-      subs=$(echo "${ourstring}"  | cut -f3 -d\|)
-      printf "%*s | %s\n" "${seccoladj}" "${vote}" "${subs}"
-      ((i=i+1))
+    for bugs in ${BUGSYSTEMS}; do
+      if declare -f ${bugs}_linecomments >/dev/null;then
+        "${bugs}_linecomments" "${title}" "${file}" "${realline}" "${uniline}" "${text}"
+      fi
     done
-  fi
-
-  printf "\n\n|| Subsystem || Report/Notes ||\n"
-  echo "============================================================================"
-  i=0
-
-  until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
-    comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
-              ${SED} -e "s,@@BASE@@,${PATCH_DIR},g")
-    printf "%s\n" "${comment}"
-    ((i=i+1))
-  done
+  done < "${fn}"
 }
 
 ## @description  Write the final output to the selected bug system
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-function output_to_bugsystem
+function bugsystem_finalreport
 {
-  "${BUGSYSTEM}_finalreport" "${@}"
+  declare bugs
+
+  for bugs in ${BUGSYSTEMS}; do
+    if declare -f ${bugs}_finalreport >/dev/null;then
+      "${bugs}_finalreport" "${@}"
+    fi
+  done
 }
 
 ## @description  Clean the filesystem as appropriate and then exit
@@ -3235,8 +2783,7 @@ function postcheckout
 
     (( RESULT = RESULT + $? ))
     if [[ ${RESULT} != 0 ]] ; then
-      output_to_console 1
-      output_to_bugsystem 1
+      bugsystem_finalreport 1
       cleanup_and_exit 1
     fi
   done
@@ -3252,8 +2799,7 @@ function postcheckout
 
       (( RESULT = RESULT + $? ))
       if [[ ${RESULT} != 0 ]] ; then
-        output_to_console 1
-        output_to_bugsystem 1
+        bugsystem_finalreport 1
         cleanup_and_exit 1
       fi
     fi
@@ -3309,8 +2855,7 @@ function postapply
   check_patch_javac
   retval=$?
   if [[ ${retval} -gt 1 ]] ; then
-    output_to_console 1
-    output_to_bugsystem 1
+    bugsystem_finalreport 1
     cleanup_and_exit 1
   fi
 
@@ -3344,6 +2889,11 @@ function postinstall
 {
   local routine
   local plugin
+
+  if declare -f ${BUILDTOOL}_postapply_install >/dev/null; then
+    "${BUILDTOOL}_postapply_install"
+    (( RESULT = RESULT + $? ))
+  fi
 
   verify_patchdir_still_exists
   for routine in check_patch_javadoc check_mvn_eclipse
@@ -3575,8 +3125,6 @@ find_changed_modules
 
 postapply
 
-check_mvninstall
-
 postinstall
 
 runtests
@@ -3585,6 +3133,5 @@ finish_vote_table
 
 finish_footer_table
 
-output_to_console ${RESULT}
-output_to_bugsystem ${RESULT}
+bugsystem_finalreport ${RESULT}
 cleanup_and_exit ${RESULT}

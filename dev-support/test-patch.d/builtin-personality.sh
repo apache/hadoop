@@ -59,13 +59,6 @@ function builtin_mvn_personality_file_tests
        || ${filename} =~ src/test/scripts
        ]]; then
     yetus_debug "tests/shell: ${filename}"
-  elif [[ ${filename} =~ \.md$
-       || ${filename} =~ \.md\.vm$
-       || ${filename} =~ src/site
-       || ${filename} =~ src/main/docs
-       ]]; then
-    yetus_debug "tests/site: ${filename}"
-    add_test site
   elif [[ ${filename} =~ \.c$
        || ${filename} =~ \.cc$
        || ${filename} =~ \.h$
@@ -78,9 +71,9 @@ function builtin_mvn_personality_file_tests
     add_test cc
     add_test unit
   elif [[ ${filename} =~ \.scala$ ]]; then
-    add_test javac
+    add_test scalac
+    add_test scaladoc
     add_test unit
-    add_test mvninstall
   elif [[ ${filename} =~ build.xml$
        || ${filename} =~ pom.xml$
        || ${filename} =~ \.java$
@@ -89,7 +82,6 @@ function builtin_mvn_personality_file_tests
       yetus_debug "tests/javadoc+units: ${filename}"
       add_test javac
       add_test javadoc
-      add_test mvninstall
       add_test unit
   fi
 
