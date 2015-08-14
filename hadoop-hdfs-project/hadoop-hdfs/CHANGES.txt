@@ -1137,6 +1137,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8879. Quota by storage type usage incorrectly initialized upon namenode
     restart. (xyao)
 
+    HDFS-8565. Typo in dfshealth.html - Decomissioning. (nijel via xyao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
