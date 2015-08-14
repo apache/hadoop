@@ -1819,9 +1819,6 @@ Release 2.7.0 - 2015-04-20
     HDFS-7301. TestMissingBlocksAlert should use MXBeans instead of old web UI.
     (Zhe Zhang via wheat9)
 
-    HDFS-7263. Snapshot read can reveal future bytes for appended files.
-    (Tao Luo via shv)
-
     HDFS-7315. DFSTestUtil.readFileBuffer opens extra FSDataInputStream.
     (Plamen Jeliazkov via wheat9)
 
@@ -2338,6 +2335,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
+
+    HDFS-7263. Snapshot read can reveal future bytes for appended files.
+    (Tao Luo via shv)
 
 Release 2.6.0 - 2014-11-18
 
