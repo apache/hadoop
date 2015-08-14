@@ -85,7 +85,7 @@ public class RpcMetrics {
   @Metric("Number of sent bytes") MutableCounterLong sentBytes;
   @Metric("Queue time") MutableRate rpcQueueTime;
   MutableQuantiles[] rpcQueueTimeMillisQuantiles;
-  @Metric("Processsing time") MutableRate rpcProcessingTime;
+  @Metric("Processing time") MutableRate rpcProcessingTime;
   MutableQuantiles[] rpcProcessingTimeMillisQuantiles;
   @Metric("Number of authentication failures")
   MutableCounterLong rpcAuthenticationFailures;
@@ -93,7 +93,7 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthenticationSuccesses;
   @Metric("Number of authorization failures")
   MutableCounterLong rpcAuthorizationFailures;
-  @Metric("Number of authorization sucesses")
+  @Metric("Number of authorization successes")
   MutableCounterLong rpcAuthorizationSuccesses;
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
@@ -108,7 +108,7 @@ public class RpcMetrics {
 
   // Public instrumentation methods that could be extracted to an
   // abstract class if we decide to do custom instrumentation classes a la
-  // JobTrackerInstrumenation. The methods with //@Override comment are
+  // JobTrackerInstrumentation. The methods with //@Override comment are
   // candidates for abstract methods in a abstract instrumentation class.
 
   /**
