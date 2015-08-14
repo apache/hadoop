@@ -1265,9 +1265,6 @@ Release 2.7.1 - 2015-07-06
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
-    HDFS-8486. DN startup may cause severe data loss (Daryn Sharp via Colin P.
-    McCabe)
-
     HDFS-8270. create() always retried with hardcoded timeout when file already
     exists with open lease (J.Andreina via vinayakumarb)
 
@@ -1406,9 +1403,6 @@ Release 2.7.0 - 2015-04-20
 
     HDFS-5928. Show namespace and namenode ID on NN dfshealth page.
     (Siqi Li via wheat9)
-
-    HDFS-7213. processIncrementalBlockReport performance degradation.
-    (Eric Payne via kihwal)
 
     HDFS-7280. Use netty 4 in WebImageViewer. (wheat9)
 
@@ -2338,6 +2332,12 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7733. NFS: readdir/readdirplus return null directory
     attribute on failure. (Arpit Agarwal)
+
+    HDFS-8486. DN startup may cause severe data loss (Daryn Sharp via Colin P.
+    McCabe)
+
+    HDFS-7213. processIncrementalBlockReport performance degradation.
+    (Eric Payne via kihwal)
 
 Release 2.6.0 - 2014-11-18
 
