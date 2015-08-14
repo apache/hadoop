@@ -137,7 +137,10 @@ function shellcheck_postapply
   fi
   add_footer_table shellcheck "${msg}"
 
-  calcdiffs "${PATCH_DIR}/branch-shellcheck-result.txt" "${PATCH_DIR}/patch-shellcheck-result.txt" > "${PATCH_DIR}/diff-patch-shellcheck.txt"
+  calcdiffs \
+    "${PATCH_DIR}/branch-shellcheck-result.txt" \
+    "${PATCH_DIR}/patch-shellcheck-result.txt" \
+      > "${PATCH_DIR}/diff-patch-shellcheck.txt"
   # shellcheck disable=SC2016
   diffPostpatch=$(wc -l "${PATCH_DIR}/diff-patch-shellcheck.txt" | ${AWK} '{print $1}')
 
@@ -151,6 +154,7 @@ function shellcheck_postapply
     add_vote_table -1 shellcheck "The applied patch generated "\
       "${diffPostpatch} new shellcheck issues (total was ${numPrepatch}, now ${numPostpatch})."
     add_footer_table shellcheck "@@BASE@@/diff-patch-shellcheck.txt"
+    bugsystem_linecomments "shellcheck" "${PATCH_DIR}/diff-patch-shellcheck.txt"
     return 1
   fi
 

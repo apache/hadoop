@@ -1,6 +1,38 @@
 
+declare -a MAVEN_ARGS=("--batch-mode")
+
+if [[ -z "${MAVEN_HOME:-}" ]]; then
+  MAVEN=mvn
+else
+  MAVEN=${MAVEN_HOME}/bin/mvn
+fi
+
 add_plugin mvnsite
 add_plugin mvneclipse
+add_build_tool maven
+
+function maven_usage
+{
+  echo "maven specific:"
+  echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
+}
+
+function maven_parse_args
+{
+  local i
+
+  for i in "$@"; do
+    case ${i} in
+      --mvn-cmd=*)
+        MAVEN=${i#*=}
+      ;;
+    esac
+  done
+
+  if [[ ${OFFLINE} == "true" ]]; then
+    MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
+  fi
+}
 
 function maven_buildfile
 {
@@ -12,8 +44,6 @@ function maven_executor
   echo "${MAVEN}" "${MAVEN_ARGS[@]}"
 }
 
-# if it ends in an explicit .sh, then this is shell code.
-# if it doesn't have an extension, we assume it is shell code too
 function mvnsite_filefilter
 {
   local filename=$1
@@ -32,8 +62,8 @@ function maven_modules_worker
   declare tst=$2
 
   case ${tst} in
-    javac)
-      modules_workers ${branch} javac clean test-compile
+    javac|scalac)
+      modules_workers ${branch} ${tst} clean test-compile
     ;;
     javadoc)
       modules_workers ${branch} javadoc clean javadoc:javadoc
@@ -54,6 +84,56 @@ function maven_count_javac_probs
 
   #shellcheck disable=SC2016,SC2046
   ${GREP} '\[WARNING\]' "${warningfile}" | ${AWK} '{sum+=1} END {print sum}'
+}
+
+function maven_builtin_personality_file_tests
+{
+  local filename=$1
+
+  yetus_debug "Using builtin mvn personality_file_tests"
+
+  if [[ ${filename} =~ src/main/webapp ]]; then
+    yetus_debug "tests/webapp: ${filename}"
+  elif [[ ${filename} =~ \.sh
+       || ${filename} =~ \.cmd
+       || ${filename} =~ src/main/scripts
+       || ${filename} =~ src/test/scripts
+       ]]; then
+    yetus_debug "tests/shell: ${filename}"
+  elif [[ ${filename} =~ \.c$
+       || ${filename} =~ \.cc$
+       || ${filename} =~ \.h$
+       || ${filename} =~ \.hh$
+       || ${filename} =~ \.proto$
+       || ${filename} =~ \.cmake$
+       || ${filename} =~ CMakeLists.txt
+       ]]; then
+    yetus_debug "tests/units: ${filename}"
+    add_test cc
+    add_test unit
+  elif [[ ${filename} =~ \.scala$ ]]; then
+    add_test javac
+    add_test scaladoc
+    add_test unit
+  elif [[ ${filename} =~ build.xml$
+       || ${filename} =~ pom.xml$
+       || ${filename} =~ \.java$
+       || ${filename} =~ src/main
+       ]]; then
+      yetus_debug "tests/javadoc+units: ${filename}"
+      add_test javac
+      add_test javadoc
+      add_test unit
+  fi
+
+  if [[ ${filename} =~ src/test ]]; then
+    yetus_debug "tests"
+    add_test unit
+  fi
+
+  if [[ ${filename} =~ \.java$ ]]; then
+    add_test findbugs
+  fi
 }
 
 ## @description  Helper for check_patch_javadoc

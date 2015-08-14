@@ -21,7 +21,9 @@ PATCH_BRANCH_DEFAULT=trunk
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
 #shellcheck disable=SC2034
-ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+JIRA_ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+#shellcheck disable=SC2034
+GITHUB_REPO="apache/hadoop"
 #shellcheck disable=SC2034
 PYLINT_OPTIONS="--indent-string='  '"
 
@@ -119,7 +121,7 @@ function hadoop_unittest_prereqs
     pushd "${BASEDIR}/${module}" >/dev/null
     # shellcheck disable=SC2086
     echo_and_redirect "${PATCH_DIR}/maven-unit-prereq-${fn}-install.txt" \
-      "${MVN}" "${MAVEN_ARGS[@]}" install -DskipTests ${flags}
+      "${MAVEN}" "${MAVEN_ARGS[@]}" install -DskipTests ${flags}
     popd >/dev/null
   fi
 }
@@ -230,7 +232,7 @@ function personality_modules
             pushd "${BASEDIR}/${i}" >/dev/null
             echo "cd ${i}"
             echo_and_redirect "${PATCH_DIR}/maven-${fn}-install.txt" \
-              "${MVN}" "${MAVEN_ARGS[@]}" install
+              "${MAVEN}" "${MAVEN_ARGS[@]}" install
             popd >/dev/null
         done
       fi

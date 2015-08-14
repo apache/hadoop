@@ -17,7 +17,9 @@
 #shellcheck disable=SC2034
 PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
-ISSUE_RE='^HBASE-[0-9]+$'
+JIRA_ISSUE_RE='^HBASE-[0-9]+$'
+#shellcheck disable=SC2034
+GITHUB_REPO="apache/hbase"
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 
@@ -108,7 +110,7 @@ function hadoopcheck_postapply
   for HADOOP2_VERSION in ${HADOOP2_VERSIONS}; do
     logfile="${PATCH_DIR}/patch-javac-${HADOOP2_VERSION}.txt"
     echo_and_redirect "${logfile}" \
-      "${MVN}" clean install \
+      "${MAVEN}" clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${HADOOP2_VERSION}"
     count=$(${GREP} -c ERROR "${logfile}")

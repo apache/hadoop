@@ -1,4 +1,38 @@
 
+if [[ -z "${ANT_HOME:-}" ]]; then
+  ANT=ant
+else
+  ANT=${ANT_HOME}/bin/ant
+fi
+
+add_build_tool ant
+
+declare -a ANT_ARGS=("-noinput")
+
+function ant_usage
+{
+  echo "ant specific:"
+  echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
+}
+
+function ant_parse_args
+{
+  local i
+
+  for i in "$@"; do
+    case ${i} in
+      --ant-cmd=*)
+        ANT=${i#*=}
+      ;;
+    esac
+  done
+
+  # if we requested offline, pass that to mvn
+  if [[ ${OFFLINE} == "true" ]]; then
+    ANT_ARGS=(${ANT_ARGS[@]} -Doffline=)
+  fi
+}
+
 function ant_buildfile
 {
   echo "build.xml"
@@ -62,4 +96,41 @@ function ant_count_javadoc_probs
   #shellcheck disable=SC2016
   val2=$(${GREP} -E "\[javadoc\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
   echo $((val1+val2))
+}
+
+function ant_builtin_personality_file_tests
+{
+  local filename=$1
+
+  yetus_debug "Using builtin ant personality_file_tests"
+
+  if [[ ${filename} =~ \.sh
+       || ${filename} =~ \.cmd
+       ]]; then
+    yetus_debug "tests/shell: ${filename}"
+  elif [[ ${filename} =~ \.c$
+       || ${filename} =~ \.cc$
+       || ${filename} =~ \.h$
+       || ${filename} =~ \.hh$
+       || ${filename} =~ \.proto$
+       || ${filename} =~ src/test
+       || ${filename} =~ \.cmake$
+       || ${filename} =~ CMakeLists.txt
+       ]]; then
+    yetus_debug "tests/units: ${filename}"
+    add_test javac
+    add_test unit
+  elif [[ ${filename} =~ build.xml
+       || ${filename} =~ ivy.xml
+       || ${filename} =~ \.java$
+       ]]; then
+      yetus_debug "tests/javadoc+units: ${filename}"
+      add_test javac
+      add_test javadoc
+      add_test unit
+  fi
+
+  if [[ ${filename} =~ \.java$ ]]; then
+    add_test findbugs
+  fi
 }

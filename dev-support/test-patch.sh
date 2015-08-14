@@ -34,8 +34,6 @@ GLOBALTIMER=$(date +"%s")
 QATESTMODE=false
 
 # global arrays
-declare -a MAVEN_ARGS=("--batch-mode")
-declare -a ANT_ARGS=("-noinput")
 declare -a TP_HEADER
 declare -a TP_VOTE_TABLE
 declare -a TP_TEST_TABLE
@@ -57,18 +55,6 @@ TP_FOOTER_COUNTER=0
 ## @replaceable  no
 function setup_defaults
 {
-  if [[ -z "${MAVEN_HOME:-}" ]]; then
-    MVN=mvn
-  else
-    MVN=${MAVEN_HOME}/bin/mvn
-  fi
-
-  if [[ -z "${ANT_HOME:-}" ]]; then
-    ANT=ant
-  else
-    ANT=${ANT_HOME}/bin/ant
-  fi
-
   PROJECT_NAME=yetus
   DOCKERFILE="${BINDIR}/test-patch-docker/Dockerfile-startstub"
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
@@ -613,6 +599,10 @@ function compute_gitdiff
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
       continue
+    elif [[ ${file} =~ gradlew.bat$
+         || ${file} =~ gradlew$
+         || ${file} =~ gradle/wrapper ]]; then
+      continue
     elif [[ ${line} =~ ^@@ ]]; then
       startline=$(echo "${line}" | cut -f3 -d' ' | cut -f1 -d, | tr -d + )
       numlines=$(echo "${line}" | cut -f3 -d' ' | cut -s -f2 -d, )
@@ -807,14 +797,12 @@ function testpatch_usage
   echo "--test-threads=<int>   Number of tests to run in parallel (default defined in ${PROJECT_NAME} build)"
   echo ""
   echo "Shell binary overrides:"
-  echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
   echo "--curl-cmd=<cmd>       The 'wget' command to use (default 'curl')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
-  echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
   echo "--sed-cmd=<cmd>        The 'sed' command to use (default 'sed')"
 
@@ -827,7 +815,7 @@ function testpatch_usage
 
   importplugins
 
-  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
+  for plugin in ${BUILDTOOLS} ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
     if declare -f ${plugin}_usage >/dev/null 2>&1; then
       echo
       "${plugin}_usage"
@@ -849,9 +837,6 @@ function parse_args
 
   for i in "$@"; do
     case ${i} in
-      --ant-cmd=*)
-        ANT=${i#*=}
-      ;;
       --awk-cmd=*)
         AWK=${i#*=}
       ;;
@@ -934,9 +919,6 @@ function parse_args
         JDK_TEST_LIST=${i#*=}
         JDK_TEST_LIST=${JDK_TEST_LIST//,/ }
         yetus_debug "Multi-JVM test list: ${JDK_TEST_LIST}"
-      ;;
-      --mvn-cmd=*)
-        MVN=${i#*=}
       ;;
       --mv-patch-dir)
         RELOCATE_PATCH_DIR=true;
@@ -1024,12 +1006,6 @@ function parse_args
     add_vote_table 0 reexec "precommit patch detected."
   elif [[ ${DOCKERMODE} == true ]]; then
     add_vote_table 0 reexec "docker mode."
-  fi
-
-  # if we requested offline, pass that to mvn
-  if [[ ${OFFLINE} == "true" ]]; then
-    MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
-    ANT_ARGS=(${ANT_ARGS[@]} -Doffline=)
   fi
 
   if [[ -z "${PATCH_OR_ISSUE}" ]]; then
@@ -1225,6 +1201,8 @@ function find_changed_modules
         buildmods="${buildmods} ${module}"
       fi
     done
+  else
+    buildmods=${CHANGED_UNFILTERED_MODULES}
   fi
 
   #shellcheck disable=SC2086,SC2034
@@ -2255,12 +2233,6 @@ function precheck_without_patch
     ((result = result +1 ))
   fi
 
-  precheck_site
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
-  fi
-
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
@@ -2861,15 +2833,6 @@ function postapply
 
   ((RESULT = RESULT + retval))
 
-  # shellcheck disable=SC2043
-  for routine in check_site
-  do
-    verify_patchdir_still_exists
-    yetus_debug "Running ${routine}"
-    ${routine}
-    (( RESULT = RESULT + $? ))
-  done
-
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_postapply >/dev/null 2>&1; then
@@ -2896,7 +2859,7 @@ function postinstall
   fi
 
   verify_patchdir_still_exists
-  for routine in check_patch_javadoc check_mvn_eclipse
+  for routine in check_patch_javadoc
   do
     verify_patchdir_still_exists
     yetus_debug "Running ${routine}"
@@ -3031,6 +2994,15 @@ function add_bugsystem
 function add_test_format
 {
   TESTFORMATS="${TESTFORMATS} $1"
+}
+
+## @description  Register test-patch.d build tools
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function add_build_tool
+{
+  BUILDTOOLS="${BUILDTOOLS} $1"
 }
 
 ## @description  Calculate the differences between the specified files

@@ -23,32 +23,3 @@ HOW_TO_CONTRIBUTE="https://cwiki.apache.org/confluence/display/SAMZA/Contributor
 # shellcheck disable=SC2034
 BUILDTOOL=gradle
 
-function personality_modules
-{
-  local repostatus=$1
-  local testtype=$2
-  local extra=""
-
-  yetus_debug "Personality: ${repostatus} ${testtype}"
-
-  clear_personality_queue
-
-  case ${testtype} in
-    asflicense)
-      # this is very fast and provides the full path if we do it from
-      # the root of the source
-      personality_enqueue_module .
-      return
-    ;;
-    unit)
-    ;;
-    *)
-      extra="-DskipTests"
-    ;;
-  esac
-
-  for module in ${CHANGED_MODULES}; do
-    # shellcheck disable=SC2086
-    personality_enqueue_module ${module} ${extra}
-  done
-}

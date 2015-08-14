@@ -52,8 +52,9 @@ test-patch always passes -noinput to Ant.  This force ant to be non-interactive.
 
 test-patch allows one to add to its basic feature set via plug-ins.  There is a directory called test-patch.d off of the directory where test-patch.sh lives.  Inside this directory one may place some bash shell fragments that, if setup with proper functions, will allow for test-patch to call it as necessary.
 
+## Test Plug-ins
 
-Every plugin must have one line in order to be recognized:
+Every test plugin must have one line in order to be recognized:
 
 ```bash
 add_plugin <pluginname>
@@ -96,6 +97,42 @@ If the plug-in has some specific options, one can use following functions:
 
     HINT: It is recommended to make the pluginname relatively small, 10 characters at the most.  Otherwise, the ASCII output table may be skewed.
 
+## Bug System Plug-ins
+
+Similar to tests, the ability to add support for bug tracking systems is also handled via a plug-in mechanism.
+
+* pluginname_usage
+
+    - executed when the help message is displayed. This is used to display the plug-in specific options for the user.
+
+* pluginname\_parse\_args
+
+    - executed prior to any other above functions except for pluginname_usage. This is useful for parsing the arguments passed from the user and setting up the execution environment.
+
+
+* pluginname\_locate\_patch
+
+    - Given input from the user, download the patch if possible.
+
+* pluginname\_determine\_branch
+
+    - Using any heuristics available, return the branch to process, if possible.
+
+* pluginname\_determine\_issue
+
+    - Using any heuristics available, set the issue, bug number, etc, for this bug system, if possible.  This is typically used to fill in supplementary information in the final output table.
+
+* pluginname_writecomment
+
+    - Given text input, write this output to the bug system as a comment.  NOTE: It is the bug system's responsibility to format appropriately.
+
+* pluginname\_linecomments
+
+    - This function allows for the system to write specific comments on specific lines if the bug system supports code review comments.
+
+* pluginname_finalreport
+
+    - Write the final result table to the bug system.
 
 # Configuring for Other Projects
 
@@ -181,7 +218,7 @@ This function will tell test-patch that when the javadoc test is being run, do t
 
 # Important Variables
 
-There are a handful of extremely important variables that make life easier for personality and plug-in writers:
+There are a handful of extremely important system variables that make life easier for personality and plug-in writers.  Other variables may be provided by individual plug-ins.  Check their development documentation for more information.
 
 * BUILD\_NATIVE will be set to true if the system has requested that non-JVM-based code be built (e.g., JNI or other compiled C code). Under Jenkins, this is always true.
 
@@ -195,7 +232,7 @@ There are a handful of extremely important variables that make life easier for p
 
 * HOW\_TO\_CONTRIBUTE should be a URL that points to a project's on-boarding documentation for new users. Currently, it is used to suggest a review of patch naming guidelines. Since this should be project specific information, it is useful to set in a project's personality.
 
-* ISSUE\_RE is to help test-patch when talking to JIRA.  It helps determine if the given project is appropriate for the given JIRA issue.
+* JIRA\_ISSUE\_RE is to help test-patch when talking to JIRA.  It helps determine if the given project is appropriate for the given JIRA issue.  There are similar variables for GITHUB.
 
 * MODULE and other MODULE\_\* are arrays that contain which modules, the status, etc, to be operated upon. These should be treated as read-only by plug-ins.
 

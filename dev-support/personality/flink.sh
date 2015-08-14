@@ -17,7 +17,9 @@
 #shellcheck disable=SC2034
 PATCH_BRANCH_DEFAULT=master
 #shellcheck disable=SC2034
-ISSUE_RE='^FLINK-[0-9]+$'
+JIRA_ISSUE_RE='^FLINK-[0-9]+$'
+#shellcheck disable=SC2034
+GITHUB_REPO="apache/flink"
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 
@@ -55,7 +57,7 @@ function flinklib_preapply
 
   pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/branch-flinklib-root.txt" \
-     "${MVN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+     "${MAVEN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   if [[ $? != 0 ]]; then
      add_vote_table -1 flinklib "Unable to determine flink libs in ${PATCH_BRANCH}."
   fi
@@ -76,7 +78,7 @@ function flinklib_postapply
 
   pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/patch-flinklib-root.txt" \
-     "${MVN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+     "${MAVEN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   FLINK_POST_LIB_FILES=$(flinklib_count)
   popd >/dev/null
 
