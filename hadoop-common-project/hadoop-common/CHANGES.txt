@@ -164,9 +164,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11965. determine-flaky-tests needs a summary mode.
     (Yufei Gu via Yongjun Zhang)
 
-    HADOOP-7139. Allow appending to existing SequenceFiles
-    (kanaka kumar avvaru via vinayakumarb)
-
     HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
     occurs (Jason Lowe via jeagles)
 
@@ -1393,6 +1390,9 @@ Release 2.6.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-7139. Allow appending to existing SequenceFiles
+    (kanaka kumar avvaru via vinayakumarb)
 
   OPTIMIZATIONS
 
