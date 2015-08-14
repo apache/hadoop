@@ -36,6 +36,9 @@ Release 2.6.5 - UNRELEASED
     MAPREDUCE-6558. multibyte delimiters with compressed input files generate
     duplicate records (Wilfred Spiegelenburg via jlowe)
 
+    MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
+    reducers are completed. (Sangjin Lee via kasha)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
