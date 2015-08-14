@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSStripedOutputStream.Coordinator;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream.MultipleBlockingQueue;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -167,18 +168,33 @@ public class StripedDataStreamer extends DataStreamer {
 
         final LocatedBlock lb = StripedDataStreamer.super.locateFollowingBlock(
             excludedNodes);
+        if (lb.getLocations().length < HdfsConstants.NUM_DATA_BLOCKS) {
+          throw new IOException(
+              "Failed to get datablocks number of nodes from namenode: blockGroupSize= "
+                  + (HdfsConstants.NUM_DATA_BLOCKS + HdfsConstants.NUM_PARITY_BLOCKS)
+                  + ", blocks.length= " + lb.getLocations().length);
+        }
         final LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
             (LocatedStripedBlock)lb,
             BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
 
         for (int i = 0; i < blocks.length; i++) {
-          if (!coordinator.getStripedDataStreamer(i).isFailed()) {
-            if (blocks[i] == null) {
-              getLastException().set(
-                  new IOException("Failed to get following block, i=" + i));
-            } else {
-              followingBlocks.offer(i, blocks[i]);
-            }
+          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
+          if (si.isFailed()) {
+            continue; // skipping failed data streamer
+          }
+          if (blocks[i] == null) {
+            // Set exception and close streamer as there is no block locations
+            // found for the parity block.
+            LOG.warn("Failed to get block location for parity block, index="
+                + i);
+            si.getLastException().set(
+                new IOException("Failed to get following block, i=" + i));
+            si.setFailed(true);
+            si.endBlock();
+            si.close(true);
+          } else {
+            followingBlocks.offer(i, blocks[i]);
           }
         }
       }
@@ -199,7 +215,11 @@ public class StripedDataStreamer extends DataStreamer {
             .parseStripedBlockGroup((LocatedStripedBlock) updated,
                 BLOCK_STRIPED_CELL_SIZE, NUM_DATA_BLOCKS, NUM_PARITY_BLOCKS);
         for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
-          final ExtendedBlock bi = coordinator.getStripedDataStreamer(i).getBlock();
+          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
+          if (si.isFailed()) {
+            continue; // skipping failed data streamer
+          }
+          final ExtendedBlock bi = si.getBlock();
           if (bi != null) {
             final LocatedBlock lb = new LocatedBlock(newBlock(bi, newGS),
                 null, null, null, -1, updated.isCorrupt(), null);
@@ -225,7 +245,11 @@ public class StripedDataStreamer extends DataStreamer {
         final ExtendedBlock newBG = newBlock(bg, newGS);
         final ExtendedBlock updated = callUpdatePipeline(bg, newBG);
         for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
-          final ExtendedBlock bi = coordinator.getStripedDataStreamer(i).getBlock();
+          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
+          if (si.isFailed()) {
+            continue; // skipping failed data streamer
+          }
+          final ExtendedBlock bi = si.getBlock();
           updateBlocks.offer(i, newBlock(bi, updated.getGenerationStamp()));
         }
       }

@@ -397,3 +397,6 @@
 
     HDFS-8854. Erasure coding: add ECPolicy to replace schema+cellSize in
     hadoop-hdfs. (Walter Su via zhz)
+
+    HDFS-8220. Erasure Coding: StripedDataStreamer fails to handle the
+    blocklocations which doesn't satisfy BlockGroupSize. (Rakesh R via zhz)
