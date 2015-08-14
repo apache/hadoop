@@ -552,6 +552,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6433. launchTime may be negative. (Zhihai Xu)
 
+    MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
+    reducers are completed. (Sangjin Lee via kasha)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
