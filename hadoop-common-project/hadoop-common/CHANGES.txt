@@ -1499,9 +1499,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11300. KMS startup scripts must not display the keystore /
     truststore passwords. (Arun Suresh via wang)
 
-    HADOOP-11333. Fix deadlock in DomainSocketWatcher when the notification
-    pipe is full (zhaoyunjiong via cmccabe)
-
     HADOOP-11337. KeyAuthorizationKeyProvider access checks need to be done
     atomically. (Dian Fu via wang)
 
@@ -1884,6 +1881,9 @@ Release 2.6.1 - UNRELEASED
     McCabe)
 
     HADOOP-10786. Fix UGI#reloginFromKeytab on Java 8. (Stephen Chu via wheat9)
+
+    HADOOP-11333. Fix deadlock in DomainSocketWatcher when the notification
+    pipe is full (zhaoyunjiong via cmccabe)
 
 Release 2.6.0 - 2014-11-18
 
