@@ -1141,6 +1141,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8565. Typo in dfshealth.html - Decomissioning. (nijel via xyao)
 
+    HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
