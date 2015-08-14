@@ -786,6 +786,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7649. Multihoming docs should emphasize using hostnames in
     configurations. (Brahma Reddy Battula via Arpit Agarwal)
 
+    HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
