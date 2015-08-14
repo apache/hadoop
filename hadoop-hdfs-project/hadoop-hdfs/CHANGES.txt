@@ -1265,9 +1265,6 @@ Release 2.7.1 - 2015-07-06
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
-    HDFS-8270. create() always retried with hardcoded timeout when file already
-    exists with open lease (J.Andreina via vinayakumarb)
-
     HDFS-8523. Remove usage information on unsupported operation
     "fsck -showprogress" from branch-2 (J.Andreina via vinayakumarb)
 
@@ -2338,6 +2335,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7225. Remove stale block invalidation work when DN re-registers with
     different UUID. (Zhe Zhang and Andrew Wang)
+
+    HDFS-8270. create() always retried with hardcoded timeout when file already
+    exists with open lease (J.Andreina via vinayakumarb)
 
 Release 2.6.0 - 2014-11-18
 
