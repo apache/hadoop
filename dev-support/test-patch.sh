@@ -2118,6 +2118,7 @@ function modules_workers
   local jdk=""
   local jdkindex=0
   local statusjdk
+  local result=0
 
   if [[ ${repostatus} == branch ]]; then
     repo=${PATCH_BRANCH}
@@ -2834,11 +2835,11 @@ function precheck_mvninstall
   big_console_header "Verifying mvn install works"
 
   verify_needed_test javadoc
-  retval=$?
+  result=$?
 
   verify_needed_test javac
-  ((retval = retval + $? ))
-  if [[ ${retval} == 0 ]]; then
+  ((result = result + $? ))
+  if [[ ${result} == 0 ]]; then
     echo "This patch does not appear to need mvn install checks."
     return 0
   fi
@@ -2870,11 +2871,11 @@ function check_mvninstall
   big_console_header "Verifying mvn install still works"
 
   verify_needed_test javadoc
-  retval=$?
+  result=$?
 
   verify_needed_test javac
-  ((retval = retval + $? ))
-  if [[ ${retval} == 0 ]]; then
+  ((result = result + $? ))
+  if [[ ${result} == 0 ]]; then
     echo "This patch does not appear to need mvn install checks."
     return 0
   fi
@@ -2897,6 +2898,8 @@ function check_mvninstall
 ## @return       1 on failure
 function check_mvn_eclipse
 {
+  local result=0
+
   if [[ ${BUILDTOOL} != maven ]]; then
     return 0
   fi
@@ -3021,7 +3024,7 @@ function check_unittests
           yetus_debug "Calling ${testsys}_process_tests"
           "${testsys}_process_tests" "${module}" "${test_logfile}" "${fn}"
           formatresult=$?
-          ((results=results+formatresult))
+          ((result=result+formatresult))
           if [[ "${formatresult}" != 0 ]]; then
             needlog=1
           fi
