@@ -2465,7 +2465,7 @@ function check_patch_javadoc
     fi
 
     personality_modules patch javadoc
-    ${BUILDTOOL}_modules_workers patch javadoc
+    ${BUILDTOOL}_modules_worker patch javadoc
 
     i=0
     until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2572,14 +2572,13 @@ function check_unittests
   local needlog
   local unitlogs
 
-  big_console_header "Running unit tests"
-
   verify_needed_test unit
 
   if [[ $? == 0 ]]; then
-    echo "Existing unit tests do not test patched files. Skipping."
     return 0
   fi
+
+  big_console_header "Running unit tests"
 
   verify_multijdk_test unit
   if [[ $? == 1 ]]; then
@@ -2596,7 +2595,7 @@ function check_unittests
     fi
 
     personality_modules patch unit
-    ${BUILDTOOL}_modules_workers patch unit
+    ${BUILDTOOL}_modules_worker patch unit
 
     ((result=result+$?))
 

@@ -37,13 +37,12 @@ function scaladoc_preapply
 {
   local result=0
 
-  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc verification"
-
   verify_needed_test scaladoc
   if [[ $? == 0 ]]; then
-     echo "Patch does not appear to need scaladoc tests."
      return 0
   fi
+
+  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc verification"
 
   personality_modules branch scaladoc
   ${BUILDTOOL}_modules_worker branch scaladoc
@@ -72,13 +71,12 @@ function scaladoc_postinstall
   declare -i numbranch=0
   declare -i numpatch=0
 
-  big_console_header "Determining number of patched scaladoc warnings"
-
   verify_needed_test scaladoc
     if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need scaladoc tests."
     return 0
   fi
+
+  big_console_header "Determining number of patched scaladoc warnings"
 
   personality_modules patch scaladoc
   ${BUILDTOOL}_modules_workers patch scaladoc
