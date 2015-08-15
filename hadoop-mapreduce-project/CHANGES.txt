@@ -573,6 +573,9 @@ Release 2.7.2 - UNRELEASED
     MAPREDUCE-6426. TestShuffleHandler#testGetMapOutputInfo is failing.
     (zhihai xu via devaraj)
 
+    MAPREDUCE-6439. AM may fail instead of retrying if RM shuts down during the
+    allocate call. (Anubhav Dhoot via kasha)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES

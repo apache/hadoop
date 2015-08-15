@@ -699,7 +699,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       // this application must clean itself up.
       eventHandler.handle(new JobEvent(this.getJob().getID(),
         JobEventType.JOB_AM_REBOOT));
-      throw new YarnRuntimeException(
+      throw new RMContainerAllocationException(
         "Resource Manager doesn't recognize AttemptId: "
             + this.getContext().getApplicationAttemptId(), e);
     } catch (ApplicationMasterNotRegisteredException e) {
@@ -717,7 +717,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
                                          JobEventType.JOB_AM_REBOOT));
-        throw new YarnRuntimeException("Could not contact RM after " +
+        throw new RMContainerAllocationException("Could not contact RM after " +
                                 retryInterval + " milliseconds.");
       }
       // Throw this up to the caller, which may decide to ignore it and
