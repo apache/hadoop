@@ -16,31 +16,72 @@
 
 add_plugin whitespace
 
+
+function whitespace_linecomment_reporter
+{
+  local file=$1
+  shift
+  local comment=$*
+  local tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
+
+  while read -r line; do
+    {
+      printf "%s" $(echo "${line}" | cut -f1-2 -d:)
+      echo "${comment}"
+    } >> "${tmpfile}"
+  done < "${file}"
+
+  bugsystem_linecomments "whitespace:" "${tmpfile}"
+  rm "${tmpfile}"
+}
+
 function whitespace_postapply
 {
   local count
-  local j
+  local result=0
 
   big_console_header "Checking for whitespace at the end of lines"
   start_clock
 
   pushd "${BASEDIR}" >/dev/null
-  for j in ${CHANGED_FILES}; do
-    ${GREP} -nHE '[[:blank:]]$' "./${j}" | ${GREP} -f "${GITDIFFLINES}" >> "${PATCH_DIR}/whitespace.txt"
-  done
+  # shellcheck disable=SC2016
+  ${AWK} '/\t/ {print $0}' \
+      "${GITDIFFCONTENT}" \
+    | ${GREP} -v Makefile: >> "${PATCH_DIR}/whitespace-tabs.txt"
+
+   ${GREP} -E '[[:blank:]]$' \
+     "${GITDIFFCONTENT}" \
+      >> "${PATCH_DIR}/whitespace-eol.txt"
 
   # shellcheck disable=SC2016
-  count=$(wc -l "${PATCH_DIR}/whitespace.txt" | ${AWK} '{print $1}')
+  count=$(wc -l "${PATCH_DIR}/whitespace-eol.txt" | ${AWK} '{print $1}')
 
   if [[ ${count} -gt 0 ]]; then
-    add_jira_table -1 whitespace "The patch has ${count}"\
+    add_vote_table -1 whitespace "The patch has ${count}"\
       " line(s) that end in whitespace. Use git apply --whitespace=fix."
-    add_jira_footer whitespace "@@BASE@@/whitespace.txt"
+
+    whitespace_linecomment_reporter "${PATCH_DIR}/whitespace-eol.txt" "end of line"
+    add_footer_table whitespace "@@BASE@@/whitespace-eol.txt"
+    ((result=result+1))
+  fi
+
+  # shellcheck disable=SC2016
+  count=$(wc -l "${PATCH_DIR}/whitespace-tabs.txt" | ${AWK} '{print $1}')
+
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 whitespace "The patch has ${count}"\
+      " line(s) with tabs."
+    add_footer_table whitespace "@@BASE@@/whitespace-tabs.txt"
+    whitespace_linecomment_reporter "${PATCH_DIR}/whitespace-tabs.txt" "tabs in line"
+    ((result=result+1))
+  fi
+
+  if [[ ${result} -gt 0 ]]; then
     popd >/dev/null
     return 1
   fi
 
   popd >/dev/null
-  add_jira_table +1 whitespace "The patch has no lines that end in whitespace."
+  add_vote_table +1 whitespace "Patch has no whitespace issues."
   return 0
 }
