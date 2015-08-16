@@ -262,7 +262,7 @@ public class HadoopArchives implements Tool {
       // have equals sized data to read and write to.
       try (SequenceFile.Reader reader = new SequenceFile.Reader(fs, src, jconf)) {
         while(reader.next(key, value)) {
-          if (currentCount + key.get() > targetSize && currentCount != 0){
+          if (currentCount != 0 && currentCount + key.get() > targetSize){
             long size = lastPos - startPos;
             splits.add(new FileSplit(src, startPos, size, (String[]) null));
             remaining = remaining - size;
