@@ -172,6 +172,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3534. Collect memory/cpu usage on the node. (Inigo Goiri via kasha)
 
+    YARN-4055. Report node resource utilization in heartbeat. 
+    (Inigo Goiri via kasha)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

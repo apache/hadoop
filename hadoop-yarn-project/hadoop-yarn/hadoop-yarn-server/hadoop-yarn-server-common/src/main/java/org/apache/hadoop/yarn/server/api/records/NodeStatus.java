@@ -47,13 +47,15 @@ public abstract class NodeStatus {
    * @param keepAliveApplications Applications to keep alive.
    * @param nodeHealthStatus Health status of the node.
    * @param containersUtilizations Utilization of the containers in this node.
+   * @param nodeUtilization Utilization of the node.
    * @return New {@code NodeStatus} with the provided information.
    */
   public static NodeStatus newInstance(NodeId nodeId, int responseId,
       List<ContainerStatus> containerStatuses,
       List<ApplicationId> keepAliveApplications,
       NodeHealthStatus nodeHealthStatus,
-      ResourceUtilization containersUtilization) {
+      ResourceUtilization containersUtilization,
+      ResourceUtilization nodeUtilization) {
     NodeStatus nodeStatus = Records.newRecord(NodeStatus.class);
     nodeStatus.setResponseId(responseId);
     nodeStatus.setNodeId(nodeId);
@@ -61,6 +63,7 @@ public abstract class NodeStatus {
     nodeStatus.setKeepAliveApplications(keepAliveApplications);
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
     nodeStatus.setContainersUtilization(containersUtilization);
+    nodeStatus.setNodeUtilization(nodeUtilization);
     return nodeStatus;
   }
 
@@ -92,4 +95,17 @@ public abstract class NodeStatus {
   @Unstable
   public abstract void setContainersUtilization(
       ResourceUtilization containersUtilization);
+
+  /**
+   * Get the <em>resource utilization</em> of the node.
+   * @return <em>resource utilization</em> of the node
+   */
+  @Public
+  @Stable
+  public abstract ResourceUtilization getNodeUtilization();
+
+  @Private
+  @Unstable
+  public abstract void setNodeUtilization(
+      ResourceUtilization nodeUtilization);
 }
