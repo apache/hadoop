@@ -84,7 +84,6 @@ import com.google.common.base.Charsets;
 public class HadoopArchives implements Tool {
   public static final int VERSION = 3;
   private static final Log LOG = LogFactory.getLog(HadoopArchives.class);
-  
   private static final String NAME = "har"; 
   private static final String ARCHIVE_NAME = "archiveName";
   private static final String REPLICATION = "r";
@@ -111,12 +110,10 @@ public class HadoopArchives implements Tool {
   long blockSize = 512 * 1024 * 1024l;
   /** the desired replication degree; default is 3 **/
   short repl = 3;
-
   private static final String usage = "archive"
   + " <-archiveName <NAME>.har> <-p <parent path>> [-r <replication factor>]" +
       " <src>* <dest>" +
   "\n";
-
   private JobConf conf;
 
   public HadoopArchives(Configuration conf) {
@@ -171,7 +168,7 @@ public class HadoopArchives implements Tool {
       out.add(fdir);
       FileStatus[] listStatus = fs.listStatus(fdir.getFileStatus().getPath());
       fdir.setChildren(listStatus);
-      for (FileStatus stat: listStatus) {
+      for (FileStatus stat : listStatus) {
         FileStatusDir fstatDir = new FileStatusDir(stat, null);
         recursiveLs(fs, fstatDir, out);
       }
@@ -288,7 +285,7 @@ public class HadoopArchives implements Tool {
   }
 
   private boolean checkValidName(String name) {
-    if(name.endsWith(".har")) {
+    if (name.endsWith(".har")) {
       Path tmp = new Path(name);
       if (tmp.depth() == 1) return true;
     }
@@ -315,13 +312,15 @@ public class HadoopArchives implements Tool {
     // rather than just using substring 
     // so that we do not break sometime later
     final Path justRoot = new Path(Path.SEPARATOR);
-    if (fullPath.depth() == root.depth()) {
+    final int fullPathDepth = fullPath.depth();
+    final int rootDepth = root.depth();
+    if (fullPathDepth == rootDepth) {
       return justRoot;
     }
-    else if (fullPath.depth() > root.depth()) {
+    else if (fullPathDepth > rootDepth) {
       Path retPath = new Path(fullPath.getName());
       Path parent = fullPath.getParent();
-      for (int i=0; i < (fullPath.depth() - root.depth() -1); i++) {
+      for (int i=0; i < (fullPathDepth - rootDepth -1); i++) {
         retPath = new Path(parent.getName(), retPath);
         parent = parent.getParent();
       }
@@ -360,7 +359,7 @@ public class HadoopArchives implements Tool {
      * twice and also we need to only add valid child of a path that
      * are specified the user.
      */
-    TreeMap<String, HashSet<String>> allpaths = new TreeMap<>();
+    TreeMap<String, HashSet<String>> allPaths = new TreeMap<>();
     /* the largest depth of paths. the max number of times
      * we need to iterate
      */
@@ -368,29 +367,19 @@ public class HadoopArchives implements Tool {
     Path root = new Path(Path.SEPARATOR);
     for (int i = parentPath.depth(); i < deepest.depth(); i++) {
       List<Path> parents = new ArrayList<>();
-      for (Path p: justPaths) {
-        if (p.compareTo(root) == 0){
-          //do nothing
-        }
-        else {
-          Path parent = p.getParent();
-          if (null != parent) {
-            if (allpaths.containsKey(parent.toString())) {
-              HashSet<String> children = allpaths.get(parent.toString());
-              children.add(p.getName());
-            } 
-            else {
-              HashSet<String> children = new HashSet<>();
-              children.add(p.getName());
-              allpaths.put(parent.toString(), children);
-            }
-            parents.add(parent);
-          }
+      for (Path p : justPaths) {
+        Path parent = p.getParent();
+        if (p.compareTo(root) != 0 && parent != null) {
+          final String patentAsString = parent.toString();
+          HashSet<String> children = new HashSet<>();
+          children.add(p.getName());
+          allPaths.put(patentAsString, children);
+          parents.add(parent);
         }
       }
       justPaths = parents;
     }
-    Set<Map.Entry<String, HashSet<String>>> keyVals = allpaths.entrySet();
+    Set<Map.Entry<String, HashSet<String>>> keyVals = allPaths.entrySet();
     for (Map.Entry<String, HashSet<String>> entry : keyVals) {
       final Path relPath = relPathToRoot(new Path(entry.getKey()), parentPath);
       if (relPath != null) {
