@@ -233,8 +233,8 @@ public class HadoopArchives implements Tool {
     //generate input splits from the src file lists
     public InputSplit[] getSplits(JobConf jconf, int numSplits)
     throws IOException {
-      String srcfilelist = jconf.get(SRC_LIST_LABEL, "");
-      if ("".equals(srcfilelist)) {
+      String srcFileList = jconf.get(SRC_LIST_LABEL, "");
+      if ("".equals(srcFileList)) {
           throw new IOException("Unable to get the " +
               "src file for archive generation.");
       }
@@ -243,7 +243,7 @@ public class HadoopArchives implements Tool {
         throw new IOException("Invalid size of files to archive");
       }
       //we should be safe since this is set by our own code
-      Path src = new Path(srcfilelist);
+      Path src = new Path(srcFileList);
       FileSystem fs = src.getFileSystem(jconf);
       FileStatus fstatus = fs.getFileStatus(src);
       ArrayList<FileSplit> splits = new ArrayList<FileSplit>(numSplits);
