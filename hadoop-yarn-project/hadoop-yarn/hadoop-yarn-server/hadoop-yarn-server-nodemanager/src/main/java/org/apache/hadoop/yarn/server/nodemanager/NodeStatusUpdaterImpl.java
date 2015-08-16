@@ -431,10 +431,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     List<ContainerStatus> containersStatuses = getContainerStatuses();
     ResourceUtilization containersUtilization = getContainersUtilization();
+    ResourceUtilization nodeUtilization = getNodeUtilization();
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
           createKeepAliveApplicationList(), nodeHealthStatus,
-          containersUtilization);
+          containersUtilization, nodeUtilization);
 
     return nodeStatus;
   }
@@ -449,6 +450,16 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     ContainersMonitor containersMonitor =
         containerManager.getContainersMonitor();
     return containersMonitor.getContainersUtilization();
+  }
+
+  /**
+   * Get the utilization of the node. This includes the containers.
+   * @return Resource utilization of the node.
+   */
+  private ResourceUtilization getNodeUtilization() {
+    NodeResourceMonitorImpl nodeResourceMonitor =
+        (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
+    return nodeResourceMonitor.getUtilization();
   }
 
   // Iterate through the NMContext and clone and get all the containers'

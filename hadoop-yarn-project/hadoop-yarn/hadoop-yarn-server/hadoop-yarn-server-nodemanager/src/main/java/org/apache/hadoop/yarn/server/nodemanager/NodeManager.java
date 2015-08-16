@@ -93,7 +93,8 @@ public class NodeManager extends CompositeService
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
   private NodeStatusUpdater nodeStatusUpdater;
-  private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
+  private NodeResourceMonitor nodeResourceMonitor;
+  private static CompositeServiceShutdownHook nodeManagerShutdownHook;
   private NMStateStoreService nmStore = null;
   
   private AtomicBoolean isStopping = new AtomicBoolean(false);
@@ -292,8 +293,9 @@ public class NodeManager extends CompositeService
               nodeLabelsProvider);
     }
 
-    NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
+    nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
+    ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
 
     containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
@@ -413,6 +415,7 @@ public class NodeManager extends CompositeService
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManagementProtocol containerManager;
+    private NodeResourceMonitor nodeResourceMonitor;
     private final LocalDirsHandlerService dirsHandler;
     private final ApplicationACLsManager aclsManager;
     private WebServer webServer;
@@ -475,6 +478,15 @@ public class NodeManager extends CompositeService
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;
+    }
+
+    @Override
+    public NodeResourceMonitor getNodeResourceMonitor() {
+      return this.nodeResourceMonitor;
+    }
+
+    public void setNodeResourceMonitor(NodeResourceMonitor nodeResourceMonitor) {
+      this.nodeResourceMonitor = nodeResourceMonitor;
     }
 
     @Override

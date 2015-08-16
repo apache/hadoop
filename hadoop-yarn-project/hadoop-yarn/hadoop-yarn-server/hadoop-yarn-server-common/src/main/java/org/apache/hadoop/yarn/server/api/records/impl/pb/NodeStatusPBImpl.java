@@ -314,6 +314,28 @@ public class NodeStatusPBImpl extends NodeStatus {
         .setContainersUtilization(convertToProtoFormat(containersUtilization));
   }
 
+  @Override
+  public ResourceUtilization getNodeUtilization() {
+    NodeStatusProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    if (!p.hasNodeUtilization()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getNodeUtilization());
+  }
+
+  @Override
+  public void setNodeUtilization(
+      ResourceUtilization nodeUtilization) {
+    maybeInitBuilder();
+    if (nodeUtilization == null) {
+      this.builder.clearNodeUtilization();
+      return;
+    }
+    this.builder
+        .setNodeUtilization(convertToProtoFormat(nodeUtilization));
+  }
+
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
     return ((NodeIdPBImpl)nodeId).getProto();
   }
