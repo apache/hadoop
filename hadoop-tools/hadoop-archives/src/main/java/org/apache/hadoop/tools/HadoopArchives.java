@@ -76,7 +76,7 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.base.Charsets;
 
 /**
- * a archive creation utility.
+ * This is an archive creation utility.
  * This class provides methods that can be used 
  * to create hadoop archives. For understanding of 
  * Hadoop archives look at {@link HarFileSystem}.
@@ -104,7 +104,7 @@ public class HadoopArchives implements Tool {
   static final String HAR_REPLICATION_LABEL = NAME + ".replication.factor";
   /** the size of the part files that will be created when archiving **/
   static final String HAR_PARTSIZE_LABEL = NAME + ".partfile.size";
-
+  static final String TEST_HADOOP_ARCHIVES_JAR_PATH = "test.hadoop.archives.jar";
   /** size of each part file size **/
   long partSize = 2 * 1024 * 1024 * 1024l;
   /** size of blocks in hadoop archives **/
@@ -116,9 +116,12 @@ public class HadoopArchives implements Tool {
   + " <-archiveName <NAME>.har> <-p <parent path>> [-r <replication factor>]" +
       " <src>* <dest>" +
   "\n";
-  
- 
+
   private JobConf conf;
+
+  public HadoopArchives(Configuration conf) {
+    setConf(conf);
+  }
 
   public void setConf(Configuration conf) {
     if (conf instanceof JobConf) {
@@ -130,7 +133,7 @@ public class HadoopArchives implements Tool {
     // This is for test purposes since MR2, different from Streaming
     // here it is not possible to add a JAR to the classpath the tool
     // will when running the mapreduce job.
-    String testJar = System.getProperty(TEST_HADOOP_ARCHIVES_JAR_PATH, null);
+    String testJar = System.getProperty(TEST_HADOOP_ARCHIVES_JAR_PATH);
     if (testJar != null) {
       this.conf.setJar(testJar);
     }
@@ -138,10 +141,6 @@ public class HadoopArchives implements Tool {
 
   public Configuration getConf() {
     return this.conf;
-  }
-
-  public HadoopArchives(Configuration conf) {
-    setConf(conf);
   }
 
   // check the src paths
@@ -158,11 +157,11 @@ public class HadoopArchives implements Tool {
   /**
    * this assumes that there are two types of files file/dir
    * @param fs the input filesystem
-   * @param fdir the filestatusdir of the path  
+   * @param fdir the filestatusdir of the path
    * @param out the list of paths output of recursive ls
    * @throws IOException
    */
-  private void recursivels(FileSystem fs, FileStatusDir fdir, List<FileStatusDir> out) 
+  private void recursiveLs(FileSystem fs, FileStatusDir fdir, List<FileStatusDir> out)
   throws IOException {
     if (fdir.getFileStatus().isFile()) {
       out.add(fdir);
@@ -174,7 +173,7 @@ public class HadoopArchives implements Tool {
       fdir.setChildren(listStatus);
       for (FileStatus stat: listStatus) {
         FileStatusDir fstatDir = new FileStatusDir(stat, null);
-        recursivels(fs, fstatDir, out);
+        recursiveLs(fs, fstatDir, out);
       }
     }
   }
@@ -246,7 +245,7 @@ public class HadoopArchives implements Tool {
       Path src = new Path(srcFileList);
       FileSystem fs = src.getFileSystem(jconf);
       FileStatus fstatus = fs.getFileStatus(src);
-      ArrayList<FileSplit> splits = new ArrayList<FileSplit>(numSplits);
+      ArrayList<FileSplit> splits = new ArrayList<>(numSplits);
       LongWritable key = new LongWritable();
       final HarEntry value = new HarEntry();
       // the remaining bytes in the file split
@@ -289,22 +288,18 @@ public class HadoopArchives implements Tool {
   }
 
   private boolean checkValidName(String name) {
-    Path tmp = new Path(name);
-    if (tmp.depth() != 1) {
-      return false;
+    if(name.endsWith(".har")) {
+      Path tmp = new Path(name);
+      if (tmp.depth() == 1) return true;
     }
-    if (name.endsWith(".har")) 
-      return true;
     return false;
   }
   
 
   private Path largestDepth(List<Path> paths) {
     Path deepest = paths.get(0);
-    for (Path p: paths) {
-      if (p.depth() > deepest.depth()) {
-        deepest = p;
-      }
+    for (Path p : paths) {
+      if (p.depth() > deepest.depth()) deepest = p;
     }
     return deepest;
   }
@@ -356,7 +351,7 @@ public class HadoopArchives implements Tool {
   private void writeTopLevelDirs(SequenceFile.Writer srcWriter, 
       List<Path> paths, Path parentPath) throws IOException {
     // extract paths from absolute URI's
-    List<Path> justPaths = new ArrayList<Path>();
+    List<Path> justPaths = new ArrayList<>();
     for (Path p: paths) {
       justPaths.add(new Path(p.toUri().getPath()));
     }
@@ -365,15 +360,14 @@ public class HadoopArchives implements Tool {
      * twice and also we need to only add valid child of a path that
      * are specified the user.
      */
-    TreeMap<String, HashSet<String>> allpaths = new TreeMap<String, 
-                                                HashSet<String>>();
+    TreeMap<String, HashSet<String>> allpaths = new TreeMap<>();
     /* the largest depth of paths. the max number of times
      * we need to iterate
      */
     Path deepest = largestDepth(paths);
     Path root = new Path(Path.SEPARATOR);
     for (int i = parentPath.depth(); i < deepest.depth(); i++) {
-      List<Path> parents = new ArrayList<Path>();
+      List<Path> parents = new ArrayList<>();
       for (Path p: justPaths) {
         if (p.compareTo(root) == 0){
           //do nothing
@@ -386,7 +380,7 @@ public class HadoopArchives implements Tool {
               children.add(p.getName());
             } 
             else {
-              HashSet<String> children = new HashSet<String>();
+              HashSet<String> children = new HashSet<>();
               children.add(p.getName());
               allpaths.put(parent.toString(), children);
             }
@@ -523,10 +517,10 @@ public class HadoopArchives implements Tool {
       // and then write them to the input file 
       // one at a time
       for (Path src: srcPaths) {
-        ArrayList<FileStatusDir> allFiles = new ArrayList<FileStatusDir>();
         FileStatus fstatus = fs.getFileStatus(src);
         FileStatusDir fdir = new FileStatusDir(fstatus, null);
-        recursivels(fs, fdir, allFiles);
+        List<FileStatusDir> allFiles = new ArrayList<>();
+        recursiveLs(fs, fdir, allFiles);
         for (FileStatusDir statDir: allFiles) {
           FileStatus stat = statDir.getFileStatus();
           long len = stat.isDirectory()? 0:stat.getLen();
@@ -869,7 +863,7 @@ public class HadoopArchives implements Tool {
       }
       // Remaining args
       args = commandLine.getArgs();
-      List<Path> srcPaths = new ArrayList<Path>();
+      List<Path> srcPaths = new ArrayList<>();
       Path destPath = null;
       //read the rest of the paths
       for (int i = 0; i < args.length; i++) {
@@ -899,7 +893,7 @@ public class HadoopArchives implements Tool {
         srcPaths.add(parentPath);
       }
       // do a glob on the srcPaths and then pass it on
-      List<Path> globPaths = new ArrayList<Path>();
+      List<Path> globPaths = new ArrayList<>();
       for (Path p: srcPaths) {
         FileSystem fs = p.getFileSystem(getConf());
         FileStatus[] statuses = fs.globStatus(p);
@@ -922,8 +916,6 @@ public class HadoopArchives implements Tool {
     }
     return 0;
   }
-
-  static final String TEST_HADOOP_ARCHIVES_JAR_PATH = "test.hadoop.archives.jar";
 
   /** the main functions **/
   public static void main(String[] args) {
