@@ -1235,13 +1235,26 @@
   </property>
 
   <property>
-    <description>How often to monitor containers.</description>
-    <name>yarn.nodemanager.container-monitor.interval-ms</name>
+    <description>How often to monitor the node and the containers.</description>
+    <name>yarn.nodemanager.resource-monitor.interval-ms</name>
     <value>3000</value>
   </property>
 
   <property>
-    <description>Class that calculates containers current resource utilization.</description>
+    <description>Class that calculates current resource utilization.</description>
+    <name>yarn.nodemanager.resource-calculator.class</name>
+  </property>
+
+  <property>
+    <description>How often to monitor containers. If not set, the value for
+    yarn.nodemanager.resource-monitor.interval-ms will be used.</description>
+    <name>yarn.nodemanager.container-monitor.interval-ms</name>
+  </property>
+
+  <property>
+    <description>Class that calculates containers current resource utilization.
+    If not set, the value for yarn.nodemanager.resource-calculator.class will
+    be used.</description>
     <name>yarn.nodemanager.container-monitor.resource-calculator.class</name>
   </property>
 
