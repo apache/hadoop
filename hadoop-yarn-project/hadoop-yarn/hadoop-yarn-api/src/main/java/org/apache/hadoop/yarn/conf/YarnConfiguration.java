@@ -960,12 +960,21 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_WEBAPP_HTTPS_PORT = 8044;
   public static final String DEFAULT_NM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_WEBAPP_HTTPS_PORT; 
-  
+
+  /** How often to monitor resource in a node.*/
+  public static final String NM_RESOURCE_MON_INTERVAL_MS =
+      NM_PREFIX + "resource-monitor.interval-ms";
+  public static final int DEFAULT_NM_RESOURCE_MON_INTERVAL_MS = 3000;
+
   /** How often to monitor containers.*/
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
+  @Deprecated
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
 
+  /** Class that calculates current resource utilization.*/
+  public static final String NM_MON_RESOURCE_CALCULATOR =
+      NM_PREFIX + "resource-calculator.class";
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";

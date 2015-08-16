@@ -100,10 +100,14 @@ public class ContainersMonitorImpl extends AbstractService implements
   protected void serviceInit(Configuration conf) throws Exception {
     this.monitoringInterval =
         conf.getLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_CONTAINER_MON_INTERVAL_MS);
+            conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
+                YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS));
 
     Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR, null,
+        conf.getClass(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
+            conf.getClass(
+                YarnConfiguration.NM_MON_RESOURCE_CALCULATOR, null,
+                ResourceCalculatorPlugin.class),
             ResourceCalculatorPlugin.class);
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
