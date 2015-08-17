@@ -76,7 +76,7 @@ function setup_defaults
     SunOS)
       AWK=${AWK:-/usr/xpg4/bin/awk}
       SED=${SED:-/usr/xpg4/bin/sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-/usr/xpg4/bin/grep}
       PATCH=${PATCH:-/usr/gnu/bin/patch}
@@ -86,7 +86,7 @@ function setup_defaults
     *)
       AWK=${AWK:-awk}
       SED=${SED:-sed}
-      WGET=${WGET:-wget}
+      CURL=${CURL:-curl}
       GIT=${GIT:-git}
       GREP=${GREP:-grep}
       PATCH=${PATCH:-patch}
@@ -122,7 +122,7 @@ function yetus_usage
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--patch-cmd=<cmd>      The GNU-compatible 'patch' command to use (default 'patch')"
-  echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
+  echo "--curl-cmd=<cmd>       The 'curl' command to use (default 'curl')"
 }
 
 ## @description  Interpret the command line parameters
@@ -162,8 +162,8 @@ function parse_args
       --patch-dir=*)
         PATCH_DIR=${i#*=}
       ;;
-      --wget-cmd=*)
-        WGET=${i#*=}
+      --curl-cmd=*)
+        CURL=${i#*=}
       ;;
       --*)
         ## PATCH_OR_ISSUE can't be a --.  So this is probably
@@ -233,13 +233,15 @@ function locate_patch
       echo "Patch is being downloaded at $(date) from"
       PATCHURL="${PATCH_OR_ISSUE}"
     else
-      ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
-
+      ${CURL} --silent \
+              --output "${PATCH_DIR}/jira" \
+              --location \
+             "https://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
       case $? in
         0)
         ;;
         2)
-          yetus_error "ERROR: .wgetrc/.netrc parsing error."
+          yetus_error "ERROR: .curlrc/.netrc parsing error."
           cleanup_and_exit 1
         ;;
         3)
@@ -269,7 +271,7 @@ function locate_patch
         #shellcheck disable=SC2016
         relativePatchURL=$(${AWK} 'match($0,"\"/jira/secure/attachment/[0-9]*/[^\"]*"){print substr($0,RSTART+1,RLENGTH-1)}' "${PATCH_DIR}/jira" |
           ${GREP} -v -e 'htm[l]*$' | sort | tail -1)
-        PATCHURL="http://issues.apache.org${relativePatchURL}"
+        PATCHURL="https://issues.apache.org${relativePatchURL}"
         if [[ ! ${PATCHURL} =~ \.patch$ ]]; then
           notSureIfPatch=true
         fi
@@ -277,7 +279,7 @@ function locate_patch
       fi
     fi
     if [[ -z "${PATCH_FILE}" ]]; then
-      ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
+      ${CURL} --silent --location --output "${PATCH_DIR}/patch" "${PATCHURL}"
       if [[ $? != 0 ]];then
         yetus_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
         cleanup_and_exit 1

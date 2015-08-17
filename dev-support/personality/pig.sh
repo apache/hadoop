@@ -17,7 +17,9 @@
 #shellcheck disable=SC2034
 PATCH_BRANCH_DEFAULT=trunk
 #shellcheck disable=SC2034
-ISSUE_RE='^PIG-[0-9]+$'
+JIRA_ISSUE_RE='^PIG-[0-9]+$'
+#shellcheck disable=SC2034
+GITHUB_REPO="apache/pig"
 #shellcheck disable=SC2034
 HOW_TO_CONTRIBUTE=""
 #shellcheck disable=SC2034

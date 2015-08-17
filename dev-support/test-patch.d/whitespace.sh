@@ -16,6 +16,26 @@
 
 add_plugin whitespace
 
+
+function whitespace_linecomment_reporter
+{
+  local file=$1
+  shift
+  local comment=$*
+  local tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
+
+  while read -r line; do
+    {
+      #shellcheck disable=SC2086
+      printf "%s" "$(echo ${line} | cut -f1-2 -d:)"
+      echo "${comment}"
+    } >> "${tmpfile}"
+  done < "${file}"
+
+  bugsystem_linecomments "whitespace:" "${tmpfile}"
+  rm "${tmpfile}"
+}
+
 function whitespace_postapply
 {
   local count
@@ -40,6 +60,8 @@ function whitespace_postapply
   if [[ ${count} -gt 0 ]]; then
     add_vote_table -1 whitespace "The patch has ${count}"\
       " line(s) that end in whitespace. Use git apply --whitespace=fix."
+
+    whitespace_linecomment_reporter "${PATCH_DIR}/whitespace-eol.txt" "end of line"
     add_footer_table whitespace "@@BASE@@/whitespace-eol.txt"
     ((result=result+1))
   fi
@@ -51,6 +73,7 @@ function whitespace_postapply
     add_vote_table -1 whitespace "The patch has ${count}"\
       " line(s) with tabs."
     add_footer_table whitespace "@@BASE@@/whitespace-tabs.txt"
+    whitespace_linecomment_reporter "${PATCH_DIR}/whitespace-tabs.txt" "tabs in line"
     ((result=result+1))
   fi
 
