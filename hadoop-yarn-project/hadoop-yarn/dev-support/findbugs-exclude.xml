@@ -508,13 +508,12 @@
   <!-- Ignore SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING warnings for Timeline Phoenix storage. -->
   <!-- Since we're using dynamic columns, we have to generate SQL statements dynamically -->
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.timelineservice.storage.PhoenixTimelineWriterImpl" />
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.storage.PhoenixOfflineAggregationWriterImpl" />
     <Or>
       <Method name="storeEntityVariableLengthFields" />
-      <Method name="storeEvents" />
-      <Method name="storeMetrics" />
-      <Method name="write" />
+      <Method name="writeAggregatedEntity" />
     </Or>
+    <Bug pattern="SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING" />
   </Match>
   
   <!-- Following fields are used in ErrorsAndWarningsBlock, which is not a part of analysis of findbugs -->
