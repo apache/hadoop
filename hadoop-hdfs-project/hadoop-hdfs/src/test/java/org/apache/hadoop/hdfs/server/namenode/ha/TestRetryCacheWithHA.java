@@ -72,7 +72,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
@@ -752,12 +752,13 @@ public class TestRetryCacheWithHA {
     boolean checkNamenodeBeforeReturn() throws Exception {
       INodeFile fileNode = cluster.getNamesystem(0).getFSDirectory()
           .getINode4Write(file).asFile();
-      BlockInfoContiguousUnderConstruction blkUC =
-          (BlockInfoContiguousUnderConstruction) (fileNode.getBlocks())[1];
-      int datanodeNum = blkUC.getExpectedStorageLocations().length;
+      BlockInfo blkUC = (fileNode.getBlocks())[1];
+      int datanodeNum = blkUC.getUnderConstructionFeature()
+          .getExpectedStorageLocations().length;
       for (int i = 0; i < CHECKTIMES && datanodeNum != 2; i++) {
         Thread.sleep(1000);
-        datanodeNum = blkUC.getExpectedStorageLocations().length;
+        datanodeNum = blkUC.getUnderConstructionFeature()
+            .getExpectedStorageLocations().length;
       }
       return datanodeNum == 2;
     }

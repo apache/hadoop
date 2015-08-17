@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ipc.StandbyException;
@@ -45,7 +45,7 @@ public interface Namesystem extends RwLock, SafeMode {
 
   void checkOperation(OperationCategory read) throws StandbyException;
 
-  boolean isInSnapshot(BlockInfoContiguousUnderConstruction blockUC);
+  boolean isInSnapshot(BlockInfo blockUC);
 
   CacheManager getCacheManager();
 }

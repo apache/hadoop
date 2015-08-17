@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
@@ -617,9 +616,8 @@ public class BlockManager implements BlockStatsMXBean {
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private static boolean commitBlock(
-      final BlockInfoContiguousUnderConstruction block, final Block commitBlock)
-      throws IOException {
+  private static boolean commitBlock(final BlockInfo block,
+      final Block commitBlock) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
       return false;
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
@@ -649,8 +647,7 @@ public class BlockManager implements BlockStatsMXBean {
     if(lastBlock.isComplete())
       return false; // already completed (e.g. by syncBlock)
     
-    final boolean b = commitBlock(
-        (BlockInfoContiguousUnderConstruction) lastBlock, commitBlock);
+    final boolean b = commitBlock(lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
       completeBlock(bc, bc.numBlocks()-1, false);
     return b;
@@ -670,16 +667,15 @@ public class BlockManager implements BlockStatsMXBean {
     BlockInfo curBlock = bc.getBlocks()[blkIndex];
     if(curBlock.isComplete())
       return curBlock;
-    BlockInfoContiguousUnderConstruction ucBlock =
-        (BlockInfoContiguousUnderConstruction) curBlock;
-    int numNodes = ucBlock.numNodes();
+
+    int numNodes = curBlock.numNodes();
     if (!force && numNodes < minReplication)
       throw new IOException("Cannot complete block: " +
           "block does not satisfy minimal replication requirement.");
-    if(!force && ucBlock.getBlockUCState() != BlockUCState.COMMITTED)
+    if(!force && curBlock.getBlockUCState() != BlockUCState.COMMITTED)
       throw new IOException(
           "Cannot complete block: block has not been COMMITTED by the client");
-    BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
+    BlockInfo completeBlock = curBlock.convertToCompleteBlock();
     // replace penultimate block in file
     bc.setBlock(blkIndex, completeBlock);
     
@@ -713,7 +709,7 @@ public class BlockManager implements BlockStatsMXBean {
    * when tailing edit logs as a Standby.
    */
   public BlockInfo forceCompleteBlock(final BlockCollection bc,
-      final BlockInfoContiguousUnderConstruction block) throws IOException {
+      final BlockInfo block) throws IOException {
     block.commitBlock(block);
     return completeBlock(bc, block, true);
   }
@@ -735,28 +731,29 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public LocatedBlock convertLastBlockToUnderConstruction(
       BlockCollection bc, long bytesToRemove) throws IOException {
-    BlockInfo oldBlock = bc.getLastBlock();
-    if(oldBlock == null ||
-       bc.getPreferredBlockSize() == oldBlock.getNumBytes() - bytesToRemove)
+    BlockInfo lastBlock = bc.getLastBlock();
+    if (lastBlock == null ||
+       bc.getPreferredBlockSize() == lastBlock.getNumBytes() - bytesToRemove) {
       return null;
-    assert oldBlock == getStoredBlock(oldBlock) :
+    }
+    assert lastBlock == getStoredBlock(lastBlock) :
       "last block of the file is not in blocksMap";
 
-    DatanodeStorageInfo[] targets = getStorages(oldBlock);
+    DatanodeStorageInfo[] targets = getStorages(lastBlock);
 
-    BlockInfoContiguousUnderConstruction ucBlock =
-        bc.setLastBlock(oldBlock, targets);
-    blocksMap.replaceBlock(ucBlock);
+    // convert the last block to under construction. note no block replacement
+    // is happening
+    bc.convertLastBlockToUC(lastBlock, targets);
 
     // Remove block from replication queue.
-    NumberReplicas replicas = countNodes(ucBlock);
-    neededReplications.remove(ucBlock, replicas.liveReplicas(),
-        replicas.decommissionedAndDecommissioning(), getReplication(ucBlock));
-    pendingReplications.remove(ucBlock);
+    NumberReplicas replicas = countNodes(lastBlock);
+    neededReplications.remove(lastBlock, replicas.liveReplicas(),
+        replicas.decommissionedAndDecommissioning(), getReplication(lastBlock));
+    pendingReplications.remove(lastBlock);
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeStorageInfo storage : targets) {
-      invalidateBlocks.remove(storage.getDatanodeDescriptor(), oldBlock);
+      invalidateBlocks.remove(storage.getDatanodeDescriptor(), lastBlock);
     }
     
     // Adjust safe-mode totals, since under-construction blocks don't
@@ -767,9 +764,11 @@ public class BlockManager implements BlockStatsMXBean {
         // always decrement total blocks
         -1);
 
-    final long fileLength = bc.computeContentSummary(getStoragePolicySuite()).getLength();
-    final long pos = fileLength - ucBlock.getNumBytes();
-    return createLocatedBlock(ucBlock, pos, BlockTokenIdentifier.AccessMode.WRITE);
+    final long fileLength = bc.computeContentSummary(
+        getStoragePolicySuite()).getLength();
+    final long pos = fileLength - lastBlock.getNumBytes();
+    return createLocatedBlock(lastBlock, pos,
+        BlockTokenIdentifier.AccessMode.WRITE);
   }
 
   /**
@@ -846,15 +845,9 @@ public class BlockManager implements BlockStatsMXBean {
   /** @return a LocatedBlock for the given block */
   private LocatedBlock createLocatedBlock(final BlockInfo blk, final long pos
       ) throws IOException {
-    if (blk instanceof BlockInfoContiguousUnderConstruction) {
-      if (blk.isComplete()) {
-        throw new IOException(
-            "blk instanceof BlockInfoUnderConstruction && blk.isComplete()"
-            + ", blk=" + blk);
-      }
-      final BlockInfoContiguousUnderConstruction uc =
-          (BlockInfoContiguousUnderConstruction) blk;
-      final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
+    if (!blk.isComplete()) {
+      final DatanodeStorageInfo[] storages = blk.getUnderConstructionFeature()
+          .getExpectedStorageLocations();
       final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
       return newLocatedBlock(eb, storages, pos, false);
     }
@@ -1761,12 +1754,13 @@ public class BlockManager implements BlockStatsMXBean {
    * reported by the datanode in the block report. 
    */
   static class StatefulBlockInfo {
-    final BlockInfoContiguousUnderConstruction storedBlock;
+    final BlockInfo storedBlock;
     final Block reportedBlock;
     final ReplicaState reportedState;
     
-    StatefulBlockInfo(BlockInfoContiguousUnderConstruction storedBlock,
+    StatefulBlockInfo(BlockInfo storedBlock,
         Block reportedBlock, ReplicaState reportedState) {
+      Preconditions.checkArgument(!storedBlock.isComplete());
       this.storedBlock = storedBlock;
       this.reportedBlock = reportedBlock;
       this.reportedState = reportedState;
@@ -2165,15 +2159,14 @@ public class BlockManager implements BlockStatsMXBean {
       
       // If block is under construction, add this replica to its list
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-        ((BlockInfoContiguousUnderConstruction)storedBlock)
+        storedBlock.getUnderConstructionFeature()
             .addReplicaIfNotPresent(storageInfo, iblk, reportedState);
         // OpenFileBlocks only inside snapshots also will be added to safemode
         // threshold. So we need to update such blocks to safemode
         // refer HDFS-5283
-        BlockInfoContiguousUnderConstruction blockUC =
-            (BlockInfoContiguousUnderConstruction) storedBlock;
-        if (namesystem.isInSnapshot(blockUC)) {
-          int numOfReplicas = blockUC.getNumExpectedLocations();
+        if (namesystem.isInSnapshot(storedBlock)) {
+          int numOfReplicas = storedBlock.getUnderConstructionFeature()
+              .getNumExpectedLocations();
           namesystem.incrementSafeBlockCount(numOfReplicas);
         }
         //and fall through to next clause
@@ -2298,11 +2291,6 @@ public class BlockManager implements BlockStatsMXBean {
 
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn, block)) {
-      /*
-       * TODO: following assertion is incorrect, see HDFS-2668 assert
-       * storedBlock.findDatanode(dn) < 0 : "Block " + block +
-       * " in recentInvalidatesSet should not appear in DN " + dn;
-       */
       return storedBlock;
     }
 
@@ -2325,8 +2313,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-      toUC.add(new StatefulBlockInfo(
-          (BlockInfoContiguousUnderConstruction) storedBlock,
+      toUC.add(new StatefulBlockInfo(storedBlock,
           new Block(block), reportedState));
       return storedBlock;
     }
@@ -2517,8 +2504,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   void addStoredBlockUnderConstruction(StatefulBlockInfo ucBlock,
       DatanodeStorageInfo storageInfo) throws IOException {
-    BlockInfoContiguousUnderConstruction block = ucBlock.storedBlock;
-    block.addReplicaIfNotPresent(
+    BlockInfo block = ucBlock.storedBlock;
+    block.getUnderConstructionFeature().addReplicaIfNotPresent(
         storageInfo, ucBlock.reportedBlock, ucBlock.reportedState);
 
     if (ucBlock.reportedState == ReplicaState.FINALIZED &&
@@ -2578,7 +2565,7 @@ public class BlockManager implements BlockStatsMXBean {
     assert block != null && namesystem.hasWriteLock();
     BlockInfo storedBlock;
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
-    if (block instanceof BlockInfoContiguousUnderConstruction) {
+    if (!block.isComplete()) {
       //refresh our copy in case the block got completed in another thread
       storedBlock = blocksMap.getStoredBlock(block);
     } else {
@@ -3533,11 +3520,9 @@ public class BlockManager implements BlockStatsMXBean {
       String src, BlockInfo[] blocks) {
     for (BlockInfo b: blocks) {
       if (!b.isComplete()) {
-        final BlockInfoContiguousUnderConstruction uc =
-            (BlockInfoContiguousUnderConstruction)b;
         final int numNodes = b.numNodes();
         LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = "
-          + uc.getBlockUCState() + ", replication# = " + numNodes
+          + b.getBlockUCState() + ", replication# = " + numNodes
           + (numNodes < minReplication ? " < ": " >= ")
           + " minimum = " + minReplication + ") in file " + src);
         return false;
