@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -51,6 +53,7 @@ public class TimelineSchemaCreator {
 
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);
+  private static final String PHOENIX_OPTION_SHORT = "p";
 
   public static void main(String[] args) throws Exception {
 
@@ -83,7 +86,41 @@ public class TimelineSchemaCreator {
       hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
           applicationTableName);
     }
-    createAllTables(hbaseConf);
+
+    List<Exception> exceptions = new ArrayList<>();
+    try {
+      createAllTables(hbaseConf);
+      LOG.info("Successfully created HBase schema. ");
+    } catch (IOException e) {
+      LOG.error("Error in creating hbase tables: " + e.getMessage());
+      exceptions.add(e);
+    }
+
+    // Create Phoenix data schema if needed
+    if (commandLine.hasOption(PHOENIX_OPTION_SHORT)) {
+      Configuration phoenixConf = new Configuration();
+      try {
+        PhoenixOfflineAggregationWriterImpl phoenixWriter =
+            new PhoenixOfflineAggregationWriterImpl();
+        phoenixWriter.init(phoenixConf);
+        phoenixWriter.start();
+        phoenixWriter.createPhoenixTables();
+        phoenixWriter.stop();
+        LOG.info("Successfully created Phoenix offline aggregation schema. ");
+      } catch (IOException e) {
+        LOG.error("Error in creating phoenix tables: " + e.getMessage());
+        exceptions.add(e);
+      }
+    }
+    if (exceptions.size() > 0) {
+      LOG.warn("Schema creation finished with the following exceptions");
+      for (Exception e : exceptions) {
+        LOG.warn(e.getMessage());
+      }
+      System.exit(-1);
+    } else {
+      LOG.info("Schema creation finished successfully");
+    }
   }
 
   /**
@@ -112,6 +149,12 @@ public class TimelineSchemaCreator {
     o.setArgName("appToflowTableName");
     o = new Option("a", "applicationTableName", true, "application table name");
     o.setArgName("applicationTableName");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(PHOENIX_OPTION_SHORT, "usePhoenix", false,
+        "create Phoenix offline aggregation tables");
+    // No need to set arg name since we do not need an argument here
     o.setRequired(false);
     options.addOption(o);
 

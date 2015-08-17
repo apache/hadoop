@@ -88,6 +88,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3906. Split the application table from the entity table. (Sangjin Lee 
     via junping_du)
 
+    YARN-3904. Refactor timelineservice.storage to add support to online and
+    offline aggregation writers (Li Lu via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
