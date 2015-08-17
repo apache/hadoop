@@ -4936,6 +4936,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return dir.ezManager.getNumEncryptionZones();
   }
 
+  /**
+   * Returns the length of the wait Queue for the FSNameSystemLock.
+   *
+   * A larger number here indicates lots of threads are waiting for
+   * FSNameSystemLock.
+   *
+   * @return int - Number of Threads waiting to acquire FSNameSystemLock
+   */
+  @Override
+  @Metric({"LockQueueLength", "Number of threads waiting to " +
+      "acquire FSNameSystemLock"})
+  public int getFsLockQueueLength() {
+    return fsLock.getQueueLength();
+  }
+
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
     try {

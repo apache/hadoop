@@ -230,6 +230,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `BlockCapacity` | Current number of block capacity |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
 | `TotalFiles` | Current number of files and directories (same as FilesTotal) |
+| `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
 
 JournalNode
 -----------

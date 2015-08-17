@@ -189,4 +189,13 @@ public interface FSNamesystemMBean {
    * Return the number of encryption zones in the system.
    */
   int getNumEncryptionZones();
+
+  /**
+   * Returns the length of the wait Queue for the FSNameSystemLock.
+   *
+   * A larger number here indicates lots of threads are waiting for
+   * FSNameSystemLock.
+   * @return int - Number of Threads waiting to acquire FSNameSystemLock
+   */
+  int getFsLockQueueLength();
 }

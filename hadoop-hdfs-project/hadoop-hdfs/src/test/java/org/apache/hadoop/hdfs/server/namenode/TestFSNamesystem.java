@@ -37,9 +37,14 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TestFSNamesystem {
 
@@ -212,5 +217,28 @@ public class TestFSNamesystem {
     assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
+  }
+
+  @Test
+  public void testFSLockGetWaiterCount() throws InterruptedException {
+    final int threadCount = 3;
+    final CountDownLatch latch = new CountDownLatch(threadCount);
+    final FSNamesystemLock rwLock = new FSNamesystemLock(true);
+    rwLock.writeLock().lock();
+    ExecutorService helper = Executors.newFixedThreadPool(threadCount);
+
+    for (int x = 0; x < threadCount; x++) {
+      helper.execute(new Runnable() {
+        @Override
+        public void run() {
+          latch.countDown();
+          rwLock.readLock().lock();
+        }
+      });
+    }
+
+    latch.await();
+    Assert.assertEquals("Expected number of blocked thread not found",
+                        threadCount, rwLock.getQueueLength());
   }
 }
