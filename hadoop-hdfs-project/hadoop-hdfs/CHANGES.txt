@@ -807,6 +807,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7433. Optimize performance of DatanodeManager's node map.
     (daryn via kihwal)
 
+    HDFS-8792. BlockManager#postponedMisreplicatedBlocks should use a
+    LightWeightHashSet to save memory (Yi Liu via Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
