@@ -810,6 +810,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8792. BlockManager#postponedMisreplicatedBlocks should use a
     LightWeightHashSet to save memory (Yi Liu via Colin P. McCabe)
 
+    HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
+    Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
