@@ -236,6 +236,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `NumActiveClients` | Current number of active clients holding lease |
 | `HAState` | (HA-only) Current state of the NameNode: initializing or active or standby or stopping state |
 | `FSState` | Current state of the file system: Safemode or Operational |
+| `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
 
 JournalNode
 -----------
