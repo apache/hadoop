@@ -33,8 +33,6 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -59,7 +59,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeDescriptor extends DatanodeInfo {
-  public static final Log LOG = LogFactory.getLog(DatanodeDescriptor.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(DatanodeDescriptor.class);
   public static final DatanodeDescriptor[] EMPTY_ARRAY = {};
 
   // Stores status of decommissioning.
@@ -319,9 +320,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
         Map.Entry<String, DatanodeStorageInfo> entry = iter.next();
         DatanodeStorageInfo storageInfo = entry.getValue();
         if (storageInfo.getLastBlockReportId() != curBlockReportId) {
-          LOG.info(storageInfo.getStorageID() + " had lastBlockReportId 0x" +
-              Long.toHexString(storageInfo.getLastBlockReportId()) +
-              ", but curBlockReportId = 0x" +
+          LOG.info("{} had lastBlockReportId 0x{} but curBlockReportId = 0x{}",
+              storageInfo.getStorageID(),
+              Long.toHexString(storageInfo.getLastBlockReportId()),
               Long.toHexString(curBlockReportId));
           iter.remove();
           if (zombies == null) {
@@ -446,8 +447,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
 
     if (checkFailedStorages) {
-      LOG.info("Number of failed storage changes from "
-          + this.volumeFailures + " to " + volFailures);
+      if (this.volumeFailures != volFailures) {
+        LOG.info("Number of failed storages changes from {} to {}",
+            this.volumeFailures, volFailures);
+      }
       synchronized (storageMap) {
         failedStorageInfos =
             new HashSet<>(storageMap.values());
@@ -498,10 +501,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private void pruneStorageMap(final StorageReport[] reports) {
     synchronized (storageMap) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Number of storages reported in heartbeat=" + reports.length
-            + "; Number of storages in storageMap=" + storageMap.size());
-      }
+      LOG.debug("Number of storages reported in heartbeat={};"
+              + " Number of storages in storageMap={}", reports.length,
+          storageMap.size());
 
       HashMap<String, DatanodeStorageInfo> excessStorages;
 
@@ -518,11 +520,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
       for (final DatanodeStorageInfo storageInfo : excessStorages.values()) {
         if (storageInfo.numBlocks() == 0) {
           storageMap.remove(storageInfo.getStorageID());
-          LOG.info("Removed storage " + storageInfo + " from DataNode" + this);
-        } else if (LOG.isDebugEnabled()) {
+          LOG.info("Removed storage {} from DataNode {}", storageInfo, this);
+        } else {
           // This can occur until all block reports are received.
-          LOG.debug("Deferring removal of stale storage " + storageInfo
-              + " with " + storageInfo.numBlocks() + " blocks");
+          LOG.debug("Deferring removal of stale storage {} with {} blocks",
+              storageInfo, storageInfo.numBlocks());
         }
       }
     }
@@ -532,7 +534,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       Set<DatanodeStorageInfo> failedStorageInfos) {
     for (DatanodeStorageInfo storageInfo : failedStorageInfos) {
       if (storageInfo.getState() != DatanodeStorage.State.FAILED) {
-        LOG.info(storageInfo + " failed.");
+        LOG.info("{} failed.", storageInfo);
         storageInfo.setState(DatanodeStorage.State.FAILED);
       }
     }
@@ -857,8 +859,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     synchronized (storageMap) {
       DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
       if (storage == null) {
-        LOG.info("Adding new storage ID " + s.getStorageID() +
-                 " for DN " + getXferAddr());
+        LOG.info("Adding new storage ID {} for DN {}", s.getStorageID(),
+            getXferAddr());
         storage = new DatanodeStorageInfo(this, s);
         storageMap.put(s.getStorageID(), storage);
       } else if (storage.getState() != s.getState() ||
