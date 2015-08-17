@@ -20,6 +20,7 @@
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=9" />
 <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+<link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
 <title>Namenode information</title>
 </head>
@@ -290,7 +291,7 @@
 </div>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
-<table class="table">
+<table class="table" id="table-datanodes">
   <thead>
     <tr>
       <th>Node</th>
@@ -303,7 +304,7 @@
   </thead>
   {#LiveNodes}
   <tr>
-    <td class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
     <td ng-value="{lastContact}">{#helper_relative_time value="{lastContact}"/}</td>
     <td ng-value="{usedPercentage}">
       <div>
@@ -315,18 +316,18 @@
       </div>
     </td>
     <td>{numBlocks}</td>
-    <td>{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
+    <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
     <td>{version}</td>
   </tr>
   {/LiveNodes}
   {#DeadNodes}
   <tr class="danger">
-    <td class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
-    <td>-</td>
-    <td>-</td>
-    <td>-</td>
-    <td>-</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
   </tr>
   {/DeadNodes}
 </table>
@@ -418,7 +419,10 @@ There are no reported volume failures.
 </script>
 
 <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+</script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
 </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+</script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
+</script><script type="text/javascript" src="/static/moment.min.js">
 </script><script type="text/javascript" src="/static/moment.min.js">
 </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
 </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">

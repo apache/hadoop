@@ -24,6 +24,13 @@
   dust.loadSource(dust.compile($('#tmpl-datanode-volume-failures').html(), 'datanode-volume-failures'));
   dust.loadSource(dust.compile($('#tmpl-snapshot').html(), 'snapshot-info'));
 
+  $.fn.dataTable.ext.order['ng-value'] = function (settings, col)
+  {
+    return this.api().column(col, {order:'index'} ).nodes().map(function (td, i) {
+      return $(td).attr('ng-value');
+    });
+  };
+
   function load_overview() {
     var BEANS = [
       {"name": "nn",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
@@ -235,6 +242,16 @@
         var base = dust.makeBase(HELPERS);
         dust.render('datanode-info', base.push(data), function(err, out) {
           $('#tab-datanode').html(out);
+          $('#table-datanodes').dataTable( {
+            'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'columns': [
+              { 'orderDataType': 'ng-value', 'searchable': true },
+              { 'orderDataType': 'ng-value', 'type': 'numeric' },
+              { 'orderDataType': 'ng-value', 'type': 'numeric' },
+              { 'orderData': 3, 'type': 'numeric' },
+              { 'orderDataType': 'ng-value', 'type': 'numeric'},
+              { 'orderData': 5 }
+            ]});
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });
       })).error(ajax_error_handler);
