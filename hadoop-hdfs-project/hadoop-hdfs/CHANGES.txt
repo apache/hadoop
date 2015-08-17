@@ -445,6 +445,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
 
+    HDFS-8883. NameNode Metrics : Add FSNameSystem lock Queue Length.
+    (Anu Engineer via xyao)
+
     HDFS-8713. Convert DatanodeDescriptor to use SLF4J logging. (wang)
 
   OPTIMIZATIONS
