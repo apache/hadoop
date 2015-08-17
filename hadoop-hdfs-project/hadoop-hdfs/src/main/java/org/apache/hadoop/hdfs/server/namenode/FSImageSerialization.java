@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -137,8 +136,9 @@ public class FSImageSerialization {
     // last block is UNDER_CONSTRUCTION
     if(numBlocks > 0) {
       blk.readFields(in);
-      blocks[i] = new BlockInfoContiguousUnderConstruction(
-        blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
+      blocks[i] = new BlockInfoContiguous(blk, blockReplication);
+      blocks[i].convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
+          null);
     }
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);
@@ -180,9 +180,9 @@ public class FSImageSerialization {
 
   /**
    * Serialize a {@link INodeFile} node
-   * @param node The node to write
+   * @param file The INodeFile to write
    * @param out The {@link DataOutputStream} where the fields are written
-   * @param writeBlock Whether to write block information
+   * @param writeUnderConstruction Whether to write under construction information
    */
   public static void writeINodeFile(INodeFile file, DataOutput out,
       boolean writeUnderConstruction) throws IOException {
