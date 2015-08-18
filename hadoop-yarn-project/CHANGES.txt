@@ -52,7 +52,10 @@ Release 2.7.2 - UNRELEASED
     YARN-4047. ClientRMService getApplications has high scheduler lock contention
     (Jason Lowe via jianhe)
 
-Release 2.7.1 - 2015-07-06 
+    YARN-3857: Memory leak in ResourceManager with SIMPLE mode.
+    (mujunchao via zxu)
+
+Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
 
