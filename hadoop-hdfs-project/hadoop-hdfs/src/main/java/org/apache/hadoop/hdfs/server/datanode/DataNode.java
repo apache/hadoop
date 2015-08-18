@@ -115,7 +115,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
@@ -346,7 +345,6 @@ public class DataNode extends ReconfigurableBase
   ReadaheadPool readaheadPool;
   SaslDataTransferClient saslClient;
   SaslDataTransferServer saslServer;
-  private final boolean getHdfsBlockLocationsEnabled;
   private ObjectName dataNodeInfoBeanName;
   private Thread checkDiskErrorThread = null;
   protected final int checkDiskErrorInterval = 5*1000;
@@ -374,7 +372,6 @@ public class DataNode extends ReconfigurableBase
     this.confVersion = null;
     this.usersWithLocalPathAccess = null;
     this.connectToDnViaHostname = false;
-    this.getHdfsBlockLocationsEnabled = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
   }
@@ -397,9 +394,6 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
-    this.getHdfsBlockLocationsEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
     this.supergroup = conf.get(DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
     this.isPermissionEnabled = conf.getBoolean(
@@ -1624,29 +1618,6 @@ public class DataNode extends ReconfigurableBase
     return fis;
   }
 
-  @Override
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(
-      String bpId, long[] blockIds,
-      List<Token<BlockTokenIdentifier>> tokens) throws IOException, 
-      UnsupportedOperationException {
-    if (!getHdfsBlockLocationsEnabled) {
-      throw new UnsupportedOperationException("Datanode#getHdfsBlocksMetadata "
-          + " is not enabled in datanode config");
-    }
-    if (blockIds.length != tokens.size()) {
-      throw new IOException("Differing number of blocks and tokens");
-    }
-    // Check access for each block
-    for (int i = 0; i < blockIds.length; i++) {
-      checkBlockToken(new ExtendedBlock(bpId, blockIds[i]),
-          tokens.get(i), BlockTokenIdentifier.AccessMode.READ);
-    }
-
-    DataNodeFaultInjector.get().getHdfsBlocksMetadata();
-
-    return data.getHdfsBlocksMetadata(bpId, blockIds);
-  }
-  
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
       AccessMode accessMode) throws IOException {
     if (isBlockTokenEnabled) {

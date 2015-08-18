@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -70,7 +69,6 @@ import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -91,7 +89,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -121,7 +118,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -923,87 +919,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
   
-  /**
-   * Get block location information about a list of {@link HdfsBlockLocation}.
-   * Used by {@link DistributedFileSystem#getFileBlockStorageLocations(List)} to
-   * get {@link BlockStorageLocation}s for blocks returned by
-   * {@link DistributedFileSystem#getFileBlockLocations(org.apache.hadoop.fs.FileStatus, long, long)}
-   * .
-   * 
-   * This is done by making a round of RPCs to the associated datanodes, asking
-   * the volume of each block replica. The returned array of
-   * {@link BlockStorageLocation} expose this information as a
-   * {@link VolumeId}.
-   * 
-   * @param blockLocations
-   *          target blocks on which to query volume location information
-   * @return volumeBlockLocations original block array augmented with additional
-   *         volume location information for each replica.
-   */
-  public BlockStorageLocation[] getBlockStorageLocations(
-      List<BlockLocation> blockLocations) throws IOException,
-      UnsupportedOperationException, InvalidBlockTokenException {
-    checkOpen();
-    if (!getConf().isHdfsBlocksMetadataEnabled()) {
-      throw new UnsupportedOperationException("Datanode-side support for " +
-          "getVolumeBlockLocations() must also be enabled in the client " +
-          "configuration.");
-    }
-    // Downcast blockLocations and fetch out required LocatedBlock(s)
-    List<LocatedBlock> blocks = new ArrayList<LocatedBlock>();
-    for (BlockLocation loc : blockLocations) {
-      if (!(loc instanceof HdfsBlockLocation)) {
-        throw new ClassCastException("DFSClient#getVolumeBlockLocations " +
-            "expected to be passed HdfsBlockLocations");
-      }
-      HdfsBlockLocation hdfsLoc = (HdfsBlockLocation) loc;
-      blocks.add(hdfsLoc.getLocatedBlock());
-    }
-    
-    // Re-group the LocatedBlocks to be grouped by datanodes, with the values
-    // a list of the LocatedBlocks on the datanode.
-    Map<DatanodeInfo, List<LocatedBlock>> datanodeBlocks = 
-        new LinkedHashMap<DatanodeInfo, List<LocatedBlock>>();
-    for (LocatedBlock b : blocks) {
-      for (DatanodeInfo info : b.getLocations()) {
-        if (!datanodeBlocks.containsKey(info)) {
-          datanodeBlocks.put(info, new ArrayList<LocatedBlock>());
-        }
-        List<LocatedBlock> l = datanodeBlocks.get(info);
-        l.add(b);
-      }
-    }
-        
-    // Make RPCs to the datanodes to get volume locations for its replicas
-    TraceScope scope =
-      Trace.startSpan("getBlockStorageLocations", traceSampler);
-    Map<DatanodeInfo, HdfsBlocksMetadata> metadatas;
-    try {
-      metadatas = BlockStorageLocationUtil.
-          queryDatanodesForHdfsBlocksMetadata(conf, datanodeBlocks,
-              getConf().getFileBlockStorageLocationsNumThreads(),
-              getConf().getFileBlockStorageLocationsTimeoutMs(),
-              getConf().isConnectToDnViaHostname());
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("metadata returned: "
-            + Joiner.on("\n").withKeyValueSeparator("=").join(metadatas));
-      }
-    } finally {
-      scope.close();
-    }
-    
-    // Regroup the returned VolumeId metadata to again be grouped by
-    // LocatedBlock rather than by datanode
-    Map<LocatedBlock, List<VolumeId>> blockVolumeIds = BlockStorageLocationUtil
-        .associateVolumeIdsWithBlocks(blocks, metadatas);
-    
-    // Combine original BlockLocations with new VolumeId information
-    BlockStorageLocation[] volumeBlockLocations = BlockStorageLocationUtil
-        .convertToVolumeBlockLocations(blocks, blockVolumeIds);
-
-    return volumeBlockLocations;
-  }
-
   /**
    * Decrypts a EDEK by consulting the KeyProvider.
    */

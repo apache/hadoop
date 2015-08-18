@@ -1698,30 +1698,6 @@
 </property>
 
 <property>
-  <name>dfs.datanode.hdfs-blocks-metadata.enabled</name>
-  <value>false</value>
-  <description>
-    Boolean which enables backend datanode-side support for the experimental DistributedFileSystem#getFileVBlockStorageLocations API.
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.file-block-storage-locations.num-threads</name>
-  <value>10</value>
-  <description>
-    Number of threads used for making parallel RPCs in DistributedFileSystem#getFileBlockStorageLocations().
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.file-block-storage-locations.timeout.millis</name>
-  <value>1000</value>
-  <description>
-    Timeout (in milliseconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
-  </description>
-</property>
-
-<property>
   <name>dfs.journalnode.rpc-address</name>
   <value>0.0.0.0:8485</value>
   <description>

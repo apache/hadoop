@@ -88,9 +88,6 @@ public class DfsClientConf {
   private final String taskId;
   private final FsPermission uMask;
   private final boolean connectToDnViaHostname;
-  private final boolean hdfsBlocksMetadataEnabled;
-  private final int fileBlockStorageLocationsNumThreads;
-  private final int fileBlockStorageLocationsTimeoutMs;
   private final int retryTimesForGetLastBlockLength;
   private final int retryIntervalForGetLastBlockLength;
   private final long datanodeRestartTimeout;
@@ -190,15 +187,6 @@ public class DfsClientConf {
     uMask = FsPermission.getUMask(conf);
     connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
         DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
-    hdfsBlocksMetadataEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
-    fileBlockStorageLocationsNumThreads = conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS,
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT);
-    fileBlockStorageLocationsTimeoutMs = conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS,
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT);
 
     datanodeRestartTimeout = conf.getLong(
         DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY,
@@ -426,27 +414,6 @@ public class DfsClientConf {
    */
   public boolean isConnectToDnViaHostname() {
     return connectToDnViaHostname;
-  }
-
-  /**
-   * @return the hdfsBlocksMetadataEnabled
-   */
-  public boolean isHdfsBlocksMetadataEnabled() {
-    return hdfsBlocksMetadataEnabled;
-  }
-
-  /**
-   * @return the fileBlockStorageLocationsNumThreads
-   */
-  public int getFileBlockStorageLocationsNumThreads() {
-    return fileBlockStorageLocationsNumThreads;
-  }
-
-  /**
-   * @return the getFileBlockStorageLocationsTimeoutMs
-   */
-  public int getFileBlockStorageLocationsTimeoutMs() {
-    return fileBlockStorageLocationsTimeoutMs;
   }
 
   /**

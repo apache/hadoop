@@ -138,8 +138,6 @@ public class HdfsConfiguration extends Configuration {
         DFSConfigKeys.DFS_NAMESERVICES),
       new DeprecationDelta("dfs.federation.nameservice.id",
         DFSConfigKeys.DFS_NAMESERVICE_ID),
-      new DeprecationDelta("dfs.client.file-block-storage-locations.timeout",
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS),
     });
   }
 

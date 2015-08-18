@@ -34,6 +34,8 @@ Trunk (Unreleased)
     HDFS-8591. Remove support for deprecated configuration key
     dfs.namenode.decommission.nodes.per.interval. (wang)
 
+    HDFS-8895. Remove deprecated BlockStorageLocation APIs. (wang)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)

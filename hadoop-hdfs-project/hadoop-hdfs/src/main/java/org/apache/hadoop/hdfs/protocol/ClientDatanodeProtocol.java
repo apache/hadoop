@@ -111,25 +111,6 @@ public interface ClientDatanodeProtocol {
       Token<BlockTokenIdentifier> token) throws IOException;
   
   /**
-   * Retrieves volume location information about a list of blocks on a datanode.
-   * This is in the form of an opaque {@link org.apache.hadoop.fs.VolumeId}
-   * for each configured data directory, which is not guaranteed to be
-   * the same across DN restarts.
-   * 
-   * @param blockPoolId the pool to query
-   * @param blockIds
-   *          list of blocks on the local datanode
-   * @param tokens
-   *          block access tokens corresponding to the requested blocks
-   * @return an HdfsBlocksMetadata that associates {@link ExtendedBlock}s with
-   *         data directories
-   * @throws IOException
-   *           if datanode is unreachable, or replica is not found on datanode
-   */
-  HdfsBlocksMetadata getHdfsBlocksMetadata(String blockPoolId,
-      long []blockIds, List<Token<BlockTokenIdentifier>> tokens) throws IOException; 
-
-  /**
    * Shuts down a datanode.
    *
    * @param forUpgrade If true, data node does extra prep work before shutting
