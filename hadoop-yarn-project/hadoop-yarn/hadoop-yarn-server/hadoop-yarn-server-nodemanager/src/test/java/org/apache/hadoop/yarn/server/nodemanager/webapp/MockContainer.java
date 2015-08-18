@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -143,5 +144,10 @@ public class MockContainer implements Container {
   @Override
   public NMContainerStatus getNMContainerStatus() {
     return null;
+  }
+
+  @Override
+  public Priority getPriority() {
+    return Priority.UNDEFINED;
   }
 }

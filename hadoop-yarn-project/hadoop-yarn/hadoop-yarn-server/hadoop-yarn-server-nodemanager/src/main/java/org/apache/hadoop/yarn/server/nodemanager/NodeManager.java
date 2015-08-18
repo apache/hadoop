@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
@@ -474,6 +475,8 @@ public class NodeManager extends CompositeService
     private final ConcurrentLinkedQueue<LogAggregationReport>
         logAggregationReportForApps;
 
+    private NMTimelinePublisher nmTimelinePublisher;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
@@ -615,6 +618,16 @@ public class NodeManager extends CompositeService
     public void addRegisteredCollectors(
         Map<ApplicationId, String> newRegisteredCollectors) {
       this.registeredCollectors.putAll(newRegisteredCollectors);
+    }
+
+    @Override
+    public void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher) {
+      this.nmTimelinePublisher = nmMetricsPublisher;
+    }
+
+    @Override
+    public NMTimelinePublisher getNMTimelinePublisher() {
+      return nmTimelinePublisher;
     }
   }
 
