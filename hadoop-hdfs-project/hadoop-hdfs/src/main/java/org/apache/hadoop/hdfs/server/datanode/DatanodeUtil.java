@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -27,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.io.AltFileInputStream;
 
 /** Provide utility methods for Datanode. */
 @InterfaceAudience.Private
@@ -121,18 +121,19 @@ public class DatanodeUtil {
   }
 
   /**
-   * @return the FileInputStream for the meta data of the given block.
+   * @return the AltFileInputStream for the meta data of the given block.
    * @throws FileNotFoundException
    *           if the file not found.
    * @throws ClassCastException
-   *           if the underlying input stream is not a FileInputStream.
+   *           if the underlying input stream is not a AltFileInputStream.
    */
-  public static FileInputStream getMetaDataInputStream(
-      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException {
+  public static AltFileInputStream getMetaDataInputStream(
+      ExtendedBlock b, FsDatasetSpi<?> data) throws IOException
+  {
     final LengthInputStream lin = data.getMetaDataInputStream(b);
     if (lin == null) {
       throw new FileNotFoundException("Meta file for " + b + " not found.");
     }
-    return (FileInputStream)lin.getWrappedStream();
+    return (AltFileInputStream)lin.getWrappedStream();
   }
 }

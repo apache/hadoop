@@ -57,11 +57,10 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -103,6 +102,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -227,7 +227,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           NativeIO.getShareDeleteFileInputStream(meta),
           meta.length());
     }
-    return new LengthInputStream(new FileInputStream(meta), meta.length());
+    return new LengthInputStream(new AltFileInputStream(meta), meta.length());
   }
     
   final DataNode datanode;
@@ -729,7 +729,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public InputStream getBlockInputStream(ExtendedBlock b,
+  public AltFileInputStream getBlockInputStream(ExtendedBlock b,
       long seekOffset) throws IOException {
     File blockFile = getBlockFileNoExistsCheck(b, true);
     if (isNativeIOAvailable) {
@@ -804,7 +804,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  private static FileInputStream openAndSeek(File file, long offset)
+  private static AltFileInputStream openAndSeek(File file, long offset)
       throws IOException {
     RandomAccessFile raf = null;
     try {
@@ -812,7 +812,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (offset > 0) {
         raf.seek(offset);
       }
-      return new FileInputStream(raf.getFD());
+      return new AltFileInputStream(raf.getFD(), raf.getChannel());
     } catch(IOException ioe) {
       IOUtils.cleanup(null, raf);
       throw ioe;
@@ -978,7 +978,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       int offset = 0;
       try (InputStream dataIn = isNativeIOAvailable ?
           NativeIO.getShareDeleteFileInputStream(blockFile) :
-          new FileInputStream(blockFile)) {
+          new AltFileInputStream(blockFile)) {
 
         for (int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
           if (n > 0) {

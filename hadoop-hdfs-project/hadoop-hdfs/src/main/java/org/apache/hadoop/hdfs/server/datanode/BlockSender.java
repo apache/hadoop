@@ -21,7 +21,6 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
@@ -388,8 +388,8 @@ class BlockSender implements java.io.Closeable {
         DataNode.LOG.debug("replica=" + replica);
       }
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
-      if (blockIn instanceof FileInputStream) {
-        blockInFd = ((FileInputStream)blockIn).getFD();
+      if (blockIn instanceof AltFileInputStream) {
+        blockInFd = ((AltFileInputStream)blockIn).getFD();
       } else {
         blockInFd = null;
       }
@@ -579,7 +579,7 @@ class BlockSender implements java.io.Closeable {
         sockOut.write(buf, headerOff, dataOff - headerOff);
         
         // no need to flush since we know out is not a buffered stream
-        FileChannel fileCh = ((FileInputStream)blockIn).getChannel();
+        FileChannel fileCh = ((AltFileInputStream)blockIn).getChannel();
         LongWritable waitTime = new LongWritable();
         LongWritable transferTime = new LongWritable();
         sockOut.transferToFully(fileCh, blockInPosition, dataLen, 
@@ -742,9 +742,9 @@ class BlockSender implements java.io.Closeable {
       int pktBufSize = PacketHeader.PKT_MAX_HEADER_LEN;
       boolean transferTo = transferToAllowed && !verifyChecksum
           && baseStream instanceof SocketOutputStream
-          && blockIn instanceof FileInputStream;
+          && blockIn instanceof AltFileInputStream;
       if (transferTo) {
-        FileChannel fileChannel = ((FileInputStream)blockIn).getChannel();
+        FileChannel fileChannel = ((AltFileInputStream)blockIn).getChannel();
         blockInPosition = fileChannel.position();
         streamForSendChunks = baseStream;
         maxChunksPerPacket = numberOfChunks(TRANSFERTO_BUFFER_SIZE);

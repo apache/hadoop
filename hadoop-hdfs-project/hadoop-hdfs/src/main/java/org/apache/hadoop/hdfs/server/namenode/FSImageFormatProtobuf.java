@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,6 +58,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
@@ -175,7 +175,7 @@ public final class FSImageFormatProtobuf {
       long start = Time.monotonicNow();
       imgDigest = MD5FileUtils.computeMd5ForFile(file);
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
-      FileInputStream fin = new FileInputStream(file);
+      AltFileInputStream fin = new AltFileInputStream(file);
       try {
         loadInternal(raFile, fin);
         long end = Time.monotonicNow();
@@ -186,7 +186,7 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-    private void loadInternal(RandomAccessFile raFile, FileInputStream fin)
+    private void loadInternal(RandomAccessFile raFile, AltFileInputStream fin)
         throws IOException {
       if (!FSImageUtil.checkFileFormat(raFile)) {
         throw new IOException("Unrecognized file format");

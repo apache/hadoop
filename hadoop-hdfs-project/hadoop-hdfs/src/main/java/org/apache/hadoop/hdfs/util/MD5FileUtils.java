@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -125,7 +126,7 @@ public abstract class MD5FileUtils {
    * Read dataFile and compute its MD5 checksum.
    */
   public static MD5Hash computeMd5ForFile(File dataFile) throws IOException {
-    InputStream in = new FileInputStream(dataFile);
+    InputStream in = new AltFileInputStream(dataFile);
     try {
       MessageDigest digester = MD5Hash.getDigester();
       DigestInputStream dis = new DigestInputStream(in, digester);

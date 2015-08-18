@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.RandomAccessFile;
-import java.io.Writer;
 import java.util.Iterator;
 import java.util.Scanner;
-
+import java.io.File;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.Writer;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
+import java.io.DataInputStream;
+import java.io.InputStream;
+import java.io.BufferedInputStream;
+import java.io.RandomAccessFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
@@ -633,7 +632,7 @@ class BlockPoolSlice {
         return 0;
       }
       checksumIn = new DataInputStream(
-          new BufferedInputStream(new FileInputStream(metaFile),
+          new BufferedInputStream(new AltFileInputStream(metaFile),
               ioFileBufferSize));
 
       // read and handle the common header here. For now just a version
@@ -648,7 +647,7 @@ class BlockPoolSlice {
         return 0;
       }
       IOUtils.skipFully(checksumIn, (numChunks-1)*checksumSize);
-      blockIn = new FileInputStream(blockFile);
+      blockIn = new AltFileInputStream(blockFile);
       long lastChunkStartPos = (numChunks-1)*bytesPerChecksum;
       IOUtils.skipFully(blockIn, lastChunkStartPos);
       int lastChunkSize = (int)Math.min(
@@ -719,9 +718,9 @@ class BlockPoolSlice {
       }
       return false;
     }
-    FileInputStream inputStream = null;
+    AltFileInputStream inputStream = null;
     try {
-      inputStream = new FileInputStream(replicaFile);
+      inputStream = new AltFileInputStream(replicaFile);
       BlockListAsLongs blocksList =  BlockListAsLongs.readFrom(inputStream);
       Iterator<BlockReportReplica> iterator = blocksList.iterator();
       while (iterator.hasNext()) {

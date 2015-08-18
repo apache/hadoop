@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.DataInputStream;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.EOFException;
 import java.io.RandomAccessFile;
+import java.io.ByteArrayInputStream;
+import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -35,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -88,7 +88,7 @@ public class BlockMetadataHeader {
     DataInputStream in = null;
     try {
       in = new DataInputStream(new BufferedInputStream(
-        new FileInputStream(metaFile), DFSUtil.getIoFileBufferSize(conf)));
+        new AltFileInputStream(metaFile), DFSUtil.getIoFileBufferSize(conf)));
       return readDataChecksum(in, metaFile);
     } finally {
       IOUtils.closeStream(in);
@@ -153,7 +153,7 @@ public class BlockMetadataHeader {
     DataInputStream in = null;
     try {
       in = new DataInputStream(new BufferedInputStream(
-                               new FileInputStream(file)));
+                               new AltFileInputStream(file)));
       return readHeader(in);
     } finally {
       IOUtils.closeStream(in);

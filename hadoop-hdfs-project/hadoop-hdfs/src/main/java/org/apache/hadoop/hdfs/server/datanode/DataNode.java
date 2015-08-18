@@ -46,17 +46,16 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.File;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.EOFException;
 import java.io.OutputStream;
+import java.io.BufferedOutputStream;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
@@ -100,11 +99,12 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.client.BlockReportOptions;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DomainPeerServer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
@@ -162,6 +162,7 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -205,6 +206,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
+import sun.tools.tree.CastExpression;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -1594,10 +1596,10 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  FileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
-      final Token<BlockTokenIdentifier> token, int maxVersion) 
-          throws ShortCircuitFdsUnsupportedException,
-            ShortCircuitFdsVersionException, IOException {
+  AltFileInputStream[] requestShortCircuitFdsForRead(final ExtendedBlock blk,
+                                                  final Token<BlockTokenIdentifier> token, int maxVersion)
+      throws ShortCircuitFdsUnsupportedException,
+      ShortCircuitFdsVersionException, IOException {
     if (fileDescriptorPassingDisabledReason != null) {
       throw new ShortCircuitFdsUnsupportedException(
           fileDescriptorPassingDisabledReason);
@@ -1606,15 +1608,15 @@ public class DataNode extends ReconfigurableBase
     int blkVersion = CURRENT_BLOCK_FORMAT_VERSION;
     if (maxVersion < blkVersion) {
       throw new ShortCircuitFdsVersionException("Your client is too old " +
-        "to read this block!  Its format version is " + 
-        blkVersion + ", but the highest format version you can read is " +
-        maxVersion);
+          "to read this block!  Its format version is " +
+          blkVersion + ", but the highest format version you can read is " +
+          maxVersion);
     }
     metrics.incrBlocksGetLocalPathInfo();
-    FileInputStream fis[] = new FileInputStream[2];
-    
+
+    AltFileInputStream fis[] = new AltFileInputStream[2];
     try {
-      fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+      fis[0] = (AltFileInputStream)data.getBlockInputStream(blk, 0);
       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);

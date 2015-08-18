@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.io.AltFileInputStream;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -239,7 +239,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
   private void unlinkFile(File file, Block b) throws IOException {
     File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
     try {
-      FileInputStream in = new FileInputStream(file);
+      AltFileInputStream in = new AltFileInputStream(file);
       try {
         FileOutputStream out = new FileOutputStream(tmpFile);
         try {
