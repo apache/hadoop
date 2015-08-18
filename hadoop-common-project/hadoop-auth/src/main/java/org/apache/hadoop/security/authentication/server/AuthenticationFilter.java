@@ -146,6 +146,13 @@ public class AuthenticationFilter implements Filter {
   public static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
 
   /**
+   * Constant for the configuration property
+   * that indicates the max inactive interval of the generated token.
+   */
+  public static final String
+      AUTH_TOKEN_MAX_INACTIVE_INTERVAL = "token.MaxInactiveInterval";
+
+  /**
    * Constant for the configuration property that indicates the validity of the generated token.
    */
   public static final String AUTH_TOKEN_VALIDITY = "token.validity";
@@ -190,6 +197,7 @@ public class AuthenticationFilter implements Filter {
   private Signer signer;
   private SignerSecretProvider secretProvider;
   private AuthenticationHandler authHandler;
+  private long maxInactiveInterval;
   private long validity;
   private String cookieDomain;
   private String cookiePath;
@@ -227,6 +235,8 @@ public class AuthenticationFilter implements Filter {
       authHandlerClassName = authHandlerName;
     }
 
+    maxInactiveInterval = Long.parseLong(config.getProperty(
+        AUTH_TOKEN_MAX_INACTIVE_INTERVAL, "1800")) * 1000; // 30 minutes;
     validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
         * 1000; //10 hours
     initializeSecretProvider(filterConfig);
@@ -352,6 +362,15 @@ public class AuthenticationFilter implements Filter {
     return clazz != FileSignerSecretProvider.class && clazz !=
         RandomSignerSecretProvider.class && clazz != ZKSignerSecretProvider
         .class;
+  }
+
+  /**
+   * Returns the max inactive interval time of the generated tokens.
+   *
+   * @return the max inactive interval time of the generated tokens in seconds.
+   */
+  protected long getMaxInactiveInterval() {
+    return maxInactiveInterval / 1000;
   }
 
   /**
@@ -510,8 +529,10 @@ public class AuthenticationFilter implements Filter {
    * @throws ServletException thrown if a processing error occurred.
    */
   @Override
-  public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
-      throws IOException, ServletException {
+  public void doFilter(ServletRequest request,
+                       ServletResponse response,
+                       FilterChain filterChain)
+                           throws IOException, ServletException {
     boolean unauthorizedResponse = true;
     int errCode = HttpServletResponse.SC_UNAUTHORIZED;
     AuthenticationException authenticationEx = null;
@@ -533,19 +554,27 @@ public class AuthenticationFilter implements Filter {
       if (authHandler.managementOperation(token, httpRequest, httpResponse)) {
         if (token == null) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
+            LOG.debug("Request [{}] triggering authentication",
+                getRequestURL(httpRequest));
           }
           token = authHandler.authenticate(httpRequest, httpResponse);
-          if (token != null && token.getExpires() != 0 &&
-              token != AuthenticationToken.ANONYMOUS) {
-            token.setExpires(System.currentTimeMillis() + getValidity() * 1000);
+          if (token != null && token != AuthenticationToken.ANONYMOUS) {
+            if (token.getMaxInactives() != 0) {
+              token.setMaxInactives(System.currentTimeMillis()
+                  + getMaxInactiveInterval() * 1000);
+            }
+            if (token.getExpires() != 0) {
+              token.setExpires(System.currentTimeMillis()
+                  + getValidity() * 1000);
+            }
           }
           newToken = true;
         }
         if (token != null) {
           unauthorizedResponse = false;
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
+            LOG.debug("Request [{}] user [{}] authenticated",
+                getRequestURL(httpRequest), token.getUserName());
           }
           final AuthenticationToken authToken = token;
           httpRequest = new HttpServletRequestWrapper(httpRequest) {
@@ -562,10 +591,22 @@ public class AuthenticationFilter implements Filter {
 
             @Override
             public Principal getUserPrincipal() {
-              return (authToken != AuthenticationToken.ANONYMOUS) ? authToken : null;
+              return (authToken != AuthenticationToken.ANONYMOUS) ?
+                  authToken : null;
             }
           };
-          if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
+
+          // If cookie persistence is configured to false,
+          // it means the cookie will be a session cookie.
+          // If the token is an old one, renew the its maxInactiveInterval.
+          if (!newToken && !isCookiePersistent()
+              && getMaxInactiveInterval() > 0) {
+            token.setMaxInactives(System.currentTimeMillis()
+                + getMaxInactiveInterval() * 1000);
+            newToken = true;
+          }
+          if (newToken && !token.isExpired()
+              && token != AuthenticationToken.ANONYMOUS) {
             String signedToken = signer.sign(token.toString());
             createAuthCookie(httpResponse, signedToken, getCookieDomain(),
                     getCookiePath(), token.getExpires(),
@@ -628,12 +669,10 @@ public class AuthenticationFilter implements Filter {
    * @param resp the response object.
    * @param token authentication token for the cookie.
    * @param domain the cookie domain.
-   * @param path the cokie path.
+   * @param path the cookie path.
    * @param expires UNIX timestamp that indicates the expire date of the
    *                cookie. It has no effect if its value &lt; 0.
    * @param isSecure is the cookie secure?
-   * @param token the token.
-   * @param expires the cookie expiration time.
    * @param isCookiePersistent whether the cookie is persistent or not.
    *
    * XXX the following code duplicate some logic in Jetty / Servlet API,
