@@ -404,6 +404,9 @@ Release 2.8.0 - UNRELEASED
    YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
    WebAppProxyServer (djp via rkanter)
 
+    YARN-4057. If ContainersMonitor is not enabled, only print
+    related log info one time. (Jun Gong via zxu)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
