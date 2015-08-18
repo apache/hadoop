@@ -127,6 +127,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.SignalContainersLauncherEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadService;
@@ -144,6 +145,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -190,6 +192,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   private long waitForContainersOnShutdownMillis;
 
+  private final NMTimelinePublisher nmMetricsPublisher;
+
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
@@ -216,6 +220,8 @@ public class ContainerManagerImpl extends CompositeService implements
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
+    nmMetricsPublisher = createNMTimelinePublisher(context);
+    context.setNMTimelinePublisher(nmMetricsPublisher);
     this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
 
@@ -223,12 +229,15 @@ public class ContainerManagerImpl extends CompositeService implements
         new ContainerEventDispatcher());
     dispatcher.register(ApplicationEventType.class,
         createApplicationEventDispatcher());
-    dispatcher.register(LocalizationEventType.class, rsrcLocalizationSrvc);
+    dispatcher.register(LocalizationEventType.class,
+        new LocalizationEventHandlerWrapper(rsrcLocalizationSrvc,
+            nmMetricsPublisher));
     dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
     
     addService(dispatcher);
+
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -428,6 +437,13 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected SharedCacheUploadService createSharedCacheUploaderService() {
     return new SharedCacheUploadService();
+  }
+
+  @VisibleForTesting
+  protected NMTimelinePublisher createNMTimelinePublisher(Context context) {
+    NMTimelinePublisher nmTimelinePublisherLocal = new NMTimelinePublisher(context);
+    addIfService(nmTimelinePublisherLocal);
+    return nmTimelinePublisherLocal;
   }
 
   protected ContainersLauncher createContainersLauncher(Context context,
@@ -982,9 +998,9 @@ public class ContainerManagerImpl extends CompositeService implements
               logAggregationContext));
         }
 
-        this.context.getNMStateStore().storeContainer(containerId, request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
+        this.context.getNMStateStore().storeContainer(containerId, request);
 
         this.context.getContainerTokenSecretManager().startContainerSuccessful(
           containerTokenIdentifier);
@@ -1317,6 +1333,7 @@ public class ContainerManagerImpl extends CompositeService implements
       Container c = containers.get(event.getContainerID());
       if (c != null) {
         c.handle(event);
+        nmMetricsPublisher.publishContainerEvent(event);
       } else {
         LOG.warn("Event " + event + " sent to absent container " +
             event.getContainerID());
@@ -1325,7 +1342,6 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   class ApplicationEventDispatcher implements EventHandler<ApplicationEvent> {
-
     @Override
     public void handle(ApplicationEvent event) {
       Application app =
@@ -1333,10 +1349,30 @@ public class ContainerManagerImpl extends CompositeService implements
               event.getApplicationID());
       if (app != null) {
         app.handle(event);
+        nmMetricsPublisher.publishApplicationEvent(event);
       } else {
         LOG.warn("Event " + event + " sent to absent application "
             + event.getApplicationID());
       }
+    }
+  }
+
+  private static final class LocalizationEventHandlerWrapper implements
+      EventHandler<LocalizationEvent> {
+
+    private EventHandler<LocalizationEvent> origLocalizationEventHandler;
+    private NMTimelinePublisher timelinePublisher;
+
+    LocalizationEventHandlerWrapper(EventHandler<LocalizationEvent> handler,
+        NMTimelinePublisher publisher) {
+      this.origLocalizationEventHandler = handler;
+      this.timelinePublisher = publisher;
+    }
+
+    @Override
+    public void handle(LocalizationEvent event) {
+      origLocalizationEventHandler.handle(event);
+      timelinePublisher.publishLocalizationEvent(event);
     }
   }
 

@@ -101,10 +101,12 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
@@ -721,6 +723,12 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
           public void setBlockNewContainerRequests(
               boolean blockNewContainerRequests) {
             // do nothing
+          }
+
+          @Override
+          public NMTimelinePublisher createNMTimelinePublisher(Context context) {
+            NMTimelinePublisher timelinePublisher = mock(NMTimelinePublisher.class);
+            return timelinePublisher;
           }
     };
   }
