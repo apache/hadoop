@@ -820,6 +820,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
     Colin P. McCabe)
 
+    HDFS-8862. BlockManager#excessReplicateMap should use a HashMap. (yliu)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
