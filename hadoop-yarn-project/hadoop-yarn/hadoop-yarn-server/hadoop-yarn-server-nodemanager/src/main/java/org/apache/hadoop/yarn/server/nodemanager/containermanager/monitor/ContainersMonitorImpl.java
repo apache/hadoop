@@ -73,6 +73,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private boolean pmemCheckEnabled;
   private boolean vmemCheckEnabled;
+  private boolean containersMonitorEnabled;
 
   private long maxVCoresAllottedForContainers;
 
@@ -153,6 +154,9 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
 
+    containersMonitorEnabled = isEnabled();
+    LOG.info("ContainersMonitor enabled: " + containersMonitorEnabled);
+
     nodeCpuPercentageForYARN =
         NodeManagerHardwareUtils.getNodeCpuPercentage(conf);
 
@@ -205,7 +209,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   @Override
   protected void serviceStart() throws Exception {
-    if (this.isEnabled()) {
+    if (containersMonitorEnabled) {
       this.monitoringThread.start();
     }
     super.serviceStart();
@@ -213,7 +217,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    if (this.isEnabled()) {
+    if (containersMonitorEnabled) {
       this.monitoringThread.interrupt();
       try {
         this.monitoringThread.join();
@@ -648,7 +652,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   @Override
   public void handle(ContainersMonitorEvent monitoringEvent) {
 
-    if (!isEnabled()) {
+    if (!containersMonitorEnabled) {
       return;
     }
 
