@@ -14,6 +14,8 @@ Release 2.6.4 - UNRELEASED
 
     YARN-2975. FSLeafQueue app lists are accessed without required locks. (kasha)
 
+    YARN-3857. Memory leak in ResourceManager with SIMPLE mode. (mujunchao via zxu)
+
 Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
