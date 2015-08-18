@@ -98,6 +98,15 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerType()).thenReturn(
         ContainerType.APPLICATION_MASTER);
     auxService.stopContainer(context);
+
+    // TODO Temporary Fix until solution for YARN-3995 is finalized
+    for (int i = 0; i < 4; i++) {
+      Thread.sleep(500l);
+      if (!auxService.hasApplication(appAttemptId.getApplicationId())) {
+        break;
+      }
+    }
+
     // auxService should not have that app
     assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()));
     auxService.close();
