@@ -192,6 +192,7 @@ public class Balancer {
   private final boolean runDuringUpgrade;
   private final double threshold;
   private final long maxSizeToMove;
+  private final long defaultBlockSize;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -270,6 +271,9 @@ public class Balancer {
     this.maxSizeToMove = getLong(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_DEFAULT);
+    this.defaultBlockSize = getLong(conf,
+        DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -282,11 +286,13 @@ public class Balancer {
     return capacity;
   }
 
-  private static long getRemaining(DatanodeStorageReport report, StorageType t) {
+  private long getRemaining(DatanodeStorageReport report, StorageType t) {
     long remaining = 0L;
     for(StorageReport r : report.getStorageReports()) {
       if (r.getStorage().getStorageType() == t) {
-        remaining += r.getRemaining();
+        if (r.getRemaining() >= defaultBlockSize) {
+          remaining += r.getRemaining();
+        }
       }
     }
     return remaining;
@@ -323,7 +329,7 @@ public class Balancer {
         final double utilizationDiff = utilization - policy.getAvgUtilization(t);
         final double thresholdDiff = Math.abs(utilizationDiff) - threshold;
         final long maxSize2Move = computeMaxSize2Move(capacity,
-            getRemaining(r, t), utilizationDiff, threshold, maxSizeToMove);
+            getRemaining(r, t), utilizationDiff, maxSizeToMove);
 
         final StorageGroup g;
         if (utilizationDiff > 0) {
@@ -360,8 +366,8 @@ public class Balancer {
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
-      final double utilizationDiff, final double threshold, final long max) {
-    final double diff = Math.min(threshold, Math.abs(utilizationDiff));
+      final double utilizationDiff, final long max) {
+    final double diff = Math.abs(utilizationDiff);
     long maxSizeToMove = percentage2bytes(diff, capacity);
     if (utilizationDiff < 0) {
       maxSizeToMove = Math.min(remaining, maxSizeToMove);
