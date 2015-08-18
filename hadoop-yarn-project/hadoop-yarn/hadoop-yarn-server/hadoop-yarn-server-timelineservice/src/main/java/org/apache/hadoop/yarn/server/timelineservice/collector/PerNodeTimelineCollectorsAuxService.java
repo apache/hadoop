@@ -137,9 +137,19 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
     // intercept the event of the AM container being stopped and remove the app
     // level collector service
     if (context.getContainerType() == ContainerType.APPLICATION_MASTER) {
-      ApplicationId appId = context.getContainerId().
-          getApplicationAttemptId().getApplicationId();
-      removeApplication(appId);
+      final ApplicationId appId =
+          context.getContainerId().getApplicationAttemptId().getApplicationId();
+      new Thread(new Runnable() {
+        public void run() {
+          try {
+            // TODO Temporary Fix until solution for YARN-3995 is finalized.
+            Thread.sleep(1000l);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          removeApplication(appId);
+        }
+      }).start();
     }
   }
 

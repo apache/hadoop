@@ -110,6 +110,16 @@
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
+  <!-- Object cast is based on the event type -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.AbstractTimelineServicePublisher" />
+     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher$ApplicationEventHandler" />
+     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 
   <!-- Ignore intentional switch fallthroughs -->
   <Match>
@@ -504,11 +514,5 @@
       <Field name="timestampSeconds" />
     </Or>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
-  </Match>
-
-  <!-- Object cast is based on the event type -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.AbstractTimelineServicePublisher" />
-     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 </FindBugsFilter>

@@ -220,7 +220,8 @@ public class TestNMWebServer {
       Container container =
           new ContainerImpl(conf, dispatcher, stateStore, launchContext,
             null, metrics,
-            BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+            BuilderUtils.newContainerTokenIdentifier(containerToken),
+            mock(Context.class)) {
 
             @Override
             public ContainerState getContainerState() {

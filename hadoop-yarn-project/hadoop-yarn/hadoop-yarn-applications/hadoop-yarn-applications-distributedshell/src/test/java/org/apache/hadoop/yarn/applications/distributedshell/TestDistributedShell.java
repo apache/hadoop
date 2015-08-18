@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
@@ -203,7 +204,7 @@ public class TestDistributedShell {
     testDSShell(false, "v2", false);
   }
 
-  public void testDSShell(boolean haveDomain, String timelineVersion,
+  private void testDSShell(boolean haveDomain, String timelineVersion,
       boolean defaultFlow)
       throws Exception {
     String[] args = {
@@ -404,9 +405,32 @@ public class TestDistributedShell {
           "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
               + "_01_000001"
               + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-      verifyEntityTypeFileExists(basePath,
+      File containerEntityFile = verifyEntityTypeFileExists(basePath,
           TimelineEntityType.YARN_CONTAINER.toString(),
           containerMetricsTimestampFileName);
+      Assert.assertEquals(
+          "Container created event needs to be published atleast once",
+          1,
+          getNumOfStringOccurences(containerEntityFile,
+              ContainerMetricsConstants.CREATED_EVENT_TYPE));
+
+      // to avoid race condition of testcase, atleast check 4 times with sleep
+      // of 500ms
+      long numOfContainerFinishedOccurences = 0;
+      for (int i = 0; i < 4; i++) {
+        numOfContainerFinishedOccurences =
+            getNumOfStringOccurences(containerEntityFile,
+                ContainerMetricsConstants.FINISHED_EVENT_TYPE);
+        if (numOfContainerFinishedOccurences > 0) {
+          break;
+        } else {
+          Thread.sleep(500l);
+        }
+      }
+      Assert.assertEquals(
+          "Container finished event needs to be published atleast once",
+          1,
+          numOfContainerFinishedOccurences);
 
       // Verify RM posting Application life cycle Events are getting published
       String appMetricsTimestampFileName =

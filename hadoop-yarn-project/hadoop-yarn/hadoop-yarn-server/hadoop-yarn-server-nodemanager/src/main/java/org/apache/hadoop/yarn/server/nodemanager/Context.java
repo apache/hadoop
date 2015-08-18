@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
@@ -93,4 +94,8 @@ public interface Context {
 
   ConcurrentLinkedQueue<LogAggregationReport>
       getLogAggregationStatusForApps();
+
+  void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher);
+
+  NMTimelinePublisher getNMTimelinePublisher();
 }

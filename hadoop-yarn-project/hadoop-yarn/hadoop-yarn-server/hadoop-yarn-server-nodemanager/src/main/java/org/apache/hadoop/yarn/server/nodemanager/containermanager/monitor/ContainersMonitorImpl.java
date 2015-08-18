@@ -18,16 +18,12 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,24 +33,19 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ContainersMonitorImpl extends AbstractService implements
     ContainersMonitor {
@@ -85,17 +76,11 @@ public class ContainersMonitorImpl extends AbstractService implements
   private boolean pmemCheckEnabled;
   private boolean vmemCheckEnabled;
   private boolean containersMonitorEnabled;
-  
-  private boolean publishContainerMetricsToTimelineService;
 
   private long maxVCoresAllottedForContainers;
 
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
   private int nodeCpuPercentageForYARN;
-  
-  // For posting entities in new timeline service in a non-blocking way
-  // TODO replace with event loop in TimelineClient.
-  private static ExecutorService threadPool;
 
   @Private
   public static enum ContainerMetric {
@@ -206,22 +191,6 @@ public class ContainersMonitorImpl extends AbstractService implements
                 1) + "). Thrashing might happen.");
       }
     }
-    
-    publishContainerMetricsToTimelineService =
-        YarnConfiguration.systemMetricsPublisherEnabled(conf);
-
-    if (publishContainerMetricsToTimelineService) {
-      LOG.info("NodeManager has been configured to publish container " +
-          "metrics to Timeline Service V2.");
-      threadPool =
-          Executors.newCachedThreadPool(
-              new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
-              .build());
-    } else {
-      LOG.warn("NodeManager has not been configured to publish container " +
-          "metrics to Timeline Service V2.");
-    }
-    
     super.serviceInit(conf);
   }
 
@@ -264,30 +233,9 @@ public class ContainersMonitorImpl extends AbstractService implements
       }
     }
     
-    shutdownAndAwaitTermination();
-    
     super.serviceStop();
   }
   
-  // TODO remove threadPool after adding non-blocking call in TimelineClient
-  private static void shutdownAndAwaitTermination() {
-    if (threadPool == null) {
-      return;
-    }
-    threadPool.shutdown();
-    try {
-      if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
-        threadPool.shutdownNow(); 
-        if (!threadPool.awaitTermination(60, TimeUnit.SECONDS))
-            LOG.error("ThreadPool did not terminate");
-      }
-    } catch (InterruptedException ie) {
-      threadPool.shutdownNow();
-      // Preserve interrupt status
-      Thread.currentThread().interrupt();
-    }
-  }
-
   private static class ProcessTreeInfo {
     private ContainerId containerId;
     private String pid;
@@ -475,9 +423,6 @@ public class ContainersMonitorImpl extends AbstractService implements
           ContainerId containerId = entry.getKey();
           ProcessTreeInfo ptInfo = entry.getValue();
           
-          ContainerEntity entity = new ContainerEntity();
-          entity.setId(containerId.toString());
-          
           try {
             String pId = ptInfo.getPID();
 
@@ -563,26 +508,6 @@ public class ContainersMonitorImpl extends AbstractService implements
                   containerId, containerMetricsPeriodMs).recordCpuUsage
                   ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
-
-            if (publishContainerMetricsToTimelineService) {
-              // if currentPmemUsage data is available
-              if (currentPmemUsage != 
-                  ResourceCalculatorProcessTree.UNAVAILABLE) {
-                TimelineMetric memoryMetric = new TimelineMetric();
-                memoryMetric.setId(ContainerMetric.MEMORY.toString() + pId);
-                memoryMetric.addValue(currentTime, currentPmemUsage);
-                entity.addMetric(memoryMetric);
-              }
-              // if cpuUsageTotalCoresPercentage data is available
-              if (cpuUsageTotalCoresPercentage != 
-                ResourceCalculatorProcessTree.UNAVAILABLE) {
-                TimelineMetric cpuMetric = new TimelineMetric();
-                cpuMetric.setId(ContainerMetric.CPU.toString() + pId);
-                cpuMetric.addValue(currentTime,
-                    cpuUsageTotalCoresPercentage);
-                entity.addMetric(cpuMetric);
-              }
-            }
             
             boolean isMemoryOverLimit = false;
             String msg = "";
@@ -639,22 +564,15 @@ public class ContainersMonitorImpl extends AbstractService implements
               LOG.info("Removed ProcessTree with root " + pId);
             }
 
+            ContainerImpl container =
+                (ContainerImpl) context.getContainers().get(containerId);
+            container.getNMTimelinePublisher().reportContainerResourceUsage(
+                container, currentTime, pId, currentPmemUsage,
+                cpuUsageTotalCoresPercentage);
           } catch (Exception e) {
             // Log the exception and proceed to the next container.
             LOG.warn("Uncaught exception in ContainersMonitorImpl "
                 + "while monitoring resource of " + containerId, e);
-          }
-          
-          if (publishContainerMetricsToTimelineService) {
-            try {
-              TimelineClient timelineClient = context.getApplications().get(
-                  containerId.getApplicationAttemptId().getApplicationId()).
-                      getTimelineClient();
-              putEntityWithoutBlocking(timelineClient, entity);
-            } catch (Exception e) {
-              LOG.error("Exception in ContainersMonitorImpl in putting " +
-                  "resource usage metrics to timeline service.", e);
-            }
           }
         }
         if (LOG.isDebugEnabled()) {
@@ -677,20 +595,6 @@ public class ContainersMonitorImpl extends AbstractService implements
           break;
         }
       }
-    }
-    
-    private void putEntityWithoutBlocking(final TimelineClient timelineClient, 
-        final TimelineEntity entity) {
-      Runnable publishWrapper = new Runnable() {
-        public void run() {
-          try {
-            timelineClient.putEntities(entity);
-          } catch (IOException|YarnException e) {
-            LOG.error("putEntityNonBlocking get failed: " + e);
-          }
-        }
-      };
-      threadPool.execute(publishWrapper);
     }
 
     private String formatErrorMessage(String memTypeExceeded,
