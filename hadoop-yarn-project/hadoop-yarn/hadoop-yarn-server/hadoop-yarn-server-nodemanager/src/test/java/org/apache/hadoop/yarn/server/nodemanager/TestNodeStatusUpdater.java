@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerContext;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -251,8 +252,10 @@ public class TestNodeStatusUpdater {
                 firstContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container = new ContainerImpl(conf, mockDispatcher,
-            stateStore, launchContext, null, mockMetrics, containerToken);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, stateStore, launchContext,
+                null, mockMetrics, containerToken,
+                mock(Context.class));
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -290,8 +293,10 @@ public class TestNodeStatusUpdater {
                 secondContainerID, InetAddress.getByName("localhost")
                     .getCanonicalHostName(), 1234, user, resource,
                 currentTime + 10000, 123, "password".getBytes(), currentTime));
-        Container container = new ContainerImpl(conf, mockDispatcher,
-            stateStore, launchContext, null, mockMetrics, containerToken);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, stateStore, launchContext,
+                null, mockMetrics, containerToken,
+                mock(Context.class));
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -978,7 +983,8 @@ public class TestNodeStatusUpdater {
             "password".getBytes(), 0);
     Container anyCompletedContainer = new ContainerImpl(conf, null,
         null, null, null, null,
-        BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+        BuilderUtils.newContainerTokenIdentifier(containerToken),
+        mock(Context.class)) {
 
       @Override
       public ContainerState getCurrentState() {
@@ -999,7 +1005,7 @@ public class TestNodeStatusUpdater {
           "password".getBytes(), 0);
     Container runningContainer =
         new ContainerImpl(conf, null, null, null, null, null,
-          BuilderUtils.newContainerTokenIdentifier(runningContainerToken)) {
+          BuilderUtils.newContainerTokenIdentifier(runningContainerToken), mock(Context.class)) {
           @Override
           public ContainerState getCurrentState() {
             return ContainerState.RUNNING;
@@ -1055,9 +1061,10 @@ public class TestNodeStatusUpdater {
         BuilderUtils.newContainerToken(containerId, "host", 1234, "user",
             BuilderUtils.newResource(1024, 1), 0, 123,
             "password".getBytes(), 0);
+
     Container completedContainer = new ContainerImpl(conf, null,
         null, null, null, null,
-        BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+        BuilderUtils.newContainerTokenIdentifier(containerToken),mock(Context.class)) {
       @Override
       public ContainerState getCurrentState() {
         return ContainerState.COMPLETE;
@@ -1094,7 +1101,8 @@ public class TestNodeStatusUpdater {
             "password".getBytes(), 0);
     Container anyCompletedContainer = new ContainerImpl(conf, null,
         null, null, null, null,
-        BuilderUtils.newContainerTokenIdentifier(containerToken)) {
+        BuilderUtils.newContainerTokenIdentifier(containerToken),
+        mock(Context.class)) {
 
       @Override
       public ContainerState getCurrentState() {
