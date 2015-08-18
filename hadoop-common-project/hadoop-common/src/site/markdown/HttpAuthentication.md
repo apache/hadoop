@@ -41,13 +41,17 @@ The following properties should be in the `core-site.xml` of all the nodes in th
 
 `hadoop.http.filter.initializers`: add to this property the `org.apache.hadoop.security.AuthenticationFilterInitializer` initializer class.
 
-`hadoop.http.authentication.type`: Defines authentication used for the HTTP web-consoles. The supported values are: `simple` | `kerberos` | `#AUTHENTICATION_HANDLER_CLASSNAME#`. The dfeault value is `simple`.
+`hadoop.http.authentication.type`: Defines authentication used for the HTTP web-consoles. The supported values are: `simple` | `kerberos` | `#AUTHENTICATION_HANDLER_CLASSNAME#`. The default value is `simple`.
 
 `hadoop.http.authentication.token.validity`: Indicates how long (in seconds) an authentication token is valid before it has to be renewed. The default value is `36000`.
 
+`hadoop.http.authentication.token.MaxInactiveInterval`: Specifies the time, in seconds, between client requests the server will invalidate the token. The default value is `1800` (30 minutes).
+
 `hadoop.http.authentication.signature.secret.file`: The signature secret file for signing the authentication tokens. The same secret should be used for all nodes in the cluster, JobTracker, NameNode, DataNode and TastTracker. The default value is `$user.home/hadoop-http-auth-signature-secret`. IMPORTANT: This file should be readable only by the Unix user running the daemons.
 
-`hadoop.http.authentication.cookie.domain`: The domain to use for the HTTP cookie that stores the authentication token. In order to authentiation to work correctly across all nodes in the cluster the domain must be correctly set. There is no default value, the HTTP cookie will not have a domain working only with the hostname issuing the HTTP cookie.
+`hadoop.http.authentication.cookie.domain`: The domain to use for the HTTP cookie that stores the authentication token. In order to authentication to work correctly across all nodes in the cluster the domain must be correctly set. There is no default value, the HTTP cookie will not have a domain working only with the hostname issuing the HTTP cookie.
+
+`hadoop.http.authentication.cookie.persistent`: Specifies the persistence of the HTTP cookie. If the value is true, the cookie is a persistent one. Otherwise, it is a session cookie. The default value is `false`(session cookie).
 
 IMPORTANT: when using IP addresses, browsers ignore cookies with domain settings. For this setting to work properly all nodes in the cluster must be configured to generate URLs with `hostname.domain` names on it.
 
