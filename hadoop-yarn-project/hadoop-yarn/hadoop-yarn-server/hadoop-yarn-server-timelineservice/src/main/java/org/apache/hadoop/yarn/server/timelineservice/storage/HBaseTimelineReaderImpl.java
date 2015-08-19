@@ -19,12 +19,9 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -431,44 +428,51 @@ public class HBaseTimelineReaderImpl
     Map<String, Object> columns = prefix.readResults(result);
     if (isConfig) {
       for (Map.Entry<String, Object> column : columns.entrySet()) {
-        entity.addConfig(column.getKey(), column.getKey().toString());
+        entity.addConfig(column.getKey(), column.getValue().toString());
       }
     } else {
       entity.addInfo(columns);
     }
   }
 
+  /**
+   * Read events from the entity table or the application table. The column name
+   * is of the form "eventId=timestamp=infoKey" where "infoKey" may be omitted
+   * if there is no info associated with the event.
+   *
+   * See {@link EntityTable} and {@link ApplicationTable} for a more detailed
+   * schema description.
+   */
   private static void readEvents(TimelineEntity entity, Result result,
       boolean isApplication) throws IOException {
     Map<String, TimelineEvent> eventsMap = new HashMap<>();
-    Map<String, Object> eventsResult = isApplication ?
-        ApplicationColumnPrefix.EVENT.readResults(result) :
-        EntityColumnPrefix.EVENT.readResults(result);
-    for (Map.Entry<String,Object> eventResult : eventsResult.entrySet()) {
-      Collection<String> tokens =
-          Separator.VALUES.splitEncoded(eventResult.getKey());
-      if (tokens.size() != 2 && tokens.size() != 3) {
-        throw new IOException(
-            "Invalid event column name: " + eventResult.getKey());
-      }
-      Iterator<String> idItr = tokens.iterator();
-      String id = idItr.next();
-      String tsStr = idItr.next();
-      // TODO: timestamp is not correct via ser/des through UTF-8 string
-      Long ts =
-          TimelineWriterUtils.invert(Bytes.toLong(tsStr.getBytes(
-              StandardCharsets.UTF_8)));
-      String key = Separator.VALUES.joinEncoded(id, ts.toString());
-      TimelineEvent event = eventsMap.get(key);
-      if (event == null) {
-        event = new TimelineEvent();
-        event.setId(id);
-        event.setTimestamp(ts);
-        eventsMap.put(key, event);
-      }
-      if (tokens.size() == 3) {
-        String infoKey = idItr.next();
-        event.addInfo(infoKey, eventResult.getValue());
+    Map<?, Object> eventsResult = isApplication ?
+        ApplicationColumnPrefix.EVENT.
+            readResultsHavingCompoundColumnQualifiers(result) :
+        EntityColumnPrefix.EVENT.
+            readResultsHavingCompoundColumnQualifiers(result);
+    for (Map.Entry<?, Object> eventResult : eventsResult.entrySet()) {
+      byte[][] karr = (byte[][])eventResult.getKey();
+      // the column name is of the form "eventId=timestamp=infoKey"
+      if (karr.length == 3) {
+        String id = Bytes.toString(karr[0]);
+        long ts = TimelineWriterUtils.invert(Bytes.toLong(karr[1]));
+        String key = Separator.VALUES.joinEncoded(id, Long.toString(ts));
+        TimelineEvent event = eventsMap.get(key);
+        if (event == null) {
+          event = new TimelineEvent();
+          event.setId(id);
+          event.setTimestamp(ts);
+          eventsMap.put(key, event);
+        }
+        // handle empty info
+        String infoKey = karr[2].length == 0 ? null : Bytes.toString(karr[2]);
+        if (infoKey != null) {
+          event.addInfo(infoKey, eventResult.getValue());
+        }
+      } else {
+        LOG.warn("incorrectly formatted column name: it will be discarded");
+        continue;
       }
     }
     Set<TimelineEvent> eventsSet = new HashSet<>(eventsMap.values());
