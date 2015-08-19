@@ -811,6 +811,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8826. In Balancer, add an option to specify the source node list
     so that balancer only selects blocks to move from those nodes.  (szetszwo)
 
+    HDFS-8911. NameNode Metric : Add Editlog counters as a JMX metric.
+    (Anu Engineer via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

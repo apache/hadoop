@@ -237,6 +237,8 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `HAState` | (HA-only) Current state of the NameNode: initializing or active or standby or stopping state |
 | `FSState` | Current state of the file system: Safemode or Operational |
 | `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
+| `TotalSyncCount` | Total number of sync operations performed by edit log |
+| `TotalSyncTimes` | Total number of milliseconds spent by various edit logs in sync operation|
 
 JournalNode
 -----------
