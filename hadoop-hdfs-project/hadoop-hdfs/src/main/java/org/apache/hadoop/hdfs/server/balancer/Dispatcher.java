@@ -28,7 +28,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -70,7 +69,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
@@ -796,7 +794,11 @@ public class Dispatcher {
         if (shouldFetchMoreBlocks()) {
           // fetch new blocks
           try {
-            blocksToReceive -= getBlockList();
+            final long received = getBlockList();
+            if (received == 0) {
+              return;
+            }
+            blocksToReceive -= received;
             continue;
           } catch (IOException e) {
             LOG.warn("Exception while getting block list", e);
@@ -925,8 +927,11 @@ public class Dispatcher {
 
     if (decommissioned || decommissioning || excluded || notIncluded) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Excluding datanode " + dn + ": " + decommissioned + ", "
-            + decommissioning + ", " + excluded + ", " + notIncluded);
+        LOG.trace("Excluding datanode " + dn
+            + ": decommissioned=" + decommissioned
+            + ", decommissioning=" + decommissioning
+            + ", excluded=" + excluded
+            + ", notIncluded=" + notIncluded);
       }
       return true;
     }
@@ -1212,32 +1217,6 @@ public class Dispatcher {
         return false;
       }
       return (nodes.contains(host) || nodes.contains(host + ":" + port));
-    }
-
-    /**
-     * Parse a comma separated string to obtain set of host names
-     * 
-     * @return set of host names
-     */
-    static Set<String> parseHostList(String string) {
-      String[] addrs = StringUtils.getTrimmedStrings(string);
-      return new HashSet<String>(Arrays.asList(addrs));
-    }
-
-    /**
-     * Read set of host names from a file
-     * 
-     * @return set of host names
-     */
-    static Set<String> getHostListFromFile(String fileName, String type) {
-      Set<String> nodes = new HashSet<String>();
-      try {
-        HostsFileReader.readFileToSet(type, fileName, nodes);
-        return StringUtils.getTrimmedStrings(nodes);
-      } catch (IOException e) {
-        throw new IllegalArgumentException(
-            "Failed to read host list from file: " + fileName);
-      }
     }
   }
 }
