@@ -300,25 +300,27 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
               byte[] compoundColumnQualifierBytes =
                   Separator.VALUES.join(columnQualifierWithTsBytes,
                       null);
-              String compoundColumnQualifier =
-                  Bytes.toString(compoundColumnQualifierBytes);
-              EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                  compoundColumnQualifier, null, TimelineWriterUtils.EMPTY_BYTES);
+              if (isApplication) {
+                ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
+                    compoundColumnQualifierBytes, null,
+                      TimelineWriterUtils.EMPTY_BYTES);
+              } else {
+                EntityColumnPrefix.EVENT.store(rowKey, entityTable,
+                    compoundColumnQualifierBytes, null,
+                    TimelineWriterUtils.EMPTY_BYTES);
+              }
             } else {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
                 // eventId?infoKey
                 byte[] compoundColumnQualifierBytes =
                     Separator.VALUES.join(columnQualifierWithTsBytes,
                         Bytes.toBytes(info.getKey()));
-                // convert back to string to avoid additional API on store.
-                String compoundColumnQualifier =
-                    Bytes.toString(compoundColumnQualifierBytes);
                 if (isApplication) {
                   ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
-                    compoundColumnQualifier, null, info.getValue());
+                    compoundColumnQualifierBytes, null, info.getValue());
                 } else {
                   EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                    compoundColumnQualifier, null, info.getValue());
+                    compoundColumnQualifierBytes, null, info.getValue());
                 }
               } // for info: eventInfo
             }

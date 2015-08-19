@@ -131,6 +131,31 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
+   * #store(byte[],
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.
+   * TypedBufferedMutator, java.lang.String, java.lang.Long, java.lang.Object)
+   */
+  public void store(byte[] rowKey,
+      TypedBufferedMutator<EntityTable> tableMutator, byte[] qualifier,
+      Long timestamp, Object inputValue) throws IOException {
+
+    // Null check
+    if (qualifier == null) {
+      throw new IOException("Cannot store column with null qualifier in "
+          + tableMutator.getName().getNameAsString());
+    }
+
+    byte[] columnQualifier =
+        ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
+
+    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue);
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
    * #readResult(org.apache.hadoop.hbase.client.Result, java.lang.String)
    */
   public Object readResult(Result result, String qualifier) throws IOException {
@@ -148,6 +173,21 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    */
   public Map<String, Object> readResults(Result result) throws IOException {
     return column.readResults(result, columnPrefixBytes);
+  }
+
+  /**
+   * @param result from which to read columns
+   * @return the latest values of columns in the column family. The column
+   *         qualifier is returned as a list of parts, each part a byte[]. This
+   *         is to facilitate returning byte arrays of values that were not
+   *         Strings. If they can be treated as Strings, you should use
+   *         {@link #readResults(Result)} instead.
+   * @throws IOException
+   */
+  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
+          throws IOException {
+    return column.readResultsHavingCompoundColumnQualifiers(result,
+        columnPrefixBytes);
   }
 
   /*

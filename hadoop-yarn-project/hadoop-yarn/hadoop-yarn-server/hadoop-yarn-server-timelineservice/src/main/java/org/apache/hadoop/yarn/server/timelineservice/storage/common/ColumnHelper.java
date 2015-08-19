@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -37,6 +39,7 @@ import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
  * @param <T> refers to the table.
  */
 public class ColumnHelper<T> {
+  private static final Log LOG = LogFactory.getLog(ColumnHelper.class);
 
   private final ColumnFamily<T> columnFamily;
 
@@ -143,6 +146,7 @@ public class ColumnHelper<T> {
             .entrySet()) {
           String columnName = null;
           if (columnPrefixBytes == null) {
+            LOG.info("null prefix was specified; returning all columns");
             // Decode the spaces we encoded in the column name.
             columnName = Separator.decode(entry.getKey(), Separator.SPACE);
           } else {
@@ -181,32 +185,43 @@ public class ColumnHelper<T> {
   /**
    * @param result from which to read columns
    * @param columnPrefixBytes optional prefix to limit columns. If null all
-   *          columns are returned.
-   * @return the latest values of columns in the column family.
+   *        columns are returned.
+   * @return the latest values of columns in the column family. This assumes
+   *         that the column name parts are all Strings by default. If the
+   *         column name parts should be treated natively and not be converted
+   *         back and forth from Strings, you should use
+   *         {@link #readResultsHavingCompoundColumnQualifiers(Result, byte[])}
+   *         instead.
    * @throws IOException
    */
-  public Map<String, Object> readResults(Result result, byte[] columnPrefixBytes)
-      throws IOException {
+  public Map<String, Object> readResults(Result result,
+      byte[] columnPrefixBytes) throws IOException {
     Map<String, Object> results = new HashMap<String, Object>();
 
     if (result != null) {
       Map<byte[], byte[]> columns = result.getFamilyMap(columnFamilyBytes);
       for (Entry<byte[], byte[]> entry : columns.entrySet()) {
-        if (entry.getKey() != null && entry.getKey().length > 0) {
+        byte[] columnKey = entry.getKey();
+        if (columnKey != null && columnKey.length > 0) {
 
           String columnName = null;
           if (columnPrefixBytes == null) {
+            LOG.info("null prefix was specified; returning all columns");
             // Decode the spaces we encoded in the column name.
-            columnName = Separator.decode(entry.getKey(), Separator.SPACE);
+            columnName = Separator.decode(columnKey, Separator.SPACE);
           } else {
             // A non-null prefix means columns are actually of the form
             // prefix!columnNameRemainder
             byte[][] columnNameParts =
-                Separator.QUALIFIERS.split(entry.getKey(), 2);
+                Separator.QUALIFIERS.split(columnKey, 2);
             byte[] actualColumnPrefixBytes = columnNameParts[0];
             if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
                 && columnNameParts.length == 2) {
               // This is the prefix that we want
+              // if the column name is a compound qualifier
+              // with non string datatypes, the following decode will not
+              // work correctly since it considers all components to be String
+              // invoke the readResultsHavingCompoundColumnQualifiers function
               columnName = Separator.decode(columnNameParts[1]);
             }
           }
@@ -215,6 +230,56 @@ public class ColumnHelper<T> {
           if (columnName != null) {
             Object value = GenericObjectMapper.read(entry.getValue());
             results.put(columnName, value);
+          }
+        }
+      } // for entry
+    }
+    return results;
+  }
+
+  /**
+   * @param result from which to read columns
+   * @param columnPrefixBytes optional prefix to limit columns. If null all
+   *        columns are returned.
+   * @return the latest values of columns in the column family. If the column
+   *         prefix is null, the column qualifier is returned as Strings. For a
+   *         non-null column prefix bytes, the column qualifier is returned as
+   *         a list of parts, each part a byte[]. This is to facilitate
+   *         returning byte arrays of values that were not Strings.
+   * @throws IOException
+   */
+  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result,
+      byte[] columnPrefixBytes) throws IOException {
+    // handle the case where the column prefix is null
+    // it is the same as readResults() so simply delegate to that implementation
+    if (columnPrefixBytes == null) {
+      return readResults(result, null);
+    }
+
+    Map<byte[][], Object> results = new HashMap<byte[][], Object>();
+
+    if (result != null) {
+      Map<byte[], byte[]> columns = result.getFamilyMap(columnFamilyBytes);
+      for (Entry<byte[], byte[]> entry : columns.entrySet()) {
+        byte[] columnKey = entry.getKey();
+        if (columnKey != null && columnKey.length > 0) {
+          // A non-null prefix means columns are actually of the form
+          // prefix!columnNameRemainder
+          // with a compound column qualifier, we are presuming existence of a
+          // prefix
+          byte[][] columnNameParts = Separator.QUALIFIERS.split(columnKey, 2);
+          if (columnNameParts.length > 0) {
+            byte[] actualColumnPrefixBytes = columnNameParts[0];
+            if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
+                && columnNameParts.length == 2) {
+              // This is the prefix that we want
+              byte[][] columnQualifierParts =
+                  Separator.VALUES.split(columnNameParts[1]);
+              Object value = GenericObjectMapper.read(entry.getValue());
+              // we return the columnQualifier in parts since we don't know
+              // which part is of which data type
+              results.put(columnQualifierParts, value);
+            }
           }
         }
       } // for entry
@@ -244,6 +309,26 @@ public class ColumnHelper<T> {
     // prefix.
     byte[] columnQualifier =
         Separator.QUALIFIERS.join(columnPrefixBytes, encodedQualifier);
+    return columnQualifier;
+  }
+
+  /**
+   * @param columnPrefixBytes The byte representation for the column prefix.
+   *          Should not contain {@link Separator#QUALIFIERS}.
+   * @param qualifier the byte representation for the remainder of the column.
+   * @return fully sanitized column qualifier that is a combination of prefix
+   *         and qualifier. If prefix is null, the result is simply the encoded
+   *         qualifier without any separator.
+   */
+  public static byte[] getColumnQualifier(byte[] columnPrefixBytes,
+      byte[] qualifier) {
+
+    if (columnPrefixBytes == null) {
+      return qualifier;
+    }
+
+    byte[] columnQualifier =
+        Separator.QUALIFIERS.join(columnPrefixBytes, qualifier);
     return columnQualifier;
   }
 
