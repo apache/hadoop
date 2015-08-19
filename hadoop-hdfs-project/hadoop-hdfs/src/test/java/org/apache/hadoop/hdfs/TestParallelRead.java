@@ -28,7 +28,7 @@ public class TestParallelRead extends TestParallelReadUtil {
     // off both short-circuit local reads and UNIX domain socket data traffic.
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
                     false);
     // dfs.domain.socket.path should be ignored because the previous two keys
     // were set to false.  This is a regression test for HDFS-4473.

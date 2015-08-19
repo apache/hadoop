@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.shortcircuit;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CONTEXT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.hamcrest.CoreMatchers.equalTo;
 
@@ -71,6 +71,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -671,8 +672,8 @@ public class TestShortCircuitCache {
 
     // The second read should fail, and we should only have 1 segment and 1 slot
     // left.
-    fs.getClient().getConf().getShortCircuitConf().brfFailureInjector =
-        new TestCleanupFailureInjector();
+    BlockReaderFactory.setFailureInjectorForTesting(
+        new TestCleanupFailureInjector());
     try {
       DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
     } catch (Throwable t) {
@@ -766,8 +767,8 @@ public class TestShortCircuitCache {
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
-    fs.getClient().getConf().getShortCircuitConf().brfFailureInjector =
-        new TestPreReceiptVerificationFailureInjector();
+    BlockReaderFactory.setFailureInjectorForTesting(
+        new TestPreReceiptVerificationFailureInjector());
     final Path TEST_PATH1 = new Path("/test_file1");
     DFSTestUtil.createFile(fs, TEST_PATH1, 4096, (short)1, 0xFADE2);
     final Path TEST_PATH2 = new Path("/test_file2");

@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.hdfs.shortcircuit.DomainSocketFactory;
@@ -138,8 +139,8 @@ public class ClientContext {
    */
   @VisibleForTesting
   public static ClientContext getFromConf(Configuration conf) {
-    return get(conf.get(DFSConfigKeys.DFS_CLIENT_CONTEXT,
-        DFSConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT),
+    return get(conf.get(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT,
+        HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT),
             new DfsClientConf(conf));
   }
 

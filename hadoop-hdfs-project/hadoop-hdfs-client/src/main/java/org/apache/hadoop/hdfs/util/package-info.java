@@ -15,15 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
-
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-
-public class TestRemoteBlockReader extends TestBlockReaderBase {
-
-  HdfsConfiguration createConf() {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
-    return conf;
-  }
-}
+package org.apache.hadoop.hdfs.util;

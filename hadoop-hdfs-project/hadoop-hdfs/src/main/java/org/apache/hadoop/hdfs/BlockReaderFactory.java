@@ -91,7 +91,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   /**
    * Injects failures into specific operations during unit tests.
    */
-  private final FailureInjector failureInjector;
+  private static FailureInjector failureInjector = new FailureInjector();
 
   /**
    * The file name, for logging and debugging purposes.
@@ -187,7 +187,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
 
   public BlockReaderFactory(DfsClientConf conf) {
     this.conf = conf;
-    this.failureInjector = conf.getShortCircuitConf().brfFailureInjector;
     this.remainingCacheTries = conf.getNumCachedConnRetry();
   }
 
@@ -276,6 +275,11 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       Configuration configuration) {
     this.configuration = configuration;
     return this;
+  }
+
+  @VisibleForTesting
+  public static void setFailureInjectorForTesting(FailureInjector injector) {
+    failureInjector = injector;
   }
 
   /**

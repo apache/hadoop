@@ -253,7 +253,7 @@ public class TestShortCircuitLocalRead {
         ignoreChecksum);
     // Set a random client context name so that we don't share a cache with
     // other invocations of this function.
-    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT,
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT,
         UUID.randomUUID().toString());
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         new File(sockDir.getDir(),
@@ -261,7 +261,7 @@ public class TestShortCircuitLocalRead {
     if (shortCircuitUser != null) {
       conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
           shortCircuitUser);
-      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
+      conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
     }
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
@@ -592,7 +592,7 @@ public class TestShortCircuitLocalRead {
   public void doTestShortCircuitReadWithRemoteBlockReader(boolean ignoreChecksum, int size, String shortCircuitUser,
                                                           int readOffset, boolean shortCircuitFails) throws IOException, InterruptedException {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)

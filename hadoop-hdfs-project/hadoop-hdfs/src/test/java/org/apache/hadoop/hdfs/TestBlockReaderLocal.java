@@ -126,10 +126,10 @@ public class TestBlockReaderLocal {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
         !checksum);
-    conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
+    conf.setLong(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
         BlockReaderLocalTest.BYTES_PER_CHECKSUM);
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_CACHE_READAHEAD, readahead);
+    conf.setLong(HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD, readahead);
     test.setConfiguration(conf);
     FileInputStream dataIn = null, metaIn = null;
     final Path TEST_PATH = new Path("/a");
