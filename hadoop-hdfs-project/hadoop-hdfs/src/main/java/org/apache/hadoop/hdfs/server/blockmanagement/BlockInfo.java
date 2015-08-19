@@ -78,7 +78,6 @@ public abstract class  BlockInfo extends Block
 
   /**
    * Copy construction.
-   * This is used to convert BlockInfoUnderConstruction
    * @param from BlockInfo to copy from.
    */
   protected BlockInfo(BlockInfo from) {

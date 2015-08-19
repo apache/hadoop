@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.junit.Test;
 
 /**
- * This class provides tests for BlockInfoUnderConstruction class
+ * This class provides tests for {@link BlockUnderConstructionFeature} class
  */
-public class TestBlockInfoUnderConstruction {
+public class TestBlockUnderConstructionFeature {
   @Test
   public void testInitializeBlockRecovery() throws Exception {
     DatanodeStorageInfo s1 = DFSTestUtil.createDatanodeStorageInfo("10.10.1.1", "s1");

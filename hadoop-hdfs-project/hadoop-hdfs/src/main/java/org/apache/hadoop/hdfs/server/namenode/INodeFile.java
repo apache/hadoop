@@ -693,7 +693,7 @@ public class INodeFile extends INodeWithAdditionalFields
       return 0;
     }
     final int last = blocks.length - 1;
-    //check if the last block is BlockInfoUnderConstruction
+    //check if the last block is under-construction
     long size = blocks[last].getNumBytes();
     if (!blocks[last].isComplete()) {
        if (!includesLastUcBlock) {

@@ -331,7 +331,7 @@ public class TestFileAppend{
   
       //1st append does not add any data so that the last block remains full
       //and the last block in INodeFileUnderConstruction is a BlockInfo
-      //but not BlockInfoUnderConstruction. 
+      //but does not have a BlockUnderConstructionFeature.
       fs2.append(p);
       
       //2nd append should get AlreadyBeingCreatedException
@@ -369,7 +369,7 @@ public class TestFileAppend{
   
       //1st append does not add any data so that the last block remains full
       //and the last block in INodeFileUnderConstruction is a BlockInfo
-      //but not BlockInfoUnderConstruction.
+      //but does not have a BlockUnderConstructionFeature.
       ((DistributedFileSystem) fs2).append(p,
           EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
 

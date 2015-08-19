@@ -151,7 +151,7 @@ public class BlockUnderConstructionFeature {
   public BlockUnderConstructionFeature(Block block, BlockUCState state,
       DatanodeStorageInfo[] targets) {
     assert getBlockUCState() != BlockUCState.COMPLETE :
-      "BlockInfoUnderConstruction cannot be in COMPLETE state";
+      "BlockUnderConstructionFeature cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(block.getGenerationStamp(), targets);
   }
@@ -241,7 +241,7 @@ public class BlockUnderConstructionFeature {
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*"
-        + " BlockInfoUnderConstruction.initLeaseRecovery:"
+        + " BlockUnderConstructionFeature.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;
