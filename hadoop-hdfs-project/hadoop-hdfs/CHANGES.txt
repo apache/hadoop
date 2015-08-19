@@ -1205,6 +1205,8 @@ Release 2.7.2 - UNRELEASED
     HDFS-8852. HDFS architecture documentation of version 2.x is outdated
     about append write support. (Ajith S via aajisaka)
 
+    HDFS-8867. Enable optimized block reports. (Daryn Sharp via jing9)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
