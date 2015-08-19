@@ -195,13 +195,13 @@ public class AppBlock extends HtmlBlock {
         && webUiType.equals(YarnWebParams.RM_WEB_UI)) {
       LogAggregationStatus status = getLogAggregationStatus();
       if (status == null) {
-        overviewTable._("Log Aggregation Status", "N/A");
+        overviewTable._("Log Aggregation Status:", "N/A");
       } else if (status == LogAggregationStatus.DISABLED
           || status == LogAggregationStatus.NOT_START
           || status == LogAggregationStatus.SUCCEEDED) {
-        overviewTable._("Log Aggregation Status", status.name());
+        overviewTable._("Log Aggregation Status:", status.name());
       } else {
-        overviewTable._("Log Aggregation Status",
+        overviewTable._("Log Aggregation Status:",
             root_url("logaggregationstatus", app.getAppId()), status.name());
       }
     }

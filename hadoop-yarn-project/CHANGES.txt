@@ -780,6 +780,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3987. Send AM container completed msg to NM once AM finishes.
     (sandflee via jianhe)
 
+    YARN-4028. AppBlock page key update and diagnostics value null on recovery
+    (Bibin A Chundatt via xgong)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

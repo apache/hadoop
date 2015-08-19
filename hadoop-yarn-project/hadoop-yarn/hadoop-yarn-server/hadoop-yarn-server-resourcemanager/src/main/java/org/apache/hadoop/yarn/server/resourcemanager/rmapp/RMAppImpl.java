@@ -782,7 +782,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     LOG.info("Recovering app: " + getApplicationId() + " with " + 
         + appState.getAttemptCount() + " attempts and final state = "
         + this.recoveredFinalState );
-    this.diagnostics.append(appState.getDiagnostics());
+    this.diagnostics.append(null == appState.getDiagnostics() ? "" : appState
+        .getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
 
