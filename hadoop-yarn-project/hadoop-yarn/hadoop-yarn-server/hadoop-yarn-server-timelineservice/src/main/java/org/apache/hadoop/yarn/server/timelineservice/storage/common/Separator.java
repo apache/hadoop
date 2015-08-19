@@ -37,7 +37,7 @@ public enum Separator {
   /**
    * separator in values, and/or compound key/column qualifier fields.
    */
-  VALUES("?", "%1$"),
+  VALUES("=", "%1$"),
 
   /**
    * separator in values, often used to avoid having these in qualifiers and
@@ -299,12 +299,22 @@ public enum Separator {
    * up to a maximum of count items. This will naturally produce copied byte
    * arrays for each of the split segments.
    * @param source to be split
-   * @param limit on how many segments are supposed to be returned. Negative
-   *          value indicates no limit on number of segments.
+   * @param limit on how many segments are supposed to be returned. A
+   *          non-positive value indicates no limit on number of segments.
    * @return source split by this separator.
    */
   public byte[][] split(byte[] source, int limit) {
     return TimelineWriterUtils.split(source, this.bytes, limit);
   }
 
+  /**
+   * Splits the source array into multiple array segments using this separator,
+   * as many times as splits are found. This will naturally produce copied byte
+   * arrays for each of the split segments.
+   * @param source to be split
+   * @return source split by this separator.
+   */
+  public byte[][] split(byte[] source) {
+    return TimelineWriterUtils.split(source, this.bytes);
+  }
 }
