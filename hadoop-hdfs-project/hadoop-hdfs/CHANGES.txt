@@ -1174,6 +1174,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
 
+    HDFS-8908. TestAppendSnapshotTruncate may fail with IOException: Failed to
+    replace a bad datanode. (Tsz Wo Nicholas Sze via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
