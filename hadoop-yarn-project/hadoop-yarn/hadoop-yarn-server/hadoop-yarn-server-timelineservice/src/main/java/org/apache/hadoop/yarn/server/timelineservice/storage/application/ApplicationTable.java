@@ -57,12 +57,12 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * |            | infoValue                    | metricValue1 |              |
  * |            |                              | @timestamp2  |              |
  * |            | r!relatesToKey:              |              |              |
- * |            | id3?id4?id5                  |              |              |
+ * |            | id3=id4=id5                  |              |              |
  * |            |                              |              |              |
  * |            | s!isRelatedToKey:            |              |              |
- * |            | id7?id9?id6                  |              |              |
+ * |            | id7=id9=id6                  |              |              |
  * |            |                              |              |              |
- * |            | e!eventId?timestamp?infoKey: |              |              |
+ * |            | e!eventId=timestamp=infoKey: |              |              |
  * |            | eventInfoValue               |              |              |
  * |            |                              |              |              |
  * |            | flowVersion:                 |              |              |

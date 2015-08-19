@@ -27,8 +27,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
@@ -75,7 +76,7 @@ import org.junit.Test;
  * even if other records exist in the table. Use a different cluster name if
  * you add a new test.
  */
-public class TestHBaseTimelineWriterImpl {
+public class TestHBaseTimelineStorage {
 
   private static HBaseTestingUtility util;
 
@@ -101,8 +102,8 @@ public class TestHBaseTimelineWriterImpl {
     ApplicationEntity entity = new ApplicationEntity();
     String id = "hello";
     entity.setId(id);
-    Long cTime = 1425016501000L;
-    Long mTime = 1425026901000L;
+    long cTime = 1425016501000L;
+    long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
     entity.setModifiedTime(mTime);
 
@@ -197,19 +198,16 @@ public class TestHBaseTimelineWriterImpl {
 
       Number val =
           (Number) ApplicationColumn.CREATED_TIME.readResult(result);
-      Long cTime1 = val.longValue();
+      long cTime1 = val.longValue();
       assertEquals(cTime1, cTime);
 
       val = (Number) ApplicationColumn.MODIFIED_TIME.readResult(result);
-      Long mTime1 = val.longValue();
+      long mTime1 = val.longValue();
       assertEquals(mTime1, mTime);
 
       Map<String, Object> infoColumns =
           ApplicationColumnPrefix.INFO.readResults(result);
-      assertEquals(infoMap.size(), infoColumns.size());
-      for (String infoItem : infoMap.keySet()) {
-        assertEquals(infoMap.get(infoItem), infoColumns.get(infoItem));
-      }
+      assertEquals(infoMap, infoColumns);
 
       // Remember isRelatedTo is of type Map<String, Set<String>>
       for (String isRelatedToKey : isRelatedTo.keySet()) {
@@ -245,27 +243,15 @@ public class TestHBaseTimelineWriterImpl {
       // Configuration
       Map<String, Object> configColumns =
           ApplicationColumnPrefix.CONFIG.readResults(result);
-      assertEquals(conf.size(), configColumns.size());
-      for (String configItem : conf.keySet()) {
-        assertEquals(conf.get(configItem), configColumns.get(configItem));
-      }
+      assertEquals(conf, configColumns);
 
       NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
           ApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result);
 
       NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
-      // We got metrics back
-      assertNotNull(metricMap);
-      // Same number of metrics as we wrote
-      assertEquals(metricValues.entrySet().size(), metricMap.entrySet().size());
+      assertEquals(metricValues, metricMap);
 
-      // Iterate over original metrics and confirm that they are present
-      // here.
-      for (Entry<Long, Number> metricEntry : metricValues.entrySet()) {
-        assertEquals(metricEntry.getValue(),
-            metricMap.get(metricEntry.getKey()));
-      }
-
+      // read the timeline entity using the reader this time
       TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, id,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
@@ -274,6 +260,31 @@ public class TestHBaseTimelineWriterImpl {
           null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
       assertEquals(1, es1.size());
+
+      // verify attributes
+      assertEquals(id, e1.getId());
+      assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
+          e1.getType());
+      assertEquals(cTime, e1.getCreatedTime());
+      assertEquals(mTime, e1.getModifiedTime());
+      Map<String, Object> infoMap2 = e1.getInfo();
+      assertEquals(infoMap, infoMap2);
+
+      Map<String, Set<String>> isRelatedTo2 = e1.getIsRelatedToEntities();
+      assertEquals(isRelatedTo, isRelatedTo2);
+
+      Map<String, Set<String>> relatesTo2 = e1.getRelatesToEntities();
+      assertEquals(relatesTo, relatesTo2);
+
+      Map<String, String> conf2 = e1.getConfigs();
+      assertEquals(conf, conf2);
+
+      Set<TimelineMetric> metrics2 = e1.getMetrics();
+      assertEquals(metrics, metrics2);
+      for (TimelineMetric metric2 : metrics2) {
+        Map<Long, Number> metricValues2 = metric2.getValues();
+        assertEquals(metricValues, metricValues2);
+      }
     } finally {
       if (hbi != null) {
         hbi.stop();
@@ -294,8 +305,8 @@ public class TestHBaseTimelineWriterImpl {
     String type = "world";
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 1425016501000L;
-    Long mTime = 1425026901000L;
+    long cTime = 1425016501000L;
+    long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
     entity.setModifiedTime(mTime);
 
@@ -396,20 +407,16 @@ public class TestHBaseTimelineWriterImpl {
           assertEquals(type, type1);
 
           Number val = (Number) EntityColumn.CREATED_TIME.readResult(result);
-          Long cTime1 = val.longValue();
+          long cTime1 = val.longValue();
           assertEquals(cTime1, cTime);
 
           val = (Number) EntityColumn.MODIFIED_TIME.readResult(result);
-          Long mTime1 = val.longValue();
+          long mTime1 = val.longValue();
           assertEquals(mTime1, mTime);
 
           Map<String, Object> infoColumns =
               EntityColumnPrefix.INFO.readResults(result);
-          assertEquals(infoMap.size(), infoColumns.size());
-          for (String infoItem : infoMap.keySet()) {
-            assertEquals(infoMap.get(infoItem),
-                infoColumns.get(infoItem));
-          }
+          assertEquals(infoMap, infoColumns);
 
           // Remember isRelatedTo is of type Map<String, Set<String>>
           for (String isRelatedToKey : isRelatedTo.keySet()) {
@@ -447,32 +454,19 @@ public class TestHBaseTimelineWriterImpl {
           // Configuration
           Map<String, Object> configColumns =
               EntityColumnPrefix.CONFIG.readResults(result);
-          assertEquals(conf.size(), configColumns.size());
-          for (String configItem : conf.keySet()) {
-            assertEquals(conf.get(configItem), configColumns.get(configItem));
-          }
+          assertEquals(conf, configColumns);
 
           NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
               EntityColumnPrefix.METRIC.readResultsWithTimestamps(result);
 
           NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
-          // We got metrics back
-          assertNotNull(metricMap);
-          // Same number of metrics as we wrote
-          assertEquals(metricValues.entrySet().size(), metricMap.entrySet()
-              .size());
-
-          // Iterate over original metrics and confirm that they are present
-          // here.
-          for (Entry<Long, Number> metricEntry : metricValues.entrySet()) {
-            assertEquals(metricEntry.getValue(),
-                metricMap.get(metricEntry.getKey()));
-          }
+          assertEquals(metricValues, metricMap);
         }
       }
       assertEquals(1, rowCount);
       assertEquals(17, colCount);
 
+      // read the timeline entity using the reader this time
       TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
@@ -481,6 +475,30 @@ public class TestHBaseTimelineWriterImpl {
           null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
       assertEquals(1, es1.size());
+
+      // verify attributes
+      assertEquals(id, e1.getId());
+      assertEquals(type, e1.getType());
+      assertEquals(cTime, e1.getCreatedTime());
+      assertEquals(mTime, e1.getModifiedTime());
+      Map<String, Object> infoMap2 = e1.getInfo();
+      assertEquals(infoMap, infoMap2);
+
+      Map<String, Set<String>> isRelatedTo2 = e1.getIsRelatedToEntities();
+      assertEquals(isRelatedTo, isRelatedTo2);
+
+      Map<String, Set<String>> relatesTo2 = e1.getRelatesToEntities();
+      assertEquals(relatesTo, relatesTo2);
+
+      Map<String, String> conf2 = e1.getConfigs();
+      assertEquals(conf, conf2);
+
+      Set<TimelineMetric> metrics2 = e1.getMetrics();
+      assertEquals(metrics, metrics2);
+      for (TimelineMetric metric2 : metrics2) {
+        Map<Long, Number> metricValues2 = metric2.getValues();
+        assertEquals(metricValues, metricValues2);
+      }
     } finally {
       if (hbi != null) {
         hbi.stop();
@@ -494,9 +512,9 @@ public class TestHBaseTimelineWriterImpl {
   }
 
   private boolean isRowKeyCorrect(byte[] rowKey, String cluster, String user,
-      String flow, Long runid, String appName, TimelineEntity te) {
+      String flow, long runid, String appName, TimelineEntity te) {
 
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey, -1);
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
 
     assertTrue(rowKeyComponents.length == 7);
     assertEquals(user, Bytes.toString(rowKeyComponents[0]));
@@ -511,9 +529,9 @@ public class TestHBaseTimelineWriterImpl {
   }
 
   private boolean isApplicationRowKeyCorrect(byte[] rowKey, String cluster,
-      String user, String flow, Long runid, String appName) {
+      String user, String flow, long runid, String appName) {
 
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey, -1);
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
 
     assertTrue(rowKeyComponents.length == 5);
     assertEquals(cluster, Bytes.toString(rowKeyComponents[0]));
@@ -530,7 +548,7 @@ public class TestHBaseTimelineWriterImpl {
     TimelineEvent event = new TimelineEvent();
     String eventId = ApplicationMetricsConstants.CREATED_EVENT_TYPE;
     event.setId(eventId);
-    Long expTs = 1436512802000L;
+    long expTs = 1436512802000L;
     event.setTimestamp(expTs);
     String expKey = "foo_event";
     Object expVal = "test";
@@ -577,24 +595,25 @@ public class TestHBaseTimelineWriterImpl {
       assertTrue(isApplicationRowKeyCorrect(row1, cluster, user, flow, runid,
           appName));
 
-      Map<String, Object> eventsResult =
-          ApplicationColumnPrefix.EVENT.readResults(result);
+      Map<?, Object> eventsResult =
+          ApplicationColumnPrefix.EVENT.
+              readResultsHavingCompoundColumnQualifiers(result);
       // there should be only one event
       assertEquals(1, eventsResult.size());
-      // key name for the event
-      byte[] compoundColumnQualifierBytes =
-          Separator.VALUES.join(Bytes.toBytes(eventId),
-              Bytes.toBytes(TimelineWriterUtils.invert(expTs)),
-              Bytes.toBytes(expKey));
-      String valueKey = Bytes.toString(compoundColumnQualifierBytes);
-      for (Map.Entry<String, Object> e : eventsResult.entrySet()) {
-        // the value key must match
-        assertEquals(valueKey, e.getKey());
+      for (Map.Entry<?, Object> e : eventsResult.entrySet()) {
+        // the qualifier is a compound key
+        // hence match individual values
+        byte[][] karr = (byte[][])e.getKey();
+        assertEquals(3, karr.length);
+        assertEquals(eventId, Bytes.toString(karr[0]));
+        assertEquals(TimelineWriterUtils.invert(expTs), Bytes.toLong(karr[1]));
+        assertEquals(expKey, Bytes.toString(karr[2]));
         Object value = e.getValue();
         // there should be only one timestamp and value
         assertEquals(expVal, value.toString());
       }
 
+      // read the timeline entity using the reader this time
       TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
@@ -613,6 +632,21 @@ public class TestHBaseTimelineWriterImpl {
       assertEquals(1, es1.size());
       assertEquals(1, es2.size());
       assertEquals(es1, es2);
+
+      // check the events
+      NavigableSet<TimelineEvent> events = e1.getEvents();
+      // there should be only one event
+      assertEquals(1, events.size());
+      for (TimelineEvent e : events) {
+        assertEquals(eventId, e.getId());
+        assertEquals(expTs, e.getTimestamp());
+        Map<String,Object> info = e.getInfo();
+        assertEquals(1, info.size());
+        for (Map.Entry<String, Object> infoEntry : info.entrySet()) {
+          assertEquals(expKey, infoEntry.getKey());
+          assertEquals(expVal, infoEntry.getValue());
+        }
+      }
     } finally {
       if (hbi != null) {
         hbi.stop();
@@ -630,7 +664,7 @@ public class TestHBaseTimelineWriterImpl {
     TimelineEvent event = new TimelineEvent();
     String eventId = "foo_event_id";
     event.setId(eventId);
-    Long expTs = 1436512802000L;
+    long expTs = 1436512802000L;
     event.setTimestamp(expTs);
 
     final TimelineEntity entity = new TimelineEntity();
@@ -678,22 +712,21 @@ public class TestHBaseTimelineWriterImpl {
           assertTrue(isRowKeyCorrect(row1, cluster, user, flow, runid, appName,
               entity));
 
-          Map<String, Object> eventsResult =
-              EntityColumnPrefix.EVENT.readResults(result);
+          Map<?, Object> eventsResult =
+              EntityColumnPrefix.EVENT.
+                  readResultsHavingCompoundColumnQualifiers(result);
           // there should be only one event
           assertEquals(1, eventsResult.size());
-          // key name for the event
-          byte[] compoundColumnQualifierWithTsBytes =
-              Separator.VALUES.join(Bytes.toBytes(eventId),
-                  Bytes.toBytes(TimelineWriterUtils.invert(expTs)));
-          byte[] compoundColumnQualifierBytes =
-              Separator.VALUES.join(compoundColumnQualifierWithTsBytes,
-                  null);
-          String valueKey = Bytes.toString(compoundColumnQualifierBytes);
-          for (Map.Entry<String, Object> e :
-              eventsResult.entrySet()) {
-            // the column qualifier key must match
-            assertEquals(valueKey, e.getKey());
+          for (Map.Entry<?, Object> e : eventsResult.entrySet()) {
+            // the qualifier is a compound key
+            // hence match individual values
+            byte[][] karr = (byte[][])e.getKey();
+            assertEquals(3, karr.length);
+            assertEquals(eventId, Bytes.toString(karr[0]));
+            assertEquals(TimelineWriterUtils.invert(expTs),
+                Bytes.toLong(karr[1]));
+            // key must be empty
+            assertEquals(0, karr[2].length);
             Object value = e.getValue();
             // value should be empty
             assertEquals("", value.toString());
@@ -702,6 +735,7 @@ public class TestHBaseTimelineWriterImpl {
       }
       assertEquals(1, rowCount);
 
+      // read the timeline entity using the reader this time
       TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appName,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
@@ -710,6 +744,17 @@ public class TestHBaseTimelineWriterImpl {
           null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
       assertEquals(1, es1.size());
+
+      // check the events
+      NavigableSet<TimelineEvent> events = e1.getEvents();
+      // there should be only one event
+      assertEquals(1, events.size());
+      for (TimelineEvent e : events) {
+        assertEquals(eventId, e.getId());
+        assertEquals(expTs, e.getTimestamp());
+        Map<String,Object> info = e.getInfo();
+        assertTrue(info == null || info.isEmpty());
+      }
     } finally {
       hbi.stop();
       hbi.close();
