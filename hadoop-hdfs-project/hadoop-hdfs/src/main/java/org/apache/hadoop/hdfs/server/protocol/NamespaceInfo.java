@@ -47,18 +47,27 @@ public class NamespaceInfo extends StorageInfo {
 
   // only authoritative on the server-side to determine advertisement to
   // clients.  enum will update the supported values
-  private static long CAPABILITIES_SUPPORTED = 0;
+  private static final long CAPABILITIES_SUPPORTED = getSupportedCapabilities();
+
+  private static long getSupportedCapabilities() {
+    long mask = 0;
+    for (Capability c : Capability.values()) {
+      if (c.supported) {
+        mask |= c.mask;
+      }
+    }
+    return mask;
+  }
 
   public enum Capability {
     UNKNOWN(false),
     STORAGE_BLOCK_REPORT_BUFFERS(true); // use optimized ByteString buffers
+    private final boolean supported;
     private final long mask;
     Capability(boolean isSupported) {
+      supported = isSupported;
       int bits = ordinal() - 1;
       mask = (bits < 0) ? 0 : (1L << bits);
-      if (isSupported) {
-        CAPABILITIES_SUPPORTED |= mask;
-      }
     }
     public long getMask() {
       return mask;
