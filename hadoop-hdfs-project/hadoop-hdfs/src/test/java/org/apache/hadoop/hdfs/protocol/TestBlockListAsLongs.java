@@ -187,7 +187,14 @@ public class TestBlockListAsLongs {
     }
     assertTrue(reportReplicas.isEmpty());
   }
-  
+
+  @Test
+  public void testCapabilitiesInited() {
+    NamespaceInfo nsInfo = new NamespaceInfo();
+    assertTrue(
+        nsInfo.isCapabilitySupported(Capability.STORAGE_BLOCK_REPORT_BUFFERS));
+  }
+
   @Test
   public void testDatanodeDetect() throws ServiceException, IOException {
     final AtomicReference<BlockReportRequestProto> request =
