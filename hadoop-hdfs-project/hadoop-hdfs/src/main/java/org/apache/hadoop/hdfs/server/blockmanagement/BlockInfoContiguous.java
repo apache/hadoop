@@ -37,8 +37,7 @@ public class BlockInfoContiguous extends BlockInfo {
 
   /**
    * Copy construction.
-   * This is used to convert BlockReplicationInfoUnderConstruction
-   * @param from BlockReplicationInfo to copy from.
+   * @param from BlockInfoContiguous to copy from.
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
     super(from);
