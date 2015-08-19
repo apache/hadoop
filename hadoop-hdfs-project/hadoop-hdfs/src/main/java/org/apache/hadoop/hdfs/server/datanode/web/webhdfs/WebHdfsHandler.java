@@ -59,6 +59,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -83,6 +84,9 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     "application/octet-stream";
   public static final String APPLICATION_JSON_UTF8 =
       "application/json; charset=utf-8";
+
+  public static final EnumSet<CreateFlag> EMPTY_CREATE_FLAG =
+      EnumSet.noneOf(CreateFlag.class);
 
   private final Configuration conf;
   private final Configuration confForCreate;
@@ -155,15 +159,24 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final short replication = params.replication();
     final long blockSize = params.blockSize();
     final FsPermission permission = params.permission();
+    final boolean createParent = params.createParent();
 
-    EnumSet<CreateFlag> flags = params.overwrite() ?
-      EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
-        : EnumSet.of(CreateFlag.CREATE);
+    EnumSet<CreateFlag> flags = params.createFlag();
+    if (flags.equals(EMPTY_CREATE_FLAG)) {
+      flags = params.overwrite() ?
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+          : EnumSet.of(CreateFlag.CREATE);
+    } else {
+      if(params.overwrite()) {
+        flags.add(CreateFlag.OVERWRITE);
+      }
+    }
 
     final DFSClient dfsClient = newDfsClient(nnId, confForCreate);
     OutputStream out = dfsClient.createWrappedOutputStream(dfsClient.create(
-      path, permission, flags, replication,
-      blockSize, null, bufferSize, null), null);
+        path, permission, flags, createParent, replication, blockSize, null,
+        bufferSize, null), null);
+
     DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1, CREATED);
 
     final URI uri = new URI(HDFS_URI_SCHEME, nnId, path, null, null);
