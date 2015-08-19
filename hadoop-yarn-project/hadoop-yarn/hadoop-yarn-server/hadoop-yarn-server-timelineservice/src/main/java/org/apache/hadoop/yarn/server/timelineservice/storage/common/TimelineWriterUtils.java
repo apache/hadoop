@@ -33,6 +33,9 @@ public class TimelineWriterUtils {
   /** empty bytes */
   public static final byte[] EMPTY_BYTES = new byte[0];
 
+  /** indicator for no limits for splitting */
+  public static final int NO_LIMIT_SPLIT = -1;
+
   /**
    * Splits the source array into multiple array segments using the given
    * separator, up to a maximum of count items. This will naturally produce
@@ -45,7 +48,7 @@ public class TimelineWriterUtils {
    * @return byte[] array after splitting the source
    */
   public static byte[][] split(byte[] source, byte[] separator) {
-    return split(source, separator, -1);
+    return split(source, separator, NO_LIMIT_SPLIT);
   }
 
   /**
@@ -57,7 +60,7 @@ public class TimelineWriterUtils {
    *
    * @param source
    * @param separator
-   * @param limit a negative value indicates no limit on number of segments.
+   * @param limit a non-positive value indicates no limit on number of segments.
    * @return byte[][] after splitting the input source
    */
   public static byte[][] split(byte[] source, byte[] separator, int limit) {
@@ -81,7 +84,7 @@ public class TimelineWriterUtils {
    * separator byte array.
    */
   public static List<Range> splitRanges(byte[] source, byte[] separator) {
-    return splitRanges(source, separator, -1);
+    return splitRanges(source, separator, NO_LIMIT_SPLIT);
   }
 
   /**
