@@ -169,7 +169,7 @@ public class TestClientProtocolForPipelineRecovery {
   @Test
   public void testPipelineRecoveryOnOOB() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "15");
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "15");
     MiniDFSCluster cluster = null;
     try {
       int numDataNodes = 1;
@@ -207,7 +207,7 @@ public class TestClientProtocolForPipelineRecovery {
   @Test
   public void testPipelineRecoveryOnRestartFailure() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "5");
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "5");
     MiniDFSCluster cluster = null;
     try {
       int numDataNodes = 2;

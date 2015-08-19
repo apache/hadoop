@@ -286,12 +286,6 @@ public interface HdfsServerConstants {
     }
   }
 
-  // Timeouts for communicating with DataNode for streaming writes/reads
-  int READ_TIMEOUT = 60 * 1000;
-  int READ_TIMEOUT_EXTENSION = 5 * 1000;
-  int WRITE_TIMEOUT = 8 * 60 * 1000;
-  int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
-
   /**
    * Defines the NameNode role.
    */

@@ -264,11 +264,12 @@ public abstract class LazyPersistTestCase {
     if (useSCR) {
       conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
       // Do not share a client context across tests.
-      conf.set(DFS_CLIENT_CONTEXT, UUID.randomUUID().toString());
+      conf.set(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT, UUID.randomUUID().toString());
       conf.set(DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
           UserGroupInformation.getCurrentUser().getShortUserName());
       if (useLegacyBlockReaderLocal) {
-        conf.setBoolean(DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
+        conf.setBoolean(
+            HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
       } else {
         sockDir = new TemporarySocketDirectory();
         conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),

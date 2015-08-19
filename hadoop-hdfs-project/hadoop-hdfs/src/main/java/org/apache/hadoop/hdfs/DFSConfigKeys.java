@@ -44,12 +44,20 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_STREAM_BUFFER_SIZE_KEY = "dfs.stream-buffer-size";
   public static final int     DFS_STREAM_BUFFER_SIZE_DEFAULT = 4096;
-  public static final String  DFS_BYTES_PER_CHECKSUM_KEY = "dfs.bytes-per-checksum";
-  public static final int     DFS_BYTES_PER_CHECKSUM_DEFAULT = 512;
+  public static final String  DFS_BYTES_PER_CHECKSUM_KEY =
+      HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+  public static final int     DFS_BYTES_PER_CHECKSUM_DEFAULT =
+      HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
   public static final String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
   public static final String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
-  public static final String  DFS_CHECKSUM_TYPE_KEY = "dfs.checksum.type";
-  public static final String  DFS_CHECKSUM_TYPE_DEFAULT = "CRC32C";
+  public static final String  DFS_CHECKSUM_TYPE_KEY = HdfsClientConfigKeys
+      .DFS_CHECKSUM_TYPE_KEY;
+  public static final String  DFS_CHECKSUM_TYPE_DEFAULT =
+      HdfsClientConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
+  public static final String  DFS_HDFS_BLOCKS_METADATA_ENABLED =
+      HdfsClientConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED;
+  public static final boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT =
+      HdfsClientConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT;
   public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
 
@@ -487,7 +495,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_DEFAULT = 1024L * 1024L * 1024L * 10L; // 10 GB
   public static final String  DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY = "dfs.datanode.available-space-volume-choosing-policy.balanced-space-preference-fraction";
   public static final float   DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT = 0.75f;
-  public static final String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY = "dfs.datanode.socket.write.timeout";
+  public static final String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY =
+      HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
   public static final String  DFS_DATANODE_STARTUP_KEY = "dfs.datanode.startup";
   public static final String  DFS_NAMENODE_PLUGINS_KEY = "dfs.namenode.plugins";
   public static final String  DFS_WEB_UGI_KEY = "dfs.web.ugi";
@@ -498,8 +507,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_USER_NAME_KEY = DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
   public static final String  DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS = "dfs.datanode.shared.file.descriptor.paths";
   public static final String  DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS_DEFAULT = "/dev/shm,/tmp";
-  public static final String  DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS = "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
-  public static final int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT = 60000;
+  public static final String
+      DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS =
+      HdfsClientConfigKeys
+          .DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
+  public static final int
+      DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
+      HdfsClientConfigKeys
+          .DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT;
   public static final String  DFS_NAMENODE_KEYTAB_FILE_KEY = "dfs.namenode.keytab.file";
   public static final String  DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY =
       HdfsClientConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
@@ -540,8 +555,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       0.6f;
 
   public static final String DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY = "dfs.block.local-path-access.user";
-  public static final String DFS_DOMAIN_SOCKET_PATH_KEY = "dfs.domain.socket.path";
-  public static final String DFS_DOMAIN_SOCKET_PATH_DEFAULT = "";
+  public static final String DFS_DOMAIN_SOCKET_PATH_KEY =
+      HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
+  public static final String DFS_DOMAIN_SOCKET_PATH_DEFAULT =
+      HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT;
 
   public static final String  DFS_STORAGE_POLICY_ENABLED_KEY = "dfs.storage.policy.enabled";
   public static final boolean DFS_STORAGE_POLICY_ENABLED_DEFAULT = true;
@@ -963,60 +980,136 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT;
 
 
+  @Deprecated
+  public static final String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 
-  public static final String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
-  public static final int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  @Deprecated
+  public static final String  DFS_CLIENT_SOCKET_TIMEOUT_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+  @Deprecated
+  public static final String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 
-  public static final String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
-  public static final String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY = "dfs.client.socketcache.capacity";
-  public static final int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 16;
-  public static final String  DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY = "dfs.client.socketcache.expiryMsec";
-  public static final long    DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT = 3000;
+  @Deprecated
+  public static final String  DFS_CLIENT_USE_DN_HOSTNAME =
+      HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
+  @Deprecated
+  public static final boolean DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_CACHE_DROP_BEHIND_WRITES =
+      HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_WRITES;
+  @Deprecated
+  public static final String  DFS_CLIENT_CACHE_DROP_BEHIND_READS =
+      HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_READS;
+  @Deprecated
+  public static final String  DFS_CLIENT_CACHE_READAHEAD =
+      HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD;
+  @Deprecated
+  public static final String  DFS_CLIENT_CACHED_CONN_RETRY_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT;
 
-  public static final String  DFS_CLIENT_USE_DN_HOSTNAME = "dfs.client.use.datanode.hostname";
-  public static final boolean DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT = false;
-  public static final String  DFS_CLIENT_CACHE_DROP_BEHIND_WRITES = "dfs.client.cache.drop.behind.writes";
-  public static final String  DFS_CLIENT_CACHE_DROP_BEHIND_READS = "dfs.client.cache.drop.behind.reads";
-  public static final String  DFS_CLIENT_CACHE_READAHEAD = "dfs.client.cache.readahead";
-  public static final String  DFS_CLIENT_CACHED_CONN_RETRY_KEY = "dfs.client.cached.conn.retry";
-  public static final int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT = 3;
+  @Deprecated
+  public static final String  DFS_CLIENT_CONTEXT = HdfsClientConfigKeys
+      .DFS_CLIENT_CONTEXT;
+  @Deprecated
+  public static final String  DFS_CLIENT_CONTEXT_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT;
+  @Deprecated
+  public static final String
+      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS =
+      HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS;
+  @Deprecated
+  public static final int
+      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT =
+      HdfsClientConfigKeys
+          .DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT;
+  @Deprecated
+  public static final String
+      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS =
+      HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS;
+  @Deprecated
+  public static final int
+      DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT =
+      HdfsClientConfigKeys
+          .DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT;
 
-  public static final String  DFS_CLIENT_CONTEXT = "dfs.client.context";
-  public static final String  DFS_CLIENT_CONTEXT_DEFAULT = "default";
-  
-  public static final String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY = "dfs.client.datanode-restart.timeout";
-  public static final long    DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT = 30;
+  @Deprecated
+  public static final String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT;
 
   public static final String  DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY = "dfs.client.https.keystore.resource";
   public static final String  DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_DEFAULT = "ssl-client.xml";
   public static final String  DFS_CLIENT_HTTPS_NEED_AUTH_KEY = "dfs.client.https.need-auth";
   public static final boolean DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT = false;
+
   // Much code in hdfs is not yet updated to use these keys.
   // the initial delay (unit is ms) for locateFollowingBlock, the delay time will increase exponentially(double) for each retry.
-  public static final String  DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY = "dfs.client.max.block.acquire.failures";
-  public static final int     DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT = 3;
+  @Deprecated
+  public static final String  DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 
-  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADER = "dfs.client.use.legacy.blockreader";
-  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT = false;
-  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL = "dfs.client.use.legacy.blockreader.local";
-  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;
+  @Deprecated
+  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
+      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
+  @Deprecated
+  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
+      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL;
+  @Deprecated
+  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT
+      = HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT;
 
   public static final String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
 
 
-  public static final String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC = "dfs.client.domain.socket.data.traffic";
-  public static final boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT = false;
+  @Deprecated
+  public static final String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
+      HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
+  @Deprecated
+  public static final boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
 
   // The number of NN response dropped by client proactively in each RPC call.
   // For testing NN retry cache, we can set this property with positive value.
   public static final String  DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY = "dfs.client.test.drop.namenode.response.number";
   public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT = 0;
 
+  @Deprecated
   public static final String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
-      "dfs.client.slow.io.warning.threshold.ms";
-  public static final long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY;
+
+  @Deprecated
+  public static final long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
+  @Deprecated
   public static final String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
-      "dfs.client.key.provider.cache.expiry";
+      HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;
+  @Deprecated
   public static final long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
-      TimeUnit.DAYS.toMillis(10); // 10 days
+      HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
 }

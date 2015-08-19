@@ -27,7 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.util.PerformanceAdvisory;
@@ -112,7 +112,7 @@ public class DomainSocketFactory {
     } else {
       if (conf.getDomainSocketPath().isEmpty()) {
         throw new HadoopIllegalArgumentException(feature + " is enabled but "
-            + DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY + " is not set.");
+            + HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY + " is not set.");
       } else if (DomainSocket.getLoadingFailureReason() != null) {
         LOG.warn(feature + " cannot be used because "
             + DomainSocket.getLoadingFailureReason());

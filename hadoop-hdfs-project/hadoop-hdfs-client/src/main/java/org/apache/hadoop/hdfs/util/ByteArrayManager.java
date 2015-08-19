@@ -22,29 +22,30 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Manage byte array creation and release. 
+ * Manage byte array creation and release.
  */
 @InterfaceAudience.Private
 public abstract class ByteArrayManager {
-  static final Log LOG = LogFactory.getLog(ByteArrayManager.class);
-  private static final ThreadLocal<StringBuilder> debugMessage = new ThreadLocal<StringBuilder>() {
+  static final Logger LOG = LoggerFactory.getLogger(ByteArrayManager.class);
+  private static final ThreadLocal<StringBuilder> DEBUG_MESSAGE =
+      new ThreadLocal<StringBuilder>() {
     protected StringBuilder initialValue() {
       return new StringBuilder();
     }
   };
 
   private static void logDebugMessage() {
-    final StringBuilder b = debugMessage.get();
-    LOG.debug(b);
+    final StringBuilder b = DEBUG_MESSAGE.get();
+    LOG.debug(b.toString());
     b.setLength(0);
   }
 
@@ -97,7 +98,7 @@ public abstract class ByteArrayManager {
 
     /**
      * Increment the counter, and reset it if there is no increment
-     * for acertain time period.
+     * for a certain time period.
      *
      * @return the new count.
      */
@@ -112,10 +113,10 @@ public abstract class ByteArrayManager {
   }
 
   /** A map from integers to counters. */
-  static class CounterMap {
+  static final class CounterMap {
     /** @see ByteArrayManager.Conf#countResetTimePeriodMs */
     private final long countResetTimePeriodMs;
-    private final Map<Integer, Counter> map = new HashMap<Integer, Counter>();
+    private final Map<Integer, Counter> map = new HashMap<>();
 
     private CounterMap(long countResetTimePeriodMs) {
       this.countResetTimePeriodMs = countResetTimePeriodMs;
@@ -125,7 +126,8 @@ public abstract class ByteArrayManager {
      * @return the counter for the given key;
      *         and create a new counter if it does not exist.
      */
-    synchronized Counter get(final Integer key, final boolean createIfNotExist) {
+    synchronized Counter get(final Integer key, final boolean
+        createIfNotExist) {
       Counter count = map.get(key);
       if (count == null && createIfNotExist) {
         count = new Counter(countResetTimePeriodMs);
@@ -133,17 +135,13 @@ public abstract class ByteArrayManager {
       }
       return count;
     }
-
-    synchronized void clear() {
-      map.clear();
-    }
   }
 
   /** Manage byte arrays with the same fixed length. */
   static class FixedLengthManager {
     private final int byteArrayLength;
     private final int maxAllocated;
-    private final Queue<byte[]> freeQueue = new LinkedList<byte[]>();
+    private final Queue<byte[]> freeQueue = new LinkedList<>();
 
     private int numAllocated = 0;
 
@@ -157,31 +155,31 @@ public abstract class ByteArrayManager {
      *
      * If the number of allocated arrays >= maximum, the current thread is
      * blocked until the number of allocated arrays drops to below the maximum.
-     * 
+     *
      * The byte array allocated by this method must be returned for recycling
      * via the {@link FixedLengthManager#recycle(byte[])} method.
      */
     synchronized byte[] allocate() throws InterruptedException {
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append(", ").append(this);
+        DEBUG_MESSAGE.get().append(", ").append(this);
       }
       for(; numAllocated >= maxAllocated;) {
         if (LOG.isDebugEnabled()) {
-          debugMessage.get().append(": wait ...");
+          DEBUG_MESSAGE.get().append(": wait ...");
           logDebugMessage();
         }
 
         wait();
 
         if (LOG.isDebugEnabled()) {
-          debugMessage.get().append("wake up: ").append(this);
+          DEBUG_MESSAGE.get().append("wake up: ").append(this);
         }
       }
       numAllocated++;
 
       final byte[] array = freeQueue.poll();
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append(", recycled? ").append(array != null);
+        DEBUG_MESSAGE.get().append(", recycled? ").append(array != null);
       }
       return array != null? array : new byte[byteArrayLength];
     }
@@ -197,7 +195,7 @@ public abstract class ByteArrayManager {
       Preconditions.checkNotNull(array);
       Preconditions.checkArgument(array.length == byteArrayLength);
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append(", ").append(this);
+        DEBUG_MESSAGE.get().append(", ").append(this);
       }
 
       notify();
@@ -210,7 +208,7 @@ public abstract class ByteArrayManager {
 
       if (freeQueue.size() < maxAllocated - numAllocated) {
         if (LOG.isDebugEnabled()) {
-          debugMessage.get().append(", freeQueue.offer");
+          DEBUG_MESSAGE.get().append(", freeQueue.offer");
         }
         freeQueue.offer(array);
       }
@@ -227,7 +225,7 @@ public abstract class ByteArrayManager {
   /** A map from array lengths to byte array managers. */
   static class ManagerMap {
     private final int countLimit;
-    private final Map<Integer, FixedLengthManager> map = new HashMap<Integer, FixedLengthManager>();
+    private final Map<Integer, FixedLengthManager> map = new HashMap<>();
 
     ManagerMap(int countLimit) {
       this.countLimit = countLimit;
@@ -243,12 +241,11 @@ public abstract class ByteArrayManager {
       }
       return manager;
     }
-
-    synchronized void clear() {
-      map.clear();
-    }
   }
 
+  /**
+   * Configuration for ByteArrayManager.
+   */
   public static class Conf {
     /**
      * The count threshold for each array length so that a manager is created
@@ -265,7 +262,8 @@ public abstract class ByteArrayManager {
      */
     private final long countResetTimePeriodMs;
 
-    public Conf(int countThreshold, int countLimit, long countResetTimePeriodMs) {
+    public Conf(int countThreshold, int countLimit, long
+        countResetTimePeriodMs) {
       this.countThreshold = countThreshold;
       this.countLimit = countLimit;
       this.countResetTimePeriodMs = countResetTimePeriodMs;
@@ -277,20 +275,20 @@ public abstract class ByteArrayManager {
    * the returned array is larger than or equal to the given length.
    *
    * The current thread may be blocked if some resource is unavailable.
-   * 
+   *
    * The byte array created by this method must be released
    * via the {@link ByteArrayManager#release(byte[])} method.
    *
    * @return a byte array with length larger than or equal to the given length.
    */
   public abstract byte[] newByteArray(int size) throws InterruptedException;
-  
+
   /**
    * Release the given byte array.
-   * 
+   *
    * The byte array may or may not be created
    * by the {@link ByteArrayManager#newByteArray(int)} method.
-   * 
+   *
    * @return the number of free array.
    */
   public abstract int release(byte[] array);
@@ -307,7 +305,7 @@ public abstract class ByteArrayManager {
     public byte[] newByteArray(int size) throws InterruptedException {
       return new byte[size];
     }
-    
+
     @Override
     public int release(byte[] array) {
       return 0;
@@ -320,38 +318,41 @@ public abstract class ByteArrayManager {
    */
   static class Impl extends ByteArrayManager {
     private final Conf conf;
-  
+
     private final CounterMap counters;
     private final ManagerMap managers;
-  
+
     Impl(Conf conf) {
       this.conf = conf;
       this.counters = new CounterMap(conf.countResetTimePeriodMs);
       this.managers = new ManagerMap(conf.countLimit);
     }
-  
+
     /**
      * Allocate a byte array, where the length of the allocated array
      * is the least power of two of the given length
      * unless the given length is less than {@link #MIN_ARRAY_LENGTH}.
-     * In such case, the returned array length is equal to {@link #MIN_ARRAY_LENGTH}.
+     * In such case, the returned array length is equal to {@link
+     * #MIN_ARRAY_LENGTH}.
      *
      * If the number of allocated arrays exceeds the capacity,
      * the current thread is blocked until
      * the number of allocated arrays drops to below the capacity.
-     * 
+     *
      * The byte array allocated by this method must be returned for recycling
      * via the {@link Impl#release(byte[])} method.
      *
-     * @return a byte array with length larger than or equal to the given length.
+     * @return a byte array with length larger than or equal to the given
+     * length.
      */
     @Override
-    public byte[] newByteArray(final int arrayLength) throws InterruptedException {
+    public byte[] newByteArray(final int arrayLength)
+        throws InterruptedException {
       Preconditions.checkArgument(arrayLength >= 0);
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append("allocate(").append(arrayLength).append(")");
+        DEBUG_MESSAGE.get().append("allocate(").append(arrayLength).append(")");
       }
-  
+
       final byte[] array;
       if (arrayLength == 0) {
         array = EMPTY_BYTE_ARRAY;
@@ -361,37 +362,40 @@ public abstract class ByteArrayManager {
         final long count = counters.get(powerOfTwo, true).increment();
         final boolean aboveThreshold = count > conf.countThreshold;
         // create a new manager only if the count is above threshold.
-        final FixedLengthManager manager = managers.get(powerOfTwo, aboveThreshold);
-  
+        final FixedLengthManager manager =
+            managers.get(powerOfTwo, aboveThreshold);
+
         if (LOG.isDebugEnabled()) {
-          debugMessage.get().append(": count=").append(count)
+          DEBUG_MESSAGE.get().append(": count=").append(count)
               .append(aboveThreshold? ", aboveThreshold": ", belowThreshold");
         }
         array = manager != null? manager.allocate(): new byte[powerOfTwo];
       }
-  
+
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append(", return byte[").append(array.length).append("]");
+        DEBUG_MESSAGE.get().append(", return byte[")
+            .append(array.length).append("]");
         logDebugMessage();
       }
       return array;
     }
-  
+
     /**
      * Recycle the given byte array.
-     * 
+     *
      * The byte array may or may not be allocated
      * by the {@link Impl#newByteArray(int)} method.
-     * 
+     *
      * This is a non-blocking call.
      */
     @Override
     public int release(final byte[] array) {
       Preconditions.checkNotNull(array);
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append("recycle: array.length=").append(array.length);
+        DEBUG_MESSAGE.get()
+            .append("recycle: array.length=").append(array.length);
       }
-  
+
       final int freeQueueSize;
       if (array.length == 0) {
         freeQueueSize = -1;
@@ -399,18 +403,18 @@ public abstract class ByteArrayManager {
         final FixedLengthManager manager = managers.get(array.length, false);
         freeQueueSize = manager == null? -1: manager.recycle(array);
       }
-  
+
       if (LOG.isDebugEnabled()) {
-        debugMessage.get().append(", freeQueueSize=").append(freeQueueSize);
+        DEBUG_MESSAGE.get().append(", freeQueueSize=").append(freeQueueSize);
         logDebugMessage();
       }
       return freeQueueSize;
     }
-  
+
     CounterMap getCounters() {
       return counters;
     }
-  
+
     ManagerMap getManagers() {
       return managers;
     }

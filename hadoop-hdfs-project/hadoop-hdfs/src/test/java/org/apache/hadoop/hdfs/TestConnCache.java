@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -89,8 +90,8 @@ public class TestConnCache {
     // instances.  Also use a really long socket timeout so that nothing
     // gets closed before we get around to checking the cache size at the end.
     final String contextName = "testReadFromOneDNContext";
-    configuration.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, contextName);
-    configuration.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+    configuration.set(HdfsClientConfigKeys.DFS_CLIENT_CONTEXT, contextName);
+    configuration.setLong(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         100000000L);
     BlockReaderTestUtil util = new BlockReaderTestUtil(1, configuration);
     final Path testFile = new Path("/testConnCache.dat");
