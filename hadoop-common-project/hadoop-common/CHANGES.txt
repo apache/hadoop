@@ -1063,6 +1063,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12322. typos in rpcmetrics.java. (Anu Engineer via
     Arpit Agarwal)
 
+    HADOOP-12317. Applications fail on NM restart on some linux distro
+    because NM container recovery declares AM container as LOST
+    (adhoot via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

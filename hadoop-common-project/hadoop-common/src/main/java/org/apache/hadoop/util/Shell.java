@@ -212,13 +212,18 @@ abstract public class Shell {
   public static String[] getCheckProcessIsAliveCommand(String pid) {
     return Shell.WINDOWS ?
       new String[] { Shell.WINUTILS, "task", "isAlive", pid } :
-      new String[] { "kill", "-0", isSetsidAvailable ? "-" + pid : pid };
+      isSetsidAvailable ?
+        new String[] { "kill", "-0", "--", "-" + pid } :
+        new String[] { "kill", "-0", pid };
   }
 
   /** Return a command to send a signal to a given pid */
   public static String[] getSignalKillCommand(int code, String pid) {
-    return Shell.WINDOWS ? new String[] { Shell.WINUTILS, "task", "kill", pid } :
-      new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
+    return Shell.WINDOWS ?
+      new String[] { Shell.WINUTILS, "task", "kill", pid } :
+      isSetsidAvailable ?
+        new String[] { "kill", "-" + code, "--", "-" + pid } :
+        new String[] { "kill", "-" + code, pid };
   }
 
   public static final String ENV_NAME_REGEX = "[A-Za-z_][A-Za-z0-9_]*";
