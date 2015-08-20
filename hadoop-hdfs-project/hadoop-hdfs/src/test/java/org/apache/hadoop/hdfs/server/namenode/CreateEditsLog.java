@@ -71,7 +71,7 @@ public class CreateEditsLog {
     for (int iB = 0; iB < blocksPerFile; ++iB) {
       blocks[iB] = 
        new BlockInfoContiguous(new Block(0, blockSize, BLOCK_GENERATION_STAMP),
-                               replication);
+           replication);
     }
     
     long currentBlockId = startingBlockId;
@@ -203,7 +203,7 @@ public class CreateEditsLog {
 
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
-    editLog.openForWrite();
+    editLog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
              blockSize, nameGenerator);
     editLog.logSync();

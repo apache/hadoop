@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_START_TIME_BEGIN;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_START_TIME_END;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPS_NUM;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
@@ -29,6 +32,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.math.LongRange;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -39,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -70,10 +75,40 @@ public class AppsBlock extends HtmlBlock {
         reqAppStates.add(YarnApplicationState.valueOf(stateString.trim()));
       }
     }
-
     callerUGI = getCallerUGI();
     final GetApplicationsRequest request =
         GetApplicationsRequest.newInstance(reqAppStates);
+    String appsNumStr = $(APPS_NUM);
+    if (appsNumStr != null && !appsNumStr.isEmpty()) {
+      long appsNum = Long.parseLong(appsNumStr);
+      request.setLimit(appsNum);
+    }
+
+    String appStartedTimeBegainStr = $(APP_START_TIME_BEGIN);
+    long appStartedTimeBegain = 0;
+    if (appStartedTimeBegainStr != null && !appStartedTimeBegainStr.isEmpty()) {
+      appStartedTimeBegain = Long.parseLong(appStartedTimeBegainStr);
+      if (appStartedTimeBegain < 0) {
+        throw new BadRequestException(
+          "app.started-time.begin must be greater than 0");
+      }
+    }
+    String appStartedTimeEndStr = $(APP_START_TIME_END);
+    long appStartedTimeEnd = Long.MAX_VALUE;
+    if (appStartedTimeEndStr != null && !appStartedTimeEndStr.isEmpty()) {
+      appStartedTimeEnd = Long.parseLong(appStartedTimeEndStr);
+      if (appStartedTimeEnd < 0) {
+        throw new BadRequestException(
+          "app.started-time.end must be greater than 0");
+      }
+    }
+    if (appStartedTimeBegain > appStartedTimeEnd) {
+      throw new BadRequestException(
+        "app.started-time.end must be greater than app.started-time.begin");
+    }
+    request.setStartRange(
+        new LongRange(appStartedTimeBegain, appStartedTimeEnd));
+
     if (callerUGI == null) {
       appReports = appBaseProt.getApplications(request).getApplicationList();
     } else {
@@ -109,10 +144,10 @@ public class AppsBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".starttime", "StartTime")
-          .th(".finishtime", "FinishTime").th(".state", "State")
-          .th(".finalstatus", "FinalStatus").th(".progress", "Progress")
-          .th(".ui", "Tracking UI")._()._().tbody();
+          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".starttime", "StartTime").th(".finishtime", "FinishTime")
+          .th(".state", "State").th(".finalstatus", "FinalStatus")
+          .th(".progress", "Progress").th(".ui", "Tracking UI")._()._().tbody();
 
     StringBuilder appsTableData = new StringBuilder("[\n");
     for (ApplicationReport appReport : appReports) {
@@ -145,7 +180,9 @@ public class AppsBlock extends HtmlBlock {
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
-            .getQueue()))).append("\",\"").append(app.getStartedTime())
+            .getQueue()))).append("\",\"").append(String
+                .valueOf(app.getPriority()))
+        .append("\",\"").append(app.getStartedTime())
         .append("\",\"").append(app.getFinishedTime())
         .append("\",\"")
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())

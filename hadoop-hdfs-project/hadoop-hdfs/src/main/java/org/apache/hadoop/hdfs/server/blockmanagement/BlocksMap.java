@@ -139,7 +139,7 @@ class BlocksMap {
       }
     }
   }
-  
+
   /** Returns the block object if it exists in the map. */
   BlockInfo getStoredBlock(Block b) {
     return blocks.get(b);
@@ -209,7 +209,11 @@ class BlocksMap {
   }
 
   int size() {
-    return blocks.size();
+    if (blocks != null) {
+      return blocks.size();
+    } else {
+      return 0;
+    }
   }
 
   Iterable<BlockInfo> getBlocks() {

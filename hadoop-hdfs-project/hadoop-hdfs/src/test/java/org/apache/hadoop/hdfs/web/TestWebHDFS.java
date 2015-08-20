@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -42,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
@@ -556,5 +561,100 @@ public class TestWebHDFS {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testWebHdfsPread() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .build();
+    byte[] content = new byte[1024];
+    RANDOM.nextBytes(content);
+    final Path foo = new Path("/foo");
+    FSDataInputStream in = null;
+    try {
+      final WebHdfsFileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsConstants.WEBHDFS_SCHEME);
+      try (OutputStream os = fs.create(foo)) {
+        os.write(content);
+      }
+
+      // pread
+      in = fs.open(foo, 1024);
+      byte[] buf = new byte[1024];
+      try {
+        in.readFully(1020, buf, 0, 5);
+        Assert.fail("EOF expected");
+      } catch (EOFException ignored) {}
+
+      // mix pread with stateful read
+      int length = in.read(buf, 0, 512);
+      in.readFully(100, new byte[1024], 0, 100);
+      int preadLen = in.read(200, new byte[1024], 0, 200);
+      Assert.assertTrue(preadLen > 0);
+      IOUtils.readFully(in, buf, length, 1024 - length);
+      Assert.assertArrayEquals(content, buf);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testGetHomeDirectory() throws Exception {
+
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      DistributedFileSystem hdfs = cluster.getFileSystem();
+
+      final URI uri = new URI(WebHdfsConstants.WEBHDFS_SCHEME + "://"
+          + cluster.getHttpUri(0).replace("http://", ""));
+      final Configuration confTemp = new Configuration();
+
+      {
+        WebHdfsFileSystem webhdfs = (WebHdfsFileSystem) FileSystem.get(uri,
+            confTemp);
+
+        assertEquals(hdfs.getHomeDirectory().toUri().getPath(), webhdfs
+            .getHomeDirectory().toUri().getPath());
+
+        webhdfs.close();
+      }
+
+      {
+        WebHdfsFileSystem webhdfs = createWebHDFSAsTestUser(confTemp, uri,
+            "XXX");
+
+        assertNotEquals(hdfs.getHomeDirectory().toUri().getPath(), webhdfs
+            .getHomeDirectory().toUri().getPath());
+
+        webhdfs.close();
+      }
+
+    } finally {
+      if (cluster != null)
+        cluster.shutdown();
+    }
+  }
+
+  private WebHdfsFileSystem createWebHDFSAsTestUser(final Configuration conf,
+      final URI uri, final String userName) throws Exception {
+
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        userName, new String[] { "supergroup" });
+
+    return ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
+      @Override
+      public WebHdfsFileSystem run() throws IOException {
+        WebHdfsFileSystem webhdfs = (WebHdfsFileSystem) FileSystem.get(uri,
+            conf);
+        return webhdfs;
+      }
+    });
   }
 }

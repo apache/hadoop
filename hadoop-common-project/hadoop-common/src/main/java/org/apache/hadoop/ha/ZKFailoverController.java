@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -84,7 +85,7 @@ public abstract class ZKFailoverController {
   };
   
   protected static final String USAGE = 
-      "Usage: java zkfc [ -formatZK [-force] [-nonInteractive] ]";
+      "Usage: hdfs zkfc [ -formatZK [-force] [-nonInteractive] ]";
 
   /** Unable to format the parent znode in ZK */
   static final int ERR_CODE_FORMAT_DENIED = 2;
@@ -141,6 +142,7 @@ public abstract class ZKFailoverController {
       throws AccessControlException, IOException;
   protected abstract InetSocketAddress getRpcAddressToBindTo();
   protected abstract PolicyProvider getPolicyProvider();
+  protected abstract List<HAServiceTarget> getAllOtherNodes();
 
   /**
    * Return the name of a znode inside the configured parent znode in which
@@ -616,9 +618,11 @@ public abstract class ZKFailoverController {
    * Coordinate a graceful failover. This proceeds in several phases:
    * 1) Pre-flight checks: ensure that the local node is healthy, and
    * thus a candidate for failover.
-   * 2) Determine the current active node. If it is the local node, no
+   * 2a) Determine the current active node. If it is the local node, no
    * need to failover - return success.
-   * 3) Ask that node to yield from the election for a number of seconds.
+   * 2b) Get the other nodes
+   * 3a) Ask the other nodes to yield from election for a number of seconds
+   * 3b) Ask the active node to yield from the election for a number of seconds.
    * 4) Allow the normal election path to run in other threads. Wait until
    * we either become unhealthy or we see an election attempt recorded by
    * the normal code path.
@@ -648,12 +652,27 @@ public abstract class ZKFailoverController {
           "No need to failover. Returning success.");
       return;
     }
-    
-    // Phase 3: ask the old active to yield from the election.
-    LOG.info("Asking " + oldActive + " to cede its active state for " +
-        timeout + "ms");
-    ZKFCProtocol oldZkfc = oldActive.getZKFCProxy(conf, timeout);
-    oldZkfc.cedeActive(timeout);
+
+    // Phase 2b: get the other nodes
+    List<HAServiceTarget> otherNodes = getAllOtherNodes();
+    List<ZKFCProtocol> otherZkfcs = new ArrayList<ZKFCProtocol>(otherNodes.size());
+
+    // Phase 3: ask the other nodes to yield from the election.
+    HAServiceTarget activeNode = null;
+    for (HAServiceTarget remote : otherNodes) {
+      // same location, same node - may not always be == equality
+      if (remote.getAddress().equals(oldActive.getAddress())) {
+        activeNode = remote;
+        continue;
+      }
+      otherZkfcs.add(cedeRemoteActive(remote, timeout));
+    }
+
+    assert
+      activeNode != null : "Active node does not match any known remote node";
+
+    // Phase 3b: ask the old active to yield
+    otherZkfcs.add(cedeRemoteActive(activeNode, timeout));
 
     // Phase 4: wait for the normal election to make the local node
     // active.
@@ -676,8 +695,10 @@ public abstract class ZKFailoverController {
     // Phase 5. At this point, we made some attempt to become active. So we
     // can tell the old active to rejoin if it wants. This allows a quick
     // fail-back if we immediately crash.
-    oldZkfc.cedeActive(-1);
-    
+    for (ZKFCProtocol zkfc : otherZkfcs) {
+      zkfc.cedeActive(-1);
+    }
+
     if (attempt.succeeded) {
       LOG.info("Successfully became active. " + attempt.status);
     } else {
@@ -685,6 +706,23 @@ public abstract class ZKFailoverController {
       String msg = "Failed to become active. " + attempt.status;
       throw new ServiceFailedException(msg);
     }
+  }
+
+  /**
+   * Ask the remote zkfc to cede its active status and wait for the specified
+   * timeout before attempting to claim leader status.
+   * @param remote node to ask
+   * @param timeout amount of time to cede
+   * @return the {@link ZKFCProtocol} used to talk to the ndoe
+   * @throws IOException
+   */
+  private ZKFCProtocol cedeRemoteActive(HAServiceTarget remote, int timeout)
+    throws IOException {
+    LOG.info("Asking " + remote + " to cede its active state for "
+               + timeout + "ms");
+    ZKFCProtocol oldZkfc = remote.getZKFCProxy(conf, timeout);
+    oldZkfc.cedeActive(timeout);
+    return oldZkfc;
   }
 
   /**
@@ -777,7 +815,8 @@ public abstract class ZKFailoverController {
           break;
           
         default:
-          throw new IllegalArgumentException("Unhandled state:" + lastHealthState);
+          throw new IllegalArgumentException("Unhandled state:"
+                                               + lastHealthState);
         }
       }
     }

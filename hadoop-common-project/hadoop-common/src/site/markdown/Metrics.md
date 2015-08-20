@@ -216,6 +216,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `TotalLoad` | Current number of connections |
 | `SnapshottableDirectories` | Current number of snapshottable directories |
 | `Snapshots` | Current number of snapshots |
+| `NumEncryptionZones` | Current number of encryption zones |
 | `BlocksTotal` | Current number of allocated blocks in the system |
 | `FilesTotal` | Current number of files and directories |
 | `PendingReplicationBlocks` | Current number of blocks pending to be replicated |
@@ -230,6 +231,12 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `BlockCapacity` | Current number of block capacity |
 | `StaleDataNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
 | `TotalFiles` | Current number of files and directories (same as FilesTotal) |
+| `MissingReplOneBlocks` | Current number of missing blocks with replication factor 1 |
+| `NumFilesUnderConstruction` | Current number of files under construction |
+| `NumActiveClients` | Current number of active clients holding lease |
+| `HAState` | (HA-only) Current state of the NameNode: initializing or active or standby or stopping state |
+| `FSState` | Current state of the file system: Safemode or Operational |
+| `LockQueueLength` | Number of threads waiting to acquire FSNameSystem lock |
 
 JournalNode
 -----------

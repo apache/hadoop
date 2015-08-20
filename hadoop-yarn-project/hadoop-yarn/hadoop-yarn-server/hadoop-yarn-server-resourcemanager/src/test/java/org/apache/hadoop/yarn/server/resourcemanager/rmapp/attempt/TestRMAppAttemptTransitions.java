@@ -258,14 +258,14 @@ public class TestRMAppAttemptTransitions {
           null, amRMTokenManager,
           new RMContainerTokenSecretManager(conf),
           nmTokenManager,
-          clientToAMTokenManager,
-          writer);
+          clientToAMTokenManager);
     
     store = mock(RMStateStore.class);
     ((RMContextImpl) rmContext).setStateStore(store);
     publisher = mock(SystemMetricsPublisher.class);
-    ((RMContextImpl) rmContext).setSystemMetricsPublisher(publisher);
-    
+    rmContext.setSystemMetricsPublisher(publisher);
+    rmContext.setRMApplicationHistoryWriter(writer);
+
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);
     applicationMasterLauncher = mock(ApplicationMasterLauncher.class);

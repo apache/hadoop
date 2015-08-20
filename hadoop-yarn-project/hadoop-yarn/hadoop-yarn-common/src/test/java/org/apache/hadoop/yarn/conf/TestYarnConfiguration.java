@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
@@ -202,5 +203,26 @@ public class TestYarnConfiguration {
         serverAddress);
 
     assertTrue(resourceTrackerConnectAddress.toString().startsWith("yo.yo.yo"));
+
+    //tests updateConnectAddr won't add suffix to NM service address configurations
+    conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "yo.yo.yo");
+    conf.set(YarnConfiguration.NM_BIND_HOST, "0.0.0.0");
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+
+    serverAddress = new InetSocketAddress(
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS.split(":")[0],
+        Integer.valueOf(YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS.split(":")[1]));
+
+    InetSocketAddress localizerAddress = conf.updateConnectAddr(
+        YarnConfiguration.NM_BIND_HOST,
+        YarnConfiguration.NM_LOCALIZER_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS,
+        serverAddress);
+
+    assertTrue(localizerAddress.toString().startsWith("yo.yo.yo"));
+    assertNull(conf.get(
+        HAUtil.addSuffix(YarnConfiguration.NM_LOCALIZER_ADDRESS, "rm1")));
   }
 }

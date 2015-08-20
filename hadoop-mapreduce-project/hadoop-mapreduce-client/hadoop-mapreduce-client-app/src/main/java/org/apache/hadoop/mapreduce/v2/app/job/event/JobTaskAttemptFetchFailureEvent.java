@@ -28,13 +28,15 @@ public class JobTaskAttemptFetchFailureEvent extends JobEvent {
 
   private final TaskAttemptId reduce;
   private final List<TaskAttemptId> maps;
+  private final String hostname;
 
   public JobTaskAttemptFetchFailureEvent(TaskAttemptId reduce, 
-      List<TaskAttemptId> maps) {
-    super(reduce.getTaskId().getJobId(), 
+      List<TaskAttemptId> maps, String host) {
+    super(reduce.getTaskId().getJobId(),
         JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE);
     this.reduce = reduce;
     this.maps = maps;
+    this.hostname = host;
   }
 
   public List<TaskAttemptId> getMaps() {
@@ -45,4 +47,7 @@ public class JobTaskAttemptFetchFailureEvent extends JobEvent {
     return reduce;
   }
 
+  public String getHost() {
+    return hostname;
+  }
 }

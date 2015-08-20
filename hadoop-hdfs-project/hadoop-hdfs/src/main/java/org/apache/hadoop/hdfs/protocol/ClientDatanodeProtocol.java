@@ -159,6 +159,11 @@ public interface ClientDatanodeProtocol {
   ReconfigurationTaskStatus getReconfigurationStatus() throws IOException;
 
   /**
+   * Get a list of allowed properties for reconfiguration.
+   */
+  List<String> listReconfigurableProperties() throws IOException;
+
+  /**
    * Trigger a new block report.
    */
   void triggerBlockReport(BlockReportOptions options)

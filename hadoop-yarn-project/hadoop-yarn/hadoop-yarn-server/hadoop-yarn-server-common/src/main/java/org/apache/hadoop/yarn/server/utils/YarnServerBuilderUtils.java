@@ -22,13 +22,11 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
-import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Server Builder utilities to construct various objects.
@@ -38,6 +36,15 @@ public class YarnServerBuilderUtils {
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+
+  public static NodeHeartbeatResponse newNodeHeartbeatResponse(
+      NodeAction action, String diagnosticsMessage) {
+    NodeHeartbeatResponse response = recordFactory
+        .newRecordInstance(NodeHeartbeatResponse.class);
+    response.setNodeAction(action);
+    response.setDiagnosticsMessage(diagnosticsMessage);
+    return response;
+  }
 
   public static NodeHeartbeatResponse newNodeHeartbeatResponse(int responseId,
       NodeAction action, List<ContainerId> containersToCleanUp,

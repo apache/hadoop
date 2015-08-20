@@ -73,7 +73,7 @@ public class ClusterCLI extends YarnCLI {
         "List cluster node-label collection");
     opts.addOption("h", HELP_CMD, false, "Displays help for all commands.");
     opts.addOption("dnl", DIRECTLY_ACCESS_NODE_LABEL_STORE, false,
-        "Directly access node label store, "
+        "This is DEPRECATED, will be removed in future releases. Directly access node label store, "
             + "with this option, all node label related operations"
             + " will NOT connect RM. Instead, they will"
             + " access/modify stored node labels directly."

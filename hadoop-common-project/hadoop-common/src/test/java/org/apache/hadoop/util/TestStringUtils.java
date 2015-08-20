@@ -278,8 +278,12 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     s.add("c");
     assertEquals("", StringUtils.join(":", s.subList(0, 0)));
     assertEquals("a", StringUtils.join(":", s.subList(0, 1)));
+    assertEquals("", StringUtils.join(':', s.subList(0, 0)));
+    assertEquals("a", StringUtils.join(':', s.subList(0, 1)));
     assertEquals("a:b", StringUtils.join(":", s.subList(0, 2)));
     assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
+    assertEquals("a:b", StringUtils.join(':', s.subList(0, 2)));
+    assertEquals("a:b:c", StringUtils.join(':', s.subList(0, 3)));
   }
   
   @Test (timeout = 30000)
@@ -417,9 +421,6 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
 
   @Test
   public void testLowerAndUpperStrings() {
-    // Due to java bug http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8047340,
-    // The test will fail with Turkish locality on Mac OS.
-    Assume.assumeTrue(Shell.LINUX);
     Locale defaultLocale = Locale.getDefault();
     try {
       Locale.setDefault(new Locale("tr", "TR"));

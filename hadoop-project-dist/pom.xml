@@ -246,27 +246,11 @@
 
                     <mkdir dir="${project.build.directory}/docs-src"/>
 
-                    <copy todir="${project.build.directory}/docs-src">
-                      <fileset dir="${basedir}/src/main/docs"/>
-                    </copy>
-
                     <!-- Docs -->
-                    <copy file="${project.build.directory}/docs-src/releasenotes.html"
-                          todir="${project.build.directory}/site"/>
                     <style basedir="${basedir}/src/main/resources"
                            destdir="${project.build.directory}/site"
                            includes="core-default.xml"
                            style="${basedir}/src/main/xsl/configuration.xsl"/>
-
-                    <!-- Convert 'CHANGES.txt' to 'changes.html" -->
-                    <exec executable="perl" input="${basedir}/../CHANGES.txt"
-                          output="${project.build.directory}/site/changes.html"
-                          failonerror="true">
-                      <arg value="${project.build.directory}/docs-src/changes/changes2html.pl"/>
-                    </exec>
-                    <copy todir="${project.build.directory}/site">
-                      <fileset dir="${project.build.directory}/docs-src/changes" includes="*.css"/>
-                    </copy>
 
                     <!-- Jdiff -->
                     <mkdir dir="${project.build.directory}/site/jdiff/xml"/>
@@ -377,7 +361,7 @@
                         fi
                       fi
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-copynativelibs.sh"/>
                     </exec>
                   </target>
@@ -396,7 +380,7 @@
                       cd "${project.build.directory}"
                       tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-maketar.sh"/>
                     </exec>
                   </target>

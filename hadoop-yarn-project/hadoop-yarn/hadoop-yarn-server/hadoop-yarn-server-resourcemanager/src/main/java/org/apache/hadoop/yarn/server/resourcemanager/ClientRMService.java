@@ -752,12 +752,8 @@ public class ClientRMService extends AbstractService implements
       RMApp application = appsIter.next();
 
       // Check if current application falls under the specified scope
-      boolean allowAccess = checkAccess(callerUGI, application.getUser(),
-          ApplicationAccessType.VIEW_APP, application);
       if (scope == ApplicationsRequestScope.OWN &&
           !callerUGI.getUserName().equals(application.getUser())) {
-        continue;
-      } else if (scope == ApplicationsRequestScope.VIEWABLE && !allowAccess) {
         continue;
       }
 
@@ -805,6 +801,13 @@ public class ClientRMService extends AbstractService implements
         if (!match) {
           continue;
         }
+      }
+
+      // checkAccess can grab the scheduler lock so call it last
+      boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+          ApplicationAccessType.VIEW_APP, application);
+      if (scope == ApplicationsRequestScope.VIEWABLE && !allowAccess) {
+        continue;
       }
 
       reports.add(application.createAndGetApplicationReport(

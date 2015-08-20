@@ -98,6 +98,9 @@ The Web processor now supports the following operations:
 * [LISTSTATUS](./WebHDFS.html#List_a_Directory)
 * [GETFILESTATUS](./WebHDFS.html#Status_of_a_FileDirectory)
 * [GETACLSTATUS](./WebHDFS.html#Get_ACL_Status)
+* [GETXATTRS](./WebHDFS.html#Get_an_XAttr)
+* [LISTXATTRS](./WebHDFS.html#List_all_XAttrs)
+* [CONTENTSUMMARY] (./WebHDFS.html#Get_Content_Summary_of_a_Directory)
 
 ### XML Processor
 

@@ -118,7 +118,7 @@ public class TestPrivilegedOperationExecutor {
     PrivilegedOperationExecutor exec = PrivilegedOperationExecutor
         .getInstance(confWithExecutorPath);
     PrivilegedOperation op = new PrivilegedOperation(PrivilegedOperation
-        .OperationType.LAUNCH_CONTAINER, (String) null);
+        .OperationType.TC_MODIFY_STATE, (String) null);
     String[] cmdArray = exec.getPrivilegedOperationExecutionCommand(null, op);
 
     //No arguments added - so the resulting array should consist of
@@ -127,10 +127,8 @@ public class TestPrivilegedOperationExecutor {
     Assert.assertEquals(customExecutorPath, cmdArray[0]);
     Assert.assertEquals(op.getOperationType().getOption(), cmdArray[1]);
 
-    //other (dummy) arguments to launch container
-    String[] additionalArgs = { "test_user", "yarn", "1", "app_01",
-        "container_01", "workdir", "launch_script.sh", "tokens", "pidfile",
-        "nm-local-dirs", "nm-log-dirs", "resource-spec" };
+    //other (dummy) arguments to tc modify state
+    String[] additionalArgs = { "cmd_file_1", "cmd_file_2", "cmd_file_3"};
 
     op.appendArgs(additionalArgs);
     cmdArray = exec.getPrivilegedOperationExecutionCommand(null, op);
@@ -217,8 +215,10 @@ public class TestPrivilegedOperationExecutor {
           .squashCGroupOperations(ops);
       String expected = new StringBuffer
           (PrivilegedOperation.CGROUP_ARG_PREFIX)
-          .append(cGroupTasks1).append(',')
-          .append(cGroupTasks2).append(',')
+          .append(cGroupTasks1).append(PrivilegedOperation
+              .LINUX_FILE_PATH_SEPARATOR)
+          .append(cGroupTasks2).append(PrivilegedOperation
+              .LINUX_FILE_PATH_SEPARATOR)
           .append(cGroupTasks3).toString();
 
       //We expect axactly one argument

@@ -456,7 +456,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       return;
     }
 
-    final Result r = file.getReplication() == 0? ecRes: replRes;
+    final Result r = file.getErasureCodingPolicy() != null ? ecRes: replRes;
     collectFileSummary(path, file, r, blocks);
     if (showprogress && (replRes.totalFiles + ecRes.totalFiles) % 100 == 0) {
       out.println();
@@ -502,8 +502,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final FSNamesystem fsn = namenode.getNamesystem();
     fsn.readLock();
     try {
-      blocks = fsn.getBlockLocations(
-          fsn.getPermissionChecker(), path, 0, fileLen, false, false)
+      blocks = FSDirStatAndListingOp.getBlockLocations(
+          fsn.getFSDirectory(), fsn.getPermissionChecker(),
+          path, 0, fileLen, false)
           .blocks;
     } catch (FileNotFoundException fnfe) {
       blocks = null;

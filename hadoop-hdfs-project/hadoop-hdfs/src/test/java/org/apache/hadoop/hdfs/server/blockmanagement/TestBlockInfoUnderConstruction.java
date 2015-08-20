@@ -39,7 +39,7 @@ public class TestBlockInfoUnderConstruction {
     DatanodeDescriptor dd3 = s3.getDatanodeDescriptor();
 
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
-    BlockInfoUnderConstructionContiguous blockInfo = new BlockInfoUnderConstructionContiguous(
+    BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
         new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
         (short) 3,
         BlockUCState.UNDER_CONSTRUCTION,

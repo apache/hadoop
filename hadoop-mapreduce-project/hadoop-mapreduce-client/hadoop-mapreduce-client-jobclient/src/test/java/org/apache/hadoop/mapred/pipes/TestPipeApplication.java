@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.BooleanWritable;
@@ -94,7 +95,7 @@ public class TestPipeApplication {
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
               new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
-      fs.setConf(conf);
+      fs.initialize(FsConstants.LOCAL_FS_URI, conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
               new Path(workSpace + File.separator + "outfile")), IntWritable.class,
               Text.class, null, null, true);
@@ -176,7 +177,7 @@ public class TestPipeApplication {
       FakeCollector output = new FakeCollector(new Counters.Counter(),
               new Progress());
       FileSystem fs = new RawLocalFileSystem();
-      fs.setConf(conf);
+      fs.initialize(FsConstants.LOCAL_FS_URI, conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
               new Path(workSpace.getAbsolutePath() + File.separator + "outfile")),
               IntWritable.class, Text.class, null, null, true);

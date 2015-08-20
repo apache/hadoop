@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -170,8 +170,8 @@ public class TestAddStripedBlocks {
     Assert.assertEquals(0,
         block.getBlockId() & HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
 
-    final BlockInfoUnderConstructionStriped blockUC =
-        (BlockInfoUnderConstructionStriped) block;
+    final BlockInfoStripedUnderConstruction blockUC =
+        (BlockInfoStripedUnderConstruction) block;
     Assert.assertEquals(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
         blockUC.getBlockUCState());
     if (checkReplica) {
@@ -205,8 +205,8 @@ public class TestAddStripedBlocks {
 
       FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
       INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
-      BlockInfoUnderConstructionStriped lastBlk =
-          (BlockInfoUnderConstructionStriped) fileNode.getLastBlock();
+      BlockInfoStripedUnderConstruction lastBlk =
+          (BlockInfoStripedUnderConstruction) fileNode.getLastBlock();
       DatanodeInfo[] expectedDNs = DatanodeStorageInfo
           .toDatanodeInfos(lastBlk.getExpectedStorageLocations());
       int[] indices = lastBlk.getBlockIndices();
@@ -228,7 +228,7 @@ public class TestAddStripedBlocks {
   }
 
   /**
-   * Test BlockInfoUnderConstructionStriped#addReplicaIfNotPresent in different
+   * Test BlockInfoStripedUnderConstruction#addReplicaIfNotPresent in different
    * scenarios.
    */
   @Test
@@ -246,8 +246,8 @@ public class TestAddStripedBlocks {
       cluster.getNamesystem().getAdditionalBlock(file.toString(),
           fileNode.getId(), dfs.getClient().getClientName(), null, null, null);
       BlockInfo lastBlock = fileNode.getLastBlock();
-      BlockInfoUnderConstructionStriped ucBlock =
-          (BlockInfoUnderConstructionStriped) lastBlock;
+      BlockInfoStripedUnderConstruction ucBlock =
+          (BlockInfoStripedUnderConstruction) lastBlock;
 
       DatanodeStorageInfo[] locs = ucBlock.getExpectedStorageLocations();
       int[] indices = ucBlock.getBlockIndices();
@@ -307,8 +307,8 @@ public class TestAddStripedBlocks {
           bpId, reports, null);
     }
 
-    BlockInfoUnderConstructionStriped ucBlock =
-        (BlockInfoUnderConstructionStriped) lastBlock;
+    BlockInfoStripedUnderConstruction ucBlock =
+        (BlockInfoStripedUnderConstruction) lastBlock;
     DatanodeStorageInfo[] locs = ucBlock.getExpectedStorageLocations();
     int[] indices = ucBlock.getBlockIndices();
     Assert.assertEquals(GROUP_SIZE, locs.length);

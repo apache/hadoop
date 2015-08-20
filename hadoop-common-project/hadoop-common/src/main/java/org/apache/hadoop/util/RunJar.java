@@ -148,7 +148,8 @@ public class RunJar {
     String fileName = args[firstArg++];
     File file = new File(fileName);
     if (!file.exists() || !file.isFile()) {
-      System.err.println("Not a valid JAR: " + file.getCanonicalPath());
+      System.err.println("JAR does not exist or is not a normal file: " +
+          file.getCanonicalPath());
       System.exit(-1);
     }
     String mainClassName = null;

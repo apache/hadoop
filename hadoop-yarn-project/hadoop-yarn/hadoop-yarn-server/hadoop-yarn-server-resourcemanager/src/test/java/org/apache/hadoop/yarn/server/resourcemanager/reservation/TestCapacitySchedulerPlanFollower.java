@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -56,7 +57,8 @@ import org.junit.rules.TestName;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
-public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollowerBase {
+public class TestCapacitySchedulerPlanFollower extends
+    TestSchedulerPlanFollowerBase {
 
   private RMContext rmContext;
   private RMContext spyRMContext;
@@ -115,11 +117,11 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
   }
 
   private void setupPlanFollower() throws Exception {
-    ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     mClock = mock(Clock.class);
     mAgent = mock(ReservationAgent.class);
 
-    String reservationQ = testUtil.getFullReservationQueueName();
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
     CapacitySchedulerConfiguration csConf = cs.getConfiguration();
     csConf.setReservationWindow(reservationQ, 20L);
     csConf.setMaximumCapacity(reservationQ, 40);
@@ -143,7 +145,7 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
 
   @Override
   protected void verifyCapacity(Queue defQ) {
-    CSQueue csQueue = (CSQueue)defQ;
+    CSQueue csQueue = (CSQueue) defQ;
     assertTrue(csQueue.getCapacity() > 0.9);
   }
 
@@ -154,7 +156,7 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
 
   @Override
   protected int getNumberOfApplications(Queue queue) {
-    CSQueue csQueue = (CSQueue)queue;
+    CSQueue csQueue = (CSQueue) queue;
     int numberOfApplications = csQueue.getNumApplications();
     return numberOfApplications;
   }

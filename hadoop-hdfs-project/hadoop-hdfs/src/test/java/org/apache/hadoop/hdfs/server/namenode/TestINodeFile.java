@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -290,7 +292,7 @@ public class TestINodeFile {
       iNodes[i] = new INodeFile(i, null, perm, 0L, 0L, null, replication,
           preferredBlockSize);
       iNodes[i].setLocalName(DFSUtil.string2Bytes(fileNamePrefix + i));
-      BlockInfoContiguous newblock = new BlockInfoContiguous(replication);
+      BlockInfo newblock = new BlockInfoContiguous(replication);
       iNodes[i].addBlock(newblock);
     }
     
@@ -1140,5 +1142,13 @@ public class TestINodeFile {
     inf.removeXAttrFeature();
     f1 = inf.getXAttrFeature();
     assertEquals(f1, null);
+  }
+
+  @Test
+  public void testClearBlocks() {
+    INodeFile toBeCleared = createINodeFiles(1, "toBeCleared")[0];
+    assertEquals(1, toBeCleared.getBlocks().length);
+    toBeCleared.clearBlocks();
+    assertNull(toBeCleared.getBlocks());
   }
 }

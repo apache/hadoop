@@ -73,6 +73,7 @@ public class ParentQueue extends AbstractCSQueue {
   final PartitionedQueueComparator partitionQueueComparator;
   volatile int numApplications;
   private final CapacitySchedulerContext scheduler;
+  private boolean needToResortQueuesAtNextAllocation = false;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -147,7 +148,7 @@ public class ParentQueue extends AbstractCSQueue {
       		" for children of queue " + queueName);
     }
     // check label capacities
-    for (String nodeLabel : labelManager.getClusterNodeLabelNames()) {
+    for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
       float capacityByLabel = queueCapacities.getCapacity(nodeLabel);
       // check children's labels
       float sum = 0;
@@ -383,7 +384,7 @@ public class ParentQueue extends AbstractCSQueue {
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(node.getPartition())) {
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
     
     // Check if this queue need more resource, simply skip allocation if this
@@ -395,7 +396,7 @@ public class ParentQueue extends AbstractCSQueue {
             + ", because it doesn't need more resource, schedulingMode="
             + schedulingMode.name() + " node-partition=" + node.getPartition());
       }
-      return NULL_ASSIGNMENT;
+      return CSAssignment.NULL_ASSIGNMENT;
     }
     
     CSAssignment assignment = 
@@ -411,7 +412,7 @@ public class ParentQueue extends AbstractCSQueue {
       // This will also consider parent's limits and also continuous reservation
       // looking
       if (!super.canAssignToThisQueue(clusterResource, node.getPartition(),
-          resourceLimits, minimumAllocation, Resources.createResource(
+          resourceLimits, Resources.createResource(
               getMetrics().getReservedMB(), getMetrics()
                   .getReservedVirtualCores()), schedulingMode)) {
         break;
@@ -527,6 +528,14 @@ public class ParentQueue extends AbstractCSQueue {
   
   private Iterator<CSQueue> sortAndGetChildrenAllocationIterator(FiCaSchedulerNode node) {
     if (node.getPartition().equals(RMNodeLabelsManager.NO_LABEL)) {
+      if (needToResortQueuesAtNextAllocation) {
+        // If we skipped resort queues last time, we need to re-sort queue
+        // before allocation
+        List<CSQueue> childrenList = new ArrayList<>(childQueues);
+        childQueues.clear();
+        childQueues.addAll(childrenList);
+        needToResortQueuesAtNextAllocation = false;
+      }
       return childQueues.iterator();
     }
 
@@ -620,12 +629,9 @@ public class ParentQueue extends AbstractCSQueue {
         super.releaseResource(clusterResource, rmContainer.getContainer()
             .getResource(), node.getPartition());
 
-        LOG.info("completedContainer" +
-            " queue=" + getQueueName() + 
-            " usedCapacity=" + getUsedCapacity() +
-            " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
-            " used=" + queueUsage.getUsed() + 
-            " cluster=" + clusterResource);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("completedContainer " + this + ", cluster=" + clusterResource);
+        }
 
         // Note that this is using an iterator on the childQueues so this can't
         // be called if already within an iterator for the childQueues. Like
@@ -637,13 +643,19 @@ public class ParentQueue extends AbstractCSQueue {
             CSQueue csqueue = iter.next();
             if(csqueue.equals(completedChildQueue)) {
               iter.remove();
-              LOG.info("Re-sorting completed queue: " + csqueue.getQueuePath() +
-                  " stats: " + csqueue);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Re-sorting completed queue: " + csqueue);
+              }
               childQueues.add(csqueue);
               break;
             }
           }
         }
+        
+        // If we skipped sort queue this time, we need to resort queues to make
+        // sure we allocate from least usage (or order defined by queue policy)
+        // queues.
+        needToResortQueuesAtNextAllocation = !sortQueues;
       }
 
       // Inform the parent

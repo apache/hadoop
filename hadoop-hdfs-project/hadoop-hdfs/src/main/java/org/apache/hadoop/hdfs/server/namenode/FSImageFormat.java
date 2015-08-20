@@ -55,7 +55,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -780,7 +780,7 @@ public class FSImageFormat {
             if (blocks.length > 0) {
               Block lastBlk = blocks[blocks.length - 1];
               blocks[blocks.length - 1] =
-                  new BlockInfoUnderConstructionContiguous(lastBlk, replication);
+                  new BlockInfoContiguousUnderConstruction(lastBlk, replication);
             }
           }
         }
@@ -1144,7 +1144,7 @@ public class FSImageFormat {
       + " option to automatically rename these paths during upgrade.";
 
   /**
-   * Same as {@link #renameReservedPathsOnUpgrade(String)}, but for a single
+   * Same as {@link #renameReservedPathsOnUpgrade}, but for a single
    * byte array path component.
    */
   private static byte[] renameReservedComponentOnUpgrade(byte[] component,
@@ -1164,7 +1164,7 @@ public class FSImageFormat {
   }
 
   /**
-   * Same as {@link #renameReservedPathsOnUpgrade(String)}, but for a single
+   * Same as {@link #renameReservedPathsOnUpgrade}, but for a single
    * byte array path component.
    */
   private static byte[] renameReservedRootComponentOnUpgrade(byte[] component,

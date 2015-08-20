@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
@@ -36,6 +37,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.TextFormat;
@@ -55,6 +57,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   private Token clientToAMToken = null;
   private Token amRmToken = null;
   private Set<String> applicationTags = null;
+  private Priority priority = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -484,6 +487,11 @@ public class ApplicationReportPBImpl extends ApplicationReport {
       builder.clearApplicationTags();
       builder.addAllApplicationTags(this.applicationTags);
     }
+    if (this.priority != null
+        && !((PriorityPBImpl) this.priority).getProto().equals(
+            builder.getPriority())) {
+      builder.setPriority(convertToProtoFormat(this.priority));
+    }
   }
 
   private void mergeLocalToProto() {
@@ -551,6 +559,14 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     return ((TokenPBImpl)t).getProto();
   }
 
+  private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
+    return new PriorityPBImpl(p);
+  }
+
+  private PriorityProto convertToProtoFormat(Priority t) {
+    return ((PriorityPBImpl)t).getProto();
+  }
+
   @Override
   public LogAggregationStatus getLogAggregationStatus() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -580,5 +596,38 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   private LogAggregationStatusProto
       convertToProtoFormat(LogAggregationStatus s) {
     return ProtoUtils.convertToProtoFormat(s);
+  }
+
+  @Override
+  public boolean isUnmanagedApp() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getUnmanagedApplication();
+  }
+
+  @Override
+  public void setUnmanagedApp(boolean unmanagedApplication) {
+    maybeInitBuilder();
+    builder.setUnmanagedApplication(unmanagedApplication);
+  }
+
+  @Override
+  public Priority getPriority() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.priority != null) {
+      return this.priority;
+    }
+    if (!p.hasPriority()) {
+      return null;
+    }
+    this.priority = convertFromProtoFormat(p.getPriority());
+    return this.priority;
+  }
+
+  @Override
+  public void setPriority(Priority priority) {
+    maybeInitBuilder();
+    if (priority == null)
+      builder.clearPriority();
+    this.priority = priority;
   }
 }

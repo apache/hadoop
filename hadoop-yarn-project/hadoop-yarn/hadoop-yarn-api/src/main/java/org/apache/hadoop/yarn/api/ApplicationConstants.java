@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -27,13 +28,13 @@ import org.apache.hadoop.util.Shell;
 /**
  * This is the API for the applications comprising of constants that YARN sets
  * up for the applications and the containers.
- * 
+ *
  * TODO: Investigate the semantics and security of each cross-boundary refs.
  */
 @Public
 @Evolving
 public interface ApplicationConstants {
-  
+
   /**
    * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment
    * only
@@ -47,11 +48,11 @@ public interface ApplicationConstants {
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
 
   /**
-   * The environmental variable for APPLICATION_WEB_PROXY_BASE. Set in 
+   * The environmental variable for APPLICATION_WEB_PROXY_BASE. Set in
    * ApplicationMaster's environment only. This states that for all non-relative
    * web URLs in the app masters web UI what base should they have.
    */
-  public static final String APPLICATION_WEB_PROXY_BASE_ENV = 
+  public static final String APPLICATION_WEB_PROXY_BASE_ENV =
     "APPLICATION_WEB_PROXY_BASE";
 
   /**
@@ -98,15 +99,9 @@ public interface ApplicationConstants {
   public static final String STDOUT = "stdout";
 
   /**
-   * The environment variable for MAX_APP_ATTEMPTS. Set in AppMaster environment
-   * only
-   */
-  public static final String MAX_APP_ATTEMPTS_ENV = "MAX_APP_ATTEMPTS";
-
-  /**
    * Environment for Applications.
-   * 
-   * Some of the environment variables for applications are <em>final</em> 
+   *
+   * Some of the environment variables for applications are <em>final</em>
    * i.e. they cannot be modified by the applications.
    */
   public enum Environment {
@@ -115,80 +110,87 @@ public interface ApplicationConstants {
      * Final, non-modifiable.
      */
     USER("USER"),
-    
+
     /**
      * $LOGNAME
      * Final, non-modifiable.
      */
     LOGNAME("LOGNAME"),
-    
+
     /**
      * $HOME
      * Final, non-modifiable.
      */
     HOME("HOME"),
-    
+
     /**
      * $PWD
      * Final, non-modifiable.
      */
     PWD("PWD"),
-    
+
     /**
      * $PATH
      */
     PATH("PATH"),
-    
+
     /**
      * $SHELL
      */
     SHELL("SHELL"),
-    
+
     /**
      * $JAVA_HOME
      */
     JAVA_HOME("JAVA_HOME"),
-    
+
     /**
      * $CLASSPATH
      */
     CLASSPATH("CLASSPATH"),
-    
+
     /**
      * $APP_CLASSPATH
      */
     APP_CLASSPATH("APP_CLASSPATH"),
-    
+
     /**
      * $LD_LIBRARY_PATH
      */
     LD_LIBRARY_PATH("LD_LIBRARY_PATH"),
-    
+
     /**
      * $HADOOP_CONF_DIR
      * Final, non-modifiable.
      */
     HADOOP_CONF_DIR("HADOOP_CONF_DIR"),
-    
+
     /**
      * $HADOOP_COMMON_HOME
      */
     HADOOP_COMMON_HOME("HADOOP_COMMON_HOME"),
-    
+
     /**
      * $HADOOP_HDFS_HOME
      */
     HADOOP_HDFS_HOME("HADOOP_HDFS_HOME"),
-    
+
     /**
      * $MALLOC_ARENA_MAX
      */
     MALLOC_ARENA_MAX("MALLOC_ARENA_MAX"),
-    
+
     /**
      * $HADOOP_YARN_HOME
      */
     HADOOP_YARN_HOME("HADOOP_YARN_HOME"),
+
+    /**
+     * $CLASSPATH_PREPEND_DISTCACHE
+     * Private, Windows specific
+     */
+    @Private
+    CLASSPATH_PREPEND_DISTCACHE("CLASSPATH_PREPEND_DISTCACHE"),
 
     /**
      * $CONTAINER_ID
@@ -232,11 +234,11 @@ public interface ApplicationConstants {
     private Environment(String variable) {
       this.variable = variable;
     }
-    
+
     public String key() {
       return variable;
     }
-    
+
     public String toString() {
       return variable;
     }

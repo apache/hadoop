@@ -137,7 +137,9 @@ public class TestClusterCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: yarn cluster");
-    pw.println(" -dnl,--directly-access-node-label-store   Directly access node label");
+    pw.println(" -dnl,--directly-access-node-label-store   This is DEPRECATED, will be");
+    pw.println("                                           removed in future releases.");
+    pw.println("                                           Directly access node label");
     pw.println("                                           store, with this option, all");
     pw.println("                                           node label related operations");
     pw.println("                                           will NOT connect RM. Instead,");

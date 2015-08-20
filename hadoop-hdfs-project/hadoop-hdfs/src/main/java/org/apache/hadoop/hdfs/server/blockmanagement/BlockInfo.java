@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.LinkedList;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.util.LightWeightGSet;
 
 /**
@@ -32,6 +32,7 @@ import org.apache.hadoop.util.LightWeightGSet;
 public abstract class BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
   public static final BlockInfo[] EMPTY_ARRAY = {};
+
   private BlockCollection bc;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
@@ -183,21 +184,6 @@ public abstract class BlockInfo extends Block
   abstract boolean hasNoStorage();
 
   /**
-   * Find specified DatanodeDescriptor.
-   * @return index or -1 if not found.
-   */
-  boolean findDatanode(DatanodeDescriptor dn) {
-    int len = getCapacity();
-    for (int idx = 0; idx < len; idx++) {
-      DatanodeDescriptor cur = getDatanode(idx);
-      if(cur == dn) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * Find specified DatanodeStorageInfo.
    * @return DatanodeStorageInfo or null if not found.
    */
@@ -304,22 +290,21 @@ public abstract class BlockInfo extends Block
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted to
-   * {@link BlockInfoUnderConstructionContiguous} or
-   * {@link BlockInfoUnderConstructionStriped}.
-   * @return {@link HdfsServerConstants.BlockUCState#COMPLETE}
+   * {@link BlockInfoContiguousUnderConstruction} or
+   * {@link BlockInfoStripedUnderConstruction}.
+   * @return {@link BlockUCState#COMPLETE}
    */
-  public HdfsServerConstants.BlockUCState getBlockUCState() {
-    return HdfsServerConstants.BlockUCState.COMPLETE;
+  public BlockUCState getBlockUCState() {
+    return BlockUCState.COMPLETE;
   }
 
   /**
    * Is this block complete?
    *
-   * @return true if the state of the block is
-   *         {@link HdfsServerConstants.BlockUCState#COMPLETE}
+   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
    */
   public boolean isComplete() {
-    return getBlockUCState().equals(HdfsServerConstants.BlockUCState.COMPLETE);
+    return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
   public boolean isDeleted() {

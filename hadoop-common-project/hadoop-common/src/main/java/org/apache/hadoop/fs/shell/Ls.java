@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -101,6 +103,12 @@ class Ls extends FsCommand {
   private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
+
+  protected Ls() {}
+
+  protected Ls(Configuration conf) {
+    super(conf);
+  }
 
   protected String formatSize(long size) {
     return humanReadable

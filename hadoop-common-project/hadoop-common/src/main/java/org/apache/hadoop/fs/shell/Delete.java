@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
@@ -195,9 +196,19 @@ class Delete {
     @Override
     protected void processArguments(LinkedList<PathData> args)
     throws IOException {
-      Trash trash = new Trash(getConf());
-      trash.expunge();
-      trash.checkpoint();    
+      FileSystem[] childFileSystems =
+          FileSystem.get(getConf()).getChildFileSystems();
+      if (null != childFileSystems) {
+        for (FileSystem fs : childFileSystems) {
+          Trash trash = new Trash(fs, getConf());
+          trash.expunge();
+          trash.checkpoint();
+        }
+      } else {
+        Trash trash = new Trash(getConf());
+        trash.expunge();
+        trash.checkpoint();
+      }
     }
   }
 }

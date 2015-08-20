@@ -120,7 +120,7 @@ public class TestAppManager{
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext context = new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null, null, null, null, writer) {
+        null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -128,7 +128,8 @@ public class TestAppManager{
     };
     ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
     metricsPublisher = mock(SystemMetricsPublisher.class);
-    ((RMContextImpl)context).setSystemMetricsPublisher(metricsPublisher);
+    context.setSystemMetricsPublisher(metricsPublisher);
+    context.setRMApplicationHistoryWriter(writer);
     return context;
   }
 
@@ -219,6 +220,7 @@ public class TestAppManager{
 
     rmContext = mockRMContext(1, now - 10);
     ResourceScheduler scheduler = mockResourceScheduler();
+    ((RMContextImpl)rmContext).setScheduler(scheduler);
     Configuration conf = new Configuration();
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);

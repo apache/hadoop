@@ -1386,19 +1386,48 @@ public abstract class SymlinkBaseTest {
   }
 
   @Test(timeout=10000)
-  /** setTimes affects the target not the link */
-  public void testSetTimes() throws IOException {
+  /** setTimes affects the target file not the link */
+  public void testSetTimesSymlinkToFile() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
     wrapper.createSymlink(file, link, false);
     long at = wrapper.getFileLinkStatus(link).getAccessTime();
-    wrapper.setTimes(link, 2L, 3L);
-    // NB: local file systems don't implement setTimes
-    if (!"file".equals(getScheme())) {
-      assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
-      assertEquals(3, wrapper.getFileStatus(file).getAccessTime());
-      assertEquals(2, wrapper.getFileStatus(file).getModificationTime());
+    // the local file system may not support millisecond timestamps
+    wrapper.setTimes(link, 2000L, 3000L);
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
+    assertEquals(2000, wrapper.getFileStatus(file).getModificationTime());
+    assertEquals(3000, wrapper.getFileStatus(file).getAccessTime());
+  }
+
+  @Test(timeout=10000)
+  /** setTimes affects the target directory not the link */
+  public void testSetTimesSymlinkToDir() throws IOException {
+    Path dir = new Path(testBaseDir1(), "dir");
+    Path link = new Path(testBaseDir1(), "linkToDir");
+    wrapper.mkdir(dir, FileContext.DEFAULT_PERM, false);
+    wrapper.createSymlink(dir, link, false);
+    long at = wrapper.getFileLinkStatus(link).getAccessTime();
+    // the local file system may not support millisecond timestamps
+    wrapper.setTimes(link, 2000L, 3000L);
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
+    assertEquals(2000, wrapper.getFileStatus(dir).getModificationTime());
+    assertEquals(3000, wrapper.getFileStatus(dir).getAccessTime());
+  }
+
+  @Test(timeout=10000)
+  /** setTimes does not affect the link even though target does not exist */
+  public void testSetTimesDanglingLink() throws IOException {
+    Path file = new Path("/noSuchFile");
+    Path link = new Path(testBaseDir1()+"/link");
+    wrapper.createSymlink(file, link, false);
+    long at = wrapper.getFileLinkStatus(link).getAccessTime();
+    try {
+      wrapper.setTimes(link, 2000L, 3000L);
+      fail("set times to non-existant file");
+    } catch (IOException e) {
+      // Expected
     }
+    assertEquals(at, wrapper.getFileLinkStatus(link).getAccessTime());
   }
 }

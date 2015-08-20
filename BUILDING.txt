@@ -10,15 +10,17 @@ Requirements:
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
 * Zlib devel (if compiling native code)
-* openssl devel ( if compiling native hadoop-pipes and to get the best HDFS encryption performance )
-* Jansson C XML parsing library ( if compiling libwebhdfs )
-* Linux FUSE (Filesystem in Userspace) version 2.6 or above ( if compiling fuse_dfs )
+* openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
+* Jansson C XML parsing library (if compiling libwebhdfs)
+* Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
+* python (for releasedocs)
+* bats (for shell code testing)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
 of the provided Docker config.
-This requires a recent version of docker ( 1.4.1 and higher are known to work ).
+This requires a recent version of docker (1.4.1 and higher are known to work).
 
 On Linux:
     Install Docker and run this command:
@@ -49,8 +51,8 @@ Known issues:
   This issue has been resolved as a duplicate, and they point to a new feature for utilizing NFS mounts
   as the proposed solution:
     https://github.com/boot2docker/boot2docker/issues/64
-  An alternative solution to this problem is when you install Linux native inside a virtual machine
-  and run your IDE and Docker etc in side that VM.
+  An alternative solution to this problem is to install Linux native inside a virtual machine
+  and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
 Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
@@ -106,7 +108,7 @@ Maven build goals:
 
  * Clean                     : mvn clean [-Preleasedocs]
  * Compile                   : mvn compile [-Pnative]
- * Run tests                 : mvn test [-Pnative]
+ * Run tests                 : mvn test [-Pnative] [-Pshelltest]
  * Create JAR                : mvn package
  * Run findbugs              : mvn compile findbugs:findbugs
  * Run checkstyle            : mvn compile checkstyle:checkstyle
@@ -255,7 +257,7 @@ Handling out of memory errors in builds
 ----------------------------------------------------------------------------------
 
 If the build process fails with an out of memory error, you should be able to fix
-it by increasing the memory used by maven -which can be done via the environment
+it by increasing the memory used by maven which can be done via the environment
 variable MAVEN_OPTS.
 
 Here is an example setting to allocate between 256 and 512 MB of heap space to
@@ -282,9 +284,10 @@ Requirements:
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * Unix command-line tools from GnuWin32: sh, mkdir, rm, cp, tar, gzip. These
   tools must be present on your PATH.
+* Python ( for generation of docs using 'mvn site')
 
 Unix command-line tools are also included with the Windows Git package which
-can be downloaded from http://git-scm.com/download/win.
+can be downloaded from http://git-scm.com/downloads
 
 If using Visual Studio, it must be Visual Studio 2010 Professional (not 2012).
 Do not use Visual Studio Express.  It does not support compiling for 64-bit,
@@ -303,19 +306,19 @@ Cygwin is neither required nor supported.
 Building:
 
 Keep the source code tree in a short path to avoid running into problems related
-to Windows maximum path length limitation.  (For example, C:\hdc).
+to Windows maximum path length limitation (for example, C:\hdc).
 
-Run builds from a Windows SDK Command Prompt.  (Start, All Programs,
-Microsoft Windows SDK v7.1, Windows SDK 7.1 Command Prompt.)
+Run builds from a Windows SDK Command Prompt. (Start, All Programs,
+Microsoft Windows SDK v7.1, Windows SDK 7.1 Command Prompt).
 
-JAVA_HOME must be set, and the path must not contain spaces.  If the full path
+JAVA_HOME must be set, and the path must not contain spaces. If the full path
 would contain spaces, then use the Windows short path instead.
 
 You must set the Platform environment variable to either x64 or Win32 depending
-on whether you're running a 64-bit or 32-bit system.  Note that this is
-case-sensitive.  It must be "Platform", not "PLATFORM" or "platform".
+on whether you're running a 64-bit or 32-bit system. Note that this is
+case-sensitive. It must be "Platform", not "PLATFORM" or "platform".
 Environment variables on Windows are usually case-insensitive, but Maven treats
-them as case-sensitive.  Failure to set this environment variable correctly will
+them as case-sensitive. Failure to set this environment variable correctly will
 cause msbuild to fail while building the native code in hadoop-common.
 
 set Platform=x64 (when building on a 64-bit system)
@@ -330,12 +333,12 @@ is enabled by default when building on Windows since the native components
 are required (not optional) on Windows.
 
 If native code bindings for zlib are required, then the zlib headers must be
-deployed on the build machine.  Set the ZLIB_HOME environment variable to the
+deployed on the build machine. Set the ZLIB_HOME environment variable to the
 directory containing the headers.
 
 set ZLIB_HOME=C:\zlib-1.2.7
 
-At runtime, zlib1.dll must be accessible on the PATH.  Hadoop has been tested
+At runtime, zlib1.dll must be accessible on the PATH. Hadoop has been tested
 with zlib 1.2.7, built using Visual Studio 2010 out of contrib\vstudio\vc10 in
 the zlib 1.2.7 source tree.
 

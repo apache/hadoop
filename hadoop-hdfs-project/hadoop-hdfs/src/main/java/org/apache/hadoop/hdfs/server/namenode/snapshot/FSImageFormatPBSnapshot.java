@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
@@ -241,11 +242,10 @@ public class FSImageFormatPBSnapshot {
             pbf.getFileSize());
         List<BlockProto> bpl = pbf.getBlocksList();
         // in file diff there can only be contiguous blocks
-        BlockInfoContiguous[] blocks = new BlockInfoContiguous[bpl.size()];
+        BlockInfo[] blocks = new BlockInfo[bpl.size()];
         for(int j = 0, e = bpl.size(); j < e; ++j) {
           Block blk = PBHelper.convert(bpl.get(j));
-          BlockInfoContiguous storedBlock =
-              (BlockInfoContiguous) fsn.getBlockManager().getStoredBlock(blk);
+          BlockInfo storedBlock =  fsn.getBlockManager().getStoredBlock(blk);
           if(storedBlock == null) {
             storedBlock = (BlockInfoContiguous) fsn.getBlockManager()
                 .addBlockCollectionWithCheck(new BlockInfoContiguous(blk,

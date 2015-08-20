@@ -56,10 +56,13 @@ public class RMAppsBlock extends AppsBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".starttime", "StartTime")
+          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".starttime", "StartTime")
           .th(".finishtime", "FinishTime").th(".state", "State")
           .th(".finalstatus", "FinalStatus")
           .th(".runningcontainer", "Running Containers")
+          .th(".allocatedCpu", "Allocated CPU VCores")
+          .th(".allocatedMemory", "Allocated Memory MB")
           .th(".progress", "Progress")
           .th(".ui", "Tracking UI").th(".blacklisted", "Blacklisted Nodes")._()
           ._().tbody();
@@ -104,7 +107,9 @@ public class RMAppsBlock extends AppsBlock {
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
-            .getQueue()))).append("\",\"").append(app.getStartedTime())
+             .getQueue()))).append("\",\"").append(String
+             .valueOf(app.getPriority()))
+        .append("\",\"").append(app.getStartedTime())
         .append("\",\"").append(app.getFinishedTime())
         .append("\",\"")
         .append(app.getAppState() == null ? UNAVAILABLE : app.getAppState())
@@ -113,6 +118,12 @@ public class RMAppsBlock extends AppsBlock {
         .append("\",\"")
         .append(app.getRunningContainers() == -1 ? "N/A" : String
             .valueOf(app.getRunningContainers()))
+        .append("\",\"")
+        .append(app.getAllocatedCpuVcores() == -1 ? "N/A" : String
+            .valueOf(app.getAllocatedCpuVcores()))
+        .append("\",\"")
+        .append(app.getAllocatedMemoryMB() == -1 ? "N/A" : String
+            .valueOf(app.getAllocatedMemoryMB()))
         .append("\",\"")
         // Progress bar
         .append("<br title='").append(percent).append("'> <div class='")
@@ -123,13 +134,15 @@ public class RMAppsBlock extends AppsBlock {
 
       String trackingURL =
           app.getTrackingUrl() == null
-              || app.getTrackingUrl().equals(UNAVAILABLE) ? null : app
-            .getTrackingUrl();
+              || app.getTrackingUrl().equals(UNAVAILABLE)
+              || app.getAppState() == YarnApplicationState.NEW ? null : app
+              .getTrackingUrl();
 
       String trackingUI =
           app.getTrackingUrl() == null
-              || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
-            .getAppState() == YarnApplicationState.FINISHED
+              || app.getTrackingUrl().equals(UNAVAILABLE)
+              || app.getAppState() == YarnApplicationState.NEW ? "Unassigned"
+              : app.getAppState() == YarnApplicationState.FINISHED
               || app.getAppState() == YarnApplicationState.FAILED
               || app.getAppState() == YarnApplicationState.KILLED ? "History"
               : "ApplicationMaster";

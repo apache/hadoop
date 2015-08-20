@@ -136,7 +136,8 @@ import com.google.protobuf.ByteString;
 public class ShuffleHandler extends AuxiliaryService {
 
   private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
-  
+  private static final Log AUDITLOG =
+      LogFactory.getLog(ShuffleHandler.class.getName()+".audit");
   public static final String SHUFFLE_MANAGE_OS_CACHE = "mapreduce.shuffle.manage.os.cache";
   public static final boolean DEFAULT_SHUFFLE_MANAGE_OS_CACHE = true;
 
@@ -751,6 +752,14 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, "Too many job/reduce parameters", BAD_REQUEST);
         return;
       }
+
+      // this audit log is disabled by default,
+      // to turn it on please enable this audit log
+      // on log4j.properties by uncommenting the setting
+      if (AUDITLOG.isDebugEnabled()) {
+        AUDITLOG.debug("shuffle for " + jobQ.get(0) +
+                         " reducer " + reduceQ.get(0));
+      }
       int reduceId;
       String jobId;
       try {
@@ -806,7 +815,8 @@ public class ShuffleHandler extends AuxiliaryService {
         try {
           MapOutputInfo info = mapOutputInfoMap.get(mapId);
           if (info == null) {
-            info = getMapOutputInfo(outputBasePathStr, mapId, reduceId, user);
+            info = getMapOutputInfo(outputBasePathStr + mapId,
+                mapId, reduceId, user);
           }
           lastMap =
               sendMapOutput(ctx, ch, user, mapId,
@@ -897,7 +907,9 @@ public class ShuffleHandler extends AuxiliaryService {
     protected void setResponseHeaders(HttpResponse response,
         boolean keepAliveParam, long contentLength) {
       if (!connectionKeepAliveEnabled && !keepAliveParam) {
-        LOG.info("Setting connection close header...");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Setting connection close header...");
+        }
         response.setHeader(HttpHeaders.CONNECTION, CONNECTION_CLOSE);
       } else {
         response.setHeader(HttpHeaders.CONTENT_LENGTH,

@@ -375,13 +375,10 @@ public class FsPermission implements Writable {
     public ImmutableFsPermission(short permission) {
       super(permission);
     }
-    @Override
-    public FsPermission applyUMask(FsPermission umask) {
-      throw new UnsupportedOperationException();
-    }
+
     @Override
     public void readFields(DataInput in) throws IOException {
       throw new UnsupportedOperationException();
-    }    
+    }
   }
 }

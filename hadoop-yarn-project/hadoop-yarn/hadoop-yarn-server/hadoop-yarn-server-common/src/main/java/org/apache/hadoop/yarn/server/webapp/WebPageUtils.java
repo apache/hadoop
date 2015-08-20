@@ -27,6 +27,10 @@ public class WebPageUtils {
     return appsTableInit(false, true);
   }
 
+  public static String appsTableInit(boolean isResourceManager) {
+    return appsTableInit(false, isResourceManager);
+  }
+
   public static String appsTableInit(
       boolean isFairSchedulerPage, boolean isResourceManager) {
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
@@ -48,13 +52,13 @@ public class WebPageUtils {
       .append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
       .append("\n, {'sType':'numeric', 'aTargets': " +
-          (isFairSchedulerPage ? "[6, 7]": "[5, 6]"))
+          (isFairSchedulerPage ? "[6, 7]": "[6, 7]"))
       .append(", 'mRender': renderHadoopDate }")
       .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
     if (isFairSchedulerPage) {
-      sb.append("[11]");
+      sb.append("[13]");
     } else if (isResourceManager) {
-      sb.append("[10]");
+      sb.append("[13]");
     } else {
       sb.append("[9]");
     }

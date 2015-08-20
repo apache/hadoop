@@ -22,6 +22,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <inttypes.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -74,14 +75,14 @@ static int is_only_root_writable(const char *file) {
     return 0;
   }
   if (file_stat.st_uid != 0) {
-    fprintf(ERRORFILE, "File %s must be owned by root, but is owned by %d\n",
-            file, file_stat.st_uid);
+    fprintf(ERRORFILE, "File %s must be owned by root, but is owned by %" PRId64 "\n",
+            file, (int64_t)file_stat.st_uid);
     return 0;
   }
   if ((file_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
     fprintf(ERRORFILE, 
-	    "File %s must not be world or group writable, but is %03o\n",
-	    file, file_stat.st_mode & (~S_IFMT));
+	    "File %s must not be world or group writable, but is %03lo\n",
+	    file, (unsigned long)file_stat.st_mode & (~S_IFMT));
     return 0;
   }
   return 1;
@@ -283,40 +284,43 @@ char * get_value(const char* key) {
 
 /**
  * Function to return an array of values for a key.
- * Value delimiter is assumed to be a comma.
+ * Value delimiter is assumed to be a ','.
  */
 char ** get_values(const char * key) {
   char *value = get_value(key);
-  return extract_values(value);
+  return extract_values_delim(value, ",");
 }
 
-/**
- * Extracts array of values from the comma separated list of values.
- */
-char ** extract_values(char *value) {
+char ** extract_values_delim(char *value, const char *delim) {
   char ** toPass = NULL;
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
   int toPassSize = MAX_SIZE;
-
   //first allocate any array of 10
   if(value != NULL) {
     toPass = (char **) malloc(sizeof(char *) * toPassSize);
-    tempTok = strtok_r((char *)value, ",", &tempstr);
+    tempTok = strtok_r((char *)value, delim, &tempstr);
     while (tempTok != NULL) {
       toPass[size++] = tempTok;
       if(size == toPassSize) {
         toPassSize += MAX_SIZE;
         toPass = (char **) realloc(toPass,(sizeof(char *) * toPassSize));
       }
-      tempTok = strtok_r(NULL, ",", &tempstr);
+      tempTok = strtok_r(NULL, delim, &tempstr);
     }
   }
   if (toPass != NULL) {
     toPass[size] = NULL;
   }
   return toPass;
+}
+
+/**
+ * Extracts array of values from the '%' separated list of values.
+ */
+char ** extract_values(char *value) {
+  extract_values_delim(value, "%");
 }
 
 // free an entry set of values

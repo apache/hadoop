@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
@@ -28,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.List;
 
@@ -103,7 +104,7 @@ class FSDirConcatOp {
   private static INodeFile[] verifySrcFiles(FSDirectory fsd, String[] srcs,
       INodesInPath targetIIP, FSPermissionChecker pc) throws IOException {
     // to make sure no two files are the same
-    Set<INodeFile> si = new HashSet<>();
+    Set<INodeFile> si = new LinkedHashSet<>();
     final INodeFile targetINode = targetIIP.getLastINode().asFile();
     final INodeDirectory targetParent = targetINode.getParent();
     // now check the srcs

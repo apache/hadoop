@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -53,16 +57,13 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 public class TestFSImage {
 
@@ -239,7 +240,7 @@ public class TestFSImage {
    * saved and loaded by FSImageSerialization
    */
   @Test
-  public void testSaveAndLoadStripedINodeFileUC() throws IOException{
+  public void testSaveAndLoadStripedINodeFileUC() throws IOException {
     // construct a INode with StripedBlock for saving and loading
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
@@ -250,6 +251,45 @@ public class TestFSImage {
     } finally {
       if (cluster != null) {
         cluster.shutdown();
+      }
+    }
+  }
+
+   /**
+   * On checkpointing , stale fsimage checkpoint file should be deleted.
+   */
+  @Test
+  public void testRemovalStaleFsimageCkpt() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    Configuration conf = new HdfsConfiguration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).
+          numDataNodes(1).format(true).build();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          "0.0.0.0:0");
+      secondary = new SecondaryNameNode(conf);
+      // Do checkpointing
+      secondary.doCheckpoint();
+      NNStorage storage = secondary.getFSImage().storage;
+      File currentDir = FSImageTestUtil.
+          getCurrentDirs(storage, NameNodeDirType.IMAGE).get(0);
+      // Create a stale fsimage.ckpt file
+      File staleCkptFile = new File(currentDir.getPath() +
+          "/fsimage.ckpt_0000000000000000002");
+      staleCkptFile.createNewFile();
+      assertTrue(staleCkptFile.exists());
+      // After checkpoint stale fsimage.ckpt file should be deleted
+      secondary.doCheckpoint();
+      assertFalse(staleCkptFile.exists());
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+        secondary = null;
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
       }
     }
   }

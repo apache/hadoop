@@ -1,30 +1,30 @@
-/*******************************************************************************
- *   Licensed to the Apache Software Foundation (ASF) under one
- *   or more contributor license agreements.  See the NOTICE file
- *   distributed with this work for additional information
- *   regarding copyright ownership.  The ASF licenses this file
- *   to you under the Apache License, Version 2.0 (the
- *   "License"); you may not use this file except in compliance
- *   with the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *******************************************************************************/
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
-
-import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.Set;
+
 /**
  * This interface provides a read-only view on the allocations made in this
- * plan. This methods are used for example by {@link ReservationAgent}s to
+ * plan. This methods are used for example by {@code ReservationAgent}s to
  * determine the free resources in a certain point in time, and by
  * PlanFollowerPolicy to publish this plan to the scheduler.
  */
@@ -65,7 +65,7 @@ public interface PlanView extends PlanContext {
    * @return the total {@link Resource} reserved for all users at the specified
    *         time
    */
-  public Resource getTotalCommittedResources(long tick);
+  Resource getTotalCommittedResources(long tick);
 
   /**
    * Returns the total {@link Resource} reserved for a given user at the
@@ -87,7 +87,7 @@ public interface PlanView extends PlanContext {
    * @return the overall capacity in terms of {@link Resource} assigned to this
    *         plan
    */
-  public Resource getTotalCapacity();
+  Resource getTotalCapacity();
 
   /**
    * Gets the time (UTC in ms) at which the first reservation starts

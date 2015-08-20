@@ -2759,6 +2759,12 @@ public class PBHelper {
                   .timestamp(unlink.getTimestamp())
                   .build());
             break;
+          case EVENT_TRUNCATE:
+            InotifyProtos.TruncateEventProto truncate =
+                InotifyProtos.TruncateEventProto.parseFrom(p.getContents());
+            events.add(new Event.TruncateEvent(truncate.getPath(),
+                truncate.getFileSize(), truncate.getTimestamp()));
+            break;
           default:
             throw new RuntimeException("Unexpected inotify event type: " +
                 p.getType());
@@ -2863,6 +2869,17 @@ public class PBHelper {
                     InotifyProtos.UnlinkEventProto.newBuilder()
                         .setPath(ue.getPath())
                         .setTimestamp(ue.getTimestamp()).build().toByteString()
+                ).build());
+            break;
+          case TRUNCATE:
+            Event.TruncateEvent te = (Event.TruncateEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_TRUNCATE)
+                .setContents(
+                    InotifyProtos.TruncateEventProto.newBuilder()
+                        .setPath(te.getPath())
+                        .setFileSize(te.getFileSize())
+                        .setTimestamp(te.getTimestamp()).build().toByteString()
                 ).build());
             break;
           default:
@@ -3116,7 +3133,7 @@ public class PBHelper {
 
   public static BlockReportContext convert(BlockReportContextProto proto) {
     return new BlockReportContext(proto.getTotalRpcs(),
-        proto.getCurRpc(), proto.getId());
+        proto.getCurRpc(), proto.getId(), proto.getLeaseId());
   }
 
   public static BlockReportContextProto convert(BlockReportContext context) {
@@ -3124,6 +3141,7 @@ public class PBHelper {
         setTotalRpcs(context.getTotalRpcs()).
         setCurRpc(context.getCurRpc()).
         setId(context.getReportId()).
+        setLeaseId(context.getLeaseId()).
         build();
   }
 

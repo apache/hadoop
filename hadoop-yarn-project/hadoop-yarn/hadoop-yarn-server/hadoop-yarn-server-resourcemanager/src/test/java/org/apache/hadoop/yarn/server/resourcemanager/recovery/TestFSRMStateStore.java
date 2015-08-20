@@ -26,11 +26,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,17 +33,22 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestFSRMStateStore extends RMStateStoreTestBase {
@@ -111,6 +111,10 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 8);
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
               900L);
+      if (adminCheckEnable) {
+        conf.setBoolean(
+          YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION, true);
+      }
       this.store = new TestFileSystemRMStore(conf);
       Assert.assertEquals(store.getNumRetries(), 8);
       Assert.assertEquals(store.getRetryInterval(), 900L);
@@ -119,11 +123,6 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       store.startInternal();
       Assert.assertTrue(store.fs != previousFs);
       Assert.assertTrue(store.fs.getConf() == store.fsConf);
-      if (adminCheckEnable) {
-        store.setIsHDFS(true);
-      } else {
-        store.setIsHDFS(false);
-      }
       return store;
     }
 
@@ -187,6 +186,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testDeleteStore(fsTester);
       testRemoveApplication(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
+      testReservationStateStore(fsTester);
     } finally {
       cluster.shutdown();
     }

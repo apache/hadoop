@@ -27,6 +27,7 @@ import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +117,7 @@ public class TestRMAdminCLI {
 
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
     rmAdminCLIWithHAEnabled = new RMAdminCLI(conf) {
 
       @Override
@@ -259,6 +261,8 @@ public class TestRMAdminCLI {
     assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
     verify(haadmin).transitionToActive(
         any(HAServiceProtocol.StateChangeRequestInfo.class));
+    // HAAdmin#isOtherTargetNodeActive should check state of non-target node.
+    verify(haadmin, times(1)).getServiceStatus();
   }
 
   @Test(timeout = 500)
@@ -333,9 +337,9 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
-              " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
-              "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] " +
+              " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),label2(exclusive=false),label3\">]" +
+              " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode " +
+              "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] " +
               "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -413,9 +417,10 @@ public class TestRMAdminCLI {
           "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper"
               + "UserGroupsConfiguration] [-refreshUserToGroupsMappings] "
               + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"
-              + " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]"
-              + " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode "
-              + "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] "
+              + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
+                  + "label2(exclusive=false),label3\">]"
+              + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
+              + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";

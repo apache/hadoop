@@ -18,25 +18,23 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import java.util.Map;
-
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+import java.util.Map;
+
 /**
  * This interface is the one implemented by any system that wants to support
- * Reservations i.e. make {@link Resource} allocations in future. Implementors
+ * Reservations i.e. make {@code Resource} allocations in future. Implementors
  * need to bootstrap all configured {@link Plan}s in the active
  * {@link ResourceScheduler} along with their corresponding
- * {@link ReservationAgent} and {@link SharingPolicy}. It is also responsible
+ * {@code ReservationAgent} and {@link SharingPolicy}. It is also responsible
  * for managing the {@link PlanFollower} to ensure the {@link Plan}s are in sync
  * with the {@link ResourceScheduler}.
  */
@@ -48,7 +46,7 @@ public interface ReservationSystem {
    * Set RMContext for {@link ReservationSystem}. This method should be called
    * immediately after instantiating a reservation system once.
    * 
-   * @param rmContext created by {@link ResourceManager}
+   * @param rmContext created by {@code ResourceManager}
    */
   void setRMContext(RMContext rmContext);
 
@@ -56,7 +54,7 @@ public interface ReservationSystem {
    * Re-initialize the {@link ReservationSystem}.
    * 
    * @param conf configuration
-   * @param rmContext current context of the {@link ResourceManager}
+   * @param rmContext current context of the {@code ResourceManager}
    * @throws YarnException
    */
   void reinitialize(Configuration conf, RMContext rmContext)

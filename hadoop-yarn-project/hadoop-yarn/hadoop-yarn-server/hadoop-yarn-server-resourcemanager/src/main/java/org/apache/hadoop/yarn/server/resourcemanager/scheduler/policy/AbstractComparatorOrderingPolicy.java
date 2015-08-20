@@ -37,6 +37,7 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
                                             
   protected TreeSet<S> schedulableEntities;
   protected Comparator<SchedulableEntity> comparator;
+  protected Map<String, S> entitiesToReorder = new HashMap<String, S>();
   
   public AbstractComparatorOrderingPolicy() { }
   
@@ -47,11 +48,13 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   
   @Override
   public Iterator<S> getAssignmentIterator() {
+    reorderScheduleEntities();
     return schedulableEntities.iterator();
   }
   
   @Override
   public Iterator<S> getPreemptionIterator() {
+    reorderScheduleEntities();
     return schedulableEntities.descendingIterator();
   }
   
@@ -68,6 +71,22 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
     schedulableEntities.add(schedulableEntity);
   }
   
+  protected void reorderScheduleEntities() {
+    synchronized (entitiesToReorder) {
+      for (Map.Entry<String, S> entry :
+          entitiesToReorder.entrySet()) {
+        reorderSchedulableEntity(entry.getValue());
+      }
+      entitiesToReorder.clear();
+    }
+  }
+
+  protected void entityRequiresReordering(S schedulableEntity) {
+    synchronized (entitiesToReorder) {
+      entitiesToReorder.put(schedulableEntity.getId(), schedulableEntity);
+    }
+  }
+
   @VisibleForTesting
   public Comparator<SchedulableEntity> getComparator() {
     return comparator; 
@@ -75,11 +94,20 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   
   @Override
   public void addSchedulableEntity(S s) {
+    if (null == s) {
+      return;
+    }
     schedulableEntities.add(s); 
   }
   
   @Override
   public boolean removeSchedulableEntity(S s) {
+    if (null == s) {
+      return false;
+    }
+    synchronized (entitiesToReorder) {
+      entitiesToReorder.remove(s.getId());
+    }
     return schedulableEntities.remove(s); 
   }
   
@@ -104,6 +132,9 @@ public abstract class AbstractComparatorOrderingPolicy<S extends SchedulableEnti
   public abstract void containerReleased(S schedulableEntity, 
     RMContainer r);
   
+  @Override
+  public abstract void demandUpdated(S schedulableEntity);
+
   @Override
   public abstract String getInfo();
   

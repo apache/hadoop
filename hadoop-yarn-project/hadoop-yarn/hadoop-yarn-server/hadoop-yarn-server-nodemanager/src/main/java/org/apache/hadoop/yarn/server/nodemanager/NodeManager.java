@@ -38,7 +38,9 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -80,7 +82,9 @@ public class NodeManager extends CompositeService
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
+  private static long nmStartupTime = System.currentTimeMillis();
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
+  private JvmPauseMonitor pauseMonitor;
   private ApplicationACLsManager aclsManager;
   private NodeHealthCheckerService nodeHealthChecker;
   private NodeLabelsProvider nodeLabelsProvider;
@@ -89,14 +93,20 @@ public class NodeManager extends CompositeService
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
   private NodeStatusUpdater nodeStatusUpdater;
-  private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
+  private NodeResourceMonitor nodeResourceMonitor;
+  private static CompositeServiceShutdownHook nodeManagerShutdownHook;
   private NMStateStoreService nmStore = null;
   
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private boolean rmWorkPreservingRestartEnabled;
+  private boolean shouldExitOnShutdownEvent = false;
 
   public NodeManager() {
     super(NodeManager.class.getName());
+  }
+
+  public static long getNMStartupTime() {
+    return nmStartupTime;
   }
 
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
@@ -283,8 +293,9 @@ public class NodeManager extends CompositeService
               nodeLabelsProvider);
     }
 
-    NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
+    nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
+    ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
 
     containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
@@ -300,13 +311,16 @@ public class NodeManager extends CompositeService
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
     addService(dispatcher);
-    
+
+    pauseMonitor = new JvmPauseMonitor(conf);
+    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+
     DefaultMetricsSystem.initialize("NodeManager");
 
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
-    
+
     super.serviceInit(conf);
     // TODO add local dirs to del
   }
@@ -318,6 +332,7 @@ public class NodeManager extends CompositeService
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed NodeManager login", e);
     }
+    pauseMonitor.start();
     super.serviceStart();
   }
 
@@ -329,6 +344,9 @@ public class NodeManager extends CompositeService
     try {
       super.serviceStop();
       DefaultMetricsSystem.shutdown();
+      if (pauseMonitor != null) {
+        pauseMonitor.stop();
+      }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
       // release of NMLevelDBStore.
@@ -344,7 +362,16 @@ public class NodeManager extends CompositeService
     new Thread() {
       @Override
       public void run() {
-        NodeManager.this.stop();
+        try {
+          NodeManager.this.stop();
+        } catch (Throwable t) {
+          LOG.error("Error while shutting down NodeManager", t);
+        } finally {
+          if (shouldExitOnShutdownEvent
+              && !ShutdownHookManager.get().isShutdownInProgress()) {
+            ExitUtil.terminate(-1);
+          }
+        }
       }
     }.start();
   }
@@ -388,6 +415,7 @@ public class NodeManager extends CompositeService
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManagementProtocol containerManager;
+    private NodeResourceMonitor nodeResourceMonitor;
     private final LocalDirsHandlerService dirsHandler;
     private final ApplicationACLsManager aclsManager;
     private WebServer webServer;
@@ -450,6 +478,15 @@ public class NodeManager extends CompositeService
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;
+    }
+
+    @Override
+    public NodeResourceMonitor getNodeResourceMonitor() {
+      return this.nodeResourceMonitor;
+    }
+
+    public void setNodeResourceMonitor(NodeResourceMonitor nodeResourceMonitor) {
+      this.nodeResourceMonitor = nodeResourceMonitor;
     }
 
     @Override
@@ -530,7 +567,9 @@ public class NodeManager extends CompositeService
       nodeManagerShutdownHook = new CompositeServiceShutdownHook(this);
       ShutdownHookManager.get().addShutdownHook(nodeManagerShutdownHook,
                                                 SHUTDOWN_HOOK_PRIORITY);
-
+      // System exit should be called only when NodeManager is instantiated from
+      // main() funtion
+      this.shouldExitOnShutdownEvent = true;
       this.init(conf);
       this.start();
     } catch (Throwable t) {

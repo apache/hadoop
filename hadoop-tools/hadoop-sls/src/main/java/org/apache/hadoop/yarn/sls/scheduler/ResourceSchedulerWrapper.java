@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -949,4 +950,13 @@ final public class ResourceSchedulerWrapper
       ContainerStatus containerStatus, RMContainerEventType event) {
     // do nothing
   }
+
+  @Override
+  public Priority checkAndGetApplicationPriority(Priority priority,
+      String user, String queueName, ApplicationId applicationId)
+      throws YarnException {
+    // TODO Dummy implementation.
+    return Priority.newInstance(0);
+  }
+
 }

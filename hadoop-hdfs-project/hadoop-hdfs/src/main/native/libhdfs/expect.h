@@ -48,6 +48,24 @@ struct hdfsFile_internal;
         } \
     } while (0);
 
+#define EXPECT_NULL_WITH_ERRNO(x, e) \
+    do { \
+        const void* __my_ret__ = x; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ != NULL) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d (errno: %d): " \
+		    "got non-NULL value %p from %s\n", \
+		    __FILE__, __LINE__, __my_errno__, __my_ret__, #x); \
+            return -1; \
+        } \
+        if (__my_errno__ != e) { \
+            fprintf(stderr, "TEST_ERROR: failed on %s:%d (errno: %d): " \
+		    "got expected NULL without expected errno %d from %s\n", \
+		    __FILE__, __LINE__, __my_errno__, e, #x); \
+            return -1; \
+        } \
+    } while (0);
+
 #define EXPECT_NONNULL(x) \
     do { \
         const void* __my_ret__ = x; \

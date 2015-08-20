@@ -103,6 +103,8 @@ public interface DatanodeProtocol {
    * @param xceiverCount number of active transceiver threads
    * @param failedVolumes number of failed volumes
    * @param volumeFailureSummary info about volume failures
+   * @param requestFullBlockReportLease whether to request a full block
+   *                                    report lease.
    * @throws IOException on error
    */
   @Idempotent
@@ -113,7 +115,8 @@ public interface DatanodeProtocol {
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes,
-                                       VolumeFailureSummary volumeFailureSummary)
+                                       VolumeFailureSummary volumeFailureSummary,
+                                       boolean requestFullBlockReportLease)
       throws IOException;
 
   /**

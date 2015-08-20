@@ -17,4 +17,8 @@
     </Or>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
   </Match>
+  <Match>
+    <Package name="org.apache.hadoop.hdfs.protocol.proto" />
+    <Bug pattern="SE_BAD_FIELD,MS_SHOULD_BE_FINAL,UCF_USELESS_CONTROL_FLOW" />
+  </Match>
 </FindBugsFilter>

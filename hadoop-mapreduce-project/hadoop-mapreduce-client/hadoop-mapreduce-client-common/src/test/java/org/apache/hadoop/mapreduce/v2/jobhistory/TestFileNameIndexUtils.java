@@ -148,6 +148,32 @@ public class TestFileNameIndexUtils {
   }
 
   @Test
+  public void testTrimJobName() throws IOException {
+    int jobNameTrimLength = 5;
+    JobIndexInfo info = new JobIndexInfo();
+    JobID oldJobId = JobID.forName(JOB_ID);
+    JobId jobId = TypeConverter.toYarn(oldJobId);
+    info.setJobId(jobId);
+    info.setSubmitTime(Long.parseLong(SUBMIT_TIME));
+    info.setUser(USER_NAME);
+    info.setJobName(JOB_NAME);
+    info.setFinishTime(Long.parseLong(FINISH_TIME));
+    info.setNumMaps(Integer.parseInt(NUM_MAPS));
+    info.setNumReduces(Integer.parseInt(NUM_REDUCES));
+    info.setJobStatus(JOB_STATUS);
+    info.setQueueName(QUEUE_NAME);
+    info.setJobStartTime(Long.parseLong(JOB_START_TIME));
+
+    String jobHistoryFile =
+         FileNameIndexUtils.getDoneFileName(info, jobNameTrimLength);
+    JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
+
+    Assert.assertEquals("Job name did not get trimmed correctly",
+        info.getJobName().substring(0, jobNameTrimLength),
+        parsedInfo.getJobName());
+  }
+
+  @Test
   public void testUserNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,

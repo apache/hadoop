@@ -75,30 +75,30 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
   public Object getDatum() {
     if (datum == null) {
       datum = new TaskAttemptFinished();
-      datum.taskid = new Utf8(attemptId.getTaskID().toString());
-      datum.attemptId = new Utf8(attemptId.toString());
-      datum.taskType = new Utf8(taskType.name());
-      datum.taskStatus = new Utf8(taskStatus);
-      datum.finishTime = finishTime;
+      datum.setTaskid(new Utf8(attemptId.getTaskID().toString()));
+      datum.setAttemptId(new Utf8(attemptId.toString()));
+      datum.setTaskType(new Utf8(taskType.name()));
+      datum.setTaskStatus(new Utf8(taskStatus));
+      datum.setFinishTime(finishTime);
       if (rackName != null) {
-        datum.rackname = new Utf8(rackName);
+        datum.setRackname(new Utf8(rackName));
       }
-      datum.hostname = new Utf8(hostname);
-      datum.state = new Utf8(state);
-      datum.counters = EventWriter.toAvro(counters);
+      datum.setHostname(new Utf8(hostname));
+      datum.setState(new Utf8(state));
+      datum.setCounters(EventWriter.toAvro(counters));
     }
     return datum;
   }
   public void setDatum(Object oDatum) {
     this.datum = (TaskAttemptFinished)oDatum;
-    this.attemptId = TaskAttemptID.forName(datum.attemptId.toString());
-    this.taskType = TaskType.valueOf(datum.taskType.toString());
-    this.taskStatus = datum.taskStatus.toString();
-    this.finishTime = datum.finishTime;
-    this.rackName = datum.rackname.toString();
-    this.hostname = datum.hostname.toString();
-    this.state = datum.state.toString();
-    this.counters = EventReader.fromAvro(datum.counters);
+    this.attemptId = TaskAttemptID.forName(datum.getAttemptId().toString());
+    this.taskType = TaskType.valueOf(datum.getTaskType().toString());
+    this.taskStatus = datum.getTaskStatus().toString();
+    this.finishTime = datum.getFinishTime();
+    this.rackName = datum.getRackname().toString();
+    this.hostname = datum.getHostname().toString();
+    this.state = datum.getState().toString();
+    this.counters = EventReader.fromAvro(datum.getCounters());
   }
 
   /** Get the task ID */

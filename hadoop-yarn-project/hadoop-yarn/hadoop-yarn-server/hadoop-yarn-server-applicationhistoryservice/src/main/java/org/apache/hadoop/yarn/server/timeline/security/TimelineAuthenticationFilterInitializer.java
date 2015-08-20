@@ -62,9 +62,8 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
    * Initializes {@link TimelineAuthenticationFilter}
    * <p>
    * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
-   * configuration properties prefixed with
-   * {@code yarn.timeline-service.authentication.}
-   * 
+   * configuration properties prefixed with {@value #PREFIX}
+   *
    * @param container
    *          The filter container
    * @param conf

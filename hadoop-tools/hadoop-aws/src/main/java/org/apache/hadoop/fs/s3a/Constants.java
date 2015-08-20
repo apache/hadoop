@@ -82,8 +82,8 @@ public class Constants {
   
   // minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_THRESHOLD = "fs.s3a.multipart.threshold";
-  public static final int DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
-  
+  public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
+
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
@@ -111,7 +111,10 @@ public class Constants {
   // s3 server-side encryption
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = 
     "fs.s3a.server-side-encryption-algorithm";
-  
+
+  //override signature algorithm used for signing requests
+  public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";
+
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";

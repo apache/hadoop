@@ -45,8 +45,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -244,9 +244,8 @@ class FSDirWriteFileOp {
       } else {
         // add new chosen targets to already allocated block and return
         BlockInfo lastBlockInFile = pendingFile.getLastBlock();
-        final BlockInfoUnderConstruction uc
-            = (BlockInfoUnderConstruction)lastBlockInFile;
-        uc.setExpectedLocations(targets);
+        ((BlockInfoContiguousUnderConstruction) lastBlockInFile)
+            .setExpectedLocations(targets);
         offset = pendingFile.computeFileSize();
         return makeLocatedBlock(fsn, lastBlockInFile, targets, offset);
       }
@@ -437,14 +436,14 @@ class FSDirWriteFileOp {
       fsd.setFileEncryptionInfo(src, feInfo);
       newNode = fsd.getInode(newNode.getId()).asFile();
     }
-    setNewINodeStoragePolicy(fsn.getBlockManager(), newNode, iip,
+    setNewINodeStoragePolicy(fsd.getBlockManager(), newNode, iip,
                              isLazyPersist);
     fsd.getEditLog().logOpenFile(src, newNode, overwrite, logRetryEntry);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
           src + " inode " + newNode.getId() + " " + holder);
     }
-    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath, true);
+    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath);
   }
 
   static EncryptionKeyInfo getEncryptionKeyInfo(FSNamesystem fsn,
@@ -540,7 +539,7 @@ class FSDirWriteFileOp {
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
-        blockInfo = new BlockInfoUnderConstructionStriped(block, ecPolicy,
+        blockInfo = new BlockInfoStripedUnderConstruction(block, ecPolicy,
             HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       } else {
         // check quota limits and updated space consumed
@@ -548,7 +547,7 @@ class FSDirWriteFileOp {
             fileINode.getPreferredBlockReplication(), true);
 
         short numLocations = fileINode.getFileReplication();
-        blockInfo = new BlockInfoUnderConstructionContiguous(block,
+        blockInfo = new BlockInfoContiguousUnderConstruction(block,
             numLocations, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
             targets);
       }

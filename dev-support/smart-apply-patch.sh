@@ -12,7 +12,7 @@
 #   limitations under the License.
 
 #
-# Determine if the patch file is a git diff file with prefixes.
+# Determine if the git diff patch file has prefixes.
 # These files are generated via "git diff" *without* the --no-prefix option.
 #
 # We can apply these patches more easily because we know that the a/ and b/
@@ -21,28 +21,13 @@
 # And of course, we know that the patch file was generated using git, so we
 # know git apply can handle it properly.
 #
-# Arguments: file name.
-# Return: 0 if it is a git diff; 1 otherwise.
+# Arguments: git diff file name.
+# Return: 0 if it is a git diff with prefix; 1 otherwise.
 #
-is_git_diff_with_prefix() {
-  DIFF_TYPE="unknown"
-  while read -r line; do
-    if [[ "$line" =~ ^diff\  ]]; then
-      if [[ "$line" =~ ^diff\ \-\-git ]]; then
-        DIFF_TYPE="git"
-      else
-        return 1 # All diff lines must be diff --git lines.
-      fi
-    fi
-    if [[ "$line" =~ ^\+\+\+\  ]] ||
-       [[ "$line" =~ ^\-\-\-\  ]]; then
-      if ! [[ "$line" =~ ^....[ab]/ || "$line" =~ ^..../dev/null ]]; then
-        return 1 # All +++ and --- lines must start with a/ or b/ or be /dev/null.
-      fi
-    fi
-  done < $1
-  [ x$DIFF_TYPE == x"git" ] || return 1
-  return 0 # return true (= 0 in bash)
+has_prefix() {
+  awk '/^diff --git / { if ($3 !~ "^a/" || $4 !~ "^b/") { exit 1 } }
+    /^\+{3}|-{3} / { if ($2 !~ "^[ab]/" && $2 !~ "^/dev/null") { exit 1 } }' "$1"
+  return $?
 }
 
 PATCH_FILE=$1
@@ -100,17 +85,26 @@ if [[ ${PATCH_FILE} =~ ^http || ${PATCH_FILE} =~ ${ISSUE_RE} ]]; then
   PATCH_FILE="${PFILE}"
 fi
 
-# Special case for git-diff patches without --no-prefix
-if is_git_diff_with_prefix "$PATCH_FILE"; then
-  GIT_FLAGS="--binary -p1 -v"
-  if [[ -z $DRY_RUN ]]; then
-      GIT_FLAGS="$GIT_FLAGS --stat --apply "
-      echo Going to apply git patch with: git apply "${GIT_FLAGS}"
+# Case for git-diff patches
+if grep -q "^diff --git" "${PATCH_FILE}"; then
+  GIT_FLAGS="--binary -v"
+  if has_prefix "$PATCH_FILE"; then
+    GIT_FLAGS="$GIT_FLAGS -p1"
   else
-      GIT_FLAGS="$GIT_FLAGS --check "
+    GIT_FLAGS="$GIT_FLAGS -p0"
   fi
+  if [[ -z $DRY_RUN ]]; then
+    GIT_FLAGS="$GIT_FLAGS --stat --apply"
+    echo Going to apply git patch with: git apply "${GIT_FLAGS}"
+  else
+    GIT_FLAGS="$GIT_FLAGS --check"
+  fi
+  # shellcheck disable=SC2086
   git apply ${GIT_FLAGS} "${PATCH_FILE}"
-  exit $?
+  if [[ $? == 0 ]]; then
+    cleanup 0
+  fi
+  echo "git apply failed. Going to apply the patch with: ${PATCH}"
 fi
 
 # Come up with a list of changed files into $TMP

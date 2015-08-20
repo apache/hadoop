@@ -76,8 +76,10 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -97,7 +99,15 @@ public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
 
-  private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private final static RecordFactory recordFactory = RecordFactoryProvider
+      .getRecordFactory(null);
+
+  public final static Priority AM_CONTAINER_PRIORITY = recordFactory
+      .newRecordInstance(Priority.class);
+  static {
+    AM_CONTAINER_PRIORITY.setPriority(0);
+  }
+
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
   private Configuration conf;
@@ -525,6 +535,24 @@ public class YARNRunner implements ClientProtocol {
         conf.getInt(MRJobConfig.MR_AM_MAX_ATTEMPTS,
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
     appContext.setResource(capability);
+
+    // set labels for the AM container request if present
+    String amNodelabelExpression = conf.get(MRJobConfig.AM_NODE_LABEL_EXP);
+    if (null != amNodelabelExpression
+        && amNodelabelExpression.trim().length() != 0) {
+      ResourceRequest amResourceRequest =
+          recordFactory.newRecordInstance(ResourceRequest.class);
+      amResourceRequest.setPriority(AM_CONTAINER_PRIORITY);
+      amResourceRequest.setResourceName(ResourceRequest.ANY);
+      amResourceRequest.setCapability(capability);
+      amResourceRequest.setNumContainers(1);
+      amResourceRequest.setNodeLabelExpression(amNodelabelExpression.trim());
+      appContext.setAMContainerResourceRequest(amResourceRequest);
+    }
+    // set labels for the Job containers
+    appContext.setNodeLabelExpression(jobConf
+        .get(JobContext.JOB_NODE_LABEL_EXP));
+
     appContext.setApplicationType(MRJobConfig.MR_APPLICATION_TYPE);
     if (tagsFromConf != null && !tagsFromConf.isEmpty()) {
       appContext.setApplicationTags(new HashSet<String>(tagsFromConf));

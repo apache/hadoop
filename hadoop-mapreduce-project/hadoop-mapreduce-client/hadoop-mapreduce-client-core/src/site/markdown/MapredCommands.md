@@ -51,18 +51,24 @@ Commands useful for users of a hadoop cluster.
 ### `archive`
 
 Creates a hadoop archive. More information can be found at
-[Hadoop Archives Guide](./HadoopArchives.html).
+[Hadoop Archives Guide](../../hadoop-archives/HadoopArchives.html).
 
 ### `classpath`
 
-Prints the class path needed to get the Hadoop jar and the required libraries.
+Usage: `yarn classpath [--glob |--jar <path> |-h |--help]`
 
-Usage: `mapred classpath`
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `--glob` | expand wildcards |
+| `--jar` *path* | write classpath as manifest in jar named *path* |
+| `-h`, `--help` | print help |
+
+Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
 ### `distcp`
 
 Copy file or directories recursively. More information can be found at
-[Hadoop DistCp Guide](./DistCp.html).
+[Hadoop DistCp Guide](../../hadoop-distcp/DistCp.html).
 
 ### `job`
 

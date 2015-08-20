@@ -29,11 +29,15 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Event Writer is an utility class used to write events to the underlying
@@ -41,31 +45,58 @@ import org.apache.hadoop.mapreduce.Counters;
  * is created per job 
  * 
  */
-class EventWriter {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class EventWriter {
   static final String VERSION = "Avro-Json";
+  static final String VERSION_BINARY = "Avro-Binary";
 
   private FSDataOutputStream out;
   private DatumWriter<Event> writer =
     new SpecificDatumWriter<Event>(Event.class);
   private Encoder encoder;
   private static final Log LOG = LogFactory.getLog(EventWriter.class);
-  
-  EventWriter(FSDataOutputStream out) throws IOException {
+
+  /**
+   * avro encoding format supported by EventWriter.
+   */
+  public enum WriteMode { JSON, BINARY }
+  private final WriteMode writeMode;
+  private final boolean jsonOutput;  // Cache value while we have 2 modes
+
+  @VisibleForTesting
+  public EventWriter(FSDataOutputStream out, WriteMode mode)
+      throws IOException {
     this.out = out;
-    out.writeBytes(VERSION);
+    this.writeMode = mode;
+    if (this.writeMode==WriteMode.JSON) {
+      this.jsonOutput = true;
+      out.writeBytes(VERSION);
+    } else if (this.writeMode==WriteMode.BINARY) {
+      this.jsonOutput = false;
+      out.writeBytes(VERSION_BINARY);
+    } else {
+      throw new IOException("Unknown mode: " + mode);
+    }
     out.writeBytes("\n");
     out.writeBytes(Event.SCHEMA$.toString());
     out.writeBytes("\n");
-    this.encoder =  EncoderFactory.get().jsonEncoder(Event.SCHEMA$, out);
+    if (!this.jsonOutput) {
+      this.encoder = EncoderFactory.get().binaryEncoder(out, null);
+    } else {
+      this.encoder = EncoderFactory.get().jsonEncoder(Event.SCHEMA$, out);
+    }
   }
   
   synchronized void write(HistoryEvent event) throws IOException { 
     Event wrapper = new Event();
-    wrapper.type = event.getEventType();
-    wrapper.event = event.getDatum();
+    wrapper.setType(event.getEventType());
+    wrapper.setEvent(event.getDatum());
     writer.write(wrapper, encoder);
     encoder.flush();
-    out.writeBytes("\n");
+    if (this.jsonOutput) {
+      out.writeBytes("\n");
+    }
   }
   
   void flush() throws IOException {
@@ -74,7 +105,8 @@ class EventWriter {
     out.hflush();
   }
 
-  void close() throws IOException {
+  @VisibleForTesting
+  public void close() throws IOException {
     try {
       encoder.flush();
       out.close();
@@ -95,22 +127,22 @@ class EventWriter {
   }
   static JhCounters toAvro(Counters counters, String name) {
     JhCounters result = new JhCounters();
-    result.name = new Utf8(name);
-    result.groups = new ArrayList<JhCounterGroup>(0);
+    result.setName(new Utf8(name));
+    result.setGroups(new ArrayList<JhCounterGroup>(0));
     if (counters == null) return result;
     for (CounterGroup group : counters) {
       JhCounterGroup g = new JhCounterGroup();
-      g.name = new Utf8(group.getName());
-      g.displayName = new Utf8(group.getDisplayName());
-      g.counts = new ArrayList<JhCounter>(group.size());
+      g.setName(new Utf8(group.getName()));
+      g.setDisplayName(new Utf8(group.getDisplayName()));
+      g.setCounts(new ArrayList<JhCounter>(group.size()));
       for (Counter counter : group) {
         JhCounter c = new JhCounter();
-        c.name = new Utf8(counter.getName());
-        c.displayName = new Utf8(counter.getDisplayName());
-        c.value = counter.getValue();
-        g.counts.add(c);
+        c.setName(new Utf8(counter.getName()));
+        c.setDisplayName(new Utf8(counter.getDisplayName()));
+        c.setValue(counter.getValue());
+        g.getCounts().add(c);
       }
-      result.groups.add(g);
+      result.getGroups().add(g);
     }
     return result;
   }

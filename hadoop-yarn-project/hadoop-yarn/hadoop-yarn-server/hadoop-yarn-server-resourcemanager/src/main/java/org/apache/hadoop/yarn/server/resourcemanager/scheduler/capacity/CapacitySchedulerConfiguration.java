@@ -207,6 +207,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String QUEUE_PREEMPTION_DISABLED = "disable_preemption";
 
   @Private
+  public static final String DEFAULT_APPLICATION_PRIORITY = "default-application-priority";
+
+  @Private
+  public static final Integer DEFAULT_CONFIGURATION_APPLICATION_PRIORITY = 0;
+
+  @Private
   public static class QueueMapping {
 
     public enum MappingType {
@@ -524,7 +530,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   public String getDefaultNodeLabelExpression(String queue) {
-    return get(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION);
+    String defaultLabelExpression = get(getQueuePrefix(queue)
+        + DEFAULT_NODE_LABEL_EXPRESSION);
+    if (defaultLabelExpression == null) {
+      return null;
+    }
+    return defaultLabelExpression.trim();
   }
   
   public void setDefaultNodeLabelExpression(String queue, String exp) {
@@ -941,5 +952,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configuredNodeLabels.add(RMNodeLabelsManager.NO_LABEL);
     
     return configuredNodeLabels;
+  }
+
+  public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {
+    Integer defaultPriority = getInt(getQueuePrefix(queue)
+        + DEFAULT_APPLICATION_PRIORITY,
+        DEFAULT_CONFIGURATION_APPLICATION_PRIORITY);
+    return defaultPriority;
   }
 }

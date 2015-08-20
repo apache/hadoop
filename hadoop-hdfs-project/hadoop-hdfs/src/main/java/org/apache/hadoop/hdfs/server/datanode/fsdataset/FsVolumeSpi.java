@@ -39,38 +39,38 @@ public interface FsVolumeSpi {
   FsVolumeReference obtainReference() throws ClosedChannelException;
 
   /** @return the StorageUuid of the volume */
-  public String getStorageID();
+  String getStorageID();
 
   /** @return a list of block pools. */
-  public String[] getBlockPoolList();
+  String[] getBlockPoolList();
 
   /** @return the available storage space in bytes. */
-  public long getAvailable() throws IOException;
+  long getAvailable() throws IOException;
 
   /** @return the base path to the volume */
-  public String getBasePath();
+  String getBasePath();
 
   /** @return the path to the volume */
-  public String getPath(String bpid) throws IOException;
+  String getPath(String bpid) throws IOException;
 
   /** @return the directory for the finalized blocks in the block pool. */
-  public File getFinalizedDir(String bpid) throws IOException;
+  File getFinalizedDir(String bpid) throws IOException;
   
-  public StorageType getStorageType();
+  StorageType getStorageType();
 
   /** Returns true if the volume is NOT backed by persistent storage. */
-  public boolean isTransientStorage();
+  boolean isTransientStorage();
 
   /**
    * Reserve disk space for an RBW block so a writer does not run out of
    * space before the block is full.
    */
-  public void reserveSpaceForRbw(long bytesToReserve);
+  void reserveSpaceForRbw(long bytesToReserve);
 
   /**
    * Release disk space previously reserved for RBW block.
    */
-  public void releaseReservedSpace(long bytesToRelease);
+  void releaseReservedSpace(long bytesToRelease);
 
   /**
    * Release reserved memory for an RBW block written to transient storage
@@ -78,7 +78,7 @@ public interface FsVolumeSpi {
    * bytesToRelease will be rounded down to the OS page size since locked
    * memory reservation must always be a multiple of the page size.
    */
-  public void releaseLockedMemory(long bytesToRelease);
+  void releaseLockedMemory(long bytesToRelease);
 
   /**
    * BlockIterator will return ExtendedBlock entries from a block pool in
@@ -90,7 +90,7 @@ public interface FsVolumeSpi {
    *
    * Closing the iterator does not save it.  You must call save to save it.
    */
-  public interface BlockIterator extends Closeable {
+  interface BlockIterator extends Closeable {
     /**
      * Get the next block.<p/>
      *
@@ -107,17 +107,17 @@ public interface FsVolumeSpi {
      *                         this volume.  In this case, EOF will be set on
      *                         the iterator.
      */
-    public ExtendedBlock nextBlock() throws IOException;
+    ExtendedBlock nextBlock() throws IOException;
 
     /**
      * Returns true if we got to the end of the block pool.
      */
-    public boolean atEnd();
+    boolean atEnd();
 
     /**
      * Repositions the iterator at the beginning of the block pool.
      */
-    public void rewind();
+    void rewind();
 
     /**
      * Save this block iterator to the underlying volume.
@@ -127,7 +127,7 @@ public interface FsVolumeSpi {
      * @throws IOException   If there was an error when saving the block
      *                         iterator.
      */
-    public void save() throws IOException;
+    void save() throws IOException;
 
     /**
      * Set the maximum staleness of entries that we will return.<p/>
@@ -138,25 +138,25 @@ public interface FsVolumeSpi {
      * to 0, consumers of this API must handle race conditions where block
      * disappear before they can be processed.
      */
-    public void setMaxStalenessMs(long maxStalenessMs);
+    void setMaxStalenessMs(long maxStalenessMs);
 
     /**
      * Get the wall-clock time, measured in milliseconds since the Epoch,
      * when this iterator was created.
      */
-    public long getIterStartMs();
+    long getIterStartMs();
 
     /**
      * Get the wall-clock time, measured in milliseconds since the Epoch,
      * when this iterator was last saved.  Returns iterStartMs if the
      * iterator was never saved.
      */
-    public long getLastSavedMs();
+    long getLastSavedMs();
 
     /**
      * Get the id of the block pool which this iterator traverses.
      */
-    public String getBlockPoolId();
+    String getBlockPoolId();
   }
 
   /**
@@ -168,7 +168,7 @@ public interface FsVolumeSpi {
    *
    * @return                 The new block iterator.
    */
-  public BlockIterator newBlockIterator(String bpid, String name);
+  BlockIterator newBlockIterator(String bpid, String name);
 
   /**
    * Load a saved block iterator.
@@ -180,11 +180,10 @@ public interface FsVolumeSpi {
    * @throws IOException     If there was an IO error loading the saved
    *                           block iterator.
    */
-  public BlockIterator loadBlockIterator(String bpid, String name)
-      throws IOException;
+  BlockIterator loadBlockIterator(String bpid, String name) throws IOException;
 
   /**
    * Get the FSDatasetSpi which this volume is a part of.
    */
-  public FsDatasetSpi getDataset();
+  FsDatasetSpi getDataset();
 }

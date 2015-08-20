@@ -191,7 +191,7 @@
                       echo "Hadoop dist layout available at: ${project.build.directory}/hadoop-${project.version}"
                       echo
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-layout-stitching.sh"/>
                     </exec>
                   </target>
@@ -224,7 +224,7 @@
                       echo "Hadoop dist tar available at: ${project.build.directory}/hadoop-${project.version}.tar.gz"
                       echo
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-tar-stitching.sh"/>
                     </exec>
                   </target>

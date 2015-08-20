@@ -19,7 +19,15 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 
+/**
+ * Interface for monitoring the resources of a node.
+ */
 public interface NodeResourceMonitor extends Service {
-
+  /**
+   * Get the <em>resource utilization</em> of the node.
+   * @return <em>resource utilization</em> of the node.
+   */
+  public ResourceUtilization getUtilization();
 }

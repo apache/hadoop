@@ -26,8 +26,8 @@ import java.net.URI;
 import java.util.regex.Matcher;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -94,7 +94,7 @@ public class StorageLocation {
       }
     }
 
-    return new StorageLocation(storageType, Util.stringAsURI(location));
+    return new StorageLocation(storageType, new Path(location).toUri());
   }
 
   @Override

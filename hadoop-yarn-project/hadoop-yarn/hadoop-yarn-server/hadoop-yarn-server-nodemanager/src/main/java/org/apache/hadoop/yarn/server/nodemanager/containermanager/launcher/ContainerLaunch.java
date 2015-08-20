@@ -303,6 +303,7 @@ public class ContainerLaunch implements Callable<Integer> {
         exec.activateContainer(containerID, pidFilePath);
         ret = exec.launchContainer(new ContainerStartContext.Builder()
             .setContainer(container)
+            .setLocalizedResources(localResources)
             .setNmPrivateContainerScriptPath(nmPrivateContainerScriptPath)
             .setNmPrivateTokensPath(nmPrivateTokensPath)
             .setUser(user)
@@ -427,6 +428,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
         boolean result = exec.signalContainer(
             new ContainerSignalContext.Builder()
+                .setContainer(container)
                 .setUser(user)
                 .setPid(processId)
                 .setSignal(signal)
@@ -528,6 +530,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void command(List<String> command) throws IOException;
 
+    public abstract void whitelistedEnv(String key, String value) throws IOException;
+
     public abstract void env(String key, String value) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
@@ -586,6 +590,11 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) {
+      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
+    }
+
+    @Override
     public void env(String key, String value) {
       line("export ", key, "=\"", value, "\"");
     }
@@ -623,6 +632,12 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void command(List<String> command) throws IOException {
       lineWithLenCheck("@call ", StringUtils.join(" ", command));
+      errorCheck();
+    }
+
+    @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
     }
 
@@ -749,11 +764,12 @@ public class ContainerLaunch implements Callable<Integer> {
         //jar is created and so they "are lost" and have to be explicitly
         //added to the classpath instead.  This also means that their position
         //is lost relative to other non-distcache classpath entries which will
-        //break things like mapreduce.job.user.classpath.first.
+        //break things like mapreduce.job.user.classpath.first.  An environment
+        //variable can be set to indicate that distcache entries should come
+        //first
 
-        boolean preferLocalizedJars = conf.getBoolean(
-          YarnConfiguration.YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE,
-          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH_PREPEND_DISTCACHE
+        boolean preferLocalizedJars = Boolean.valueOf(
+          environment.get(Environment.CLASSPATH_PREPEND_DISTCACHE.name())
           );
 
         boolean needsSeparator = false;

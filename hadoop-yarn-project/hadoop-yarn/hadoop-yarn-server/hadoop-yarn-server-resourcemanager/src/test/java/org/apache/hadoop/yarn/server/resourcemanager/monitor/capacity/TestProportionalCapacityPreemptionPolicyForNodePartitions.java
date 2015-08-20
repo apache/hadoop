@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,13 +51,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -66,9 +67,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
@@ -92,7 +95,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
   private Configuration conf = null;
   private CapacitySchedulerConfiguration csConf = null;
   private CapacityScheduler cs = null;
-  private EventHandler<ContainerPreemptEvent> mDisp = null;
+  private EventHandler<SchedulerEvent> mDisp = null;
   private ProportionalCapacityPreemptionPolicy policy = null;
   private Resource clusterResource = null;
 
@@ -125,11 +128,14 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
     rmContext = mock(RMContext.class);
     when(rmContext.getNodeLabelManager()).thenReturn(nlm);
+    Dispatcher disp = mock(Dispatcher.class);
+    when(rmContext.getDispatcher()).thenReturn(disp);
+    when(disp.getEventHandler()).thenReturn(mDisp);
     csConf = new CapacitySchedulerConfiguration();
     when(cs.getConfiguration()).thenReturn(csConf);
     when(cs.getRMContext()).thenReturn(rmContext);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, mDisp, cs, mClock);
+    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs, mClock);
     partitionToResource = new HashMap<>();
     nodeIdToSchedulerNodes = new HashMap<>();
     nameToCSQueues = new HashMap<>();
@@ -767,6 +773,60 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
         argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
   }
 
+  @Test
+  public void testNodePartitionPreemptionWithVCoreResource() throws IOException {
+    /**
+     * Queue structure is:
+     *
+     * <pre>
+     *       root
+     *       /  \
+     *      a    b
+     * </pre>
+     *
+     * Both a/b can access x, and guaranteed capacity of them is 50:50. Two
+     * nodes, n1 has 100 x, n2 has 100 NO_LABEL 4 applications in the cluster,
+     * app1/app2 in a, and app3/app4 in b. app1 uses 80 x, app2 uses 20
+     * NO_LABEL, app3 uses 20 x, app4 uses 80 NO_LABEL. Both a/b have 50 pending
+     * resource for x and NO_LABEL
+     *
+     * After preemption, it should preempt 30 from app1, and 30 from app4.
+     */
+    String labelsConfig = "=100:200,true;" + // default partition
+        "x=100:200,true"; // partition=x
+    String nodesConfig = "n1=x;" + // n1 has partition=x
+        "n2="; // n2 is default partition
+    String queuesConfig =
+    // guaranteed,max,used,pending
+    "root(=[100:200 100:200 100:200 100:200],x=[100:200 100:200 100:200 100:200]);"
+        + // root
+        "-a(=[50:100 100:200 20:40 50:100],x=[50:100 100:200 80:160 50:100]);" + // a
+        "-b(=[50:100 100:200 80:160 50:100],x=[50:100 100:200 20:40 50:100])"; // b
+    String appsConfig =
+    // queueName\t(priority,resource,host,expression,#repeat,reserved)
+    "a\t" // app1 in a
+        + "(1,1:2,n1,x,80,false);" + // 80 * x in n1
+        "a\t" // app2 in a
+        + "(1,1:2,n2,,20,false);" + // 20 default in n2
+        "b\t" // app3 in b
+        + "(1,1:2,n1,x,20,false);" + // 20 * x in n1
+        "b\t" // app4 in b
+        + "(1,1:2,n2,,80,false)"; // 80 default in n2
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    policy.editSchedule();
+
+    // 30 preempted from app1, 30 preempted from app4, and nothing preempted
+    // from app2/app3
+    verify(mDisp, times(30)).handle(
+        argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
+    verify(mDisp, times(30)).handle(
+        argThat(new IsPreemptionRequestFor(getAppAttemptId(4))));
+    verify(mDisp, never()).handle(
+        argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
+    verify(mDisp, never()).handle(
+        argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
+  }
 
   private ApplicationAttemptId getAppAttemptId(int id) {
     ApplicationId appId = ApplicationId.newInstance(0L, id);
@@ -817,6 +877,16 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
   private void buildEnv(String labelsConfig, String nodesConfig,
       String queuesConfig, String appsConfig) throws IOException {
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, false);
+  }
+
+  private void buildEnv(String labelsConfig, String nodesConfig,
+      String queuesConfig, String appsConfig,
+      boolean useDominantResourceCalculator) throws IOException {
+    if (useDominantResourceCalculator) {
+      when(cs.getResourceCalculator()).thenReturn(
+          new DominantResourceCalculator());
+    }
     mockNodeLabelsManager(labelsConfig);
     mockSchedulerNodes(nodesConfig);
     for (NodeId nodeId : nodeIdToSchedulerNodes.keySet()) {
@@ -828,7 +898,8 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     when(cs.getClusterResource()).thenReturn(clusterResource);
     mockApplications(appsConfig);
 
-    policy = new ProportionalCapacityPreemptionPolicy(conf, mDisp, cs, mClock);
+    policy = new ProportionalCapacityPreemptionPolicy(conf, rmContext, cs,
+        mClock);
   }
 
   private void mockContainers(String containersConfig, ApplicationAttemptId attemptId,
@@ -864,7 +935,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
             + "(priority,resource,host,expression,repeat,reserved)");
       }
       Priority pri = Priority.newInstance(Integer.valueOf(values[0]));
-      Resource res = Resources.createResource(Integer.valueOf(values[1]));
+      Resource res = parseResourceFromString(values[1]);
       NodeId host = NodeId.newInstance(values[2], 1);
       String exp = values[3];
       int repeat = Integer.valueOf(values[4]);
@@ -955,6 +1026,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
       when(app.getReservedContainers()).thenReturn(reservedContainers);
       when(app.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(app.getApplicationId()).thenReturn(appId);
+      when(app.getPriority()).thenReturn(Priority.newInstance(0));
 
       // add to LeafQueue
       LeafQueue queue = (LeafQueue) nameToCSQueues.get(queueName);
@@ -998,11 +1070,10 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
     clusterResource = Resources.createResource(0);
     for (String p : partitionConfigArr) {
       String partitionName = p.substring(0, p.indexOf("="));
-      int totalResource =
-          Integer.valueOf(p.substring(p.indexOf("=") + 1, p.indexOf(",")));
-      boolean exclusivity =
+      Resource res = parseResourceFromString(p.substring(p.indexOf("=") + 1,
+          p.indexOf(",")));
+     boolean exclusivity =
           Boolean.valueOf(p.substring(p.indexOf(",") + 1, p.length()));
-      Resource res = Resources.createResource(totalResource);
       when(nlm.getResourceByLabel(eq(partitionName), any(Resource.class)))
           .thenReturn(res);
       when(nlm.isExclusiveNodeLabel(eq(partitionName))).thenReturn(exclusivity);
@@ -1016,6 +1087,18 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
     when(nlm.getClusterNodeLabelNames()).thenReturn(
         partitionToResource.keySet());
+  }
+
+  private Resource parseResourceFromString(String p) {
+    String[] resource = p.split(":");
+    Resource res = Resources.createResource(0);
+    if (resource.length == 1) {
+      res = Resources.createResource(Integer.valueOf(resource[0]));
+    } else {
+      res = Resources.createResource(Integer.valueOf(resource[0]),
+          Integer.valueOf(resource[1]));
+    }
+    return res;
   }
 
   /**
@@ -1045,8 +1128,13 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
         when(parentQueue.getChildQueues()).thenReturn(children);
       } else {
         LeafQueue leafQueue = mock(LeafQueue.class);
-        final TreeSet<FiCaSchedulerApp> apps =
-            new TreeSet<>(CapacityScheduler.applicationComparator);
+        final TreeSet<FiCaSchedulerApp> apps = new TreeSet<>(
+            new Comparator<FiCaSchedulerApp>() {
+              @Override
+              public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
+                return a1.getApplicationId().compareTo(a2.getApplicationId());
+              }
+            });
         when(leafQueue.getApplications()).thenReturn(apps);
         OrderingPolicy<FiCaSchedulerApp> so = mock(OrderingPolicy.class);
         when(so.getPreemptionIterator()).thenAnswer(new Answer() {
@@ -1116,23 +1204,22 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
       // Add a small epsilon to capacities to avoid truncate when doing
       // Resources.multiply
       float epsilon = 1e-6f;
-      float absGuaranteed =
-          Integer.valueOf(values[0].trim())
-              / (float) (partitionToResource.get(partitionName).getMemory())
-              + epsilon;
-      float absMax =
-          Integer.valueOf(values[1].trim())
-              / (float) (partitionToResource.get(partitionName).getMemory())
-              + epsilon;
-      float absUsed =
-          Integer.valueOf(values[2].trim())
-              / (float) (partitionToResource.get(partitionName).getMemory())
-              + epsilon;
-      Resource pending = Resources.createResource(Integer.valueOf(values[3].trim()));
+      Resource totResoucePerPartition = partitionToResource.get(partitionName);
+      float absGuaranteed = Resources.divide(rc, totResoucePerPartition,
+          parseResourceFromString(values[0].trim()), totResoucePerPartition)
+          + epsilon;
+      float absMax = Resources.divide(rc, totResoucePerPartition,
+          parseResourceFromString(values[1].trim()), totResoucePerPartition)
+          + epsilon;
+      float absUsed = Resources.divide(rc, totResoucePerPartition,
+          parseResourceFromString(values[2].trim()), totResoucePerPartition)
+          + epsilon;
+      Resource pending = parseResourceFromString(values[3].trim());
       qc.setAbsoluteCapacity(partitionName, absGuaranteed);
       qc.setAbsoluteMaximumCapacity(partitionName, absMax);
       qc.setAbsoluteUsedCapacity(partitionName, absUsed);
       ru.setPending(partitionName, pending);
+      ru.setUsed(partitionName, parseResourceFromString(values[2].trim()));
       LOG.debug("Setup queue=" + queueName + " partition=" + partitionName
           + " [abs_guaranteed=" + absGuaranteed + ",abs_max=" + absMax
           + ",abs_used" + absUsed + ",pending_resource=" + pending + "]");

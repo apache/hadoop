@@ -162,14 +162,22 @@ public class LayoutVersion {
   public static class FeatureInfo {
     private final int lv;
     private final int ancestorLV;
+    private final Integer minCompatLV;
     private final String description;
     private final boolean reserved;
     private final LayoutFeature[] specialFeatures;
 
     public FeatureInfo(final int lv, final int ancestorLV, final String description,
         boolean reserved, LayoutFeature... specialFeatures) {
+      this(lv, ancestorLV, null, description, reserved, specialFeatures);
+    }
+
+    public FeatureInfo(final int lv, final int ancestorLV, Integer minCompatLV,
+        final String description, boolean reserved,
+        LayoutFeature... specialFeatures) {
       this.lv = lv;
       this.ancestorLV = ancestorLV;
+      this.minCompatLV = minCompatLV;
       this.description = description;
       this.reserved = reserved;
       this.specialFeatures = specialFeatures;
@@ -191,7 +199,20 @@ public class LayoutVersion {
       return ancestorLV;
     }
 
-    /** 
+    /**
+     * Accessor method for feature minimum compatible layout version.  If the
+     * feature does not define a minimum compatible layout version, then this
+     * method returns the feature's own layout version.  This would indicate
+     * that the feature cannot provide compatibility with any prior layout
+     * version.
+     *
+     * @return int minimum compatible LV value
+     */
+    public int getMinimumCompatibleLayoutVersion() {
+      return minCompatLV != null ? minCompatLV : lv;
+    }
+
+    /**
      * Accessor method for feature description 
      * @return String feature description 
      */
@@ -220,8 +241,23 @@ public class LayoutVersion {
       LayoutFeature[] features) {
     // Go through all the enum constants and build a map of
     // LayoutVersion <-> Set of all supported features in that LayoutVersion
+    SortedSet<LayoutFeature> existingFeatures = new TreeSet<LayoutFeature>(
+        new LayoutFeatureComparator());
+    for (SortedSet<LayoutFeature> s : map.values()) {
+      existingFeatures.addAll(s);
+    }
+    LayoutFeature prevF = existingFeatures.isEmpty() ? null :
+        existingFeatures.first();
     for (LayoutFeature f : features) {
       final FeatureInfo info = f.getInfo();
+      int minCompatLV = info.getMinimumCompatibleLayoutVersion();
+      if (prevF != null &&
+          minCompatLV > prevF.getInfo().getMinimumCompatibleLayoutVersion()) {
+        throw new AssertionError(String.format(
+            "Features must be listed in order of minimum compatible layout " +
+            "version.  Check features %s and %s.", prevF, f));
+      }
+      prevF = f;
       SortedSet<LayoutFeature> ancestorSet = map.get(info.getAncestorLayoutVersion());
       if (ancestorSet == null) {
         // Empty set
@@ -282,6 +318,18 @@ public class LayoutVersion {
     return getLastNonReservedFeature(features).getInfo().getLayoutVersion();
   }
 
+  /**
+   * Gets the minimum compatible layout version.
+   *
+   * @param features all features to check
+   * @return minimum compatible layout version
+   */
+  public static int getMinimumCompatibleLayoutVersion(
+      LayoutFeature[] features) {
+    return getLastNonReservedFeature(features).getInfo()
+        .getMinimumCompatibleLayoutVersion();
+  }
+
   static LayoutFeature getLastNonReservedFeature(LayoutFeature[] features) {
     for (int i = features.length -1; i >= 0; i--) {
       final FeatureInfo info = features[i].getInfo();
@@ -292,4 +340,3 @@ public class LayoutVersion {
     throw new AssertionError("All layout versions are reserved.");
   }
 }
-

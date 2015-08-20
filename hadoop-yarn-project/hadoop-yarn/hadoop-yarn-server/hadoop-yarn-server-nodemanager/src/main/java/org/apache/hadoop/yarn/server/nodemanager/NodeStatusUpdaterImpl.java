@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -66,16 +68,20 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -128,6 +134,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
+  private boolean registeredWithRM = false;
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
 
   private final NodeLabelsProvider nodeLabelsProvider;
@@ -157,18 +164,16 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    int memoryMb = 
-        conf.getInt(
-            YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-    float vMemToPMem =             
+    int memoryMb = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
+    float vMemToPMem =
         conf.getFloat(
             YarnConfiguration.NM_VMEM_PMEM_RATIO, 
             YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO); 
     int virtualMemoryMb = (int)Math.ceil(memoryMb * vMemToPMem);
     
-    int virtualCores =
-        conf.getInt(
-            YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
+    int virtualCores = NodeManagerHardwareUtils.getVCores(conf);
+    LOG.info("Nodemanager resources: memory set to " + memoryMb + "MB.");
+    LOG.info("Nodemanager resources: vcores set to " + virtualCores + ".");
 
     this.totalResource = Resource.newInstance(memoryMb, virtualCores);
     metrics.addResource(totalResource);
@@ -232,10 +237,38 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
+    // the isStopped check is for avoiding multiple unregistrations.
+    if (this.registeredWithRM && !this.isStopped
+        && !isNMUnderSupervisionWithRecoveryEnabled()
+        && !context.getDecommissioned()) {
+      unRegisterNM();
+    }
     // Interrupt the updater.
     this.isStopped = true;
     stopRMProxy();
     super.serviceStop();
+  }
+
+  private boolean isNMUnderSupervisionWithRecoveryEnabled() {
+    Configuration config = getConfig();
+    return config.getBoolean(YarnConfiguration.NM_RECOVERY_ENABLED,
+        YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED)
+        && config.getBoolean(YarnConfiguration.NM_RECOVERY_SUPERVISED,
+            YarnConfiguration.DEFAULT_NM_RECOVERY_SUPERVISED);
+  }
+
+  private void unRegisterNM() {
+    RecordFactory recordFactory = RecordFactoryPBImpl.get();
+    UnRegisterNodeManagerRequest request = recordFactory
+        .newRecordInstance(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(this.nodeId);
+    try {
+      resourceTracker.unRegisterNodeManager(request);
+      LOG.info("Successfully Unregistered the Node " + this.nodeId
+          + " with ResourceManager.");
+    } catch (Exception e) {
+      LOG.warn("Unregistration of the Node " + this.nodeId + " failed.", e);
+    }
   }
 
   protected void rebootNodeStatusUpdaterAndRegisterWithRM() {
@@ -327,6 +360,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             + "version error, " + message);
       }
     }
+    this.registeredWithRM = true;
     MasterKey masterKey = regNMResponse.getContainerTokenMasterKey();
     // do this now so that its set before we start heartbeating to RM
     // It is expected that status updater is started by this point and
@@ -396,11 +430,36 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           + ", " + nodeHealthStatus.getHealthReport());
     }
     List<ContainerStatus> containersStatuses = getContainerStatuses();
+    ResourceUtilization containersUtilization = getContainersUtilization();
+    ResourceUtilization nodeUtilization = getNodeUtilization();
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
-          createKeepAliveApplicationList(), nodeHealthStatus);
+          createKeepAliveApplicationList(), nodeHealthStatus,
+          containersUtilization, nodeUtilization);
 
     return nodeStatus;
+  }
+
+  /**
+   * Get the aggregated utilization of the containers in this node.
+   * @return Resource utilization of all the containers.
+   */
+  private ResourceUtilization getContainersUtilization() {
+    ContainerManagerImpl containerManager =
+        (ContainerManagerImpl) this.context.getContainerManager();
+    ContainersMonitor containersMonitor =
+        containerManager.getContainersMonitor();
+    return containersMonitor.getContainersUtilization();
+  }
+
+  /**
+   * Get the utilization of the node. This includes the containers.
+   * @return Resource utilization of the node.
+   */
+  private ResourceUtilization getNodeUtilization() {
+    NodeResourceMonitorImpl nodeResourceMonitor =
+        (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
+    return nodeResourceMonitor.getUtilization();
   }
 
   // Iterate through the NMContext and clone and get all the containers'
@@ -426,12 +485,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           if (!isContainerRecentlyStopped(containerId)) {
             pendingCompletedContainers.put(containerId, containerStatus);
-            // Adding to finished containers cache. Cache will keep it around at
-            // least for #durationToTrackStoppedContainers duration. In the
-            // subsequent call to stop container it will get removed from cache.
-            addCompletedContainer(containerId);
           }
         }
+        // Adding to finished containers cache. Cache will keep it around at
+        // least for #durationToTrackStoppedContainers duration. In the
+        // subsequent call to stop container it will get removed from cache.
+        addCompletedContainer(containerId);
       } else {
         containerStatuses.add(containerStatus);
       }

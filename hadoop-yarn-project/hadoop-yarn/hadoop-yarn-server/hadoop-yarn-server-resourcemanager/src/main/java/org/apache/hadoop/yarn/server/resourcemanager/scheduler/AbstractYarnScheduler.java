@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -66,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 
 
@@ -213,12 +215,12 @@ public abstract class AbstractYarnScheduler
   protected synchronized void containerLaunchedOnNode(
       ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
-    SchedulerApplicationAttempt application = getCurrentAttemptForContainer
-        (containerId);
+    SchedulerApplicationAttempt application =
+        getCurrentAttemptForContainer(containerId);
     if (application == null) {
-      LOG.info("Unknown application "
-          + containerId.getApplicationAttemptId().getApplicationId()
-          + " launched container " + containerId + " on node: " + node);
+      LOG.info("Unknown application " + containerId.getApplicationAttemptId()
+          .getApplicationId() + " launched container " + containerId
+          + " on node: " + node);
       this.rmContext.getDispatcher().getEventHandler()
         .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
       return;
@@ -451,25 +453,30 @@ public abstract class AbstractYarnScheduler
     new Timer().schedule(new TimerTask() {
       @Override
       public void run() {
-        for (SchedulerApplication<T> app : applications.values()) {
-
-          T attempt = app.getCurrentAppAttempt();
-          synchronized (attempt) {
-            for (ContainerId containerId : attempt.getPendingRelease()) {
-              RMAuditLogger.logFailure(
-                app.getUser(),
-                AuditConstants.RELEASE_CONTAINER,
-                "Unauthorized access or invalid container",
-                "Scheduler",
-                "Trying to release container not owned by app or with invalid id.",
-                attempt.getApplicationId(), containerId);
-            }
-            attempt.getPendingRelease().clear();
-          }
-        }
+        clearPendingContainerCache();
         LOG.info("Release request cache is cleaned up");
       }
     }, nmExpireInterval);
+  }
+
+  @VisibleForTesting
+  public void clearPendingContainerCache() {
+    for (SchedulerApplication<T> app : applications.values()) {
+      T attempt = app.getCurrentAppAttempt();
+      if (attempt != null) {
+        synchronized (attempt) {
+          for (ContainerId containerId : attempt.getPendingRelease()) {
+            RMAuditLogger.logFailure(app.getUser(),
+                AuditConstants.RELEASE_CONTAINER,
+                "Unauthorized access or invalid container", "Scheduler",
+                "Trying to release container not owned by app "
+                    + "or with invalid id.", attempt.getApplicationId(),
+                containerId);
+          }
+          attempt.getPendingRelease().clear();
+        }
+      }
+    }
   }
 
   // clean up a completed container
@@ -684,5 +691,21 @@ public abstract class AbstractYarnScheduler
       return attempt.getAppSchedulingInfo().getAllResourceRequests();
     }
     return null;
+  }
+
+  @Override
+  public Priority checkAndGetApplicationPriority(Priority priorityFromContext,
+      String user, String queueName, ApplicationId applicationId)
+      throws YarnException {
+    // Dummy Implementation till Application Priority changes are done in
+    // specific scheduler.
+    return Priority.newInstance(0);
+  }
+
+  @Override
+  public void updateApplicationPriority(Priority newPriority,
+      ApplicationId applicationId) throws YarnException {
+    // Dummy Implementation till Application Priority changes are done in
+    // specific scheduler.
   }
 }

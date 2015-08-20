@@ -32,11 +32,14 @@ import java.util.Random;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.*;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
+
 
 /**
  * This class tests the local file system via the FileSystem abstraction.
@@ -378,7 +381,14 @@ public class TestLocalFileSystem {
     assertTrue(dataFileFound);
     assertTrue(checksumFileFound);
   }
-  
+
+  private void checkTimesStatus(Path path,
+    long expectedModTime, long expectedAccTime) throws IOException {
+    FileStatus status = fileSys.getFileStatus(path);
+    assertEquals(expectedModTime, status.getModificationTime());
+    assertEquals(expectedAccTime, status.getAccessTime());
+  }
+
   @Test(timeout = 1000)
   public void testSetTimes() throws Exception {
     Path path = new Path(TEST_ROOT_DIR, "set-times");
@@ -387,15 +397,24 @@ public class TestLocalFileSystem {
     // test only to the nearest second, as the raw FS may not
     // support millisecond timestamps
     long newModTime = 12345000;
+    long newAccTime = 23456000;
 
     FileStatus status = fileSys.getFileStatus(path);
     assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    long accessTime = status.getAccessTime();
+    assertTrue("check we're actually changing something", newAccTime != status.getAccessTime());
+
+    fileSys.setTimes(path, newModTime, newAccTime);
+    checkTimesStatus(path, newModTime, newAccTime);
+
+    newModTime = 34567000;
 
     fileSys.setTimes(path, newModTime, -1);
-    status = fileSys.getFileStatus(path);
-    assertEquals(newModTime, status.getModificationTime());
-    assertEquals(accessTime, status.getAccessTime());
+    checkTimesStatus(path, newModTime, newAccTime);
+
+    newAccTime = 45678000;
+
+    fileSys.setTimes(path, -1, newAccTime);
+    checkTimesStatus(path, newModTime, newAccTime);
   }
 
   /**
@@ -560,5 +579,59 @@ public class TestLocalFileSystem {
     Path resolved = fs.resolvePath(pathWithFragment);
     assertEquals("resolvePath did not strip fragment from Path", pathQualified,
         resolved);
+  }
+
+  @Test
+  public void testAppendSetsPosCorrectly() throws Exception {
+    FileSystem fs = fileSys.getRawFileSystem();
+    Path file = new Path(TEST_ROOT_DIR, "test-append");
+
+    fs.delete(file, true);
+    FSDataOutputStream out = fs.create(file);
+
+    try {
+      out.write("text1".getBytes());
+    } finally {
+      out.close();
+    }
+
+    // Verify the position
+    out = fs.append(file);
+    try {
+      assertEquals(5, out.getPos());
+      out.write("text2".getBytes());
+    } finally {
+      out.close();
+    }
+
+    // Verify the content
+    FSDataInputStream in = fs.open(file);
+    try {
+      byte[] buf = new byte[in.available()];
+      in.readFully(buf);
+      assertEquals("text1text2", new String(buf));
+    } finally {
+      in.close();
+    }
+  }
+
+  @Test
+  public void testFileStatusPipeFile() throws Exception {
+    RawLocalFileSystem origFs = new RawLocalFileSystem();
+    RawLocalFileSystem fs = spy(origFs);
+    Configuration conf = mock(Configuration.class);
+    fs.setConf(conf);
+    Whitebox.setInternalState(fs, "useDeprecatedFileStatus", false);
+    Path path = new Path("/foo");
+    File pipe = mock(File.class);
+    when(pipe.isFile()).thenReturn(false);
+    when(pipe.isDirectory()).thenReturn(false);
+    when(pipe.exists()).thenReturn(true);
+
+    FileStatus stat = mock(FileStatus.class);
+    doReturn(pipe).when(fs).pathToFile(path);
+    doReturn(stat).when(fs).getFileStatus(path);
+    FileStatus[] stats = fs.listStatus(path);
+    assertTrue(stats != null && stats.length == 1 && stats[0] == stat);
   }
 }

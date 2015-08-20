@@ -191,6 +191,7 @@ public class TestBlobDataValidation {
 
     private static boolean isPutBlock(HttpURLConnection connection) {
       return connection.getRequestMethod().equals("PUT")
+          && connection.getURL().getQuery() != null
           && connection.getURL().getQuery().contains("blockid");
     }
 

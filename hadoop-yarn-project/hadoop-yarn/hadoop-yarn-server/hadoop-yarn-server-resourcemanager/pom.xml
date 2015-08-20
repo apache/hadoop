@@ -175,6 +175,14 @@
       <artifactId>hadoop-yarn-server-web-proxy</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-test</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
@@ -250,6 +258,10 @@
                   <mainClass>org.apache.hadoop.test.YarnTestDriver</mainClass>
                 </manifest>
               </archive>
+              <excludes>
+                <exclude>**/core-site.xml</exclude>
+                <exclude>**/yarn-site.xml</exclude>
+              </excludes>
             </configuration>
           </execution>
         </executions>
@@ -271,7 +283,7 @@
               <imports>
                 <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
                 <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-common/src/main/proto/server/</param>
+                <param>${basedir}/../../hadoop-yarn-common/src/main/proto</param>
                 <param>${basedir}/../hadoop-yarn-server-common/src/main/proto</param>
                 <param>${basedir}/src/main/proto</param>
               </imports>

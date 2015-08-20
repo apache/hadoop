@@ -330,4 +330,25 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public void decPendingResource(String nodeLabel, Resource resourceToDec) {
   }
+
+  @Override
+  public Priority getDefaultApplicationPriority() {
+    // TODO add implementation for FSParentQueue
+    return null;
+  }
+
+  public boolean fitsInMaxShare(Resource additionalResource) {
+    Resource usagePlusAddition =
+        Resources.add(getResourceUsage(), additionalResource);
+
+    if (!Resources.fitsIn(usagePlusAddition, getMaxShare())) {
+      return false;
+    }
+
+    FSQueue parentQueue = getParent();
+    if (parentQueue != null) {
+      return parentQueue.fitsInMaxShare(additionalResource);
+    }
+    return true;
+  }
 }

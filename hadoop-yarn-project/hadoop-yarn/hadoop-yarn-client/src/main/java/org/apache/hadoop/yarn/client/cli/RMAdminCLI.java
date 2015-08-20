@@ -109,20 +109,20 @@ public class RMAdminCLI extends HAAdmin {
           .put("-getGroups", new UsageInfo("[username]",
               "Get the groups which given user belongs to."))
           .put("-addToClusterNodeLabels",
-              new UsageInfo("[label1(exclusive=true),"
-                  + "label2(exclusive=false),label3]",
-                  "add to cluster node labels "))
+              new UsageInfo("<\"label1(exclusive=true),"
+                  + "label2(exclusive=false),label3\">",
+                  "add to cluster node labels. Default exclusivity is true"))
           .put("-removeFromClusterNodeLabels",
-              new UsageInfo("[label1,label2,label3] (label splitted by \",\")",
+              new UsageInfo("<label1,label2,label3> (label splitted by \",\")",
                   "remove from cluster node labels"))
           .put("-replaceLabelsOnNode",
               new UsageInfo(
-                  "[node1[:port]=label1,label2 node2[:port]=label1,label2]",
+                  "<\"node1[:port]=label1,label2 node2[:port]=label1,label2\">",
                   "replace labels on nodes"
                       + " (please note that we do not support specifying multiple"
                       + " labels on a single host for now.)"))
           .put("-directlyAccessNodeLabelStore",
-              new UsageInfo("", "Directly access node label store, "
+              new UsageInfo("", "This is DEPRECATED, will be removed in future releases. Directly access node label store, "
                   + "with this option, all node label related operations"
                   + " will not connect RM. Instead, they will"
                   + " access/modify stored node labels directly."
@@ -222,9 +222,10 @@ public class RMAdminCLI extends HAAdmin {
       " [-refreshAdminAcls]" +
       " [-refreshServiceAcl]" +
       " [-getGroup [username]]" +
-      " [[-addToClusterNodeLabels [label1,label2,label3]]" +
-      " [-removeFromClusterNodeLabels [label1,label2,label3]]" +
-      " [-replaceLabelsOnNode [node1[:port]=label1,label2 node2[:port]=label1]" +
+      " [-addToClusterNodeLabels <\"label1(exclusive=true),"
+                  + "label2(exclusive=false),label3\">]" +
+      " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
+      " [-replaceLabelsOnNode <\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
       " [-directlyAccessNodeLabelStore]]");
     if (isHAEnabled) {
       appendHAUsage(summary);
@@ -681,6 +682,7 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-addToClusterNodeLabels".equals(cmd)) {
         if (i >= args.length) {
           System.err.println(NO_LABEL_ERR_MSG);
+          printUsage("", isHAEnabled);
           exitCode = -1;
         } else {
           exitCode = addToClusterNodeLabels(args[i]);
@@ -688,6 +690,7 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-removeFromClusterNodeLabels".equals(cmd)) {
         if (i >= args.length) {
           System.err.println(NO_LABEL_ERR_MSG);
+          printUsage("", isHAEnabled);
           exitCode = -1;
         } else {
           exitCode = removeFromClusterNodeLabels(args[i]);
@@ -695,6 +698,7 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-replaceLabelsOnNode".equals(cmd)) {
         if (i >= args.length) {
           System.err.println(NO_MAPPING_ERR_MSG);
+          printUsage("", isHAEnabled);
           exitCode = -1;
         } else {
           exitCode = replaceLabelsOnNodes(args[i]);
@@ -793,7 +797,15 @@ public class RMAdminCLI extends HAAdmin {
           "Could not connect to RM HA Admin for node " + rmId);
     }
   }
-  
+
+  /**
+   * returns the list of all resourcemanager ids for the given configuration.
+   */
+  @Override
+  protected Collection<String> getTargetIds(String targetNodeToActivate) {
+    return HAUtil.getRMHAIds(getConf());
+  }
+
   @Override
   protected String getUsageString() {
     return "Usage: rmadmin";

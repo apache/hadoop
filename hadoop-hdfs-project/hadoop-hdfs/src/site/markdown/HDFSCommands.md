@@ -71,9 +71,15 @@ Commands useful for users of a hadoop cluster.
 
 ### `classpath`
 
-Usage: `hdfs classpath`
+Usage: `hdfs classpath [--glob |--jar <path> |-h |--help]`
 
-Prints the class path needed to get the Hadoop jar and the required libraries
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `--glob` | expand wildcards |
+| `--jar` *path* | write classpath as manifest in jar named *path* |
+| `-h`, `--help` | print help |
+
+Prints the class path needed to get the Hadoop jar and the required libraries. If called without arguments, then prints the classpath set up by the command scripts, which is likely to contain wildcards in the classpath entries. Additional options print the classpath after wildcard expansion or write the classpath into the manifest of a jar file. The latter is useful in environments where wildcards cannot be used and the expanded classpath exceeds the maximum supported command line length.
 
 ### `dfs`
 
@@ -83,12 +89,16 @@ Run a filesystem command on the file system supported in Hadoop. The various COM
 
 ### `fetchdt`
 
-Usage: `hdfs fetchdt [--webservice <namenode_http_addr>] <path> `
+Usage: `hdfs fetchdt <opts> <token_file_path> `
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `--webservice` *https\_address* | use http protocol instead of RPC |
-| *fileName* | File name to store the token into. |
+| `--webservice` *NN_Url* | Url to contact NN on (starts with http or https)|
+| `--renewer` *name* | Name of the delegation token renewer |
+| `--cancel` | Cancel the delegation token |
+| `--renew` | Renew the delegation token.  Delegation token must have been fetched using the --renewer *name* option.|
+| `--print` | Print the delegation token |
+| *token_file_path* | File path to store the token into. |
 
 Gets Delegation Token from a NameNode. See [fetchdt](./HdfsUserGuide.html#fetchdt) for more info.
 
@@ -99,8 +109,9 @@ Usage:
        hdfs fsck <path>
               [-list-corruptfileblocks |
               [-move | -delete | -openforwrite]
-              [-files [-blocks [-locations | -racks]]]
+              [-files [-blocks [-locations | -racks | -replicaDetails]]]
               [-includeSnapshots] [-showprogress]
+              [-storagepolicies] [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -110,11 +121,14 @@ Usage:
 | `-files` `-blocks` | Print out the block report |
 | `-files` `-blocks` `-locations` | Print out locations for every block. |
 | `-files` `-blocks` `-racks` | Print out network topology for data-node locations. |
+| `-files` `-blocks` `-replicaDetails` | Print out each replica details. |
 | `-includeSnapshots` | Include snapshot data if the given path indicates a snapshottable directory or there are snapshottable directories under it. |
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
 | `-showprogress` | Print out dots for progress in output. Default is OFF (no progress). |
+| `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
@@ -284,7 +298,7 @@ See the [HDFS Transparent Encryption Documentation](./TransparentEncryption.html
 
 ### `datanode`
 
-Usage: `hdfs datanode [-regular | -rollback | -rollingupgrace rollback]`
+Usage: `hdfs datanode [-regular | -rollback | -rollingupgrade rollback]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -332,7 +346,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-report` `[-live]` `[-dead]` `[-decommissioning]` | Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes. |
+| `-report` `[-live]` `[-dead]` `[-decommissioning]` | Reports basic filesystem information and statistics, The dfs usage can be different from "du" usage, because it measures raw space used by replication, checksums, snapshots and etc. on all the DNs. Optional flags may be used to filter the list of displayed DataNodes. |
 | `-safemode` enter\|leave\|get\|wait | Safe mode maintenance command. Safe mode is a Namenode state in which it <br/>1. does not accept changes to the name space (read-only) <br/>2. does not replicate or delete blocks. <br/>Safe mode is entered automatically at Namenode startup, and leaves safe mode automatically when the configured minimum percentage of blocks satisfies the minimum replication condition. Safe mode can also be entered manually, but then it can only be turned off manually as well. |
 | `-saveNamespace` | Save current namespace into storage directories and reset edits log. Requires safe mode. |
 | `-rollEdits` | Rolls the edit log on the active NameNode. |
@@ -487,7 +501,7 @@ Useful commands to help administrators debug HDFS issues, like validating block 
 
 ### `verify`
 
-Usage: `hdfs dfs verify [-meta <metadata-file>] [-block <block-file>]`
+Usage: `hdfs debug verify [-meta <metadata-file>] [-block <block-file>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -498,7 +512,7 @@ Verify HDFS metadata and block files. If a block file is specified, we will veri
 
 ### `recoverLease`
 
-Usage: `hdfs dfs recoverLease [-path <path>] [-retries <num-retries>]`
+Usage: `hdfs debug recoverLease [-path <path>] [-retries <num-retries>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |

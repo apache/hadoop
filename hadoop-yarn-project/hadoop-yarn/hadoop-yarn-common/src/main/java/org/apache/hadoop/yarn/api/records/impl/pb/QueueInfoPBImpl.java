@@ -358,7 +358,7 @@ public class QueueInfoPBImpl extends QueueInfo {
   public String getDefaultNodeLabelExpression() {
     QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
     return (p.hasDefaultNodeLabelExpression()) ? p
-        .getDefaultNodeLabelExpression() : null;
+        .getDefaultNodeLabelExpression().trim() : null;
   }
 
   @Override

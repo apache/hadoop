@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import com.google.common.base.Supplier;
+import org.apache.commons.lang.UnhandledException;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -37,6 +39,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
@@ -55,6 +58,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -79,7 +83,6 @@ public abstract class LazyPersistTestCase {
 
   protected static final int BLOCK_SIZE = 5 * 1024 * 1024;
   protected static final int BUFFER_LENGTH = 4096;
-  protected static final int EVICTION_LOW_WATERMARK = 1;
   private static final long HEARTBEAT_INTERVAL_SEC = 1;
   private static final int HEARTBEAT_RECHECK_INTERVAL_MSEC = 500;
   private static final String JMX_RAM_DISK_METRICS_PATTERN = "^RamDisk";
@@ -236,7 +239,6 @@ public abstract class LazyPersistTestCase {
       StorageType[] storageTypes,
       int ramDiskReplicaCapacity,
       long ramDiskStorageLimit,
-      long evictionLowWatermarkReplicas,
       long maxLockedMemory,
       boolean useSCR,
       boolean useLegacyBlockReaderLocal,
@@ -256,8 +258,6 @@ public abstract class LazyPersistTestCase {
                 HEARTBEAT_RECHECK_INTERVAL_MSEC);
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
                 LAZY_WRITER_INTERVAL_SEC);
-    conf.setLong(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES,
-                evictionLowWatermarkReplicas * BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
     conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, maxLockedMemory);
 
@@ -389,12 +389,6 @@ public abstract class LazyPersistTestCase {
       return this;
     }
 
-    public ClusterWithRamDiskBuilder setEvictionLowWatermarkReplicas(
-        long evictionLowWatermarkReplicas) {
-      this.evictionLowWatermarkReplicas = evictionLowWatermarkReplicas;
-      return this;
-    }
-
     public ClusterWithRamDiskBuilder disableScrubber() {
       this.disableScrubber = true;
       return this;
@@ -403,8 +397,8 @@ public abstract class LazyPersistTestCase {
     public void build() throws IOException {
       LazyPersistTestCase.this.startUpCluster(
           numDatanodes, hasTransientStorage, storageTypes, ramDiskReplicaCapacity,
-          ramDiskStorageLimit, evictionLowWatermarkReplicas,
-          maxLockedMemory, useScr, useLegacyBlockReaderLocal, disableScrubber);
+          ramDiskStorageLimit, maxLockedMemory, useScr, useLegacyBlockReaderLocal,
+          disableScrubber);
     }
 
     private int numDatanodes = REPL_FACTOR;
@@ -415,7 +409,6 @@ public abstract class LazyPersistTestCase {
     private boolean hasTransientStorage = true;
     private boolean useScr = false;
     private boolean useLegacyBlockReaderLocal = false;
-    private long evictionLowWatermarkReplicas = EVICTION_LOW_WATERMARK;
     private boolean disableScrubber=false;
   }
 
@@ -512,5 +505,28 @@ public abstract class LazyPersistTestCase {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  protected void waitForMetric(final String metricName, final int expectedValue)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          final int currentValue = Integer.parseInt(jmx.getValue(metricName));
+          LOG.info("Waiting for " + metricName +
+                       " to reach value " + expectedValue +
+                       ", current value = " + currentValue);
+          return currentValue == expectedValue;
+        } catch (Exception e) {
+          throw new UnhandledException("Test failed due to unexpected exception", e);
+        }
+      }
+    }, 1000, Integer.MAX_VALUE);
+  }
+
+  protected void triggerEviction(DataNode dn) {
+    FsDatasetImpl fsDataset = (FsDatasetImpl) dn.getFSDataset();
+    fsDataset.evictLazyPersistBlocks(Long.MAX_VALUE); // Run one eviction cycle.
   }
 }

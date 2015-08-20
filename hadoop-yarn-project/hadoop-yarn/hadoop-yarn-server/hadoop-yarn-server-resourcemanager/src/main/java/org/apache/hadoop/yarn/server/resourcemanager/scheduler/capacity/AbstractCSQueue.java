@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -52,19 +53,13 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
-  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);
-  
-  static final CSAssignment NULL_ASSIGNMENT =
-      new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
-  
-  static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
-  
+  private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);  
   CSQueue parent;
   final String queueName;
   volatile int numContainers;
   
   final Resource minimumAllocation;
-  Resource maximumAllocation;
+  volatile Resource maximumAllocation;
   QueueState state;
   final CSQueueMetrics metrics;
   protected final PrivilegedEntity queueEntity;
@@ -76,7 +71,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   Map<AccessType, AccessControlList> acls = 
       new HashMap<AccessType, AccessControlList>();
-  boolean reservationsContinueLooking;
+  volatile boolean reservationsContinueLooking;
   private boolean preemptionDisabled;
 
   // Track resource usage-by-label like used-resource/pending-resource, etc.
@@ -328,11 +323,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     stats.setAllocatedVCores(getMetrics().getAllocatedVirtualCores());
     stats.setPendingVCores(getMetrics().getPendingVirtualCores());
     stats.setReservedVCores(getMetrics().getReservedVirtualCores());
+    stats.setPendingContainers(getMetrics().getPendingContainers());
+    stats.setAllocatedContainers(getMetrics().getAllocatedContainers());
+    stats.setReservedContainers(getMetrics().getReservedContainers());
     return stats;
   }
   
   @Private
-  public synchronized Resource getMaximumAllocation() {
+  public Resource getMaximumAllocation() {
     return maximumAllocation;
   }
   
@@ -447,13 +445,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   synchronized boolean canAssignToThisQueue(Resource clusterResource,
-      String nodePartition, ResourceLimits currentResourceLimits,
-      Resource nowRequired, Resource resourceCouldBeUnreserved,
+      String nodePartition, ResourceLimits currentResourceLimits, Resource resourceCouldBeUnreserved,
       SchedulingMode schedulingMode) {
-    // New total resource = used + required
-    Resource newTotalResource =
-        Resources.add(queueUsage.getUsed(nodePartition), nowRequired);
-
     // Get current limited resource: 
     // - When doing RESPECT_PARTITION_EXCLUSIVITY allocation, we will respect
     // queues' max capacity.
@@ -469,8 +462,14 @@ public abstract class AbstractCSQueue implements CSQueue {
         getCurrentLimitResource(nodePartition, clusterResource,
             currentResourceLimits, schedulingMode);
 
-    if (Resources.greaterThan(resourceCalculator, clusterResource,
-        newTotalResource, currentLimitResource)) {
+    Resource nowTotalUsed = queueUsage.getUsed(nodePartition);
+
+    // Set headroom for currentResourceLimits
+    currentResourceLimits.setHeadroom(Resources.subtract(currentLimitResource,
+        nowTotalUsed));
+
+    if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
+        nowTotalUsed, currentLimitResource)) {
 
       // if reservation continous looking enabled, check to see if could we
       // potentially use this node instead of a reserved node if the application
@@ -482,7 +481,7 @@ public abstract class AbstractCSQueue implements CSQueue {
               resourceCouldBeUnreserved, Resources.none())) {
         // resource-without-reserved = used - reserved
         Resource newTotalWithoutReservedResource =
-            Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
+            Resources.subtract(nowTotalUsed, resourceCouldBeUnreserved);
 
         // when total-used-without-reserved-resource < currentLimit, we still
         // have chance to allocate on this node by unreserving some containers
@@ -497,8 +496,6 @@ public abstract class AbstractCSQueue implements CSQueue {
                 + newTotalWithoutReservedResource + ", maxLimitCapacity: "
                 + currentLimitResource);
           }
-          currentResourceLimits.setAmountNeededUnreserve(Resources.subtract(newTotalResource,
-            currentLimitResource));
           return true;
         }
       }
@@ -573,5 +570,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // sorry, you cannot access
     return false;
+  }
+
+  @Override
+  public Priority getDefaultApplicationPriority() {
+    // TODO add dummy implementation
+    return null;
   }
 }

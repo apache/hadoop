@@ -214,4 +214,18 @@ public class JHAdminConfig {
    */
   public static boolean DEFAULT_MR_HISTORY_MINICLUSTER_FIXED_PORTS = false;
 
+  /**
+   * Number of characters allowed for job name in Job History Server web page.
+   */
+  public static final String MR_HS_JOBNAME_LIMIT = MR_HISTORY_PREFIX
+      + "jobname.limit";
+  public static final int DEFAULT_MR_HS_JOBNAME_LIMIT = 50;
+
+  /**
+   * Settings for .jhist file format.
+   */
+  public static final String MR_HS_JHIST_FORMAT =
+      MR_HISTORY_PREFIX + "jhist.format";
+  public static final String DEFAULT_MR_HS_JHIST_FORMAT =
+      "json";
 }

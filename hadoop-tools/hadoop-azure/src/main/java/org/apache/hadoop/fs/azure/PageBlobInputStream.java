@@ -80,7 +80,7 @@ final class PageBlobInputStream extends InputStream {
    * @throws IOException If the format is corrupt.
    * @throws StorageException If anything goes wrong in the requests.
    */
-  public static long getPageBlobSize(CloudPageBlobWrapper blob,
+  public static long getPageBlobDataSize(CloudPageBlobWrapper blob,
       OperationContext opContext) throws IOException, StorageException {
     // Get the page ranges for the blob. There should be one range starting
     // at byte 0, but we tolerate (and ignore) ranges after the first one.
@@ -156,7 +156,7 @@ final class PageBlobInputStream extends InputStream {
     }
     if (pageBlobSize == -1) {
       try {
-        pageBlobSize = getPageBlobSize(blob, opContext);
+        pageBlobSize = getPageBlobDataSize(blob, opContext);
       } catch (StorageException e) {
         throw new IOException("Unable to get page blob size.", e);
       }
@@ -179,7 +179,13 @@ final class PageBlobInputStream extends InputStream {
 
   /**
    * Check our buffer and download more from the server if needed.
-   * @return true if there's more data in the buffer, false if we're done.
+   * If data is not available in the buffer, method downloads maximum
+   * page blob download size (4MB) or if there is less then 4MB left,
+   * all remaining pages.
+   * If we are on the last page, method will return true even if
+   * we reached the end of stream.
+   * @return true if there's more data in the buffer, false if buffer is empty
+   *         and we reached the end of the blob.
    * @throws IOException
    */
   private synchronized boolean ensureDataInBuffer() throws IOException {
@@ -257,11 +263,15 @@ final class PageBlobInputStream extends InputStream {
   @Override
   public synchronized int read(byte[] outputBuffer, int offset, int len)
       throws IOException {
+    // If len is zero return 0 per the InputStream contract
+    if (len == 0) {
+      return 0;
+    }
+
     int numberOfBytesRead = 0;
     while (len > 0) {
       if (!ensureDataInBuffer()) {
-        filePosition += numberOfBytesRead;
-        return numberOfBytesRead;
+        break;
       }
       int bytesRemainingInCurrentPage = getBytesRemainingInCurrentPage();
       int numBytesToRead = Math.min(len, bytesRemainingInCurrentPage);
@@ -277,6 +287,13 @@ final class PageBlobInputStream extends InputStream {
         currentOffsetInBuffer += numBytesToRead;
       }
     }
+
+    // if outputBuffer len is > 0 and zero bytes were read, we reached
+    // an EOF
+    if (numberOfBytesRead == 0) {
+      return -1;
+    }
+
     filePosition += numberOfBytesRead;
     return numberOfBytesRead;
   }
@@ -284,8 +301,9 @@ final class PageBlobInputStream extends InputStream {
   @Override
   public int read() throws IOException {
     byte[] oneByte = new byte[1];
-    if (read(oneByte) == 0) {
-      return -1;
+    int result = read(oneByte);
+    if (result < 0) {
+      return result;
     }
     return oneByte[0];
   }

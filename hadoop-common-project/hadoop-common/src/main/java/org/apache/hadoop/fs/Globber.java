@@ -20,12 +20,17 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -135,6 +140,19 @@ class Globber {
   }
 
   public FileStatus[] glob() throws IOException {
+    TraceScope scope = Trace.startSpan("Globber#glob");
+    Span span = scope.getSpan();
+    if (span != null) {
+      span.addKVAnnotation("pattern", pathPattern.toUri().getPath());
+    }
+    try {
+      return doGlob();
+    } finally {
+      scope.close();
+    }
+  }
+
+  private FileStatus[] doGlob() throws IOException {
     // First we get the scheme and authority of the pattern that was passed
     // in.
     String scheme = schemeFromPath(pathPattern);
@@ -285,6 +303,14 @@ class Globber {
         (flattenedPatterns.size() <= 1)) {
       return null;
     }
-    return results.toArray(new FileStatus[0]);
+    /*
+     * In general, the results list will already be sorted, since listStatus
+     * returns results in sorted order for many Hadoop filesystems.  However,
+     * not all Hadoop filesystems have this property.  So we sort here in order
+     * to get consistent results.  See HADOOP-10798 for details.
+     */
+    FileStatus ret[] = results.toArray(new FileStatus[0]);
+    Arrays.sort(ret);
+    return ret;
   }
 }

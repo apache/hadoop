@@ -69,18 +69,18 @@ public class BlockStoragePolicySuite {
         new StorageType[]{StorageType.SSD, StorageType.DISK});
     final byte hotId = HdfsServerConstants.HOT_STORAGE_POLICY_ID;
     policies[hotId] = new BlockStoragePolicy(hotId,
-        HdfsServerConstants.HOT_STORAGE_POLICY_NAME,
+        HdfsConstants.HOT_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.DISK}, StorageType.EMPTY_ARRAY,
         new StorageType[]{StorageType.ARCHIVE});
     final byte warmId = HdfsServerConstants.WARM_STORAGE_POLICY_ID;
     policies[warmId] = new BlockStoragePolicy(warmId,
-        HdfsServerConstants.WARM_STORAGE_POLICY_NAME,
+        HdfsConstants.WARM_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE});
     final byte coldId = HdfsServerConstants.COLD_STORAGE_POLICY_ID;
     policies[coldId] = new BlockStoragePolicy(coldId,
-        HdfsServerConstants.COLD_STORAGE_POLICY_NAME,
+        HdfsConstants.COLD_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.ARCHIVE}, StorageType.EMPTY_ARRAY,
         StorageType.EMPTY_ARRAY);
     return new BlockStoragePolicySuite(hotId, policies);

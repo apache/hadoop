@@ -22,7 +22,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.ServiceFailedException;
-import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,25 +41,6 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
   private Configuration conf;
   private AtomicBoolean callbackCalled;
 
-  private void setConfForRM(String rmId, String prefix, String value) {
-    conf.set(HAUtil.addSuffix(prefix, rmId), value);
-  }
-
-  private void setRpcAddressForRM(String rmId, int base) {
-    setConfForRM(rmId, YarnConfiguration.RM_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_SCHEDULER_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_ADMIN_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_ADMIN_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT));
-    setConfForRM(rmId, YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, "0.0.0.0:" +
-        (base + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT));
-  }
-
   @Before
   public void setup() throws IOException {
     conf = new YarnConfiguration();
@@ -73,8 +53,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
 
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
-    setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE);
-    setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE);
+    HATestUtil.setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE, conf);
+    HATestUtil.setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE, conf);
 
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
 
@@ -122,9 +102,9 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
                 ServiceFailedException {
               try {
                 callbackCalled.set(true);
-                LOG.info("Callback called. Sleeping now");
+                TestRMEmbeddedElector.LOG.info("Callback called. Sleeping now");
                 Thread.sleep(delayMs);
-                LOG.info("Sleep done");
+                TestRMEmbeddedElector.LOG.info("Sleep done");
               } catch (InterruptedException e) {
                 e.printStackTrace();
               }

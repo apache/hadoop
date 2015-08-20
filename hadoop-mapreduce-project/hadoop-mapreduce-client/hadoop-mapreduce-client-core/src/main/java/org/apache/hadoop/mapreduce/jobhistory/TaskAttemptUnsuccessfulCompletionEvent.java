@@ -133,28 +133,28 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public Object getDatum() {
     if(datum == null) {
       datum = new TaskAttemptUnsuccessfulCompletion();
-      datum.taskid = new Utf8(attemptId.getTaskID().toString());
-      datum.taskType = new Utf8(taskType.name());
-      datum.attemptId = new Utf8(attemptId.toString());
-      datum.finishTime = finishTime;
-      datum.hostname = new Utf8(hostname);
+      datum.setTaskid(new Utf8(attemptId.getTaskID().toString()));
+      datum.setTaskType(new Utf8(taskType.name()));
+      datum.setAttemptId(new Utf8(attemptId.toString()));
+      datum.setFinishTime(finishTime);
+      datum.setHostname(new Utf8(hostname));
       if (rackName != null) {
-        datum.rackname = new Utf8(rackName);
+        datum.setRackname(new Utf8(rackName));
       }
-      datum.port = port;
-      datum.error = new Utf8(error);
-      datum.status = new Utf8(status);
+      datum.setPort(port);
+      datum.setError(new Utf8(error));
+      datum.setStatus(new Utf8(status));
 
-      datum.counters = EventWriter.toAvro(counters);
+      datum.setCounters(EventWriter.toAvro(counters));
 
-      datum.clockSplits = AvroArrayUtils.toAvro(ProgressSplitsBlock
-          .arrayGetWallclockTime(allSplits));
-      datum.cpuUsages = AvroArrayUtils.toAvro(ProgressSplitsBlock
-          .arrayGetCPUTime(allSplits));
-      datum.vMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
-          .arrayGetVMemKbytes(allSplits));
-      datum.physMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
-          .arrayGetPhysMemKbytes(allSplits));
+      datum.setClockSplits(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetWallclockTime(allSplits)));
+      datum.setCpuUsages(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetCPUTime(allSplits)));
+      datum.setVMemKbytes(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetVMemKbytes(allSplits)));
+      datum.setPhysMemKbytes(AvroArrayUtils.toAvro(ProgressSplitsBlock
+          .arrayGetPhysMemKbytes(allSplits)));
     }
     return datum;
   }
@@ -165,25 +165,25 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
     this.datum =
         (TaskAttemptUnsuccessfulCompletion)odatum;
     this.attemptId =
-        TaskAttemptID.forName(datum.attemptId.toString());
+        TaskAttemptID.forName(datum.getAttemptId().toString());
     this.taskType =
-        TaskType.valueOf(datum.taskType.toString());
-    this.finishTime = datum.finishTime;
-    this.hostname = datum.hostname.toString();
-    this.rackName = datum.rackname.toString();
-    this.port = datum.port;
-    this.status = datum.status.toString();
-    this.error = datum.error.toString();
+        TaskType.valueOf(datum.getTaskType().toString());
+    this.finishTime = datum.getFinishTime();
+    this.hostname = datum.getHostname().toString();
+    this.rackName = datum.getRackname().toString();
+    this.port = datum.getPort();
+    this.status = datum.getStatus().toString();
+    this.error = datum.getError().toString();
     this.counters =
-        EventReader.fromAvro(datum.counters);
+        EventReader.fromAvro(datum.getCounters());
     this.clockSplits =
-        AvroArrayUtils.fromAvro(datum.clockSplits);
+        AvroArrayUtils.fromAvro(datum.getClockSplits());
     this.cpuUsages =
-        AvroArrayUtils.fromAvro(datum.cpuUsages);
+        AvroArrayUtils.fromAvro(datum.getCpuUsages());
     this.vMemKbytes =
-        AvroArrayUtils.fromAvro(datum.vMemKbytes);
+        AvroArrayUtils.fromAvro(datum.getVMemKbytes());
     this.physMemKbytes =
-        AvroArrayUtils.fromAvro(datum.physMemKbytes);
+        AvroArrayUtils.fromAvro(datum.getPhysMemKbytes());
   }
 
   /** Get the task id */

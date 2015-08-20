@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
@@ -220,10 +221,12 @@ abstract public class Shell {
       new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
   }
 
+  public static final String ENV_NAME_REGEX = "[A-Za-z_][A-Za-z0-9_]*";
   /** Return a regular expression string that match environment variables */
   public static String getEnvironmentVariableRegex() {
-    return (WINDOWS) ? "%([A-Za-z_][A-Za-z0-9_]*?)%" :
-      "\\$([A-Za-z_][A-Za-z0-9_]*)";
+    return (WINDOWS)
+        ? "%(" + ENV_NAME_REGEX + "?)%"
+        : "\\$(" + ENV_NAME_REGEX + ")";
   }
   
   /**
@@ -392,7 +395,16 @@ abstract public class Shell {
     } catch (IOException ioe) {
       LOG.debug("setsid is not available on this machine. So not using it.");
       setsidSupported = false;
-    } finally { // handle the exit code
+    }  catch (Error err) {
+      if (err.getMessage().contains("posix_spawn is not " +
+          "a supported process launch mechanism")
+          && (Shell.FREEBSD || Shell.MAC)) {
+        // HADOOP-11924: This is a workaround to avoid failure of class init
+        // by JDK issue on TR locale(JDK-8047340).
+        LOG.info("Avoiding JDK-8047340 on BSD-based systems.", err);
+        setsidSupported = false;
+      }
+    }  finally { // handle the exit code
       if (LOG.isDebugEnabled()) {
         LOG.debug("setsid exited with exit code "
                  + (shexec != null ? shexec.getExitCode() : "(null executor)"));
@@ -545,7 +557,9 @@ abstract public class Shell {
         throw new ExitCodeException(exitCode, errMsg.toString());
       }
     } catch (InterruptedException ie) {
-      throw new IOException(ie.toString());
+      InterruptedIOException iie = new InterruptedIOException(ie.toString());
+      iie.initCause(ie);
+      throw iie;
     } finally {
       if (timeOutTimer != null) {
         timeOutTimer.cancel();

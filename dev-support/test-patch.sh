@@ -33,6 +33,8 @@ function setup_defaults
   else
     MVN=${MAVEN_HOME}/bin/mvn
   fi
+  # This parameter needs to be kept as an array
+  MAVEN_ARGS=()
 
   PROJECT_NAME=hadoop
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
@@ -44,6 +46,7 @@ function setup_defaults
   LOAD_SYSTEM_PLUGINS=true
 
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
+  FINDBUGS_WARNINGS_FAIL_PRECHECK=false
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
@@ -585,6 +588,7 @@ function hadoop_usage
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
+  echo "--findbugs-strict-precheck If there are Findbugs warnings during precheck, fail"
   echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
@@ -665,6 +669,9 @@ function parse_args
       ;;
       --findbugs-home=*)
         FINDBUGS_HOME=${i#*=}
+      ;;
+      --findbugs-strict-precheck)
+        FINDBUGS_WARNINGS_FAIL_PRECHECK=true
       ;;
       --git-cmd=*)
         GIT=${i#*=}
@@ -750,6 +757,11 @@ function parse_args
       ;;
     esac
   done
+
+  # if we requested offline, pass that to mvn
+  if [[ ${OFFLINE} == "true" ]] ; then
+    MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
+  fi
 
   # we need absolute dir for ${BASEDIR}
   cd "${CWD}"
@@ -935,6 +947,12 @@ function git_checkout
     # we need to explicitly fetch in case the
     # git ref hasn't been brought in tree yet
     if [[ ${OFFLINE} == false ]]; then
+
+      if [[ -f .git/rebase-apply ]]; then
+        hadoop_error "ERROR: previous rebase failed. Aborting it."
+        ${GIT} rebase --abort
+      fi
+
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
         hadoop_error "ERROR: git pull is failing"
@@ -1022,7 +1040,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "Compiling ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" "${MVN}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch
     if [[ $? != 0 ]] ; then
       echo "${PATCH_BRANCH} compilation is broken?"
       add_jira_table -1 pre-patch "${PATCH_BRANCH} compilation may be broken."
@@ -1036,7 +1054,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "Javadoc'ing ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" "${MVN}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
     if [[ $? != 0 ]] ; then
       echo "Pre-patch ${PATCH_BRANCH} javadoc compilation is broken?"
       add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} JavaDoc compilation may be broken."
@@ -1050,7 +1068,7 @@ function precheck_without_patch
 
   if [[ $? == 1 ]]; then
     echo "site creation for ${mypwd}"
-    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}SiteWarnings.txt" "${MVN}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${PATCH_DIR}/${PATCH_BRANCH}SiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
     if [[ $? != 0 ]] ; then
       echo "Pre-patch ${PATCH_BRANCH} site compilation is broken?"
       add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} site compilation may be broken."
@@ -1058,6 +1076,12 @@ function precheck_without_patch
     fi
   else
     echo "Patch does not appear to need site tests."
+  fi
+
+  precheck_findbugs
+
+  if [[ $? != 0 ]] ; then
+    return 1
   fi
 
   add_jira_table 0 pre-patch "Pre-patch ${PATCH_BRANCH} compilation is healthy."
@@ -1455,7 +1479,8 @@ function apply_patch_file
 }
 
 
-## @description  If this patches actually patches test-patch.sh, then
+## @description  If this actually patches the files used for the QA process
+## @description  under dev-support and its subdirectories, then
 ## @description  run with the patched version for the test.
 ## @audience     private
 ## @stability    evolving
@@ -1471,7 +1496,7 @@ function check_reexec
   fi
 
   if [[ ! ${CHANGED_FILES} =~ dev-support/test-patch
-      || ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
+     && ! ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
     return
   fi
 
@@ -1492,7 +1517,7 @@ function check_reexec
 
     rm "${commentfile}" 2>/dev/null
 
-    echo "(!) A patch to test-patch or smart-apply-patch has been detected. " > "${commentfile}"
+    echo "(!) A patch to the files used for the QA process has been detected. " > "${commentfile}"
     echo "Re-executing against the patched versions to perform further tests. " >> "${commentfile}"
     echo "The console is at ${BUILD_URL}console in case of problems." >> "${commentfile}"
 
@@ -1502,14 +1527,14 @@ function check_reexec
 
   cd "${CWD}"
   mkdir -p "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/test-patch* "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/smart-apply* "${PATCH_DIR}/dev-support-test"
+  (cd "${BINDIR}"; tar cpf - . ) \
+	| (cd  "${PATCH_DIR}/dev-support-test"; tar xpf - )
 
   big_console_header "exec'ing test-patch.sh now..."
 
   exec "${PATCH_DIR}/dev-support-test/test-patch.sh" \
     --reexec \
-    --branch "${PATCH_BRANCH}" \
+    --branch="${PATCH_BRANCH}" \
     --patch-dir="${PATCH_DIR}" \
       "${USER_PARAMS[@]}"
 }
@@ -1622,12 +1647,12 @@ function check_javadoc
   start_clock
 
   if [[ -d hadoop-project ]]; then
-    (cd hadoop-project; "${MVN}" install > /dev/null 2>&1)
+    (cd hadoop-project; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
   fi
   if [[ -d hadoop-common-project/hadoop-annotations ]]; then
-    (cd hadoop-common-project/hadoop-annotations; "${MVN}" install > /dev/null 2>&1)
+    (cd hadoop-common-project/hadoop-annotations; "${MVN}" "${MAVEN_ARGS[@]}" install > /dev/null 2>&1)
   fi
-  echo_and_redirect "${PATCH_DIR}/patchJavadocWarnings.txt"  "${MVN}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchJavadocWarnings.txt"  "${MVN}" "${MAVEN_ARGS[@]}" clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess
   count_javadoc_warns "${PATCH_DIR}/${PATCH_BRANCH}JavadocWarnings.txt"
   numBranchJavadocWarnings=$?
   count_javadoc_warns "${PATCH_DIR}/patchJavadocWarnings.txt"
@@ -1677,7 +1702,7 @@ function check_site
   start_clock
 
   echo "site creation for ${mypwd}"
-  echo_and_redirect "${PATCH_DIR}/patchSiteWarnings.txt" "${MVN}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchSiteWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean site site:stage -DskipTests -Dmaven.javadoc.skip=true -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
     echo "Site compilation is broken"
     add_jira_table -1 site "Site compilation is broken."
@@ -1723,7 +1748,7 @@ function check_javac
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchJavacWarnings.txt" "${MVN}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess ${NATIVE_PROFILE} -Ptest-patch
+  echo_and_redirect "${PATCH_DIR}/patchJavacWarnings.txt" "${MVN}" "${MAVEN_ARGS[@]}" clean test -DskipTests -D${PROJECT_NAME}PatchProcess ${NATIVE_PROFILE} -Ptest-patch
   if [[ $? != 0 ]] ; then
     add_jira_table -1 javac "The patch appears to cause the build to fail."
     return 2
@@ -1773,7 +1798,7 @@ function check_apachelicense
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchReleaseAuditOutput.txt" "${MVN}" apache-rat:check -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchReleaseAuditOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" apache-rat:check -D${PROJECT_NAME}PatchProcess
   #shellcheck disable=SC2038
   find "${BASEDIR}" -name rat.txt | xargs cat > "${PATCH_DIR}/patchReleaseAuditWarnings.txt"
 
@@ -1828,7 +1853,7 @@ function check_mvn_install
   big_console_header "Installing all of the jars"
 
   start_clock
-  echo_and_redirect "${PATCH_DIR}/jarinstall.txt" "${MVN}" install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/jarinstall.txt" "${MVN}" "${MAVEN_ARGS[@]}" install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
   retval=$?
   if [[ ${retval} != 0 ]]; then
     add_jira_table -1 install "The patch causes mvn install to fail."
@@ -1836,6 +1861,137 @@ function check_mvn_install
     add_jira_table +1 install "mvn install still works."
   fi
   return ${retval}
+}
+
+## @description  are the needed bits for findbugs present?
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 findbugs will work for our use
+## @return       1 findbugs is missing some component
+function findbugs_is_installed
+{
+  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
+    printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
+    add_jira_table -1 findbugs "Findbugs is not installed."
+    return 1
+  fi
+  return 0
+}
+
+## @description  Run the maven findbugs plugin and record found issues in a bug database
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function findbugs_mvnrunner
+{
+  local name=$1
+  local logfile=$2
+  local warnings_file=$3
+
+  echo_and_redirect "${logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean test findbugs:findbugs -DskipTests \
+    "-D${PROJECT_NAME}PatchProcess" < /dev/null
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+  cp target/findbugsXml.xml "${warnings_file}.xml"
+
+  "${FINDBUGS_HOME}/bin/setBugDatabaseInfo" -name "${name}" \
+      "${warnings_file}.xml" "${warnings_file}.xml"
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${warnings_file}.xml" \
+      "${warnings_file}.html"
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  return 0
+}
+
+## @description  Track pre-existing findbugs warnings
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function precheck_findbugs
+{
+  local -r mypwd=$(pwd)
+  local module_suffix
+  local modules=${CHANGED_MODULES}
+  local module
+  local findbugs_version
+  local rc=0
+  local module_findbugs_warnings
+  local findbugs_warnings=0
+
+  verify_needed_test findbugs
+
+  if [[ $? == 0 ]]; then
+    echo "Patch does not appear to need findbugs tests."
+    return 0
+  fi
+
+  echo "findbugs baseline for ${mypwd}"
+
+  findbugs_is_installed
+  if [[ $? != 0 ]]; then
+    return 1
+  fi
+
+  for module in ${modules}
+  do
+    pushd "${module}" >/dev/null
+    echo "  Running findbugs in ${module}"
+    module_suffix=$(basename "${module}")
+    findbugs_mvnrunner "${PATCH_BRANCH}" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}"
+    (( rc = rc + $? ))
+
+    if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" ]]; then
+      #shellcheck disable=SC2016
+      module_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first \
+          "${PATCH_BRANCH}" \
+          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
+          "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}".xml \
+          | ${AWK} '{print $1}')
+      if [[ $? != 0 ]]; then
+        popd >/dev/null
+        return 1
+      fi
+
+      findbugs_warnings=$((findbugs_warnings+module_findbugs_warnings))
+
+      if [[ ${module_findbugs_warnings} -gt 0 ]] ; then
+        add_jira_footer "Pre-patch Findbugs warnings" "@@BASE@@/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.html"
+      fi
+    fi
+    popd >/dev/null
+  done
+
+  #shellcheck disable=SC2016
+  findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/${PATCH_BRANCH}FindBugsOutput${module_suffix}.txt")
+
+  if [[ ${rc} -ne 0 ]]; then
+    echo "Pre-patch ${PATCH_BRANCH} findbugs is broken?"
+    add_jira_table -1 pre-patch "Findbugs (version ${findbugs_version}) appears to be broken on ${PATCH_BRANCH}."
+    return 1
+  fi
+
+  if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" && \
+        ${findbugs_warnings} -gt 0 ]] ; then
+    echo "Pre-patch ${PATCH_BRANCH} findbugs has ${findbugs_warnings} warnings."
+    add_jira_table -1 pre-patch "Pre-patch ${PATCH_BRANCH} has ${findbugs_warnings} extant Findbugs (version ${findbugs_version}) warnings."
+    return 1
+  fi
+
+  return 0
 }
 
 ## @description  Verify patch does not trigger any findbugs warnings
@@ -1846,32 +2002,33 @@ function check_mvn_install
 ## @return       1 on failure
 function check_findbugs
 {
-  local findbugs_version
-  local modules=${CHANGED_MODULES}
   local rc=0
+  local module
+  local modules=${CHANGED_MODULES}
   local module_suffix
-  local findbugsWarnings=0
-  local relative_file
-  local newFindbugsWarnings
-  local findbugsWarnings
+  local combined_xml
+  local newBugs
+  local new_findbugs_warnings
+  local new_findbugs_fixed_warnings
+  local findbugs_warnings=0
+  local findbugs_fixed_warnings=0
   local line
   local firstpart
   local secondpart
-
-  big_console_header "Determining number of patched Findbugs warnings."
-
+  local findbugs_version
 
   verify_needed_test findbugs
+
   if [[ $? == 0 ]]; then
-    echo "Patch does not touch any java files. Skipping findbugs."
     return 0
   fi
 
+  big_console_header "Determining number of patched Findbugs warnings."
+
   start_clock
 
-  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
-    printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
-    add_jira_table -1 findbugs "Findbugs is not installed."
+  findbugs_is_installed
+  if [[ $? != 0 ]]; then
     return 1
   fi
 
@@ -1880,67 +2037,82 @@ function check_findbugs
     pushd "${module}" >/dev/null
     echo "  Running findbugs in ${module}"
     module_suffix=$(basename "${module}")
-    echo_and_redirect "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt" "${MVN}" clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess \
-      < /dev/null
-    (( rc = rc + $? ))
+
+    findbugs_mvnrunner patch \
+        "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt" \
+        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}"
+
+    if [[ $? != 0 ]] ; then
+      ((rc = rc +1))
+      echo "Post-patch findbugs compilation is broken."
+      add_jira_table -1 findbugs "Post-patch findbugs ${module} compilation is broken."
+      continue
+    fi
+
+    combined_xml="$PATCH_DIR/combinedFindbugsWarnings${module_suffix}.xml"
+    newBugs="${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}"
+    "${FINDBUGS_HOME}/bin/computeBugHistory" -useAnalysisTimes -withMessages \
+        -output "${combined_xml}" \
+        "${PATCH_DIR}/${PATCH_BRANCH}FindbugsWarnings${module_suffix}.xml" \
+        "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    #shellcheck disable=SC2016
+    new_findbugs_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -first patch \
+        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+    #shellcheck disable=SC2016
+    new_findbugs_fixed_warnings=$("${FINDBUGS_HOME}/bin/filterBugs" -fixed patch \
+        "${combined_xml}" "${newBugs}.xml" | ${AWK} '{print $1}')
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    echo "Found ${new_findbugs_warnings} new Findbugs warnings and ${new_findbugs_fixed_warnings} newly fixed warnings."
+    findbugs_warnings=$((findbugs_warnings+new_findbugs_warnings))
+    findbugs_fixed_warnings=$((findbugs_fixed_warnings+new_findbugs_fixed_warnings))
+
+    "${FINDBUGS_HOME}/bin/convertXmlToText" -html "${newBugs}.xml" \
+        "${newBugs}.html"
+    if [[ $? != 0 ]]; then
+      popd >/dev/null
+      return 1
+    fi
+
+    if [[ ${new_findbugs_warnings} -gt 0 ]] ; then
+      populate_test_table FindBugs "module:${module_suffix}"
+      while read line; do
+        firstpart=$(echo "${line}" | cut -f2 -d:)
+        secondpart=$(echo "${line}" | cut -f9- -d' ')
+        add_jira_test_table "" "${firstpart}:${secondpart}"
+      done < <("${FINDBUGS_HOME}/bin/convertXmlToText" "${newBugs}.xml")
+
+      add_jira_footer "Findbugs warnings" "@@BASE@@/newPatchFindbugsWarnings${module_suffix}.html"
+    fi
+
     popd >/dev/null
   done
 
   #shellcheck disable=SC2016
   findbugs_version=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' "${PATCH_DIR}/patchFindBugsOutput${module_suffix}.txt")
 
-  if [[ ${rc} -ne 0 ]]; then
-    add_jira_table -1 findbugs "The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
+  if [[ ${findbugs_warnings} -gt 0 ]] ; then
+    add_jira_table -1 findbugs "The patch appears to introduce ${findbugs_warnings} new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
 
-  while read file
-  do
-    relative_file=${file#${BASEDIR}/} # strip leading ${BASEDIR} prefix
-    if [[ ${relative_file} != "target/findbugsXml.xml" ]]; then
-      module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
-      module_suffix=$(basename "${module_suffix}")
-    fi
-
-    cp "${file}" "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
-
-    "${FINDBUGS_HOME}/bin/setBugDatabaseInfo" -timestamp "01/01/2000" \
-      "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml"
-
-    #shellcheck disable=SC2016
-    newFindbugsWarnings=$("${FINDBUGS_HOME}/bin/filterBugs" \
-      -first "01/01/2000" "${PATCH_DIR}/patchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml" \
-      | ${AWK} '{print $1}')
-
-    echo "Found $newFindbugsWarnings Findbugs warnings ($file)"
-
-    findbugsWarnings=$((findbugsWarnings+newFindbugsWarnings))
-
-    "${FINDBUGS_HOME}/bin/convertXmlToText" -html \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml" \
-      "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.html"
-
-    if [[ ${newFindbugsWarnings} -gt 0 ]] ; then
-      populate_test_table FindBugs "module:${module_suffix}"
-      while read line; do
-        firstpart=$(echo "${line}" | cut -f2 -d:)
-        secondpart=$(echo "${line}" | cut -f9- -d' ')
-        add_jira_test_table "" "${firstpart}:${secondpart}"
-      done < <("${FINDBUGS_HOME}/bin/convertXmlToText" \
-        "${PATCH_DIR}/newPatchFindbugsWarnings${module_suffix}.xml")
-
-      add_jira_footer "Findbugs warnings" "@@BASE@@/newPatchFindbugsWarnings${module_suffix}.html"
-    fi
-  done < <(find "${BASEDIR}" -name findbugsXml.xml)
-
-  if [[ ${findbugsWarnings} -gt 0 ]] ; then
-    add_jira_table -1 findbugs "The patch appears to introduce ${findbugsWarnings} new Findbugs (version ${findbugs_version}) warnings."
-    return 1
+  if [[ ${findbugs_fixed_warnings} -gt 0 ]] ; then
+    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings, and fixes ${findbugs_fixed_warnings} pre-existing warnings."
+  else
+    add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   fi
-
-  add_jira_table +1 findbugs "The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
@@ -1962,7 +2134,7 @@ function check_mvn_eclipse
 
   start_clock
 
-  echo_and_redirect "${PATCH_DIR}/patchEclipseOutput.txt" "${MVN}" eclipse:eclipse -D${PROJECT_NAME}PatchProcess
+  echo_and_redirect "${PATCH_DIR}/patchEclipseOutput.txt" "${MVN}" "${MAVEN_ARGS[@]}" eclipse:eclipse -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
     add_jira_table -1 eclipse:eclipse "The patch failed to build with eclipse:eclipse."
     return 1
@@ -2053,7 +2225,7 @@ function check_unittests
     ordered_modules="${ordered_modules} ${hdfs_modules}"
     if [[ ${building_common} -eq 0 ]]; then
       echo "  Building hadoop-common with -Pnative in order to provide libhadoop.so to the hadoop-hdfs unit tests."
-      echo_and_redirect "${PATCH_DIR}/testrun_native.txt" "${MVN}" compile ${NATIVE_PROFILE} "-D${PROJECT_NAME}PatchProcess"
+      echo_and_redirect "${PATCH_DIR}/testrun_native.txt" "${MVN}" "${MAVEN_ARGS[@]}" compile ${NATIVE_PROFILE} "-D${PROJECT_NAME}PatchProcess"
       if [[ $? != 0 ]]; then
         add_jira_table -1 "native" "Failed to build the native portion " \
           "of hadoop-common prior to running the unit tests in ${ordered_modules}"
@@ -2073,7 +2245,7 @@ function check_unittests
 
     test_logfile=${PATCH_DIR}/testrun_${module_suffix}.txt
     echo "  Running tests in ${module_suffix}"
-    echo_and_redirect "${test_logfile}" "${MVN}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${test_logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} -D${PROJECT_NAME}PatchProcess
     test_build_result=$?
 
     add_jira_footer "${module_suffix} test log" "@@BASE@@/testrun_${module_suffix}.txt"

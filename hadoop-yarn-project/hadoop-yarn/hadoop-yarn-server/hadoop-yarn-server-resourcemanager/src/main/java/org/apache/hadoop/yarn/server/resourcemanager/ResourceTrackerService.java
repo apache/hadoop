@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -98,21 +100,10 @@ public class ResourceTrackerService extends AbstractService implements
   private InetSocketAddress resourceTrackerAddress;
   private String minimumNodeManagerVersion;
 
-  private static final NodeHeartbeatResponse resync = recordFactory
-      .newRecordInstance(NodeHeartbeatResponse.class);
-  private static final NodeHeartbeatResponse shutDown = recordFactory
-  .newRecordInstance(NodeHeartbeatResponse.class);
-  
   private int minAllocMb;
   private int minAllocVcores;
 
   private boolean isDistributedNodeLabelsConf;
-
-  static {
-    resync.setNodeAction(NodeAction.RESYNC);
-
-    shutDown.setNodeAction(NodeAction.SHUTDOWN);
-  }
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
@@ -412,8 +403,8 @@ public class ResourceTrackerService extends AbstractService implements
           "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
               + nodeId.getHost();
       LOG.info(message);
-      shutDown.setDiagnosticsMessage(message);
-      return shutDown;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(
+          NodeAction.SHUTDOWN, message);
     }
 
     // 2. Check if it's a registered node
@@ -422,8 +413,8 @@ public class ResourceTrackerService extends AbstractService implements
       /* node does not exist */
       String message = "Node not found resyncing " + remoteNodeStatus.getNodeId();
       LOG.info(message);
-      resync.setDiagnosticsMessage(message);
-      return resync;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(NodeAction.RESYNC,
+          message);
     }
 
     // Send ping
@@ -443,11 +434,11 @@ public class ResourceTrackerService extends AbstractService implements
               + lastNodeHeartbeatResponse.getResponseId() + " nm response id:"
               + remoteNodeStatus.getResponseId();
       LOG.info(message);
-      resync.setDiagnosticsMessage(message);
       // TODO: Just sending reboot is not enough. Think more.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeEvent(nodeId, RMNodeEventType.REBOOTING));
-      return resync;
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(NodeAction.RESYNC,
+          message);
     }
 
     // Heartbeat response
@@ -491,6 +482,27 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     return nodeHeartBeatResponse;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public UnRegisterNodeManagerResponse unRegisterNodeManager(
+      UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+    UnRegisterNodeManagerResponse response = recordFactory
+        .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    NodeId nodeId = request.getNodeId();
+    RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
+    if (rmNode == null) {
+      LOG.info("Node not found, ignoring the unregister from node id : "
+          + nodeId);
+      return response;
+    }
+    LOG.info("Node with node id : " + nodeId
+        + " has shutdown, hence unregistering the node.");
+    this.nmLivelinessMonitor.unregister(nodeId);
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMNodeEvent(nodeId, RMNodeEventType.SHUTDOWN));
+    return response;
   }
 
   private void updateNodeLabelsFromNMReport(Set<String> nodeLabels,

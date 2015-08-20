@@ -615,7 +615,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
         if (!s.isFailed()) {
           try {
             if (s.getBytesCurBlock() > 0) {
-              setCurrentPacket2Empty();
+              setCurrentPacketToEmpty();
             }
             // flush all data to Datanode
             flushInternal();

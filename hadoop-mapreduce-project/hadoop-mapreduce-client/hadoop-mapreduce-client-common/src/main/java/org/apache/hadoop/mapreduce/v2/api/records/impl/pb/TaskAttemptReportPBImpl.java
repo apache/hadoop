@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records.impl.pb;
 
-
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -42,12 +42,12 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
   TaskAttemptReportProto proto = TaskAttemptReportProto.getDefaultInstance();
   TaskAttemptReportProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private TaskAttemptId taskAttemptId = null;
   private Counters counters = null;
+  private org.apache.hadoop.mapreduce.Counters rawCounters = null;
   private ContainerId containerId = null;
-  
-  
+
   public TaskAttemptReportPBImpl() {
     builder = TaskAttemptReportProto.newBuilder();
   }
@@ -68,6 +68,7 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
     if (this.taskAttemptId != null) {
       builder.setTaskAttemptId(convertToProtoFormat(this.taskAttemptId));
     }
+    convertRawCountersToCounters();
     if (this.counters != null) {
       builder.setCounters(convertToProtoFormat(this.counters));
     }
@@ -90,11 +91,12 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
     }
     viaProto = false;
   }
-    
-  
+
+
   @Override
   public Counters getCounters() {
     TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    convertRawCountersToCounters();
     if (this.counters != null) {
       return this.counters;
     }
@@ -108,10 +110,32 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
   @Override
   public void setCounters(Counters counters) {
     maybeInitBuilder();
-    if (counters == null) 
+    if (counters == null) {
       builder.clearCounters();
+    }
     this.counters = counters;
+    this.rawCounters = null;
   }
+
+  @Override
+  public org.apache.hadoop.mapreduce.Counters
+        getRawCounters() {
+    return this.rawCounters;
+  }
+
+  @Override
+  public void setRawCounters(org.apache.hadoop.mapreduce.Counters rCounters) {
+    setCounters(null);
+    this.rawCounters = rCounters;
+  }
+
+  private void convertRawCountersToCounters() {
+    if (this.counters == null && this.rawCounters != null) {
+      this.counters = TypeConverter.toYarn(rawCounters);
+      this.rawCounters = null;
+    }
+  }
+
   @Override
   public long getStartTime() {
     TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;

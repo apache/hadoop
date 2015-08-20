@@ -206,13 +206,13 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
   void stop() {
     stopping = true;
     sinkThread.interrupt();
+    if (sink instanceof Closeable) {
+      IOUtils.cleanup(LOG, (Closeable)sink);
+    }
     try {
       sinkThread.join();
     } catch (InterruptedException e) {
       LOG.warn("Stop interrupted", e);
-    }
-    if (sink instanceof Closeable) {
-      IOUtils.cleanup(LOG, (Closeable)sink);
     }
   }
 

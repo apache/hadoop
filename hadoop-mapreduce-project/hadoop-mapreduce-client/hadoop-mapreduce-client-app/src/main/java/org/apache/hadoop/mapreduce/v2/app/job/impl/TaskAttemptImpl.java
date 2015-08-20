@@ -95,6 +95,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptTooManyFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
@@ -127,7 +128,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -931,10 +932,16 @@ public abstract class TaskAttemptImpl implements
     // Fill in the fields needed per-container that are missing in the common
     // spec.
 
+    boolean userClassesTakesPrecedence =
+      conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
+
     // Setup environment by cloning from common env.
     Map<String, String> env = commonContainerSpec.getEnvironment();
     Map<String, String> myEnv = new HashMap<String, String>(env.size());
     myEnv.putAll(env);
+    if (userClassesTakesPrecedence) {
+      myEnv.put(Environment.CLASSPATH_PREPEND_DISTCACHE.name(), "true");
+    }
     MapReduceChildJVM.setVMEnv(myEnv, remoteTask);
 
     // Set up the launch command
@@ -1181,7 +1188,7 @@ public abstract class TaskAttemptImpl implements
       final TaskAttemptStateInternal oldState = getInternalState()  ;
       try {
         stateMachine.doTransition(event.getType(), event);
-      } catch (InvalidStateTransitonException e) {
+      } catch (InvalidStateTransitionException e) {
         LOG.error("Can't handle this event at current state for "
             + this.attemptId, e);
         eventHandler.handle(new JobDiagnosticsUpdateEvent(
@@ -1910,12 +1917,17 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
+          (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks
       Preconditions
           .checkArgument(taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP);
       //add to diagnostic
-      taskAttempt.addDiagnosticInfo("Too Many fetch failures.Failing the attempt");
-      
+      taskAttempt.addDiagnosticInfo("Too many fetch failures."
+          + " Failing the attempt. Last failure reported by " +
+          fetchFailureEvent.getReduceId() +
+          " from host " + fetchFailureEvent.getReduceHost());
+
       if (taskAttempt.getLaunchTime() != 0) {
         taskAttempt.eventHandler
             .handle(createJobCounterUpdateEventTAFailed(taskAttempt, true));
@@ -2219,8 +2231,11 @@ public abstract class TaskAttemptImpl implements
       //this only will happen in reduce attempt type
       if (taskAttempt.reportedStatus.fetchFailedMaps != null && 
           taskAttempt.reportedStatus.fetchFailedMaps.size() > 0) {
+        String hostname = taskAttempt.container == null ? "UNKNOWN"
+            : taskAttempt.container.getNodeId().getHost();
         taskAttempt.eventHandler.handle(new JobTaskAttemptFetchFailureEvent(
-            taskAttempt.attemptId, taskAttempt.reportedStatus.fetchFailedMaps));
+            taskAttempt.attemptId, taskAttempt.reportedStatus.fetchFailedMaps,
+                hostname));
       }
     }
   }

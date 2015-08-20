@@ -19,6 +19,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <inttypes.h>
 #include <libgen.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -68,7 +69,7 @@ void set_nm_uid(uid_t user, gid_t group) {
  */
 char* get_executable() {
   char buffer[PATH_MAX];
-  snprintf(buffer, PATH_MAX, "/proc/%u/exe", getpid());
+  snprintf(buffer, PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
   char *filename = malloc(PATH_MAX);
   ssize_t len = readlink(buffer, filename, PATH_MAX);
   if (len == -1) {
@@ -181,7 +182,7 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
 
   // write pid
   char pid_buf[21];
-  snprintf(pid_buf, sizeof(pid_buf), "%d", pid);
+  snprintf(pid_buf, sizeof(pid_buf), "%" PRId64, (int64_t)pid);
   ssize_t written = write(cgroup_fd, pid_buf, strlen(pid_buf));
   close(cgroup_fd);
   if (written == -1) {
@@ -206,28 +207,33 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
   uid_t user = geteuid();
   gid_t group = getegid();
   if (change_effective_user(nm_uid, nm_gid) != 0) {
+    fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", nm_uid, nm_gid);
+    fflush(ERRORFILE);
     return -1;
   }
 
   char *temp_pid_file = concatenate("%s.tmp", "pid_file_path", 1, pid_file);
-
+  fprintf(LOGFILE, "Writing to tmp file %s\n", temp_pid_file);
+  fflush(LOGFILE);
   // create with 700
   int pid_fd = open(temp_pid_file, O_WRONLY|O_CREAT|O_EXCL, S_IRWXU);
   if (pid_fd == -1) {
     fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", temp_pid_file,
            strerror(errno));
+    fflush(LOGFILE);
     free(temp_pid_file);
     return -1;
   }
 
   // write pid to temp file
   char pid_buf[21];
-  snprintf(pid_buf, 21, "%d", pid);
+  snprintf(pid_buf, 21, "%" PRId64, (int64_t)pid);
   ssize_t written = write(pid_fd, pid_buf, strlen(pid_buf));
   close(pid_fd);
   if (written == -1) {
     fprintf(LOGFILE, "Failed to write pid to file %s as node manager - %s\n",
        temp_pid_file, strerror(errno));
+    fflush(LOGFILE);
     free(temp_pid_file);
     return -1;
   }
@@ -237,6 +243,7 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
   if (rename(temp_pid_file, pid_file)) {
     fprintf(LOGFILE, "Can't move pid file from %s to %s as node manager - %s\n",
         temp_pid_file, pid_file, strerror(errno));
+    fflush(LOGFILE);
     unlink(temp_pid_file);
     free(temp_pid_file);
     return -1;
@@ -307,7 +314,7 @@ static int wait_and_get_exit_code(pid_t pid) {
   } while (waitpid_result == -1 && errno == EINTR);
 
   if (waitpid_result < 0) {
-    fprintf(LOGFILE, "error waiting for process %d - %s\n", pid, strerror(errno));
+    fprintf(LOGFILE, "error waiting for process %" PRId64 " - %s\n", (int64_t)pid, strerror(errno));
     return -1;
   }
 
@@ -316,7 +323,7 @@ static int wait_and_get_exit_code(pid_t pid) {
   } else if (WIFSIGNALED(child_status)) {
     exit_code = 0x80 + WTERMSIG(child_status);
   } else {
-    fprintf(LOGFILE, "Unable to determine exit status for pid %d\n", pid);
+    fprintf(LOGFILE, "Unable to determine exit status for pid %" PRId64 "\n", (int64_t)pid);
   }
 
   return exit_code;
@@ -510,7 +517,8 @@ int mkdirs(const char* path, mode_t perm) {
 * Give 0 or 1 to represent whether this is the final component. If it is, we
 * need to check the permission.
 */
-int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent) {
+int create_validate_dir(const char* npath, mode_t perm, const char* path,
+                        int finalComponent) {
   struct stat sb;
   if (stat(npath, &sb) != 0) {
     if (mkdir(npath, perm) != 0) {
@@ -534,7 +542,7 @@ int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent
 
 // check whether the given path is a directory
 // also check the access permissions whether it is the same as desired permissions
-int check_dir(char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
+int check_dir(const char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
   if (!S_ISDIR(st_mode)) {
     fprintf(LOGFILE, "Path %s is file not dir\n", npath);
     return -1;
@@ -846,12 +854,15 @@ static int copy_file(int input, const char* in_filename,
 		     const char* out_filename, mode_t perm) {
   const int buffer_size = 128*1024;
   char buffer[buffer_size];
+
   int out_fd = open(out_filename, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, perm);
   if (out_fd == -1) {
     fprintf(LOGFILE, "Can't open %s for output - %s\n", out_filename, 
             strerror(errno));
+    fflush(LOGFILE);
     return -1;
   }
+
   ssize_t len = read(input, buffer, buffer_size);
   while (len > 0) {
     ssize_t pos = 0;
@@ -1024,7 +1035,354 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-int launch_container_as_user(const char *user, const char *app_id, 
+char* parse_docker_command_file(const char* command_file) {
+  size_t len = 0;
+  char *line = NULL;
+  ssize_t read;
+  FILE *stream;
+  stream = fopen(command_file, "r");
+  if (stream == NULL) {
+   fprintf(ERRORFILE, "Cannot open file %s - %s",
+                 command_file, strerror(errno));
+   fflush(ERRORFILE);
+   exit(ERROR_OPENING_FILE);
+  }
+  if ((read = getline(&line, &len, stream)) == -1) {
+     fprintf(ERRORFILE, "Error reading command_file %s\n", command_file);
+     fflush(ERRORFILE);
+     exit(ERROR_READING_FILE);
+  }
+  fclose(stream);
+
+  return line;
+}
+
+int run_docker(const char *command_file) {
+  char* docker_command = parse_docker_command_file(command_file);
+  char* docker_binary = get_value(DOCKER_BINARY_KEY);
+  char* docker_command_with_binary = calloc(sizeof(char), PATH_MAX);
+  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
+  char **args = extract_values_delim(docker_command_with_binary, " ");
+
+  int exit_code = -1;
+  if (execvp(docker_binary, args) != 0) {
+    fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
+              docker_binary, strerror(errno));
+      fflush(LOGFILE);
+      fflush(ERRORFILE);
+      free(docker_binary);
+      free(args);
+      free(docker_command_with_binary);
+      free(docker_command);
+      exit_code = DOCKER_RUN_FAILED;
+  }
+  exit_code = 0;
+  return exit_code;
+}
+
+int create_script_paths(const char *work_dir,
+  const char *script_name, const char *cred_file,
+  char** script_file_dest, char** cred_file_dest,
+  int* container_file_source, int* cred_file_source ) {
+  int exit_code = -1;
+
+  *script_file_dest = get_container_launcher_file(work_dir);
+  if (script_file_dest == NULL) {
+    exit_code = OUT_OF_MEMORY;
+    fprintf(ERRORFILE, "Could not create script_file_dest");
+    fflush(ERRORFILE);
+    return exit_code;
+  }
+
+  *cred_file_dest = get_container_credentials_file(work_dir);
+  if (NULL == cred_file_dest) {
+    exit_code = OUT_OF_MEMORY;
+    fprintf(ERRORFILE, "Could not create cred_file_dest");
+    fflush(ERRORFILE);
+    return exit_code;
+  }
+  // open launch script
+  *container_file_source = open_file_as_nm(script_name);
+  if (*container_file_source == -1) {
+    exit_code = INVALID_NM_ROOT_DIRS;
+    fprintf(ERRORFILE, "Could not open container file");
+    fflush(ERRORFILE);
+    return exit_code;
+  }
+  // open credentials
+  *cred_file_source = open_file_as_nm(cred_file);
+  if (*cred_file_source == -1) {
+    exit_code = INVALID_ARGUMENT_NUMBER;
+    fprintf(ERRORFILE, "Could not open cred file");
+    fflush(ERRORFILE);
+    return exit_code;
+  }
+
+  exit_code = 0;
+  return exit_code;
+}
+
+int create_local_dirs(const char * user, const char *app_id,
+                       const char *container_id, const char *work_dir,
+                       const char *script_name, const char *cred_file,
+                       char* const* local_dirs,
+                       char* const* log_dirs, int effective_user,
+                       char* script_file_dest, char* cred_file_dest,
+                       int container_file_source, int cred_file_source) {
+  int exit_code = -1;
+  // create the user directory on all disks
+  int result = initialize_user(user, local_dirs);
+  if (result != 0) {
+    fprintf(ERRORFILE, "Could not create user dir");
+    fflush(ERRORFILE);
+    return result;
+  }
+
+  // initializing log dirs
+  int log_create_result = create_log_dirs(app_id, log_dirs);
+  if (log_create_result != 0) {
+    fprintf(ERRORFILE, "Could not create log dirs");
+    fflush(ERRORFILE);
+    return log_create_result;
+  }
+  if (effective_user == 1) {
+    if (change_effective_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
+      fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", user_detail->pw_uid, user_detail->pw_gid);
+      fflush(ERRORFILE);
+      goto cleanup;
+    }
+  } else {
+   // give up root privs
+    if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
+      exit_code = SETUID_OPER_FAILED;
+      goto cleanup;
+    }
+  }
+  // Create container specific directories as user. If there are no resources
+  // to localize for this container, app-directories and log-directories are
+  // also created automatically as part of this call.
+  if (create_container_directories(user, app_id, container_id, local_dirs,
+                                   log_dirs, work_dir) != 0) {
+    fprintf(ERRORFILE, "Could not create container dirs");
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  // 700
+  if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
+    fprintf(ERRORFILE, "Could not create copy file %d %s\n", container_file_source, script_file_dest);
+    fflush(ERRORFILE);
+    exit_code = INVALID_COMMAND_PROVIDED;
+    goto cleanup;
+  }
+
+  // 600
+  if (copy_file(cred_file_source, cred_file, cred_file_dest,
+        S_IRUSR | S_IWUSR) != 0) {
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    fprintf(ERRORFILE, "Could not copy file");
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  if (chdir(work_dir) != 0) {
+    fprintf(ERRORFILE, "Can't change directory to %s -%s\n", work_dir,
+      strerror(errno));
+      fflush(ERRORFILE);
+    goto cleanup;
+  }
+  exit_code = 0;
+  cleanup:
+  return exit_code;
+}
+
+int launch_docker_container_as_user(const char * user, const char *app_id,
+                              const char *container_id, const char *work_dir,
+                              const char *script_name, const char *cred_file,
+                              const char *pid_file, char* const* local_dirs,
+                              char* const* log_dirs, const char *command_file,
+                              const char *resources_key,
+                              char* const* resources_values) {
+  int exit_code = -1;
+  char *script_file_dest = NULL;
+  char *cred_file_dest = NULL;
+  char *exit_code_file = NULL;
+  char docker_command_with_binary[PATH_MAX];
+  char docker_wait_command[PATH_MAX];
+  char docker_logs_command[PATH_MAX];
+  char docker_inspect_command[PATH_MAX];
+  char docker_rm_command[PATH_MAX];
+  int container_file_source =-1;
+  int cred_file_source = -1;
+  int BUFFER_SIZE = 4096;
+  char buffer[BUFFER_SIZE];
+
+  char *docker_command = parse_docker_command_file(command_file);
+  char *docker_binary = get_value(DOCKER_BINARY_KEY);
+  if (docker_binary == NULL) {
+    docker_binary = "docker";
+  }
+  exit_code = create_script_paths(
+    work_dir, script_name, cred_file, &script_file_dest, &cred_file_dest,
+    &container_file_source, &cred_file_source);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create script path\n");
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+  gid_t user_gid = getegid();
+
+  exit_code = create_local_dirs(user, app_id, container_id,
+    work_dir, script_name, cred_file, local_dirs, log_dirs,
+    1, script_file_dest, cred_file_dest,
+    container_file_source, cred_file_source);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create local files and directories %d %d\n", container_file_source, cred_file_source);
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  exit_code_file = get_exit_code_file(pid_file);
+  if (NULL == exit_code_file) {
+    exit_code = OUT_OF_MEMORY;
+    fprintf(ERRORFILE, "Container out of memory");
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  if (change_effective_user(0, user_gid) != 0) {
+    fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", 0, user_gid);
+    fflush(ERRORFILE);
+    goto cleanup;
+  }
+
+  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
+
+  FILE* start_docker = popen(docker_command_with_binary, "r");
+  if (pclose (start_docker) != 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not invoke docker %s.\n", docker_command_with_binary);
+    fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
+  snprintf(docker_inspect_command, PATH_MAX,
+    "%s inspect --format {{.State.Pid}} %s",
+    docker_binary, container_id);
+
+  FILE* inspect_docker = popen(docker_inspect_command, "r");
+  int pid = 0;
+  int res = fscanf (inspect_docker, "%d", &pid);
+  if (pclose (inspect_docker) != 0 || res <= 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not inspect docker to get pid %s.\n", docker_inspect_command);
+    fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
+  if (pid != 0) {
+    // cgroups-based resource enforcement
+    if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
+     // write pid to cgroups
+     char* const* cgroup_ptr;
+     for (cgroup_ptr = resources_values; cgroup_ptr != NULL &&
+          *cgroup_ptr != NULL; ++cgroup_ptr) {
+       if (strcmp(*cgroup_ptr, "none") != 0 &&
+             write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
+         exit_code = WRITE_CGROUP_FAILED;
+         goto cleanup;
+       }
+     }
+    }
+    // write pid to pidfile
+    if (pid_file == NULL
+        || write_pid_to_file_as_nm(pid_file, (pid_t)pid) != 0) {
+      exit_code = WRITE_PIDFILE_FAILED;
+      fprintf(ERRORFILE, "Could not write pid to %s", pid_file);
+      fflush(ERRORFILE);
+      goto cleanup;
+    }
+
+    snprintf(docker_wait_command, PATH_MAX,
+      "%s wait %s", docker_binary, container_id);
+
+    FILE* wait_docker = popen(docker_wait_command, "r");
+    res = fscanf (wait_docker, "%d", &exit_code);
+    if (pclose (wait_docker) != 0 || res <= 0) {
+      fprintf (ERRORFILE,
+       "Could not attach to docker; is container dead? %s.\n", docker_wait_command);
+      fflush(ERRORFILE);
+    }
+    if(exit_code != 0) {
+      snprintf(docker_logs_command, PATH_MAX, "%s logs --tail=250 %s",
+        docker_binary, container_id);
+      FILE* logs = popen(docker_logs_command, "r");
+      if(logs != NULL) {
+        clearerr(logs);
+        res = fread(buffer, BUFFER_SIZE, 1, logs);
+        if(res < 1) {
+          fprintf(ERRORFILE, "%s %d %d\n",
+            "Unable to read from docker logs(ferror, feof):", ferror(logs), feof(logs));
+          fflush(ERRORFILE);
+        }
+        else {
+          fprintf(ERRORFILE, "%s\n", buffer);
+          fflush(ERRORFILE);
+        }
+      }
+      else {
+        fprintf(ERRORFILE, "%s\n", "Failed to get output of docker logs");
+        fprintf(ERRORFILE, "Command was '%s'\n", docker_logs_command);
+        fprintf(ERRORFILE, "%s\n", strerror(errno));
+        fflush(ERRORFILE);
+      }
+      if(pclose(logs) != 0) {
+        fprintf(ERRORFILE, "%s\n", "Failed to fetch docker logs");
+        fflush(ERRORFILE);
+      }
+    }
+  }
+
+  snprintf(docker_rm_command, PATH_MAX,
+    "%s rm %s", docker_binary, container_id);
+  FILE* rm_docker = popen(docker_rm_command, "w");
+  if (pclose (rm_docker) != 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not remove container %s.\n", docker_rm_command);
+    fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
+cleanup:
+  if (exit_code_file != NULL && write_exit_code_file(exit_code_file, exit_code) < 0) {
+    fprintf (ERRORFILE,
+      "Could not write exit code to file %s.\n", exit_code_file);
+    fflush(ERRORFILE);
+  }
+#if HAVE_FCLOSEALL
+  fcloseall();
+#else
+  // only those fds are opened assuming no bug
+  fclose(LOGFILE);
+  fclose(ERRORFILE);
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
+  free(exit_code_file);
+  free(script_file_dest);
+  free(cred_file_dest);
+  return exit_code;
+}
+
+
+int launch_container_as_user(const char *user, const char *app_id,
                    const char *container_id, const char *work_dir,
                    const char *script_name, const char *cred_file,
                    const char* pid_file, char* const* local_dirs,
@@ -1035,31 +1393,21 @@ int launch_container_as_user(const char *user, const char *app_id,
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
 
-  script_file_dest = get_container_launcher_file(work_dir);
-  if (script_file_dest == NULL) {
-    exit_code = OUT_OF_MEMORY;
-    goto cleanup;
-  }
-  cred_file_dest = get_container_credentials_file(work_dir);
-  if (NULL == cred_file_dest) {
-    exit_code = OUT_OF_MEMORY;
-    goto cleanup;
-  }
+
   exit_code_file = get_exit_code_file(pid_file);
   if (NULL == exit_code_file) {
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
 
-  // open launch script
-  int container_file_source = open_file_as_nm(script_name);
-  if (container_file_source == -1) {
-    goto cleanup;
-  }
-
-  // open credentials
-  int cred_file_source = open_file_as_nm(cred_file);
-  if (cred_file_source == -1) {
+  int container_file_source =-1;
+  int cred_file_source = -1;
+  exit_code = create_script_paths(
+    work_dir, script_name, cred_file, &script_file_dest, &cred_file_dest,
+    &container_file_source, &cred_file_source);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create local files and directories");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
@@ -1086,7 +1434,6 @@ int launch_container_as_user(const char *user, const char *app_id,
 
   // cgroups-based resource enforcement
   if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
-
     // write pid to cgroups
     char* const* cgroup_ptr;
     for (cgroup_ptr = resources_values; cgroup_ptr != NULL && 
@@ -1099,42 +1446,13 @@ int launch_container_as_user(const char *user, const char *app_id,
     }
   }
 
-  // create the user directory on all disks
-  int result = initialize_user(user, local_dirs);
-  if (result != 0) {
-    return result;
-  }
-
-  // initializing log dirs
-  int log_create_result = create_log_dirs(app_id, log_dirs);
-  if (log_create_result != 0) {
-    return log_create_result;
-  }
-
-  // give up root privs
-  if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
-    exit_code = SETUID_OPER_FAILED;
-    goto cleanup;
-  }
-
-  // Create container specific directories as user. If there are no resources
-  // to localize for this container, app-directories and log-directories are
-  // also created automatically as part of this call.
-  if (create_container_directories(user, app_id, container_id, local_dirs,
-                                   log_dirs, work_dir) != 0) {
-    fprintf(LOGFILE, "Could not create container dirs");
-    goto cleanup;
-  }
-
-
-  // 700
-  if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
-    goto cleanup;
-  }
-
-  // 600
-  if (copy_file(cred_file_source, cred_file, cred_file_dest,
-        S_IRUSR | S_IWUSR) != 0) {
+  exit_code = create_local_dirs(user, app_id, container_id,
+    work_dir, script_name, cred_file, local_dirs, log_dirs,
+    0, script_file_dest, cred_file_dest,
+    container_file_source, cred_file_source);
+  if (exit_code != 0) {
+    fprintf(ERRORFILE, "Could not create local files and directories");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
@@ -1149,24 +1467,20 @@ int launch_container_as_user(const char *user, const char *app_id,
   fclose(stderr);
 #endif
   umask(0027);
-  if (chdir(work_dir) != 0) {
-    fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
-	    strerror(errno));
-    goto cleanup;
-  }
+
   if (execlp(script_file_dest, script_file_dest, NULL) != 0) {
-    fprintf(LOGFILE, "Couldn't execute the container launch file %s - %s", 
+    fprintf(LOGFILE, "Couldn't execute the container launch file %s - %s",
             script_file_dest, strerror(errno));
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
   exit_code = 0;
 
- cleanup:
-  free(exit_code_file);
-  free(script_file_dest);
-  free(cred_file_dest);
-  return exit_code;
+  cleanup:
+    free(exit_code_file);
+    free(script_file_dest);
+    free(cred_file_dest);
+    return exit_code;
 }
 
 int signal_container_as_user(const char *user, int pid, int sig) {
@@ -1491,7 +1805,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 
 static int run_traffic_control(const char *opts[], char *command_file) {
   const int max_tc_args = 16;
-  char *args[max_tc_args];
+  const char *args[max_tc_args];
   int i = 0, j = 0;
 
   args[i++] = TC_BIN;
@@ -1517,7 +1831,7 @@ static int run_traffic_control(const char *opts[], char *command_file) {
     unlink(command_file);
     return 0;
   } else {
-    execv(TC_BIN, args);
+    execv(TC_BIN, (char**)args);
     //if we reach here, exec failed
     fprintf(LOGFILE, "failed to execute tc command! error: %s\n", strerror(errno));
     return TRAFFIC_CONTROL_EXECUTION_FAILED;

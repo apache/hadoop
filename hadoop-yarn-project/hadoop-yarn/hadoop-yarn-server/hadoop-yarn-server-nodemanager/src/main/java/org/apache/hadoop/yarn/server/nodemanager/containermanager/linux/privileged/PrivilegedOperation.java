@@ -36,6 +36,7 @@ import java.util.List;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class PrivilegedOperation {
+  public final static char LINUX_FILE_PATH_SEPARATOR = '%';
 
   public enum OperationType {
     CHECK_SETUP("--checksetup"),
@@ -44,10 +45,12 @@ public class PrivilegedOperation {
     LAUNCH_CONTAINER(""), //no CLI switch supported yet
     SIGNAL_CONTAINER(""), //no CLI switch supported yet
     DELETE_AS_USER(""), //no CLI switch supported yet
+    LAUNCH_DOCKER_CONTAINER(""), //no CLI switch supported yet
     TC_MODIFY_STATE("--tc-modify-state"),
     TC_READ_STATE("--tc-read-state"),
     TC_READ_STATS("--tc-read-stats"),
-    ADD_PID_TO_CGROUP(""); //no CLI switch supported yet.
+    ADD_PID_TO_CGROUP(""), //no CLI switch supported yet.
+    RUN_DOCKER_CMD("--run-docker");
 
     private final String option;
 
@@ -61,6 +64,7 @@ public class PrivilegedOperation {
   }
 
   public static final String CGROUP_ARG_PREFIX = "cgroups=";
+  public static final String CGROUP_ARG_NO_TASKS = "none";
 
   private final OperationType opType;
   private final List<String> args;
@@ -115,5 +119,46 @@ public class PrivilegedOperation {
   @Override
   public int hashCode() {
     return opType.hashCode() + 97 * args.hashCode();
+  }
+
+  /**
+   * List of commands that the container-executor will execute.
+   */
+  public enum RunAsUserCommand {
+    INITIALIZE_CONTAINER(0),
+    LAUNCH_CONTAINER(1),
+    SIGNAL_CONTAINER(2),
+    DELETE_AS_USER(3),
+    LAUNCH_DOCKER_CONTAINER(4);
+
+    private int value;
+    RunAsUserCommand(int value) {
+      this.value = value;
+    }
+    public int getValue() {
+      return value;
+    }
+  }
+
+  /**
+   * Result codes returned from the C container-executor.
+   * These must match the values in container-executor.h.
+   */
+  public enum ResultCode {
+    OK(0),
+    INVALID_USER_NAME(2),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    INVALID_CONTAINER_PID(9),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
+    INVALID_CONFIG_FILE(24),
+    WRITE_CGROUP_FAILED(27);
+
+    private final int value;
+    ResultCode(int value) {
+      this.value = value;
+    }
+    public int getValue() {
+      return value;
+    }
   }
 }

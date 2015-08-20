@@ -39,6 +39,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.io.nativeio.NativeIOException;
+
+import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -78,7 +81,7 @@ public class TestCachingStrategy {
     synchronized void fadvise(int offset, int len, int flags) {
       LOG.debug("got fadvise(offset=" + offset + ", len=" + len +
           ",flags=" + flags + ")");
-      if (flags == NativeIO.POSIX.POSIX_FADV_DONTNEED) {
+      if (flags == POSIX_FADV_DONTNEED) {
         for (int i = 0; i < len; i++) {
           dropped[(offset + i)] = true;
         }

@@ -195,6 +195,8 @@ message ApplicationReportProto {
   optional hadoop.common.TokenProto am_rm_token = 19;
   repeated string applicationTags = 20;
   optional LogAggregationStatusProto log_aggregation_status = 21;
+  optional bool unmanaged_application = 22 [default = false];
+  optional PriorityProto priority = 23;
 }
 
 enum LogAggregationStatusProto {
@@ -228,6 +230,7 @@ enum NodeStateProto {
   NS_LOST = 5;
   NS_REBOOTED = 6;
   NS_DECOMMISSIONING = 7;
+  NS_SHUTDOWN = 8;
 }
 
 message NodeIdProto {
@@ -261,6 +264,11 @@ message LabelsToNodeIdsProto {
 message NodeLabelProto {
   optional string name = 1;
   optional bool isExclusive = 2 [default = true]; 
+}
+
+enum ContainerTypeProto {
+  APPLICATION_MASTER = 1;
+  TASK = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -377,6 +385,9 @@ message QueueStatisticsProto {
   optional int64 allocatedVCores = 13;
   optional int64 pendingVCores = 14;
   optional int64 reservedVCores = 15;
+  optional int64 allocatedContainers = 16;
+  optional int64 pendingContainers = 17;
+  optional int64 reservedContainers = 18;
 }
 
 message QueueInfoProto {

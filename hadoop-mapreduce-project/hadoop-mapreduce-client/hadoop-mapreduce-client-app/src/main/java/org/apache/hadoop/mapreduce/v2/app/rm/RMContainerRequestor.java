@@ -121,39 +121,43 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     final String[] racks;
     //final boolean earlierAttemptFailed;
     final Priority priority;
+    final String nodeLabelExpression;
+
     /**
      * the time when this request object was formed; can be used to avoid
      * aggressive preemption for recently placed requests
      */
     final long requestTimeMs;
 
-    public ContainerRequest(ContainerRequestEvent event, Priority priority) {
+    public ContainerRequest(ContainerRequestEvent event, Priority priority,
+        String nodeLabelExpression) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
-          event.getRacks(), priority);
+          event.getRacks(), priority, nodeLabelExpression);
     }
 
     public ContainerRequest(ContainerRequestEvent event, Priority priority,
                             long requestTimeMs) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
-          event.getRacks(), priority, requestTimeMs);
+          event.getRacks(), priority, requestTimeMs,null);
     }
 
     public ContainerRequest(TaskAttemptId attemptID,
                             Resource capability, String[] hosts, String[] racks,
-                            Priority priority) {
+                            Priority priority, String nodeLabelExpression) {
       this(attemptID, capability, hosts, racks, priority,
-          System.currentTimeMillis());
+          System.currentTimeMillis(), nodeLabelExpression);
     }
 
     public ContainerRequest(TaskAttemptId attemptID,
         Resource capability, String[] hosts, String[] racks,
-        Priority priority, long requestTimeMs) {
+        Priority priority, long requestTimeMs,String nodeLabelExpression) {
       this.attemptID = attemptID;
       this.capability = capability;
       this.hosts = hosts;
       this.racks = racks;
       this.priority = priority;
       this.requestTimeMs = requestTimeMs;
+      this.nodeLabelExpression = nodeLabelExpression;
     }
     
     public String toString() {
@@ -390,17 +394,20 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     for (String host : req.hosts) {
       // Data-local
       if (!isNodeBlacklisted(host)) {
-        addResourceRequest(req.priority, host, req.capability);
-      }      
+        addResourceRequest(req.priority, host, req.capability,
+            null);
+      }
     }
 
     // Nothing Rack-local for now
     for (String rack : req.racks) {
-      addResourceRequest(req.priority, rack, req.capability);
+      addResourceRequest(req.priority, rack, req.capability,
+          null);
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability);
+    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.nodeLabelExpression);
   }
 
   protected void decContainerReq(ContainerRequest req) {
@@ -417,7 +424,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   private void addResourceRequest(Priority priority, String resourceName,
-      Resource capability) {
+      Resource capability, String nodeLabelExpression) {
     Map<String, Map<Resource, ResourceRequest>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
@@ -439,6 +446,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       remoteRequest.setResourceName(resourceName);
       remoteRequest.setCapability(capability);
       remoteRequest.setNumContainers(0);
+      remoteRequest.setNodeLabelExpression(nodeLabelExpression);
       reqMap.put(capability, remoteRequest);
     }
     remoteRequest.setNumContainers(remoteRequest.getNumContainers() + 1);
@@ -533,7 +541,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     }
     String[] hosts = newHosts.toArray(new String[newHosts.size()]);
     ContainerRequest newReq = new ContainerRequest(orig.attemptID, orig.capability,
-        hosts, orig.racks, orig.priority); 
+        hosts, orig.racks, orig.priority, orig.nodeLabelExpression);
     return newReq;
   }
   

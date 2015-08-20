@@ -101,7 +101,7 @@ public class TestTruncateQuotaUpdate {
   @Test
   public void testTruncateWithSnapshotAndDivergence() {
     INodeFile file = createMockFile(BLOCKSIZE * 2 + BLOCKSIZE / 2, REPLICATION);
-    BlockInfoContiguous[] blocks = new BlockInfoContiguous
+    BlockInfo[] blocks = new BlockInfo
         [file.getBlocks().length];
     System.arraycopy(file.getBlocks(), 0, blocks, 0, blocks.length);
     addSnapshotFeature(file, blocks);
@@ -131,11 +131,11 @@ public class TestTruncateQuotaUpdate {
   }
 
   private INodeFile createMockFile(long size, short replication) {
-    ArrayList<BlockInfoContiguous> blocks = new ArrayList<>();
+    ArrayList<BlockInfo> blocks = new ArrayList<>();
     long createdSize = 0;
     while (createdSize < size) {
       long blockSize = Math.min(BLOCKSIZE, size - createdSize);
-      BlockInfoContiguous bi = newBlock(blockSize, replication);
+      BlockInfo bi = newBlock(blockSize, replication);
       blocks.add(bi);
       createdSize += BLOCKSIZE;
     }
@@ -143,11 +143,11 @@ public class TestTruncateQuotaUpdate {
         .createImmutable((short) 0x1ff));
     return new INodeFile(
         ++nextMockINodeId, new byte[0], perm, 0, 0,
-        blocks.toArray(new BlockInfoContiguous[blocks.size()]), replication,
+        blocks.toArray(new BlockInfo[blocks.size()]), replication,
         BLOCKSIZE);
   }
 
-  private BlockInfoContiguous newBlock(long size, short replication) {
+  private BlockInfo newBlock(long size, short replication) {
     Block b = new Block(++nextMockBlockId, size, ++nextMockGenstamp);
     return new BlockInfoContiguous(b, replication);
   }

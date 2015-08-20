@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -74,10 +75,10 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   @Override
   public void channelRead0(ChannelHandlerContext ctx, HttpRequest request)
-          throws Exception {
+      throws Exception {
     if (request.method() != HttpMethod.GET) {
       DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
-        METHOD_NOT_ALLOWED);
+          METHOD_NOT_ALLOWED);
       resp.headers().set(CONNECTION, CLOSE);
       ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
       return;
@@ -89,25 +90,36 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final String content;
     String path = getPath(decoder);
     switch (op) {
-      case "GETFILESTATUS":
-        content = image.getFileStatus(path);
-        break;
-      case "LISTSTATUS":
-        content = image.listStatus(path);
-        break;
-      case "GETACLSTATUS":
-        content = image.getAclStatus(path);
-        break;
-      default:
-        throw new IllegalArgumentException(
-            "Invalid value for webhdfs parameter" + " \"op\"");
+    case "GETFILESTATUS":
+      content = image.getFileStatus(path);
+      break;
+    case "LISTSTATUS":
+      content = image.listStatus(path);
+      break;
+    case "GETACLSTATUS":
+      content = image.getAclStatus(path);
+      break;
+    case "GETXATTRS":
+      List<String> names = getXattrNames(decoder);
+      String encoder = getEncoder(decoder);
+      content = image.getXAttrs(path, names, encoder);
+      break;
+    case "LISTXATTRS":
+      content = image.listXAttrs(path);
+      break;
+    case "GETCONTENTSUMMARY":
+      content = image.getContentSummary(path);
+      break;
+    default:
+      throw new IllegalArgumentException("Invalid value for webhdfs parameter"
+          + " \"op\"");
     }
 
     LOG.info("op=" + op + " target=" + path);
 
-    DefaultFullHttpResponse resp = new DefaultFullHttpResponse(
-            HTTP_1_1, HttpResponseStatus.OK,
-            Unpooled.wrappedBuffer(content.getBytes(Charsets.UTF_8)));
+    DefaultFullHttpResponse resp = new DefaultFullHttpResponse(HTTP_1_1,
+        HttpResponseStatus.OK, Unpooled.wrappedBuffer(content
+            .getBytes(Charsets.UTF_8)));
     resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
     resp.headers().set(CONTENT_LENGTH, resp.content().readableBytes());
     resp.headers().set(CONNECTION, CLOSE);
@@ -134,8 +146,9 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
       resp.setStatus(BAD_REQUEST);
     } else if (e instanceof FileNotFoundException) {
       resp.setStatus(NOT_FOUND);
+    } else if (e instanceof IOException) {
+      resp.setStatus(FORBIDDEN);
     }
-
     resp.headers().set(CONTENT_LENGTH, resp.content().readableBytes());
     resp.headers().set(CONNECTION, CLOSE);
     ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
@@ -145,6 +158,17 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
     Map<String, List<String>> parameters = decoder.parameters();
     return parameters.containsKey("op")
         ? StringUtils.toUpperCase(parameters.get("op").get(0)) : null;
+  }
+
+  private static List<String> getXattrNames(QueryStringDecoder decoder) {
+    Map<String, List<String>> parameters = decoder.parameters();
+    return parameters.get("xattr.name");
+  }
+
+  private static String getEncoder(QueryStringDecoder decoder) {
+    Map<String, List<String>> parameters = decoder.parameters();
+    return parameters.containsKey("encoding") ? parameters.get("encoding").get(
+        0) : null;
   }
 
   private static String getPath(QueryStringDecoder decoder)

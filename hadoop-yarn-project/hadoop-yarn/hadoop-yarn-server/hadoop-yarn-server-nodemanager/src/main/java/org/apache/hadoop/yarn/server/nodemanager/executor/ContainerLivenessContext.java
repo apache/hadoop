@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.executor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
 /**
  * Encapsulates information required for container liveness checks.
@@ -30,14 +31,21 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class ContainerLivenessContext {
+  private final Container container;
   private final String user;
   private final String pid;
 
   public static final class Builder {
+    private Container container;
     private String user;
     private String pid;
 
     public Builder() {
+    }
+
+    public Builder setContainer(Container container) {
+      this.container = container;
+      return this;
     }
 
     public Builder setUser(String user) {
@@ -56,8 +64,13 @@ public final class ContainerLivenessContext {
   }
 
   private ContainerLivenessContext(Builder builder) {
+    this.container = builder.container;
     this.user = builder.user;
     this.pid = builder.pid;
+  }
+
+  public Container getContainer() {
+    return this.container;
   }
 
   public String getUser() {

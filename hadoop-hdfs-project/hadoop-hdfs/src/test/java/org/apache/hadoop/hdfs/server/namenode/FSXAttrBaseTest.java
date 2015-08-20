@@ -395,7 +395,10 @@ public class FSXAttrBaseTest {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
-    
+
+    final byte[] theValue = fs.getXAttr(path, "USER.a2");
+    Assert.assertArrayEquals(value2, theValue);
+
     /* An XAttr that was requested does not exist. */
     try {
       final byte[] value = fs.getXAttr(path, name3);

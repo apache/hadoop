@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
@@ -445,7 +446,6 @@ public class INodeFile extends INodeWithAdditionalFields
     setStoragePolicyID(storagePolicyId);
   }
 
-
   /**
    * @return true if the file is in the striping layout.
    */
@@ -483,9 +483,8 @@ public class INodeFile extends INodeWithAdditionalFields
     snapshotBlocks = getDiffs().findLaterSnapshotBlocks(snapshot);
     return (snapshotBlocks == null) ? getBlocks() : snapshotBlocks;
   }
-
-  /** Used during concat to update the BlockCollection for each block */
-  void updateBlockCollection() {
+  /** Used during concat to update the BlockCollection for each block. */
+  private void updateBlockCollection() {
     if (blocks != null) {
       for(BlockInfo b : blocks) {
         b.setBlockCollection(this);
@@ -538,6 +537,7 @@ public class INodeFile extends INodeWithAdditionalFields
     this.blocks = blocks;
   }
 
+  /** Clear all blocks of the file. */
   public void clearBlocks() {
     setBlocks(null);
   }
@@ -890,8 +890,9 @@ public class INodeFile extends INodeWithAdditionalFields
     for(; n < oldBlocks.length && max > size; n++) {
       size += oldBlocks[n].getNumBytes();
     }
-    if (n >= oldBlocks.length)
+    if (n >= oldBlocks.length) {
       return size;
+    }
 
     // starting from block n, the data is beyond max.
     // resize the array.

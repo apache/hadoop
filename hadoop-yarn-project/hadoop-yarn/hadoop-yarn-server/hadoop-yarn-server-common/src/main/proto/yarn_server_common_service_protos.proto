@@ -49,6 +49,13 @@ message RegisterNodeManagerResponseProto {
   optional bool areNodeLabelsAcceptedByRM = 7 [default = false];
 }
 
+message UnRegisterNodeManagerRequestProto {
+  optional NodeIdProto node_id = 1;
+}
+
+message UnRegisterNodeManagerResponseProto {
+}
+
 message NodeHeartbeatRequestProto {
   optional NodeStatusProto node_status = 1;
   optional MasterKeyProto last_known_container_token_master_key = 2;

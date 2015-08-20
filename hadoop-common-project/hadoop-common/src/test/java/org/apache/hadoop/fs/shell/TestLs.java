@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
@@ -1046,6 +1048,29 @@ public class TestLs {
     inOrder.verify(out).println(testfile05.getPath().toString());
     inOrder.verify(out).println(testfile06.getPath().toString());
     verifyNoMoreInteractions(out);
+  }
+
+  private static void displayWarningOnLocalFileSystem(boolean shouldDisplay)
+      throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY, shouldDisplay);
+
+    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+    PrintStream err = new PrintStream(buf, true);
+    Ls ls = new Ls(conf);
+    ls.err = err;
+    ls.run("file:///.");
+    assertEquals(shouldDisplay, buf.toString().contains(
+        "Warning: fs.defaultFs is not set when running \"ls\" command."));
+  }
+
+  @Test
+  public void displayWarningsOnLocalFileSystem() throws IOException {
+    // Display warnings.
+    displayWarningOnLocalFileSystem(true);
+    // Does not display warnings.
+    displayWarningOnLocalFileSystem(false);
   }
 
   // check the deprecated flag isn't set

@@ -18,12 +18,13 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,8 +39,12 @@ import org.junit.Test;
 
 public class TestCopyPreserveFlag {
   private static final int MODIFICATION_TIME = 12345000;
-  private static final Path FROM = new Path("d1", "f1");
-  private static final Path TO = new Path("d2", "f2");
+  private static final int ACCESS_TIME = 23456000;
+  private static final Path DIR_FROM = new Path("d0");
+  private static final Path DIR_TO1 = new Path("d1");
+  private static final Path DIR_TO2 = new Path("d2");
+  private static final Path FROM = new Path(DIR_FROM, "f0");
+  private static final Path TO = new Path(DIR_TO1, "f1");
   private static final FsPermission PERMISSIONS = new FsPermission(
     FsAction.ALL,
     FsAction.EXECUTE,
@@ -62,8 +67,8 @@ public class TestCopyPreserveFlag {
 
     FileSystem.setDefaultUri(conf, fs.getUri());
     fs.setWorkingDirectory(testDir);
-    fs.mkdirs(new Path("d1"));
-    fs.mkdirs(new Path("d2"));
+    fs.mkdirs(DIR_FROM);
+    fs.mkdirs(DIR_TO1);
     fs.createNewFile(FROM);
 
     FSDataOutputStream output = fs.create(FROM, true);
@@ -72,10 +77,10 @@ public class TestCopyPreserveFlag {
         output.writeChar('\n');
     }
     output.close();
-    fs.setTimes(FROM, MODIFICATION_TIME, 0);
+    fs.setTimes(FROM, MODIFICATION_TIME, ACCESS_TIME);
     fs.setPermission(FROM, PERMISSIONS);
-    fs.setTimes(new Path("d1"), MODIFICATION_TIME, 0);
-    fs.setPermission(new Path("d1"), PERMISSIONS);
+    fs.setTimes(DIR_FROM, MODIFICATION_TIME, ACCESS_TIME);
+    fs.setPermission(DIR_FROM, PERMISSIONS);
   }
 
   @After
@@ -84,14 +89,18 @@ public class TestCopyPreserveFlag {
     fs.close();
   }
 
-  private void assertAttributesPreserved() throws IOException {
-    assertEquals(MODIFICATION_TIME, fs.getFileStatus(TO).getModificationTime());
-    assertEquals(PERMISSIONS, fs.getFileStatus(TO).getPermission());
+  private void assertAttributesPreserved(Path to) throws IOException {
+    FileStatus status = fs.getFileStatus(to);
+    assertEquals(MODIFICATION_TIME, status.getModificationTime());
+    assertEquals(ACCESS_TIME, status.getAccessTime());
+    assertEquals(PERMISSIONS, status.getPermission());
   }
 
-  private void assertAttributesChanged() throws IOException {
-      assertTrue(MODIFICATION_TIME != fs.getFileStatus(TO).getModificationTime());
-      assertTrue(!PERMISSIONS.equals(fs.getFileStatus(TO).getPermission()));
+  private void assertAttributesChanged(Path to) throws IOException {
+    FileStatus status = fs.getFileStatus(to);
+    assertNotEquals(MODIFICATION_TIME, status.getModificationTime());
+    assertNotEquals(ACCESS_TIME, status.getAccessTime());
+    assertNotEquals(PERMISSIONS, status.getPermission());
   }
 
   private void run(CommandWithDestination cmd, String... args) {
@@ -102,54 +111,48 @@ public class TestCopyPreserveFlag {
   @Test(timeout = 10000)
   public void testPutWithP() throws Exception {
     run(new Put(), "-p", FROM.toString(), TO.toString());
-    assertAttributesPreserved();
+    assertAttributesPreserved(TO);
   }
 
   @Test(timeout = 10000)
   public void testPutWithoutP() throws Exception {
     run(new Put(), FROM.toString(), TO.toString());
-    assertAttributesChanged();
+    assertAttributesChanged(TO);
   }
 
   @Test(timeout = 10000)
   public void testGetWithP() throws Exception {
     run(new Get(), "-p", FROM.toString(), TO.toString());
-    assertAttributesPreserved();
+    assertAttributesPreserved(TO);
   }
 
   @Test(timeout = 10000)
   public void testGetWithoutP() throws Exception {
     run(new Get(), FROM.toString(), TO.toString());
-    assertAttributesChanged();
+    assertAttributesChanged(TO);
   }
 
   @Test(timeout = 10000)
   public void testCpWithP() throws Exception {
       run(new Cp(), "-p", FROM.toString(), TO.toString());
-      assertAttributesPreserved();
+      assertAttributesPreserved(TO);
   }
 
   @Test(timeout = 10000)
   public void testCpWithoutP() throws Exception {
       run(new Cp(), FROM.toString(), TO.toString());
-      assertAttributesChanged();
+      assertAttributesChanged(TO);
   }
 
   @Test(timeout = 10000)
   public void testDirectoryCpWithP() throws Exception {
-    run(new Cp(), "-p", "d1", "d3");
-    assertEquals(fs.getFileStatus(new Path("d1")).getModificationTime(),
-        fs.getFileStatus(new Path("d3")).getModificationTime());
-    assertEquals(fs.getFileStatus(new Path("d1")).getPermission(),
-        fs.getFileStatus(new Path("d3")).getPermission());
+    run(new Cp(), "-p", DIR_FROM.toString(), DIR_TO2.toString());
+    assertAttributesPreserved(DIR_TO2);
   }
 
   @Test(timeout = 10000)
   public void testDirectoryCpWithoutP() throws Exception {
-    run(new Cp(), "d1", "d4");
-    assertTrue(fs.getFileStatus(new Path("d1")).getModificationTime() !=
-        fs.getFileStatus(new Path("d4")).getModificationTime());
-    assertTrue(!fs.getFileStatus(new Path("d1")).getPermission()
-        .equals(fs.getFileStatus(new Path("d4")).getPermission()));
+    run(new Cp(), DIR_FROM.toString(), DIR_TO2.toString());
+    assertAttributesChanged(DIR_TO2);
   }
 }

@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
 import java.io.IOException;
+import java.io.OutputStream;
+
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.ChunkChecksum;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
@@ -57,6 +59,11 @@ public class ExternalReplicaInPipeline implements ReplicaInPipelineInterface {
   public ReplicaOutputStreams createStreams(boolean isCreate,
       DataChecksum requestedChecksum) throws IOException {
     return new ReplicaOutputStreams(null, null, requestedChecksum, false);
+  }
+
+  @Override
+  public OutputStream createRestartMetaStream() throws IOException {
+    return null;
   }
 
   @Override

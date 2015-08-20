@@ -297,7 +297,7 @@ public class TestFSEditLogLoader {
       // FSEditLog#endCurrentLogSegment.  For testing purposes, we
       // disable that here.
       doNothing().when(spyLog).endCurrentLogSegment(true);
-      spyLog.openForWrite();
+      spyLog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       assertTrue("should exist: " + inProgressFile, inProgressFile.exists());
       
       for (int i = 0; i < numTx; i++) {

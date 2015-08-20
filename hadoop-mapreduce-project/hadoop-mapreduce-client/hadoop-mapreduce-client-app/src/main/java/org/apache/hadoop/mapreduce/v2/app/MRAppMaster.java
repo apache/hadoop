@@ -233,7 +233,7 @@ public class MRAppMaster extends CompositeService {
   JobStateInternal forcedState = null;
   private final ScheduledExecutorService logSyncer;
 
-  private long recoveredJobStartTime = 0;
+  private long recoveredJobStartTime = -1L;
   private static boolean mainStarted = false;
 
   @VisibleForTesting
@@ -334,14 +334,20 @@ public class MRAppMaster extends CompositeService {
             " because a commit was started.");
         copyHistory = true;
         if (commitSuccess) {
-          shutDownMessage = "We crashed after successfully committing. Recovering.";
+          shutDownMessage =
+              "Job commit succeeded in a prior MRAppMaster attempt " +
+              "before it crashed. Recovering.";
           forcedState = JobStateInternal.SUCCEEDED;
         } else if (commitFailure) {
-          shutDownMessage = "We crashed after a commit failure.";
+          shutDownMessage =
+              "Job commit failed in a prior MRAppMaster attempt " +
+              "before it crashed. Not retrying.";
           forcedState = JobStateInternal.FAILED;
         } else {
           //The commit is still pending, commit error
-          shutDownMessage = "We crashed durring a commit";
+          shutDownMessage =
+              "Job commit from a prior MRAppMaster attempt is " +
+              "potentially in progress. Preventing multiple commit executions";
           forcedState = JobStateInternal.ERROR;
         }
       }
@@ -582,7 +588,7 @@ public class MRAppMaster extends CompositeService {
       //if isLastAMRetry comes as true, should never set it to false
       if ( !isLastAMRetry){
         if (((JobImpl)job).getInternalState() != JobStateInternal.REBOOT) {
-          LOG.info("We are finishing cleanly so this is the last retry");
+          LOG.info("Job finished cleanly, recording last MRAppMaster retry");
           isLastAMRetry = true;
         }
       }
@@ -1191,11 +1197,15 @@ public class MRAppMaster extends CompositeService {
       startJobs();
     }
   }
-  
+
+  protected void shutdownTaskLog() {
+    TaskLog.syncLogsShutdown(logSyncer);
+  }
+
   @Override
   public void stop() {
     super.stop();
-    TaskLog.syncLogsShutdown(logSyncer);
+    shutdownTaskLog();
   }
 
   private boolean isRecoverySupported() throws IOException {
@@ -1699,10 +1709,14 @@ public class MRAppMaster extends CompositeService {
     T call(Configuration conf) throws Exception;
   }
 
+  protected void shutdownLogManager() {
+    LogManager.shutdown();
+  }
+
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
-    LogManager.shutdown();
+    shutdownLogManager();
   }
 
   public ClientService getClientService() {

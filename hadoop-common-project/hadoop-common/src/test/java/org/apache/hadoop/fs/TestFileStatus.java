@@ -26,6 +26,9 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.junit.Test;
 import org.apache.commons.logging.Log;
@@ -183,6 +186,25 @@ public class TestFileStatus {
     validateToString(fileStatus);
   }
   
+  @Test
+  public void testCompareTo() throws IOException {
+    Path path1 = new Path("path1");
+    Path path2 = new Path("path2");
+    FileStatus fileStatus1 =
+        new FileStatus(1, true, 1, 1, 1, 1, FsPermission.valueOf("-rw-rw-rw-"),
+            "one", "one", null, path1);
+    FileStatus fileStatus2 =
+        new FileStatus(1, true, 1, 1, 1, 1, FsPermission.valueOf("-rw-rw-rw-"),
+            "one", "one", null, path2);
+    assertTrue(fileStatus1.compareTo(fileStatus2) < 0);
+    assertTrue(fileStatus2.compareTo(fileStatus1) > 0);
+
+    List<FileStatus> statList = new ArrayList<>();
+    statList.add(fileStatus1);
+    statList.add(fileStatus2);
+    assertTrue(Collections.binarySearch(statList, fileStatus1) > -1);
+  }
+
   /**
    * Check that toString produces the expected output for a symlink.
    */

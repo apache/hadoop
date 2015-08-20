@@ -135,7 +135,7 @@ public class TestReadOnlySharedStorage {
     extendedBlock = locatedBlock.getBlock();
     block = extendedBlock.getLocalBlock();
     storedBlock = blockManager.getStoredBlock(block);
-    
+
     assertThat(locatedBlock.getLocations().length, is(1));
     normalDataNode = locatedBlock.getLocations()[0];
     readOnlyDataNode = datanodeManager.getDatanode(cluster.getDataNodes().get(RO_NODE_INDEX).getDatanodeId());

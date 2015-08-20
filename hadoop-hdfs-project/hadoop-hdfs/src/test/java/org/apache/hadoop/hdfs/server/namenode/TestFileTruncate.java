@@ -55,7 +55,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -63,9 +63,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestFileTruncate {
@@ -91,8 +90,8 @@ public class TestFileTruncate {
 
  private Path parent;
 
-  @BeforeClass
-  public static void startUp() throws IOException {
+  @Before
+  public void setUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BLOCK_SIZE);
@@ -106,18 +105,13 @@ public class TestFileTruncate {
         .waitSafeMode(true)
         .build();
     fs = cluster.getFileSystem();
+    parent = new Path("/test");
   }
 
-  @AfterClass
-  public static void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     if(fs != null)      fs.close();
     if(cluster != null) cluster.shutdown();
-  }
-
-  @Before
-  public void setup() throws IOException {
-    parent = new Path("/test");
-    fs.delete(parent, true);
   }
 
   /**
@@ -811,6 +805,9 @@ public class TestFileTruncate {
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
 
+    Thread.sleep(2000);
+    // trigger the second time BR to delete the corrupted replica if there's one
+    cluster.triggerBlockReports();
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
     // Old replica is disregarded and replaced with the truncated one on dn0
@@ -1009,8 +1006,8 @@ public class TestFileTruncate {
     fsn.writeLock();
     try {
       Block oldBlock = file.getLastBlock();
-      Block truncateBlock =
-          fsn.prepareFileForTruncate(iip, client, clientMachine, 1, null);
+      Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
+          client, clientMachine, 1, null);
       // In-place truncate uses old block id with new genStamp.
       assertThat(truncateBlock.getBlockId(),
           is(equalTo(oldBlock.getBlockId())));
@@ -1020,7 +1017,7 @@ public class TestFileTruncate {
           is(fsn.getBlockIdManager().getGenerationStampV2()));
       assertThat(file.getLastBlock().getBlockUCState(),
           is(HdfsServerConstants.BlockUCState.UNDER_RECOVERY));
-      long blockRecoveryId = ((BlockInfoUnderConstructionContiguous) file.getLastBlock())
+      long blockRecoveryId = ((BlockInfoContiguousUnderConstruction) file.getLastBlock())
           .getBlockRecoveryId();
       assertThat(blockRecoveryId, is(initialGenStamp + 1));
       fsn.getEditLog().logTruncate(
@@ -1043,8 +1040,8 @@ public class TestFileTruncate {
     fsn.writeLock();
     try {
       Block oldBlock = file.getLastBlock();
-      Block truncateBlock =
-          fsn.prepareFileForTruncate(iip, client, clientMachine, 1, null);
+      Block truncateBlock = FSDirTruncateOp.prepareFileForTruncate(fsn, iip,
+          client, clientMachine, 1, null);
       // Copy-on-write truncate makes new block with new id and genStamp
       assertThat(truncateBlock.getBlockId(),
           is(not(equalTo(oldBlock.getBlockId()))));
@@ -1054,7 +1051,7 @@ public class TestFileTruncate {
           is(fsn.getBlockIdManager().getGenerationStampV2()));
       assertThat(file.getLastBlock().getBlockUCState(),
           is(HdfsServerConstants.BlockUCState.UNDER_RECOVERY));
-      long blockRecoveryId = ((BlockInfoUnderConstructionContiguous) file.getLastBlock())
+      long blockRecoveryId = ((BlockInfoContiguousUnderConstruction) file.getLastBlock())
           .getBlockRecoveryId();
       assertThat(blockRecoveryId, is(initialGenStamp + 1));
       fsn.getEditLog().logTruncate(

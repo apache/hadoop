@@ -253,7 +253,7 @@
                 <param>${basedir}/src/main/proto</param>
               </imports>
               <source>
-                <directory>${basedir}/src/main/proto/server</directory>
+                <directory>${basedir}/src/main/proto</directory>
                 <includes>
                   <include>yarn_security_token.proto</include>
                 </includes>

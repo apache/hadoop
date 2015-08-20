@@ -19,8 +19,7 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.util.Map;
-import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -238,13 +237,17 @@ public abstract class PipeMapRed {
   void addJobConfToEnvironment(JobConf jobconf, Properties env) {
     JobConf conf = new JobConf(jobconf);
     conf.setDeprecatedProperties();
-    Iterator it = conf.iterator();
-    while (it.hasNext()) {
-      Map.Entry en = (Map.Entry) it.next();
-      String name = (String) en.getKey();
-      //String value = (String)en.getValue(); // does not apply variable expansion
-      String value = conf.get(name); // does variable expansion 
+    int lenLimit = conf.getInt("stream.jobconf.truncate.limit", -1);
+
+    for (Entry<String, String> confEntry: conf) {
+      String name = confEntry.getKey();
+      String value = conf.get(name); // does variable expansion
       name = safeEnvVarName(name);
+      if (lenLimit > -1  && value.length() > lenLimit) {
+        LOG.warn("Environment variable " + name + " truncated to " + lenLimit
+            + " to  fit system limits.");
+        value = value.substring(0, lenLimit);
+      }
       envPut(env, name, value);
     }
   }

@@ -15,9 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 package org.apache.hadoop.yarn.client.api;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 

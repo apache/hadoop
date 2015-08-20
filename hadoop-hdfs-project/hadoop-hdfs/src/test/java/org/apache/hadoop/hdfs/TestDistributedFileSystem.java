@@ -40,8 +40,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -71,7 +73,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -824,7 +829,62 @@ public class TestDistributedFileSystem {
      noXmlDefaults = false; 
     }
   }
-  
+
+  @Test(timeout=120000)
+  public void testLocatedFileStatusStorageIdsTypes() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build();
+    try {
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final Path testFile = new Path("/testListLocatedStatus");
+      final int blockSize = 4096;
+      final int numBlocks = 10;
+      // Create a test file
+      final int repl = 2;
+      DFSTestUtil.createFile(fs, testFile, blockSize, numBlocks * blockSize,
+          blockSize, (short) repl, 0xADDED);
+      // Get the listing
+      RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(testFile);
+      assertTrue("Expected file to be present", it.hasNext());
+      LocatedFileStatus stat = it.next();
+      BlockLocation[] locs = stat.getBlockLocations();
+      assertEquals("Unexpected number of locations", numBlocks, locs.length);
+
+      Set<String> dnStorageIds = new HashSet<>();
+      for (DataNode d : cluster.getDataNodes()) {
+        try (FsDatasetSpi.FsVolumeReferences volumes = d.getFSDataset()
+            .getFsVolumeReferences()) {
+          for (FsVolumeSpi vol : volumes) {
+            dnStorageIds.add(vol.getStorageID());
+          }
+        }
+      }
+
+      for (BlockLocation loc : locs) {
+        String[] ids = loc.getStorageIds();
+        // Run it through a set to deduplicate, since there should be no dupes
+        Set<String> storageIds = new HashSet<>();
+        for (String id: ids) {
+          storageIds.add(id);
+        }
+        assertEquals("Unexpected num storage ids", repl, storageIds.size());
+        // Make sure these are all valid storage IDs
+        assertTrue("Unknown storage IDs found!", dnStorageIds.containsAll
+            (storageIds));
+        // Check storage types are the default, since we didn't set any
+        StorageType[] types = loc.getStorageTypes();
+        assertEquals("Unexpected num storage types", repl, types.length);
+        for (StorageType t: types) {
+          assertEquals("Unexpected storage type", StorageType.DEFAULT, t);
+        }
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   /**
    * Tests the normal path of batching up BlockLocation[]s to be passed to a
@@ -1132,10 +1192,9 @@ public class TestDistributedFileSystem {
       cluster.shutdown();
     }
   }
-  
-  
+
   @Test(timeout=10000)
-  public void testDFSClientPeerTimeout() throws IOException {
+  public void testDFSClientPeerReadTimeout() throws IOException {
     final int timeout = 1000;
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
@@ -1152,11 +1211,11 @@ public class TestDistributedFileSystem {
       long start = Time.now();
       try {
         peer.getInputStream().read();
-        Assert.fail("should timeout");
+        Assert.fail("read should timeout");
       } catch (SocketTimeoutException ste) {
         long delta = Time.now() - start;
-        Assert.assertTrue("timedout too soon", delta >= timeout*0.9);
-        Assert.assertTrue("timedout too late", delta <= timeout*1.1);
+        Assert.assertTrue("read timedout too soon", delta >= timeout*0.9);
+        Assert.assertTrue("read timedout too late", delta <= timeout*1.1);
       } catch (Throwable t) {
         Assert.fail("wrong exception:"+t);
       }
@@ -1174,6 +1233,41 @@ public class TestDistributedFileSystem {
       DistributedFileSystem dfs = cluster.getFileSystem();
       FsServerDefaults fsServerDefaults = dfs.getServerDefaults();
       Assert.assertNotNull(fsServerDefaults);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=10000)
+  public void testDFSClientPeerWriteTimeout() throws IOException {
+    final int timeout = 1000;
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
+
+    // only need cluster to create a dfs client to get a peer
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      // Write 10 MB to a dummy socket to ensure the write times out
+      ServerSocket socket = new ServerSocket(0);
+      Peer peer = dfs.getClient().newConnectedPeer(
+        (InetSocketAddress) socket.getLocalSocketAddress(), null, null);
+      long start = Time.now();
+      try {
+        byte[] buf = new byte[10 * 1024 * 1024];
+        peer.getOutputStream().write(buf);
+        long delta = Time.now() - start;
+        Assert.fail("write finish in " + delta + " ms" + "but should timedout");
+      } catch (SocketTimeoutException ste) {
+        long delta = Time.now() - start;
+        Assert.assertTrue("write timedout too soon in " + delta + " ms",
+            delta >= timeout * 0.9);
+        Assert.assertTrue("write timedout too late in " + delta + " ms",
+            delta <= timeout * 1.2);
+      } catch (Throwable t) {
+        Assert.fail("wrong exception:" + t);
+      }
     } finally {
       cluster.shutdown();
     }

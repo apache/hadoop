@@ -231,4 +231,22 @@ abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
       // Expected.
     }
   }
+
+  @Override
+  public void testSetTimesSymlinkToFile() throws IOException {
+    assumeTrue(!Path.WINDOWS);
+    super.testSetTimesSymlinkToFile();
+  }
+
+  @Override
+  public void testSetTimesSymlinkToDir() throws IOException {
+    assumeTrue(!Path.WINDOWS);
+    super.testSetTimesSymlinkToDir();
+  }
+
+  @Override
+  public void testSetTimesDanglingLink() throws IOException {
+    assumeTrue(!Path.WINDOWS);
+    super.testSetTimesDanglingLink();
+  }
 }

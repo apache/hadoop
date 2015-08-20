@@ -541,38 +541,36 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
 
       return container.getResource();
-    } else {
-      if (!FairScheduler.fitsInMaxShare(getQueue(), capability)) {
-        return Resources.none();
-      }
-
-      // The desired container won't fit here, so reserve
-      reserve(request.getPriority(), node, container, reserved);
-
-      return FairScheduler.CONTAINER_RESERVED;
     }
+
+    // The desired container won't fit here, so reserve
+    reserve(request.getPriority(), node, container, reserved);
+
+    return FairScheduler.CONTAINER_RESERVED;
   }
 
   private boolean hasNodeOrRackLocalRequests(Priority priority) {
     return getResourceRequests(priority).size() > 1;
   }
 
-  private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
-    }
-
+  /**
+   * Whether the AM container for this app is over maxAMShare limit.
+   */
+  private boolean isOverAMShareLimit() {
     // Check the AM resource usage for the leaf queue
     if (!isAmRunning() && !getUnmanagedAM()) {
       List<ResourceRequest> ask = appSchedulingInfo.getAllResourceRequests();
       if (ask.isEmpty() || !getQueue().canRunAppAM(
           ask.get(0).getCapability())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping allocation because maxAMShare limit would " +
-              "be exceeded");
-        }
-        return Resources.none();
+        return true;
       }
+    }
+    return false;
+  }
+
+  private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
     }
 
     Collection<Priority> prioritiesToTry = (reserved) ?
@@ -584,8 +582,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // (not scheduled) in order to promote better locality.
     synchronized (this) {
       for (Priority priority : prioritiesToTry) {
-        if (getTotalRequiredResources(priority) <= 0 ||
-            !hasContainerForNode(priority, node)) {
+        // Skip it for reserved container, since
+        // we already check it in isValidReservation.
+        if (!reserved && !hasContainerForNode(priority, node)) {
           continue;
         }
 
@@ -651,41 +650,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   /**
-   * Called when this application already has an existing reservation on the
-   * given node.  Sees whether we can turn the reservation into an allocation.
-   * Also checks whether the application needs the reservation anymore, and
-   * releases it if not.
-   *
-   * @param node
-   *     Node that the application has an existing reservation on
-   */
-  public Resource assignReservedContainer(FSSchedulerNode node) {
-    RMContainer rmContainer = node.getReservedContainer();
-    Priority priority = rmContainer.getReservedPriority();
-
-    // Make sure the application still needs requests at this priority
-    if (getTotalRequiredResources(priority) == 0) {
-      unreserve(priority, node);
-      return Resources.none();
-    }
-
-    // Fail early if the reserved container won't fit.
-    // Note that we have an assumption here that there's only one container size
-    // per priority.
-    if (!Resources.fitsIn(node.getReservedContainer().getReservedResource(),
-        node.getAvailableResource())) {
-      return Resources.none();
-    }
-
-    return assignContainer(node, true);
-  }
-
-
-  /**
    * Whether this app has containers requests that could be satisfied on the
    * given node, if the node had full space.
    */
-  public boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
+  private boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
     ResourceRequest anyRequest = getResourceRequest(prio, ResourceRequest.ANY);
     ResourceRequest rackRequest = getResourceRequest(prio, node.getRackName());
     ResourceRequest nodeRequest = getResourceRequest(prio, node.getNodeName());
@@ -703,9 +671,56 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
                 (nodeRequest != null && nodeRequest.getNumContainers() > 0)) &&
             // The requested container must be able to fit on the node:
             Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
-                anyRequest.getCapability(), node.getRMNode().getTotalCapability());
+                anyRequest.getCapability(),
+                node.getRMNode().getTotalCapability()) &&
+            // The requested container must fit in queue maximum share:
+            getQueue().fitsInMaxShare(anyRequest.getCapability());
   }
 
+  private boolean isValidReservation(FSSchedulerNode node) {
+    Priority reservedPriority = node.getReservedContainer().
+        getReservedPriority();
+    return hasContainerForNode(reservedPriority, node) &&
+        !isOverAMShareLimit();
+  }
+
+  /**
+   * Called when this application already has an existing reservation on the
+   * given node.  Sees whether we can turn the reservation into an allocation.
+   * Also checks whether the application needs the reservation anymore, and
+   * releases it if not.
+   *
+   * @param node
+   *     Node that the application has an existing reservation on
+   * @return whether the reservation on the given node is valid.
+   */
+  public boolean assignReservedContainer(FSSchedulerNode node) {
+    RMContainer rmContainer = node.getReservedContainer();
+    Priority reservedPriority = rmContainer.getReservedPriority();
+
+    if (!isValidReservation(node)) {
+      // Don't hold the reservation if app can no longer use it
+      LOG.info("Releasing reservation that cannot be satisfied for " +
+          "application " + getApplicationAttemptId() + " on node " + node);
+      unreserve(reservedPriority, node);
+      return false;
+    }
+
+    // Reservation valid; try to fulfill the reservation
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Trying to fulfill reservation for application "
+          + getApplicationAttemptId() + " on node: " + node);
+    }
+
+    // Fail early if the reserved container won't fit.
+    // Note that we have an assumption here that
+    // there's only one container size per priority.
+    if (Resources.fitsIn(node.getReservedContainer().getReservedResource(),
+        node.getAvailableResource())) {
+      assignContainer(node, true);
+    }
+    return true;
+  }
 
   static class RMContainerComparator implements Comparator<RMContainer>,
       Serializable {
@@ -786,8 +801,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     synchronized (this) {
       for (Priority p : getPriorities()) {
         for (ResourceRequest r : getResourceRequests(p).values()) {
-          Resource total = Resources.multiply(r.getCapability(), r.getNumContainers());
-          Resources.addTo(demand, total);
+          Resources.multiplyAndAddTo(demand,
+              r.getCapability(), r.getNumContainers());
         }
       }
     }
@@ -795,6 +810,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource assignContainer(FSSchedulerNode node) {
+    if (isOverAMShareLimit()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping allocation because maxAMShare limit would " +
+            "be exceeded");
+      }
+      return Resources.none();
+    }
     return assignContainer(node, false);
   }
 

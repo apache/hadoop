@@ -107,7 +107,7 @@ public class ApplicationMasterService extends AbstractService implements
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
-  private InetSocketAddress bindAddress;
+  private InetSocketAddress masterServiceAddress;
   private Server server;
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -123,15 +123,18 @@ public class ApplicationMasterService extends AbstractService implements
   }
 
   @Override
-  protected void serviceStart() throws Exception {
-    Configuration conf = getConfig();
-    YarnRPC rpc = YarnRPC.create(conf);
-
-    InetSocketAddress masterServiceAddress = conf.getSocketAddr(
+  protected void serviceInit(Configuration conf) throws Exception {
+    masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_BIND_HOST,
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
 
     Configuration serverConf = conf;
     // If the auth is not-simple, enforce it to be token-based.
@@ -160,7 +163,7 @@ public class ApplicationMasterService extends AbstractService implements
     }
     
     this.server.start();
-    this.bindAddress =
+    this.masterServiceAddress =
         conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
                                YarnConfiguration.RM_SCHEDULER_ADDRESS,
                                YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
@@ -170,7 +173,7 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Private
   public InetSocketAddress getBindAddress() {
-    return this.bindAddress;
+    return this.masterServiceAddress;
   }
 
   // Obtain the needed AMRMTokenIdentifier from the remote-UGI. RPC layer

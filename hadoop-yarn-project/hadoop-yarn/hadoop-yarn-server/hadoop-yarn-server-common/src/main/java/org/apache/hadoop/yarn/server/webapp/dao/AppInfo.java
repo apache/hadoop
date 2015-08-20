@@ -58,6 +58,10 @@ public class AppInfo {
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
+  protected int priority;
+  private int allocatedCpuVcores;
+  private int allocatedMemoryMB;
+  protected boolean unmanagedApplication;
 
   public AppInfo() {
     // JAXB needs this
@@ -83,14 +87,25 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
+    priority = 0;
+    if (app.getPriority() != null) {
+      priority = app.getPriority().getPriority();
+    }
     if (app.getApplicationResourceUsageReport() != null) {
-      runningContainers =
-          app.getApplicationResourceUsageReport().getNumUsedContainers();
+      runningContainers = app.getApplicationResourceUsageReport()
+          .getNumUsedContainers();
+      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
+        allocatedCpuVcores = app.getApplicationResourceUsageReport()
+            .getUsedResources().getVirtualCores();
+        allocatedMemoryMB = app.getApplicationResourceUsageReport()
+            .getUsedResources().getMemory();
+      }
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
     }
+    unmanagedApplication = app.isUnmanagedApp();
   }
 
   public String getAppId() {
@@ -133,6 +148,14 @@ public class AppInfo {
     return runningContainers;
   }
 
+  public int getAllocatedCpuVcores() {
+    return allocatedCpuVcores;
+  }
+
+  public int getAllocatedMemoryMB() {
+    return allocatedMemoryMB;
+  }
+
   public float getProgress() {
     return progress;
   }
@@ -171,5 +194,13 @@ public class AppInfo {
 
   public String getApplicationTags() {
     return applicationTags;
+  }
+
+  public boolean isUnmanagedApp() {
+    return unmanagedApplication;
+  }
+
+  public int getPriority() {
+    return priority;
   }
 }

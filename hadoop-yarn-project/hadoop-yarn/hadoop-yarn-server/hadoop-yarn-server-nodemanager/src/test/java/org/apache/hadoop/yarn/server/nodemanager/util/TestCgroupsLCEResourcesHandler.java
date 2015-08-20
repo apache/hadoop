@@ -160,6 +160,7 @@ public class TestCgroupsLCEResourcesHandler {
     ResourceCalculatorPlugin plugin =
         Mockito.mock(ResourceCalculatorPlugin.class);
     Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
+    Mockito.doReturn(numProcessors).when(plugin).getNumCores();
     handler.setConf(conf);
     handler.initConfig();
 
@@ -256,6 +257,7 @@ public class TestCgroupsLCEResourcesHandler {
     ResourceCalculatorPlugin plugin =
         Mockito.mock(ResourceCalculatorPlugin.class);
     Mockito.doReturn(numProcessors).when(plugin).getNumProcessors();
+    Mockito.doReturn(numProcessors).when(plugin).getNumCores();
     handler.setConf(conf);
     handler.initConfig();
 

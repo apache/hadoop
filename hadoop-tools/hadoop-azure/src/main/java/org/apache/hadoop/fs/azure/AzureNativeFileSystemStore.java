@@ -2301,7 +2301,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     throws AzureException {
     if (blob instanceof CloudPageBlobWrapper) {
       try {
-        return PageBlobInputStream.getPageBlobSize((CloudPageBlobWrapper) blob,
+        return PageBlobInputStream.getPageBlobDataSize((CloudPageBlobWrapper) blob,
             getInstrumentedContext(
                 isConcurrentOOBAppendAllowed()));
       } catch (Exception e) {
@@ -2434,15 +2434,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       //
       CloudBlobWrapper dstBlob = getBlobReference(dstKey);
 
-      // TODO: Remove at the time when we move to Azure Java SDK 1.2+.
-      // This is the workaround provided by Azure Java SDK team to
-      // mitigate the issue with un-encoded x-ms-copy-source HTTP
-      // request header. Azure sdk version before 1.2+ does not encode this
-      // header what causes all URIs that have special (category "other")
-      // characters in the URI not to work with startCopyFromBlob when
-      // specified as source (requests fail with HTTP 403).
-      URI srcUri = new URI(srcBlob.getUri().toASCIIString());
-
       // Rename the source blob to the destination blob by copying it to
       // the destination blob then deleting it.
       //
@@ -2451,7 +2442,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // a more intensive exponential retry policy when the cluster is getting 
       // throttled.
       try {
-        dstBlob.startCopyFromBlob(srcUri, null, getInstrumentedContext());
+        dstBlob.startCopyFromBlob(srcBlob, null, getInstrumentedContext());
       } catch (StorageException se) {
         if (se.getErrorCode().equals(
 		  StorageErrorCode.SERVER_BUSY.toString())) {
@@ -2475,7 +2466,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           options.setRetryPolicyFactory(new RetryExponentialRetry(
             copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff, 
 			copyBlobMaxRetries));
-          dstBlob.startCopyFromBlob(srcUri, options, getInstrumentedContext());
+          dstBlob.startCopyFromBlob(srcBlob, options, getInstrumentedContext());
         } else {
           throw se;
         }

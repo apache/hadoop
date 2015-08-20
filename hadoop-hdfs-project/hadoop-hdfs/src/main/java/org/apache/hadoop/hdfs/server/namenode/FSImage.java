@@ -572,9 +572,9 @@ public class FSImage implements Closeable {
     return editLog;
   }
 
-  void openEditLogForWrite() throws IOException {
+  void openEditLogForWrite(int layoutVersion) throws IOException {
     assert editLog != null : "editLog must be initialized";
-    editLog.openForWrite();
+    editLog.openForWrite(layoutVersion);
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
   }
   
@@ -907,11 +907,9 @@ public class FSImage implements Closeable {
             + " quota = " + ssQuota + " < consumed = " + ssConsumed);
       }
 
-      final EnumCounters<StorageType> typeSpaces =
-          new EnumCounters<StorageType>(StorageType.class);
+      final EnumCounters<StorageType> typeSpaces = counts.getTypeSpaces();
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
-        final long typeSpace = counts.getTypeSpaces().get(t) -
-            parentTypeSpaces.get(t);
+        final long typeSpace = typeSpaces.get(t) - parentTypeSpaces.get(t);
         final long typeQuota = q.getTypeSpaces().get(t);
         if (Quota.isViolated(typeQuota, typeSpace)) {
           LOG.warn("Storage type quota violation in image for "
@@ -1127,10 +1125,13 @@ public class FSImage implements Closeable {
     try {
       try {
         saveFSImageInAllDirs(source, nnf, imageTxId, canceler);
-        storage.writeAll();
+        if (!source.isRollingUpgrade()) {
+          storage.writeAll();
+        }
       } finally {
         if (editLogWasOpen) {
-          editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1);
+          editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1,
+              source.getEffectiveLayoutVersion());
           // Take this opportunity to note the current transaction.
           // Even if the namespace save was cancelled, this marker
           // is only used to determine what transaction ID is required
@@ -1209,6 +1210,7 @@ public class FSImage implements Closeable {
       // Since we now have a new checkpoint, we can clean up some
       // old edit logs and checkpoints.
       purgeOldStorage(nnf);
+      archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_NEW);
     } finally {
       // Notify any threads waiting on the checkpoint to be canceled
       // that it is complete.
@@ -1314,8 +1316,8 @@ public class FSImage implements Closeable {
     }
   }
 
-  CheckpointSignature rollEditLog() throws IOException {
-    getEditLog().rollEditLog();
+  CheckpointSignature rollEditLog(int layoutVersion) throws IOException {
+    getEditLog().rollEditLog(layoutVersion);
     // Record this log segment ID in all of the storage directories, so
     // we won't miss this log segment on a restart if the edits directories
     // go missing.
@@ -1340,7 +1342,8 @@ public class FSImage implements Closeable {
    * @throws IOException
    */
   NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
-                                  NamenodeRegistration nnReg) // active name-node
+                                  NamenodeRegistration nnReg,
+                                  int layoutVersion) // active name-node
   throws IOException {
     LOG.info("Start checkpoint at txid " + getEditLog().getLastWrittenTxId());
     String msg = null;
@@ -1369,7 +1372,7 @@ public class FSImage implements Closeable {
     if(storage.getNumStorageDirs(NameNodeDirType.IMAGE) == 0)
       // do not return image if there are no image directories
       needToReturnImg = false;
-    CheckpointSignature sig = rollEditLog();
+    CheckpointSignature sig = rollEditLog(layoutVersion);
     return new CheckpointCommand(sig, needToReturnImg);
   }
 

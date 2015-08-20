@@ -135,6 +135,15 @@ public class TestAmFilterInitializer extends TestCase {
     assertEquals(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf),
         proxyHosts.get(0));
 
+    // Check conf in which only RM hostname is set
+    conf = new Configuration(false);
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS,
+        "${yarn.resourcemanager.hostname}:8088"); // default in yarn-default.xml
+    conf.set(YarnConfiguration.RM_HOSTNAME, "host1");
+    proxyHosts = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
+    assertEquals(1, proxyHosts.size());
+    assertEquals("host1:8088", proxyHosts.get(0));
+
     // Check PROXY_ADDRESS has priority
     conf = new Configuration(false);
     conf.set(YarnConfiguration.PROXY_ADDRESS, "host1:1000");
@@ -188,6 +197,44 @@ public class TestAmFilterInitializer extends TestCase {
     Collections.sort(proxyHosts);
     assertEquals("host5:5000", proxyHosts.get(0));
     assertEquals("host6:6000", proxyHosts.get(1));
+
+    // Check config without explicit RM_WEBAPP_ADDRESS settings (RM HA)
+    conf = new Configuration(false);
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm1", "host2");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm2", "host3");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm3", "host4");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm4", "dummy");
+    proxyHosts = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
+    assertEquals(3, proxyHosts.size());
+    Collections.sort(proxyHosts);
+    assertEquals("host2:" + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT,
+        proxyHosts.get(0));
+    assertEquals("host3:" + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT,
+        proxyHosts.get(1));
+    assertEquals("host4:" + YarnConfiguration.DEFAULT_RM_WEBAPP_PORT,
+        proxyHosts.get(2));
+
+    // Check config without explicit RM_WEBAPP_HTTPS_ADDRESS settings (RM HA)
+    conf = new Configuration(false);
+    conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
+        HttpConfig.Policy.HTTPS_ONLY.toString());
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm1", "host2");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm2", "host3");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm3", "host4");
+    conf.set(YarnConfiguration.RM_HOSTNAME + ".rm4", "dummy");
+    proxyHosts = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
+    assertEquals(3, proxyHosts.size());
+    Collections.sort(proxyHosts);
+    assertEquals("host2:" + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT,
+        proxyHosts.get(0));
+    assertEquals("host3:" + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT,
+        proxyHosts.get(1));
+    assertEquals("host4:" + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT,
+        proxyHosts.get(2));
   }
 
   class MockAmFilterInitializer extends AmFilterInitializer {

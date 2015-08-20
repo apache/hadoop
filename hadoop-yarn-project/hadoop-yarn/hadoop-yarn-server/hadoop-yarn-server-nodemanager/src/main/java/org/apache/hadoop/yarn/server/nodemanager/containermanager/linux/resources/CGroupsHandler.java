@@ -79,6 +79,14 @@ public interface CGroupsHandler {
       ResourceHandlerException;
 
   /**
+   * Gets the relative path for the cgroup, independent of a controller, for a
+   * given cgroup id.
+   * @param cGroupId - id of the cgroup
+   * @return path for the cgroup relative to the root of (any) controller.
+   */
+  public String getRelativePathForCGroup(String cGroupId);
+
+  /**
    * Gets the full path for the cgroup, given a controller and a cgroup id
    * @param controller - controller type for the cgroup
    * @param cGroupId - id of the cgroup

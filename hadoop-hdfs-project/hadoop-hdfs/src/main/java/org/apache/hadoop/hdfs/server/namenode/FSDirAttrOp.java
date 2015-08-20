@@ -200,6 +200,29 @@ public class FSDirAttrOp {
     return bm.getStoragePolicies();
   }
 
+  static BlockStoragePolicy getStoragePolicy(FSDirectory fsd, BlockManager bm,
+      String path) throws IOException {
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    byte[][] pathComponents = FSDirectory
+        .getPathComponentsForReservedPath(path);
+    fsd.readLock();
+    try {
+      path = fsd.resolvePath(pc, path, pathComponents);
+      final INodesInPath iip = fsd.getINodesInPath(path, false);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPathAccess(pc, iip, FsAction.READ);
+      }
+      INode inode = iip.getLastINode();
+      if (inode == null) {
+        throw new FileNotFoundException("File/Directory does not exist: "
+            + iip.getPath());
+      }
+      return bm.getStoragePolicy(inode.getStoragePolicyID());
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
   static long getPreferredBlockSize(FSDirectory fsd, String src)
       throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
@@ -479,8 +502,7 @@ public class FSDirAttrOp {
 
       // if the last access time update was within the last precision interval, then
       // no need to store access time
-      if (atime <= inodeTime + fsd.getFSNamesystem().getAccessTimePrecision()
-          && !force) {
+      if (atime <= inodeTime + fsd.getAccessTimePrecision() && !force) {
         status =  false;
       } else {
         inode.setAccessTime(atime, latest);

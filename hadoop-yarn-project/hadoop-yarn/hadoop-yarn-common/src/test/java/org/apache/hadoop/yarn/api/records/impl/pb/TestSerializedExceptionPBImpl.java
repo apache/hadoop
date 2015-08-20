@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.junit.Assert;
-import org.apache.hadoop.yarn.api.records.impl.pb.SerializedExceptionPBImpl;
+import java.nio.channels.ClosedChannelException;
+
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSerializedExceptionPBImpl {
@@ -55,6 +56,15 @@ public class TestSerializedExceptionPBImpl {
   }
 
   @Test
+  public void testDeserializeWithDefaultConstructor() {
+    // Init SerializedException with an Exception with default constructor.
+    ClosedChannelException ex = new ClosedChannelException();
+    SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
+    pb.init(ex);
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
+  }
+
+  @Test
   public void testBeforeInit() throws Exception {
     SerializedExceptionProto defaultProto =
         SerializedExceptionProto.newBuilder().build();
@@ -67,5 +77,14 @@ public class TestSerializedExceptionPBImpl {
 
     SerializedExceptionPBImpl pb3 = new SerializedExceptionPBImpl();
     Assert.assertEquals(defaultProto.getTrace(), pb3.getRemoteTrace());
+  }
+
+  @Test
+  public void testThrowableDeserialization() {
+    // java.lang.Error should also be serializable
+    Error ex = new Error();
+    SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
+    pb.init(ex);
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
   }
 }

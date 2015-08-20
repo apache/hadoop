@@ -290,9 +290,15 @@ public class DFSAdmin extends FsShell {
       String storageTypeString =
           StringUtils.popOptionWithArgument("-storageType", parameters);
       if (storageTypeString != null) {
-        this.type = StorageType.parseStorageType(storageTypeString);
+        try {
+          this.type = StorageType.parseStorageType(storageTypeString);
+        } catch (IllegalArgumentException e) {
+          throw new IllegalArgumentException("Storage type "
+              + storageTypeString
+              + " is not available. Available storage types are "
+              + StorageType.getTypesSupportingQuota());
+        }
       }
-      
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -407,7 +413,7 @@ public class DFSAdmin extends FsShell {
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
     "\t[-refreshCallQueue]\n" +
     "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-    "\t[-reconfig <datanode|...> <host:ipc_port> <start|status>]\n" +
+    "\t[-reconfig <datanode|...> <host:ipc_port> <start|status|properties>]\n" +
     "\t[-printTopology]\n" +
     "\t[-refreshNamenodes datanode_host:ipc_port]\n"+
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
@@ -910,9 +916,11 @@ public class DFSAdmin extends FsShell {
       commonUsageSummary;
 
     String report ="-report [-live] [-dead] [-decommissioning]:\n" +
-      "\tReports basic filesystem information and statistics.\n" +
+      "\tReports basic filesystem information and statistics. \n" +
+      "\tThe dfs usage can be different from \"du\" usage, because it\n" +
+      "\tmeasures raw space used by replication, checksums, snapshots\n" +
+      "\tand etc. on all the DNs.\n" +
       "\tOptional flags may be used to filter the list of displayed DNs.\n";
-    
 
     String safemode = "-safemode <enter|leave|get|wait>:  Safe mode maintenance command.\n" + 
       "\t\tSafe mode is a Namenode state in which it\n" +
@@ -977,8 +985,9 @@ public class DFSAdmin extends FsShell {
 
     String refreshCallQueue = "-refreshCallQueue: Reload the call queue from config\n";
 
-    String reconfig = "-reconfig <datanode|...> <host:ipc_port> <start|status>:\n" +
-        "\tStarts reconfiguration or gets the status of an ongoing reconfiguration.\n" +
+    String reconfig = "-reconfig <datanode|...> <host:ipc_port> <start|status|properties>:\n" +
+        "\tStarts or gets the status of a reconfiguration operation, \n" +
+        "\tor gets a list of reconfigurable properties.\n" +
         "\tThe second parameter specifies the node type.\n" +
         "\tCurrently, only reloading DataNode's configuration is supported.\n";
 
@@ -1437,6 +1446,9 @@ public class DFSAdmin extends FsShell {
       return startReconfiguration(nodeType, address);
     } else if ("status".equals(op)) {
       return getReconfigurationStatus(nodeType, address, System.out, System.err);
+    } else if ("properties".equals(op)) {
+      return getReconfigurableProperties(
+          nodeType, address, System.out, System.err);
     }
     System.err.println("Unknown operation: " + op);
     return -1;
@@ -1474,18 +1486,24 @@ public class DFSAdmin extends FsShell {
 
         out.println(" and finished at " +
             new Date(status.getEndTime()).toString() + ".");
+        if (status.getStatus() == null) {
+          // Nothing to report.
+          return 0;
+        }
         for (Map.Entry<PropertyChange, Optional<String>> result :
             status.getStatus().entrySet()) {
           if (!result.getValue().isPresent()) {
-            out.print("SUCCESS: ");
+            out.printf(
+                "SUCCESS: Changed property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
+                result.getKey().prop, result.getKey().oldVal,
+                result.getKey().newVal);
           } else {
-            out.print("FAILED: ");
-          }
-          out.printf("Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
-              result.getKey().prop, result.getKey().oldVal,
-              result.getKey().newVal);
-          if (result.getValue().isPresent()) {
-            out.println("\tError: " + result.getValue().get() + ".");
+            final String errorMsg = result.getValue().get();
+            out.printf(
+                  "FAILED: Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
+                  result.getKey().prop, result.getKey().oldVal,
+                  result.getKey().newVal);
+            out.println("\tError: " + errorMsg + ".");
           }
         }
       } catch (IOException e) {
@@ -1493,7 +1511,32 @@ public class DFSAdmin extends FsShell {
         return 1;
       }
     } else {
-      err.println("Node type " + nodeType + " does not support reconfiguration.");
+      err.println("Node type " + nodeType +
+          " does not support reconfiguration.");
+      return 1;
+    }
+    return 0;
+  }
+
+  int getReconfigurableProperties(String nodeType, String address,
+      PrintStream out, PrintStream err) throws IOException {
+    if ("datanode".equals(nodeType)) {
+      ClientDatanodeProtocol dnProxy = getDataNodeProxy(address);
+      try {
+        List<String> properties =
+            dnProxy.listReconfigurableProperties();
+        out.println(
+            "Configuration properties that are allowed to be reconfigured:");
+        for (String name : properties) {
+          out.println(name);
+        }
+      } catch (IOException e) {
+        err.println("DataNode reconfiguration: " + e + ".");
+        return 1;
+      }
+    } else {
+      err.println("Node type " + nodeType +
+          " does not support reconfiguration.");
       return 1;
     }
     return 0;

@@ -872,6 +872,10 @@ public class StringUtils {
     return sb.toString();
   }
 
+  public static String join(char separator, Iterable<?> strings) {
+    return join(separator + "", strings);
+  }
+
   /**
    * Concatenates strings, using a separator.
    *
@@ -892,6 +896,10 @@ public class StringUtils {
       sb.append(s);
     }
     return sb.toString();
+  }
+
+  public static String join(char separator, String[] strings) {
+    return join(separator + "", strings);
   }
 
   /**

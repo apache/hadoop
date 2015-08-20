@@ -72,7 +72,7 @@ function shellcheck_preapply
   start_clock
 
   # shellcheck disable=SC2016
-  SHELLCHECK_VERSION=$(shellcheck --version | ${GREP} version: | ${AWK} '{print $NF}')
+  SHELLCHECK_VERSION=$(${SHELLCHECK} --version | ${GREP} version: | ${AWK} '{print $NF}')
 
   echo "Running shellcheck against all identifiable shell scripts"
   pushd "${BASEDIR}" >/dev/null

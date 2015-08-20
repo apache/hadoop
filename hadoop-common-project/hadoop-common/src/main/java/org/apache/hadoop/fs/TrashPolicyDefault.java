@@ -89,9 +89,6 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);
-    LOG.info("Namenode trash configuration: Deletion interval = " +
-             (this.deletionInterval / MSECS_PER_MINUTE) + " minutes, Emptier interval = " +
-             (this.emptierInterval / MSECS_PER_MINUTE) + " minutes.");
    }
 
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
@@ -251,6 +248,10 @@ public class TrashPolicyDefault extends TrashPolicy {
                  " minutes that is used for deletion instead");
         this.emptierInterval = deletionInterval;
       }
+      LOG.info("Namenode trash configuration: Deletion interval = "
+          + (deletionInterval / MSECS_PER_MINUTE)
+          + " minutes, Emptier interval = "
+          + (emptierInterval / MSECS_PER_MINUTE) + " minutes.");
     }
 
     @Override

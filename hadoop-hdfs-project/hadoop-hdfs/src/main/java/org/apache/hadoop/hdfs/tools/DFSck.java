@@ -78,8 +78,9 @@ public class DFSck extends Configured implements Tool {
   private static final String USAGE = "Usage: hdfs fsck <path> "
       + "[-list-corruptfileblocks | "
       + "[-move | -delete | -openforwrite] "
-      + "[-files [-blocks [-locations | -racks]]]] "
-      + "[-includeSnapshots] [-showprogress]\n"
+      + "[-files [-blocks [-locations | -racks | -replicaDetails]]]] "
+      + "[-includeSnapshots] [-showprogress] "
+      + "[-storagepolicies] [-blockId <blk_Id>]\n"
       + "\t<path>\tstart checking from this path\n"
       + "\t-move\tmove corrupted files to /lost+found\n"
       + "\t-delete\tdelete corrupted files\n"
@@ -94,12 +95,12 @@ public class DFSck extends Configured implements Tool {
       + "\t-files -blocks -locations\tprint out locations for every block\n"
       + "\t-files -blocks -racks" 
       + "\tprint out network topology for data-node locations\n"
+      + "\t-files -blocks -replicaDetails\tprint out each replica details \n"
       + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
-      + " (under replicated, corrupted or not, etc)\n"
-      + "\t-replicaDetails\tprint out each replica details \n\n"
+      + " (under replicated, corrupted or not, etc)\n\n"
       + "Please Note:\n"
       + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
@@ -376,7 +377,6 @@ public class DFSck extends Configured implements Tool {
     int res = -1;
     if ((args.length == 0) || ("-files".equals(args[0]))) {
       printUsage(System.err);
-      ToolRunner.printGenericCommandUsage(System.err);
     } else if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
       res = 0;
     } else {

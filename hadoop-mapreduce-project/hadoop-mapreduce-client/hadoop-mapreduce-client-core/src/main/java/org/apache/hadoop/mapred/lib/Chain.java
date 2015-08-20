@@ -290,7 +290,7 @@ class Chain extends org.apache.hadoop.mapreduce.lib.chain.Chain {
   // using a ThreadLocal to reuse the ByteArrayOutputStream used for ser/deser
   // it has to be a thread local because if not it would break if used from a
   // MultiThreadedMapRunner.
-  private ThreadLocal<DataOutputBuffer> threadLocalDataOutputBuffer =
+  private final ThreadLocal<DataOutputBuffer> threadLocalDataOutputBuffer =
     new ThreadLocal<DataOutputBuffer>() {
       protected DataOutputBuffer initialValue() {
         return new DataOutputBuffer(1024);

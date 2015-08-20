@@ -181,6 +181,8 @@ public class DFSUtilClient {
       }
       blkLocations[idx] = new BlockLocation(xferAddrs, hosts, cachedHosts,
                                             racks,
+                                            blk.getStorageIDs(),
+                                            blk.getStorageTypes(),
                                             blk.getStartOffset(),
                                             blk.getBlockSize(),
                                             blk.isCorrupt());
@@ -317,10 +319,9 @@ public class DFSUtilClient {
       if (address != null) {
         InetSocketAddress isa = NetUtils.createSocketAddr(address);
         if (isa.isUnresolved()) {
-          LOG.warn("Namenode for " + nsId +
-                       " remains unresolved for ID " + nnId +
-                   ".  Check your hdfs-site.xml file to " +
-                   "ensure namenodes are configured properly.");
+          LOG.warn("Namenode for {} remains unresolved for ID {}. Check your "
+              + "hdfs-site.xml file to ensure namenodes are configured "
+              + "properly.", nsId, nnId);
         }
         ret.put(nnId, isa);
       }

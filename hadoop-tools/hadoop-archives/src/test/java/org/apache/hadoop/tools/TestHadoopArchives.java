@@ -21,7 +21,6 @@ package org.apache.hadoop.tools;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URI;
 import java.util.ArrayList;
@@ -39,7 +38,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.JarFinder;
@@ -110,13 +111,9 @@ public class TestHadoopArchives {
     conf.set(CapacitySchedulerConfiguration.PREFIX
         + CapacitySchedulerConfiguration.ROOT + ".default."
         + CapacitySchedulerConfiguration.CAPACITY, "100");
-    dfscluster = new MiniDFSCluster
-      .Builder(conf)
-      .checkExitOnShutdown(true)
-      .numDataNodes(2)
-      .format(true)
-      .racks(null)
-      .build();
+    dfscluster =
+        new MiniDFSCluster.Builder(conf).checkExitOnShutdown(true)
+            .numDataNodes(3).format(true).racks(null).build();
 
     fs = dfscluster.getFileSystem();
     
@@ -753,12 +750,21 @@ public class TestHadoopArchives {
 
     final String harName = "foo.har";
     final String fullHarPathStr = prefix + harName;
-    final String[] args = { "-archiveName", harName, "-p", inputPathStr,
-        "-r 3", "*", archivePath.toString() };
+    final String[] args =
+        { "-archiveName", harName, "-p", inputPathStr, "-r", "2", "*",
+            archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
     final HadoopArchives har = new HadoopArchives(conf);
     assertEquals(0, ToolRunner.run(har, args));
+    RemoteIterator<LocatedFileStatus> listFiles =
+        fs.listFiles(new Path(archivePath.toString() + "/" + harName), false);
+    while (listFiles.hasNext()) {
+      LocatedFileStatus next = listFiles.next();
+      if (!next.getPath().toString().endsWith("_SUCCESS")) {
+        assertEquals(next.getPath().toString(), 2, next.getReplication());
+      }
+    }
     return fullHarPathStr;
   }
   

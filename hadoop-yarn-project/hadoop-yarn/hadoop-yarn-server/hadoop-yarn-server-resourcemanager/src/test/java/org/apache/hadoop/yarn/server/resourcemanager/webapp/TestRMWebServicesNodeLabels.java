@@ -133,12 +133,15 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertEquals("a", nlsifo.getNodeLabelsInfo().get(0).getName());
     assertEquals(1, nlsifo.getNodeLabels().size());
+    for (NodeLabelInfo nl : nlsifo.getNodeLabelsInfo()) {
+      assertEquals("a", nl.getName());
+      assertTrue(nl.getExclusivity());
+    }
     
     // Add another
     nlsifo = new NodeLabelsInfo();
-    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("b"));
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("b", false));
     response =
         r.path("ws").path("v1").path("cluster")
             .path("add-node-labels").queryParam("user.name", userName)
@@ -154,6 +157,12 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(2, nlsifo.getNodeLabels().size());
+    // Verify exclusivity for 'y' as false
+    for (NodeLabelInfo nl : nlsifo.getNodeLabelsInfo()) {
+      if (nl.getName().equals("b")) {
+        assertFalse(nl.getExclusivity());
+      }
+    }
     
     // Add labels to a node
     MultivaluedMapImpl params = new MultivaluedMapImpl();
@@ -202,7 +211,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     LabelsToNodesInfo ltni = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(2, ltni.getLabelsToNodes().size());
-    NodeIDsInfo nodes = ltni.getLabelsToNodes().get(new NodeLabelInfo("b"));
+    NodeIDsInfo nodes = ltni.getLabelsToNodes().get(
+        new NodeLabelInfo("b", false));
     assertTrue(nodes.getNodeIDs().contains("nid2:0"));
     assertTrue(nodes.getNodeIDs().contains("nid1:0"));
     nodes = ltni.getLabelsToNodes().get(new NodeLabelInfo("a"));
@@ -231,7 +241,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
+    assertTrue(nlsifo.getNodeLabelsInfo().contains(new NodeLabelInfo("a")));
 
     
     // Replace
@@ -255,7 +265,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertTrue(nlsifo.getNodeLabelsName().contains("b"));
+    assertTrue(nlsifo.getNodeLabelsInfo().contains(
+        new NodeLabelInfo("b", false)));
             
     // Replace labels using node-to-labels
     NodeToLabelsEntryList ntli = new NodeToLabelsEntryList();
@@ -281,7 +292,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     NodeToLabelsInfo ntlinfo = response.getEntity(NodeToLabelsInfo.class);
     NodeLabelsInfo nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
     assertEquals(1, nlinfo.getNodeLabels().size());
-    assertTrue(nlinfo.getNodeLabelsName().contains("a"));
+    assertTrue(nlinfo.getNodeLabelsInfo().contains(new NodeLabelInfo("a")));
     
     // Remove all
     params = new MultivaluedMapImpl();
@@ -303,7 +314,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertTrue(nlsifo.getNodeLabelsName().contains(""));
+    assertTrue(nlsifo.getNodeLabelsInfo().isEmpty());
     
     // Add a label back for auth tests
     params = new MultivaluedMapImpl();
@@ -326,7 +337,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
+    assertTrue(nlsifo.getNodeLabelsInfo().contains(new NodeLabelInfo("a")));
     
     // Auth fail replace labels on node
     params = new MultivaluedMapImpl();
@@ -347,7 +358,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertTrue(nlsifo.getNodeLabelsName().contains("a"));
+    assertTrue(nlsifo.getNodeLabelsInfo().contains(new NodeLabelInfo("a")));
     
     // Fail to add a label with post
     response =
@@ -383,8 +394,11 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
-    assertEquals("a", nlsifo.getNodeLabelsInfo().get(0).getName());
     assertEquals(1, nlsifo.getNodeLabels().size());
+    for (NodeLabelInfo nl : nlsifo.getNodeLabelsInfo()) {
+      assertEquals("a", nl.getName());
+      assertTrue(nl.getExclusivity());
+    }
     
     // Remove cluster label with post
     params = new MultivaluedMapImpl();
@@ -409,8 +423,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // configuration is on
     // Reset for testing : add cluster labels
     nlsifo = new NodeLabelsInfo();
-    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("x"));
-    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("y"));
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("x", false));
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("y", false));
     response =
         r.path("ws")
             .path("v1")
@@ -421,8 +435,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
     // Reset for testing : Add labels to a node
-    nlsifo = new NodeLabelsInfo();
-    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("y"));
     params = new MultivaluedMapImpl();
     params.add("labels", "y");
     response =
@@ -461,7 +473,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ntlinfo = response.getEntity(NodeToLabelsInfo.class);
     nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
     assertEquals(1, nlinfo.getNodeLabels().size());
-    assertFalse(nlinfo.getNodeLabels().contains("x"));
+    assertFalse(nlinfo.getNodeLabelsInfo().contains(
+        new NodeLabelInfo("x", false)));
 
     // Case2 : failure to Replace labels using replace-labels
     response =
@@ -481,7 +494,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ntlinfo = response.getEntity(NodeToLabelsInfo.class);
     nlinfo = ntlinfo.getNodeToLabels().get("nid:0");
     assertEquals(1, nlinfo.getNodeLabels().size());
-    assertFalse(nlinfo.getNodeLabels().contains("x"));
+    assertFalse(nlinfo.getNodeLabelsInfo().contains(
+        new NodeLabelInfo("x", false)));
 
     //  Case3 : Remove cluster label should be successful
     params = new MultivaluedMapImpl();
@@ -500,7 +514,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(new NodeLabelInfo("y", false),
+        nlsifo.getNodeLabelsInfo().get(0));
     assertEquals("y", nlsifo.getNodeLabelsInfo().get(0).getName());
+    assertFalse(nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
 
     // Remove y
     params = new MultivaluedMapImpl();
@@ -543,7 +560,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     nlsifo = response.getEntity(NodeLabelsInfo.class);
     assertEquals("z", nlsifo.getNodeLabelsInfo().get(0).getName());
-    assertEquals(false, nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
+    assertFalse(nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nlsifo.getNodeLabels().size());
   }
 

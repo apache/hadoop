@@ -333,7 +333,7 @@ public class BackupImage extends FSImage {
    * directories.
    */
   synchronized void namenodeStartedLogSegment(long txid) throws IOException {
-    editLog.startLogSegment(txid, true);
+    editLog.startLogSegment(txid, true, namesystem.getEffectiveLayoutVersion());
 
     if (bnState == BNState.DROP_UNTIL_NEXT_ROLL) {
       setState(BNState.JOURNAL_ONLY);

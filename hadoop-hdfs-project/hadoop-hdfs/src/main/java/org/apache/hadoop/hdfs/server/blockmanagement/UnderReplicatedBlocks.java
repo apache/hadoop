@@ -93,10 +93,11 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
   /**
    * Empty the queues.
    */
-  void clear() {
+  synchronized void clear() {
     for (int i = 0; i < LEVEL; i++) {
       priorityQueues.get(i).clear();
     }
+    corruptReplOneBlocks = 0;
   }
 
   /** Return the total number of under replication blocks */
@@ -216,7 +217,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * @return true if the block was added to a queue.
    */
   synchronized boolean add(BlockInfo block,
-                           int curReplicas, 
+                           int curReplicas,
                            int decomissionedReplicas,
                            int expectedReplicas) {
     assert curReplicas >= 0 : "Negative replicas!";
@@ -240,7 +241,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
 
   /** remove a block from a under replication queue */
   synchronized boolean remove(BlockInfo block,
-                              int oldReplicas, 
+                              int oldReplicas,
                               int decommissionedReplicas,
                               int oldExpectedReplicas) {
     int priLevel = getPriority(block, oldReplicas,
@@ -274,7 +275,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * @return true if the block was found and removed from one of the priority queues
    */
   boolean remove(BlockInfo block, int priLevel) {
-    if(priLevel >= 0 && priLevel < LEVEL 
+    if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(
         "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block {}" +

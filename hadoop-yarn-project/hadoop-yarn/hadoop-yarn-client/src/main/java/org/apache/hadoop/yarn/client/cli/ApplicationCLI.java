@@ -501,6 +501,8 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getUser());
       appReportStr.print("\tQueue : ");
       appReportStr.println(appReport.getQueue());
+      appReportStr.print("\tApplication Priority : ");
+      appReportStr.println(appReport.getPriority());
       appReportStr.print("\tStart-Time : ");
       appReportStr.println(appReport.getStartTime());
       appReportStr.print("\tFinish-Time : ");
@@ -534,7 +536,9 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getLogAggregationStatus() == null ? "N/A"
           : appReport.getLogAggregationStatus());
       appReportStr.print("\tDiagnostics : ");
-      appReportStr.print(appReport.getDiagnostics());
+      appReportStr.println(appReport.getDiagnostics());
+      appReportStr.print("\tUnmanaged Application : ");
+      appReportStr.print(appReport.isUnmanagedApp());
     } else {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");

@@ -203,7 +203,7 @@
                 <phase>test</phase>
                 <configuration>
                   <target>
-                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native">
+                    <exec executable="${shell-executable}" failonerror="true" dir="${project.build.directory}/native">
                       <arg value="-c"/>
                       <arg value="[ x$SKIPTESTS = xtrue ] || test-container-executor"/>
                       <env key="SKIPTESTS" value="${skipTests}"/>

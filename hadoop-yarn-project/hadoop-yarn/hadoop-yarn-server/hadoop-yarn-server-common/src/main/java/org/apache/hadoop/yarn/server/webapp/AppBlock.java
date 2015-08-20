@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
@@ -168,6 +167,7 @@ public class AppBlock extends HtmlBlock {
       ._("Application Type:", app.getType())
       ._("Application Tags:",
         app.getApplicationTags() == null ? "" : app.getApplicationTags())
+      ._("Application Priority:", clarifyAppPriority(app.getPriority()))
       ._(
         "YarnApplicationState:",
         app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
@@ -207,6 +207,7 @@ public class AppBlock extends HtmlBlock {
     }
     overviewTable._("Diagnostics:",
         app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
+    overviewTable._("Unmanaged Application:", app.isUnmanagedApp());
 
     Collection<ApplicationAttemptReport> attempts;
     try {
@@ -255,10 +256,9 @@ public class AppBlock extends HtmlBlock {
       AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
       ContainerReport containerReport;
       try {
-        // AM container is always the first container of the attempt
         final GetContainerReportRequest request =
-            GetContainerReportRequest.newInstance(ContainerId.newContainerId(
-              appAttemptReport.getApplicationAttemptId(), 1));
+                GetContainerReportRequest.newInstance(
+                      appAttemptReport.getAMContainerId());
         if (callerUGI == null) {
           containerReport =
               appBaseProt.getContainerReport(request).getContainerReport();
@@ -268,11 +268,13 @@ public class AppBlock extends HtmlBlock {
             @Override
             public ContainerReport run() throws Exception {
               ContainerReport report = null;
-              try {
-                report = appBaseProt.getContainerReport(request)
-                    .getContainerReport();
-              } catch (ContainerNotFoundException ex) {
-                LOG.warn(ex.getMessage());
+              if (request.getContainerId() != null) {
+                  try {
+                    report = appBaseProt.getContainerReport(request)
+                        .getContainerReport();
+                  } catch (ContainerNotFoundException ex) {
+                    LOG.warn(ex.getMessage());
+                  }
               }
               return report;
             }
@@ -339,6 +341,10 @@ public class AppBlock extends HtmlBlock {
     default:
       return ret;
     }
+  }
+
+  private String clarifyAppPriority(int priority) {
+    return priority + " (Higher Integer value indicates higher priority)";
   }
 
   private String clairfyAppFinalStatus(FinalApplicationStatus status) {

@@ -236,6 +236,11 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * This API has been deprecated since the NameNode now tracks datanode
+   * storages separately. Storage IDs can be gotten from {@link
+   * BlockLocation#getStorageIds()}, which are functionally equivalent to
+   * the volume IDs returned here (although a String rather than a byte[]).
+   *
    * Used to query storage location information for a list of blocks. This list
    * of blocks is normally constructed via a series of calls to
    * {@link DistributedFileSystem#getFileBlockLocations(Path, long, long)} to
@@ -259,6 +264,7 @@ public class DistributedFileSystem extends FileSystem {
    *         information for each replica of each block.
    */
   @InterfaceStability.Unstable
+  @Deprecated
   public BlockStorageLocation[] getFileBlockStorageLocations(
       List<BlockLocation> blocks) throws IOException, 
       UnsupportedOperationException, InvalidBlockTokenException {
@@ -554,6 +560,25 @@ public class DistributedFileSystem extends FileSystem {
           throws IOException {
         fs.setStoragePolicy(p, policyName);
         return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  @Override
+  public BlockStoragePolicySpi getStoragePolicy(Path path) throws IOException {
+    statistics.incrementReadOps(1);
+    Path absF = fixRelativePart(path);
+
+    return new FileSystemLinkResolver<BlockStoragePolicySpi>() {
+      @Override
+      public BlockStoragePolicySpi doCall(final Path p) throws IOException {
+        return getClient().getStoragePolicy(getPathName(p));
+      }
+
+      @Override
+      public BlockStoragePolicySpi next(final FileSystem fs, final Path p)
+          throws IOException, UnresolvedLinkException {
+        return fs.getStoragePolicy(p);
       }
     }.resolve(this, absF);
   }

@@ -28,8 +28,6 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +36,8 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -47,7 +47,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.LimitedPrivate({ "HDFS" })
 @InterfaceStability.Unstable
 public class URLConnectionFactory {
-  private static final Log LOG = LogFactory.getLog(URLConnectionFactory.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(URLConnectionFactory.class);
 
   /**
    * Timeout for socket connects and reads
@@ -154,16 +155,14 @@ public class URLConnectionFactory {
       throws IOException, AuthenticationException {
     if (isSpnego) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("open AuthenticatedURL connection" + url);
+        LOG.debug("open AuthenticatedURL connection {}", url);
       }
       UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
       final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
       return new AuthenticatedURL(new KerberosUgiAuthenticator(),
           connConfigurator).openConnection(url, authToken);
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("open URL connection");
-      }
+      LOG.debug("open URL connection");
       URLConnection connection = url.openConnection();
       if (connection instanceof HttpURLConnection) {
         connConfigurator.configure((HttpURLConnection) connection);
