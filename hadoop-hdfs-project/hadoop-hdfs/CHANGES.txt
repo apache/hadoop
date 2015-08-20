@@ -1196,11 +1196,11 @@ Release 2.7.2 - UNRELEASED
 
   IMPROVEMENTS
 
-  HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
+    HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
 
   OPTIMIZATIONS
 
-  HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
+    HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
   BUG FIXES
 
@@ -1214,6 +1214,9 @@ Release 2.7.2 - UNRELEASED
     about append write support. (Ajith S via aajisaka)
 
     HDFS-8867. Enable optimized block reports. (Daryn Sharp via jing9)
+
+    HDFS-8863. The remaining space check in BlockPlacementPolicyDefault is
+    flawed. (Kihwal Lee via yliu)
 
 Release 2.7.1 - 2015-07-06
 

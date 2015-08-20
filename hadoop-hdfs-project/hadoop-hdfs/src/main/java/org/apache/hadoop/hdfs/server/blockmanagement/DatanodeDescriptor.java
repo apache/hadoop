@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.util.EnumCounters;
@@ -662,16 +663,26 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * @return Approximate number of blocks currently scheduled to be written 
+   * Return the sum of remaining spaces of the specified type. If the remaining
+   * space of a storage is less than minSize, it won't be counted toward the
+   * sum.
+   *
+   * @param t The storage type. If null, the type is ignored.
+   * @param minSize The minimum free space required.
+   * @return the sum of remaining spaces that are bigger than minSize.
    */
-  public long getRemaining(StorageType t) {
+  public long getRemaining(StorageType t, long minSize) {
     long remaining = 0;
-    for(DatanodeStorageInfo s : getStorageInfos()) {
-      if (s.getStorageType() == t) {
-        remaining += s.getRemaining();
+    for (DatanodeStorageInfo s : getStorageInfos()) {
+      if (s.getState() == State.NORMAL &&
+          (t == null || s.getStorageType() == t)) {
+        long r = s.getRemaining();
+        if (r >= minSize) {
+          remaining += r;
+        }
       }
     }
-    return remaining;    
+    return remaining;
   }
 
   /**
