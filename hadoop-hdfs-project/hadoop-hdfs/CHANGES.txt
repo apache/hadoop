@@ -819,6 +819,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8917. Cleanup BlockInfoUnderConstruction from comments and tests.
     (Zhe Zhang via jing9)
 
+    HDFS-8884. Fail-fast check in BlockPlacementPolicyDefault#chooseTarget.
+    (yliu)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
