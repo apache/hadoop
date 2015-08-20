@@ -139,6 +139,8 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3984. Adjusted the event column key schema and avoided missing empty
     event. (Vrushali C via zjshen)
 
+    YARN-4064. build is broken at TestHBaseTimelineWriterImpl.java (sjlee)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
