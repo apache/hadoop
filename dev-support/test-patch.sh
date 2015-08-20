@@ -811,7 +811,7 @@ function testpatch_usage
   echo "Shell binary overrides:"
   echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
-  echo "--curl-cmd=<cmd>       The 'wget' command to use (default 'curl')"
+  echo "--curl-cmd=<cmd>       The 'curl' command to use (default 'curl')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
