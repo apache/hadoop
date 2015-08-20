@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
@@ -122,12 +123,38 @@ public class NodeManager extends CompositeService
         metrics, nodeLabelsProvider);
   }
 
-  @VisibleForTesting
-  protected NodeLabelsProvider createNodeLabelsProvider(
-      Configuration conf) throws IOException {
-    // TODO as part of YARN-2729
-    // Need to get the implementation of provider service and return
-    return null;
+  protected NodeLabelsProvider createNodeLabelsProvider(Configuration conf)
+      throws IOException {
+    NodeLabelsProvider provider = null;
+    String providerString =
+        conf.get(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG, null);
+    if (providerString == null || providerString.trim().length() == 0) {
+      // Seems like Distributed Node Labels configuration is not enabled
+      return provider;
+    }
+    switch (providerString.trim().toLowerCase()) {
+    case YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER:
+      provider = new ConfigurationNodeLabelsProvider();
+      break;
+    default:
+      try {
+        Class<? extends NodeLabelsProvider> labelsProviderClass =
+            conf.getClass(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG, null,
+                NodeLabelsProvider.class);
+        provider = labelsProviderClass.newInstance();
+      } catch (InstantiationException | IllegalAccessException
+          | RuntimeException e) {
+        LOG.error("Failed to create NodeLabelsProvider based on Configuration",
+            e);
+        throw new IOException("Failed to create NodeLabelsProvider : "
+            + e.getMessage(), e);
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Distributed Node Labels is enabled"
+          + " with provider class as : " + provider.getClass().toString());
+    }
+    return provider;
   }
 
   protected NodeResourceMonitor createNodeResourceMonitor() {
