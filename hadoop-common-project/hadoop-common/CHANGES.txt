@@ -1096,6 +1096,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-11932. MetricsSinkAdapter may hang  when being stopped.
     (Brahma Reddy Battula via jianhe)
 
+    HADOOP-12061. Incorrect command in single cluster setup document.
+    (Kengo Seki via aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
