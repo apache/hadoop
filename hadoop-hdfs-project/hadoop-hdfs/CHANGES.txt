@@ -1194,6 +1194,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8922. Link the native_mini_dfs test library with libdl, since IBM Java
     requires it (Ayappan via Colin P. McCabe)
 
+    HDFS-8809. HDFS fsck reports under construction blocks as "CORRUPT". (jing9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
