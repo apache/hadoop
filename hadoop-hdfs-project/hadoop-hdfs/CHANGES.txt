@@ -822,6 +822,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8884. Fail-fast check in BlockPlacementPolicyDefault#chooseTarget.
     (yliu)
 
+    HDFS-8828. Utilize Snapshot diff report to build diff copy list in distcp.
+    (Yufei Gu via Yongjun Zhang)
+ 
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
