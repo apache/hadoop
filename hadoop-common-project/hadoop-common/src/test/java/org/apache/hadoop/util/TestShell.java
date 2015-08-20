@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import junit.framework.TestCase;
+import org.junit.Assert;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -149,6 +150,44 @@ public class TestShell extends TestCase {
     int timersAfter = countTimerThreads();
     System.err.println("after: " + timersAfter);
     assertEquals(timersBefore, timersAfter);
+  }
+
+  public void testGetCheckProcessIsAliveCommand() throws Exception {
+    String anyPid = "9999";
+    String[] checkProcessAliveCommand = Shell.getCheckProcessIsAliveCommand(
+        anyPid);
+
+    String[] expectedCommand;
+
+    if (Shell.WINDOWS) {
+      expectedCommand =
+          new String[]{ Shell.WINUTILS, "task", "isAlive", anyPid };
+    } else if (Shell.isSetsidAvailable) {
+      expectedCommand = new String[]{ "kill", "-0", "--", "-" + anyPid };
+    } else {
+      expectedCommand = new String[]{"kill", "-0", anyPid};
+    }
+    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
+  }
+
+  public void testGetSignalKillCommand() throws Exception {
+    String anyPid = "9999";
+    int anySignal = 9;
+    String[] checkProcessAliveCommand = Shell.getSignalKillCommand(anySignal,
+        anyPid);
+
+    String[] expectedCommand;
+    if (Shell.WINDOWS) {
+      expectedCommand =
+          new String[]{ Shell.WINUTILS, "task", "kill", anyPid };
+    } else if (Shell.isSetsidAvailable) {
+      expectedCommand =
+          new String[]{ "kill", "-" + anySignal, "--", "-" + anyPid };
+    } else {
+      expectedCommand =
+          new String[]{ "kill", "-" + anySignal, anyPid };
+    }
+    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
   
 
