@@ -139,7 +139,7 @@ If you cannot ssh to localhost without a passphrase, execute the following comma
 
       $ ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
       $ cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
-      $ export HADOOP\_PREFIX=/usr/local/hadoop
+      $ chmod 0600 ~/.ssh/authorized_keys
 
 $H3 Execution
 
