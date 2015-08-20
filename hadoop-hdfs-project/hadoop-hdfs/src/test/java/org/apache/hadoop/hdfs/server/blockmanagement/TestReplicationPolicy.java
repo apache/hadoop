@@ -100,6 +100,16 @@ public class TestReplicationPolicy {
         dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
   }
 
+  private static void updateHeartbeatForExtraStorage(long capacity,
+      long dfsUsed, long remaining, long blockPoolUsed) {
+    DatanodeDescriptor dn = dataNodes[5];
+    dn.getStorageInfos()[1].setUtilizationForTesting(
+        capacity, dfsUsed, remaining, blockPoolUsed);
+    dn.updateHeartbeat(
+        BlockManagerTestUtil.getStorageReportsForDatanode(dn),
+        0L, 0L, 0, 0, null);
+  }
+
   @BeforeClass
   public static void setupCluster() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -112,6 +122,16 @@ public class TestReplicationPolicy {
         "/d2/r3"};
     storages = DFSTestUtil.createDatanodeStorageInfos(racks);
     dataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
+
+    // create an extra storage for dn5.
+    DatanodeStorage extraStorage = new DatanodeStorage(
+        storages[5].getStorageID() + "-extra", DatanodeStorage.State.NORMAL,
+        StorageType.DEFAULT);
+/*    DatanodeStorageInfo si = new DatanodeStorageInfo(
+        storages[5].getDatanodeDescriptor(), extraStorage);
+*/
+    BlockManagerTestUtil.updateStorage(storages[5].getDatanodeDescriptor(),
+        extraStorage);
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
@@ -135,11 +155,17 @@ public class TestReplicationPolicy {
       bm.getDatanodeManager().getHeartbeatManager().addDatanode(
           dataNodes[i]);
     }
+    resetHeartbeatForStorages();
+  }
+
+  private static void resetHeartbeatForStorages() {
     for (int i=0; i < NUM_OF_DATANODES; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
-    }    
+    }
+    // No available space in the extra storage of dn0
+    updateHeartbeatForExtraStorage(0L, 0L, 0L, 0L);
   }
 
   private static boolean isOnSameRack(DatanodeStorageInfo left, DatanodeStorageInfo right) {
@@ -149,6 +175,31 @@ public class TestReplicationPolicy {
   private static boolean isOnSameRack(DatanodeStorageInfo left, DatanodeDescriptor right) {
     return cluster.isOnSameRack(left.getDatanodeDescriptor(), right);
   }
+
+  /**
+   * Test whether the remaining space per storage is individually
+   * considered.
+   */
+  @Test
+  public void testChooseNodeWithMultipleStorages() throws Exception {
+    updateHeartbeatWithUsage(dataNodes[5],
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L,
+        0L, 0L, 0, 0);
+
+    updateHeartbeatForExtraStorage(
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L);
+
+    DatanodeStorageInfo[] targets;
+    targets = chooseTarget (1, dataNodes[5],
+        new ArrayList<DatanodeStorageInfo>(), null);
+    assertEquals(1, targets.length);
+    assertEquals(storages[4], targets[0]);
+
+    resetHeartbeatForStorages();
+  }
+
   /**
    * In this testcase, client is dataNodes[0]. So the 1st replica should be
    * placed on dataNodes[0], the 2nd replica should be placed on 
@@ -190,10 +241,8 @@ public class TestReplicationPolicy {
     assertTrue(isOnSameRack(targets[1], targets[2]) ||
                isOnSameRack(targets[2], targets[3]));
     assertFalse(isOnSameRack(targets[0], targets[2]));
-    
-    updateHeartbeatWithUsage(dataNodes[0],
-        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+
+    resetHeartbeatForStorages();
   }
 
   private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas) {
@@ -348,9 +397,7 @@ public class TestReplicationPolicy {
                isOnSameRack(targets[2], targets[3]));
     assertFalse(isOnSameRack(targets[1], targets[3]));
 
-    updateHeartbeatWithUsage(dataNodes[0],
-        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+    resetHeartbeatForStorages();
   }
   
   /**
@@ -391,12 +438,8 @@ public class TestReplicationPolicy {
     assertTrue(isOnSameRack(targets[0], targets[1]) ||
                isOnSameRack(targets[1], targets[2]));
     assertFalse(isOnSameRack(targets[0], targets[2]));
-    
-    for(int i=0; i<2; i++) {
-      updateHeartbeatWithUsage(dataNodes[i],
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
-    }
+
+    resetHeartbeatForStorages();
   }
 
   /**
@@ -474,6 +517,7 @@ public class TestReplicationPolicy {
     } finally {
       bm.getDatanodeManager().getNetworkTopology().remove(newDn);
     }
+    resetHeartbeatForStorages();
   }
 
 
@@ -527,12 +571,8 @@ public class TestReplicationPolicy {
     // Suppose to place replicas on each node but two data nodes are not
     // available for placing replica, so here we expect a short of 2
     assertTrue(((String)lastLogEntry.getMessage()).contains("in need of 2"));
-    
-    for(int i=0; i<2; i++) {
-      updateHeartbeatWithUsage(dataNodes[i],
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
-    }
+
+    resetHeartbeatForStorages();
   }
 
   private boolean containsWithinRange(DatanodeStorageInfo target,
