@@ -1191,6 +1191,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8908. TestAppendSnapshotTruncate may fail with IOException: Failed to
     replace a bad datanode. (Tsz Wo Nicholas Sze via yliu)
 
+    HDFS-8922. Link the native_mini_dfs test library with libdl, since IBM Java
+    requires it (Ayappan via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
