@@ -655,7 +655,7 @@ public class TestOptionsParser {
         false));
 
     DistCpOptions options = OptionsParser.parse(new String[] { "-update",
-        "-delete", "-diff", "s1", "s2",
+        "-diff", "s1", "s2",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/" });
     options.appendToConf(conf);
@@ -665,7 +665,7 @@ public class TestOptionsParser {
     Assert.assertEquals("s2", options.getToSnapshot());
 
     options = OptionsParser.parse(new String[] {
-        "-delete", "-diff", "s1", ".", "-update",
+        "-diff", "s1", ".", "-update",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/" });
     options.appendToConf(conf);
@@ -677,7 +677,7 @@ public class TestOptionsParser {
 
     // -diff requires two option values
     try {
-      OptionsParser.parse(new String[] {"-diff", "s1", "-delete", "-update",
+      OptionsParser.parse(new String[] {"-diff", "s1", "-update",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target/" });
       fail("-diff should fail with only one snapshot name");
@@ -686,25 +686,25 @@ public class TestOptionsParser {
           "Must provide both the starting and ending snapshot names", e);
     }
 
-    // make sure -diff is only valid when -update and -delete is specified
+    // make sure -diff is only valid when -update is specified
     try {
       OptionsParser.parse(new String[] { "-diff", "s1", "s2",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target/" });
-      fail("-diff should fail if -update or -delete option is not specified");
+      fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "Diff is valid only with update and delete options", e);
+          "Diff is valid only with update options", e);
     }
 
     try {
-      OptionsParser.parse(new String[] { "-diff", "s1", "s2", "-update",
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2", "-update", "-delete",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target/" });
-      fail("-diff should fail if -update or -delete option is not specified");
+      fail("-diff should fail if -delete option is specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "Diff is valid only with update and delete options", e);
+          "Diff is valid only with update options", e);
     }
 
     try {
@@ -712,10 +712,10 @@ public class TestOptionsParser {
           "-delete", "-overwrite",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target/" });
-      fail("-diff should fail if -update or -delete option is not specified");
+      fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "Diff is valid only with update and delete options", e);
+          "Diff is valid only with update options", e);
     }
   }
 
