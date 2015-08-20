@@ -172,6 +172,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7470. SecondaryNameNode need twice memory when calling
     reloadFromImageFile. (zhaoyunjiong via cnauroth)
 
+    HDFS-8863. The remaining space check in BlockPlacementPolicyDefault is
+    flawed. (Kihwal Lee via yliu)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
