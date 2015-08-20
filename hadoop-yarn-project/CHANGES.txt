@@ -175,6 +175,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4055. Report node resource utilization in heartbeat. 
     (Inigo Goiri via kasha)
 
+    YARN-2923. Support configuration based NodeLabelsProvider Service in Distributed 
+    Node Label Configuration Setup. (Naganarasimha G R)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

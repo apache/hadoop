@@ -916,7 +916,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
 
-  private void checkAndThrowLabelName(String label) throws IOException {
+  public static void checkAndThrowLabelName(String label) throws IOException {
     if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {
       throw new IOException("label added is empty or exceeds "
           + MAX_LABEL_LENGTH + " character(s)");
