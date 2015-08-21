@@ -96,7 +96,8 @@ public class AuthToken implements Principal {
   /**
    * Sets the max inactive interval of the token.
    *
-   * @param max inactive interval of the token in milliseconds since the epoch.
+   * @param interval max inactive interval of the token in milliseconds since
+   *                 the epoch.
    */
   public void setMaxInactives(long interval) {
     this.maxInactives = interval;

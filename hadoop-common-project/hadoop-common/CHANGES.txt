@@ -172,6 +172,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
 
+    HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
+    (hzlu via benoyantony)
+
   BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
@@ -569,6 +572,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12317. Applications fail on NM restart on some linux distro
     because NM container recovery declares AM container as LOST
     (adhoot via rkanter)
+
+    HADOOP-12347. Fix mismatch parameter name in javadocs of
+    AuthToken#setMaxInactives (xyao)
 
 Release 2.7.2 - UNRELEASED
 
