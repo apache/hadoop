@@ -12,6 +12,10 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6454. Fixed MapReduce to modify HADOOP_CLASSPATH to have distributed
+    cache files so that child processes running hadoop scripts can access these
+    files. (Junping Du via vinodkv)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
