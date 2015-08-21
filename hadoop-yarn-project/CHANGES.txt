@@ -218,6 +218,8 @@ Release 2.8.0 - UNRELEASED
     YARN-1644. RM-NM protocol changes and NodeStatusUpdater implementation to
     support container resizing. (Meng Ding via jianhe)
 
+    YARN-3868. Recovery support for container resizing. (Meng Ding via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
