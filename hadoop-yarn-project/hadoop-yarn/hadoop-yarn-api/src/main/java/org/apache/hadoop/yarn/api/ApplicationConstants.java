@@ -161,6 +161,11 @@ public interface ApplicationConstants {
     APP_CLASSPATH("APP_CLASSPATH"),
     
     /**
+     * $HADOOP_CLASSPATH.
+     */
+    HADOOP_CLASSPATH("HADOOP_CLASSPATH"),
+
+    /**
      * $LD_LIBRARY_PATH
      */
     LD_LIBRARY_PATH("LD_LIBRARY_PATH"),
