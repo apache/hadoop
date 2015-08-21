@@ -555,6 +555,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5817. Mappers get rescheduled on node transition even after all
     reducers are completed. (Sangjin Lee via kasha)
 
+    MAPREDUCE-6357. MultipleOutputs.write() API should document that output
+    committing is not utilized when input path is absolute.
+    (Dustin Cote via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
