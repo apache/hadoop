@@ -1282,7 +1282,7 @@ public class DataNode extends ReconfigurableBase
     checkDiskError();
 
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
-    initDirectoryScanner(conf);
+    initPeriodicScanners(conf);
   }
 
   BPOfferService[] getAllBpOs() {
