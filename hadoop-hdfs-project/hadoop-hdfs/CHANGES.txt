@@ -1186,8 +1186,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8565. Typo in dfshealth.html - Decomissioning. (nijel via xyao)
 
-    HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
-
     HDFS-8908. TestAppendSnapshotTruncate may fail with IOException: Failed to
     replace a bad datanode. (Tsz Wo Nicholas Sze via yliu)
 
@@ -1225,6 +1223,8 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8863. The remaining space check in BlockPlacementPolicyDefault is
     flawed. (Kihwal Lee via yliu)
+
+    HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
 
 Release 2.7.1 - 2015-07-06
 
