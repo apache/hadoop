@@ -786,6 +786,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4028. AppBlock page key update and diagnostics value null on recovery
     (Bibin A Chundatt via xgong)
 
+    YARN-3986. getTransferredContainers in AbstractYarnScheduler should be present
+    in YarnScheduler interface instead. (Varun Saxena via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
