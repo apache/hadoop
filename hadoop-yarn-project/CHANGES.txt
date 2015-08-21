@@ -215,6 +215,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1643. Make ContainersMonitor support changing monitoring size of an
     allocated container. (Meng Ding and Wangda Tan)
 
+    YARN-1644. RM-NM protocol changes and NodeStatusUpdater implementation to
+    support container resizing. (Meng Ding via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

@@ -29,6 +29,7 @@ import java.util.HashSet;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -168,6 +169,20 @@ public class TestYarnServerApiClasses {
     assertTrue(copy.getAreNodeLabelsAcceptedByRM());
   }
 
+  @Test
+  public void testNodeHeartbeatResponsePBImplWithDecreasedContainers() {
+    NodeHeartbeatResponsePBImpl original = new NodeHeartbeatResponsePBImpl();
+    original.addAllContainersToDecrease(
+        Arrays.asList(getDecreasedContainer(1, 2, 2048, 2),
+            getDecreasedContainer(2, 3, 1024, 1)));
+    NodeHeartbeatResponsePBImpl copy =
+        new NodeHeartbeatResponsePBImpl(original.getProto());
+    assertEquals(1, copy.getContainersToDecrease().get(0)
+        .getId().getContainerId());
+    assertEquals(1024, copy.getContainersToDecrease().get(1)
+        .getResource().getMemory());
+  }
+
   /**
    * Test RegisterNodeManagerRequestPBImpl.
    */
@@ -244,6 +259,9 @@ public class TestYarnServerApiClasses {
     original.setNodeHealthStatus(getNodeHealthStatus());
     original.setNodeId(getNodeId());
     original.setResponseId(1);
+    original.setIncreasedContainers(
+        Arrays.asList(getIncreasedContainer(1, 2, 2048, 2),
+            getIncreasedContainer(2, 3, 4096, 3)));
 
     NodeStatusPBImpl copy = new NodeStatusPBImpl(original.getProto());
     assertEquals(3L, copy.getContainersStatuses().get(1).getContainerId()
@@ -252,7 +270,10 @@ public class TestYarnServerApiClasses {
     assertEquals(1000, copy.getNodeHealthStatus().getLastHealthReportTime());
     assertEquals(9090, copy.getNodeId().getPort());
     assertEquals(1, copy.getResponseId());
-
+    assertEquals(1, copy.getIncreasedContainers().get(0)
+        .getId().getContainerId());
+    assertEquals(4096, copy.getIncreasedContainers().get(1)
+        .getResource().getMemory());
   }
 
   @Test
@@ -345,6 +366,22 @@ public class TestYarnServerApiClasses {
       }
     }.setParameters(applicationId, 1000);
     return new ApplicationIdPBImpl(appId.getProto());
+  }
+
+  private Container getDecreasedContainer(int containerID,
+      int appAttemptId, int memory, int vCores) {
+    ContainerId containerId = getContainerId(containerID, appAttemptId);
+    Resource capability = Resource.newInstance(memory, vCores);
+    return Container.newInstance(
+        containerId, null, null, capability, null, null);
+  }
+
+  private Container getIncreasedContainer(int containerID,
+      int appAttemptId, int memory, int vCores) {
+    ContainerId containerId = getContainerId(containerID, appAttemptId);
+    Resource capability = Resource.newInstance(memory, vCores);
+    return Container.newInstance(
+        containerId, null, null, capability, null, null);
   }
 
   private NodeStatus getNodeStatus() {

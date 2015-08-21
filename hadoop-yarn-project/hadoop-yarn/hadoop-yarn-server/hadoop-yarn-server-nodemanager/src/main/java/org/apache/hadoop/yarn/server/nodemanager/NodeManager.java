@@ -439,6 +439,10 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
+    protected final ConcurrentMap<ContainerId,
+        org.apache.hadoop.yarn.api.records.Container> increasedContainers =
+            new ConcurrentHashMap<>();
+
     private final NMContainerTokenSecretManager containerTokenSecretManager;
     private final NMTokenSecretManagerInNM nmTokenSecretManager;
     private ContainerManagementProtocol containerManager;
@@ -490,6 +494,12 @@ public class NodeManager extends CompositeService
     @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
       return this.containers;
+    }
+
+    @Override
+    public ConcurrentMap<ContainerId, org.apache.hadoop.yarn.api.records.Container>
+        getIncreasedContainers() {
+      return this.increasedContainers;
     }
 
     @Override
