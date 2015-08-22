@@ -2226,4 +2226,28 @@
     <value>0</value>
   </property>
 
+  <property>
+    <description>
+    The default log aggregation policy class. Applications can
+    override it via LogAggregationContext. This configuration can provide
+    some cluster-side default behavior so that if the application doesn't
+    specify any policy via LogAggregationContext administrators of the cluster
+    can adjust the policy globally.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.policy.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AllContainerLogAggregationPolicy</value>
+  </property>
+
+  <property>
+    <description>
+    The default parameters for the log aggregation policy. Applications can
+    override it via LogAggregationContext. This configuration can provide
+    some cluster-side default behavior so that if the application doesn't
+    specify any policy via LogAggregationContext administrators of the cluster
+    can adjust the policy globally.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.policy.parameters</name>
+    <value></value>
+  </property>
+
 </configuration>

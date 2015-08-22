@@ -315,7 +315,18 @@ public class StringUtils {
    * @return the arraylist of the comma seperated string values
    */
   public static String[] getStrings(String str){
-    Collection<String> values = getStringCollection(str);
+    String delim = ",";
+    return getStrings(str, delim);
+  }
+
+  /**
+   * Returns an arraylist of strings.
+   * @param str the string values
+   * @param delim delimiter to separate the values
+   * @return the arraylist of the seperated string values
+   */
+  public static String[] getStrings(String str, String delim){
+    Collection<String> values = getStringCollection(str, delim);
     if(values.size() == 0) {
       return null;
     }

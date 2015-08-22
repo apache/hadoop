@@ -1237,6 +1237,12 @@ public class YarnConfiguration extends Configuration {
       NM_RECOVERY_PREFIX + "supervised";
   public static final boolean DEFAULT_NM_RECOVERY_SUPERVISED = false;
 
+  public static final String NM_LOG_AGG_POLICY_CLASS =
+      NM_PREFIX + "log-aggregation.policy.class";
+
+  public static final String NM_LOG_AGG_POLICY_CLASS_PARAMETERS = NM_PREFIX
+      + "log-aggregation.policy.parameters";
+
   ////////////////////////////////
   // Web Proxy Configs
   ////////////////////////////////

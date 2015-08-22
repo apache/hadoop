@@ -19,12 +19,13 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.yarn.server.api.ContainerLogContext;
+import org.apache.hadoop.yarn.server.api.ContainerLogAggregationPolicy;
 
+// The class provides no-op implementation for parseParameters. Polices
+// that don't need parameters can derive from this class.
 @Private
-public class AllContainerLogAggregationPolicy extends
-    AbstractContainerLogAggregationPolicy {
-  public boolean shouldDoLogAggregation(ContainerLogContext logContext) {
-    return true;
+public abstract class AbstractContainerLogAggregationPolicy implements
+    ContainerLogAggregationPolicy {
+  public void parseParameters(String parameters) {
   }
 }
