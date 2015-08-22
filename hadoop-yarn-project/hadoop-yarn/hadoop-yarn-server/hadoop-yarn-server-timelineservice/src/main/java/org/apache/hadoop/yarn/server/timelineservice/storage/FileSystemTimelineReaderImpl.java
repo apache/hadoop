@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
@@ -397,6 +398,10 @@ public class FileSystemTimelineReaderImpl extends AbstractService
                  new FileInputStream(entityFile), Charset.forName("UTF-8")))) {
       TimelineEntity entity = readEntityFromFile(reader);
       return createEntityToBeReturned(entity, fieldsToRetrieve);
+    } catch (FileNotFoundException e) {
+      LOG.info("Cannot find entity {id:" + entityId + " , type:" + entityType +
+          "}. Will send HTTP 404 in response.");
+      return null;
     }
   }
 

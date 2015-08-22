@@ -54,7 +54,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class TimelineReaderServer extends CompositeService {
   private static final Log LOG = LogFactory.getLog(TimelineReaderServer.class);
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private static final String TIMELINE_READER_MANAGER_ATTR =
+  static final String TIMELINE_READER_MANAGER_ATTR =
       "timeline.reader.manager";
 
   private HttpServer2 readerWebServer;

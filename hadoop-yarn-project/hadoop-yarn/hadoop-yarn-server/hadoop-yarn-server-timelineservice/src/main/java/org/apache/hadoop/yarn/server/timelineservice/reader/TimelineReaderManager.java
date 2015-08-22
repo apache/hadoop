@@ -18,10 +18,18 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 
 @Private
 @Unstable
@@ -32,5 +40,38 @@ public class TimelineReaderManager extends AbstractService {
   public TimelineReaderManager(TimelineReader timelineReader) {
     super(TimelineReaderManager.class.getName());
     this.reader = timelineReader;
+  }
+
+  /**
+   * Get a set of entities matching given predicates. The meaning of each
+   * argument has been documented with {@link TimelineReader#getEntities}.
+   *
+   * @see TimelineReader#getEntities
+   */
+  Set<TimelineEntity> getEntities(String userId, String clusterId,
+      String flowId, Long flowRunId, String appId, String entityType,
+      Long limit, Long createdTimeBegin, Long createdTimeEnd,
+      Long modifiedTimeBegin, Long modifiedTimeEnd,
+      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
+      Map<String, Object> infoFilters, Map<String, String> configFilters,
+      Set<String>  metricFilters, Set<String> eventFilters,
+      EnumSet<Field> fieldsToRetrieve) throws IOException {
+    return reader.getEntities(userId, clusterId, flowId, flowRunId, appId,
+        entityType, limit, createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
+        metricFilters, eventFilters, fieldsToRetrieve);
+  }
+
+  /**
+   * Get single timeline entity. The meaning of each argument has been
+   * documented with {@link TimelineReader#getEntity}.
+   *
+   * @see TimelineReader#getEntity
+   */
+  public TimelineEntity getEntity(String userId, String clusterId,
+      String flowId, Long flowRunId, String appId, String entityType,
+      String entityId, EnumSet<Field> fields) throws IOException {
+    return reader.getEntity(userId, clusterId, flowId, flowRunId, appId,
+        entityType, entityId, fields);
   }
 }
