@@ -181,7 +181,9 @@ public class TaskLog {
   }
 
   static String getBaseLogDir() {
-    return System.getProperty("hadoop.log.dir");
+    String logDir = System.getProperty("hadoop.log.dir");
+    // file is treating "" different from null {@see File#File(String, String)}
+    return logDir == null || logDir.isEmpty() ? null : logDir;
   }
 
   static File getAttemptDir(TaskAttemptID taskid, boolean isCleanup) {

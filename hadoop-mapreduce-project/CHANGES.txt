@@ -275,6 +275,8 @@ Trunk (Unreleased)
     MAPREDUCE-5801. Uber mode's log message is missing a vcore reason
     (Steven Wong via aw)
 
+    MAPREDUCE-6455. Unable to use surefire > 2.18. (Charlie Helin via kasha)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

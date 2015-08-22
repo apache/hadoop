@@ -988,8 +988,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       } catch(SecurityException se) {
         LOG.warn("Unexpected SecurityException in Configuration", se);
       }
-      if (val == null) {
-        val = getRaw(var);
+      if (val == null || val.isEmpty()) {
+        String raw = getRaw(var);
+        if (raw != null) {
+          // if System.getProperty(var) returns an empty string, retain this
+          // value instead of return null
+          val = raw;
+        }
       }
       if (val == null) {
         return eval; // return literal ${var}: var is unbound
