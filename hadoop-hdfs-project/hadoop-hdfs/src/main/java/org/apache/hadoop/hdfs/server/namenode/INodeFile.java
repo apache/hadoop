@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -353,12 +354,11 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileReplication(CURRENT_STATE_ID);
   }
 
-  @Override // BlockCollection
   public short getPreferredBlockReplication() {
     short max = getFileReplication(CURRENT_STATE_ID);
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
-      short maxInSnapshot = sf.getMaxBlockRepInDiffs();
+      short maxInSnapshot = sf.getMaxBlockRepInDiffs(null);
       if (sf.isCurrentFileDeleted()) {
         return maxInSnapshot;
       }
@@ -439,19 +439,10 @@ public class INodeFile extends INodeWithAdditionalFields
     return (snapshotBlocks == null) ? getBlocks() : snapshotBlocks;
   }
 
-  /** Used during concat to update the BlockCollection for each block. */
-  private void updateBlockCollection() {
-    if (blocks != null) {
-      for(BlockInfo b : blocks) {
-        b.setBlockCollection(this);
-      }
-    }
-  }
-
   /**
    * append array of blocks to this.blocks
    */
-  void concatBlocks(INodeFile[] inodes) {
+  void concatBlocks(INodeFile[] inodes, BlockManager bm) {
     int size = this.blocks.length;
     int totalAddedBlocks = 0;
     for(INodeFile f : inodes) {
@@ -468,7 +459,14 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     setBlocks(newlist);
-    updateBlockCollection();
+    for(BlockInfo b : blocks) {
+      b.setBlockCollection(this);
+      short oldRepl = b.getReplication();
+      short repl = getPreferredBlockReplication();
+      if (oldRepl != repl) {
+        bm.setReplication(oldRepl, repl, b);
+      }
+    }
   }
   
   /**
@@ -857,10 +855,9 @@ public class INodeFile extends INodeWithAdditionalFields
         truncatedBytes -= bi.getNumBytes();
       }
 
-      delta.addStorageSpace(-truncatedBytes * getPreferredBlockReplication());
+      delta.addStorageSpace(-truncatedBytes * bi.getReplication());
       if (bsps != null) {
-        List<StorageType> types = bsps.chooseStorageTypes(
-            getPreferredBlockReplication());
+        List<StorageType> types = bsps.chooseStorageTypes(bi.getReplication());
         for (StorageType t : types) {
           if (t.supportTypeQuota()) {
             delta.addTypeSpace(t, -truncatedBytes);

@@ -190,7 +190,6 @@ public class TestPendingReplication {
           DatanodeStorageInfo.toDatanodeDescriptors(
               DFSTestUtil.createDatanodeStorageInfos(1)));
       BlockCollection bc = Mockito.mock(BlockCollection.class);
-      Mockito.doReturn((short) 3).when(bc).getPreferredBlockReplication();
       // Place into blocksmap with GenerationStamp = 1
       blockInfo.setGenerationStamp(1);
       blocksMap.addBlockCollection(blockInfo, bc);

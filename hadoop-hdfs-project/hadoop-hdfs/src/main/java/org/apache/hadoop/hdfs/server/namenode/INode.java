@@ -901,15 +901,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
     /**
      * @param bsps
-     *          block storage policy suite to calculate intended storage type
-     *          usage
+ *          block storage policy suite to calculate intended storage type
+ *          usage
      * @param collectedBlocks
-     *          blocks collected from the descents for further block
-     *          deletion/update will be added to the given map.
+*          blocks collected from the descents for further block
+*          deletion/update will be added to the given map.
      * @param removedINodes
- *          INodes collected from the descents for further cleaning up of
+*          INodes collected from the descents for further cleaning up of
      * @param removedUCFiles
-     *      files that the NN need to remove the leases
      */
     public ReclaimContext(
         BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,
@@ -948,12 +947,43 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public static class BlocksMapUpdateInfo {
     /**
+     * The blocks whose replication factor need to be updated.
+     */
+    public static class UpdatedReplicationInfo {
+      /**
+       * the expected replication after the update.
+       */
+      private final short targetReplication;
+      /**
+       * The block whose replication needs to be updated.
+       */
+      private final BlockInfo block;
+
+      public UpdatedReplicationInfo(short targetReplication, BlockInfo block) {
+        this.targetReplication = targetReplication;
+        this.block = block;
+      }
+
+      public BlockInfo block() {
+        return block;
+      }
+
+      public short targetReplication() {
+        return targetReplication;
+      }
+    }
+    /**
      * The list of blocks that need to be removed from blocksMap
      */
     private final List<BlockInfo> toDeleteList;
+    /**
+     * The list of blocks whose replication factor needs to be adjusted
+     */
+    private final List<UpdatedReplicationInfo> toUpdateReplicationInfo;
 
     public BlocksMapUpdateInfo() {
       toDeleteList = new ChunkedArrayList<>();
+      toUpdateReplicationInfo = new ChunkedArrayList<>();
     }
     
     /**
@@ -962,7 +992,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public List<BlockInfo> getToDeleteList() {
       return toDeleteList;
     }
-    
+
+    public List<UpdatedReplicationInfo> toUpdateReplicationInfo() {
+      return toUpdateReplicationInfo;
+    }
+
     /**
      * Add a to-be-deleted block into the
      * {@link BlocksMapUpdateInfo#toDeleteList}
@@ -978,6 +1012,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       toDeleteList.remove(block);
     }
 
+    public void addUpdateReplicationFactor(BlockInfo block, short targetRepl) {
+      toUpdateReplicationInfo.add(
+          new UpdatedReplicationInfo(targetRepl, block));
+    }
     /**
      * Clear {@link BlocksMapUpdateInfo#toDeleteList}
      */

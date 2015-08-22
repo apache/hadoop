@@ -43,9 +43,14 @@ public abstract class  BlockInfo extends Block
 
   public static final BlockInfo[] EMPTY_ARRAY = {};
 
+  /**
+   * Replication factor
+   */
+  private short replication;
+
   private BlockCollection bc;
 
-  /** For implementing {@link LightWeightGSet.LinkedElement} interface */
+  /** For implementing {@link LightWeightGSet.LinkedElement} interface. */
   private LightWeightGSet.LinkedElement nextLinkedElement;
 
   /**
@@ -71,12 +76,14 @@ public abstract class  BlockInfo extends Block
   public BlockInfo(short replication) {
     this.triplets = new Object[3*replication];
     this.bc = null;
+    this.replication = replication;
   }
 
   public BlockInfo(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.bc = null;
+    this.replication = replication;
   }
 
   /**
@@ -84,9 +91,16 @@ public abstract class  BlockInfo extends Block
    * @param from BlockInfo to copy from.
    */
   protected BlockInfo(BlockInfo from) {
-    super(from);
-    this.triplets = new Object[from.triplets.length];
+    this(from, from.getReplication());
     this.bc = from.bc;
+  }
+
+  public short getReplication() {
+    return replication;
+  }
+
+  public void setReplication(short repl) {
+    this.replication = repl;
   }
 
   public BlockCollection getBlockCollection() {
