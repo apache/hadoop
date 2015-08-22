@@ -44,7 +44,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReleaseShortCircuitAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RetriableException;
@@ -201,7 +201,7 @@ public class ShortCircuitCache implements Closeable {
         DataInputStream in = new DataInputStream(sock.getInputStream());
         ReleaseShortCircuitAccessResponseProto resp =
             ReleaseShortCircuitAccessResponseProto.parseFrom(
-                PBHelper.vintPrefixed(in));
+                PBHelperClient.vintPrefixed(in));
         if (resp.getStatus() != Status.SUCCESS) {
           String error = resp.hasError() ? resp.getError() : "(unknown)";
           throw new IOException(resp.getStatus().toString() + ": " + error);

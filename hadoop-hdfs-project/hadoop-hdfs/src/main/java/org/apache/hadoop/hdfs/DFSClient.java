@@ -144,7 +144,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -1853,7 +1853,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           new Sender(out).blockChecksum(block, lb.getBlockToken());
 
           final BlockOpResponseProto reply =
-            BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
+            BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
 
           String logInfo = "for block " + block + " from datanode " + datanodes[j];
           DataTransferProtoUtil.checkBlockOpStatus(reply, logInfo);
@@ -1885,7 +1885,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           // read crc-type
           final DataChecksum.Type ct;
           if (checksumData.hasCrcType()) {
-            ct = PBHelper.convert(checksumData
+            ct = PBHelperClient.convert(checksumData
                 .getCrcType());
           } else {
             LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
@@ -2013,11 +2013,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new Sender(out).readBlock(lb.getBlock(), lb.getBlockToken(), clientName,
           0, 1, true, CachingStrategy.newDefaultStrategy());
       final BlockOpResponseProto reply =
-          BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
+          BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
       String logInfo = "trying to read " + lb.getBlock() + " from datanode " + dn;
       DataTransferProtoUtil.checkBlockOpStatus(reply, logInfo);
 
-      return PBHelper.convert(reply.getReadOpChecksumInfo().getChecksum().getType());
+      return PBHelperClient.convert(reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
       IOUtils.cleanup(null, pair.in, pair.out);
     }

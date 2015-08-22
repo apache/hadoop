@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -155,7 +156,7 @@ public final class FSImageFormatPBINode {
       QuotaByStorageTypeFeatureProto proto) {
       ImmutableList.Builder<QuotaByStorageTypeEntry> b = ImmutableList.builder();
       for (QuotaByStorageTypeEntryProto quotaEntry : proto.getQuotasList()) {
-        StorageType type = PBHelper.convertStorageType(quotaEntry.getStorageType());
+        StorageType type = PBHelperClient.convertStorageType(quotaEntry.getStorageType());
         long quota = quotaEntry.getQuota();
         b.add(new QuotaByStorageTypeEntry.Builder().setStorageType(type)
             .setQuota(quota).build());
@@ -462,7 +463,7 @@ public final class FSImageFormatPBINode {
         if (q.getTypeSpace(t) >= 0) {
           QuotaByStorageTypeEntryProto.Builder eb =
               QuotaByStorageTypeEntryProto.newBuilder().
-              setStorageType(PBHelper.convertStorageType(t)).
+              setStorageType(PBHelperClient.convertStorageType(t)).
               setQuota(q.getTypeSpace(t));
           b.addQuotas(eb);
         }
