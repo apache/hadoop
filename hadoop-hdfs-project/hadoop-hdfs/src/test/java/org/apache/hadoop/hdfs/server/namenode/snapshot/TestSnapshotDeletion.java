@@ -782,7 +782,7 @@ public class TestSnapshotDeletion {
     // modify file10, to check if the posterior diff was set correctly
     hdfs.setReplication(file10, REPLICATION);
     checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 20 * BLOCKSIZE);
-    
+
     Path file10_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
         modDirStr + "file10");
     Path file11_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
@@ -830,7 +830,7 @@ public class TestSnapshotDeletion {
         blockmanager);
     TestSnapshotBlocksMap.assertBlockCollection(file13_s1.toString(), 1, fsdir,
         blockmanager);
-    
+
     // make sure file14 and file15 are not included in s1
     Path file14_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
         modDirStr + "file14");
@@ -841,14 +841,18 @@ public class TestSnapshotDeletion {
     for (BlockInfo b : blocks_14) {
       assertNull(blockmanager.getBlockCollection(b));
     }
-    
+
     INodeFile nodeFile13 = (INodeFile) fsdir.getINode(file13.toString());
-    assertEquals(REPLICATION_1, nodeFile13.getPreferredBlockReplication());
+    for (BlockInfo b: nodeFile13.getBlocks()) {
+      assertEquals(REPLICATION_1, b.getReplication());
+    }
     TestSnapshotBlocksMap.assertBlockCollection(file13.toString(), 1, fsdir,
         blockmanager);
-    
+
     INodeFile nodeFile12 = (INodeFile) fsdir.getINode(file12_s1.toString());
-    assertEquals(REPLICATION_1, nodeFile12.getPreferredBlockReplication());
+    for (BlockInfo b: nodeFile12.getBlocks()) {
+      assertEquals(REPLICATION_1, b.getReplication());
+    }
   }
   
   /** Test deleting snapshots with modification on the metadata of directory */ 

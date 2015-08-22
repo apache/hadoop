@@ -514,7 +514,7 @@ public class FSEditLogLoader {
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
       FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
-          setReplicationOp.path, logVersion), replication, null);
+          setReplicationOp.path, logVersion), replication);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -1058,7 +1058,7 @@ public class FSEditLogLoader {
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
           newBI = new BlockInfoContiguous(newBlock,
-              file.getPreferredBlockReplication());
+              file.getFileReplication());
         }
         fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);
