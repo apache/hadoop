@@ -20,11 +20,16 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.server.api.ContainerLogContext;
+import org.apache.hadoop.yarn.server.api.ContainerType;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 
 @Private
-public class AllContainerLogAggregationPolicy extends
+public class AMOrFailedContainerLogAggregationPolicy extends
     AbstractContainerLogAggregationPolicy {
   public boolean shouldDoLogAggregation(ContainerLogContext logContext) {
-    return true;
+    int exitCode = logContext.getExitCode();
+    return logContext.getContainerType() == ContainerType.APPLICATION_MASTER ||
+        (exitCode != 0 && exitCode != ExitCode.FORCE_KILLED.getExitCode()
+        && exitCode != ExitCode.TERMINATED.getExitCode());
   }
 }

@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -148,8 +147,7 @@ public class TestNonAggregatingLogHandler {
     logHandler.init(conf);
     logHandler.start();
 
-    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null,
-        ContainerLogsRetentionPolicy.ALL_CONTAINERS, null));
+    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
     logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
 
@@ -189,8 +187,7 @@ public class TestNonAggregatingLogHandler {
     logHandler.init(conf);
     logHandler.start();
 
-    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null,
-        ContainerLogsRetentionPolicy.ALL_CONTAINERS, null));
+    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
     logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
 
@@ -357,8 +354,7 @@ public class TestNonAggregatingLogHandler {
     logHandler.init(conf);
     logHandler.start();
 
-    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null,
-        ContainerLogsRetentionPolicy.ALL_CONTAINERS, null));
+    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
     logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
@@ -445,7 +441,7 @@ public class TestNonAggregatingLogHandler {
     doReturn(localLogDirPaths).when(dirsHandler).getLogDirsForCleanup();
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null,
-      ContainerLogsRetentionPolicy.ALL_CONTAINERS, appAcls));
+        appAcls));
 
     // test case where some dirs have the log dir to delete
     // mock some dirs throwing various exceptions

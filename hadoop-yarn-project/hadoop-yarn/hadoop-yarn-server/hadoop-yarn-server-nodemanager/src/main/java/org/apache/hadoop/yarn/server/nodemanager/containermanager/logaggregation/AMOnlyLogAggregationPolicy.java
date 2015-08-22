@@ -20,11 +20,12 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.server.api.ContainerLogContext;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 @Private
-public class AllContainerLogAggregationPolicy extends
+public class AMOnlyLogAggregationPolicy extends
     AbstractContainerLogAggregationPolicy {
   public boolean shouldDoLogAggregation(ContainerLogContext logContext) {
-    return true;
+   return logContext.getContainerType() == ContainerType.APPLICATION_MASTER;
   }
 }

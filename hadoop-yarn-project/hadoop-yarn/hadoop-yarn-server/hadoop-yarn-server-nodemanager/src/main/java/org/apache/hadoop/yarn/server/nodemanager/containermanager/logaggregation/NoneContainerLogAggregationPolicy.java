@@ -22,9 +22,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.server.api.ContainerLogContext;
 
 @Private
-public class AllContainerLogAggregationPolicy extends
+public class NoneContainerLogAggregationPolicy extends
     AbstractContainerLogAggregationPolicy {
   public boolean shouldDoLogAggregation(ContainerLogContext logContext) {
-    return true;
+    return false;
   }
 }

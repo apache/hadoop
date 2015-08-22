@@ -178,6 +178,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2923. Support configuration based NodeLabelsProvider Service in Distributed 
     Node Label Configuration Setup. (Naganarasimha G R)
 
+    YARN-221. NM should provide a way for AM to tell it not to aggregate logs.
+    (Ming Ma via xgong)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
