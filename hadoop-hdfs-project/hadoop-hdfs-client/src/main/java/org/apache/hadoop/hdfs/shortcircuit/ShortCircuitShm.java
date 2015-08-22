@@ -27,14 +27,15 @@ import java.util.Random;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sun.misc.Unsafe;
 
@@ -46,7 +47,7 @@ import com.google.common.primitives.Ints;
  * A shared memory segment used to implement short-circuit reads.
  */
 public class ShortCircuitShm {
-  private static final Log LOG = LogFactory.getLog(ShortCircuitShm.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ShortCircuitShm.class);
 
   protected static final int BYTES_PER_SLOT = 64;
 
