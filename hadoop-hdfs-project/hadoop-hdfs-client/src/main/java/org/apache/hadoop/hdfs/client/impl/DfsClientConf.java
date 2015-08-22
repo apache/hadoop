@@ -23,7 +23,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.ReplicaAccessorBuilder;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.util.DataChecksum;
@@ -83,6 +85,11 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Retry;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.ShortCircuit;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write;
 
+import java.lang.Class;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * DFSClient configuration.
  */
@@ -126,6 +133,8 @@ public class DfsClientConf {
 
   private final long hedgedReadThresholdMillis;
   private final int hedgedReadThreadpoolSize;
+  private final List<Class<? extends ReplicaAccessorBuilder>>
+      replicaAccessorBuilderClasses;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
@@ -231,8 +240,35 @@ public class DfsClientConf {
         HedgedRead.THRESHOLD_MILLIS_KEY,
         HedgedRead.THRESHOLD_MILLIS_DEFAULT);
     hedgedReadThreadpoolSize = conf.getInt(
-        HedgedRead.THREADPOOL_SIZE_KEY,
-        HedgedRead.THREADPOOL_SIZE_DEFAULT);
+        HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
+        HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT);
+
+    replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Class<? extends ReplicaAccessorBuilder>>
+      loadReplicaAccessorBuilderClasses(Configuration conf)
+  {
+    String classNames[] = conf.getTrimmedStrings(
+        HdfsClientConfigKeys.REPLICA_ACCESSOR_BUILDER_CLASSES_KEY);
+    if (classNames.length == 0) {
+      return Collections.emptyList();
+    }
+    ArrayList<Class<? extends ReplicaAccessorBuilder>> classes =
+        new ArrayList<Class<? extends ReplicaAccessorBuilder>>();
+    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+    for (String className: classNames) {
+      try {
+        Class<? extends ReplicaAccessorBuilder> cls =
+          (Class<? extends ReplicaAccessorBuilder>)
+            classLoader.loadClass(className);
+        classes.add(cls);
+      } catch (Throwable t) {
+        LOG.warn("Unable to load " + className, t);
+      }
+    }
+    return classes;
   }
 
   private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -486,6 +522,14 @@ public class DfsClientConf {
    */
   public int getHedgedReadThreadpoolSize() {
     return hedgedReadThreadpoolSize;
+  }
+
+  /**
+   * @return the replicaAccessorBuilderClasses
+   */
+  public List<Class<? extends ReplicaAccessorBuilder>>
+        getReplicaAccessorBuilderClasses() {
+    return replicaAccessorBuilderClasses;
   }
 
   /**
