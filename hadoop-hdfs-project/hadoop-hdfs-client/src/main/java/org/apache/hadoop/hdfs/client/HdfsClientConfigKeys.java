@@ -117,6 +117,9 @@ public interface HdfsClientConfigKeys {
       "dfs.datanode.hdfs-blocks-metadata.enabled";
   boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT = false;
 
+  static final String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
+      PREFIX + "replica.accessor.builder.classes";
+
   /** dfs.client.retry configuration properties */
   interface Retry {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "retry.";

@@ -302,3 +302,7 @@ message OpBlockChecksumResponseProto {
   required bytes md5 = 3;
   optional ChecksumTypeProto crcType = 4;
 }
+
+message OpCustomProto {
+  required string customId = 1;
+}
