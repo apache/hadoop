@@ -1208,6 +1208,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8930. Block report lease may leak if the 2nd full block report comes
     when NN is still in safemode (Colin P. McCabe via Jing Zhao)
 
+    HDFS-8948. Use GenericTestUtils to set log levels in TestPread and
+    TestReplaceDatanodeOnFailure. (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
