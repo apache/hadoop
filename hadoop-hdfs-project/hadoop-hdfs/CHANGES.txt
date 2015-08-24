@@ -1201,6 +1201,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8942. Update hyperlink to rack awareness page in HDFS Architecture
     documentation. (Masatake Iwasaki via aajisaka)
 
+    HDFS-8930. Block report lease may leak if the 2nd full block report comes
+    when NN is still in safemode (Colin P. McCabe via Jing Zhao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
