@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -268,7 +269,7 @@ public class TestSnapshotDeletion {
     checkQuotaUsageComputation(dir, 8, BLOCKSIZE * REPLICATION * 3);
     // check blocks of tempFile
     for (BlockInfo b : blocks) {
-      assertNull(blockmanager.getBlockCollection(b));
+      assertEquals(INVALID_INODE_ID, b.getBlockCollectionId());
     }
     
     // make a change: create a new file under subsub
@@ -345,7 +346,7 @@ public class TestSnapshotDeletion {
     // newFile
     checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
     for (BlockInfo b : blocks) {
-      assertNull(blockmanager.getBlockCollection(b));
+      assertEquals(INVALID_INODE_ID, b.getBlockCollectionId());
     }
     
     // make sure the whole subtree of sub is stored correctly in snapshot
@@ -508,7 +509,7 @@ public class TestSnapshotDeletion {
     // metaChangeFile's replication factor decreases
     checkQuotaUsageComputation(dir, 6, 2 * BLOCKSIZE * REPLICATION - BLOCKSIZE);
     for (BlockInfo b : blocks) {
-      assertNull(blockmanager.getBlockCollection(b));
+      assertEquals(INVALID_INODE_ID, b.getBlockCollectionId());
     }
     
     // check 1. there is no snapshot s0
@@ -839,7 +840,7 @@ public class TestSnapshotDeletion {
     assertFalse(hdfs.exists(file14_s1));
     assertFalse(hdfs.exists(file15_s1));
     for (BlockInfo b : blocks_14) {
-      assertNull(blockmanager.getBlockCollection(b));
+      assertEquals(INVALID_INODE_ID, b.getBlockCollectionId());
     }
 
     INodeFile nodeFile13 = (INodeFile) fsdir.getINode(file13.toString());
