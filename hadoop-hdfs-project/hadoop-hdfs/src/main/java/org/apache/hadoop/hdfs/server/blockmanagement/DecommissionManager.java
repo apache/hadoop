@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -528,12 +529,14 @@ public class DecommissionManager {
           it.remove();
           continue;
         }
-        BlockCollection bc = blockManager.blocksMap.getBlockCollection(block);
-        if (bc == null) {
+
+        long bcId = block.getBlockCollectionId();
+        if (bcId == INodeId.INVALID_INODE_ID) {
           // Orphan block, will be invalidated eventually. Skip.
           continue;
         }
 
+        BlockCollection bc = namesystem.getBlockCollection(bcId);
         final NumberReplicas num = blockManager.countNodes(block);
         final int liveReplicas = num.liveReplicas();
         final int curReplicas = liveReplicas;

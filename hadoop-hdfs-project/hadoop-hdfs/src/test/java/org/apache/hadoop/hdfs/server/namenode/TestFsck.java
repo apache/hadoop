@@ -80,6 +80,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -828,11 +829,19 @@ public class TestFsck {
 
       // decommission datanode
       ExtendedBlock eb = DFSTestUtil.getFirstBlock(dfs, path);
-      DatanodeDescriptor dn =
-          cluster.getNameNode().getNamesystem().getBlockManager()
-              .getBlockCollection(eb.getLocalBlock()).getBlocks()[0].getDatanode(0);
-      cluster.getNameNode().getNamesystem().getBlockManager().getDatanodeManager()
-          .getDecomManager().startDecommission(dn);
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
+      BlockCollection bc = null;
+      try {
+        fsn.writeLock();
+        BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
+        bc = bm.getBlockCollection(bi);
+      } finally {
+        fsn.writeUnlock();
+      }
+      DatanodeDescriptor dn = bc.getBlocks()[0]
+          .getDatanode(0);
+      bm.getDatanodeManager().getDecomManager().startDecommission(dn);
       String dnName = dn.getXferAddr();
 
       // check the replica status while decommissioning
@@ -1387,12 +1396,19 @@ public class TestFsck {
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
 
       //decommission datanode
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
       ExtendedBlock eb = util.getFirstBlock(dfs, path);
-      DatanodeDescriptor dn = cluster.getNameNode().getNamesystem()
-          .getBlockManager().getBlockCollection(eb.getLocalBlock())
-          .getBlocks()[0].getDatanode(0);
-      cluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager().getDecomManager().startDecommission(dn);
+      BlockCollection bc = null;
+      try {
+        fsn.writeLock();
+        BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
+        bc = bm.getBlockCollection(bi);
+      } finally {
+        fsn.writeUnlock();
+      }
+      DatanodeDescriptor dn = bc.getBlocks()[0].getDatanode(0);
+      bm.getDatanodeManager().getDecomManager().startDecommission(dn);
       String dnName = dn.getXferAddr();
 
       //wait for decommission start
@@ -1595,12 +1611,20 @@ public class TestFsck {
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
 
       // decommission datanode
+      FSNamesystem fsn = cluster.getNameNode().getNamesystem();
+      BlockManager bm = fsn.getBlockManager();
       ExtendedBlock eb = util.getFirstBlock(dfs, path);
-      DatanodeDescriptor dn = cluster.getNameNode().getNamesystem()
-          .getBlockManager().getBlockCollection(eb.getLocalBlock())
-          .getBlocks()[0].getDatanode(0);
-      cluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager().getDecomManager().startDecommission(dn);
+      BlockCollection bc = null;
+      try {
+        fsn.writeLock();
+        BlockInfo bi = bm.getStoredBlock(eb.getLocalBlock());
+        bc = bm.getBlockCollection(bi);
+      } finally {
+        fsn.writeUnlock();
+      }
+      DatanodeDescriptor dn = bc.getBlocks()[0]
+          .getDatanode(0);
+      bm.getDatanodeManager().getDecomManager().startDecommission(dn);
       String dnName = dn.getXferAddr();
 
       // wait for decommission start

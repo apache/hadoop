@@ -70,7 +70,7 @@ public class TestCommitBlockSynchronization {
     BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 1);
     blockInfo.convertToBlockUnderConstruction(
         HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
-    blockInfo.setBlockCollection(file);
+    blockInfo.setBlockCollectionId(file.getId());
     blockInfo.setGenerationStamp(genStamp);
     blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo,
         genStamp);
@@ -88,8 +88,7 @@ public class TestCommitBlockSynchronization {
   }
 
   private INodeFile mockFileUnderConstruction() {
-    INodeFile file = mock(INodeFile.class);
-    return file;
+    return mock(INodeFile.class);
   }
 
   @Test
@@ -110,7 +109,7 @@ public class TestCommitBlockSynchronization {
 
     // Simulate 'completing' the block.
     BlockInfo completedBlockInfo = new BlockInfoContiguous(block, (short) 1);
-    completedBlockInfo.setBlockCollection(file);
+    completedBlockInfo.setBlockCollectionId(file.getId());
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)
         .getStoredBlock(any(Block.class));
@@ -182,7 +181,7 @@ public class TestCommitBlockSynchronization {
         lastBlock, genStamp, length, true, false, newTargets, null);
 
     BlockInfo completedBlockInfo = new BlockInfoContiguous(block, (short) 1);
-    completedBlockInfo.setBlockCollection(file);
+    completedBlockInfo.setBlockCollectionId(file.getId());
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)
         .getStoredBlock(any(Block.class));

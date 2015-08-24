@@ -79,4 +79,9 @@ public interface BlockCollection {
    * @return whether the block collection is under construction.
    */
   public boolean isUnderConstruction();
+
+  /**
+   * @return the id for the block collection
+   */
+  long getId();
 }

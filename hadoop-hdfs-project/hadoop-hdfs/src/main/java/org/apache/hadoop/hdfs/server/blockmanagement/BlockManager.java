@@ -562,7 +562,7 @@ public class BlockManager implements BlockStatsMXBean {
                          numReplicas.decommissionedAndDecommissioning();
     
     if (block instanceof BlockInfo) {
-      BlockCollection bc = ((BlockInfo) block).getBlockCollection();
+      BlockCollection bc = getBlockCollection((BlockInfo)block);
       String fileName = (bc == null) ? "[orphaned]" : bc.getName();
       out.print(fileName + ": ");
     }
@@ -1353,7 +1353,7 @@ public class BlockManager implements BlockStatsMXBean {
         for (int priority = 0; priority < blocksToReplicate.size(); priority++) {
           for (BlockInfo block : blocksToReplicate.get(priority)) {
             // block should belong to a file
-            bc = blocksMap.getBlockCollection(block);
+            bc = getBlockCollection(block);
             // abandoned block or block reopened for append
             if (bc == null
                 || (bc.isUnderConstruction() && block.equals(bc.getLastBlock()))) {
@@ -1439,7 +1439,7 @@ public class BlockManager implements BlockStatsMXBean {
           int priority = rw.priority;
           // Recheck since global lock was released
           // block should belong to a file
-          bc = blocksMap.getBlockCollection(block);
+          bc = getBlockCollection(block);
           // abandoned block or block reopened for append
           if(bc == null || (bc.isUnderConstruction() && block.equals(bc.getLastBlock()))) {
             neededReplications.remove(block, priority); // remove from neededReplications
@@ -2542,7 +2542,7 @@ public class BlockManager implements BlockStatsMXBean {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication) {
-      completeBlock(storedBlock.getBlockCollection(), storedBlock, false);
+      completeBlock(getBlockCollection(storedBlock), storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
@@ -2580,7 +2580,7 @@ public class BlockManager implements BlockStatsMXBean {
       // it will happen in next block report otherwise.
       return block;
     }
-    BlockCollection bc = storedBlock.getBlockCollection();
+    BlockCollection bc = getBlockCollection(storedBlock);
     assert bc != null : "Block must belong to a file";
 
     // add block to the datanode
@@ -2975,7 +2975,8 @@ public class BlockManager implements BlockStatsMXBean {
                               BlockPlacementPolicy replicator) {
     assert namesystem.hasWriteLock();
     // first form a rack to datanodes map and
-    BlockCollection bc = getBlockCollection(b);
+    BlockInfo bi = getStoredBlock(b);
+    BlockCollection bc = getBlockCollection(bi);
     final BlockStoragePolicy storagePolicy = storagePolicySuite.getPolicy(bc.getStoragePolicyID());
     final List<StorageType> excessTypes = storagePolicy.chooseExcess(
         replication, DatanodeStorageInfo.toStorageTypes(nonExcess));
@@ -3112,7 +3113,7 @@ public class BlockManager implements BlockStatsMXBean {
       // necessary. In that case, put block on a possibly-will-
       // be-replicated list.
       //
-      BlockCollection bc = blocksMap.getBlockCollection(block);
+      BlockCollection bc = getBlockCollection(storedBlock);
       if (bc != null) {
         namesystem.decrementSafeBlockCount(storedBlock);
         updateNeededReplications(storedBlock, -1, 0);
@@ -3628,8 +3629,8 @@ public class BlockManager implements BlockStatsMXBean {
     return blocksMap.addBlockCollection(block, bc);
   }
 
-  public BlockCollection getBlockCollection(Block b) {
-    return blocksMap.getBlockCollection(b);
+  public BlockCollection getBlockCollection(BlockInfo b) {
+    return namesystem.getBlockCollection(b.getBlockCollectionId());
   }
 
   /** @return an iterator of the datanodes. */

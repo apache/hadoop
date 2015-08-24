@@ -37,6 +37,7 @@ public class INodeId extends SequentialNumber {
    */
   public static final long LAST_RESERVED_ID = 2 << 14 - 1;
   public static final long ROOT_INODE_ID = LAST_RESERVED_ID + 1;
+  public static final long INVALID_INODE_ID = -1;
 
   /**
    * To check if the request id is the same as saved id. Don't check fileId
