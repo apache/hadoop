@@ -1211,6 +1211,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8948. Use GenericTestUtils to set log levels in TestPread and
     TestReplaceDatanodeOnFailure. (Mingliang Liu via wheat9)
 
+    HDFS-8932. NPE thrown in NameNode when try to get TotalSyncCount metric
+    before editLogStream initialization. (Surendra Singh Lilhore via xyao)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
