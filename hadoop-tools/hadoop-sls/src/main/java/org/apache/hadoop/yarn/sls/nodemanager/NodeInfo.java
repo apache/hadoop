@@ -149,6 +149,9 @@ public class NodeInfo {
       return null;
     }
 
+    public void resetLastNodeHeartBeatResponse() {
+    }
+
     public List<UpdatedContainerInfo> pullContainerUpdates() {
       ArrayList<UpdatedContainerInfo> list = new ArrayList<UpdatedContainerInfo>();
       

@@ -443,6 +443,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  @Override
+  public void resetLastNodeHeartBeatResponse() {
+    this.writeLock.lock();
+    try {
+      latestNodeHeartBeatResponse.setResponseId(0);
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
   public void handle(RMNodeEvent event) {
     LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
     try {
@@ -617,8 +627,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             new NodeRemovedSchedulerEvent(rmNode));
 
         if (rmNode.getHttpPort() == newNode.getHttpPort()) {
-          // Reset heartbeat ID since node just restarted.
-          rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
           if (!rmNode.getTotalCapability().equals(
               newNode.getTotalCapability())) {
             rmNode.totalCapability = newNode.getTotalCapability();
@@ -655,9 +663,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         }
       
         handleNMContainerStatus(reconnectEvent.getNMContainerStatuses(), rmNode);
-
-        // Reset heartbeat ID since node just restarted.
-        rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
 
         for (ApplicationId appId : reconnectEvent.getRunningApplications()) {
           handleRunningAppOnNode(rmNode, rmNode.context, appId, rmNode.nodeId);

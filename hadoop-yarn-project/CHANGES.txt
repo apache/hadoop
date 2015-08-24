@@ -792,6 +792,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3986. getTransferredContainers in AbstractYarnScheduler should be present
     in YarnScheduler interface instead. (Varun Saxena via rohithsharmaks)
 
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    has not been reset synchronously. (Jun Gong via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
