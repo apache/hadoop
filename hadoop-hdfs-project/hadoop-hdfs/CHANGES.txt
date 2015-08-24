@@ -829,6 +829,10 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8934. Move ShortCircuitShm to hdfs-client. (Mingliang Liu via wheat9)
 
+    HDFS-8928. Improvements for BlockUnderConstructionFeature:
+    ReplicaUnderConstruction as a separate class and replicas as an array.
+    (jing9)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
