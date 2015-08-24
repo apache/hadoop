@@ -1032,6 +1032,15 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 
+<property>
+    <name>ipc.server.log.slow.rpc</name>
+    <value>false</value>
+    <description>This setting is useful to troubleshoot performance issues for
+     various services. If this value is set to true then we log requests that
+     fall into 99th percentile as well as increment RpcSlowCalls counter.
+    </description>
+</property>
+
 <!-- Proxy Configuration -->
 
 <property>

@@ -567,7 +567,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       /**
        * This is a server side method, which is invoked over RPC. On success
        * the return response has protobuf response payload. On failure, the
-       * exception name and the stack trace are return in the resposne.
+       * exception name and the stack trace are returned in the response.
        * See {@link HadoopRpcResponseProto}
        * 
        * In this method there three types of exceptions possible and they are
@@ -657,6 +657,9 @@ public class ProtobufRpcEngine implements RpcEngine {
           server.rpcMetrics.addRpcProcessingTime(processingTime);
           server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
               processingTime);
+          if (server.isLogSlowRPC()) {
+            server.logSlowRpcCalls(methodName, processingTime);
+          }
         }
         return new RpcResponseWrapper(result);
       }

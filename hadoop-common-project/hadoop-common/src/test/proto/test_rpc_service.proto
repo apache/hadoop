@@ -37,4 +37,5 @@ service TestProtobufRpcProto {
 service TestProtobufRpc2Proto {
   rpc ping2(EmptyRequestProto) returns (EmptyResponseProto);
   rpc echo2(EchoRequestProto) returns (EchoResponseProto);
+  rpc sleep(SleepRequestProto) returns (SleepResponseProto);
 }

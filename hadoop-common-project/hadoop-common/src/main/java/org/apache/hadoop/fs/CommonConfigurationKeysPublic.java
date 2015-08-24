@@ -235,6 +235,11 @@ public class CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_MAX_CONNECTIONS_KEY */
   public static final int     IPC_SERVER_MAX_CONNECTIONS_DEFAULT = 0;
 
+  /** Logs if a RPC is really slow compared to rest of RPCs. */
+  public static final String IPC_SERVER_LOG_SLOW_RPC =
+                                                "ipc.server.log.slow.rpc";
+  public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
+
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY =
     "hadoop.rpc.socket.factory.class.default";
