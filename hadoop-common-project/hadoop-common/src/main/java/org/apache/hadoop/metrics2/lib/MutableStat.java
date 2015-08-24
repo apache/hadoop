@@ -139,7 +139,12 @@ public class MutableStat extends MutableMetric {
     }
   }
 
-  private SampleStat lastStat() {
+  /**
+   * Return a SampleStat object that supports
+   * calls like StdDev and Mean.
+   * @return SampleStat
+   */
+  public SampleStat lastStat() {
     return changed() ? intervalStat : prevStat;
   }
 
