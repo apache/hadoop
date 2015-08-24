@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.protocol.datatransfer;
 
 import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil.fromProto;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil.continueTraceSpan;
-import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
+import static org.apache.hadoop.hdfs.protocolPB.PBHelper.vintPrefixed;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProt
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReleaseShortCircuitAccessRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmRequestProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.htrace.TraceScope;
@@ -137,7 +136,7 @@ public abstract class Receiver implements DataTransferProtocol {
         proto.getClass().getSimpleName());
     try {
       writeBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
-          PBHelperClient.convertStorageType(proto.getStorageType()),
+          PBHelper.convertStorageType(proto.getStorageType()),
           PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
           proto.getHeader().getClientName(),
           targets,
@@ -229,7 +228,7 @@ public abstract class Receiver implements DataTransferProtocol {
         proto.getClass().getSimpleName());
     try {
       replaceBlock(PBHelper.convert(proto.getHeader().getBlock()),
-          PBHelperClient.convertStorageType(proto.getStorageType()),
+          PBHelper.convertStorageType(proto.getStorageType()),
           PBHelper.convert(proto.getHeader().getToken()),
           proto.getDelHint(),
           PBHelper.convert(proto.getSource()));

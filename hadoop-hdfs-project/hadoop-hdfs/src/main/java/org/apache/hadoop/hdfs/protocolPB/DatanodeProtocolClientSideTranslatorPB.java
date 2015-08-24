@@ -298,11 +298,11 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       ) throws IOException {
     CommitBlockSynchronizationRequestProto.Builder builder = 
         CommitBlockSynchronizationRequestProto.newBuilder()
-        .setBlock(PBHelperClient.convert(block)).setNewGenStamp(newgenerationstamp)
+        .setBlock(PBHelper.convert(block)).setNewGenStamp(newgenerationstamp)
         .setNewLength(newlength).setCloseFile(closeFile)
         .setDeleteBlock(deleteblock);
     for (int i = 0; i < newtargets.length; i++) {
-      builder.addNewTaragets(PBHelperClient.convert(newtargets[i]));
+      builder.addNewTaragets(PBHelper.convert(newtargets[i]));
       builder.addNewTargetStorages(newtargetstorages[i]);
     }
     CommitBlockSynchronizationRequestProto req = builder.build();

@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
@@ -30,7 +32,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationH
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTraceInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ChecksumTypeProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.security.token.Token;
@@ -58,7 +60,7 @@ public abstract class DataTransferProtoUtil {
   }
 
   public static ChecksumProto toProto(DataChecksum checksum) {
-    ChecksumTypeProto type = PBHelperClient.convert(checksum.getChecksumType());
+    ChecksumTypeProto type = PBHelper.convert(checksum.getChecksumType());
     // ChecksumType#valueOf never returns null
     return ChecksumProto.newBuilder()
       .setBytesPerChecksum(checksum.getBytesPerChecksum())
@@ -70,7 +72,7 @@ public abstract class DataTransferProtoUtil {
     if (proto == null) return null;
 
     int bytesPerChecksum = proto.getBytesPerChecksum();
-    DataChecksum.Type type = PBHelperClient.convert(proto.getType());
+    DataChecksum.Type type = PBHelper.convert(proto.getType());
     return DataChecksum.newDataChecksum(type, bytesPerChecksum);
   }
 
@@ -87,8 +89,8 @@ public abstract class DataTransferProtoUtil {
   static BaseHeaderProto buildBaseHeader(ExtendedBlock blk,
       Token<BlockTokenIdentifier> blockToken) {
     BaseHeaderProto.Builder builder =  BaseHeaderProto.newBuilder()
-      .setBlock(PBHelperClient.convert(blk))
-      .setToken(PBHelperClient.convert(blockToken));
+      .setBlock(PBHelper.convert(blk))
+      .setToken(PBHelper.convert(blockToken));
     if (Trace.isTracing()) {
       Span s = Trace.currentSpan();
       builder.setTraceInfo(DataTransferTraceInfoProto.newBuilder()

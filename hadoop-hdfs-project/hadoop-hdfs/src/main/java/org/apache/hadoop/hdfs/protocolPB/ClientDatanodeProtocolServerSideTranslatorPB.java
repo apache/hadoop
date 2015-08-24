@@ -137,7 +137,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return GetBlockLocalPathInfoResponseProto.newBuilder()
-        .setBlock(PBHelperClient.convert(resp.getBlock()))
+        .setBlock(PBHelper.convert(resp.getBlock()))
         .setLocalPath(resp.getBlockPath()).setLocalMetaPath(resp.getMetaPath())
         .build();
   }

@@ -185,7 +185,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   @Override
   public long getReplicaVisibleLength(ExtendedBlock b) throws IOException {
     GetReplicaVisibleLengthRequestProto req = GetReplicaVisibleLengthRequestProto
-        .newBuilder().setBlock(PBHelperClient.convert(b)).build();
+        .newBuilder().setBlock(PBHelper.convert(b)).build();
     try {
       return rpcProxy.getReplicaVisibleLength(NULL_CONTROLLER, req).getLength();
     } catch (ServiceException e) {
@@ -218,8 +218,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
       Token<BlockTokenIdentifier> token) throws IOException {
     GetBlockLocalPathInfoRequestProto req =
         GetBlockLocalPathInfoRequestProto.newBuilder()
-        .setBlock(PBHelperClient.convert(block))
-        .setToken(PBHelperClient.convert(token)).build();
+        .setBlock(PBHelper.convert(block))
+        .setToken(PBHelper.convert(token)).build();
     GetBlockLocalPathInfoResponseProto resp;
     try {
       resp = rpcProxy.getBlockLocalPathInfo(NULL_CONTROLLER, req);

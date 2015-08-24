@@ -30,6 +30,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.net.DomainPeer;
@@ -37,17 +39,16 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmResponseProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Manages short-circuit memory segments for an HDFS client.
@@ -62,8 +63,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class DfsClientShmManager implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      DfsClientShmManager.class);
+  private static final Log LOG = LogFactory.getLog(DfsClientShmManager.class);
 
   /**
    * Manages short-circuit memory segments that pertain to a given DataNode.
@@ -168,7 +168,7 @@ public class DfsClientShmManager implements Closeable {
       new Sender(out).requestShortCircuitShm(clientName);
       ShortCircuitShmResponseProto resp = 
           ShortCircuitShmResponseProto.parseFrom(
-            PBHelperClient.vintPrefixed(peer.getInputStream()));
+              PBHelper.vintPrefixed(peer.getInputStream()));
       String error = resp.hasError() ? resp.getError() : "(unknown)";
       switch (resp.getStatus()) {
       case SUCCESS:
@@ -185,18 +185,14 @@ public class DfsClientShmManager implements Closeable {
         }
         try {
           DfsClientShm shm = 
-              new DfsClientShm(PBHelperClient.convert(resp.getId()),
+              new DfsClientShm(PBHelper.convert(resp.getId()),
                   fis[0], this, peer);
           if (LOG.isTraceEnabled()) {
             LOG.trace(this + ": createNewShm: created " + shm);
           }
           return shm;
         } finally {
-          try {
-            fis[0].close();
-          } catch (Throwable e) {
-            LOG.debug("Exception in closing " + fis[0], e);
-          }
+          IOUtils.cleanup(LOG,  fis[0]);
         }
       case ERROR_UNSUPPORTED:
         // The DataNode just does not support short-circuit shared memory
@@ -501,11 +497,7 @@ public class DfsClientShmManager implements Closeable {
     }
     // When closed, the domainSocketWatcher will issue callbacks that mark
     // all the outstanding DfsClientShm segments as stale.
-    try {
-      domainSocketWatcher.close();
-    } catch (Throwable e) {
-      LOG.debug("Exception in closing " + domainSocketWatcher, e);
-    }
+    IOUtils.cleanup(LOG, domainSocketWatcher);
   }
 
 

@@ -698,7 +698,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDatanodeReportRequestProto req)
       throws ServiceException {
     try {
-      List<? extends DatanodeInfoProto> result = PBHelperClient.convert(server
+      List<? extends DatanodeInfoProto> result = PBHelper.convert(server
           .getDatanodeReport(PBHelper.convert(req.getType())));
       return GetDatanodeReportResponseProto.newBuilder()
           .addAllDi(result).build();
@@ -892,7 +892,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       server.setQuota(req.getPath(), req.getNamespaceQuota(),
           req.getStoragespaceQuota(),
           req.hasStorageType() ?
-          PBHelperClient.convertStorageType(req.getStorageType()): null);
+          PBHelper.convertStorageType(req.getStorageType()): null);
       return VOID_SETQUOTA_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -992,7 +992,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetDelegationTokenResponseProto.Builder rspBuilder = 
           GetDelegationTokenResponseProto.newBuilder();
       if (token != null) {
-        rspBuilder.setToken(PBHelperClient.convert(token));
+        rspBuilder.setToken(PBHelper.convert(token));
       }
       return rspBuilder.build();
     } catch (IOException e) {

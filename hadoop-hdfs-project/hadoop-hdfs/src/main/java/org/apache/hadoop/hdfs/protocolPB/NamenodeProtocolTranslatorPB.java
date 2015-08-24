@@ -101,7 +101,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
       throws IOException {
     GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
-        .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
+        .setDatanode(PBHelper.convert((DatanodeID)datanode)).setSize(size)
         .build();
     try {
       return PBHelper.convert(rpcProxy.getBlocks(NULL_CONTROLLER, req)
