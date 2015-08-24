@@ -1198,6 +1198,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8809. HDFS fsck reports under construction blocks as "CORRUPT". (jing9)
 
+    HDFS-8942. Update hyperlink to rack awareness page in HDFS Architecture
+    documentation. (Masatake Iwasaki via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
