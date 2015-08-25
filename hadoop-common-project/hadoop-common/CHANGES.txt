@@ -796,6 +796,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
+    before deleting (Casey Brotherton via harsh)
+
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
 
