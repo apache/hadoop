@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -45,7 +46,6 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -332,6 +332,12 @@ public class TestSystemMetricsPublisherForV2 {
     when(app.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
     when(app.getApplicationTags()).thenReturn(Collections.<String> emptySet());
+    ApplicationSubmissionContext appSubmissionContext =
+        mock(ApplicationSubmissionContext.class);
+    when(appSubmissionContext.getPriority())
+        .thenReturn(Priority.newInstance(0));
+    when(app.getApplicationSubmissionContext())
+        .thenReturn(appSubmissionContext);
     return app;
   }
 
