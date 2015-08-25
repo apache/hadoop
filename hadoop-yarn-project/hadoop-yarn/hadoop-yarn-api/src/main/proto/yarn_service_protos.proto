@@ -216,6 +216,14 @@ message GetClusterNodeLabelsResponseProto {
   repeated NodeLabelProto nodeLabels = 1;
 }
 
+message UpdateApplicationPriorityRequestProto {
+  required ApplicationIdProto applicationId = 1;
+  required PriorityProto applicationPriority = 2;
+}
+
+message UpdateApplicationPriorityResponseProto {
+}
+
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////
