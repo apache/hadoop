@@ -33,7 +33,7 @@ struct InputStreamImpl::RemoteBlockReaderTrait {
   struct State {
     std::unique_ptr<asio::ip::tcp::socket> conn_;
     std::unique_ptr<Reader> reader_;
-    std::vector<asio::ip::tcp::endpoint> endpoints_;
+    std::array<asio::ip::tcp::endpoint, 1> endpoints_;
     size_t transferred_;
     Reader *reader() { return reader_.get(); }
     size_t *transferred() { return &transferred_; }
@@ -41,17 +41,15 @@ struct InputStreamImpl::RemoteBlockReaderTrait {
   };
   static continuation::Pipeline<State> *
   CreatePipeline(::asio::io_service *io_service,
-                 const ::hadoop::hdfs::LocatedBlockProto &b) {
+                 const ::hadoop::hdfs::DatanodeInfoProto &dn) {
     using namespace ::asio::ip;
     auto m = continuation::Pipeline<State>::Create();
     auto &s = m->state();
     s.conn_.reset(new tcp::socket(*io_service));
     s.reader_.reset(new Reader(BlockReaderOptions(), s.conn_.get()));
-    for (auto &loc : b.locs()) {
-      auto datanode = loc.id();
-      s.endpoints_.push_back(tcp::endpoint(
-          address::from_string(datanode.ipaddr()), datanode.xferport()));
-    }
+    auto datanode = dn.id();
+    s.endpoints_[0] = tcp::endpoint(address::from_string(datanode.ipaddr()),
+                                    datanode.xferport());
 
     m->Push(continuation::Connect(s.conn_.get(), s.endpoints_.begin(),
                                   s.endpoints_.end()));
@@ -125,12 +123,11 @@ private:
 };
 
 template <class MutableBufferSequence, class Handler>
-void InputStreamImpl::AsyncPreadSome(size_t offset,
-                                     const MutableBufferSequence &buffers,
-                                     const Handler &handler) {
+void InputStreamImpl::AsyncPreadSome(
+    size_t offset, const MutableBufferSequence &buffers,
+    const std::set<std::string> &excluded_datanodes, const Handler &handler) {
+  using ::hadoop::hdfs::DatanodeInfoProto;
   using ::hadoop::hdfs::LocatedBlockProto;
-  namespace ip = ::asio::ip;
-  using ::asio::ip::tcp;
 
   auto it = std::find_if(
       blocks_.begin(), blocks_.end(), [offset](const LocatedBlockProto &p) {
@@ -138,10 +135,21 @@ void InputStreamImpl::AsyncPreadSome(size_t offset,
       });
 
   if (it == blocks_.end()) {
-    handler(Status::InvalidArgument("Cannot find corresponding blocks"), 0);
+    handler(Status::InvalidArgument("Cannot find corresponding blocks"), "", 0);
     return;
-  } else if (!it->locs_size()) {
-    handler(Status::ResourceUnavailable("No datanodes available"), 0);
+  }
+
+  const DatanodeInfoProto *chosen_dn = nullptr;
+  for (int i = 0; i < it->locs_size(); ++i) {
+    const auto &di = it->locs(i);
+    if (!excluded_datanodes.count(di.id().datanodeuuid())) {
+      chosen_dn = &di;
+      break;
+    }
+  }
+
+  if (!chosen_dn) {
+    handler(Status::ResourceUnavailable("No datanodes available"), "", 0);
     return;
   }
 
@@ -150,28 +158,30 @@ void InputStreamImpl::AsyncPreadSome(size_t offset,
       it->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   AsyncReadBlock<RemoteBlockReaderTrait>(
-      fs_->rpc_engine().client_name(), *it, offset_within_block,
+      fs_->rpc_engine().client_name(), *it, *chosen_dn, offset_within_block,
       asio::buffer(buffers, size_within_block), handler);
 }
 
 template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
 void InputStreamImpl::AsyncReadBlock(
     const std::string &client_name,
-    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const hadoop::hdfs::LocatedBlockProto &block,
+    const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
     const MutableBufferSequence &buffers, const Handler &handler) {
 
   typedef typename BlockReaderTrait::Reader Reader;
   auto m =
-      BlockReaderTrait::CreatePipeline(&fs_->rpc_engine().io_service(), block);
+      BlockReaderTrait::CreatePipeline(&fs_->rpc_engine().io_service(), dn);
   auto &s = m->state();
   size_t size = asio::buffer_size(buffers);
   m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name, nullptr,
                                             &block.b(), size, offset))
       .Push(new ReadBlockContinuation<Reader, decltype(buffers)>(
           s.reader(), buffers, s.transferred()));
-  m->Run([handler](const Status &status,
+  const std::string &dnid = dn.id().datanodeuuid();
+  m->Run([handler, dnid](const Status &status,
                    const typename BlockReaderTrait::State &state) {
-           handler(status, *state.transferred());
+           handler(status, dnid, *state.transferred());
   });
 }
 }

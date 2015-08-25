@@ -21,6 +21,7 @@
 #include "libhdfspp/status.h"
 
 #include <functional>
+#include <set>
 
 namespace hdfs {
 
@@ -57,12 +58,23 @@ public:
 class InputStream {
 public:
   /**
-   * Read data from a specific position. The handler returns the
-   * number of bytes has read.
+   * Read data from a specific position. The current implementation
+   * stops at the block boundary.
+   *
+   * @param buf the pointer to the buffer
+   * @param nbyte the size of the buffer
+   * @param offset the offset the file
+   * @param excluded_datanodes the UUID of the datanodes that should
+   * not be used in this read
+   *
+   * The handler returns the datanode that serves the block and the number of
+   * bytes has read.
    **/
   virtual void
-  PositionRead(void *buf, size_t nbyte, size_t offset,
-               const std::function<void(const Status &, size_t)> &handler) = 0;
+  PositionRead(void *buf, size_t nbyte, uint64_t offset,
+               const std::set<std::string> &excluded_datanodes,
+               const std::function<void(const Status &, const std::string &,
+                                        size_t)> &handler) = 0;
   virtual ~InputStream();
 };
 

@@ -37,8 +37,10 @@ InputStreamImpl::InputStreamImpl(FileSystemImpl *fs,
 }
 
 void InputStreamImpl::PositionRead(
-    void *buf, size_t nbyte, size_t offset,
-    const std::function<void(const Status &, size_t)> &handler) {
-  AsyncPreadSome(offset, asio::buffer(buf, nbyte), handler);
+    void *buf, size_t nbyte, uint64_t offset,
+    const std::set<std::string> &excluded_datanodes,
+    const std::function<void(const Status &, const std::string &, size_t)>
+        &handler) {
+  AsyncPreadSome(offset, asio::buffer(buf, nbyte), excluded_datanodes, handler);
 }
 }
