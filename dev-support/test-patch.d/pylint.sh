@@ -148,14 +148,14 @@ function pylint_postapply
   add_footer_table pylint "v${PYLINT_VERSION%,}"
 
   calcdiffs "${PATCH_DIR}/branch-pylint-result.txt" "${PATCH_DIR}/patch-pylint-result.txt" > "${PATCH_DIR}/diff-patch-pylint.txt"
-  diffPostpatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-pylint.txt")
+  diffPostpatch=$(${GREP} -c "^.*:.*: \[.*\] " "${PATCH_DIR}/diff-patch-pylint.txt")
 
   if [[ ${diffPostpatch} -gt 0 ]] ; then
     # shellcheck disable=SC2016
-    numPrepatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-pylint-result.txt")
+    numPrepatch=$(${GREP} -c "^.*:.*: \[.*\] " "${PATCH_DIR}/branch-pylint-result.txt")
 
     # shellcheck disable=SC2016
-    numPostpatch=$(${AWK} 'BEGIN {sum=0} 2<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-pylint-result.txt")
+    numPostpatch=$(${GREP} -c "^.*:.*: \[.*\] " "${PATCH_DIR}/patch-pylint-result.txt")
 
     add_vote_table -1 pylint "The applied patch generated "\
       "${diffPostpatch} new pylint issues (total was ${numPrepatch}, now ${numPostpatch})."

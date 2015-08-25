@@ -70,7 +70,7 @@ function rubocop_preapply
   pushd "${BASEDIR}" >/dev/null
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.rb$ && -f ${i} ]]; then
-      ${RUBOCOP} -f c "${i}" | ${AWK} '!/[0-9]* files? inspected/' >> "${PATCH_DIR}/branch-rubocop-result.txt"
+      ${RUBOCOP} -f e "${i}" | ${AWK} '!/[0-9]* files? inspected/' >> "${PATCH_DIR}/branch-rubocop-result.txt"
     fi
   done
   popd >/dev/null
@@ -110,7 +110,7 @@ function rubocop_postapply
   pushd "${BASEDIR}" >/dev/null
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ \.rb$ && -f ${i} ]]; then
-      ${RUBOCOP} -f c "${i}" | ${AWK} '!/[0-9]* files? inspected/' >> "${PATCH_DIR}/patch-rubocop-result.txt"
+      ${RUBOCOP} -f e "${i}" | ${AWK} '!/[0-9]* files? inspected/' >> "${PATCH_DIR}/patch-rubocop-result.txt"
     fi
   done
   popd >/dev/null
