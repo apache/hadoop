@@ -51,7 +51,7 @@ public class TestDFSInotifyEventInputStream {
   private static final Log LOG = LogFactory.getLog(
       TestDFSInotifyEventInputStream.class);
 
-  private static EventBatch waitForNextEvents(DFSInotifyEventInputStream eis)
+  public static EventBatch waitForNextEvents(DFSInotifyEventInputStream eis)
     throws IOException, MissingEventsException {
     EventBatch batch = null;
     while ((batch = eis.poll()) == null);

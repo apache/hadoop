@@ -16,6 +16,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
     files rather than the entire DFSClient. (mingma)
 
+    HDFS-8846. Add a unit test for INotify functionality across a layout
+    version upgrade (Zhe Zhang via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
