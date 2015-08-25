@@ -77,6 +77,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -89,6 +91,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -819,5 +822,13 @@ public class YarnClientImpl extends YarnClient {
   public List<NodeLabel> getClusterNodeLabels() throws YarnException, IOException {
     return rmClient.getClusterNodeLabels(
         GetClusterNodeLabelsRequest.newInstance()).getNodeLabels();
+  }
+
+  @Override
+  public void updateApplicationPriority(ApplicationId applicationId,
+      Priority priority) throws YarnException, IOException {
+    UpdateApplicationPriorityRequest request =
+        UpdateApplicationPriorityRequest.newInstance(applicationId, priority);
+    rmClient.updateApplicationPriority(request);
   }
 }

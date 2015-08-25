@@ -181,6 +181,9 @@ Release 2.8.0 - UNRELEASED
     YARN-221. NM should provide a way for AM to tell it not to aggregate logs.
     (Ming Ma via xgong)
 
+    YARN-4014. Support user cli interface in for Application Priority.
+    (Rohith Sharma K S via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

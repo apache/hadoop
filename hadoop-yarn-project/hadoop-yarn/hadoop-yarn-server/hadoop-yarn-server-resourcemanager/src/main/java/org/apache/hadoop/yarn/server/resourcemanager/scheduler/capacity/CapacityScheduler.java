@@ -785,6 +785,17 @@ public class CapacityScheduler extends
     }
     application.setCurrentAppAttempt(attempt);
 
+    // Update attempt priority to the latest to avoid race condition i.e
+    // SchedulerApplicationAttempt is created with old priority but it is not
+    // set to SchedulerApplication#setCurrentAppAttempt.
+    // Scenario would occur is
+    // 1. SchdulerApplicationAttempt is created with old priority.
+    // 2. updateApplicationPriority() updates SchedulerApplication. Since
+    // currentAttempt is null, it just return.
+    // 3. ScheduelerApplcationAttempt is set in
+    // SchedulerApplication#setCurrentAppAttempt.
+    attempt.setPriority(application.getPriority());
+
     queue.submitApplicationAttempt(attempt, application.getUser());
     LOG.info("Added Application Attempt " + applicationAttemptId
         + " to scheduler from user " + application.getUser() + " in queue "
@@ -1853,7 +1864,7 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public synchronized void updateApplicationPriority(Priority newPriority,
+  public void updateApplicationPriority(Priority newPriority,
       ApplicationId applicationId) throws YarnException {
     Priority appPriority = null;
     SchedulerApplication<FiCaSchedulerApp> application = applications
@@ -1879,7 +1890,8 @@ public class CapacityScheduler extends
     ApplicationStateData appState = ApplicationStateData.newInstance(
         rmApp.getSubmitTime(), rmApp.getStartTime(),
         rmApp.getApplicationSubmissionContext(), rmApp.getUser());
-    rmContext.getStateStore().updateApplicationStateSynchronously(appState);
+    rmContext.getStateStore().updateApplicationStateSynchronously(appState,
+        false);
 
     // As we use iterator over a TreeSet for OrderingPolicy, once we change
     // priority then reinsert back to make order correct.
