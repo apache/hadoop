@@ -46,16 +46,20 @@ class InputStreamImpl : public InputStream {
 public:
   InputStreamImpl(FileSystemImpl *fs,
                   const ::hadoop::hdfs::LocatedBlocksProto *blocks);
-  virtual void PositionRead(
-      void *buf, size_t nbyte, size_t offset,
-      const std::function<void(const Status &, size_t)> &handler) override;
+  virtual void
+  PositionRead(void *buf, size_t nbyte, uint64_t offset,
+               const std::set<std::string> &excluded_datanodes,
+               const std::function<void(const Status &, const std::string &,
+                                        size_t)> &handler) override;
   template <class MutableBufferSequence, class Handler>
   void AsyncPreadSome(size_t offset, const MutableBufferSequence &buffers,
+                      const std::set<std::string> &excluded_datanodes,
                       const Handler &handler);
   template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
   void AsyncReadBlock(const std::string &client_name,
                       const hadoop::hdfs::LocatedBlockProto &block,
-                      size_t offset, const MutableBufferSequence &buffers,
+                      const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
+                      const MutableBufferSequence &buffers,
                       const Handler &handler);
 
 private:

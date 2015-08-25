@@ -20,6 +20,8 @@
 #include <gmock/gmock.h>
 
 using hadoop::common::TokenProto;
+using hadoop::hdfs::DatanodeInfoProto;
+using hadoop::hdfs::DatanodeIDProto;
 using hadoop::hdfs::ExtendedBlockProto;
 using hadoop::hdfs::LocatedBlockProto;
 using hadoop::hdfs::LocatedBlocksProto;
@@ -57,7 +59,7 @@ template <class Trait> struct MockBlockReaderTrait {
   };
 
   static continuation::Pipeline<State> *
-  CreatePipeline(::asio::io_service *, const LocatedBlockProto &) {
+  CreatePipeline(::asio::io_service *, const DatanodeInfoProto &) {
     auto m = continuation::Pipeline<State>::Create();
     *m->state().transferred() = 0;
     Trait::InitializeMockReader(m->state().reader());
@@ -69,6 +71,7 @@ template <class Trait> struct MockBlockReaderTrait {
 TEST(InputStreamTest, TestReadSingleTrunk) {
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
+  DatanodeInfoProto dn;
   char buf[4096] = {
       0,
   };
@@ -82,14 +85,14 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
       EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_,_))
+      EXPECT_CALL(*reader, async_read_some(_, _))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
     }
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
+      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
         stat = status;
         read = transferred;
       });
@@ -101,6 +104,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
 TEST(InputStreamTest, TestReadMultipleTrunk) {
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
+  DatanodeInfoProto dn;
   char buf[4096] = {
       0,
   };
@@ -114,15 +118,16 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
       EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_,_))
+      EXPECT_CALL(*reader, async_read_some(_, _))
           .Times(4)
           .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
     }
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
+      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
         stat = status;
         read = transferred;
       });
@@ -134,6 +139,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
 TEST(InputStreamTest, TestReadError) {
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
+  DatanodeInfoProto dn;
   char buf[4096] = {
       0,
   };
@@ -147,7 +153,7 @@ TEST(InputStreamTest, TestReadError) {
       EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_,_))
+      EXPECT_CALL(*reader, async_read_some(_, _))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
@@ -156,14 +162,57 @@ TEST(InputStreamTest, TestReadError) {
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, 0, asio::buffer(buf, sizeof(buf)),
-      [&stat, &read](const Status &status, size_t transferred) {
+      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
         stat = status;
         read = transferred;
       });
   ASSERT_FALSE(stat.ok());
   ASSERT_EQ(sizeof(buf) / 4 * 3, read);
   read = 0;
+}
+
+TEST(InputStreamTest, TestExcludeDataNode) {
+  LocatedBlocksProto blocks;
+  LocatedBlockProto *block = blocks.add_blocks();
+  ExtendedBlockProto *b = block->mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  DatanodeInfoProto *di = block->add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("foo");
+
+  char buf[4096] = {
+      0,
+  };
+  IoServiceImpl io_service;
+  FileSystemImpl fs(&io_service);
+  InputStreamImpl is(&fs, &blocks);
+  Status stat;
+  size_t read = 0;
+  struct Trait {
+    static void InitializeMockReader(MockReader *reader) {
+      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
+          .WillOnce(InvokeArgument<5>(Status::OK()));
+
+      EXPECT_CALL(*reader, async_read_some(_, _))
+          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
+    }
+  };
+
+
+  std::set<std::string> excluded_dn({"foo"});
+  is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), excluded_dn,
+      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
+  ASSERT_EQ(0UL, read);
 }
 
 int main(int argc, char *argv[]) {
