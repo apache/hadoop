@@ -28,18 +28,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.List;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.inotify.Event;
-import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -48,20 +42,12 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import static org.apache.hadoop.hdfs.inotify.Event.CreateEvent;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -80,7 +66,7 @@ public class TestDFSUpgrade {
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
-    
+
   /**
    * Writes an INFO log message containing the parameters.
    */
@@ -462,68 +448,6 @@ public class TestDFSUpgrade {
   public void test203LayoutVersion() {
     for (int lv : Storage.LAYOUT_VERSIONS_203) {
       assertTrue(Storage.is203LayoutVersion(lv));
-    }
-  }
-
-  @Test
-  public void testPreserveEditLogs() throws Exception {
-    conf = new HdfsConfiguration();
-    conf = UpgradeUtilities.initializeStorageStateConf(1, conf);
-    String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION, false);
-
-    log("Normal NameNode upgrade", 1);
-    File[] created =
-        UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
-    for (final File createdDir : created) {
-      List<String> fileNameList =
-          IOUtils.listDirectory(createdDir, EditLogsFilter.INSTANCE);
-      for (String fileName : fileNameList) {
-        String tmpFileName = fileName + ".tmp";
-        File existingFile = new File(createdDir, fileName);
-        File tmpFile = new File(createdDir, tmpFileName);
-        Files.move(existingFile.toPath(), tmpFile.toPath());
-        File newFile = new File(createdDir, fileName);
-        Preconditions.checkState(newFile.createNewFile(),
-            "Cannot create new edits log file in " + createdDir);
-        EditLogFileInputStream in = new EditLogFileInputStream(tmpFile,
-            HdfsServerConstants.INVALID_TXID, HdfsServerConstants.INVALID_TXID,
-            false);
-        EditLogFileOutputStream out = new EditLogFileOutputStream(conf, newFile,
-            (int)tmpFile.length());
-        out.create(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION + 1);
-        FSEditLogOp logOp = in.readOp();
-        while (logOp != null) {
-          out.write(logOp);
-          logOp = in.readOp();
-        }
-        out.setReadyToFlush();
-        out.flushAndSync(true);
-        out.close();
-        Files.delete(tmpFile.toPath());
-      }
-    }
-
-    cluster = createCluster();
-
-    DFSInotifyEventInputStream ieis =
-        cluster.getFileSystem().getInotifyEventStream(0);
-    EventBatch batch = ieis.poll();
-    Event[] events = batch.getEvents();
-    assertTrue("Should be able to get transactions before the upgrade.",
-        events.length > 0);
-    assertEquals(events[0].getEventType(), Event.EventType.CREATE);
-    assertEquals(((CreateEvent) events[0]).getPath(), "/TestUpgrade");
-    cluster.shutdown();
-    UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-  }
-
-  private enum EditLogsFilter implements FilenameFilter {
-    INSTANCE;
-
-    @Override
-    public boolean accept(File dir, String name) {
-      return name.startsWith(NNStorage.NameNodeFile.EDITS.getName());
     }
   }
 

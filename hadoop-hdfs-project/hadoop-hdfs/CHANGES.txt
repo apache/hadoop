@@ -835,6 +835,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8900. Compact XAttrs to optimize memory footprint. (yliu)
 
+    HDFS-8846. Add a unit test for INotify functionality across a layout
+    version upgrade (Zhe Zhang via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
