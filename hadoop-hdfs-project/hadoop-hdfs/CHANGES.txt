@@ -163,6 +163,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7446. HDFS inotify should have the ability to determine what txid it
     has read up to (cmccabe)
 
+    HDFS-8846. Add a unit test for INotify functionality across a layout
+    version upgrade (Zhe Zhang via Colin P. McCabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
