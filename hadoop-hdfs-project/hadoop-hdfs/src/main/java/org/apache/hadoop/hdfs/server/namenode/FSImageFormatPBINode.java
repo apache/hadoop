@@ -131,9 +131,9 @@ public final class FSImageFormatPBINode {
       return b.build();
     }
     
-    public static ImmutableList<XAttr> loadXAttrs(
+    public static List<XAttr> loadXAttrs(
         XAttrFeatureProto proto, final String[] stringTable) {
-      ImmutableList.Builder<XAttr> b = ImmutableList.builder();
+      List<XAttr> b = new ArrayList<>();
       for (XAttrCompactProto xAttrCompactProto : proto.getXAttrsList()) {
         int v = xAttrCompactProto.getName();
         int nid = (v >> XATTR_NAME_OFFSET) & XATTR_NAME_MASK;
@@ -149,7 +149,7 @@ public final class FSImageFormatPBINode {
             .setName(name).setValue(value).build());
       }
       
-      return b.build();
+      return b;
     }
 
     public static ImmutableList<QuotaByStorageTypeEntry> loadQuotaByStorageTypeEntries(

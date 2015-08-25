@@ -833,6 +833,8 @@ Release 2.8.0 - UNRELEASED
     ReplicaUnderConstruction as a separate class and replicas as an array.
     (jing9)
 
+    HDFS-8900. Compact XAttrs to optimize memory footprint. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

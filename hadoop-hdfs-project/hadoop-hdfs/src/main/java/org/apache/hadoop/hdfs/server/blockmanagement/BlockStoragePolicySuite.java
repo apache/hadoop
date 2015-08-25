@@ -141,8 +141,7 @@ public class BlockStoragePolicySuite {
     return XAttrHelper.buildXAttr(name, new byte[]{policyId});
   }
 
-  public static boolean isStoragePolicyXAttr(XAttr xattr) {
-    return xattr != null && xattr.getNameSpace() == XAttrNS
-        && xattr.getName().equals(STORAGE_POLICY_XATTR_NAME);
+  public static String getStoragePolicyXAttrPrefixedName() {
+    return XAttrHelper.getPrefixedName(XAttrNS, STORAGE_POLICY_XATTR_NAME);
   }
 }

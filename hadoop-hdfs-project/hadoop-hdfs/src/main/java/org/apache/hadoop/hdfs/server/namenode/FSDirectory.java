@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -234,11 +235,14 @@ public class FSDirectory implements Closeable {
     this.xattrMaxSize = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
-    Preconditions.checkArgument(xattrMaxSize >= 0,
-                                "Cannot set a negative value for the maximum size of an xattr (%s).",
-                                DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
-    final String unlimited = xattrMaxSize == 0 ? " (unlimited)" : "";
-    LOG.info("Maximum size of an xattr: " + xattrMaxSize + unlimited);
+    Preconditions.checkArgument(xattrMaxSize > 0,
+        "The maximum size of an xattr should be > 0: (%s).",
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
+    Preconditions.checkArgument(xattrMaxSize <=
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_HARD_LIMIT,
+        "The maximum size of an xattr should be <= maximum size"
+        + " hard limit " + DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_HARD_LIMIT
+        + ": (%s).", DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
 
     this.accessTimePrecision = conf.getLong(
         DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
@@ -930,22 +934,19 @@ public class FSDirectory implements Closeable {
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         if (xaf != null) {
-          final List<XAttr> xattrs = xaf.getXAttrs();
-          for (XAttr xattr : xattrs) {
-            final String xaName = XAttrHelper.getPrefixName(xattr);
-            if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-              try {
-                final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-                    HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
-                        xattr.getValue());
-                ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                    PBHelper.convert(ezProto.getSuite()),
-                    PBHelper.convert(ezProto.getCryptoProtocolVersion()),
-                    ezProto.getKeyName());
-              } catch (InvalidProtocolBufferException e) {
-                NameNode.LOG.warn("Error parsing protocol buffer of " +
-                    "EZ XAttr " + xattr.getName());
-              }
+          XAttr xattr = xaf.getXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE);
+          if (xattr != null) {
+            try {
+              final HdfsProtos.ZoneEncryptionInfoProto ezProto =
+                  HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
+                      xattr.getValue());
+              ezManager.unprotectedAddEncryptionZone(inode.getId(),
+                  PBHelper.convert(ezProto.getSuite()),
+                  PBHelper.convert(ezProto.getCryptoProtocolVersion()),
+                  ezProto.getKeyName());
+            } catch (InvalidProtocolBufferException e) {
+              NameNode.LOG.warn("Error parsing protocol buffer of " +
+                  "EZ XAttr " + xattr.getName());
             }
           }
         }
@@ -1121,9 +1122,8 @@ public class FSDirectory implements Closeable {
       final CipherSuite suite = encryptionZone.getSuite();
       final String keyName = encryptionZone.getKeyName();
 
-      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByName(inode,
-                                                               snapshotId,
-                                                               CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
+      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(inode,
+          snapshotId, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
 
       if (fileXAttr == null) {
         NameNode.LOG.warn("Could not find encryption XAttr for file " +
@@ -1481,13 +1481,11 @@ public class FSDirectory implements Closeable {
       FSPermissionChecker pc, INode inode, int snapshotId)
       throws IOException {
     if (pc.isSuperUser()) {
-      for (XAttr xattr : FSDirXAttrOp.getXAttrs(this, inode, snapshotId)) {
-        if (XAttrHelper.getPrefixName(xattr).
-            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
-          throw new AccessControlException(
-              "Access is denied for " + pc.getUser() + " since the superuser "
-              + "is not allowed to perform this operation.");
-        }
+      if (FSDirXAttrOp.getXAttrByPrefixedName(this, inode, snapshotId,
+          SECURITY_XATTR_UNREADABLE_BY_SUPERUSER) != null) {
+        throw new AccessControlException(
+            "Access is denied for " + pc.getUser() + " since the superuser "
+            + "is not allowed to perform this operation.");
       }
     }
   }

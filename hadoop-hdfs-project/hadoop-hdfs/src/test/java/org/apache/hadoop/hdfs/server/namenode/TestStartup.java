@@ -655,7 +655,7 @@ public class TestStartup {
       fail("Expected exception with negative xattr size");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "Cannot set a negative value for the maximum size of an xattr", e);
+          "The maximum size of an xattr should be > 0", e);
     } finally {
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
@@ -675,31 +675,6 @@ public class TestStartup {
     } finally {
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-
-    try {
-      // Set up a logger to check log message
-      final LogVerificationAppender appender = new LogVerificationAppender();
-      final Logger logger = Logger.getRootLogger();
-      logger.addAppender(appender);
-      int count = appender.countLinesWithMessage(
-          "Maximum size of an xattr: 0 (unlimited)");
-      assertEquals("Expected no messages about unlimited xattr size", 0, count);
-
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, 0);
-      cluster =
-          new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true).build();
-
-      count = appender.countLinesWithMessage(
-          "Maximum size of an xattr: 0 (unlimited)");
-      // happens twice because we format then run
-      assertEquals("Expected unlimited xattr size", 2, count);
-    } finally {
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
       if (cluster != null) {
         cluster.shutdown();
       }

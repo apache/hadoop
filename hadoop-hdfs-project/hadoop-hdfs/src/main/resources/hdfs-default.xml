@@ -2205,7 +2205,9 @@
   <name>dfs.namenode.fs-limits.max-xattr-size</name>
   <value>16384</value>
   <description>
-    The maximum combined size of the name and value of an extended attribute in bytes.
+    The maximum combined size of the name and value of an extended attribute
+    in bytes. It should be larger than 0, and less than or equal to maximum
+    size hard limit which is 32768.
   </description>
 </property>
 
