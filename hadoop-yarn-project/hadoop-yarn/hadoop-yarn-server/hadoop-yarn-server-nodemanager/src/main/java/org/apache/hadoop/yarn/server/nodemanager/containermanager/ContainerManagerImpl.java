@@ -980,22 +980,24 @@ public class ContainerManagerImpl extends CompositeService implements
         if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
           flowRunId = Long.parseLong(flowRunIdStr);
         }
-        Application application = new ApplicationImpl(dispatcher, user,
-            flowName, flowVersion, flowRunId, applicationID, credentials, context);
-        if (null == context.getApplications().putIfAbsent(applicationID,
-          application)) {
-          LOG.info("Creating a new application reference for app "
-              + applicationID);
-          LogAggregationContext logAggregationContext =
-              containerTokenIdentifier.getLogAggregationContext();
-          Map<ApplicationAccessType, String> appAcls =
-              container.getLaunchContext().getApplicationACLs();
-          context.getNMStateStore().storeApplication(applicationID,
-              buildAppProto(applicationID, user, credentials, appAcls,
-                logAggregationContext));
-          dispatcher.getEventHandler().handle(
-            new ApplicationInitEvent(applicationID, appAcls,
-              logAggregationContext));
+        if (!context.getApplications().containsKey(applicationID)) {
+          Application application =
+              new ApplicationImpl(dispatcher, user, flowName, flowVersion,
+                  flowRunId, applicationID, credentials, context);
+          if (context.getApplications().putIfAbsent(applicationID,
+              application) == null) {
+            LOG.info("Creating a new application reference for app "
+                + applicationID);
+            LogAggregationContext logAggregationContext =
+                containerTokenIdentifier.getLogAggregationContext();
+            Map<ApplicationAccessType, String> appAcls =
+                container.getLaunchContext().getApplicationACLs();
+            context.getNMStateStore().storeApplication(applicationID,
+                buildAppProto(applicationID, user, credentials, appAcls,
+                    logAggregationContext));
+            dispatcher.getEventHandler().handle(new ApplicationInitEvent(
+                applicationID, appAcls, logAggregationContext));
+          }
         }
 
         dispatcher.getEventHandler().handle(
