@@ -1107,7 +1107,6 @@ function find_buildfile_dir
 {
   local buildfile=$1
   local dir=$2
-  local d
 
   yetus_debug "Find ${buildfile} dir for: ${dir}"
 
@@ -1120,12 +1119,6 @@ function find_buildfile_dir
       yetus_debug "ERROR: ${buildfile} is not found."
       return 1
     else
-      d=$(cd -P -- "$(dirname -- "${dir}")" >/dev/null && pwd -P)
-      relative_dir "${d}" >/dev/null
-      if [[ $? == 1 ]]; then
-        yetus_debug "ERROR: ${dir} is not in ${BASEDIR}."
-        return 1
-      fi
       dir=$(dirname "${dir}")
     fi
   done
@@ -1158,7 +1151,6 @@ function find_changed_files
 function module_skipdir
 {
   local dir=${1}
-  local d
   local i
 
   yetus_debug "Checking skipdirs for ${dir}"
@@ -1178,12 +1170,6 @@ function module_skipdir
     if [[ ${dir} == "." ]]; then
       return 0
     else
-      d=$(cd -P -- "$(dirname -- "${dir}")" >/dev/null && pwd -P)
-      relative_dir "${d}" >/dev/null
-      if [[ $? == 1 ]]; then
-        yetus_debug "ERROR: ${dir} is not in ${BASEDIR}."
-        return 1
-      fi
       dir=$(dirname "${dir}")
       yetus_debug "Trying to skip: ${dir}"
     fi
