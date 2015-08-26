@@ -419,7 +419,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + ": trying to construct BlockReaderLocalLegacy");
     }
-    if (!DFSClient.isLocalAddress(inetSocketAddress)) {
+    if (!DFSUtilClient.isLocalAddress(inetSocketAddress)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace(this + ": can't construct BlockReaderLocalLegacy because " +
             "the address " + inetSocketAddress + " is not local");

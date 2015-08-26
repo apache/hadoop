@@ -39,7 +39,6 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -701,30 +700,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
     }
-  }
-  
-  private static final Map<String, Boolean> localAddrMap = Collections
-      .synchronizedMap(new HashMap<String, Boolean>());
-  
-  public static boolean isLocalAddress(InetSocketAddress targetAddr) {
-    InetAddress addr = targetAddr.getAddress();
-    Boolean cached = localAddrMap.get(addr.getHostAddress());
-    if (cached != null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Address " + targetAddr +
-                  (cached ? " is local" : " is not local"));
-      }
-      return cached;
-    }
-    
-    boolean local = NetUtils.isLocalAddress(addr);
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Address " + targetAddr +
-                (local ? " is local" : " is not local"));
-    }
-    localAddrMap.put(addr.getHostAddress(), local);
-    return local;
   }
   
   /**
