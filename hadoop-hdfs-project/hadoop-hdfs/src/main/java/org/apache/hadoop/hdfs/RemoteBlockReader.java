@@ -351,7 +351,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
           checksum.getBytesPerChecksum(),
           checksum.getChecksumSize());
 
-    this.isLocal = DFSClient.isLocalAddress(NetUtils.
+    this.isLocal = DFSUtilClient.isLocalAddress(NetUtils.
         createSocketAddr(datanodeID.getXferAddr()));
     
     this.peer = peer;

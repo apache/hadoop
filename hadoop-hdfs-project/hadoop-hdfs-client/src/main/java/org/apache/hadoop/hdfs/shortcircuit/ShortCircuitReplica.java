@@ -23,18 +23,20 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
+import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A ShortCircuitReplica object contains file descriptors for a block that
@@ -46,7 +48,8 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class ShortCircuitReplica {
-  public static final Log LOG = LogFactory.getLog(ShortCircuitCache.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      ShortCircuitCache.class);
 
   /**
    * Identifies this ShortCircuitReplica object.
@@ -253,7 +256,7 @@ public class ShortCircuitReplica {
         suffix += "  munmapped.";
       }
     }
-    IOUtils.cleanup(LOG, dataStream, metaStream);
+    IOUtilsClient.cleanup(LOG, dataStream, metaStream);
     if (slot != null) {
       cache.scheduleSlotReleaser(slot);
       if (LOG.isTraceEnabled()) {

@@ -23,10 +23,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -36,8 +34,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class DomainSocketFactory {
-  private static final Log LOG = LogFactory.getLog(DomainSocketFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      DomainSocketFactory.class);
 
   public enum PathState {
     UNUSABLE(false, false),
@@ -145,7 +147,7 @@ public class DomainSocketFactory {
       return PathInfo.NOT_CONFIGURED;
     }
     // UNIX domain sockets can only be used to talk to local peers
-    if (!DFSClient.isLocalAddress(addr)) return PathInfo.NOT_CONFIGURED;
+    if (!DFSUtilClient.isLocalAddress(addr)) return PathInfo.NOT_CONFIGURED;
     String escapedPath = DomainSocket.getEffectivePath(
         conf.getDomainSocketPath(), addr.getPort());
     PathState status = pathMap.getIfPresent(escapedPath);

@@ -29,17 +29,15 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -50,7 +48,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockMetadataHeader {
-  private static final Log LOG = LogFactory.getLog(BlockMetadataHeader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      BlockMetadataHeader.class);
 
   public static final short VERSION = 1;
   
@@ -62,8 +61,6 @@ public class BlockMetadataHeader {
   private final short version;
   private DataChecksum checksum = null;
 
-  private static final HdfsConfiguration conf = new HdfsConfiguration();
-    
   @VisibleForTesting
   public BlockMetadataHeader(short version, DataChecksum checksum) {
     this.checksum = checksum;
@@ -84,11 +81,12 @@ public class BlockMetadataHeader {
    * Read the checksum header from the meta file.
    * @return the data checksum obtained from the header.
    */
-  public static DataChecksum readDataChecksum(File metaFile) throws IOException {
+  public static DataChecksum readDataChecksum(File metaFile, int bufSize)
+      throws IOException {
     DataInputStream in = null;
     try {
       in = new DataInputStream(new BufferedInputStream(
-        new FileInputStream(metaFile), DFSUtil.getIoFileBufferSize(conf)));
+        new FileInputStream(metaFile), bufSize));
       return readDataChecksum(in, metaFile);
     } finally {
       IOUtils.closeStream(in);
