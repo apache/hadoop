@@ -1228,6 +1228,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8932. NPE thrown in NameNode when try to get TotalSyncCount metric
     before editLogStream initialization. (Surendra Singh Lilhore via xyao)
 
+    HDFS-8682. Should not remove decommissioned node,while calculating the
+    number of live/dead decommissioned node. (J. Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
