@@ -851,6 +851,11 @@ public class DFSAdmin extends FsShell {
       return exitCode;
     }
 
+    if (bandwidth < 0) {
+      System.err.println("Bandwidth should be a non-negative integer");
+      return exitCode;
+    }
+
     FileSystem fs = getFS();
     if (!(fs instanceof DistributedFileSystem)) {
       System.err.println("FileSystem is " + fs.getUri());

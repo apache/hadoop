@@ -359,6 +359,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-2390. dfsadmin -setBalancerBandwidth does not validate -ve value
+    (Gautam Gopalakrishnan via harsh)
+
     HDFS-8821. Explain message "Operation category X is not supported
     in state standby" (Gautam Gopalakrishnan via harsh)
 
