@@ -231,16 +231,22 @@ public class TestContainerAllocation {
         LogAggregationContext.newInstance(
           "includePattern", "excludePattern",
           "rolledLogsIncludePattern",
-          "rolledLogsExcludePattern");
+          "rolledLogsExcludePattern",
+          "policyClass",
+          "policyParameters");
     LogAggregationContext returned =
         getLogAggregationContextFromContainerToken(rm1, nm2,
           logAggregationContext);
     Assert.assertEquals("includePattern", returned.getIncludePattern());
     Assert.assertEquals("excludePattern", returned.getExcludePattern());
     Assert.assertEquals("rolledLogsIncludePattern",
-      returned.getRolledLogsIncludePattern());
+        returned.getRolledLogsIncludePattern());
     Assert.assertEquals("rolledLogsExcludePattern",
-      returned.getRolledLogsExcludePattern());
+        returned.getRolledLogsExcludePattern());
+    Assert.assertEquals("policyClass",
+        returned.getLogAggregationPolicyClassName());
+    Assert.assertEquals("policyParameters",
+        returned.getLogAggregationPolicyParameters());
     rm1.stop();
   }
 

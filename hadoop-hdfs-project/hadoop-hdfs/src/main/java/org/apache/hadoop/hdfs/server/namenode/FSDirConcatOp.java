@@ -176,7 +176,7 @@ class FSDirConcatOp {
     QuotaCounts deltas = new QuotaCounts.Builder().build();
     final short targetRepl = target.getPreferredBlockReplication();
     for (INodeFile src : srcList) {
-      short srcRepl = src.getPreferredBlockReplication();
+      short srcRepl = src.getFileReplication();
       long fileSize = src.computeFileSize();
       if (targetRepl != srcRepl) {
         deltas.addStorageSpace(fileSize * (targetRepl - srcRepl));
@@ -229,7 +229,7 @@ class FSDirConcatOp {
     // the target file can be included in a snapshot
     trgInode.recordModification(targetIIP.getLatestSnapshotId());
     INodeDirectory trgParent = targetIIP.getINode(-2).asDirectory();
-    trgInode.concatBlocks(srcList);
+    trgInode.concatBlocks(srcList, fsd.getBlockManager());
 
     // since we are in the same dir - we can use same parent to remove files
     int count = 0;

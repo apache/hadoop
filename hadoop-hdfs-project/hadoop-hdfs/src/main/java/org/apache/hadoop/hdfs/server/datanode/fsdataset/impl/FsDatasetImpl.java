@@ -28,7 +28,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -60,12 +59,10 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -308,7 +305,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
         blockChooserImpl);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
-    asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode);
+    asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
 
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
@@ -850,20 +847,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   static File[] copyBlockFiles(long blockId, long genStamp, File srcMeta,
       File srcFile, File destRoot, boolean calculateChecksum,
-      int smallBufferSize) throws IOException {
+      int smallBufferSize, final Configuration conf) throws IOException {
     final File destDir = DatanodeUtil.idToBlockDir(destRoot, blockId);
     final File dstFile = new File(destDir, srcFile.getName());
     final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
     return copyBlockFiles(srcMeta, srcFile, dstMeta, dstFile, calculateChecksum,
-        smallBufferSize);
+        smallBufferSize, conf);
   }
 
   static File[] copyBlockFiles(File srcMeta, File srcFile, File dstMeta,
                                File dstFile, boolean calculateChecksum,
-                               int smallBufferSize)
+                               int smallBufferSize, final Configuration conf)
       throws IOException {
     if (calculateChecksum) {
-      computeChecksum(srcMeta, dstMeta, srcFile, smallBufferSize);
+      computeChecksum(srcMeta, dstMeta, srcFile, smallBufferSize, conf);
     } else {
       try {
         Storage.nativeCopyFileUnbuffered(srcMeta, dstMeta, true);
@@ -927,7 +924,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       File[] blockFiles = copyBlockFiles(block.getBlockId(),
           block.getGenerationStamp(), oldMetaFile, oldBlockFile,
           targetVolume.getTmpDir(block.getBlockPoolId()),
-          replicaInfo.isOnTransientStorage(), smallBufferSize);
+          replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
 
       ReplicaInfo newReplicaInfo = new ReplicaInPipeline(
           replicaInfo.getBlockId(), replicaInfo.getGenerationStamp(),
@@ -956,9 +953,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @throws IOException
    */
   private static void computeChecksum(File srcMeta, File dstMeta,
-      File blockFile, int smallBufferSize)
+      File blockFile, int smallBufferSize, final Configuration conf)
       throws IOException {
-    final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(srcMeta);
+    final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(srcMeta,
+        DFSUtil.getIoFileBufferSize(conf));
     final byte[] data = new byte[1 << 16];
     final byte[] crcs = new byte[checksum.getChecksumSize(data.length)];
 
@@ -2516,7 +2514,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       final File dstMetaFile = FsDatasetUtil.getMetaFile(dstBlockFile, newGS);
       return copyBlockFiles(replicaInfo.getMetaFile(),
           replicaInfo.getBlockFile(),
-          dstMetaFile, dstBlockFile, true, smallBufferSize);
+          dstMetaFile, dstBlockFile, true, smallBufferSize, conf);
     }
   }
 
@@ -2656,48 +2654,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     BlockLocalPathInfo info = new BlockLocalPathInfo(block,
         datafile.getAbsolutePath(), metafile.getAbsolutePath());
     return info;
-  }
-
-  @Override // FsDatasetSpi
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(String poolId,
-      long[] blockIds) throws IOException {
-    List<FsVolumeImpl> curVolumes = volumes.getVolumes();
-    // List of VolumeIds, one per volume on the datanode
-    List<byte[]> blocksVolumeIds = new ArrayList<>(curVolumes.size());
-    // List of indexes into the list of VolumeIds, pointing at the VolumeId of
-    // the volume that the block is on
-    List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blockIds.length);
-    // Initialize the list of VolumeIds simply by enumerating the volumes
-    for (int i = 0; i < curVolumes.size(); i++) {
-      blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
-    }
-    // Determine the index of the VolumeId of each block's volume, by comparing 
-    // the block's volume against the enumerated volumes
-    for (int i = 0; i < blockIds.length; i++) {
-      long blockId = blockIds[i];
-      boolean isValid = false;
-
-      ReplicaInfo info = volumeMap.get(poolId, blockId);
-      int volumeIndex = 0;
-      if (info != null) {
-        FsVolumeSpi blockVolume = info.getVolume();
-        for (FsVolumeImpl volume : curVolumes) {
-          // This comparison of references should be safe
-          if (blockVolume == volume) {
-            isValid = true;
-            break;
-          }
-          volumeIndex++;
-        }
-      }
-      // Indicates that the block is not present, or not found in a data dir
-      if (!isValid) {
-        volumeIndex = Integer.MAX_VALUE;
-      }
-      blocksVolumeIndexes.add(volumeIndex);
-    }
-    return new HdfsBlocksMetadata(poolId, blockIds,
-        blocksVolumeIds, blocksVolumeIndexes);
   }
 
   @Override

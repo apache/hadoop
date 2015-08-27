@@ -65,10 +65,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
   }
   
   /** @return the max replication factor in diffs */
-  public short getMaxBlockRepInDiffs() {
+  public short getMaxBlockRepInDiffs(FileDiff excluded) {
     short max = 0;
     for(FileDiff d : getDiffs()) {
-      if (d.snapshotINode != null) {
+      if (d != excluded && d.snapshotINode != null) {
         final short replication = d.snapshotINode.getFileReplication();
         if (replication > max) {
           max = replication;
@@ -147,28 +147,27 @@ public class FileWithSnapshotFeature implements INode.Feature {
     byte storagePolicyID = file.getStoragePolicyID();
     BlockStoragePolicy bsp = null;
     if (storagePolicyID != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
-      bsp = reclaimContext.storagePolicySuite().getPolicy(file.getStoragePolicyID());
+      bsp = reclaimContext.storagePolicySuite().
+          getPolicy(file.getStoragePolicyID());
     }
 
-
-    QuotaCounts oldCounts = file.storagespaceConsumed(null);
-    long oldStoragespace;
+    QuotaCounts oldCounts;
     if (removed.snapshotINode != null) {
-      short replication = removed.snapshotINode.getFileReplication();
-      short currentRepl = file.getPreferredBlockReplication();
-      if (replication > currentRepl) {
-        long oldFileSizeNoRep = currentRepl == 0
-            ? file.computeFileSize(true, true)
-            : oldCounts.getStorageSpace() /
-            file.getPreferredBlockReplication();
-        oldStoragespace = oldFileSizeNoRep * replication;
-        oldCounts.setStorageSpace(oldStoragespace);
+      oldCounts = new QuotaCounts.Builder().build();
+      BlockInfo[] blocks = file.getBlocks() == null ? new
+          BlockInfo[0] : file.getBlocks();
+      for (BlockInfo b: blocks) {
+        short replication = b.getReplication();
+        long blockSize = b.isComplete() ? b.getNumBytes() : file
+            .getPreferredBlockSize();
+
+        oldCounts.addStorageSpace(blockSize * replication);
 
         if (bsp != null) {
           List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
           for (StorageType t : oldTypeChosen) {
             if (t.supportTypeQuota()) {
-              oldCounts.addTypeSpace(t, oldFileSizeNoRep);
+              oldCounts.addTypeSpace(t, blockSize);
             }
           }
         }
@@ -178,10 +177,21 @@ public class FileWithSnapshotFeature implements INode.Feature {
       if (aclFeature != null) {
         AclStorage.removeAclFeature(aclFeature);
       }
+    } else {
+      oldCounts = file.storagespaceConsumed(null);
     }
 
     getDiffs().combineAndCollectSnapshotBlocks(reclaimContext, file, removed);
-
+    if (file.getBlocks() != null) {
+      short replInDiff = getMaxBlockRepInDiffs(removed);
+      short repl = (short) Math.max(file.getPreferredBlockReplication(),
+                                    replInDiff);
+      for (BlockInfo b : file.getBlocks()) {
+        if (repl != b.getReplication()) {
+          reclaimContext.collectedBlocks().addUpdateReplicationFactor(b, repl);
+        }
+      }
+    }
     QuotaCounts current = file.storagespaceConsumed(bsp);
     reclaimContext.quotaDelta().add(oldCounts.subtract(current));
   }

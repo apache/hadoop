@@ -70,13 +70,14 @@ public class SequentialBlockGroupIdGenerator extends SequentialNumber {
   /**
    * @param b A block object whose id is set to the starting point for check
    * @return true if any ID in the range
-   *      {id, id+HdfsConstants.MAX_BLOCKS_IN_GROUP} is pointed-to by a file
+   *      {id, id+HdfsConstants.MAX_BLOCKS_IN_GROUP} is pointed-to by a stored
+   *      block.
    */
   private boolean hasValidBlockInRange(Block b) {
     final long id = b.getBlockId();
     for (int i = 0; i < MAX_BLOCKS_IN_GROUP; i++) {
       b.setBlockId(id + i);
-      if (blockManager.getBlockCollection(b) != null) {
+      if (blockManager.getStoredBlock(b) != null) {
         return true;
       }
     }

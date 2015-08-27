@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
@@ -209,7 +209,7 @@ public class TestPread {
       return;
     }
     int numBlocks = 1;
-    assertTrue(numBlocks <= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
+    assertTrue(numBlocks <= HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
     byte[] expected = new byte[numBlocks * blockSize];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
@@ -261,7 +261,7 @@ public class TestPread {
   @Test
   public void testPreadDFSNoChecksum() throws IOException {
     Configuration conf = new Configuration();
-    ((Log4JLogger)DataTransferProtocol.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
     dfsPreadTest(conf, false, false);
     dfsPreadTest(conf, true, false);
   }

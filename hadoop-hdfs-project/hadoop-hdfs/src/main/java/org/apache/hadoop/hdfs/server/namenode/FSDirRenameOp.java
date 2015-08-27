@@ -731,8 +731,8 @@ class FSDirRenameOp {
       Preconditions.checkState(oldDstChild != null);
       List<INode> removedINodes = new ChunkedArrayList<>();
       List<Long> removedUCFiles = new ChunkedArrayList<>();
-      INode.ReclaimContext context = new INode.ReclaimContext(bsps,
-          collectedBlocks, removedINodes, removedUCFiles);
+      INode.ReclaimContext context = new INode.ReclaimContext(
+          bsps, collectedBlocks, removedINodes, removedUCFiles);
       final boolean filesDeleted;
       if (!oldDstChild.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
         oldDstChild.destroyAndCollectBlocks(context);
@@ -742,6 +742,9 @@ class FSDirRenameOp {
             dstIIP.getLatestSnapshotId());
         filesDeleted = context.quotaDelta().getNsDelta() >= 0;
       }
+      fsd.updateReplicationFactor(context.collectedBlocks()
+                                      .toUpdateReplicationInfo());
+
       fsd.getFSNamesystem().removeLeasesAndINodes(
           removedUCFiles, removedINodes, false);
       return filesDeleted;

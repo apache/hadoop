@@ -325,6 +325,8 @@ public class ResourceTrackerService extends AbstractService implements
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
+      // Reset heartbeat ID since node just restarted.
+      oldNode.resetLastNodeHeartBeatResponse();
       this.rmContext
           .getDispatcher()
           .getEventHandler()

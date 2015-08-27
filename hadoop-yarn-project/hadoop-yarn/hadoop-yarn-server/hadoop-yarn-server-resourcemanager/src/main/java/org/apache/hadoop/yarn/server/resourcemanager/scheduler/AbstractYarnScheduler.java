@@ -99,6 +99,8 @@ public abstract class AbstractYarnScheduler
 
   protected RMContext rmContext;
   
+  private volatile Priority maxClusterLevelAppPriority;
+
   /*
    * All schedulers which are inheriting AbstractYarnScheduler should use
    * concurrent version of 'applications' map.
@@ -131,6 +133,7 @@ public abstract class AbstractYarnScheduler
     configuredMaximumAllocationWaitTime =
         conf.getLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
           YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS);
+    maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
     createReleaseCache();
     super.serviceInit(conf);
   }
@@ -707,5 +710,27 @@ public abstract class AbstractYarnScheduler
       ApplicationId applicationId) throws YarnException {
     // Dummy Implementation till Application Priority changes are done in
     // specific scheduler.
+  }
+
+  public Priority getMaxClusterLevelAppPriority() {
+    return maxClusterLevelAppPriority;
+  }
+
+  private Priority getMaxPriorityFromConf(Configuration conf) {
+    return Priority.newInstance(conf.getInt(
+        YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
+        YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
+  }
+
+  @Override
+  public synchronized void setClusterMaxPriority(Configuration conf)
+      throws YarnException {
+    try {
+      maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
+    } catch (NumberFormatException e) {
+      throw new YarnException(e);
+    }
+    LOG.info("Updated the cluste max priority to maxClusterLevelAppPriority = "
+        + maxClusterLevelAppPriority);
   }
 }

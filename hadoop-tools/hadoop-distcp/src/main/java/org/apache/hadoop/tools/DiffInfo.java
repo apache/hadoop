@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.tools;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 
 /**
@@ -54,12 +51,19 @@ class DiffInfo {
    */
   private Path tmp;
   /** The target file/dir of the rename op. Null means the op is deletion. */
-  final Path target;
+  Path target;
 
-  DiffInfo(Path source, Path target) {
+  private final SnapshotDiffReport.DiffType type;
+
+  public SnapshotDiffReport.DiffType getType(){
+    return this.type;
+  }
+
+  DiffInfo(Path source, Path target, SnapshotDiffReport.DiffType type) {
     assert source != null;
     this.source = source;
     this.target= target;
+    this.type = type;
   }
 
   void setTmp(Path tmp) {
@@ -68,23 +72,5 @@ class DiffInfo {
 
   Path getTmp() {
     return tmp;
-  }
-
-  static DiffInfo[] getDiffs(SnapshotDiffReport report, Path targetDir) {
-    List<DiffInfo> diffs = new ArrayList<>();
-    for (SnapshotDiffReport.DiffReportEntry entry : report.getDiffList()) {
-      if (entry.getType() == SnapshotDiffReport.DiffType.DELETE) {
-        final Path source = new Path(targetDir,
-            DFSUtil.bytes2String(entry.getSourcePath()));
-        diffs.add(new DiffInfo(source, null));
-      } else if (entry.getType() == SnapshotDiffReport.DiffType.RENAME) {
-        final Path source = new Path(targetDir,
-            DFSUtil.bytes2String(entry.getSourcePath()));
-        final Path target = new Path(targetDir,
-            DFSUtil.bytes2String(entry.getTargetPath()));
-        diffs.add(new DiffInfo(source, target));
-      }
-    }
-    return diffs.toArray(new DiffInfo[diffs.size()]);
   }
 }

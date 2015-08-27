@@ -527,7 +527,7 @@ public class FSEditLogLoader {
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
       FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
-          setReplicationOp.path, logVersion), replication, null);
+          setReplicationOp.path, logVersion), replication);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -1084,8 +1084,8 @@ public class FSEditLogLoader {
             newBI = new BlockInfoContiguous(newBlock,
                 file.getPreferredBlockReplication());
           }
-          newBI.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
-              null);
+          newBI.convertToBlockUnderConstruction(
+              BlockUCState.UNDER_CONSTRUCTION, null);
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior
@@ -1096,7 +1096,7 @@ public class FSEditLogLoader {
                 ErasureCodingPolicyManager.getSystemDefaultPolicy());
           } else {
             newBI = new BlockInfoContiguous(newBlock,
-                file.getPreferredBlockReplication());
+                file.getFileReplication());
           }
         }
         fsNamesys.getBlockManager().addBlockCollectionWithCheck(newBI, file);

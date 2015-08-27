@@ -89,6 +89,13 @@ public final class HdfsConstants {
   // The chunk size for striped block which is used by erasure coding
   public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
 
+  // Timeouts for communicating with DataNode for streaming writes/reads
+  public static final int READ_TIMEOUT = 60 * 1000;
+  public static final int READ_TIMEOUT_EXTENSION = 5 * 1000;
+  public static final int WRITE_TIMEOUT = 8 * 60 * 1000;
+  //for write pipeline
+  public static final int WRITE_TIMEOUT_EXTENSION = 5 * 1000;
+
   // SafeMode actions
   public enum SafeModeAction {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET

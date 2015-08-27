@@ -20,11 +20,14 @@ package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.CreateFlagParam;
+import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
@@ -41,6 +44,7 @@ import org.apache.hadoop.security.token.Token;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -120,6 +124,16 @@ class ParameterParser {
       token.setService(SecurityUtil.buildTokenService(nnUri));
     }
     return token;
+  }
+
+  public boolean createParent() {
+    return new CreateParentParam(param(CreateParentParam.NAME)).getValue();
+  }
+
+  public EnumSet<CreateFlag> createFlag() {
+    String cf = decodeComponent(param(CreateFlagParam.NAME), Charsets.UTF_8);
+
+    return new CreateFlagParam(cf).getValue();
   }
 
   Configuration conf() {

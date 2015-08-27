@@ -89,7 +89,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -305,7 +304,7 @@ public class ApplicationMasterService extends AbstractService implements
       // and corresponding NM tokens.
       if (app.getApplicationSubmissionContext()
           .getKeepContainersAcrossApplicationAttempts()) {
-        List<Container> transferredContainers = ((AbstractYarnScheduler) rScheduler)
+        List<Container> transferredContainers = rScheduler
             .getTransferredContainers(applicationAttemptId);
         if (!transferredContainers.isEmpty()) {
           response.setContainersFromPreviousAttempts(transferredContainers);

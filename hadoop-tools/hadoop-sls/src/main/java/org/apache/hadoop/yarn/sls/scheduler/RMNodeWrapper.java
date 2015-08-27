@@ -135,6 +135,11 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
+  public void resetLastNodeHeartBeatResponse() {
+    node.getLastNodeHeartBeatResponse().setResponseId(0);
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public List<UpdatedContainerInfo> pullContainerUpdates() {
     List<UpdatedContainerInfo> list = Collections.EMPTY_LIST;

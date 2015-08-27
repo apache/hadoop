@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -72,7 +73,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.net.NetUtils;
@@ -259,7 +259,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.println("Block Id: " + blockId);
       out.println("Block belongs to: "+iNode.getFullPathName());
       out.println("No. of Expected Replica: " +
-          bm.getExpectedReplicaNum(bc, blockInfo));
+          bm.getExpectedReplicaNum(blockInfo));
       out.println("No. of live Replica: " + numberReplicas.liveReplicas());
       out.println("No. of excess Replica: " + numberReplicas.excessReplicas());
       out.println("No. of stale Replica: " +
@@ -543,6 +543,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       LocatedBlocks blocks) throws IOException {
     String path = file.getFullName(parent);
     boolean isOpen = blocks.isUnderConstruction();
+    if (isOpen && !showOpenFiles) {
+      return;
+    }
     int missing = 0;
     int corrupt = 0;
     long missize = 0;
@@ -551,8 +554,15 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     int misReplicatedPerFile = 0;
     StringBuilder report = new StringBuilder();
     int blockNumber = 0;
+    final LocatedBlock lastBlock = blocks.getLastLocatedBlock();
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       ExtendedBlock block = lBlk.getBlock();
+      if (!blocks.isLastBlockComplete() && lastBlock != null &&
+          lastBlock.getBlock().equals(block)) {
+        // this is the last block and this is not complete. ignore it since
+        // it is under construction
+        continue;
+      }
       BlockManager bm = namenode.getNamesystem().getBlockManager();
 
       final BlockInfo storedBlock = bm.getStoredBlock(
@@ -860,7 +870,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         chosenNode = bestNode(dfs, lblock.getLocations(), deadNodes);
         targetAddr = NetUtils.createSocketAddr(chosenNode.getXferAddr());
       }  catch (IOException ie) {
-        if (failures >= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
+        if (failures >= HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
           throw new IOException("Could not obtain block " + lblock, ie);
         }
         LOG.info("Could not obtain block from any node:  " + ie);
@@ -896,8 +906,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                 Peer peer = null;
                 Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
                 try {
-                  s.connect(addr, HdfsServerConstants.READ_TIMEOUT);
-                  s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
+                  s.connect(addr, HdfsConstants.READ_TIMEOUT);
+                  s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
                   peer = TcpPeerServer.peerFromSocketAndKey(
                         dfs.getSaslDataTransferClient(), s, NamenodeFsck.this,
                         blockToken, datanodeId);

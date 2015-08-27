@@ -60,7 +60,7 @@ public interface BlockCollection {
    */
   public short getPreferredBlockReplication();
 
-  /** 
+  /**
    * @return the storage policy ID.
    */
   public byte getStoragePolicyID();
@@ -90,5 +90,10 @@ public interface BlockCollection {
   /**
    * @return whether the block collection is in striping format
    */
-  public boolean isStriped();
+  boolean isStriped();
+
+  /**
+   * @return the id for the block collection
+   */
+  long getId();
 }

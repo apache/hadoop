@@ -41,7 +41,7 @@ public class TestParallelUnixDomainRead extends TestParallelReadUtil {
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
       new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
     DomainSocket.disableBindPathValidation();
     setupCluster(1, conf);
   }

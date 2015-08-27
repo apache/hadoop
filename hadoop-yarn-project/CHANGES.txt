@@ -175,6 +175,18 @@ Release 2.8.0 - UNRELEASED
     YARN-4055. Report node resource utilization in heartbeat. 
     (Inigo Goiri via kasha)
 
+    YARN-2923. Support configuration based NodeLabelsProvider Service in Distributed 
+    Node Label Configuration Setup. (Naganarasimha G R)
+
+    YARN-221. NM should provide a way for AM to tell it not to aggregate logs.
+    (Ming Ma via xgong)
+
+    YARN-4014. Support user cli interface in for Application Priority.
+    (Rohith Sharma K S via jianhe)
+
+    YARN-3250. Support admin cli interface in for Application Priority.
+    (Rohith Sharma K S via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -401,8 +413,14 @@ Release 2.8.0 - UNRELEASED
     YARN-4026. Refactored ContainerAllocator to accept a list of priorites
     rather than a single priority. (Wangda Tan via jianhe)
 
-   YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
-   WebAppProxyServer (djp via rkanter)
+    YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
+    WebAppProxyServer (djp via rkanter)
+
+    YARN-4057. If ContainersMonitor is not enabled, only print
+    related log info one time. (Jun Gong via zxu)
+
+    YARN-1556. NPE getting application report with a null appId. (Weiwei Yang via 
+    junping_du)
 
   OPTIMIZATIONS
 
@@ -777,6 +795,15 @@ Release 2.8.0 - UNRELEASED
     YARN-3987. Send AM container completed msg to NM once AM finishes.
     (sandflee via jianhe)
 
+    YARN-4028. AppBlock page key update and diagnostics value null on recovery
+    (Bibin A Chundatt via xgong)
+
+    YARN-3986. getTransferredContainers in AbstractYarnScheduler should be present
+    in YarnScheduler interface instead. (Varun Saxena via rohithsharmaks)
+
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    has not been reset synchronously. (Jun Gong via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -827,7 +854,10 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3999. RM hangs on draing events. (Jian He via xgong)
 
-Release 2.7.1 - 2015-07-06 
+    YARN-3857: Memory leak in ResourceManager with SIMPLE mode.
+    (mujunchao via zxu)
+
+Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
 
@@ -1737,6 +1767,18 @@ Release 2.7.0 - 2015-04-20
 
     YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
     renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
+
+Release 2.6.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.6.1 - UNRELEASED
 

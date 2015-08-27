@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -101,11 +102,6 @@ class BlocksMap {
     }
   }
 
-  BlockCollection getBlockCollection(Block b) {
-    BlockInfo info = blocks.get(b);
-    return (info != null) ? info.getBlockCollection() : null;
-  }
-
   /**
    * Add block b belonging to the specified block collection to the map.
    */
@@ -115,7 +111,7 @@ class BlocksMap {
       info = b;
       blocks.put(info);
     }
-    info.setBlockCollection(bc);
+    info.setBlockCollectionId(bc.getId());
     return info;
   }
 
@@ -129,9 +125,9 @@ class BlocksMap {
     if (blockInfo == null)
       return;
 
-    blockInfo.setBlockCollection(null);
-    final int size = blockInfo instanceof BlockInfoContiguous ?
-        blockInfo.numNodes() : blockInfo.getCapacity();
+    blockInfo.setBlockCollectionId(INodeId.INVALID_INODE_ID);
+    final int size = blockInfo.isStriped() ?
+        blockInfo.getCapacity() : blockInfo.numNodes();
     for(int idx = size - 1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       if (dn != null) {

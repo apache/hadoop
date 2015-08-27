@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -559,18 +558,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b
       ) throws IOException;
-
-  /**
-   * Get a {@link HdfsBlocksMetadata} corresponding to the list of blocks in 
-   * <code>blocks</code>.
-   * 
-   * @param bpid pool to query
-   * @param blockIds List of block ids for which to return metadata
-   * @return metadata Metadata for the list of blocks
-   * @throws IOException
-   */
-  HdfsBlocksMetadata getHdfsBlocksMetadata(String bpid,
-      long[] blockIds) throws IOException;
 
   /**
    * Enable 'trash' for the given dataset. When trash is enabled, files are

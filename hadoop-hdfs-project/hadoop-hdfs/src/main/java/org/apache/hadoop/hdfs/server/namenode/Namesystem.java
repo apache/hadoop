@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.util.RwLock;
@@ -44,11 +45,11 @@ public interface Namesystem extends RwLock, SafeMode {
 
   boolean isGenStampInFuture(Block block);
 
+  BlockCollection getBlockCollection(long id);
+
   void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
 
   void checkOperation(OperationCategory read) throws StandbyException;
-
-  boolean isInSnapshot(BlockCollection bc);
 
   /**
    * Gets the ECZone for path
@@ -59,6 +60,8 @@ public interface Namesystem extends RwLock, SafeMode {
    */
   ErasureCodingZone getErasureCodingZoneForPath(String src)
       throws IOException;
+
+  boolean isInSnapshot(BlockInfo blockUC);
 
   CacheManager getCacheManager();
 }

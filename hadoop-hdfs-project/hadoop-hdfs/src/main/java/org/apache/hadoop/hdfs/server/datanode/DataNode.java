@@ -116,7 +116,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
@@ -137,7 +136,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier.AccessMode;
@@ -145,7 +144,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -348,7 +346,6 @@ public class DataNode extends ReconfigurableBase
   ReadaheadPool readaheadPool;
   SaslDataTransferClient saslClient;
   SaslDataTransferServer saslServer;
-  private final boolean getHdfsBlockLocationsEnabled;
   private ObjectName dataNodeInfoBeanName;
   private Thread checkDiskErrorThread = null;
   protected final int checkDiskErrorInterval = 5*1000;
@@ -378,7 +375,6 @@ public class DataNode extends ReconfigurableBase
     this.confVersion = null;
     this.usersWithLocalPathAccess = null;
     this.connectToDnViaHostname = false;
-    this.getHdfsBlockLocationsEnabled = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
   }
@@ -401,9 +397,6 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
-    this.getHdfsBlockLocationsEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
-        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
     this.supergroup = conf.get(DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
     this.isPermissionEnabled = conf.getBoolean(
@@ -924,8 +917,8 @@ public class DataNode extends ReconfigurableBase
 
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
               HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT) ||
-        conf.getBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
-              DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
+        conf.getBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+              HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
       DomainPeerServer domainPeerServer =
                 getDomainPeerServer(conf, streamingAddr.getPort());
       if (domainPeerServer != null) {
@@ -946,8 +939,8 @@ public class DataNode extends ReconfigurableBase
     if (domainSocketPath.isEmpty()) {
       if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
             HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT) &&
-         (!conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
-          DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT))) {
+         (!conf.getBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
+          HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT))) {
         LOG.warn("Although short-circuit local reads are configured, " +
             "they are disabled because you didn't configure " +
             DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY);
@@ -1634,29 +1627,6 @@ public class DataNode extends ReconfigurableBase
     return fis;
   }
 
-  @Override
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(
-      String bpId, long[] blockIds,
-      List<Token<BlockTokenIdentifier>> tokens) throws IOException, 
-      UnsupportedOperationException {
-    if (!getHdfsBlockLocationsEnabled) {
-      throw new UnsupportedOperationException("Datanode#getHdfsBlocksMetadata "
-          + " is not enabled in datanode config");
-    }
-    if (blockIds.length != tokens.size()) {
-      throw new IOException("Differing number of blocks and tokens");
-    }
-    // Check access for each block
-    for (int i = 0; i < blockIds.length; i++) {
-      checkBlockToken(new ExtendedBlock(bpId, blockIds[i]),
-          tokens.get(i), BlockTokenIdentifier.AccessMode.READ);
-    }
-
-    DataNodeFaultInjector.get().getHdfsBlocksMetadata();
-
-    return data.getHdfsBlocksMetadata(bpId, blockIds);
-  }
-  
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
       AccessMode accessMode) throws IOException {
     if (isBlockTokenEnabled) {
@@ -2162,7 +2132,7 @@ public class DataNode extends ReconfigurableBase
             EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
 
         long writeTimeout = dnConf.socketWriteTimeout + 
-                            HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
+                            HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
         InputStream unbufIn = NetUtils.getInputStream(sock);
         DataEncryptionKeyFactory keyFactory =
@@ -2194,7 +2164,7 @@ public class DataNode extends ReconfigurableBase
         // read ack
         if (isClient) {
           DNTransferAckProto closeAck = DNTransferAckProto.parseFrom(
-              PBHelper.vintPrefixed(in));
+              PBHelperClient.vintPrefixed(in));
           if (LOG.isDebugEnabled()) {
             LOG.debug(getClass().getSimpleName() + ": close-ack=" + closeAck);
           }

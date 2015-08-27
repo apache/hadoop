@@ -1576,6 +1576,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.metrics.logger.period.seconds</name>
+  <value>600</value>
+  <description>
+    This setting controls how frequently the NameNode logs its metrics. The
+    logging configuration must also define one or more appenders for
+    NameNodeMetricsLog for the metrics to be logged.
+    NameNode metrics logging is disabled if this value is set to zero or
+    less than zero.
+  </description>
+</property>
+
+<property>
   <name>dfs.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -1682,30 +1694,6 @@
     SaslPropertiesResolver used to resolve the QOP used for a connection to the
     DataNode when reading or writing block data. If not specified, the value of
     hadoop.security.saslproperties.resolver.class is used as the default value.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.hdfs-blocks-metadata.enabled</name>
-  <value>false</value>
-  <description>
-    Boolean which enables backend datanode-side support for the experimental DistributedFileSystem#getFileVBlockStorageLocations API.
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.file-block-storage-locations.num-threads</name>
-  <value>10</value>
-  <description>
-    Number of threads used for making parallel RPCs in DistributedFileSystem#getFileBlockStorageLocations().
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.file-block-storage-locations.timeout.millis</name>
-  <value>1000</value>
-  <description>
-    Timeout (in milliseconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
   </description>
 </property>
 
@@ -2217,7 +2205,9 @@
   <name>dfs.namenode.fs-limits.max-xattr-size</name>
   <value>16384</value>
   <description>
-    The maximum combined size of the name and value of an extended attribute in bytes.
+    The maximum combined size of the name and value of an extended attribute
+    in bytes. It should be larger than 0, and less than or equal to maximum
+    size hard limit which is 32768.
   </description>
 </property>
 
@@ -2430,6 +2420,16 @@
   <name>dfs.datanode.stripedread.buffer.size</name>
   <value>262144</value>
   <description>datanode striped read buffer size.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.quota.init-threads</name>
+  <value>4</value>
+  <description>
+    The number of concurrent threads to be used in quota initialization. The
+    speed of quota initialization also affects the namenode fail-over latency.
+    If the size of name space is big, try increasing this.
   </description>
 </property>
 

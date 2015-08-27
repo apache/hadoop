@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -73,6 +74,8 @@ public class ApplicationCLI extends YarnCLI {
   public static final String APPLICATION = "application";
   public static final String APPLICATION_ATTEMPT = "applicationattempt";
   public static final String CONTAINER = "container";
+  public static final String APP_ID = "appId";
+  public static final String UPDATE_PRIORITY = "updatePriority";
 
   private boolean allAppStates;
 
@@ -117,10 +120,16 @@ public class ApplicationCLI extends YarnCLI {
       appStateOpt.setArgs(Option.UNLIMITED_VALUES);
       appStateOpt.setArgName("States");
       opts.addOption(appStateOpt);
+      opts.addOption(APP_ID, true, "Specify Application Id to be operated");
+      opts.addOption(UPDATE_PRIORITY, true,
+          "update priority of an application. ApplicationId can be"
+              + " passed using 'appId' option.");
       opts.getOption(KILL_CMD).setArgName("Application ID");
       opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
       opts.getOption(QUEUE_CMD).setArgName("Queue Name");
       opts.getOption(STATUS_CMD).setArgName("Application ID");
+      opts.getOption(APP_ID).setArgName("Application ID");
+      opts.getOption(UPDATE_PRIORITY).setArgName("Priority");
     } else if (args.length > 0 && args[0].equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       title = APPLICATION_ATTEMPT;
       opts.addOption(STATUS_CMD, true,
@@ -238,6 +247,13 @@ public class ApplicationCLI extends YarnCLI {
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(title, opts);
       return 0;
+    } else if (cliParser.hasOption(UPDATE_PRIORITY)) {
+      if (!cliParser.hasOption(APP_ID)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      updateApplicationPriority(cliParser.getOptionValue(APP_ID),
+          cliParser.getOptionValue(UPDATE_PRIORITY));
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);
@@ -618,5 +634,18 @@ public class ApplicationCLI extends YarnCLI {
           containerReport.getLogUrl());
     }
     writer.flush();
+  }
+
+  /**
+   * Updates priority of an application with the given ID.
+   */
+  private void updateApplicationPriority(String applicationId, String priority)
+      throws YarnException, IOException {
+    ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
+    Priority newAppPriority = Priority.newInstance(Integer.parseInt(priority));
+    sysout.println("Updating priority of an aplication " + applicationId);
+    client.updateApplicationPriority(appId, newAppPriority);
+    sysout.println("Successfully updated the priority of any application "
+        + applicationId);
   }
 }

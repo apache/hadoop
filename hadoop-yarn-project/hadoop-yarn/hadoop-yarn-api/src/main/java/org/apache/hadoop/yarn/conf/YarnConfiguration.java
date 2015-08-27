@@ -1237,6 +1237,12 @@ public class YarnConfiguration extends Configuration {
       NM_RECOVERY_PREFIX + "supervised";
   public static final boolean DEFAULT_NM_RECOVERY_SUPERVISED = false;
 
+  public static final String NM_LOG_AGG_POLICY_CLASS =
+      NM_PREFIX + "log-aggregation.policy.class";
+
+  public static final String NM_LOG_AGG_POLICY_CLASS_PARAMETERS = NM_PREFIX
+      + "log-aggregation.policy.parameters";
+
   ////////////////////////////////
   // Web Proxy Configs
   ////////////////////////////////
@@ -1966,6 +1972,36 @@ public class YarnConfiguration extends Configuration {
     return DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
         NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
   }
+
+  private static final String NM_NODE_LABELS_PREFIX = NM_PREFIX
+      + "node-labels.";
+
+  public static final String NM_NODE_LABELS_PROVIDER_CONFIG =
+      NM_NODE_LABELS_PREFIX + "provider";
+
+  // whitelist names for the yarn.nodemanager.node-labels.provider
+  public static final String CONFIG_NODE_LABELS_PROVIDER = "config";
+
+  private static final String NM_NODE_LABELS_PROVIDER_PREFIX =
+      NM_NODE_LABELS_PREFIX + "provider.";
+
+  // If -1 is configured then no timer task should be created
+  public static final String NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "fetch-interval-ms";
+
+  public static final String NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "fetch-timeout-ms";
+
+  // once in 10 mins
+  public static final long DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
+      10 * 60 * 1000;
+
+  // Twice of default interval time
+  public static final long DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS =
+      DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS * 2;
+
+  public static final String NM_PROVIDER_CONFIGURED_NODE_LABELS =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-labels";
 
   public YarnConfiguration() {
     super();

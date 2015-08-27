@@ -102,32 +102,6 @@ message GetBlockLocalPathInfoResponseProto {
 }
 
 /**
- * Query for the disk locations of a number of blocks on this DN.
- * blockPoolId - the pool to query
- * blockIds - list of block IDs to query
- * tokens - list of access tokens corresponding to list of block IDs
- */
-message GetHdfsBlockLocationsRequestProto {
-  // Removed: HDFS-3969
-  // repeated ExtendedBlockProto blocks = 1;
-  repeated hadoop.common.TokenProto tokens = 2;
-
-  required string blockPoolId = 3;
-  repeated sfixed64 blockIds = 4 [ packed = true ];
-}
-
-/**
- * volumeIds - id of each volume, potentially multiple bytes
- * volumeIndexes - for each block, an index into volumeIds specifying the volume
- *               on which it is located. If block is not present on any volume,
- *               index is set to MAX_INT.
- */
-message GetHdfsBlockLocationsResponseProto {
-  repeated bytes volumeIds = 1;
-  repeated uint32 volumeIndexes = 2 [ packed = true ];
-}
-
-/**
  * forUpgrade - if true, clients are advised to wait for restart and quick
  *              upgrade restart is instrumented. Otherwise, datanode does
  *              the regular shutdown.
@@ -218,13 +192,6 @@ service ClientDatanodeProtocolService {
    */
   rpc getBlockLocalPathInfo(GetBlockLocalPathInfoRequestProto)
       returns(GetBlockLocalPathInfoResponseProto);
-
-  /**
-   * Retrieve additional HDFS-specific metadata about a set of blocks stored
-   * on the local file system.
-   */
-  rpc getHdfsBlockLocations(GetHdfsBlockLocationsRequestProto)
-      returns(GetHdfsBlockLocationsResponseProto);
 
   rpc shutdownDatanode(ShutdownDatanodeRequestProto)
       returns(ShutdownDatanodeResponseProto);

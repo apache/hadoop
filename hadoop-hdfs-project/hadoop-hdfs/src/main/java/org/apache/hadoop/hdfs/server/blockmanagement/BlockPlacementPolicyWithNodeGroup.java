@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
@@ -67,34 +65,11 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
       EnumMap<StorageType, Integer> storageTypes, boolean fallbackToLocalRack)
       throws NotEnoughReplicasException {
-    // if no local machine, randomly choose one node
-    if (localMachine == null)
-      return chooseRandom(NodeBase.ROOT, excludedNodes, 
-          blocksize, maxNodesPerRack, results, avoidStaleNodes, storageTypes);
-
-    // otherwise try local machine first
-    if (localMachine instanceof DatanodeDescriptor) {
-      DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;
-      if (excludedNodes.add(localMachine)) { // was not in the excluded list
-        for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
-            .entrySet().iterator(); iter.hasNext(); ) {
-          Map.Entry<StorageType, Integer> entry = iter.next();
-          for (DatanodeStorageInfo localStorage : DFSUtil.shuffle(
-              localDataNode.getStorageInfos())) {
-            StorageType type = entry.getKey();
-            if (addIfIsGoodTarget(localStorage, excludedNodes, blocksize,
-                maxNodesPerRack, false, results, avoidStaleNodes, type) >= 0) {
-              int num = entry.getValue();
-              if (num == 1) {
-                iter.remove();
-              } else {
-                entry.setValue(num - 1);
-              }
-              return localStorage;
-            }
-          }
-        }
-      }
+    DatanodeStorageInfo localStorage = chooseLocalStorage(localMachine,
+        excludedNodes, blocksize, maxNodesPerRack, results,
+        avoidStaleNodes, storageTypes);
+    if (localStorage != null) {
+      return localStorage;
     }
 
     // try a node on local node group

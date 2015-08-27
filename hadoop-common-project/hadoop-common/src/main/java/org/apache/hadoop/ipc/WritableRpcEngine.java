@@ -551,6 +551,9 @@ public class WritableRpcEngine implements RpcEngine {
          server.rpcMetrics.addRpcProcessingTime(processingTime);
          server.rpcDetailedMetrics.addProcessingTime(detailedMetricsName,
              processingTime);
+          if (server.isLogSlowRPC()) {
+            server.logSlowRpcCalls(call.getMethodName(), processingTime);
+          }
        }
       }
     }

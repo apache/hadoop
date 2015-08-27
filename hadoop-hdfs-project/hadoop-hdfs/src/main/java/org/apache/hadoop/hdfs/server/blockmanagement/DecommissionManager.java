@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -240,9 +241,9 @@ public class DecommissionManager {
    */
   private boolean isSufficient(BlockInfo block, BlockCollection bc,
       NumberReplicas numberReplicas) {
-    final int numExpected = blockManager.getExpectedReplicaNum(bc, block);
+    final int numExpected = blockManager.getExpectedReplicaNum(block);
     final int numLive = numberReplicas.liveReplicas();
-    if (!blockManager.isNeededReplication(block, numExpected, numLive)) {
+    if (!blockManager.isNeededReplication(block, numLive)) {
       // Block doesn't need replication. Skip.
       LOG.trace("Block {} does not need replication.", block);
       return true;
@@ -274,11 +275,12 @@ public class DecommissionManager {
     return false;
   }
 
-  private void logBlockReplicationInfo(BlockInfo block, BlockCollection bc,
+  private void logBlockReplicationInfo(BlockInfo block,
+      BlockCollection bc,
       DatanodeDescriptor srcNode, NumberReplicas num,
       Iterable<DatanodeStorageInfo> storages) {
     int curReplicas = num.liveReplicas();
-    int curExpectedReplicas = blockManager.getExpectedReplicaNum(bc, block);
+    int curExpectedReplicas = blockManager.getExpectedReplicaNum(block);
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
@@ -524,19 +526,20 @@ public class DecommissionManager {
           it.remove();
           continue;
         }
-        BlockCollection bc = blockManager.getBlockCollection(block);
-        if (bc == null) {
+
+        long bcId = block.getBlockCollectionId();
+        if (bcId == INodeId.INVALID_INODE_ID) {
           // Orphan block, will be invalidated eventually. Skip.
           continue;
         }
 
+        BlockCollection bc = namesystem.getBlockCollection(bcId);
         final NumberReplicas num = blockManager.countNodes(block);
         final int liveReplicas = num.liveReplicas();
 
         // Schedule under-replicated blocks for replication if not already
         // pending
-        if (blockManager.isNeededReplication(block,
-            blockManager.getExpectedReplicaNum(bc, block), liveReplicas)) {
+        if (blockManager.isNeededReplication(block, liveReplicas)) {
           if (!blockManager.neededReplications.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
               namesystem.isPopulatingReplQueues()) {
@@ -544,7 +547,7 @@ public class DecommissionManager {
             blockManager.neededReplications.add(block,
                 liveReplicas,
                 num.decommissionedAndDecommissioning(),
-                blockManager.getExpectedReplicaNum(bc, block));
+                blockManager.getExpectedReplicaNum(block));
           }
         }
 

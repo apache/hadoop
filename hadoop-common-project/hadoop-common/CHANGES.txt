@@ -750,6 +750,12 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
 
+    HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
+    (hzlu via benoyantony)
+
+    HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
+    (Anu Engineer via xyao)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -789,6 +795,9 @@ Release 2.8.0 - UNRELEASED
     more informative exception. (Brahma Reddy Battula via kasha)
 
   BUG FIXES
+
+    HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
+    before deleting (Casey Brotherton via harsh)
 
     HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
     is an I/O error during requestShortCircuitShm (cmccabe)
@@ -1063,6 +1072,16 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12322. typos in rpcmetrics.java. (Anu Engineer via
     Arpit Agarwal)
 
+    HADOOP-12317. Applications fail on NM restart on some linux distro
+    because NM container recovery declares AM container as LOST
+    (adhoot via rkanter)
+
+    HADOOP-12347. Fix mismatch parameter name in javadocs of
+    AuthToken#setMaxInactives (xyao)
+
+    HADOOP-12362. Set hadoop.tmp.dir and hadoop.log.dir in pom.
+    (Charlie Helin via wang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1091,6 +1110,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-11932. MetricsSinkAdapter may hang  when being stopped.
     (Brahma Reddy Battula via jianhe)
+
+    HADOOP-12061. Incorrect command in single cluster setup document.
+    (Kengo Seki via aajisaka)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -1860,6 +1882,18 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11837. AuthenticationFilter should destroy SignerSecretProvider in
     Tomcat deployments. (Bowen Zhang via wheat9)
+
+Release 2.6.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.6.1 - UNRELEASED
 

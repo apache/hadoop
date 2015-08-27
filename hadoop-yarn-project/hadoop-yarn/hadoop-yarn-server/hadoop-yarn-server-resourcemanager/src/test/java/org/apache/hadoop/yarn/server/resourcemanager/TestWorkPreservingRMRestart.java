@@ -770,7 +770,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       am0.getApplicationAttemptId()));
 
     // getTransferredContainers should not throw NPE.
-    ((AbstractYarnScheduler) rm2.getResourceScheduler())
+    rm2.getResourceScheduler()
       .getTransferredContainers(am0.getApplicationAttemptId());
 
     List<NMContainerStatus> containers = createNMContainerStatusForApp(am0);

@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.eq;
@@ -38,20 +36,17 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -65,21 +60,17 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
@@ -88,17 +79,11 @@ import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
 
-  {
+  static {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
   }
 
@@ -109,16 +94,17 @@ public class TestDistributedFileSystem {
   private HdfsConfiguration getTestConfiguration() {
     HdfsConfiguration conf;
     if (noXmlDefaults) {
-       conf = new HdfsConfiguration(false);
-       String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(), "name").getAbsolutePath();
-       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeDir);
-       conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeDir);     
+      conf = new HdfsConfiguration(false);
+      String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(), "name").
+          getAbsolutePath();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeDir);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeDir);
     } else {
-       conf = new HdfsConfiguration();
+      conf = new HdfsConfiguration();
     }
     if (dualPortTesting) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-              "localhost:0");
+          "localhost:0");
     }
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
 
@@ -134,14 +120,17 @@ public class TestDistributedFileSystem {
       FileSystem fileSys = cluster.getFileSystem();
       fileSys.getDelegationToken("");
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
   @Test
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).
+        build();
     URI address = FileSystem.getDefaultUri(conf);
 
     try {
@@ -213,12 +202,6 @@ public class TestDistributedFileSystem {
     try {
       dfsClient.getBlockLocations(p.getName(), 0, 1);
       fail("getBlockLocations using a closed filesystem!");
-    } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
-    }
-    try {
-      dfsClient.getBlockStorageLocations(new ArrayList<BlockLocation>());
-      fail("getBlockStorageLocations using a closed filesystem!");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains("Filesystem closed", ioe);
     }
@@ -662,7 +645,8 @@ public class TestDistributedFileSystem {
   }
   
   /** Checks statistics. -1 indicates do not check for the operations */
-  private void checkStatistics(FileSystem fs, int readOps, int writeOps, int largeReadOps) {
+  private void checkStatistics(FileSystem fs, int readOps, int writeOps,
+      int largeReadOps) {
     assertEquals(readOps, DFSTestUtil.getStatistics(fs).getReadOps());
     assertEquals(writeOps, DFSTestUtil.getStatistics(fs).getWriteOps());
     assertEquals(largeReadOps, DFSTestUtil.getStatistics(fs).getLargeReadOps());
@@ -676,7 +660,8 @@ public class TestDistributedFileSystem {
 
     final Configuration conf = getTestConfiguration();
 
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2).build();
     final FileSystem hdfs = cluster.getFileSystem();
 
     final String nnAddr = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
@@ -716,8 +701,9 @@ public class TestDistributedFileSystem {
 
     final Path dir = new Path("/filechecksum");
     final int block_size = 1024;
-    final int buffer_size = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
+    final int buffer_size = conf.getInt(
+        CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    conf.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
 
     //try different number of blocks
     for(int n = 0; n < 5; n++) {
@@ -744,14 +730,15 @@ public class TestDistributedFileSystem {
       System.out.println("webhdfsfoocs=" + webhdfsfoocs);
 
       final Path webhdfsqualified = new Path(webhdfsuri + dir, "foo" + n);
-      final FileChecksum webhdfs_qfoocs = webhdfs.getFileChecksum(webhdfsqualified);
+      final FileChecksum webhdfs_qfoocs =
+          webhdfs.getFileChecksum(webhdfsqualified);
       System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
 
       //create a zero byte file
       final Path zeroByteFile = new Path(dir, "zeroByteFile" + n);
       {
-        final FSDataOutputStream out = hdfs.create(zeroByteFile, false, buffer_size,
-            (short)2, block_size);
+        final FSDataOutputStream out = hdfs.create(zeroByteFile, false,
+            buffer_size, (short)2, block_size);
         out.close();
       }
 
@@ -865,9 +852,7 @@ public class TestDistributedFileSystem {
         String[] ids = loc.getStorageIds();
         // Run it through a set to deduplicate, since there should be no dupes
         Set<String> storageIds = new HashSet<>();
-        for (String id: ids) {
-          storageIds.add(id);
-        }
+        Collections.addAll(storageIds, ids);
         assertEquals("Unexpected num storage ids", repl, storageIds.size());
         // Make sure these are all valid storage IDs
         assertTrue("Unknown storage IDs found!", dnStorageIds.containsAll
@@ -879,213 +864,6 @@ public class TestDistributedFileSystem {
           assertEquals("Unexpected storage type", StorageType.DEFAULT, t);
         }
       }
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  /**
-   * Tests the normal path of batching up BlockLocation[]s to be passed to a
-   * single
-   * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
-   * call
-   */
-  @Test(timeout=60000)
-  public void testGetFileBlockStorageLocationsBatching() throws Exception {
-    final Configuration conf = getTestConfiguration();
-    ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.TRACE);
-    ((Log4JLogger)BlockStorageLocationUtil.LOG).getLogger().setLevel(Level.TRACE);
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.TRACE);
-
-    conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
-        true);
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(2).build();
-    try {
-      final DistributedFileSystem fs = cluster.getFileSystem();
-      // Create two files
-      final Path tmpFile1 = new Path("/tmpfile1.dat");
-      final Path tmpFile2 = new Path("/tmpfile2.dat");
-      DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
-      DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
-      // Make sure files are fully replicated before continuing
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            List<BlockLocation> list = Lists.newArrayList();
-            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile1, 0,
-                1024)));
-            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile2, 0,
-                1024)));
-            int totalRepl = 0;
-            for (BlockLocation loc : list) {
-              totalRepl += loc.getHosts().length;
-            }
-            if (totalRepl == 4) {
-              return true;
-            }
-          } catch(IOException e) {
-            // swallow
-          }
-          return false;
-        }
-      }, 500, 30000);
-      // Get locations of blocks of both files and concat together
-      BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
-      BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
-      BlockLocation[] blockLocs = (BlockLocation[]) ArrayUtils.addAll(blockLocs1,
-          blockLocs2);
-      // Fetch VolumeBlockLocations in batch
-      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
-          .asList(blockLocs));
-      int counter = 0;
-      // Print out the list of ids received for each block
-      for (BlockStorageLocation l : locs) {
-        for (int i = 0; i < l.getVolumeIds().length; i++) {
-          VolumeId id = l.getVolumeIds()[i];
-          String name = l.getNames()[i];
-          if (id != null) {
-            System.out.println("Datanode " + name + " has block " + counter
-                + " on volume id " + id.toString());
-          }
-        }
-        counter++;
-      }
-      assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
-          locs.length);
-      for (BlockStorageLocation l : locs) {
-        assertEquals("Expected two replicas for each block", 2,
-            l.getVolumeIds().length);
-        for (int i = 0; i < l.getVolumeIds().length; i++) {
-          VolumeId id = l.getVolumeIds()[i];
-          String name = l.getNames()[i];
-          assertTrue("Expected block to be valid on datanode " + name,
-              id != null);
-        }
-      }
-    } finally {
-      cluster.shutdown();
-    }
-  }
-
-  /**
-   * Tests error paths for
-   * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
-   */
-  @Test(timeout=60000)
-  public void testGetFileBlockStorageLocationsError() throws Exception {
-    final Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
-        true);
-    conf.setInt(
-        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS, 1500);
-    conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
-    
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      cluster.getDataNodes();
-      final DistributedFileSystem fs = cluster.getFileSystem();
-      
-      // Create a few files and add together their block locations into
-      // a list.
-      final Path tmpFile1 = new Path("/errorfile1.dat");
-      final Path tmpFile2 = new Path("/errorfile2.dat");
-
-      DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
-      DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
-
-      // Make sure files are fully replicated before continuing
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          try {
-            List<BlockLocation> list = Lists.newArrayList();
-            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile1, 0,
-                1024)));
-            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile2, 0,
-                1024)));
-            int totalRepl = 0;
-            for (BlockLocation loc : list) {
-              totalRepl += loc.getHosts().length;
-            }
-            if (totalRepl == 4) {
-              return true;
-            }
-          } catch(IOException e) {
-            // swallow
-          }
-          return false;
-        }
-      }, 500, 30000);
-      
-      BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
-      BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
-
-      List<BlockLocation> allLocs = Lists.newArrayList();
-      allLocs.addAll(Arrays.asList(blockLocs1));
-      allLocs.addAll(Arrays.asList(blockLocs2));
-
-      // Stall on the DN to test the timeout
-      DataNodeFaultInjector injector = Mockito.mock(DataNodeFaultInjector.class);
-      Mockito.doAnswer(new Answer<Void>() {
-        @Override
-        public Void answer(InvocationOnMock invocation) throws Throwable {
-          Thread.sleep(3000);
-          return null;
-        }
-      }).when(injector).getHdfsBlocksMetadata();
-      DataNodeFaultInjector.instance = injector;
-
-      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(allLocs);
-      for (BlockStorageLocation loc: locs) {
-        assertEquals(
-            "Found more than 0 cached hosts although RPCs supposedly timed out",
-            0, loc.getCachedHosts().length);
-      }
-
-      // Restore a default injector
-      DataNodeFaultInjector.instance = new DataNodeFaultInjector();
-
-      // Stop a datanode to simulate a failure.
-      DataNodeProperties stoppedNode = cluster.stopDataNode(0);
-      
-      // Fetch VolumeBlockLocations
-      locs = fs.getFileBlockStorageLocations(allLocs);
-      assertEquals("Expected two HdfsBlockLocation for two 1-block files", 2,
-          locs.length);
-  
-      for (BlockStorageLocation l : locs) {
-        assertEquals("Expected two replicas for each block", 2,
-            l.getHosts().length);
-        assertEquals("Expected two VolumeIDs for each block", 2,
-            l.getVolumeIds().length);
-        assertTrue("Expected one valid and one invalid volume",
-            (l.getVolumeIds()[0] == null) ^ (l.getVolumeIds()[1] == null));
-      }
-      
-      // Start the datanode again, and remove one of the blocks.
-      // This is a different type of failure where the block itself
-      // is invalid.
-      cluster.restartDataNode(stoppedNode, true /*keepPort*/);
-      cluster.waitActive();
-      
-      fs.delete(tmpFile2, true);
-      HATestUtil.waitForNNToIssueDeletions(cluster.getNameNode());
-      cluster.triggerHeartbeats();
-      HATestUtil.waitForDNDeletions(cluster);
-  
-      locs = fs.getFileBlockStorageLocations(allLocs);
-      assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
-          locs.length);
-      assertNotNull(locs[0].getVolumeIds()[0]);
-      assertNotNull(locs[0].getVolumeIds()[1]);
-      assertNull(locs[1].getVolumeIds()[0]);
-      assertNull(locs[1].getVolumeIds()[1]);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -1165,9 +943,7 @@ public class TestDistributedFileSystem {
       output.close();
       assertTrue("File status should be closed", fs.isFileClosed(file));
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
   
@@ -1182,8 +958,9 @@ public class TestDistributedFileSystem {
       final Path relative = new Path("relative");
       fs.create(new Path(relative, "foo")).close();
   
-      final List<LocatedFileStatus> retVal = new ArrayList<LocatedFileStatus>();
-      final RemoteIterator<LocatedFileStatus> iter = fs.listFiles(relative, true);
+      final List<LocatedFileStatus> retVal = new ArrayList<>();
+      final RemoteIterator<LocatedFileStatus> iter =
+          fs.listFiles(relative, true);
       while (iter.hasNext()) {
         retVal.add(iter.next());
       }
@@ -1197,8 +974,8 @@ public class TestDistributedFileSystem {
   public void testDFSClientPeerReadTimeout() throws IOException {
     final int timeout = 1000;
     final Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
-    
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
+
     // only need cluster to create a dfs client to get a peer
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
@@ -1242,7 +1019,7 @@ public class TestDistributedFileSystem {
   public void testDFSClientPeerWriteTimeout() throws IOException {
     final int timeout = 1000;
     final Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
 
     // only need cluster to create a dfs client to get a peer
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

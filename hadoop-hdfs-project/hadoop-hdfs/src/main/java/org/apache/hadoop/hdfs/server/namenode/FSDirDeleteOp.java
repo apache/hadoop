@@ -47,6 +47,7 @@ class FSDirDeleteOp {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + iip.getPath());
     }
     long filesRemoved = -1;
+    FSNamesystem fsn = fsd.getFSNamesystem();
     fsd.writeLock();
     try {
       if (deleteAllowed(iip, iip.getPath()) ) {
@@ -58,7 +59,9 @@ class FSDirDeleteOp {
         if (unprotectedDelete(fsd, iip, context, mtime)) {
           filesRemoved = context.quotaDelta().getNsDelta();
         }
-        fsd.getFSNamesystem().removeSnapshottableDirs(snapshottableDirs);
+        fsd.updateReplicationFactor(context.collectedBlocks()
+                                        .toUpdateReplicationInfo());
+        fsn.removeSnapshottableDirs(snapshottableDirs);
         fsd.updateCount(iip, context.quotaDelta(), false);
       }
     } finally {

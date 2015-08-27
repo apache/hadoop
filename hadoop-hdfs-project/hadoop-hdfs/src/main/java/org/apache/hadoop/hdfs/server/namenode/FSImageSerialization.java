@@ -182,9 +182,9 @@ public class FSImageSerialization {
 
   /**
    * Serialize a {@link INodeFile} node
-   * @param file The node to write
+   * @param file The INodeFile to write
    * @param out The {@link DataOutputStream} where the fields are written
-   * @param writeUnderConstruction Whether to write block information
+   * @param writeUnderConstruction Whether to write under construction information
    */
   public static void writeINodeFile(INodeFile file, DataOutput out,
       boolean writeUnderConstruction) throws IOException {

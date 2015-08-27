@@ -70,9 +70,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumIn
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReleaseShortCircuitAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsUnsupportedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsVersionException;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry.NewShmInfo;
@@ -428,7 +427,7 @@ class DataXceiver extends Receiver implements Runnable {
       throws IOException {
     DataNodeFaultInjector.get().sendShortCircuitShmResponse();
     ShortCircuitShmResponseProto.newBuilder().setStatus(SUCCESS).
-        setId(PBHelper.convert(shmInfo.shmId)).build().
+        setId(PBHelperClient.convert(shmInfo.shmId)).build().
         writeDelimitedTo(socketOut);
     // Send the file descriptor for the shared memory segment.
     byte buf[] = new byte[] { (byte)0 };
@@ -560,7 +559,7 @@ class DataXceiver extends Receiver implements Runnable {
         // to respond with a Status enum.
         try {
           ClientReadStatusProto stat = ClientReadStatusProto.parseFrom(
-              PBHelper.vintPrefixed(in));
+              PBHelperClient.vintPrefixed(in));
           if (!stat.hasStatus()) {
             LOG.warn("Client " + peer.getRemoteAddressString() +
                 " did not send a valid status code after reading. " +
@@ -704,10 +703,10 @@ class DataXceiver extends Receiver implements Runnable {
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
-          int timeoutValue = dnConf.socketTimeout
-              + (HdfsServerConstants.READ_TIMEOUT_EXTENSION * targets.length);
-          int writeTimeout = dnConf.socketWriteTimeout + 
-                      (HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
+          int timeoutValue = dnConf.socketTimeout +
+              (HdfsConstants.READ_TIMEOUT_EXTENSION * targets.length);
+          int writeTimeout = dnConf.socketWriteTimeout +
+              (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
@@ -746,7 +745,7 @@ class DataXceiver extends Receiver implements Runnable {
           // read connect ack (only for clients, not for replication req)
           if (isClient) {
             BlockOpResponseProto connectAck =
-              BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(mirrorIn));
+              BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(mirrorIn));
             mirrorInStatus = connectAck.getStatus();
             firstBadLink = connectAck.getFirstBadLink();
             if (LOG.isDebugEnabled() || mirrorInStatus != SUCCESS) {
@@ -963,7 +962,7 @@ class DataXceiver extends Receiver implements Runnable {
           .setBytesPerCrc(bytesPerCRC)
           .setCrcPerBlock(crcPerBlock)
           .setMd5(ByteString.copyFrom(md5.getDigest()))
-          .setCrcType(PBHelper.convert(checksum.getChecksumType())))
+          .setCrcType(PBHelperClient.convert(checksum.getChecksumType())))
         .build()
         .writeDelimitedTo(out);
       out.flush();
@@ -1148,8 +1147,8 @@ class DataXceiver extends Receiver implements Runnable {
         // receive the response from the proxy
         
         BlockOpResponseProto copyResponse = BlockOpResponseProto.parseFrom(
-            PBHelper.vintPrefixed(proxyReply));
-        
+            PBHelperClient.vintPrefixed(proxyReply));
+
         String logInfo = "copy block " + block + " from "
             + proxySock.getRemoteSocketAddress();
         DataTransferProtoUtil.checkBlockOpStatus(copyResponse, logInfo);

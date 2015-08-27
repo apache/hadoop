@@ -30,6 +30,8 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
@@ -154,6 +156,36 @@ public class TestFSNamesystemMBean {
       if (fsn != null && fsn.hasWriteLock()) {
         fsn.writeUnlock();
       }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testFsEditLogMetrics() throws Exception {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanNameFs =
+          new ObjectName("Hadoop:service=NameNode,name=FSNamesystemState");
+
+      FileSystem fs = cluster.getFileSystem();
+      final int NUM_OPS = 10;
+      for (int i = 0; i < NUM_OPS; i++) {
+        final Path path = new Path(String.format("/user%d", i));
+        fs.mkdirs(path);
+      }
+
+      long syncCount = (long) mbs.getAttribute(mxbeanNameFs, "TotalSyncCount");
+      String syncTimes =
+          (String) mbs.getAttribute(mxbeanNameFs, "TotalSyncTimes");
+      assertTrue(syncCount > 0);
+      assertNotNull(syncTimes);
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

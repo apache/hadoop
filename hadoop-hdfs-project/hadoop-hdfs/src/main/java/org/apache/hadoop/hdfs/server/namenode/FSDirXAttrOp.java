@@ -272,7 +272,7 @@ class FSDirXAttrOp {
     final boolean isFile = inode.isFile();
 
     for (XAttr xattr : newXAttrs) {
-      final String xaName = XAttrHelper.getPrefixName(xattr);
+      final String xaName = XAttrHelper.getPrefixedName(xattr);
 
       /*
        * If we're adding the encryption zone xattr, then add src to the list
@@ -368,30 +368,22 @@ class FSDirXAttrOp {
     return xAttrs;
   }
 
-  static List<XAttr> getXAttrs(FSDirectory fsd, INode inode, int snapshotId)
-      throws IOException {
+  static XAttr getXAttrByPrefixedName(FSDirectory fsd, INode inode,
+      int snapshotId, String prefixedName) throws IOException {
     fsd.readLock();
     try {
-      return XAttrStorage.readINodeXAttrs(inode, snapshotId);
+      return XAttrStorage.readINodeXAttrByPrefixedName(inode, snapshotId,
+          prefixedName);
     } finally {
       fsd.readUnlock();
     }
   }
 
-  static XAttr unprotectedGetXAttrByName(
-      INode inode, int snapshotId, String xAttrName)
+  static XAttr unprotectedGetXAttrByPrefixedName(
+      INode inode, int snapshotId, String prefixedName)
       throws IOException {
-    List<XAttr> xAttrs = XAttrStorage.readINodeXAttrs(inode, snapshotId);
-    if (xAttrs == null) {
-      return null;
-    }
-    for (XAttr x : xAttrs) {
-      if (XAttrHelper.getPrefixName(x)
-          .equals(xAttrName)) {
-        return x;
-      }
-    }
-    return null;
+    return XAttrStorage.readINodeXAttrByPrefixedName(inode, snapshotId,
+        prefixedName);
   }
 
   private static void checkXAttrChangeAccess(
@@ -418,9 +410,6 @@ class FSDirXAttrOp {
    * the configured limit. Setting a limit of zero disables this check.
    */
   private static void checkXAttrSize(FSDirectory fsd, XAttr xAttr) {
-    if (fsd.getXattrMaxSize() == 0) {
-      return;
-    }
     int size = xAttr.getName().getBytes(Charsets.UTF_8).length;
     if (xAttr.getValue() != null) {
       size += xAttr.getValue().length;

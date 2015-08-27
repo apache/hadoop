@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+import java.util.concurrent.TimeUnit;
+
 /** Client configuration properties */
+@InterfaceAudience.Private
 public interface HdfsClientConfigKeys {
   long SECOND = 1000L;
   long MINUTE = 60 * SECOND;
@@ -31,7 +36,7 @@ public interface HdfsClientConfigKeys {
   String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
-  static final String PREFIX = "dfs.client.";
+  String PREFIX = "dfs.client.";
   String  DFS_NAMESERVICES = "dfs.nameservices";
   int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 50070;
   String  DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
@@ -41,6 +46,75 @@ public interface HdfsClientConfigKeys {
   int DFS_NAMENODE_RPC_PORT_DEFAULT = 8020;
   String DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.namenode.kerberos.principal";
+  String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
+  int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
+  String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY =
+      "dfs.client.socketcache.capacity";
+  int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 16;
+  String  DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY =
+      "dfs.client.socketcache.expiryMsec";
+  long    DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT = 3000;
+  String  DFS_CLIENT_USE_DN_HOSTNAME = "dfs.client.use.datanode.hostname";
+  boolean DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT = false;
+  String  DFS_CLIENT_CACHE_DROP_BEHIND_WRITES =
+      "dfs.client.cache.drop.behind.writes";
+  String  DFS_CLIENT_CACHE_DROP_BEHIND_READS =
+      "dfs.client.cache.drop.behind.reads";
+  String  DFS_CLIENT_CACHE_READAHEAD = "dfs.client.cache.readahead";
+  String  DFS_CLIENT_CACHED_CONN_RETRY_KEY = "dfs.client.cached.conn.retry";
+  int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT = 3;
+  String  DFS_CLIENT_CONTEXT = "dfs.client.context";
+  String  DFS_CLIENT_CONTEXT_DEFAULT = "default";
+  String  DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS =
+      "dfs.client.file-block-storage-locations.num-threads";
+  int     DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT = 10;
+  String  DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS =
+      "dfs.client.file-block-storage-locations.timeout.millis";
+  int     DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT = 1000;
+  String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
+      "dfs.client.use.legacy.blockreader";
+  boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT = false;
+  String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
+      "dfs.client.use.legacy.blockreader.local";
+  boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;
+  String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY =
+      "dfs.client.datanode-restart.timeout";
+  long    DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT = 30;
+  // Much code in hdfs is not yet updated to use these keys.
+  // the initial delay (unit is ms) for locateFollowingBlock, the delay time
+  // will increase exponentially(double) for each retry.
+  String  DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY =
+      "dfs.client.max.block.acquire.failures";
+  int     DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT = 3;
+  String  DFS_CHECKSUM_TYPE_KEY = "dfs.checksum.type";
+  String  DFS_CHECKSUM_TYPE_DEFAULT = "CRC32C";
+  String  DFS_BYTES_PER_CHECKSUM_KEY = "dfs.bytes-per-checksum";
+  int     DFS_BYTES_PER_CHECKSUM_DEFAULT = 512;
+  String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY =
+      "dfs.datanode.socket.write.timeout";
+  String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
+      "dfs.client.domain.socket.data.traffic";
+  boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT = false;
+  String  DFS_DOMAIN_SOCKET_PATH_KEY = "dfs.domain.socket.path";
+  String  DFS_DOMAIN_SOCKET_PATH_DEFAULT = "";
+  String  DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS =
+      "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
+  int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
+      60000;
+  String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
+      "dfs.client.slow.io.warning.threshold.ms";
+  long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+  String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
+          "dfs.client.key.provider.cache.expiry";
+  long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
+              TimeUnit.DAYS.toMillis(10); // 10 days
+  String  DFS_HDFS_BLOCKS_METADATA_ENABLED =
+      "dfs.datanode.hdfs-blocks-metadata.enabled";
+  boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT = false;
+
+  String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
+      PREFIX + "replica.accessor.builder.classes";
 
   /** dfs.client.retry configuration properties */
   interface Retry {

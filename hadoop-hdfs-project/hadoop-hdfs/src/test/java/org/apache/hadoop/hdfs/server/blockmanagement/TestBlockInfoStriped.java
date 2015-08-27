@@ -207,7 +207,9 @@ public class TestBlockInfoStriped {
           storages[i].addBlock(info, blocks[i]));
     }
 
-    BlockInfoStriped newBlockInfo = new BlockInfoStriped(info);
+    BlockInfoStriped newBlockInfo = new BlockInfoStriped(info,
+        info.getErasureCodingPolicy());
+    newBlockInfo.setBlockCollectionId(info.getBlockCollectionId());
     info.replaceBlock(newBlockInfo);
 
     // make sure the newBlockInfo is correct

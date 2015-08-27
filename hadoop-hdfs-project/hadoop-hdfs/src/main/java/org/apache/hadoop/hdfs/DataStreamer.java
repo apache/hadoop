@@ -67,7 +67,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
@@ -1255,7 +1255,7 @@ class DataStreamer extends Daemon {
 
       //ack
       BlockOpResponseProto response =
-          BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
+          BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
       if (SUCCESS != response.getStatus()) {
         throw new IOException("Failed to add a datanode");
       }
@@ -1552,7 +1552,7 @@ class DataStreamer extends Daemon {
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
-            PBHelper.vintPrefixed(blockReplyStream));
+            PBHelperClient.vintPrefixed(blockReplyStream));
         pipelineStatus = resp.getStatus();
         firstBadLink = resp.getFirstBadLink();
 

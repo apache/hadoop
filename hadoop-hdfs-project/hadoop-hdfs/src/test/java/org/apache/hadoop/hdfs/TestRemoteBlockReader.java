@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+
 public class TestRemoteBlockReader extends TestBlockReaderBase {
 
   HdfsConfiguration createConf() {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
     return conf;
   }
 }

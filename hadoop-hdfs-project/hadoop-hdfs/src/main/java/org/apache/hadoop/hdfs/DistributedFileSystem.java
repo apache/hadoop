@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -58,7 +57,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -86,7 +84,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
@@ -233,42 +230,6 @@ public class DistributedFileSystem extends FileSystem {
         return fs.getFileBlockLocations(p, start, len);
       }
     }.resolve(this, absF);
-  }
-
-  /**
-   * This API has been deprecated since the NameNode now tracks datanode
-   * storages separately. Storage IDs can be gotten from {@link
-   * BlockLocation#getStorageIds()}, which are functionally equivalent to
-   * the volume IDs returned here (although a String rather than a byte[]).
-   *
-   * Used to query storage location information for a list of blocks. This list
-   * of blocks is normally constructed via a series of calls to
-   * {@link DistributedFileSystem#getFileBlockLocations(Path, long, long)} to
-   * get the blocks for ranges of a file.
-   * 
-   * The returned array of {@link BlockStorageLocation} augments
-   * {@link BlockLocation} with a {@link VolumeId} per block replica. The
-   * VolumeId specifies the volume on the datanode on which the replica resides.
-   * The VolumeId associated with a replica may be null because volume
-   * information can be unavailable if the corresponding datanode is down or
-   * if the requested block is not found.
-   * 
-   * This API is unstable, and datanode-side support is disabled by default. It
-   * can be enabled by setting "dfs.datanode.hdfs-blocks-metadata.enabled" to
-   * true.
-   * 
-   * @param blocks
-   *          List of target BlockLocations to query volume location information
-   * @return volumeBlockLocations Augmented array of
-   *         {@link BlockStorageLocation}s containing additional volume location
-   *         information for each replica of each block.
-   */
-  @InterfaceStability.Unstable
-  @Deprecated
-  public BlockStorageLocation[] getFileBlockStorageLocations(
-      List<BlockLocation> blocks) throws IOException, 
-      UnsupportedOperationException, InvalidBlockTokenException {
-    return dfs.getBlockStorageLocations(blocks);
   }
 
   @Override

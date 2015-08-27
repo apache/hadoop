@@ -36,11 +36,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -428,5 +430,29 @@ public class DFSUtilClient {
     SimpleDateFormat df =
         new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH);
     return df.format(date);
+  }
+
+  private static final Map<String, Boolean> localAddrMap = Collections
+      .synchronizedMap(new HashMap<String, Boolean>());
+
+  public static boolean isLocalAddress(InetSocketAddress targetAddr) {
+    InetAddress addr = targetAddr.getAddress();
+    Boolean cached = localAddrMap.get(addr.getHostAddress());
+    if (cached != null) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Address " + targetAddr +
+            (cached ? " is local" : " is not local"));
+      }
+      return cached;
+    }
+
+    boolean local = NetUtils.isLocalAddress(addr);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Address " + targetAddr +
+          (local ? " is local" : " is not local"));
+    }
+    localAddrMap.put(addr.getHostAddress(), local);
+    return local;
   }
 }

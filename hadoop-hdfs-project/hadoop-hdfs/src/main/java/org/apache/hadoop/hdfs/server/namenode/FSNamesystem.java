@@ -23,12 +23,12 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
@@ -3122,7 +3122,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new AlreadyBeingCreatedException(message);
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
-      final BlockUnderConstructionFeature uc = lastBlock.getUnderConstructionFeature();
+      BlockUnderConstructionFeature uc =
+          lastBlock.getUnderConstructionFeature();
       // determine if last block was intended to be truncated
       Block recoveryBlock = uc.getTruncateBlock();
       boolean truncateRecovery = recoveryBlock != null;
@@ -3153,8 +3154,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         return true;
       }
       // start recovery of the last block for this file
-      long blockRecoveryId =
-          nextGenerationStamp(blockIdManager.isLegacyBlock(lastBlock));
+      long blockRecoveryId = nextGenerationStamp(
+          blockIdManager.isLegacyBlock(lastBlock));
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
       if(copyOnTruncate) {
         lastBlock.setGenerationStamp(blockRecoveryId);
@@ -3262,8 +3263,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   @Override
-  public boolean isInSnapshot(BlockCollection bc) {
+  public boolean isInSnapshot(BlockInfo blockUC) {
     assert hasReadLock();
+    final BlockCollection bc = blockManager.getBlockCollection(blockUC);
     if (bc == null || !(bc instanceof INodeFile)
         || !bc.isUnderConstruction()) {
       return false;
@@ -3290,6 +3292,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      * snapshot inode.
      */
     return true;
+  }
+
+  @Override
+  public BlockCollection getBlockCollection(long id) {
+    INode inode = getFSDirectory().getInode(id);
+    return inode == null ? null : inode.asFile();
   }
 
   void commitBlockSynchronization(ExtendedBlock oldBlock,
@@ -3349,7 +3357,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + " is null, likely because the file owning this block was"
             + " deleted and the block removal is delayed");
       }
-      INodeFile iFile = ((INode)storedBlock.getBlockCollection()).asFile();
+      long bcId = storedBlock.getBlockCollectionId();
+      INodeFile iFile = ((INode)getBlockCollection(bcId)).asFile();
       if (isFileDeleted(iFile)) {
         throw new FileNotFoundException("File not found: "
             + iFile.getFullPathName() + ", likely due to delayed block"
@@ -3770,10 +3779,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
         while (it.hasNext()) {
           Block b = it.next();
-          BlockInfo blockInfo = getStoredBlock(b);
-          if (blockInfo.getBlockCollection().getStoragePolicyID()
-              == lpPolicy.getId()) {
-            filesToDelete.add(blockInfo.getBlockCollection());
+          BlockInfo blockInfo = blockManager.getStoredBlock(b);
+          BlockCollection bc = getBlockCollection(
+              blockInfo.getBlockCollectionId());
+          if (bc.getStoragePolicyID() == lpPolicy.getId()) {
+            filesToDelete.add(bc);
           }
         }
 
@@ -5122,7 +5132,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public int getNumDecomLiveDataNodes() {
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
     int liveDecommissioned = 0;
     for (DatanodeDescriptor node : live) {
       liveDecommissioned += node.isDecommissioned() ? 1 : 0;
@@ -5133,7 +5143,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public int getNumDecomDeadDataNodes() {
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, false);
     int deadDecommissioned = 0;
     for (DatanodeDescriptor node : dead) {
       deadDecommissioned += node.isDecommissioned() ? 1 : 0;
@@ -5296,7 +5306,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     
     // check file inode
-    final INodeFile file = ((INode)storedBlock.getBlockCollection()).asFile();
+    long bcId = storedBlock.getBlockCollectionId();
+    final INodeFile file = ((INode)getBlockCollection(bcId)).asFile();
     if (file == null || !file.isUnderConstruction() || isFileDeleted(file)) {
       throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
@@ -5568,7 +5579,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       while (blkIterator.hasNext()) {
         BlockInfo blk = blkIterator.next();
-        final INode inode = (INode)blockManager.getBlockCollection(blk);
+        BlockCollection bc = getBlockCollection(blk.getBlockCollectionId());
+        final INode inode = (INode)bc;
         skip++;
         if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
           String src = FSDirectory.getFullPathName(inode);
@@ -7421,6 +7433,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         asyncAppender.addAppender(appender);
       }
       logger.addAppender(asyncAppender);        
+    }
+  }
+  /**
+   * Return total number of Sync Operations on FSEditLog.
+   */
+  @Override
+  @Metric({"TotalSyncCount",
+              "Total number of sync operations performed on edit logs"})
+  public long getTotalSyncCount() {
+    return fsImage.editLog.getTotalSyncCount();
+  }
+
+  /**
+   * Return total time spent doing sync operations on FSEditLog.
+   */
+  @Override
+  @Metric({"TotalSyncTimes",
+              "Total time spend in sync operation on various edit logs"})
+  public String getTotalSyncTimes() {
+    JournalSet journalSet = fsImage.editLog.getJournalSet();
+    if (journalSet != null) {
+      return journalSet.getSyncTimes();
+    } else {
+      return "";
     }
   }
 

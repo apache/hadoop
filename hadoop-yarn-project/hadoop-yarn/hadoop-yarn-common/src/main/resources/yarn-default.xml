@@ -2092,6 +2092,53 @@
     <value>centralized</value>
   </property>
 
+  <!-- Distributed Node Labels Configuration -->
+  <property>
+    <description>
+    When node labels "yarn.node-labels.configuration-type" is
+    of type "distributed" Administrators can configure the source of the
+    node labels provider by configuring this parameter. Administrators can
+    specify either "config" or the class name of the provider. Configured
+    class needs to extend
+    org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider.
+    If "config" is specified then, "ConfigurationNodeLabelsProvider" will
+    be used.
+    </description>
+    <name>yarn.nodemanager.node-labels.provider</name>
+  </property>
+
+  <property>
+    <description>
+    When node labels "yarn.nodemanager.node-labels.provider" is of type
+    "config" or the configured class extends AbstractNodeLabelsProvider then
+    periodically node labels are retrieved from the node labels provider.
+    This configuration is to define the interval. If -1 is configured then
+    node labels are retrieved from. provider only during initialization.
+    Defaults to 10 mins.
+    </description>
+    <name>yarn.nodemanager.node-labels.provider.fetch-interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>
+    When node labels "yarn.nodemanager.node-labels.provider"
+    is of type "config" then ConfigurationNodeLabelsProvider fetches the
+    labels this parameter.
+    </description>
+    <name>yarn.nodemanager.node-labels.provider.configured-node-labels</name>
+  </property>
+
+  <property>
+    <description>
+    When node labels "yarn.nodemanager.node-labels.provider" is a class
+    which extends AbstractNodeLabelsProvider then this configuration provides
+    the timeout period after which it will stop querying the Node labels
+    provider. Defaults to 20 mins.
+    </description>
+    <name>yarn.nodemanager.node-labels.provider.fetch-timeout-ms</name>
+    <value>1200000</value>
+  </property>
   <!-- Other Configuration -->
 
   <property>
@@ -2177,6 +2224,30 @@
     </description>
     <name>yarn.cluster.max-application-priority</name>
     <value>0</value>
+  </property>
+
+  <property>
+    <description>
+    The default log aggregation policy class. Applications can
+    override it via LogAggregationContext. This configuration can provide
+    some cluster-side default behavior so that if the application doesn't
+    specify any policy via LogAggregationContext administrators of the cluster
+    can adjust the policy globally.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.policy.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AllContainerLogAggregationPolicy</value>
+  </property>
+
+  <property>
+    <description>
+    The default parameters for the log aggregation policy. Applications can
+    override it via LogAggregationContext. This configuration can provide
+    some cluster-side default behavior so that if the application doesn't
+    specify any policy via LogAggregationContext administrators of the cluster
+    can adjust the policy globally.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.policy.parameters</name>
+    <value></value>
   </property>
 
 </configuration>

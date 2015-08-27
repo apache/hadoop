@@ -20,10 +20,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -33,6 +33,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -65,6 +66,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -219,7 +221,7 @@ public class TestFileCreation {
     if (netIf != null) {
       conf.set(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
     }
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
+    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
     if (useDnHostname) {
       // Since the mini cluster only listens on the loopback we have to
       // ensure the hostname used to access DNs maps to the loopback. We
@@ -794,93 +796,94 @@ public class TestFileCreation {
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
-    final Path path = new Path("/" + Time.now()
-        + "-testFileCreationNonRecursive");
-    FSDataOutputStream out = null;
 
     try {
-      IOException expectedException = null;
-      final String nonExistDir = "/non-exist-" + Time.now();
-
-      fs.delete(new Path(nonExistDir), true);
-      EnumSet<CreateFlag> createFlag = EnumSet.of(CreateFlag.CREATE);
-      // Create a new file in root dir, should succeed
-      out = createNonRecursive(fs, path, 1, createFlag);
-      out.close();
-      // Create a file when parent dir exists as file, should fail
-      try {
-        createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
-      } catch (IOException e) {
-        expectedException = e;
-      }
-      assertTrue("Create a file when parent directory exists as a file"
-          + " should throw ParentNotDirectoryException ",
-          expectedException != null
-              && expectedException instanceof ParentNotDirectoryException);
-      fs.delete(path, true);
-      // Create a file in a non-exist directory, should fail
-      final Path path2 = new Path(nonExistDir + "/testCreateNonRecursive");
-      expectedException = null;
-      try {
-        createNonRecursive(fs, path2, 1, createFlag);
-      } catch (IOException e) {
-        expectedException = e;
-      }
-      assertTrue("Create a file in a non-exist dir using"
-          + " createNonRecursive() should throw FileNotFoundException ",
-          expectedException != null
-              && expectedException instanceof FileNotFoundException);
-
-      EnumSet<CreateFlag> overwriteFlag = 
-        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
-      // Overwrite a file in root dir, should succeed
-      out = createNonRecursive(fs, path, 1, overwriteFlag);
-      out.close();
-      // Overwrite a file when parent dir exists as file, should fail
-      expectedException = null;
-      try {
-        createNonRecursive(fs, new Path(path, "Overwrite"), 1, overwriteFlag);
-      } catch (IOException e) {
-        expectedException = e;
-      }
-      assertTrue("Overwrite a file when parent directory exists as a file"
-          + " should throw ParentNotDirectoryException ",
-          expectedException != null
-              && expectedException instanceof ParentNotDirectoryException);
-      fs.delete(path, true);
-      // Overwrite a file in a non-exist directory, should fail
-      final Path path3 = new Path(nonExistDir + "/testOverwriteNonRecursive");
-      expectedException = null;
-      try {
-        createNonRecursive(fs, path3, 1, overwriteFlag);
-      } catch (IOException e) {
-        expectedException = e;
-      }
-      assertTrue("Overwrite a file in a non-exist dir using"
-          + " createNonRecursive() should throw FileNotFoundException ",
-          expectedException != null
-              && expectedException instanceof FileNotFoundException);
+      testFileCreationNonRecursive(fs);
     } finally {
       fs.close();
       cluster.shutdown();
     }
   }
 
-  // creates a file using DistributedFileSystem.createNonRecursive()
-  static FSDataOutputStream createNonRecursive(FileSystem fs, Path name,
-      int repl, EnumSet<CreateFlag> flag) throws IOException {
-    System.out.println("createNonRecursive: Created " + name + " with " + repl
-        + " replica.");
-    FSDataOutputStream stm = ((DistributedFileSystem) fs).createNonRecursive(
-        name, FsPermission.getDefault(), flag, fs.getConf().getInt(
-            CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096), (short) repl,  blockSize, null);
-    return stm;
-  }
-  
+  // Worker method for testing non-recursive. Extracted to allow other
+  // FileSystem implementations to re-use the tests
+  public static void testFileCreationNonRecursive(FileSystem fs) throws IOException {
+    final Path path = new Path("/" + Time.now()
+        + "-testFileCreationNonRecursive");
+    FSDataOutputStream out = null;
+    IOException expectedException = null;
+    final String nonExistDir = "/non-exist-" + Time.now();
 
-/**
- * Test that file data becomes available before file is closed.
- */
+    fs.delete(new Path(nonExistDir), true);
+    EnumSet<CreateFlag> createFlag = EnumSet.of(CreateFlag.CREATE);
+    // Create a new file in root dir, should succeed
+    assertNull(createNonRecursive(fs, path, 1, createFlag));
+
+    // Create a file when parent dir exists as file, should fail
+    expectedException = createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
+
+    assertTrue("Create a file when parent directory exists as a file"
+        + " should throw ParentNotDirectoryException ",
+        expectedException != null
+            && expectedException instanceof ParentNotDirectoryException);
+    fs.delete(path, true);
+    // Create a file in a non-exist directory, should fail
+    final Path path2 = new Path(nonExistDir + "/testCreateNonRecursive");
+    expectedException =  createNonRecursive(fs, path2, 1, createFlag);
+
+    assertTrue("Create a file in a non-exist dir using"
+        + " createNonRecursive() should throw FileNotFoundException ",
+        expectedException != null
+            && expectedException instanceof FileNotFoundException);
+
+    EnumSet<CreateFlag> overwriteFlag =
+      EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
+    // Overwrite a file in root dir, should succeed
+    assertNull(createNonRecursive(fs, path, 1, overwriteFlag));
+
+    // Overwrite a file when parent dir exists as file, should fail
+    expectedException = createNonRecursive(fs, new Path(path, "Overwrite"), 1, overwriteFlag);
+
+    assertTrue("Overwrite a file when parent directory exists as a file"
+        + " should throw ParentNotDirectoryException ",
+        expectedException != null
+            && expectedException instanceof ParentNotDirectoryException);
+    fs.delete(path, true);
+
+    // Overwrite a file in a non-exist directory, should fail
+    final Path path3 = new Path(nonExistDir + "/testOverwriteNonRecursive");
+    expectedException = createNonRecursive(fs, path3, 1, overwriteFlag);
+
+    assertTrue("Overwrite a file in a non-exist dir using"
+        + " createNonRecursive() should throw FileNotFoundException ",
+        expectedException != null
+            && expectedException instanceof FileNotFoundException);
+  }
+
+  // Attempts to create and close a file using FileSystem.createNonRecursive(),
+  // catching and returning an exception if one occurs or null
+  // if the operation is successful.
+  @SuppressWarnings("deprecation")
+  static IOException createNonRecursive(FileSystem fs, Path name,
+      int repl, EnumSet<CreateFlag> flag) throws IOException {
+    try {
+      System.out.println("createNonRecursive: Attempting to create " + name +
+          " with " + repl + " replica.");
+      int bufferSize = fs.getConf()
+          .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+      FSDataOutputStream stm = fs.createNonRecursive(name,
+          FsPermission.getDefault(), flag, bufferSize, (short) repl,  blockSize,
+          null);
+      stm.close();
+    } catch (IOException e) {
+      return e;
+    }
+    return null;
+  }
+
+  /**
+   * Test that file data becomes available before file is closed.
+  */
   @Test
   public void testFileCreationSimulated() throws IOException {
     simulatedStorage = true;

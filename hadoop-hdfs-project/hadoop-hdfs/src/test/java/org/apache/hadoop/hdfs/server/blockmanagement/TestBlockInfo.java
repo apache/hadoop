@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -51,9 +52,9 @@ public class TestBlockInfo {
   public void testIsDeleted() {
     BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
     BlockCollection bc = Mockito.mock(BlockCollection.class);
-    blockInfo.setBlockCollection(bc);
+    blockInfo.setBlockCollectionId(1000);
     Assert.assertFalse(blockInfo.isDeleted());
-    blockInfo.setBlockCollection(null);
+    blockInfo.setBlockCollectionId(INVALID_INODE_ID);
     Assert.assertTrue(blockInfo.isDeleted());
   }
 
@@ -67,18 +68,6 @@ public class TestBlockInfo {
 
     Assert.assertTrue(added);
     Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
-  }
-
-  @Test
-  public void testCopyConstructor() {
-    BlockInfo old = new BlockInfoContiguous((short) 3);
-    try {
-      BlockInfo copy = new BlockInfoContiguous((BlockInfoContiguous)old);
-      assertEquals(old.getBlockCollection(), copy.getBlockCollection());
-      assertEquals(old.getCapacity(), copy.getCapacity());
-    } catch (Exception e) {
-      Assert.fail("Copy constructor throws exception: " + e);
-    }
   }
 
   @Test

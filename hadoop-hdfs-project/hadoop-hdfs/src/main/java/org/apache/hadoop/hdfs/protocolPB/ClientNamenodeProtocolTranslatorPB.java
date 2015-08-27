@@ -402,7 +402,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       String holder) throws AccessControlException, FileNotFoundException,
         UnresolvedLinkException, IOException {
     AbandonBlockRequestProto req = AbandonBlockRequestProto.newBuilder()
-        .setB(PBHelper.convert(b)).setSrc(src).setHolder(holder)
+        .setB(PBHelperClient.convert(b)).setSrc(src).setHolder(holder)
             .setFileId(fileId).build();
     try {
       rpcProxy.abandonBlock(null, req);
@@ -421,9 +421,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
     AddBlockRequestProto.Builder req = AddBlockRequestProto.newBuilder()
         .setSrc(src).setClientName(clientName).setFileId(fileId);
     if (previous != null) 
-      req.setPrevious(PBHelper.convert(previous)); 
-    if (excludeNodes != null) 
-      req.addAllExcludeNodes(PBHelper.convert(excludeNodes));
+      req.setPrevious(PBHelperClient.convert(previous));
+    if (excludeNodes != null)
+      req.addAllExcludeNodes(PBHelperClient.convert(excludeNodes));
     if (favoredNodes != null) {
       req.addAllFavoredNodes(Arrays.asList(favoredNodes));
     }
@@ -446,10 +446,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .newBuilder()
         .setSrc(src)
         .setFileId(fileId)
-        .setBlk(PBHelper.convert(blk))
-        .addAllExistings(PBHelper.convert(existings))
+        .setBlk(PBHelperClient.convert(blk))
+        .addAllExistings(PBHelperClient.convert(existings))
         .addAllExistingStorageUuids(Arrays.asList(existingStorageIDs))
-        .addAllExcludes(PBHelper.convert(excludes))
+        .addAllExcludes(PBHelperClient.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)
         .build();
@@ -471,7 +471,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setClientName(clientName)
         .setFileId(fileId);
     if (last != null)
-      req.setLast(PBHelper.convert(last));
+      req.setLast(PBHelperClient.convert(last));
     try {
       return rpcProxy.complete(null, req.build()).getResult();
     } catch (ServiceException e) {
@@ -832,7 +832,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setNamespaceQuota(namespaceQuota)
         .setStoragespaceQuota(storagespaceQuota);
     if (type != null) {
-      builder.setStorageType(PBHelper.convertStorageType(type));
+      builder.setStorageType(PBHelperClient.convertStorageType(type));
     }
     final SetQuotaRequestProto req = builder.build();
     try {
@@ -910,7 +910,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       String clientName) throws IOException {
     UpdateBlockForPipelineRequestProto req = UpdateBlockForPipelineRequestProto
         .newBuilder()
-        .setBlock(PBHelper.convert(block))
+        .setBlock(PBHelperClient.convert(block))
         .setClientName(clientName)
         .build();
     try {
@@ -926,8 +926,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
       ExtendedBlock newBlock, DatanodeID[] newNodes, String[] storageIDs) throws IOException {
     UpdatePipelineRequestProto req = UpdatePipelineRequestProto.newBuilder()
         .setClientName(clientName)
-        .setOldBlock(PBHelper.convert(oldBlock))
-        .setNewBlock(PBHelper.convert(newBlock))
+        .setOldBlock(PBHelperClient.convert(oldBlock))
+        .setNewBlock(PBHelperClient.convert(newBlock))
         .addAllNewNodes(Arrays.asList(PBHelper.convert(newNodes)))
         .addAllStorageIDs(storageIDs == null ? null : Arrays.asList(storageIDs))
         .build();
@@ -958,7 +958,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     RenewDelegationTokenRequestProto req = RenewDelegationTokenRequestProto.newBuilder().
-        setToken(PBHelper.convert(token)).
+        setToken(PBHelperClient.convert(token)).
         build();
     try {
       return rpcProxy.renewDelegationToken(null, req).getNewExpiryTime();
@@ -972,7 +972,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       throws IOException {
     CancelDelegationTokenRequestProto req = CancelDelegationTokenRequestProto
         .newBuilder()
-        .setToken(PBHelper.convert(token))
+        .setToken(PBHelperClient.convert(token))
         .build();
     try {
       rpcProxy.cancelDelegationToken(null, req);

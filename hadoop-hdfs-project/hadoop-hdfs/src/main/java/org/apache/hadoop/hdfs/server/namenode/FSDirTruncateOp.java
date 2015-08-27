@@ -262,7 +262,7 @@ final class FSDirTruncateOp {
       truncatedBlockUC = oldBlock;
 
       NameNode.stateChangeLog.debug("BLOCK* prepareFileForTruncate: " +
-              "{} Scheduling in-place block truncate to new size {}",
+          "{} Scheduling in-place block truncate to new size {}",
           uc, uc.getTruncateBlock().getNumBytes());
     }
     if (shouldRecoverNow) {

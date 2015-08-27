@@ -1386,8 +1386,7 @@ public class DatanodeManager {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
               blocks.length);
           for (BlockInfo b : blocks) {
-            final BlockUnderConstructionFeature uc =
-                b.getUnderConstructionFeature();
+            BlockUnderConstructionFeature uc = b.getUnderConstructionFeature();
             assert uc != null;
             final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
             // Skip stale nodes during recovery - not heart beated for some time (30s by default).

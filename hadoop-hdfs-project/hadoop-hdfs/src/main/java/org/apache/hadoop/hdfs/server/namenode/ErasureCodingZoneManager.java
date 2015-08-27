@@ -84,7 +84,7 @@ public class ErasureCodingZoneManager {
           new ArrayList<XAttr>(0)
           : inode.getXAttrFeature().getXAttrs();
       for (XAttr xAttr : xAttrs) {
-        if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
+        if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixedName(xAttr))) {
           ByteArrayInputStream bIn=new ByteArrayInputStream(xAttr.getValue());
           DataInputStream dIn=new DataInputStream(bIn);
           String ecPolicyName = WritableUtils.readString(dIn);

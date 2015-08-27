@@ -116,7 +116,7 @@ public abstract class RMStateStore extends AbstractService {
       .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.ACTIVE,
           RMStateStoreEventType.STORE_APP, new StoreAppTransition())
       .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.ACTIVE,
-          RMStateStoreEventType.UPDATE_APP, new UpdateAppTransition())
+              RMStateStoreEventType.UPDATE_APP, new UpdateAppTransition())
       .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.ACTIVE,
           RMStateStoreEventType.REMOVE_APP, new RemoveAppTransition())
       .addTransition(RMStateStoreState.ACTIVE, RMStateStoreState.ACTIVE,
@@ -215,8 +215,10 @@ public abstract class RMStateStore extends AbstractService {
       LOG.info("Updating info for app: " + appId);
       try {
         store.updateApplicationStateInternal(appId, appState);
-        store.notifyApplication(new RMAppEvent(appId,
-               RMAppEventType.APP_UPDATE_SAVED));
+        if (((RMStateUpdateAppEvent) event).isNotifyApplication()) {
+          store.notifyApplication(new RMAppEvent(appId,
+              RMAppEventType.APP_UPDATE_SAVED));
+        }
       } catch (Exception e) {
         LOG.error("Error updating app: " + appId, e);
         store.notifyStoreOperationFailed(e);
@@ -707,8 +709,8 @@ public abstract class RMStateStore extends AbstractService {
   }
 
   public void updateApplicationStateSynchronously(
-      ApplicationStateData appState) {
-    handleStoreEvent(new RMStateUpdateAppEvent(appState));
+      ApplicationStateData appState, boolean notifyApp) {
+    handleStoreEvent(new RMStateUpdateAppEvent(appState, notifyApp));
   }
 
   public void updateFencedState() {

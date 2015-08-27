@@ -22,6 +22,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.COMPLETE;
 
 /**
@@ -57,7 +60,7 @@ public class BlockUnderConstructionFeature {
   public BlockUnderConstructionFeature(Block blk,
       BlockUCState state, DatanodeStorageInfo[] targets, boolean isStriped) {
     assert getBlockUCState() != COMPLETE :
-      "BlockUnderConstructionFeature cannot be in COMPLETE state";
+        "BlockUnderConstructionFeature cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(blk, targets, isStriped);
   }
@@ -140,18 +143,17 @@ public class BlockUnderConstructionFeature {
     blockUCState = BlockUCState.COMMITTED;
   }
 
-  void removeStaleReplicas(BlockInfo block) {
-    final long genStamp = block.getGenerationStamp();
+  List<ReplicaUnderConstruction> getStaleReplicas(long genStamp) {
+    List<ReplicaUnderConstruction> staleReplicas = new ArrayList<>();
     if (replicas != null) {
       // Remove replicas with wrong gen stamp. The replica list is unchanged.
       for (ReplicaUnderConstruction r : replicas) {
         if (genStamp != r.getGenerationStamp()) {
-          r.getExpectedStorageLocation().removeBlock(block);
-          NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica "
-              + "from location: {}", r.getExpectedStorageLocation());
+          staleReplicas.add(r);
         }
       }
     }
+    return staleReplicas;
   }
 
   /**
@@ -164,7 +166,7 @@ public class BlockUnderConstructionFeature {
     blockRecoveryId = recoveryId;
     if (replicas == null || replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
-          " BlockUnderConstructionFeature.initLeaseRecovery:" +
+          " BlockUnderConstructionFeature.initializeBlockRecovery:" +
           " No blocks found, lease removed.");
       // sets primary node index and return.
       primaryNodeIndex = -1;
@@ -174,8 +176,8 @@ public class BlockUnderConstructionFeature {
     for (ReplicaUnderConstruction replica : replicas) {
       // Check if all replicas have been tried or not.
       if (replica.isAlive()) {
-        allLiveReplicasTriedAsPrimary = (allLiveReplicasTriedAsPrimary &&
-            replica.getChosenAsPrimary());
+        allLiveReplicasTriedAsPrimary = allLiveReplicasTriedAsPrimary
+            && replica.getChosenAsPrimary();
       }
     }
     if (allLiveReplicasTriedAsPrimary) {
@@ -187,7 +189,7 @@ public class BlockUnderConstructionFeature {
     long mostRecentLastUpdate = 0;
     ReplicaUnderConstruction primary = null;
     primaryNodeIndex = -1;
-    for(int i = 0; i < replicas.length; i++) {
+    for (int i = 0; i < replicas.length; i++) {
       // Skip alive replicas which have been chosen for recovery.
       if (!(replicas[i].isAlive() && !replicas[i].getChosenAsPrimary())) {
         continue;
@@ -205,7 +207,7 @@ public class BlockUnderConstructionFeature {
       primary.getExpectedStorageLocation().getDatanodeDescriptor()
           .addBlockToBeRecovered(blockInfo);
       primary.setChosenAsPrimary(true);
-      NameNode.blockStateChangeLog.info(
+      NameNode.blockStateChangeLog.debug(
           "BLOCK* {} recovery started, primary={}", this, primary);
     }
   }
@@ -215,12 +217,13 @@ public class BlockUnderConstructionFeature {
       Block reportedBlock, ReplicaState rState) {
     if (replicas == null) {
       replicas = new ReplicaUnderConstruction[1];
-      replicas[0] = new ReplicaUnderConstruction(reportedBlock, storage, rState);
+      replicas[0] = new ReplicaUnderConstruction(reportedBlock, storage,
+          rState);
     } else {
       for (int i = 0; i < replicas.length; i++) {
-        DatanodeStorageInfo expected = replicas[i].getExpectedStorageLocation();
+        DatanodeStorageInfo expected =
+            replicas[i].getExpectedStorageLocation();
         if (expected == storage) {
-          replicas[i].setBlockId(reportedBlock.getBlockId());
           replicas[i].setGenerationStamp(reportedBlock.getGenerationStamp());
           return;
         } else if (expected != null && expected.getDatanodeDescriptor() ==

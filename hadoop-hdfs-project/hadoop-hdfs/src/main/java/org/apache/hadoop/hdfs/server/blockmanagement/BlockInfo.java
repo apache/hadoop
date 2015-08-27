@@ -19,11 +19,15 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.LightWeightGSet;
+
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 
 /**
  * For a given block (or an erasure coding block group), BlockInfo class
@@ -33,11 +37,20 @@ import org.apache.hadoop.util.LightWeightGSet;
  */
 public abstract class BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
+
   public static final BlockInfo[] EMPTY_ARRAY = {};
 
-  private BlockCollection bc;
+  /**
+   * Replication factor.
+   */
+  private short replication;
 
-  /** For implementing {@link LightWeightGSet.LinkedElement} interface */
+  /**
+   * Block collection ID.
+   */
+  private long bcId;
+
+  /** For implementing {@link LightWeightGSet.LinkedElement} interface. */
   private LightWeightGSet.LinkedElement nextLinkedElement;
 
   /**
@@ -63,21 +76,35 @@ public abstract class BlockInfo extends Block
    */
   public BlockInfo(short size) {
     this.triplets = new Object[3 * size];
-    this.bc = null;
+    this.bcId = INVALID_INODE_ID;
+    this.replication = isStriped() ? 0 : size;
   }
 
   public BlockInfo(Block blk, short size) {
     super(blk);
-    this.triplets = new Object[3 * size];
-    this.bc = null;
+    this.triplets = new Object[3*size];
+    this.bcId = INVALID_INODE_ID;
+    this.replication = isStriped() ? 0 : size;
   }
 
-  public BlockCollection getBlockCollection() {
-    return bc;
+  public short getReplication() {
+    return replication;
   }
 
-  public void setBlockCollection(BlockCollection bc) {
-    this.bc = bc;
+  public void setReplication(short repl) {
+    this.replication = repl;
+  }
+
+  public long getBlockCollectionId() {
+    return bcId;
+  }
+
+  public void setBlockCollectionId(long id) {
+    this.bcId = id;
+  }
+
+  public boolean isDeleted() {
+    return bcId == INVALID_INODE_ID;
   }
 
   public DatanodeDescriptor getDatanode(int index) {
@@ -291,10 +318,6 @@ public abstract class BlockInfo extends Block
     return this;
   }
 
-  public boolean isDeleted() {
-    return (bc == null);
-  }
-
   @Override
   public int hashCode() {
     // Super implementation is sufficient
@@ -342,7 +365,8 @@ public abstract class BlockInfo extends Block
   public void convertToBlockUnderConstruction(BlockUCState s,
       DatanodeStorageInfo[] targets) {
     if (isComplete()) {
-      uc = new BlockUnderConstructionFeature(this, s, targets, this.isStriped());
+      uc = new BlockUnderConstructionFeature(this, s, targets,
+          this.isStriped());
     } else {
       // the block is already under construction
       uc.setBlockUCState(s);
@@ -377,7 +401,12 @@ public abstract class BlockInfo extends Block
     setGenerationStamp(genStamp);
 
     // Remove the replicas with wrong gen stamp
-    uc.removeStaleReplicas(this);
+    List<ReplicaUnderConstruction> staleReplicas = uc.getStaleReplicas(genStamp);
+    for (ReplicaUnderConstruction r : staleReplicas) {
+      r.getExpectedStorageLocation().removeBlock(this);
+      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica "
+          + "from location: {}", r.getExpectedStorageLocation());
+    }
   }
 
   /**

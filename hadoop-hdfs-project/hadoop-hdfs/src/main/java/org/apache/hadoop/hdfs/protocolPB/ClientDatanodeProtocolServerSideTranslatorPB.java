@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
@@ -39,9 +38,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusConfigChangeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReconfigurationStatusResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ListReconfigurablePropertiesRequestProto;
@@ -54,12 +50,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartR
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.StartReconfigurationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportResponseProto;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
-import org.apache.hadoop.security.token.Token;
 
-import com.google.common.primitives.Longs;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -137,41 +128,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return GetBlockLocalPathInfoResponseProto.newBuilder()
-        .setBlock(PBHelper.convert(resp.getBlock()))
+        .setBlock(PBHelperClient.convert(resp.getBlock()))
         .setLocalPath(resp.getBlockPath()).setLocalMetaPath(resp.getMetaPath())
         .build();
-  }
-
-  @Override
-  public GetHdfsBlockLocationsResponseProto getHdfsBlockLocations(
-      RpcController controller, GetHdfsBlockLocationsRequestProto request)
-      throws ServiceException {
-    HdfsBlocksMetadata resp;
-    try {
-      String poolId = request.getBlockPoolId();
-
-      List<Token<BlockTokenIdentifier>> tokens = 
-          new ArrayList<Token<BlockTokenIdentifier>>(request.getTokensCount());
-      for (TokenProto b : request.getTokensList()) {
-        tokens.add(PBHelper.convert(b));
-      }
-      long[] blockIds = Longs.toArray(request.getBlockIdsList());
-      
-      // Call the real implementation
-      resp = impl.getHdfsBlocksMetadata(poolId, blockIds, tokens);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    List<ByteString> volumeIdsByteStrings = 
-        new ArrayList<ByteString>(resp.getVolumeIds().size());
-    for (byte[] b : resp.getVolumeIds()) {
-      volumeIdsByteStrings.add(ByteString.copyFrom(b));
-    }
-    // Build and return the response
-    Builder builder = GetHdfsBlockLocationsResponseProto.newBuilder();
-    builder.addAllVolumeIds(volumeIdsByteStrings);
-    builder.addAllVolumeIndexes(resp.getVolumeIndexes());
-    return builder.build();
   }
 
   @Override

@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -102,6 +103,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
@@ -131,6 +133,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -330,6 +333,18 @@ public class TestClientRMService {
           report.getApplicationResourceUsageReport();
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
+
+      // if application id is null
+      GetApplicationReportRequest invalidRequest = recordFactory
+          .newRecordInstance(GetApplicationReportRequest.class);
+      invalidRequest.setApplicationId(null);
+      try {
+        rmService.getApplicationReport(invalidRequest);
+      } catch (YarnException e) {
+        // rmService should return a ApplicationNotFoundException
+        // when a null application id is provided
+        Assert.assertTrue(e instanceof ApplicationNotFoundException);
+      }
     } finally {
       rmService.close();
     }
@@ -1542,5 +1557,65 @@ public class TestClientRMService {
 
     rpc.stopProxy(client, conf);
     rm.close();
+  }
+
+  @Test(timeout = 120000)
+  public void testUpdateApplicationPriorityRequest() throws Exception {
+    int maxPriority = 10;
+    int appPriorty = 5;
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
+        maxPriority);
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    // Start app1 with appPriority 5
+    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriorty));
+
+    Assert.assertEquals("Incorrect priority has been set to application",
+        appPriorty, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
+
+    appPriorty = 9;
+    ClientRMService rmService = rm.getClientRMService();
+    UpdateApplicationPriorityRequest updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(appPriorty));
+
+    rmService.updateApplicationPriority(updateRequest);
+
+    Assert.assertEquals("Incorrect priority has been set to application",
+        appPriorty, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
+
+    rm.killApp(app1.getApplicationId());
+    rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+
+    // Update priority request for application in KILLED state
+    try {
+      rmService.updateApplicationPriority(updateRequest);
+      Assert.fail("Can not update priority for an application in KILLED state");
+    } catch (YarnException e) {
+      String msg =
+          "Application in " + app1.getState()
+              + " state cannot be update priority.";
+      Assert.assertTrue("", msg.contains(e.getMessage()));
+    }
+
+    // Update priority request for invalid application id.
+    ApplicationId invalidAppId = ApplicationId.newInstance(123456789L, 3);
+    updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(invalidAppId,
+            Priority.newInstance(appPriorty));
+    try {
+      rmService.updateApplicationPriority(updateRequest);
+      Assert
+          .fail("ApplicationNotFoundException should be thrown for invalid application id");
+    } catch (ApplicationNotFoundException e) {
+      // Expected
+    }
+
+    rm.stop();
   }
 }
