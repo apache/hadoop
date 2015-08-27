@@ -6079,7 +6079,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public int getNumDecomLiveDataNodes() {
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
     int liveDecommissioned = 0;
     for (DatanodeDescriptor node : live) {
       liveDecommissioned += node.isDecommissioned() ? 1 : 0;
@@ -6090,7 +6090,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public int getNumDecomDeadDataNodes() {
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(null, dead, false);
     int deadDecommissioned = 0;
     for (DatanodeDescriptor node : dead) {
       deadDecommissioned += node.isDecommissioned() ? 1 : 0;
