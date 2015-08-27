@@ -1079,6 +1079,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12347. Fix mismatch parameter name in javadocs of
     AuthToken#setMaxInactives (xyao)
 
+    HADOOP-12362. Set hadoop.tmp.dir and hadoop.log.dir in pom.
+    (Charlie Helin via wang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
