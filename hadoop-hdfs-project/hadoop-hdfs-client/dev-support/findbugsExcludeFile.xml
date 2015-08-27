@@ -21,4 +21,14 @@
     <Package name="org.apache.hadoop.hdfs.protocol.proto" />
     <Bug pattern="SE_BAD_FIELD,MS_SHOULD_BE_FINAL,UCF_USELESS_CONTROL_FLOW" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
+    <Method name="allocSlot" />
+    <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager$EndpointShmManager" />
+    <Method name="allocSlot" />
+    <Bug pattern="UL_UNRELEASED_LOCK" />
+  </Match>
 </FindBugsFilter>

@@ -1237,6 +1237,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8682. Should not remove decommissioned node,while calculating the
     number of live/dead decommissioned node. (J. Andreina via vinayakumarb)
 
+    HDFS-8961. Investigate lock issue in o.a.h.hdfs.shortcircuit.
+    DfsClientShmManager.EndpointShmManager. (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
