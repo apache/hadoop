@@ -134,6 +134,9 @@ class FSDirWriteFileOp {
     FSNamesystem fsn = fsd.getFSNamesystem();
     final INodeFile file = fsn.checkLease(src, holder, inode, fileId);
     Preconditions.checkState(file.isUnderConstruction());
+    if (file.isStriped()) {
+      return; // do not abandon block for striped file
+    }
 
     Block localBlock = ExtendedBlock.getLocalBlock(b);
     fsd.writeLock();

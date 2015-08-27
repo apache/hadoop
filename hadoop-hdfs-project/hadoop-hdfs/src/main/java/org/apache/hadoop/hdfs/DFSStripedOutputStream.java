@@ -170,15 +170,18 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       }
 
       final boolean atBlockGroupBoundary = s0.getBytesCurBlock() == 0 && b0.getNumBytes() > 0;
+
       final ExtendedBlock block = new ExtendedBlock(b0);
-      long numBytes = b0.getNumBytes();
-      for (int i = 1; i < numDataBlocks; i++) {
+      long numBytes = atBlockGroupBoundary? b0.getNumBytes(): s0.getBytesCurBlock();
+      for (int i = 1; i < numAllBlocks; i++) {
         final StripedDataStreamer si = getStripedDataStreamer(i);
         final ExtendedBlock bi = si.getBlock();
         if (bi != null && bi.getGenerationStamp() > block.getGenerationStamp()) {
           block.setGenerationStamp(bi.getGenerationStamp());
         }
-        numBytes += atBlockGroupBoundary? bi.getNumBytes(): si.getBytesCurBlock();
+        if (i < numDataBlocks) {
+          numBytes += atBlockGroupBoundary? bi.getNumBytes(): si.getBytesCurBlock();
+        }
       }
       block.setNumBytes(numBytes);
       if (LOG.isDebugEnabled()) {
@@ -318,8 +321,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     return (StripedDataStreamer)streamer;
   }
 
-  private synchronized StripedDataStreamer setCurrentStreamer(int newIdx)
-      throws IOException {
+  private synchronized StripedDataStreamer setCurrentStreamer(int newIdx) {
     // backup currentPacket for current streamer
     int oldIdx = streamers.indexOf(streamer);
     if (oldIdx >= 0) {
@@ -349,11 +351,11 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
 
-  private void checkStreamers() throws IOException {
+  private void checkStreamers(boolean setExternalError) throws IOException {
     int count = 0;
     for(StripedDataStreamer s : streamers) {
       if (!s.isFailed()) {
-        if (s.getBlock() != null) {
+        if (setExternalError && s.getBlock() != null) {
           s.getErrorState().initExternalError();
         }
         count++;
@@ -369,11 +371,16 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
   }
 
-  private void handleStreamerFailure(String err,
-                                     Exception e) throws IOException {
+  private void handleStreamerFailure(String err, Exception e)
+      throws IOException {
+    handleStreamerFailure(err, e, true);
+  }
+
+  private void handleStreamerFailure(String err, Exception e,
+      boolean setExternalError) throws IOException {
     LOG.warn("Failed: " + err + ", " + this, e);
     getCurrentStreamer().setFailed(true);
-    checkStreamers();
+    checkStreamers(setExternalError);
     currentPacket = null;
   }
 
@@ -505,10 +512,10 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     return sum;
   }
 
-  private void writeParityCellsForLastStripe() throws IOException {
+  private boolean generateParityCellsForLastStripe() {
     final long currentBlockGroupBytes = getCurrentSumBytes();
     if (currentBlockGroupBytes % stripeDataSize() == 0) {
-      return;
+      return false;
     }
 
     final int firstCellSize =
@@ -530,8 +537,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       }
       buffers[i].flip();
     }
-
-    writeParityCells();
+    return true;
   }
 
   void writeParityCells() throws IOException {
@@ -603,12 +609,14 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       // flush from all upper layers
       try {
         flushBuffer();
-        // if the last stripe is incomplete, generate and write parity cells
-        writeParityCellsForLastStripe();
-        enqueueAllCurrentPackets();
       } catch(Exception e) {
-        handleStreamerFailure("closeImpl", e);
+        handleStreamerFailure("flushBuffer " + getCurrentStreamer(), e);
       }
+      // if the last stripe is incomplete, generate and write parity cells
+      if (generateParityCellsForLastStripe()) {
+        writeParityCells();
+      }
+      enqueueAllCurrentPackets();
 
       for (int i = 0; i < numAllBlocks; i++) {
         final StripedDataStreamer s = setCurrentStreamer(i);
@@ -620,7 +628,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
             // flush all data to Datanode
             flushInternal();
           } catch(Exception e) {
-            handleStreamerFailure("closeImpl", e);
+            handleStreamerFailure("flushInternal " + s, e, false);
           }
         }
       }
@@ -643,9 +651,13 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   private void enqueueAllCurrentPackets() throws IOException {
     int idx = streamers.indexOf(getCurrentStreamer());
     for(int i = 0; i < streamers.size(); i++) {
-      setCurrentStreamer(i);
-      if (currentPacket != null) {
-        enqueueCurrentPacket();
+      final StripedDataStreamer si = setCurrentStreamer(i);
+      if (!si.isFailed() && currentPacket != null) {
+        try {
+          enqueueCurrentPacket();
+        } catch (IOException e) {
+          handleStreamerFailure("enqueueAllCurrentPackets, i=" + i, e, false);
+        }
       }
     }
     setCurrentStreamer(idx);

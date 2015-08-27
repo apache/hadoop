@@ -173,7 +173,7 @@ class DataStreamer extends Daemon {
     packets.clear();
   }
   
-  static class LastExceptionInStreamer {
+  class LastExceptionInStreamer {
     private IOException thrown;
 
     synchronized void set(Throwable t) {
@@ -191,7 +191,8 @@ class DataStreamer extends Daemon {
       if (thrown != null) {
         if (LOG.isTraceEnabled()) {
           // wrap and print the exception to know when the check is called
-          LOG.trace("Got Exception while checking", new Throwable(thrown));
+          LOG.trace("Got Exception while checking, " + DataStreamer.this,
+              new Throwable(thrown));
         }
         final IOException e = thrown;
         if (resetToNull) {
@@ -584,16 +585,13 @@ class DataStreamer extends Daemon {
         }
 
         // get new block from namenode.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("stage=" + stage + ", " + this);
+        }
         if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("Allocating new block " + this);
-          }
           setPipeline(nextBlockOutputStream());
           initDataStreaming();
         } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("Append to block " + block);
-          }
           setupPipelineForAppendOrRecovery();
           if (streamerClosed) {
             continue;
@@ -639,8 +637,7 @@ class DataStreamer extends Daemon {
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("DataStreamer block " + block +
-              " sending packet " + one);
+          LOG.debug(this + " sending " + one);
         }
 
         // write out data to remote datanode
@@ -1426,14 +1423,19 @@ class DataStreamer extends Daemon {
   /** update pipeline at the namenode */
   ExtendedBlock updatePipeline(long newGS) throws IOException {
     final ExtendedBlock newBlock = newBlock(block, newGS);
-    return callUpdatePipeline(block, newBlock);
+    return callUpdatePipeline(block, newBlock, nodes, storageIDs);
   }
 
-  ExtendedBlock callUpdatePipeline(ExtendedBlock oldBlock, ExtendedBlock newBlock)
+  ExtendedBlock callUpdatePipeline(ExtendedBlock oldBlock, ExtendedBlock newBlock,
+      DatanodeInfo[] newNodes, String[] newStorageIDs)
       throws IOException {
     dfsClient.namenode.updatePipeline(dfsClient.clientName, oldBlock, newBlock,
-        nodes, storageIDs);
+        newNodes, newStorageIDs);
     return newBlock;
+  }
+
+  int getNumBlockWriteRetry() {
+    return dfsClient.getConf().getNumBlockWriteRetry();
   }
 
   /**
@@ -1446,7 +1448,7 @@ class DataStreamer extends Daemon {
     LocatedBlock lb = null;
     DatanodeInfo[] nodes = null;
     StorageType[] storageTypes = null;
-    int count = dfsClient.getConf().getNumBlockWriteRetry();
+    int count = getNumBlockWriteRetry();
     boolean success = false;
     ExtendedBlock oldBlock = block;
     do {
@@ -1502,7 +1504,7 @@ class DataStreamer extends Daemon {
     String firstBadLink = "";
     boolean checkRestart = false;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("pipeline = " + Arrays.asList(nodes));
+      LOG.debug("pipeline = " + Arrays.toString(nodes) + ", " + this);
     }
 
     // persist blocks on namenode on next flush
@@ -1574,7 +1576,7 @@ class DataStreamer extends Daemon {
         errorState.reset();
       } catch (IOException ie) {
         if (!errorState.isRestartingNode()) {
-          LOG.info("Exception in createBlockOutputStream", ie);
+          LOG.info("Exception in createBlockOutputStream " + this, ie);
         }
         if (ie instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
           LOG.info("Will fetch a new encryption key and retry, "
@@ -1649,7 +1651,7 @@ class DataStreamer extends Daemon {
     }
   }
 
-  protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
+  LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
       throws IOException {
     final DfsClientConf conf = dfsClient.getConf(); 
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
@@ -1753,6 +1755,10 @@ class DataStreamer extends Daemon {
    */
   DatanodeInfo[] getNodes() {
     return nodes;
+  }
+
+  String[] getStorageIDs() {
+    return storageIDs;
   }
 
   /**
@@ -1933,7 +1939,6 @@ class DataStreamer extends Daemon {
 
   @Override
   public String toString() {
-    return  (block == null? null: block.getLocalBlock())
-        + "@" + Arrays.toString(getNodes());
+    return block == null? "block==null": "" + block.getLocalBlock();
   }
 }

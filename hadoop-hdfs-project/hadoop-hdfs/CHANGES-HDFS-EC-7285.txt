@@ -400,3 +400,6 @@
 
     HDFS-8220. Erasure Coding: StripedDataStreamer fails to handle the
     blocklocations which doesn't satisfy BlockGroupSize. (Rakesh R via zhz)
+
+    HDFS-8838. Erasure Coding: Tolerate datanode failures in DFSStripedOutputStream
+    when the data length is small. (szetszwo via waltersu4549)

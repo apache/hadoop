@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_DATA_BLOCKS;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_PARITY_BLOCKS;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hdfs.DFSStripedOutputStream.Coordinator;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class extends {@link DataStreamer} to support writing striped blocks
@@ -58,13 +61,13 @@ public class StripedDataStreamer extends DataStreamer {
    * @param <T> the queue entry type.
    */
   static abstract class ConcurrentPoll<T> {
-    private final MultipleBlockingQueue<T> queue;
+    final MultipleBlockingQueue<T> queue;
 
     ConcurrentPoll(MultipleBlockingQueue<T> queue) {
       this.queue = queue;
     }
 
-    T poll(final int i) throws IOException {
+    T poll(final int i) throws InterruptedIOException {
       for(;;) {
         synchronized(queue) {
           final T polled = queue.poll(i);
@@ -72,18 +75,17 @@ public class StripedDataStreamer extends DataStreamer {
             return polled;
           }
           if (isReady2Populate()) {
-            populate();
-            return queue.poll(i);
+            try {
+              populate();
+              return queue.poll(i);
+            } catch(IOException ioe) {
+              LOG.warn("Failed to populate, " + this, ioe);
+            }
           }
         }
 
         // sleep and then retry.
-        try {
-          Thread.sleep(100);
-        } catch(InterruptedException ie) {
-          throw DFSUtil.toInterruptedIOException(
-              "Sleep interrupted during poll", ie);
-        }
+        sleep(100, "poll");
       }
     }
 
@@ -92,6 +94,15 @@ public class StripedDataStreamer extends DataStreamer {
     }
 
     abstract void populate() throws IOException;
+  }
+
+  private static void sleep(long ms, String op) throws InterruptedIOException {
+    try {
+      Thread.sleep(ms);
+    } catch(InterruptedException ie) {
+      throw DFSUtil.toInterruptedIOException(
+          "Sleep interrupted during " + op, ie);
+    }
   }
 
   private final Coordinator coordinator;
@@ -135,11 +146,14 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   @Override
-  protected LocatedBlock locateFollowingBlock(final DatanodeInfo[] excludedNodes)
+  int getNumBlockWriteRetry() {
+    return 0;
+  }
+
+  @Override
+  LocatedBlock locateFollowingBlock(final DatanodeInfo[] excludedNodes)
       throws IOException {
-    final MultipleBlockingQueue<LocatedBlock> followingBlocks
-        = coordinator.getFollowingBlocks();
-    return new ConcurrentPoll<LocatedBlock>(followingBlocks) {
+    return new ConcurrentPoll<LocatedBlock>(coordinator.getFollowingBlocks()) {
       @Override
       boolean isReady2Populate() {
         return super.isReady2Populate()
@@ -194,18 +208,24 @@ public class StripedDataStreamer extends DataStreamer {
             si.endBlock();
             si.close(true);
           } else {
-            followingBlocks.offer(i, blocks[i]);
+            queue.offer(i, blocks[i]);
           }
         }
       }
     }.poll(index);
   }
 
+  @VisibleForTesting
+  LocatedBlock peekFollowingBlock() {
+    return coordinator.getFollowingBlocks().peek(index);
+  }
+
   @Override
   LocatedBlock updateBlockForPipeline() throws IOException {
-    final MultipleBlockingQueue<LocatedBlock> newBlocks
-        = coordinator.getNewBlocks();
-    return new ConcurrentPoll<LocatedBlock>(newBlocks) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("updateBlockForPipeline(), " + this);
+    }
+    return new ConcurrentPoll<LocatedBlock>(coordinator.getNewBlocks()) {
       @Override
       void populate() throws IOException {
         final ExtendedBlock bg = coordinator.getBlockGroup();
@@ -224,10 +244,22 @@ public class StripedDataStreamer extends DataStreamer {
             final LocatedBlock lb = new LocatedBlock(newBlock(bi, newGS),
                 null, null, null, -1, updated.isCorrupt(), null);
             lb.setBlockToken(updatedBlks[i].getBlockToken());
-            newBlocks.offer(i, lb);
+            queue.offer(i, lb);
           } else {
-            final LocatedBlock lb = coordinator.getFollowingBlocks().peek(i);
-            lb.getBlock().setGenerationStamp(newGS);
+            final MultipleBlockingQueue<LocatedBlock> followingBlocks
+                = coordinator.getFollowingBlocks();
+            synchronized(followingBlocks) {
+              final LocatedBlock lb = followingBlocks.peek(i);
+              if (lb != null) {
+                lb.getBlock().setGenerationStamp(newGS);
+                si.getErrorState().reset();
+                continue;
+              }
+            }
+
+            //streamer i just have polled the block, sleep and retry.
+            sleep(100, "updateBlockForPipeline, " + this);
+            i--;
           }
         }
       }
@@ -236,21 +268,64 @@ public class StripedDataStreamer extends DataStreamer {
 
   @Override
   ExtendedBlock updatePipeline(final long newGS) throws IOException {
-    final MultipleBlockingQueue<ExtendedBlock> updateBlocks
-        = coordinator.getUpdateBlocks();
-    return new ConcurrentPoll<ExtendedBlock>(updateBlocks) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("updatePipeline(newGS=" + newGS + "), " + this);
+    }
+    return new ConcurrentPoll<ExtendedBlock>(coordinator.getUpdateBlocks()) {
       @Override
       void populate() throws IOException {
+        final MultipleBlockingQueue<LocatedBlock> followingBlocks
+            = coordinator.getFollowingBlocks();
         final ExtendedBlock bg = coordinator.getBlockGroup();
         final ExtendedBlock newBG = newBlock(bg, newGS);
-        final ExtendedBlock updated = callUpdatePipeline(bg, newBG);
-        for (int i = 0; i < NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS; i++) {
-          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
-          if (si.isFailed()) {
-            continue; // skipping failed data streamer
+
+        final int n = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+        final DatanodeInfo[] newNodes = new DatanodeInfo[n];
+        final String[] newStorageIDs = new String[n];
+        for (int i = 0; i < n; i++) {
+          final StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
+          DatanodeInfo[] nodes = si.getNodes();
+          String[] storageIDs = si.getStorageIDs();
+          if (nodes == null || storageIDs == null) {
+            synchronized(followingBlocks) {
+              final LocatedBlock lb = followingBlocks.peek(i);
+              if (lb != null) {
+                nodes = lb.getLocations();
+                storageIDs = lb.getStorageIDs();
+              }
+            }
           }
+          if (nodes != null && storageIDs != null) {
+            newNodes[i] = nodes[0];
+            newStorageIDs[i] = storageIDs[0];
+          } else {
+            //streamer i just have polled the block, sleep and retry.
+            sleep(100, "updatePipeline, " + this);
+            i--;
+          }
+        }
+        final ExtendedBlock updated = callUpdatePipeline(bg, newBG, newNodes,
+            newStorageIDs);
+
+        for (int i = 0; i < n; i++) {
+          final StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
           final ExtendedBlock bi = si.getBlock();
-          updateBlocks.offer(i, newBlock(bi, updated.getGenerationStamp()));
+          if (bi != null) {
+            queue.offer(i, newBlock(bi, updated.getGenerationStamp()));
+          } else if (!si.isFailed()) {
+            synchronized(followingBlocks) {
+              final LocatedBlock lb = followingBlocks.peek(i);
+              if (lb != null) {
+                lb.getBlock().setGenerationStamp(newGS);
+                si.getErrorState().reset();
+                continue;
+              }
+            }
+
+            //streamer i just have polled the block, sleep and retry.
+            sleep(100, "updatePipeline, " + this);
+            i--;
+          }
         }
       }
     }.poll(index);
@@ -258,7 +333,6 @@ public class StripedDataStreamer extends DataStreamer {
 
   @Override
   public String toString() {
-    return "#" + index + ": failed? " + Boolean.toString(failed).charAt(0)
-        + ", " + super.toString();
+    return "#" + index + ": " + (failed? "failed, ": "") + super.toString();
   }
 }

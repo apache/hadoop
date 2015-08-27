@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -169,6 +168,7 @@ public class TestDFSStripedOutputStream {
   }
 
   private void testOneFile(String src, int writeBytes) throws IOException {
+    src += "_" + writeBytes;
     Path testPath = new Path(src);
 
     byte[] bytes = generateBytes(writeBytes);
