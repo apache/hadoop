@@ -1381,13 +1381,15 @@ public class DatanodeManager {
         }
 
         //check lease recovery
-        BlockInfoUnderConstruction[] blocks = nodeinfo
-            .getLeaseRecoveryCommand(Integer.MAX_VALUE);
+        BlockInfo[] blocks = nodeinfo.getLeaseRecoveryCommand(Integer.MAX_VALUE);
         if (blocks != null) {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
               blocks.length);
-          for (BlockInfoUnderConstruction b : blocks) {
-            final DatanodeStorageInfo[] storages = b.getExpectedStorageLocations();
+          for (BlockInfo b : blocks) {
+            final BlockUnderConstructionFeature uc =
+                b.getUnderConstructionFeature();
+            assert uc != null;
+            final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
             // Skip stale nodes during recovery - not heart beated for some time (30s by default).
             final List<DatanodeStorageInfo> recoveryLocations =
                 new ArrayList<>(storages.length);
@@ -1398,12 +1400,12 @@ public class DatanodeManager {
             }
             // If we are performing a truncate recovery than set recovery fields
             // to old block.
-            boolean truncateRecovery = b.getTruncateBlock() != null;
+            boolean truncateRecovery = uc.getTruncateBlock() != null;
             boolean copyOnTruncateRecovery = truncateRecovery &&
-                b.getTruncateBlock().getBlockId() != b.toBlock().getBlockId();
+                uc.getTruncateBlock().getBlockId() != b.getBlockId();
             ExtendedBlock primaryBlock = (copyOnTruncateRecovery) ?
-                new ExtendedBlock(blockPoolId, b.getTruncateBlock()) :
-                new ExtendedBlock(blockPoolId, b.toBlock());
+                new ExtendedBlock(blockPoolId, uc.getTruncateBlock()) :
+                new ExtendedBlock(blockPoolId, b);
             // If we only get 1 replica after eliminating stale nodes, then choose all
             // replicas for recovery and let the primary data node handle failures.
             DatanodeInfo[] recoveryInfos;
@@ -1420,13 +1422,13 @@ public class DatanodeManager {
               recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
             }
             if(truncateRecovery) {
-              Block recoveryBlock = (copyOnTruncateRecovery) ? b.toBlock() :
-                  b.getTruncateBlock();
+              Block recoveryBlock = (copyOnTruncateRecovery) ? b :
+                  uc.getTruncateBlock();
               brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
                                                 recoveryBlock));
             } else {
               brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
-                                                b.getBlockRecoveryId()));
+                                                uc.getBlockRecoveryId()));
             }
           }
           return new DatanodeCommand[] { brCommand };

@@ -227,7 +227,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private final BlockQueue<BlockECRecoveryInfo> erasurecodeBlocks =
       new BlockQueue<>();
   /** A queue of blocks to be recovered by this datanode */
-  private final BlockQueue<BlockInfoUnderConstruction> recoverBlocks =
+  private final BlockQueue<BlockInfo> recoverBlocks =
       new BlockQueue<>();
   /** A set of blocks to be invalidated by this datanode */
   private final LightWeightHashSet<Block> invalidateBlocks =
@@ -624,7 +624,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Store block recovery work.
    */
-  void addBlockToBeRecovered(BlockInfoUnderConstruction block) {
+  void addBlockToBeRecovered(BlockInfo block) {
     if(recoverBlocks.contains(block)) {
       // this prevents adding the same block twice to the recovery queue
       BlockManager.LOG.info(block + " is already in the recovery queue");
@@ -678,11 +678,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return erasurecodeBlocks.poll(maxTransfers);
   }
 
-  public BlockInfoUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
-    List<BlockInfoUnderConstruction> blocks = recoverBlocks.poll(maxTransfers);
+  public BlockInfo[] getLeaseRecoveryCommand(int maxTransfers) {
+    List<BlockInfo> blocks = recoverBlocks.poll(maxTransfers);
     if(blocks == null)
       return null;
-    return blocks.toArray(new BlockInfoUnderConstruction[blocks.size()]);
+    return blocks.toArray(new BlockInfo[blocks.size()]);
   }
 
   /**

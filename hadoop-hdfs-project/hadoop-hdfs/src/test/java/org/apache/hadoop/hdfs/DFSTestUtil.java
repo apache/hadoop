@@ -117,7 +117,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -1650,13 +1649,11 @@ public class DFSTestUtil {
     BlockManager bm0 = nn.getNamesystem().getBlockManager();
     BlockInfo storedBlock = bm0.getStoredBlock(blk.getLocalBlock());
     assertTrue("Block " + blk + " should be under construction, " +
-        "got: " + storedBlock,
-        storedBlock instanceof BlockInfoContiguousUnderConstruction);
-    BlockInfoContiguousUnderConstruction ucBlock =
-      (BlockInfoContiguousUnderConstruction)storedBlock;
+        "got: " + storedBlock, !storedBlock.isComplete());
     // We expect that the replica with the most recent heart beat will be
     // the one to be in charge of the synchronization / recovery protocol.
-    final DatanodeStorageInfo[] storages = ucBlock.getExpectedStorageLocations();
+    final DatanodeStorageInfo[] storages = storedBlock
+        .getUnderConstructionFeature().getExpectedStorageLocations();
     DatanodeStorageInfo expectedPrimary = storages[0];
     long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor()
         .getLastUpdateMonotonic();

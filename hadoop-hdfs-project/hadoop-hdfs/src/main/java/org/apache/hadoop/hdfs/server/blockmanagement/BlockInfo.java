@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.LinkedList;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -51,6 +53,8 @@ public abstract class BlockInfo extends Block
    * bytes using the triplets.
    */
   protected Object[] triplets;
+
+  private BlockUnderConstructionFeature uc;
 
   /**
    * Construct an entry for blocksmap
@@ -287,26 +291,6 @@ public abstract class BlockInfo extends Block
     return this;
   }
 
-  /**
-   * BlockInfo represents a block that is not being constructed.
-   * In order to start modifying the block, the BlockInfo should be converted to
-   * {@link BlockInfoContiguousUnderConstruction} or
-   * {@link BlockInfoStripedUnderConstruction}.
-   * @return {@link BlockUCState#COMPLETE}
-   */
-  public BlockUCState getBlockUCState() {
-    return BlockUCState.COMPLETE;
-  }
-
-  /**
-   * Is this block complete?
-   *
-   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
-   */
-  public boolean isComplete() {
-    return getBlockUCState().equals(BlockUCState.COMPLETE);
-  }
-
   public boolean isDeleted() {
     return (bc == null);
   }
@@ -331,5 +315,86 @@ public abstract class BlockInfo extends Block
   @Override
   public void setNext(LightWeightGSet.LinkedElement next) {
     this.nextLinkedElement = next;
+  }
+
+  /* UnderConstruction Feature related */
+
+  public BlockUnderConstructionFeature getUnderConstructionFeature() {
+    return uc;
+  }
+
+  public BlockUCState getBlockUCState() {
+    return uc == null ? BlockUCState.COMPLETE : uc.getBlockUCState();
+  }
+
+  /**
+   * Is this block complete?
+   *
+   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
+   */
+  public boolean isComplete() {
+    return getBlockUCState().equals(BlockUCState.COMPLETE);
+  }
+
+  /**
+   * Add/Update the under construction feature.
+   */
+  public void convertToBlockUnderConstruction(BlockUCState s,
+      DatanodeStorageInfo[] targets) {
+    if (isComplete()) {
+      uc = new BlockUnderConstructionFeature(this, s, targets, this.isStriped());
+    } else {
+      // the block is already under construction
+      uc.setBlockUCState(s);
+      uc.setExpectedLocations(this, targets, this.isStriped());
+    }
+  }
+
+  /**
+   * Convert an under construction block to a complete block.
+   *
+   * @return BlockInfo - a complete block.
+   * @throws IOException if the state of the block
+   * (the generation stamp and the length) has not been committed by
+   * the client or it does not have at least a minimal number of replicas
+   * reported from data-nodes.
+   */
+  BlockInfo convertToCompleteBlock() throws IOException {
+    assert getBlockUCState() != BlockUCState.COMPLETE :
+        "Trying to convert a COMPLETE block";
+    uc = null;
+    return this;
+  }
+
+  /**
+   * Process the recorded replicas. When about to commit or finish the
+   * pipeline recovery sort out bad replicas.
+   * @param genStamp  The final generation stamp for the block.
+   */
+  public void setGenerationStampAndVerifyReplicas(long genStamp) {
+    Preconditions.checkState(uc != null && !isComplete());
+    // Set the generation stamp for the block.
+    setGenerationStamp(genStamp);
+
+    // Remove the replicas with wrong gen stamp
+    uc.removeStaleReplicas(this);
+  }
+
+  /**
+   * Commit block's length and generation stamp as reported by the client.
+   * Set block state to {@link BlockUCState#COMMITTED}.
+   * @param block - contains client reported block length and generation
+   * @throws IOException if block ids are inconsistent.
+   */
+  void commitBlock(Block block) throws IOException {
+    if (getBlockId() != block.getBlockId()) {
+      throw new IOException("Trying to commit inconsistent block: id = "
+          + block.getBlockId() + ", expected id = " + getBlockId());
+    }
+    Preconditions.checkState(!isComplete());
+    uc.commit();
+    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    // Sort out invalid replicas.
+    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 }

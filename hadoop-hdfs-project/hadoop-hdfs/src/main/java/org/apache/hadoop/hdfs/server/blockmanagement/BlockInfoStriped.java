@@ -245,27 +245,6 @@ public class BlockInfoStriped extends BlockInfo {
     return num;
   }
 
-  /**
-   * Convert a complete block to an under construction block.
-   * @return BlockInfoUnderConstruction -  an under construction block.
-   */
-  public BlockInfoStripedUnderConstruction convertToBlockUnderConstruction(
-      BlockUCState s, DatanodeStorageInfo[] targets) {
-    final BlockInfoStripedUnderConstruction ucBlock;
-    if(isComplete()) {
-      ucBlock = new BlockInfoStripedUnderConstruction(this, ecPolicy,
-          s, targets);
-      ucBlock.setBlockCollection(getBlockCollection());
-    } else {
-      // the block is already under construction
-      ucBlock = (BlockInfoStripedUnderConstruction) this;
-      ucBlock.setBlockUCState(s);
-      ucBlock.setExpectedLocations(targets);
-      ucBlock.setBlockCollection(getBlockCollection());
-    }
-    return ucBlock;
-  }
-
   @Override
   final boolean hasNoStorage() {
     final int len = getCapacity();

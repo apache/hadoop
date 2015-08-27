@@ -55,7 +55,6 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -756,7 +755,7 @@ public class FSImageFormat {
       // file
       
       // read blocks
-      Block[] blocks = new BlockInfoContiguous[numBlocks];
+      BlockInfo[] blocks = new BlockInfoContiguous[numBlocks];
       for (int j = 0; j < numBlocks; j++) {
         blocks[j] = new BlockInfoContiguous(replication);
         blocks[j].readFields(in);
@@ -778,9 +777,9 @@ public class FSImageFormat {
             clientMachine = FSImageSerialization.readString(in);
             // convert the last block to BlockUC
             if (blocks.length > 0) {
-              Block lastBlk = blocks[blocks.length - 1];
-              blocks[blocks.length - 1] =
-                  new BlockInfoContiguousUnderConstruction(lastBlk, replication);
+              BlockInfo lastBlk = blocks[blocks.length - 1];
+              lastBlk.convertToBlockUnderConstruction(
+                  HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, null);
             }
           }
         }

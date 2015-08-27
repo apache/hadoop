@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -138,8 +137,9 @@ public class FSImageSerialization {
     // last block is UNDER_CONSTRUCTION
     if(numBlocks > 0) {
       blk.readFields(in);
-      blocksContiguous[i] = new BlockInfoContiguousUnderConstruction(
-          blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
+      blocksContiguous[i] = new BlockInfoContiguous(blk, blockReplication);
+      blocksContiguous[i].convertToBlockUnderConstruction(
+          BlockUCState.UNDER_CONSTRUCTION, null);
     }
 
     PermissionStatus perm = PermissionStatus.read(in);

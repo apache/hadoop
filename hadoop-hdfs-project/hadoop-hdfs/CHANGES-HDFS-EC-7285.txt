@@ -403,3 +403,6 @@
 
     HDFS-8838. Erasure Coding: Tolerate datanode failures in DFSStripedOutputStream
     when the data length is small. (szetszwo via waltersu4549)
+
+    HDFS-8909. Erasure coding: update BlockInfoContiguousUC and BlockInfoStripedUC
+    to use BlockUnderConstructionFeature. (Jing Zhao via waltersu4549)

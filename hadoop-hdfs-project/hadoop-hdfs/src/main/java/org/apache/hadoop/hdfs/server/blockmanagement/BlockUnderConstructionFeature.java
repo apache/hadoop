@@ -21,19 +21,14 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-
-import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.COMPLETE;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 
 /**
- * Represents a striped block that is currently being constructed.
+ * Represents the under construction feature of a Block.
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
-    implements BlockInfoUnderConstruction{
+public class BlockUnderConstructionFeature {
   private BlockUCState blockUCState;
 
   /**
@@ -55,41 +50,30 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   private long blockRecoveryId = 0;
 
   /**
-   * Constructor with null storage targets.
+   * The block source to use in the event of copy-on-write truncate.
    */
-  public BlockInfoStripedUnderConstruction(Block blk, ErasureCodingPolicy ecPolicy) {
-    this(blk, ecPolicy, UNDER_CONSTRUCTION, null);
-  }
+  private Block truncateBlock;
 
-  /**
-   * Create a striped block that is currently being constructed.
-   */
-  public BlockInfoStripedUnderConstruction(Block blk, ErasureCodingPolicy ecPolicy,
-      BlockUCState state, DatanodeStorageInfo[] targets) {
-    super(blk, ecPolicy);
+  public BlockUnderConstructionFeature(Block blk,
+      BlockUCState state, DatanodeStorageInfo[] targets, boolean isStriped) {
     assert getBlockUCState() != COMPLETE :
-      "BlockInfoStripedUnderConstruction cannot be in COMPLETE state";
+      "BlockUnderConstructionFeature cannot be in COMPLETE state";
     this.blockUCState = state;
-    setExpectedLocations(targets);
-  }
-
-  @Override
-  public BlockInfoStriped convertToCompleteBlock() throws IOException {
-    assert getBlockUCState() != COMPLETE :
-      "Trying to convert a COMPLETE block";
-    return new BlockInfoStriped(this);
+    setExpectedLocations(blk, targets, isStriped);
   }
 
   /** Set expected locations */
-  @Override
-  public void setExpectedLocations(DatanodeStorageInfo[] targets) {
+  public void setExpectedLocations(Block block, DatanodeStorageInfo[] targets,
+      boolean isStriped) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ReplicaUnderConstruction[numLocations];
     for(int i = 0; i < numLocations; i++) {
-      // when creating a new block we simply sequentially assign block index to
-      // each storage
-      Block blk = new Block(this.getBlockId() + i, 0, this.getGenerationStamp());
-      replicas[i] = new ReplicaUnderConstruction(blk, targets[i],
+      // when creating a new striped block we simply sequentially assign block
+      // index to each storage
+      Block replicaBlock = isStriped ?
+          new Block(block.getBlockId() + i, 0, block.getGenerationStamp()) :
+          block;
+      replicas[i] = new ReplicaUnderConstruction(replicaBlock, targets[i],
           ReplicaState.RBW);
     }
   }
@@ -98,7 +82,6 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
    */
-  @Override
   public DatanodeStorageInfo[] getExpectedStorageLocations() {
     int numLocations = getNumExpectedLocations();
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[numLocations];
@@ -108,7 +91,10 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     return storages;
   }
 
-  /** @return the index array indicating the block index in each storage */
+  /**
+   * @return the index array indicating the block index in each storage. Used
+   * only by striped blocks.
+   */
   public int[] getBlockIndices() {
     int numLocations = getNumExpectedLocations();
     int[] indices = new int[numLocations];
@@ -118,7 +104,6 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     return indices;
   }
 
-  @Override
   public int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.length;
   }
@@ -127,7 +112,6 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
    * Return the state of the block under construction.
    * @see BlockUCState
    */
-  @Override // BlockInfo
   public BlockUCState getBlockUCState() {
     return blockUCState;
   }
@@ -136,58 +120,51 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     blockUCState = s;
   }
 
-  @Override
   public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
-  @Override
+  /** Get recover block */
   public Block getTruncateBlock() {
-    return null;
+    return truncateBlock;
   }
 
-  @Override
-  public Block toBlock(){
-    return this;
+  public void setTruncateBlock(Block recoveryBlock) {
+    this.truncateBlock = recoveryBlock;
   }
 
-  @Override
-  public void setGenerationStampAndVerifyReplicas(long genStamp) {
-    // Set the generation stamp for the block.
-    setGenerationStamp(genStamp);
-    if (replicas == null)
-      return;
+  /**
+   * Set {@link #blockUCState} to {@link BlockUCState#COMMITTED}.
+   */
+  void commit() {
+    blockUCState = BlockUCState.COMMITTED;
+  }
 
-    // Remove the replicas with wrong gen stamp.
-    // The replica list is unchanged.
-    for (ReplicaUnderConstruction r : replicas) {
-      if (genStamp != r.getGenerationStamp()) {
-        r.getExpectedStorageLocation().removeBlock(this);
-        NameNode.blockStateChangeLog.info("BLOCK* Removing stale replica "
-            + "from location: {}", r.getExpectedStorageLocation());
+  void removeStaleReplicas(BlockInfo block) {
+    final long genStamp = block.getGenerationStamp();
+    if (replicas != null) {
+      // Remove replicas with wrong gen stamp. The replica list is unchanged.
+      for (ReplicaUnderConstruction r : replicas) {
+        if (genStamp != r.getGenerationStamp()) {
+          r.getExpectedStorageLocation().removeBlock(block);
+          NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica "
+              + "from location: {}", r.getExpectedStorageLocation());
+        }
       }
     }
   }
 
-  @Override
-  public void commitBlock(Block block) throws IOException {
-    if (getBlockId() != block.getBlockId()) {
-      throw new IOException("Trying to commit inconsistent block: id = "
-          + block.getBlockId() + ", expected id = " + getBlockId());
-    }
-    blockUCState = BlockUCState.COMMITTED;
-    this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
-    // Sort out invalid replicas.
-    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
-  }
-
-  @Override
-  public void initializeBlockRecovery(long recoveryId) {
+  /**
+   * Initialize lease recovery for this block.
+   * Find the first alive data-node starting from the previous primary and
+   * make it primary.
+   */
+  public void initializeBlockRecovery(BlockInfo blockInfo, long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas == null || replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
-          " BlockInfoStripedUnderConstruction.initLeaseRecovery:" +
+          " BlockUnderConstructionFeature.initLeaseRecovery:" +
           " No blocks found, lease removed.");
       // sets primary node index and return.
       primaryNodeIndex = -1;
@@ -226,15 +203,15 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     }
     if (primary != null) {
       primary.getExpectedStorageLocation().getDatanodeDescriptor()
-          .addBlockToBeRecovered(this);
+          .addBlockToBeRecovered(blockInfo);
       primary.setChosenAsPrimary(true);
       NameNode.blockStateChangeLog.info(
           "BLOCK* {} recovery started, primary={}", this, primary);
     }
   }
 
-  @Override
-  public void addReplicaIfNotPresent(DatanodeStorageInfo storage,
+  /** Add the reported replica if it is not already in the replica list. */
+  void addReplicaIfNotPresent(DatanodeStorageInfo storage,
       Block reportedBlock, ReplicaState rState) {
     if (replicas == null) {
       replicas = new ReplicaUnderConstruction[1];
@@ -269,20 +246,15 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(100);
-    appendStringTo(b);
+    appendUCParts(b);
     return b.toString();
   }
 
-  @Override
-  public void appendStringTo(StringBuilder sb) {
-    super.appendStringTo(sb);
-    appendUCParts(sb);
-  }
-
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{UCState=").append(blockUCState).
-        append(", primaryNodeIndex=").append(primaryNodeIndex).
-        append(", replicas=[");
+    sb.append("{UCState=").append(blockUCState)
+      .append(", truncateBlock=").append(truncateBlock)
+      .append(", primaryNodeIndex=").append(primaryNodeIndex)
+      .append(", replicas=[");
     if (replicas != null) {
       int i = 0;
       for (ReplicaUnderConstruction r : replicas) {

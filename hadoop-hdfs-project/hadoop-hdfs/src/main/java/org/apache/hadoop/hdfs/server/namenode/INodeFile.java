@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -39,12 +38,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
@@ -86,7 +83,7 @@ public class INodeFile extends INodeWithAdditionalFields
    * [4-bit storagePolicyID][1-bit isStriped]
    * [11-bit replication][48-bit preferredBlockSize]
    */
-  static enum HeaderFormat {
+  enum HeaderFormat {
     PREFERRED_BLOCK_SIZE(null, 48, 1),
     REPLICATION(PREFERRED_BLOCK_SIZE.BITS, 11, 0),
     IS_STRIPED(REPLICATION.BITS, 1, 0),
@@ -264,25 +261,20 @@ public class INodeFile extends INodeWithAdditionalFields
     if (numBlocks() == 0) {
       throw new IOException("Failed to set last block: File is empty.");
     }
+    lastBlock.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
+        locations);
+  }
 
-    final BlockInfo ucBlock;
-    if (isStriped()) {
-      Preconditions.checkState(lastBlock.isStriped());
-      ucBlock = ((BlockInfoStriped) lastBlock)
-          .convertToBlockUnderConstruction(UNDER_CONSTRUCTION, locations);
-    } else {
-      Preconditions.checkState(!lastBlock.isStriped());
-      ucBlock = ((BlockInfoContiguous) lastBlock)
-          .convertToBlockUnderConstruction(UNDER_CONSTRUCTION, locations);
-    }
-    setBlock(numBlocks() - 1, ucBlock);
+  void setLastBlock(BlockInfo blk) {
+    blk.setBlockCollection(this);
+    setBlock(numBlocks() - 1, blk);
   }
 
   /**
    * Remove a block from the block list. This block should be
    * the last one on the list.
    */
-  BlockInfoUnderConstruction removeLastBlock(Block oldblock) {
+  BlockInfo removeLastBlock(Block oldblock) {
     Preconditions.checkState(isUnderConstruction(),
         "file is no longer under construction");
     if (blocks == null || blocks.length == 0) {
@@ -293,13 +285,12 @@ public class INodeFile extends INodeWithAdditionalFields
       return null;
     }
 
-    BlockInfoUnderConstruction uc =
-        (BlockInfoUnderConstruction)blocks[size_1];
+    BlockInfo ucBlock = blocks[size_1];
     //copy to a new list
     BlockInfo[] newlist = new BlockInfo[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
     setBlocks(newlist);
-    return uc;
+    return ucBlock;
   }
 
   /* End of Under-Construction Feature */
@@ -758,7 +749,7 @@ public class INodeFile extends INodeWithAdditionalFields
     //check if the last block is BlockInfoUnderConstruction
     BlockInfo lastBlk = blocks[last];
     long size = lastBlk.getNumBytes();
-    if (lastBlk instanceof BlockInfoUnderConstruction) {
+    if (!lastBlk.isComplete()) {
        if (!includesLastUcBlock) {
          size = 0;
        } else if (usePreferredBlockSize4LastUcBlock) {

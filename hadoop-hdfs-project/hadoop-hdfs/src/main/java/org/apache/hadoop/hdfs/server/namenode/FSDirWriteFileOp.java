@@ -45,10 +45,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -77,7 +77,7 @@ class FSDirWriteFileOp {
       Block block) throws IOException {
     // modify file-> block and blocksMap
     // fileNode should be under construction
-    BlockInfoUnderConstruction uc = fileNode.removeLastBlock(block);
+    BlockInfo uc = fileNode.removeLastBlock(block);
     if (uc == null) {
       return false;
     }
@@ -214,8 +214,8 @@ class FSDirWriteFileOp {
 
   static LocatedBlock makeLocatedBlock(FSNamesystem fsn, BlockInfo blk,
       DatanodeStorageInfo[] locs, long offset) throws IOException {
-    LocatedBlock lBlk = BlockManager.newLocatedBlock(fsn.getExtendedBlock(blk),
-        blk, locs, offset);
+    LocatedBlock lBlk = BlockManager.newLocatedBlock(
+        fsn.getExtendedBlock(new Block(blk)), blk, locs, offset);
     fsn.getBlockManager().setBlockToken(lBlk,
         BlockTokenIdentifier.AccessMode.WRITE);
     return lBlk;
@@ -247,8 +247,8 @@ class FSDirWriteFileOp {
       } else {
         // add new chosen targets to already allocated block and return
         BlockInfo lastBlockInFile = pendingFile.getLastBlock();
-        ((BlockInfoContiguousUnderConstruction) lastBlockInFile)
-            .setExpectedLocations(targets);
+        lastBlockInFile.getUnderConstructionFeature().setExpectedLocations(
+            lastBlockInFile, targets, pendingFile.isStriped());
         offset = pendingFile.computeFileSize();
         return makeLocatedBlock(fsn, lastBlockInFile, targets, offset);
       }
@@ -542,7 +542,8 @@ class FSDirWriteFileOp {
         // check quota limits and updated space consumed
         fsd.updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
             numLocations, true);
-        blockInfo = new BlockInfoStripedUnderConstruction(block, ecPolicy,
+        blockInfo = new BlockInfoStriped(block, ecPolicy);
+        blockInfo.convertToBlockUnderConstruction(
             HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       } else {
         // check quota limits and updated space consumed
@@ -550,9 +551,9 @@ class FSDirWriteFileOp {
             fileINode.getPreferredBlockReplication(), true);
 
         short numLocations = fileINode.getFileReplication();
-        blockInfo = new BlockInfoContiguousUnderConstruction(block,
-            numLocations, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
-            targets);
+        blockInfo = new BlockInfoContiguous(block, numLocations);
+        blockInfo.convertToBlockUnderConstruction(
+            HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
       }
       fsd.getBlockManager().addBlockCollection(blockInfo, fileINode);
       fileINode.addBlock(blockInfo);
@@ -692,10 +693,10 @@ class FSDirWriteFileOp {
             "allocation of a new block in " + src + ". Returning previously" +
             " allocated block " + lastBlockInFile);
         long offset = file.computeFileSize();
-        BlockInfoUnderConstruction lastBlockUC =
-            (BlockInfoUnderConstruction) lastBlockInFile;
+        BlockUnderConstructionFeature uc =
+            lastBlockInFile.getUnderConstructionFeature();
         onRetryBlock[0] = makeLocatedBlock(fsn, lastBlockInFile,
-            lastBlockUC.getExpectedStorageLocations(), offset);
+            uc.getExpectedStorageLocations(), offset);
         return new FileState(file, src, iip);
       } else {
         // Case 3

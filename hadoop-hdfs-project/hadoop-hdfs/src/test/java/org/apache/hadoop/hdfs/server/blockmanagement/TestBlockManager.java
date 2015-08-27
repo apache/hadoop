@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -727,8 +728,8 @@ public class TestBlockManager {
     // verify the storage info is correct
     assertTrue(bm.getStoredBlock(new Block(receivedBlockId)).findStorageInfo
         (ds) >= 0);
-    assertTrue(((BlockInfoContiguousUnderConstruction) bm.
-        getStoredBlock(new Block(receivingBlockId))).getNumExpectedLocations() > 0);
+    assertTrue(bm.getStoredBlock(new Block(receivingBlockId))
+        .getUnderConstructionFeature().getNumExpectedLocations() > 0);
     assertTrue(bm.getStoredBlock(new Block(receivingReceivedBlockId))
         .findStorageInfo(ds) >= 0);
     assertNull(bm.getStoredBlock(new Block(ReceivedDeletedBlockId)));
@@ -748,8 +749,8 @@ public class TestBlockManager {
 
   private BlockInfo addUcBlockToBM(long blkId) {
     Block block = new Block(blkId);
-    BlockInfoContiguousUnderConstruction blockInfo =
-        new BlockInfoContiguousUnderConstruction(block, (short) 3);
+    BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 3);
+    blockInfo.convertToBlockUnderConstruction(UNDER_CONSTRUCTION, null);
     BlockCollection bc = Mockito.mock(BlockCollection.class);
     Mockito.doReturn((short) 3).when(bc).getPreferredBlockReplication();
     bm.blocksMap.addBlockCollection(blockInfo, bc);

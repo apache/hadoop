@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
@@ -170,13 +169,13 @@ public class TestAddStripedBlocks {
     Assert.assertEquals(0,
         block.getBlockId() & HdfsServerConstants.BLOCK_GROUP_INDEX_MASK);
 
-    final BlockInfoStripedUnderConstruction blockUC =
-        (BlockInfoStripedUnderConstruction) block;
     Assert.assertEquals(HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION,
-        blockUC.getBlockUCState());
+        block.getBlockUCState());
     if (checkReplica) {
-      Assert.assertEquals(GROUP_SIZE, blockUC.getNumExpectedLocations());
-      DatanodeStorageInfo[] storages = blockUC.getExpectedStorageLocations();
+      Assert.assertEquals(GROUP_SIZE,
+          block.getUnderConstructionFeature().getNumExpectedLocations());
+      DatanodeStorageInfo[] storages = block.getUnderConstructionFeature()
+          .getExpectedStorageLocations();
       for (DataNode dn : cluster.getDataNodes()) {
         Assert.assertTrue(includeDataNode(dn.getDatanodeId(), storages));
       }
@@ -205,11 +204,10 @@ public class TestAddStripedBlocks {
 
       FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
       INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
-      BlockInfoStripedUnderConstruction lastBlk =
-          (BlockInfoStripedUnderConstruction) fileNode.getLastBlock();
-      DatanodeInfo[] expectedDNs = DatanodeStorageInfo
-          .toDatanodeInfos(lastBlk.getExpectedStorageLocations());
-      int[] indices = lastBlk.getBlockIndices();
+      BlockInfoStriped lastBlk = (BlockInfoStriped) fileNode.getLastBlock();
+      DatanodeInfo[] expectedDNs = DatanodeStorageInfo.toDatanodeInfos(
+          lastBlk.getUnderConstructionFeature().getExpectedStorageLocations());
+      int[] indices = lastBlk.getUnderConstructionFeature().getBlockIndices();
 
       LocatedBlocks blks = dfs.getClient().getLocatedBlocks(file.toString(), 0L);
       Assert.assertEquals(1, blks.locatedBlockCount());
@@ -246,11 +244,10 @@ public class TestAddStripedBlocks {
       cluster.getNamesystem().getAdditionalBlock(file.toString(),
           fileNode.getId(), dfs.getClient().getClientName(), null, null, null);
       BlockInfo lastBlock = fileNode.getLastBlock();
-      BlockInfoStripedUnderConstruction ucBlock =
-          (BlockInfoStripedUnderConstruction) lastBlock;
 
-      DatanodeStorageInfo[] locs = ucBlock.getExpectedStorageLocations();
-      int[] indices = ucBlock.getBlockIndices();
+      DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
+          .getExpectedStorageLocations();
+      int[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
       Assert.assertEquals(GROUP_SIZE, locs.length);
       Assert.assertEquals(GROUP_SIZE, indices.length);
 
@@ -272,8 +269,8 @@ public class TestAddStripedBlocks {
       }
 
       // make sure lastBlock is correct and the storages have been updated
-      locs = ucBlock.getExpectedStorageLocations();
-      indices = ucBlock.getBlockIndices();
+      locs = lastBlock.getUnderConstructionFeature().getExpectedStorageLocations();
+      indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
       Assert.assertEquals(GROUP_SIZE, locs.length);
       Assert.assertEquals(GROUP_SIZE, indices.length);
       for (DatanodeStorageInfo newstorage : locs) {
@@ -307,10 +304,9 @@ public class TestAddStripedBlocks {
           bpId, reports, null);
     }
 
-    BlockInfoStripedUnderConstruction ucBlock =
-        (BlockInfoStripedUnderConstruction) lastBlock;
-    DatanodeStorageInfo[] locs = ucBlock.getExpectedStorageLocations();
-    int[] indices = ucBlock.getBlockIndices();
+    DatanodeStorageInfo[] locs = lastBlock.getUnderConstructionFeature()
+        .getExpectedStorageLocations();
+    int[] indices = lastBlock.getUnderConstructionFeature().getBlockIndices();
     Assert.assertEquals(GROUP_SIZE, locs.length);
     Assert.assertEquals(GROUP_SIZE, indices.length);
     for (i = 0; i < GROUP_SIZE; i++) {

@@ -42,15 +42,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -991,12 +990,14 @@ public class FSEditLogLoader {
     final BlockInfo newBlockInfo;
     boolean isStriped = ecZone != null;
     if (isStriped) {
-      newBlockInfo = new BlockInfoStripedUnderConstruction(newBlock,
+      newBlockInfo = new BlockInfoStriped(newBlock,
           ecZone.getErasureCodingPolicy());
     } else {
-      newBlockInfo = new BlockInfoContiguousUnderConstruction(newBlock,
+      newBlockInfo = new BlockInfoContiguous(newBlock,
           file.getPreferredBlockReplication());
     }
+    newBlockInfo.convertToBlockUnderConstruction(
+        BlockUCState.UNDER_CONSTRUCTION, null);
     fsNamesys.getBlockManager().addBlockCollectionWithCheck(newBlockInfo, file);
     file.addBlock(newBlockInfo);
     fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
@@ -1077,12 +1078,14 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           if (isStriped) {
-            newBI = new BlockInfoStripedUnderConstruction(newBlock,
+            newBI = new BlockInfoStriped(newBlock,
                 ecZone.getErasureCodingPolicy());
           } else {
-            newBI = new BlockInfoContiguousUnderConstruction(newBlock,
+            newBI = new BlockInfoContiguous(newBlock,
                 file.getPreferredBlockReplication());
           }
+          newBI.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
+              null);
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior

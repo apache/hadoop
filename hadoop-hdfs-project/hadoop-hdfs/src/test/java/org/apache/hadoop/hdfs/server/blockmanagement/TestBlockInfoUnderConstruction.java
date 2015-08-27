@@ -39,25 +39,24 @@ public class TestBlockInfoUnderConstruction {
     DatanodeDescriptor dd3 = s3.getDatanodeDescriptor();
 
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
-    BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
-        new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
-        (short) 3,
-        BlockUCState.UNDER_CONSTRUCTION,
+    BlockInfoContiguous blockInfo = new BlockInfoContiguous(
+        new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3);
+    blockInfo.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
         new DatanodeStorageInfo[] {s1, s2, s3});
 
     // Recovery attempt #1.
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -3 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -2 * 1000);
-    blockInfo.initializeBlockRecovery(1);
-    BlockInfoUnderConstruction[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 1);
+    BlockInfo[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
     // Recovery attempt #2.
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.initializeBlockRecovery(2);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 2);
     blockInfoRecovery = dd1.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
@@ -65,7 +64,7 @@ public class TestBlockInfoUnderConstruction {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.initializeBlockRecovery(3);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
@@ -74,7 +73,7 @@ public class TestBlockInfoUnderConstruction {
     DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
     DFSTestUtil.resetLastUpdatesWithOffset(dd3, 0);
-    blockInfo.initializeBlockRecovery(3);
+    blockInfo.getUnderConstructionFeature().initializeBlockRecovery(blockInfo, 3);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
   }

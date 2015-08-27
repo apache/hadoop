@@ -45,10 +45,9 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
@@ -378,11 +377,13 @@ public final class FSImageFormatPBINode {
           final BlockInfo ucBlk;
           if (isStriped) {
             BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
-            ucBlk = new BlockInfoStripedUnderConstruction(striped, ecPolicy);
+            ucBlk = new BlockInfoStriped(striped, ecPolicy);
           } else {
-            ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk,
+            ucBlk = new BlockInfoContiguous(lastBlk,
                 replication);
           }
+          ucBlk.convertToBlockUnderConstruction(
+              HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, null);
           file.setBlock(file.numBlocks() - 1, ucBlk);
         }
       }

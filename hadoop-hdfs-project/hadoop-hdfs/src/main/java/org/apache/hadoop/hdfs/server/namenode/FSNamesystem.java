@@ -142,7 +142,6 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -204,10 +203,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
@@ -3124,28 +3122,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new AlreadyBeingCreatedException(message);
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
-      // TODO support truncate of striped blocks
-      final BlockInfoUnderConstruction uc =
-          (BlockInfoUnderConstruction)lastBlock;
+      final BlockUnderConstructionFeature uc = lastBlock.getUnderConstructionFeature();
       // determine if last block was intended to be truncated
       Block recoveryBlock = uc.getTruncateBlock();
       boolean truncateRecovery = recoveryBlock != null;
       boolean copyOnTruncate = truncateRecovery &&
-          recoveryBlock.getBlockId() != uc.toBlock().getBlockId();
+          recoveryBlock.getBlockId() != lastBlock.getBlockId();
       assert !copyOnTruncate ||
-          recoveryBlock.getBlockId() < uc.toBlock().getBlockId() &&
-          recoveryBlock.getGenerationStamp() < uc.toBlock().
-              getGenerationStamp() &&
-          recoveryBlock.getNumBytes() > uc.toBlock().getNumBytes() :
+          recoveryBlock.getBlockId() < lastBlock.getBlockId() &&
+          recoveryBlock.getGenerationStamp() < lastBlock.getGenerationStamp() &&
+          recoveryBlock.getNumBytes() > lastBlock.getNumBytes() :
             "wrong recoveryBlock";
 
       // setup the last block locations from the blockManager if not known
       if (uc.getNumExpectedLocations() == 0) {
-        uc.setExpectedLocations(blockManager.getStorages(lastBlock));
+        uc.setExpectedLocations(lastBlock, blockManager.getStorages(lastBlock),
+            lastBlock.isStriped());
       }
 
-      if (uc.getNumExpectedLocations() == 0 &&
-          uc.toBlock().getNumBytes() == 0) {
+      if (uc.getNumExpectedLocations() == 0 && lastBlock.getNumBytes() == 0) {
         // There is no datanode reported to this block.
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
@@ -3159,14 +3154,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       // start recovery of the last block for this file
       long blockRecoveryId =
-          nextGenerationStamp(blockIdManager.isLegacyBlock(uc.toBlock()));
+          nextGenerationStamp(blockIdManager.isLegacyBlock(lastBlock));
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
       if(copyOnTruncate) {
-        uc.toBlock().setGenerationStamp(blockRecoveryId);
+        lastBlock.setGenerationStamp(blockRecoveryId);
       } else if(truncateRecovery) {
         recoveryBlock.setGenerationStamp(blockRecoveryId);
       }
-      uc.initializeBlockRecovery(blockRecoveryId);
+      uc.initializeBlockRecovery(lastBlock, blockRecoveryId);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -3371,8 +3366,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
 
       truncatedBlock = iFile.getLastBlock();
-      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)truncatedBlock;
-      final long recoveryId = uc.getBlockRecoveryId();
+      final long recoveryId = truncatedBlock.getUnderConstructionFeature()
+          .getBlockRecoveryId();
       copyTruncate = truncatedBlock.getBlockId() != storedBlock.getBlockId();
       if(recoveryId != newgenerationstamp) {
         throw new IOException("The recovery id " + newgenerationstamp
@@ -5424,7 +5419,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // check the vadility of the block and lease holder name
     final INodeFile pendingFile = checkUCBlock(oldBlock, clientName);
     final BlockInfo lastBlock = pendingFile.getLastBlock();
-    final BlockInfoUnderConstruction blockinfo = (BlockInfoUnderConstruction)lastBlock;
+    assert !lastBlock.isComplete();
 
     // check new GS & length: this is not expected
     if (newBlock.getGenerationStamp() <= lastBlock.getGenerationStamp()) {
@@ -5444,12 +5439,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // Update old block with the new generation stamp and new length
     lastBlock.setNumBytes(newBlock.getNumBytes());
-    blockinfo.setGenerationStampAndVerifyReplicas(newBlock.getGenerationStamp());
+    lastBlock.setGenerationStampAndVerifyReplicas(newBlock.getGenerationStamp());
 
     // find the DatanodeDescriptor objects
     final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
         .getDatanodeStorageInfos(newNodes, newStorageIDs);
-    blockinfo.setExpectedLocations(storages);
+    lastBlock.getUnderConstructionFeature().setExpectedLocations(lastBlock,
+        storages, lastBlock.isStriped());
 
     String src = pendingFile.getFullPathName();
     FSDirWriteFileOp.persistBlocks(dir, src, pendingFile, logRetryCache);
