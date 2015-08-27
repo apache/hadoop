@@ -109,7 +109,7 @@ public class TestDataTransferProtocol {
       sock = new Socket();
       sock.connect(dnAddr, HdfsConstants.READ_TIMEOUT);
       sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
-      
+
       OutputStream out = sock.getOutputStream();
       // Should we excuse 
       byte[] retBuf = new byte[recvBuf.size()];

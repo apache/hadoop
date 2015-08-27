@@ -45,10 +45,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DATA
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
@@ -71,8 +67,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRIT
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
@@ -256,7 +250,7 @@ public class DfsClientConf {
       return Collections.emptyList();
     }
     ArrayList<Class<? extends ReplicaAccessorBuilder>> classes =
-        new ArrayList<Class<? extends ReplicaAccessorBuilder>>();
+        new ArrayList<>();
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     for (String className: classNames) {
       try {
@@ -751,35 +745,33 @@ public class DfsClientConf {
     }
 
     public String confAsString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("shortCircuitStreamsCacheSize = ").
-        append(shortCircuitStreamsCacheSize).
-        append(", shortCircuitStreamsCacheExpiryMs = ").
-        append(shortCircuitStreamsCacheExpiryMs).
-        append(", shortCircuitMmapCacheSize = ").
-        append(shortCircuitMmapCacheSize).
-        append(", shortCircuitMmapCacheExpiryMs = ").
-        append(shortCircuitMmapCacheExpiryMs).
-        append(", shortCircuitMmapCacheRetryTimeout = ").
-        append(shortCircuitMmapCacheRetryTimeout).
-        append(", shortCircuitCacheStaleThresholdMs = ").
-        append(shortCircuitCacheStaleThresholdMs).
-        append(", socketCacheCapacity = ").
-        append(socketCacheCapacity).
-        append(", socketCacheExpiry = ").
-        append(socketCacheExpiry).
-        append(", shortCircuitLocalReads = ").
-        append(shortCircuitLocalReads).
-        append(", useLegacyBlockReaderLocal = ").
-        append(useLegacyBlockReaderLocal).
-        append(", domainSocketDataTraffic = ").
-        append(domainSocketDataTraffic).
-        append(", shortCircuitSharedMemoryWatcherInterruptCheckMs = ").
-        append(shortCircuitSharedMemoryWatcherInterruptCheckMs).
-        append(", keyProviderCacheExpiryMs = ").
-        append(keyProviderCacheExpiryMs);
 
-      return builder.toString();
+      return "shortCircuitStreamsCacheSize = "
+          + shortCircuitStreamsCacheSize
+          + ", shortCircuitStreamsCacheExpiryMs = "
+          + shortCircuitStreamsCacheExpiryMs
+          + ", shortCircuitMmapCacheSize = "
+          + shortCircuitMmapCacheSize
+          + ", shortCircuitMmapCacheExpiryMs = "
+          + shortCircuitMmapCacheExpiryMs
+          + ", shortCircuitMmapCacheRetryTimeout = "
+          + shortCircuitMmapCacheRetryTimeout
+          + ", shortCircuitCacheStaleThresholdMs = "
+          + shortCircuitCacheStaleThresholdMs
+          + ", socketCacheCapacity = "
+          + socketCacheCapacity
+          + ", socketCacheExpiry = "
+          + socketCacheExpiry
+          + ", shortCircuitLocalReads = "
+          + shortCircuitLocalReads
+          + ", useLegacyBlockReaderLocal = "
+          + useLegacyBlockReaderLocal
+          + ", domainSocketDataTraffic = "
+          + domainSocketDataTraffic
+          + ", shortCircuitSharedMemoryWatcherInterruptCheckMs = "
+          + shortCircuitSharedMemoryWatcherInterruptCheckMs
+          + ", keyProviderCacheExpiryMs = "
+          + keyProviderCacheExpiryMs;
     }
   }
 }
