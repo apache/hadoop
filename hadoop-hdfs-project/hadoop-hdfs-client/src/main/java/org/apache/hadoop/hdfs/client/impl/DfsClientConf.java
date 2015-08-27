@@ -262,7 +262,7 @@ public class DfsClientConf {
       return Collections.emptyList();
     }
     ArrayList<Class<? extends ReplicaAccessorBuilder>> classes =
-        new ArrayList<Class<? extends ReplicaAccessorBuilder>>();
+        new ArrayList<>();
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     for (String className: classNames) {
       try {
@@ -778,35 +778,33 @@ public class DfsClientConf {
     }
 
     public String confAsString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("shortCircuitStreamsCacheSize = ").
-        append(shortCircuitStreamsCacheSize).
-        append(", shortCircuitStreamsCacheExpiryMs = ").
-        append(shortCircuitStreamsCacheExpiryMs).
-        append(", shortCircuitMmapCacheSize = ").
-        append(shortCircuitMmapCacheSize).
-        append(", shortCircuitMmapCacheExpiryMs = ").
-        append(shortCircuitMmapCacheExpiryMs).
-        append(", shortCircuitMmapCacheRetryTimeout = ").
-        append(shortCircuitMmapCacheRetryTimeout).
-        append(", shortCircuitCacheStaleThresholdMs = ").
-        append(shortCircuitCacheStaleThresholdMs).
-        append(", socketCacheCapacity = ").
-        append(socketCacheCapacity).
-        append(", socketCacheExpiry = ").
-        append(socketCacheExpiry).
-        append(", shortCircuitLocalReads = ").
-        append(shortCircuitLocalReads).
-        append(", useLegacyBlockReaderLocal = ").
-        append(useLegacyBlockReaderLocal).
-        append(", domainSocketDataTraffic = ").
-        append(domainSocketDataTraffic).
-        append(", shortCircuitSharedMemoryWatcherInterruptCheckMs = ").
-        append(shortCircuitSharedMemoryWatcherInterruptCheckMs).
-        append(", keyProviderCacheExpiryMs = ").
-        append(keyProviderCacheExpiryMs);
 
-      return builder.toString();
+      return "shortCircuitStreamsCacheSize = "
+          + shortCircuitStreamsCacheSize
+          + ", shortCircuitStreamsCacheExpiryMs = "
+          + shortCircuitStreamsCacheExpiryMs
+          + ", shortCircuitMmapCacheSize = "
+          + shortCircuitMmapCacheSize
+          + ", shortCircuitMmapCacheExpiryMs = "
+          + shortCircuitMmapCacheExpiryMs
+          + ", shortCircuitMmapCacheRetryTimeout = "
+          + shortCircuitMmapCacheRetryTimeout
+          + ", shortCircuitCacheStaleThresholdMs = "
+          + shortCircuitCacheStaleThresholdMs
+          + ", socketCacheCapacity = "
+          + socketCacheCapacity
+          + ", socketCacheExpiry = "
+          + socketCacheExpiry
+          + ", shortCircuitLocalReads = "
+          + shortCircuitLocalReads
+          + ", useLegacyBlockReaderLocal = "
+          + useLegacyBlockReaderLocal
+          + ", domainSocketDataTraffic = "
+          + domainSocketDataTraffic
+          + ", shortCircuitSharedMemoryWatcherInterruptCheckMs = "
+          + shortCircuitSharedMemoryWatcherInterruptCheckMs
+          + ", keyProviderCacheExpiryMs = "
+          + keyProviderCacheExpiryMs;
     }
   }
 }

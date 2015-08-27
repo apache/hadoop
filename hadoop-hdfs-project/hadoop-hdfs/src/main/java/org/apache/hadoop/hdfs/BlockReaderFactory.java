@@ -56,7 +56,6 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplicaInfo;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.apache.hadoop.io.ByteWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -328,10 +327,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    *             If there was another problem.
    */
   public BlockReader build() throws IOException {
-    BlockReader reader = null;
-
     Preconditions.checkNotNull(configuration);
-    reader = tryToCreateExternalBlockReader();
+    BlockReader reader = tryToCreateExternalBlockReader();
     if (reader != null) {
       return reader;
     }
@@ -432,7 +429,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
             "disableLegacyBlockReaderLocal is set.", this);
       return null;
     }
-    IOException ioe = null;
+    IOException ioe;
     try {
       return BlockReaderLocalLegacy.newBlockReader(conf,
           userGroupInformation, configuration, fileName, block, token,

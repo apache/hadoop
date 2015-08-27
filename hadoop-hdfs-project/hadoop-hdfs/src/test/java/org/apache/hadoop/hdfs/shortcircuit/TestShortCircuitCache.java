@@ -71,7 +71,6 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -269,7 +268,7 @@ public class TestShortCircuitCache {
     }
     // The last two replicas should still be cached.
     for (int i = 1; i < pairs.length; i++) {
-      final Integer iVal = new Integer(i);
+      final Integer iVal = i;
       replicaInfos[i] = cache.fetchOrCreate(
           new ExtendedBlockId(i, "test_bp1"),
             new ShortCircuitReplicaCreator() {
@@ -322,7 +321,7 @@ public class TestShortCircuitCache {
     };
     final long HOUR_IN_MS = 60 * 60 * 1000;
     for (int i = 0; i < pairs.length; i++) {
-      final Integer iVal = new Integer(i);
+      final Integer iVal = i;
       final ExtendedBlockId key = new ExtendedBlockId(i, "test_bp1");
       replicaInfos[i] = cache.fetchOrCreate(key,
           new ShortCircuitReplicaCreator() {
