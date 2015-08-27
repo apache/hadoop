@@ -220,7 +220,7 @@ public class CapacityScheduler extends
   private RMNodeLabelsManager labelManager;
   private SchedulerHealth schedulerHealth = new SchedulerHealth();
   long lastNodeUpdateTime;
-  private Priority maxClusterLevelAppPriority;
+
   /**
    * EXPERT
    */
@@ -316,9 +316,6 @@ public class CapacityScheduler extends
     if (scheduleAsynchronously) {
       asyncSchedulerThread = new AsyncScheduleThread(this);
     }
-    maxClusterLevelAppPriority = Priority.newInstance(yarnConf.getInt(
-        YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
-        YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
 
     LOG.info("Initialized CapacityScheduler with " +
         "calculator=" + getResourceCalculator().getClass() + ", " +
@@ -1857,10 +1854,6 @@ public class CapacityScheduler extends
 
     return Priority.newInstance(queue.getDefaultApplicationPriority()
         .getPriority());
-  }
-
-  public Priority getMaxClusterLevelAppPriority() {
-    return maxClusterLevelAppPriority;
   }
 
   @Override

@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
@@ -865,6 +866,39 @@ public class TestRMAdminService {
     Set<String> clusterNodeLabels = labelMgr.getClusterNodeLabelNames();
     assertEquals(1,clusterNodeLabels.size());
     rm.close();
+  }
+
+  @Test(timeout = 30000)
+  public void testAdminRefreshClusterMaxPriority() throws Exception,
+      YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    uploadDefaultConfiguration();
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, "5");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
+    Assert.assertEquals(5, cs.getMaxClusterLevelAppPriority().getPriority());
+
+    yarnConf = new YarnConfiguration();
+    yarnConf
+        .set(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, "10");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    try {
+      rm.adminService
+          .refreshClusterMaxPriority(RefreshClusterMaxPriorityRequest
+              .newInstance());
+      Assert.assertEquals(10, cs.getMaxClusterLevelAppPriority().getPriority());
+    } catch (Exception ex) {
+      fail("Could not refresh cluster max priority.");
+    }
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)

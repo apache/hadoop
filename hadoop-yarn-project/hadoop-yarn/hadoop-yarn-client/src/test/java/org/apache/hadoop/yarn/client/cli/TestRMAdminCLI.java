@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
@@ -168,6 +169,14 @@ public class TestRMAdminCLI {
     String[] args = { "-refreshAdminAcls" };
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshAdminAcls(any(RefreshAdminAclsRequest.class));
+  }
+
+  @Test(timeout = 5000)
+  public void testRefreshClusterMaxPriority() throws Exception {
+    String[] args = { "-refreshClusterMaxPriority" };
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin).refreshClusterMaxPriority(
+        any(RefreshClusterMaxPriorityRequest.class));
   }
 
   @Test(timeout=500)

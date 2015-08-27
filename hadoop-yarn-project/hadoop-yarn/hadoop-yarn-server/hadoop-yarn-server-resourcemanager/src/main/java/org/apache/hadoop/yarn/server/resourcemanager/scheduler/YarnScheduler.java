@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -328,4 +329,12 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return list of live containers for the given attempt
    */
   List<Container> getTransferredContainers(ApplicationAttemptId appAttemptId);
+
+  /**
+   * Set the cluster max priority
+   * 
+   * @param conf
+   * @throws YarnException
+   */
+  void setClusterMaxPriority(Configuration conf) throws YarnException;
 }
