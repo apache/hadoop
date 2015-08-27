@@ -66,6 +66,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioning
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
@@ -613,6 +615,7 @@ public class AdminService extends CompositeService implements
           false)) {
         refreshServiceAcls(RefreshServiceAclsRequest.newInstance());
       }
+      refreshClusterMaxPriority(RefreshClusterMaxPriorityRequest.newInstance());
     } catch (Exception ex) {
       throw new ServiceFailedException(ex.getMessage());
     }
@@ -741,5 +744,30 @@ public class AdminService extends CompositeService implements
         .newRecordInstance(CheckForDecommissioningNodesResponse.class);
     response.setDecommissioningNodes(decommissioningNodes);
     return response;
+  }
+
+  @Override
+  public RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
+      RefreshClusterMaxPriorityRequest request) throws YarnException,
+      IOException {
+    String argName = "refreshClusterMaxPriority";
+    String msg = "refresh cluster max priority";
+    UserGroupInformation user = checkAcls(argName);
+
+    checkRMStatus(user.getShortUserName(), argName, msg);
+    try {
+      Configuration conf =
+          getConfiguration(new Configuration(false),
+              YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+
+      rmContext.getScheduler().setClusterMaxPriority(conf);
+
+      RMAuditLogger
+          .logSuccess(user.getShortUserName(), argName, "AdminService");
+      return recordFactory
+          .newRecordInstance(RefreshClusterMaxPriorityResponse.class);
+    } catch (YarnException e) {
+      throw logAndWrapException(e, user.getShortUserName(), argName, msg);
+    }
   }
 }

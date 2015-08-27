@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
@@ -132,6 +133,9 @@ public class RMAdminCLI extends HAAdmin {
                   + " (instead of NFS or HDFS), this option will only work"
                   +
                   " when the command run on the machine where RM is running."))
+          .put("-refreshClusterMaxPriority",
+              new UsageInfo("",
+                  "Refresh cluster max priority"))
               .build();
 
   public RMAdminCLI() {
@@ -379,6 +383,15 @@ public class RMAdminCLI extends HAAdmin {
     RefreshServiceAclsRequest request = 
       recordFactory.newRecordInstance(RefreshServiceAclsRequest.class);
     adminProtocol.refreshServiceAcls(request);
+    return 0;
+  }
+
+  private int refreshClusterMaxPriority() throws IOException, YarnException {
+    // Refresh cluster max priority
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    RefreshClusterMaxPriorityRequest request =
+        recordFactory.newRecordInstance(RefreshClusterMaxPriorityRequest.class);
+    adminProtocol.refreshClusterMaxPriority(request);
     return 0;
   }
   
@@ -676,6 +689,8 @@ public class RMAdminCLI extends HAAdmin {
         exitCode = refreshAdminAcls();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcls();
+      } else if ("-refreshClusterMaxPriority".equals(cmd)) {
+        exitCode = refreshClusterMaxPriority();
       } else if ("-getGroups".equals(cmd)) {
         String[] usernames = Arrays.copyOfRange(args, i, args.length);
         exitCode = getGroups(usernames);

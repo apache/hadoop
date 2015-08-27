@@ -184,6 +184,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4014. Support user cli interface in for Application Priority.
     (Rohith Sharma K S via jianhe)
 
+    YARN-3250. Support admin cli interface in for Application Priority.
+    (Rohith Sharma K S via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
