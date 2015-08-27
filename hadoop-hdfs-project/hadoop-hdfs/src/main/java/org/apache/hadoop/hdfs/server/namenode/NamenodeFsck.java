@@ -254,9 +254,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       NumberReplicas numberReplicas= bm.countNodes(blockInfo);
       out.println("Block Id: " + blockId);
       out.println("Block belongs to: "+iNode.getFullPathName());
-      if (blockInfo != null) {
-        out.println("No. of Expected Replica: " + blockInfo.getReplication());
-      }
+      out.println("No. of Expected Replica: " + blockInfo.getReplication());
       out.println("No. of live Replica: " + numberReplicas.liveReplicas());
       out.println("No. of excess Replica: " + numberReplicas.excessReplicas());
       out.println("No. of stale Replica: " +
