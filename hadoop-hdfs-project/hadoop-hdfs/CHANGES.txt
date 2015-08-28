@@ -1251,6 +1251,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8963. Fix incorrect sign extension of xattr length in HDFS-8900.
     (Colin Patrick McCabe via yliu)
 
+    HDFS-8950. NameNode refresh doesn't remove DataNodes that are no longer in
+    the allowed list (Daniel Templeton)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
