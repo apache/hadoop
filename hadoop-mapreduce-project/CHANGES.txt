@@ -559,6 +559,13 @@ Release 2.8.0 - UNRELEASED
     committing is not utilized when input path is absolute.
     (Dustin Cote via aajisaka)
 
+    MAPREDUCE-6357. MultipleOutputs.write() API should document that output
+    committing is not utilized when input path is absolute.
+    (Dustin Cote via aajisaka)
+
+    MAPREDUCE-6452. NPE when intermediate encrypt enabled for LocalRunner.
+    (Zhihai Xu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
