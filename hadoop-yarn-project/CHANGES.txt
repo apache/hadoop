@@ -413,11 +413,14 @@ Release 2.8.0 - UNRELEASED
     YARN-4026. Refactored ContainerAllocator to accept a list of priorites
     rather than a single priority. (Wangda Tan via jianhe)
 
-   YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
-   WebAppProxyServer (djp via rkanter)
+    YARN-4031. Add JvmPauseMonitor to ApplicationHistoryServer and
+    WebAppProxyServer (djp via rkanter)
 
     YARN-4057. If ContainersMonitor is not enabled, only print
     related log info one time. (Jun Gong via zxu)
+
+    YARN-1556. NPE getting application report with a null appId. (Weiwei Yang via 
+    junping_du)
 
   OPTIMIZATIONS
 

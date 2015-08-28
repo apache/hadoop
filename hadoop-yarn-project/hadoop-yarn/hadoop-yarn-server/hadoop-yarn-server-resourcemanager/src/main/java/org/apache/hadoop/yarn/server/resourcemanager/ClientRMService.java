@@ -315,6 +315,9 @@ public class ClientRMService extends AbstractService implements
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException {
     ApplicationId applicationId = request.getApplicationId();
+    if (applicationId == null) {
+      throw new ApplicationNotFoundException("Invalid application id: null");
+    }
 
     UserGroupInformation callerUGI;
     try {

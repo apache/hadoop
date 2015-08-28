@@ -333,6 +333,18 @@ public class TestClientRMService {
           report.getApplicationResourceUsageReport();
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
+
+      // if application id is null
+      GetApplicationReportRequest invalidRequest = recordFactory
+          .newRecordInstance(GetApplicationReportRequest.class);
+      invalidRequest.setApplicationId(null);
+      try {
+        rmService.getApplicationReport(invalidRequest);
+      } catch (YarnException e) {
+        // rmService should return a ApplicationNotFoundException
+        // when a null application id is provided
+        Assert.assertTrue(e instanceof ApplicationNotFoundException);
+      }
     } finally {
       rmService.close();
     }
