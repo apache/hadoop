@@ -43,6 +43,14 @@ public class TestXAttrFeature {
   static final String name7 = "raw.a7";
   static final byte[] value7 = {0x011, 0x012, 0x013};
   static final String name8 = "user.a8";
+  static final String bigXattrKey = "user.big.xattr.key";
+  static final byte[] bigXattrValue = new byte[128];
+
+  static {
+    for (int i = 0; i < bigXattrValue.length; i++) {
+      bigXattrValue[i] = (byte) (i & 0xff);
+    }
+  }
 
   static byte[] randomBytes(int len) {
     Random rand = new Random();
@@ -74,12 +82,14 @@ public class TestXAttrFeature {
     XAttr a5 = XAttrHelper.buildXAttr(name5, value5);
     XAttr a6 = XAttrHelper.buildXAttr(name6, value6);
     XAttr a7 = XAttrHelper.buildXAttr(name7, value7);
+    XAttr bigXattr = XAttrHelper.buildXAttr(bigXattrKey, bigXattrValue);
     xAttrs.add(a2);
     xAttrs.add(a3);
     xAttrs.add(a4);
     xAttrs.add(a5);
     xAttrs.add(a6);
     xAttrs.add(a7);
+    xAttrs.add(bigXattr);
     feature = new XAttrFeature(xAttrs);
 
     XAttr r2 = feature.getXAttr(name2);
@@ -94,6 +104,8 @@ public class TestXAttrFeature {
     assertTrue(a6.equals(r6));
     XAttr r7 = feature.getXAttr(name7);
     assertTrue(a7.equals(r7));
+    XAttr rBigXattr = feature.getXAttr(bigXattrKey);
+    assertTrue(bigXattr.equals(rBigXattr));
     List<XAttr> rs = feature.getXAttrs();
     assertEquals(rs.size(), xAttrs.size());
     for (int i = 0; i < rs.size(); i++) {

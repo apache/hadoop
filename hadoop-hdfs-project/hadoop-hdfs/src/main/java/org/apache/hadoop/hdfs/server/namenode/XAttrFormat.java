@@ -61,12 +61,15 @@ class XAttrFormat {
     for (int i = 0; i < attrs.length;) {
       XAttr.Builder builder = new XAttr.Builder();
       // big-endian
-      int v = Ints.fromBytes(attrs[i++], attrs[i++], attrs[i++], attrs[i++]);
+      int v = Ints.fromBytes(attrs[i], attrs[i + 1],
+          attrs[i + 2], attrs[i + 3]);
+      i += 4;
       int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
       int nid = v & XATTR_NAME_MASK;
       builder.setNameSpace(XATTR_NAMESPACE_VALUES[ns]);
       builder.setName(XAttrStorage.getName(nid));
-      int vlen = (attrs[i++] << 8) | attrs[i++];
+      int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
+      i += 2;
       if (vlen > 0) {
         byte[] value = new byte[vlen];
         System.arraycopy(attrs, i, value, 0, vlen);
@@ -94,12 +97,15 @@ class XAttrFormat {
     XAttr xAttr = XAttrHelper.buildXAttr(prefixedName);
     for (int i = 0; i < attrs.length;) {
       // big-endian
-      int v = Ints.fromBytes(attrs[i++], attrs[i++], attrs[i++], attrs[i++]);
+      int v = Ints.fromBytes(attrs[i], attrs[i + 1],
+          attrs[i + 2], attrs[i + 3]);
+      i += 4;
       int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
       int nid = v & XATTR_NAME_MASK;
       XAttr.NameSpace namespace = XATTR_NAMESPACE_VALUES[ns];
       String name = XAttrStorage.getName(nid);
-      int vlen = (attrs[i++] << 8) | attrs[i++];
+      int vlen = ((0xff & attrs[i]) << 8) | (0xff & attrs[i + 1]);
+      i += 2;
       if (xAttr.getNameSpace() == namespace &&
           xAttr.getName().equals(name)) {
         if (vlen > 0) {
