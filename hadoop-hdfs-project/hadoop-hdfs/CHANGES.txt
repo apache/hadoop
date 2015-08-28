@@ -1,8 +1,5 @@
 Hadoop HDFS Change Log
 
-    HDFS-8879. Quota by storage type usage incorrectly initialized upon namenode
-    restart. (xyao)
-
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -34,6 +31,9 @@ Release 2.7.2 - UNRELEASED
     flawed. (Kihwal Lee via yliu)
 
     HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
+
+    HDFS-8879. Quota by storage type usage incorrectly initialized upon namenode
+    restart. (xyao)
 
 Release 2.7.1 - 2015-07-06
 
