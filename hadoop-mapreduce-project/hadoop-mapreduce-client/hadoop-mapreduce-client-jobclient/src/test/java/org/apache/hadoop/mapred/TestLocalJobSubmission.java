@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -68,6 +69,30 @@ public class TestLocalJobSubmission {
     conf.set(MRConfig.FRAMEWORK_NAME, "local");
     final String[] args = {
         "-jt" , "local", "-libjars", jarPath.toString(),
+        "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
+    };
+    int res = -1;
+    try {
+      res = ToolRunner.run(conf, new SleepJob(), args);
+    } catch (Exception e) {
+      System.out.println("Job failed with " + e.getLocalizedMessage());
+      e.printStackTrace(System.out);
+      fail("Job failed");
+    }
+    assertEquals("dist job res is not 0:", 0, res);
+  }
+
+  /**
+   * test the local job submission with
+   * intermediate data encryption enabled.
+   * @throws IOException
+   */
+  @Test
+  public void testLocalJobEncryptedIntermediateData() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, "local");
+    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+    final String[] args = {
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
     };
     int res = -1;
