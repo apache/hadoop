@@ -95,7 +95,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     long len;
     try {
-      len = impl.getReplicaVisibleLength(PBHelper.convert(request.getBlock()));
+      len = impl.getReplicaVisibleLength(PBHelperClient.convert(request.getBlock()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -132,7 +132,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     BlockLocalPathInfo resp;
     try {
-      resp = impl.getBlockLocalPathInfo(PBHelper.convert(request.getBlock()), PBHelper.convert(request.getToken()));
+      resp = impl.getBlockLocalPathInfo(PBHelperClient.convert(request.getBlock()), PBHelper.convert(request.getToken()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -150,7 +150,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     try {
       String poolId = request.getBlockPoolId();
 
-      List<Token<BlockTokenIdentifier>> tokens = 
+      List<Token<BlockTokenIdentifier>> tokens =
           new ArrayList<Token<BlockTokenIdentifier>>(request.getTokensCount());
       for (TokenProto b : request.getTokensList()) {
         tokens.add(PBHelper.convert(b));

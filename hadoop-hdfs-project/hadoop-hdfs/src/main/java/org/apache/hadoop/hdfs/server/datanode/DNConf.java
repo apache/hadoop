@@ -125,8 +125,8 @@ public class DNConf {
         DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
     
     readaheadLength = conf.getLong(
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
     dropCacheBehindWrites = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY,
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT);

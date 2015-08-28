@@ -23,12 +23,14 @@ import com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeLocalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
@@ -183,6 +185,17 @@ public class PBHelperClient {
       }
     }
     return pinnings;
+  }
+
+  public static ExtendedBlock convert(ExtendedBlockProto eb) {
+    if (eb == null) return null;
+    return new ExtendedBlock( eb.getPoolId(), eb.getBlockId(), eb.getNumBytes(),
+        eb.getGenerationStamp());
+  }
+
+  public static DatanodeLocalInfo convert(DatanodeLocalInfoProto proto) {
+    return new DatanodeLocalInfo(proto.getSoftwareVersion(),
+        proto.getConfigVersion(), proto.getUptime());
   }
 
   static public DatanodeInfoProto convertDatanodeInfo(DatanodeInfo di) {

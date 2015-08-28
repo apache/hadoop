@@ -27,15 +27,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A cache of input stream sockets to Data Node.
@@ -44,7 +45,7 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @VisibleForTesting
 public class PeerCache {
-  private static final Log LOG = LogFactory.getLog(PeerCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PeerCache.class);
   
   private static class Key {
     final DatanodeID dnID;
@@ -188,7 +189,7 @@ public class PeerCache {
     if (peer.isClosed()) return;
     if (capacity <= 0) {
       // Cache disabled.
-      IOUtils.cleanup(LOG, peer);
+      IOUtilsClient.cleanup(LOG, peer);
       return;
     }
     putInternal(dnId, peer);
@@ -222,7 +223,7 @@ public class PeerCache {
         expiryPeriod) {
         break;
       }
-      IOUtils.cleanup(LOG, entry.getValue().getPeer());
+      IOUtilsClient.cleanup(LOG, entry.getValue().getPeer());
       iter.remove();
     }
   }
@@ -241,7 +242,7 @@ public class PeerCache {
         "capacity: " + capacity);
     }
     Entry<Key, Value> entry = iter.next();
-    IOUtils.cleanup(LOG, entry.getValue().getPeer());
+    IOUtilsClient.cleanup(LOG, entry.getValue().getPeer());
     iter.remove();
   }
 
@@ -269,7 +270,7 @@ public class PeerCache {
   @VisibleForTesting
   synchronized void clear() {
     for (Value value : multimap.values()) {
-      IOUtils.cleanup(LOG, value.getPeer());
+      IOUtilsClient.cleanup(LOG, value.getPeer());
     }
     multimap.clear();
   }

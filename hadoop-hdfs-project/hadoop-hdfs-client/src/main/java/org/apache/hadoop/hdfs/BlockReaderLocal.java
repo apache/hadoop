@@ -22,11 +22,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
@@ -41,6 +40,9 @@ import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * BlockReaderLocal enables local short circuited reads. If the DFS client is on
@@ -60,7 +62,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 class BlockReaderLocal implements BlockReader {
-  static final Log LOG = LogFactory.getLog(BlockReaderLocal.class);
+  static final Logger LOG = LoggerFactory.getLogger(BlockReaderLocal.class);
 
   private static final DirectBufferPool bufferPool = new DirectBufferPool();
 
@@ -88,7 +90,7 @@ class BlockReaderLocal implements BlockReader {
     public Builder setCachingStrategy(CachingStrategy cachingStrategy) {
       long readahead = cachingStrategy.getReadahead() != null ?
           cachingStrategy.getReadahead() :
-              DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT;
+              HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT;
       this.maxReadahead = (int)Math.min(Integer.MAX_VALUE, readahead);
       return this;
     }

@@ -182,7 +182,7 @@ public class TestBlockReaderLocalLegacy {
     {
       final LocatedBlock lb = cluster.getNameNode().getRpcServer()
           .getBlockLocations(path.toString(), 0, 1).get(0);
-      proxy = DFSUtil.createClientDatanodeProtocolProxy(
+      proxy = DFSUtilClient.createClientDatanodeProtocolProxy(
           lb.getLocations()[0], conf, 60000, false);
       token = lb.getBlockToken();
 

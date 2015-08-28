@@ -364,7 +364,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       ClientDatanodeProtocol cdp = null;
       
       try {
-        cdp = DFSUtil.createClientDatanodeProtocolProxy(datanode,
+        cdp = DFSUtilClient.createClientDatanodeProtocolProxy(datanode,
             dfsClient.getConfiguration(), conf.getSocketTimeout(),
             conf.isConnectToDnViaHostname(), locatedblock);
         

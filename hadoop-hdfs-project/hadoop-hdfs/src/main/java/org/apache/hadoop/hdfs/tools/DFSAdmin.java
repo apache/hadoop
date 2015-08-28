@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -1940,7 +1941,7 @@ public class DFSAdmin extends FsShell {
 
     // Create the client
     ClientDatanodeProtocol dnProtocol =     
-        DFSUtil.createClientDatanodeProtocolProxy(datanodeAddr, getUGI(), conf,
+        DFSUtilClient.createClientDatanodeProtocolProxy(datanodeAddr, getUGI(), conf,
             NetUtils.getSocketFactory(conf, ClientDatanodeProtocol.class));
     return dnProtocol;
   }

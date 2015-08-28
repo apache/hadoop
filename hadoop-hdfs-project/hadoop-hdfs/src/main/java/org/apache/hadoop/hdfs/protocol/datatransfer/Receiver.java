@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCustomProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
@@ -115,7 +114,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      readBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
+      readBlock(PBHelperClient.convert(proto.getHeader().getBaseHeader().getBlock()),
         PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
         proto.getHeader().getClientName(),
         proto.getOffset(),
@@ -136,7 +135,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      writeBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
+      writeBlock(PBHelperClient.convert(proto.getHeader().getBaseHeader().getBlock()),
           PBHelperClient.convertStorageType(proto.getStorageType()),
           PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
           proto.getHeader().getClientName(),
@@ -167,7 +166,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      transferBlock(PBHelper.convert(proto.getHeader().getBaseHeader().getBlock()),
+      transferBlock(PBHelperClient.convert(proto.getHeader().getBaseHeader().getBlock()),
           PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
           proto.getHeader().getClientName(),
           targets,
@@ -186,7 +185,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      requestShortCircuitFds(PBHelper.convert(proto.getHeader().getBlock()),
+      requestShortCircuitFds(PBHelperClient.convert(proto.getHeader().getBlock()),
           PBHelper.convert(proto.getHeader().getToken()),
           slotId, proto.getMaxVersion(),
           proto.getSupportsReceiptVerification());
@@ -228,7 +227,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      replaceBlock(PBHelper.convert(proto.getHeader().getBlock()),
+      replaceBlock(PBHelperClient.convert(proto.getHeader().getBlock()),
           PBHelperClient.convertStorageType(proto.getStorageType()),
           PBHelper.convert(proto.getHeader().getToken()),
           proto.getDelHint(),
@@ -244,7 +243,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-      copyBlock(PBHelper.convert(proto.getHeader().getBlock()),
+      copyBlock(PBHelperClient.convert(proto.getHeader().getBlock()),
           PBHelper.convert(proto.getHeader().getToken()));
     } finally {
       if (traceScope != null) traceScope.close();
@@ -257,7 +256,7 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-    blockChecksum(PBHelper.convert(proto.getHeader().getBlock()),
+    blockChecksum(PBHelperClient.convert(proto.getHeader().getBlock()),
         PBHelper.convert(proto.getHeader().getToken()));
     } finally {
       if (traceScope != null) traceScope.close();

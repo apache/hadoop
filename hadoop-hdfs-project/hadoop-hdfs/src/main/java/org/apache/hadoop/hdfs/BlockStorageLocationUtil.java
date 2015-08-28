@@ -350,7 +350,8 @@ class BlockStorageLocationUtil {
       TraceScope scope =
           Trace.startSpan("getHdfsBlocksMetadata", parentSpan);
       try {
-        cdp = DFSUtil.createClientDatanodeProtocolProxy(datanode, configuration,
+        cdp = DFSUtilClient.createClientDatanodeProtocolProxy(
+            datanode, configuration,
             timeout, connectToDnViaHostname);
         metadata = cdp.getHdfsBlocksMetadata(poolId, blockIds, dnTokens);
       } catch (IOException e) {

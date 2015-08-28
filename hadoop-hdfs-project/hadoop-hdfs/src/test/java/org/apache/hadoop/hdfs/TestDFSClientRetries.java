@@ -856,7 +856,7 @@ public class TestDFSClientRetries {
     ClientDatanodeProtocol proxy = null;
 
     try {
-      proxy = DFSUtil.createClientDatanodeProtocolProxy(
+      proxy = DFSUtilClient.createClientDatanodeProtocolProxy(
           fakeDnId, conf, 500, false, fakeBlock);
 
       proxy.getReplicaVisibleLength(new ExtendedBlock("bpid", 1));
