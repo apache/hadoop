@@ -21,14 +21,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
@@ -36,10 +34,13 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
 public class KeyProviderCache {
 
-  public static final Log LOG = LogFactory.getLog(KeyProviderCache.class);
+  public static final Logger LOG = LoggerFactory.getLogger(KeyProviderCache.class);
 
   private final Cache<URI, KeyProvider> cache;
 
@@ -72,7 +73,7 @@ public class KeyProviderCache {
       return cache.get(kpURI, new Callable<KeyProvider>() {
         @Override
         public KeyProvider call() throws Exception {
-          return DFSUtil.createKeyProvider(conf);
+          return DFSUtilClient.createKeyProvider(conf);
         }
       });
     } catch (Exception e) {
@@ -83,11 +84,11 @@ public class KeyProviderCache {
 
   private URI createKeyProviderURI(Configuration conf) {
     final String providerUriStr =
-        conf.getTrimmed(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
+        conf.getTrimmed(HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
     // No provider set in conf
     if (providerUriStr.isEmpty()) {
       LOG.error("Could not find uri with key ["
-          + DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI
+          + HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI
           + "] to create a keyProvider !!");
       return null;
     }

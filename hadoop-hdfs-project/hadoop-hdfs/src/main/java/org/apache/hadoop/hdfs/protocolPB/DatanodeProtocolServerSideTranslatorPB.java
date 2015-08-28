@@ -281,7 +281,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     final List<String> sidprotos = request.getNewTargetStoragesList();
     final String[] storageIDs = sidprotos.toArray(new String[sidprotos.size()]);
     try {
-      impl.commitBlockSynchronization(PBHelper.convert(request.getBlock()),
+      impl.commitBlockSynchronization(PBHelperClient.convert(request.getBlock()),
           request.getNewGenStamp(), request.getNewLength(),
           request.getCloseFile(), request.getDeleteBlock(), dns, storageIDs);
     } catch (IOException e) {

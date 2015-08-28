@@ -247,7 +247,7 @@ public class TestBlockReaderLocal {
   @Test
   public void testBlockReaderSimpleReads() throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderSimpleReads(), true,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -259,7 +259,7 @@ public class TestBlockReaderLocal {
   @Test
   public void testBlockReaderSimpleReadsNoChecksum() throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderSimpleReads(), false,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -297,14 +297,14 @@ public class TestBlockReaderLocal {
   @Test
   public void testBlockReaderLocalArrayReads2() throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalArrayReads2(),
-        true, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
   public void testBlockReaderLocalArrayReads2NoChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalArrayReads2(),
-        false, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -341,7 +341,7 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalByteBufferReads()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalByteBufferReads(),
-        true, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -349,7 +349,7 @@ public class TestBlockReaderLocal {
       throws IOException {
     runBlockReaderLocalTest(
         new TestBlockReaderLocalByteBufferReads(),
-        false, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
   
   @Test
@@ -473,7 +473,7 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalReadCorruptStart()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadCorruptStart(), true,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
   
   private static class TestBlockReaderLocalReadCorrupt
@@ -524,14 +524,14 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalReadCorrupt()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadCorrupt(), true,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
   public void testBlockReaderLocalReadCorruptNoChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadCorrupt(), false,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -576,14 +576,14 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalWithMlockChanges()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalWithMlockChanges(),
-        true, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
   public void testBlockReaderLocalWithMlockChangesNoChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalWithMlockChanges(),
-        false, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -649,14 +649,14 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalOnFileWithoutChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalOnFileWithoutChecksum(),
-        true, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
   public void testBlockReaderLocalOnFileWithoutChecksumNoChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalOnFileWithoutChecksum(),
-        false, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
@@ -677,14 +677,14 @@ public class TestBlockReaderLocal {
   public void testBlockReaderLocalReadZeroBytes()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadZeroBytes(),
-        true, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        true, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test
   public void testBlockReaderLocalReadZeroBytesNoChecksum()
       throws IOException {
     runBlockReaderLocalTest(new TestBlockReaderLocalReadZeroBytes(),
-        false, DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+        false, HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
   }
 
   @Test

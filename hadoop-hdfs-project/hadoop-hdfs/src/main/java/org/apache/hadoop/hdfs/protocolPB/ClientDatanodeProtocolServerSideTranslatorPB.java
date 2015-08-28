@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Optional;
@@ -86,7 +84,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     long len;
     try {
-      len = impl.getReplicaVisibleLength(PBHelper.convert(request.getBlock()));
+      len = impl.getReplicaVisibleLength(PBHelperClient.convert(request.getBlock()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -123,7 +121,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     BlockLocalPathInfo resp;
     try {
-      resp = impl.getBlockLocalPathInfo(PBHelper.convert(request.getBlock()), PBHelper.convert(request.getToken()));
+      resp = impl.getBlockLocalPathInfo(PBHelperClient.convert(request.getBlock()), PBHelper.convert(request.getToken()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }

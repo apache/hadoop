@@ -27,8 +27,6 @@ import javax.net.SocketFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -70,6 +68,8 @@ import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -81,8 +81,8 @@ import com.google.protobuf.ServiceException;
 public class ClientDatanodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientDatanodeProtocol,
     ProtocolTranslator, Closeable {
-  public static final Log LOG = LogFactory
-      .getLog(ClientDatanodeProtocolTranslatorPB.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(ClientDatanodeProtocolTranslatorPB.class);
   
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
@@ -219,7 +219,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
-    return new BlockLocalPathInfo(PBHelper.convert(resp.getBlock()),
+    return new BlockLocalPathInfo(PBHelperClient.convert(resp.getBlock()),
         resp.getLocalPath(), resp.getLocalMetaPath());
   }
 
@@ -251,7 +251,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
     GetDatanodeInfoResponseProto response;
     try {
       response = rpcProxy.getDatanodeInfo(NULL_CONTROLLER, VOID_GET_DATANODE_INFO);
-      return PBHelper.convert(response.getLocalInfo());
+      return PBHelperClient.convert(response.getLocalInfo());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
