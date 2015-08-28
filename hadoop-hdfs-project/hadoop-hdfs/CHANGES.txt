@@ -1243,6 +1243,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8969. Clean up findbugs warnings for HDFS-8823 and HDFS-8932.
     (Anu Engineer via wheat9)
 
+    HDFS-8963. Fix incorrect sign extension of xattr length in HDFS-8900.
+    (Colin Patrick McCabe via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
