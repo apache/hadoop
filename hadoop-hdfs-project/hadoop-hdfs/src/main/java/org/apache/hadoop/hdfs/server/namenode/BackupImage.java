@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -82,6 +83,8 @@ public class BackupImage extends FSImage {
   
   private FSNamesystem namesystem;
 
+  private int quotaInitThreads;
+
   /**
    * Construct a backup image.
    * @param conf Configuration
@@ -91,6 +94,9 @@ public class BackupImage extends FSImage {
     super(conf);
     storage.setDisablePreUpgradableLayoutCheck(true);
     bnState = BNState.DROP_UNTIL_NEXT_ROLL;
+    quotaInitThreads = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT);
   }
 
   synchronized FSNamesystem getNamesystem() {
@@ -218,7 +224,7 @@ public class BackupImage extends FSImage {
 
       FSImage.updateCountForQuota(
           getNamesystem().dir.getBlockStoragePolicySuite(),
-          getNamesystem().dir.rootDir); // inefficient!
+          getNamesystem().dir.rootDir, quotaInitThreads);
     } finally {
       backupInputStream.clear();
     }
