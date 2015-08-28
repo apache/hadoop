@@ -68,10 +68,7 @@ public class TestQuotaByStorageType {
         .storageTypes(new StorageType[]{StorageType.SSD, StorageType.DEFAULT})
         .build();
     cluster.waitActive();
-
-    fsdir = cluster.getNamesystem().getFSDirectory();
-    dfs = cluster.getFileSystem();
-    fsn = cluster.getNamesystem();
+    refreshClusterState();
   }
 
   @After
@@ -79,6 +76,13 @@ public class TestQuotaByStorageType {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  // Cluster state must be refreshed after each start/restart in the test
+  private void refreshClusterState() throws IOException{
+    fsdir = cluster.getNamesystem().getFSDirectory();
+    dfs = cluster.getFileSystem();
+    fsn = cluster.getNamesystem();
   }
 
   @Test(timeout = 60000)
@@ -663,6 +667,7 @@ public class TestQuotaByStorageType {
 
     // Restart namenode to make sure the editlog is correct
     cluster.restartNameNode(true);
+    refreshClusterState();
 
     INode testDirNodeAfterNNRestart = fsdir.getINode4Write(testDir.toString());
     // Verify quota is still set
@@ -715,6 +720,7 @@ public class TestQuotaByStorageType {
     dfs.saveNamespace();
     dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
     cluster.restartNameNode(true);
+    refreshClusterState();
 
     INode testDirNodeAfterNNRestart = fsdir.getINode4Write(testDir.toString());
     assertTrue(testDirNode.isDirectory());
