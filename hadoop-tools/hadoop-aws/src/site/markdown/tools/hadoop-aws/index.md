@@ -206,7 +206,7 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.attempts.maximum</name>
-      <value>10</value>
+      <value>20</value>
       <description>How many times we should retry commands on transient errors.</description>
     </property>
 
@@ -218,7 +218,7 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.connection.timeout</name>
-      <value>50000</value>
+      <value>200000</value>
       <description>Socket connection timeout in milliseconds.</description>
     </property>
 
