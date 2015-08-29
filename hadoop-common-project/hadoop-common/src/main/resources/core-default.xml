@@ -565,6 +565,16 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.protected.directories</name>
+  <value></value>
+  <description>A comma-separated list of directories which cannot
+    be deleted even by the superuser unless they are empty. This
+    setting can be used to guard important system directories
+    against accidental deletion due to administrator error.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.file.impl</name>
   <value>org.apache.hadoop.fs.local.LocalFs</value>
   <description>The AbstractFileSystem for file: uris.</description>
