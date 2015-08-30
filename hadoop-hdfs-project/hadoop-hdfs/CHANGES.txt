@@ -357,6 +357,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8131. Implement a space balanced block placement policy (Liu Shaohui
     via kihwal)
 
+    HDFS-8155. Support OAuth2 in WebHDFS. (jghoman)
+
   IMPROVEMENTS
 
     HDFS-2390. dfsadmin -setBalancerBandwidth does not validate -ve value

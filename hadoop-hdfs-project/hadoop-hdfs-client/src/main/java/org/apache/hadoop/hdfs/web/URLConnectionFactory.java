@@ -31,6 +31,7 @@ import javax.net.ssl.SSLSocketFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.web.oauth2.OAuth2ConnectionConfigurator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -77,14 +78,41 @@ public class URLConnectionFactory {
    * try to load SSL certificates when it is specified.
    */
   public static URLConnectionFactory newDefaultURLConnectionFactory(Configuration conf) {
+    ConnectionConfigurator conn = getSSLConnectionConfiguration(conf);
+
+    return new URLConnectionFactory(conn);
+  }
+
+  private static ConnectionConfigurator
+      getSSLConnectionConfiguration(Configuration conf) {
     ConnectionConfigurator conn = null;
     try {
       conn = newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
     } catch (Exception e) {
       LOG.debug(
-          "Cannot load customized ssl related configuration. Fallback to system-generic settings.",
+          "Cannot load customized ssl related configuration. Fallback to" +
+              " system-generic settings.",
           e);
       conn = DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+    }
+
+    return conn;
+  }
+
+  /**
+   * Construct a new URLConnectionFactory that supports OAut-based connections.
+   * It will also try to load the SSL configuration when they are specified.
+   */
+  public static URLConnectionFactory
+      newOAuth2URLConnectionFactory(Configuration conf) throws IOException {
+    ConnectionConfigurator conn = null;
+    try {
+      ConnectionConfigurator sslConnConfigurator
+          = newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
+
+      conn = new OAuth2ConnectionConfigurator(conf, sslConnConfigurator);
+    } catch (Exception e) {
+      throw new IOException("Unable to load OAuth2 connection factory.", e);
     }
     return new URLConnectionFactory(conn);
   }
