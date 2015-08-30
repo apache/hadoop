@@ -36,6 +36,14 @@ public interface HdfsClientConfigKeys {
   String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
+  String DFS_WEBHDFS_OAUTH_ENABLED_KEY = "dfs.webhdfs.oauth2.enabled";
+  boolean DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT = false;
+
+  String OAUTH_CLIENT_ID_KEY = "dfs.webhdfs.oauth2.client.id";
+  String OAUTH_REFRESH_URL_KEY = "dfs.webhdfs.oauth2.refresh.url";
+
+  String ACCESS_TOKEN_PROVIDER_KEY = "dfs.webhdfs.oauth2.access.token.provider";
+
   String PREFIX = "dfs.client.";
   String  DFS_NAMESERVICES = "dfs.nameservices";
   int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 50070;
