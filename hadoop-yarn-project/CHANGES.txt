@@ -1453,7 +1453,7 @@ Release 2.7.0 - 2015-04-20
     YARN-2914. [YARN-1492] Potential race condition in Singleton implementation of 
     SharedCacheUploaderMetrics, CleanerMetrics, ClientSCMMetrics. (Varun Saxena via kasha)
 
-    YARN-2964. FSLeafQueue#assignContainer - document the reason for using both write and
+    YARN-2945. FSLeafQueue#assignContainer - document the reason for using both write and
     read locks. (Tsuyoshi Ozawa via kasha)
 
     YARN-2944. InMemorySCMStore can not be instantiated with ReflectionUtils#newInstance.
