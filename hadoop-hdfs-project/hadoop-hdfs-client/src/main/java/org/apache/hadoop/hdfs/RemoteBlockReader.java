@@ -50,6 +50,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -60,6 +62,8 @@ import org.apache.htrace.TraceScope;
 @InterfaceAudience.Private
 @Deprecated
 public class RemoteBlockReader extends FSInputChecker implements BlockReader {
+  static final Logger LOG = LoggerFactory.getLogger(FSInputChecker.class);
+
   private final Peer peer;
   private final DatanodeID datanodeID;
   private final DataInputStream in;
@@ -488,7 +492,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public int available() throws IOException {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
-    return DFSClient.TCP_WINDOW_SIZE;
+    return RemoteBlockReader2.TCP_WINDOW_SIZE;
   }
 
   @Override

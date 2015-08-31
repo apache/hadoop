@@ -24,14 +24,14 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class to handle reading packets one-at-a-time from the wire.
@@ -47,7 +47,7 @@ public class PacketReceiver implements Closeable {
    */
   private static final int MAX_PACKET_SIZE = 16 * 1024 * 1024;
 
-  static final Log LOG = LogFactory.getLog(PacketReceiver.class);
+  static final Logger LOG = LoggerFactory.getLogger(PacketReceiver.class);
   
   private static final DirectBufferPool bufferPool = new DirectBufferPool();
   private final boolean useDirectBuffers;
