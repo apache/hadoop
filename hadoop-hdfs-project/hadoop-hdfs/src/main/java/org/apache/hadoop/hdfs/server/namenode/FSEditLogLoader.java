@@ -506,7 +506,7 @@ public class FSEditLogLoader {
       }
       INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path), path);
       // add the new block to the INodeFile
-      addNewBlock(fsDir, addBlockOp, oldFile);
+      addNewBlock(addBlockOp, oldFile);
       break;
     }
     case OP_SET_REPLICATION: {
@@ -940,7 +940,7 @@ public class FSEditLogLoader {
   /**
    * Add a new block into the given INodeFile
    */
-  private void addNewBlock(FSDirectory fsDir, AddBlockOp op, INodeFile file)
+  private void addNewBlock(AddBlockOp op, INodeFile file)
       throws IOException {
     BlockInfo[] oldBlocks = file.getBlocks();
     Block pBlock = op.getPenultimateBlock();
@@ -960,7 +960,7 @@ public class FSEditLogLoader {
       
       oldLastBlock.setNumBytes(pBlock.getNumBytes());
       if (!oldLastBlock.isComplete()) {
-        fsNamesys.getBlockManager().forceCompleteBlock(file, oldLastBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(oldLastBlock);
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
       }
     } else { // the penultimate block is null
@@ -1013,7 +1013,7 @@ public class FSEditLogLoader {
       if (!oldBlock.isComplete() &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
-        fsNamesys.getBlockManager().forceCompleteBlock(file, oldBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(oldBlock);
       }
       if (changeMade) {
         // The state or gen-stamp of the block has changed. So, we may be

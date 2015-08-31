@@ -648,37 +648,34 @@ public class BlockManager implements BlockStatsMXBean {
       return false; // already completed (e.g. by syncBlock)
     
     final boolean b = commitBlock(lastBlock, commitBlock);
-    if(countNodes(lastBlock).liveReplicas() >= minReplication)
-      completeBlock(bc, bc.numBlocks()-1, false);
+    if (countNodes(lastBlock).liveReplicas() >= minReplication) {
+      completeBlock(lastBlock, false);
+    }
     return b;
   }
 
   /**
    * Convert a specified block of the file to a complete block.
-   * @param bc file
-   * @param blkIndex  block index in the file
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private BlockInfo completeBlock(final BlockCollection bc,
-      final int blkIndex, boolean force) throws IOException {
-    if(blkIndex < 0)
-      return null;
-    BlockInfo curBlock = bc.getBlocks()[blkIndex];
-    if(curBlock.isComplete())
-      return curBlock;
+  private void completeBlock(BlockInfo curBlock, boolean force)
+      throws IOException {
+    if (curBlock.isComplete()) {
+      return;
+    }
 
     int numNodes = curBlock.numNodes();
-    if (!force && numNodes < minReplication)
-      throw new IOException("Cannot complete block: " +
-          "block does not satisfy minimal replication requirement.");
-    if(!force && curBlock.getBlockUCState() != BlockUCState.COMMITTED)
+    if (!force && numNodes < minReplication) {
+      throw new IOException("Cannot complete block: "
+          + "block does not satisfy minimal replication requirement.");
+    }
+    if (!force && curBlock.getBlockUCState() != BlockUCState.COMMITTED) {
       throw new IOException(
           "Cannot complete block: block has not been COMMITTED by the client");
-    BlockInfo completeBlock = curBlock.convertToCompleteBlock();
-    // replace penultimate block in file
-    bc.setBlock(blkIndex, completeBlock);
-    
+    }
+
+    curBlock.convertToCompleteBlock();
     // Since safe-mode only counts complete blocks, and we now have
     // one more complete block, we need to adjust the total up, and
     // also count it as safe, if we have at least the minimum replica
@@ -688,33 +685,18 @@ public class BlockManager implements BlockStatsMXBean {
     namesystem.adjustSafeModeBlockTotals(0, 1);
     namesystem.incrementSafeBlockCount(
         Math.min(numNodes, minReplication));
-    
-    // replace block in the blocksMap
-    return blocksMap.replaceBlock(completeBlock);
   }
 
-  private BlockInfo completeBlock(final BlockCollection bc,
-      final BlockInfo block, boolean force) throws IOException {
-    BlockInfo[] fileBlocks = bc.getBlocks();
-    for(int idx = 0; idx < fileBlocks.length; idx++)
-      if(fileBlocks[idx] == block) {
-        return completeBlock(bc, idx, force);
-      }
-    return block;
-  }
-  
   /**
    * Force the given block in the given file to be marked as complete,
    * regardless of whether enough replicas are present. This is necessary
    * when tailing edit logs as a Standby.
    */
-  public BlockInfo forceCompleteBlock(final BlockCollection bc,
-      final BlockInfo block) throws IOException {
+  public void forceCompleteBlock(final BlockInfo block) throws IOException {
     block.commitBlock(block);
-    return completeBlock(bc, block, true);
+    completeBlock(block, true);
   }
 
-  
   /**
    * Convert the last block of the file to an under construction block.<p>
    * The block is converted only if the file has blocks and the last one
@@ -2503,7 +2485,7 @@ public class BlockManager implements BlockStatsMXBean {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication) {
-      completeBlock(getBlockCollection(storedBlock), storedBlock, false);
+      completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
@@ -2577,7 +2559,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
-      storedBlock = completeBlock(bc, storedBlock, false);
+      completeBlock(storedBlock, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that
