@@ -827,6 +827,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4092. Fixed UI redirection to print useful messages when both RMs are
     in standby mode. (Xuan Gong via jianhe)
 
+    YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
+    G R  via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
