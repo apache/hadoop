@@ -8,6 +8,9 @@ Release 2.6.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-4092. Fixed UI redirection to print useful messages when both RMs are
+    in standby mode. (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

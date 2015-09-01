@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -285,6 +286,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     getAdminService(0).transitionToActive(req);
     String rm1Url = "http://0.0.0.0:18088";
     String rm2Url = "http://0.0.0.0:28088";
+
     String header = getHeader("Refresh", rm2Url);
     assertTrue(header.contains("; url=" + rm1Url));
 
@@ -326,6 +328,16 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     // Due to the limitation of MiniYARNCluster and dispatcher is a singleton,
     // we couldn't add the test case after explicitFailover();
+
+    // transit the active RM to standby
+    // Both of RMs are in standby mode
+    getAdminService(0).transitionToStandby(req);
+    // RM2 is expected to send the httpRequest to itself.
+    // The Header Field: Refresh is expected to be set.
+    String redirectURL = getRefreshURL(rm2Url);
+    assertTrue(redirectURL != null
+        && redirectURL.contains(YarnWebParams.NEXT_REFRESH_INTERVAL)
+        && redirectURL.contains(rm2Url));
   }
 
   static String getHeader(String field, String url) {
@@ -340,4 +352,17 @@ public class TestRMFailover extends ClientBaseWithFixes {
     return fieldHeader;
   }
 
+  static String getRefreshURL(String url) {
+    String redirectUrl = null;
+    try {
+      HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+      // do not automatically follow the redirection
+      // otherwise we get too many redirections exception
+      conn.setInstanceFollowRedirects(false);
+      redirectUrl = conn.getHeaderField("Refresh");
+    } catch (Exception e) {
+      // throw new RuntimeException(e);
+    }
+    return redirectUrl;
+  }
 }
