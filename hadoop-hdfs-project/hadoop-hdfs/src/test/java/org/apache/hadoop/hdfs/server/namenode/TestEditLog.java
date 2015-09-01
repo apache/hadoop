@@ -875,7 +875,7 @@ public class TestEditLog {
       tracker = new FSEditLogLoader.PositionTrackingInputStream(in);
       in = new DataInputStream(tracker);
             
-      reader = new FSEditLogOp.Reader(in, tracker, version);
+      reader = FSEditLogOp.Reader.create(in, tracker, version);
     }
   
     @Override
