@@ -762,6 +762,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12367. Move TestFileUtil's test resources to resources folder.
     (wang via yliu)
 
+    HADOOP-12369. Point hadoop-project/pom.xml java.security.krb5.conf
+    within target folder. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
