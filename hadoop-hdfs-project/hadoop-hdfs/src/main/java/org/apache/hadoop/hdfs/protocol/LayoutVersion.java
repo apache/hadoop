@@ -87,7 +87,7 @@ public class LayoutVersion {
     FSIMAGE_COMPRESSION(-25, "Support for fsimage compression"),
     FSIMAGE_CHECKSUM(-26, "Support checksum for fsimage"),
     REMOVE_REL13_DISK_LAYOUT_SUPPORT(-27, "Remove support for 0.13 disk layout"),
-    EDITS_CHESKUM(-28, "Support checksum for editlog"),
+    EDITS_CHECKSUM(-28, "Support checksum for editlog"),
     UNUSED(-29, "Skipped version"),
     FSIMAGE_NAME_OPTIMIZATION(-30, "Store only last part of path in fsimage"),
     RESERVED_REL20_203(-31, -19, "Reserved for release 0.20.203", true,

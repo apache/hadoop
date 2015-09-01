@@ -872,6 +872,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8946. Improve choosing datanode storage for block placement. (yliu)
 
+    HDFS-8965. Harden edit log reading code against out of memory errors (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
