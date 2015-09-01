@@ -1262,6 +1262,22 @@ public class LeafQueue extends AbstractCSQueue {
     }
   }
 
+  @Override
+  public void incUsedResource(String nodeLabel, Resource resourceToInc,
+      SchedulerApplicationAttempt application) {
+    getUser(application.getUser()).getResourceUsage().incUsed(nodeLabel,
+        resourceToInc);
+    super.incUsedResource(nodeLabel, resourceToInc, application);
+  }
+
+  @Override
+  public void decUsedResource(String nodeLabel, Resource resourceToDec,
+      SchedulerApplicationAttempt application) {
+    getUser(application.getUser()).getResourceUsage().decUsed(nodeLabel,
+        resourceToDec);
+    super.decUsedResource(nodeLabel, resourceToDec, application);
+  }
+
   @VisibleForTesting
   public static class User {
     ResourceUsage userResourceUsage = new ResourceUsage();
