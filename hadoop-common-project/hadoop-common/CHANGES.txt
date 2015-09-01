@@ -181,6 +181,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12367. Move TestFileUtil's test resources to resources folder.
     (wang via yliu)
 
+    HADOOP-12369. Point hadoop-project/pom.xml java.security.krb5.conf
+    within target folder. (wang)
+
   BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
@@ -252,7 +255,7 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
 
- OPTIMIZATIONS
+  OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
     buildListing (Zoran Dimitrijevic via Colin P. McCabe)
