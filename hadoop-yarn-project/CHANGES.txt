@@ -422,6 +422,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1556. NPE getting application report with a null appId. (Weiwei Yang via 
     junping_du)
 
+    YARN-4092. Fixed UI redirection to print useful messages when both RMs are
+    in standby mode. (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
