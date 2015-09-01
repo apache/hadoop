@@ -742,15 +742,15 @@ public class FileUtil {
 
     int count;
     byte data[] = new byte[2048];
-    BufferedOutputStream outputStream = new BufferedOutputStream(
-        new FileOutputStream(outputFile));
+    try (BufferedOutputStream outputStream = new BufferedOutputStream(
+        new FileOutputStream(outputFile));) {
 
-    while ((count = tis.read(data)) != -1) {
-      outputStream.write(data, 0, count);
+      while ((count = tis.read(data)) != -1) {
+        outputStream.write(data, 0, count);
+      }
+
+      outputStream.flush();
     }
-
-    outputStream.flush();
-    outputStream.close();
   }
 
   /**

@@ -1123,6 +1123,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12359. hadoop fs -getmerge doc is wrong.
     (Jagadesh Kiran N via aajisaka)
 
+    HADOOP-10365. BufferedOutputStream in FileUtil#unpackEntries() should be
+    closed in finally block. (Kiran Kumar M R and Sanghyun Yun via ozawa)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
