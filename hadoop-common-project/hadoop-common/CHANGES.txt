@@ -759,6 +759,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
     (wang)
 
+    HADOOP-12367. Move TestFileUtil's test resources to resources folder.
+    (wang via yliu)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
