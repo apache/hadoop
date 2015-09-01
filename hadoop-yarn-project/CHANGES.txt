@@ -1701,6 +1701,9 @@ Release 2.7.0 - 2015-04-20
     YARN-3265. Fixed a deadlock in CapacityScheduler by always passing a queue's
     available resource-limit from the parent queue. (Wangda Tan via vinodkv)
 
+    YARN-3222. Fixed RMNode to send scheduler events in sequential order when a
+    node reconnects. (Rohith Sharma K S via jianhe)
+
     YARN-3131. YarnClientImpl should check FAILED and KILLED state in
     submitApplication (Chang Li via jlowe)
     
