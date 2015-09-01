@@ -368,9 +368,18 @@ Returns 0 on success and non-zero on error.
 getmerge
 --------
 
-Usage: `hadoop fs -getmerge <src> <localdst> [addnl]`
+Usage: `hadoop fs -getmerge [-nl] <src> <localdst>`
 
-Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally addnl can be set to enable adding a newline character at the end of each file.
+Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally -nl can be set to enable adding a newline character (LF) at the end of each file.
+
+Examples:
+
+* `hadoop fs -getmerge -nl  /src  /opt/output.txt`
+* `hadoop fs -getmerge -nl  /src/file1.txt /src/file2.txt  /output.txt`
+
+Exit Code:
+
+Returns 0 on success and non-zero on error.
 
 help
 ----
