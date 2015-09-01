@@ -26,12 +26,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
@@ -458,19 +455,18 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
             .entrySet().iterator(); iter.hasNext(); ) {
           Map.Entry<StorageType, Integer> entry = iter.next();
-          for (DatanodeStorageInfo localStorage : DFSUtil.shuffle(
-              localDatanode.getStorageInfos())) {
-            StorageType type = entry.getKey();
-            if (addIfIsGoodTarget(localStorage, excludedNodes, blocksize,
-                results, type) >= 0) {
-              int num = entry.getValue();
-              if (num == 1) {
-                iter.remove();
-              } else {
-                entry.setValue(num - 1);
-              }
-              return localStorage;
+          DatanodeStorageInfo localStorage = chooseStorage4Block(
+              localDatanode, blocksize, results, entry.getKey());
+          if (localStorage != null) {
+            // add node and related nodes to excludedNode
+            addToExcludedNodes(localDatanode, excludedNodes);
+            int num = entry.getValue();
+            if (num == 1) {
+              iter.remove();
+            } else {
+              entry.setValue(num - 1);
             }
+            return localStorage;
           }
         }
       } 
@@ -651,7 +647,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                             boolean avoidStaleNodes,
                             EnumMap<StorageType, Integer> storageTypes)
                             throws NotEnoughReplicasException {
-      
+
     int numOfAvailableNodes = clusterMap.countNumOfAvailableNodes(
         scope, excludedNodes);
     StringBuilder builder = null;
@@ -669,49 +665,39 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           builder.append("\nNode ").append(NodeBase.getPath(chosenNode)).append(" [");
         }
         numOfAvailableNodes--;
-        if (!isGoodDatanode(chosenNode, maxNodesPerRack, considerLoad,
+        DatanodeStorageInfo storage = null;
+        if (isGoodDatanode(chosenNode, maxNodesPerRack, considerLoad,
             results, avoidStaleNodes)) {
-          if (LOG.isDebugEnabled()) {
-            builder.append("\n]");
-          }
-          badTarget = true;
-          continue;
-        }
-
-        final DatanodeStorageInfo[] storages = DFSUtil.shuffle(
-            chosenNode.getStorageInfos());
-        int i = 0;
-        boolean search = true;
-        for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
-            .entrySet().iterator(); search && iter.hasNext(); ) {
-          Map.Entry<StorageType, Integer> entry = iter.next();
-          for (i = 0; i < storages.length; i++) {
-            StorageType type = entry.getKey();
-            final int newExcludedNodes = addIfIsGoodTarget(storages[i],
-                excludedNodes, blocksize, results, type);
-            if (newExcludedNodes >= 0) {
+          for (Iterator<Map.Entry<StorageType, Integer>> iter = storageTypes
+              .entrySet().iterator(); iter.hasNext(); ) {
+            Map.Entry<StorageType, Integer> entry = iter.next();
+            storage = chooseStorage4Block(
+                chosenNode, blocksize, results, entry.getKey());
+            if (storage != null) {
               numOfReplicas--;
               if (firstChosen == null) {
-                firstChosen = storages[i];
+                firstChosen = storage;
               }
-              numOfAvailableNodes -= newExcludedNodes;
+              // add node and related nodes to excludedNode
+              numOfAvailableNodes -=
+                  addToExcludedNodes(chosenNode, excludedNodes);
               int num = entry.getValue();
               if (num == 1) {
                 iter.remove();
               } else {
                 entry.setValue(num - 1);
               }
-              search = false;
               break;
             }
           }
         }
+
         if (LOG.isDebugEnabled()) {
           builder.append("\n]");
         }
 
         // If no candidate storage was found on this DN then set badTarget.
-        badTarget = (i == storages.length);
+        badTarget = (storage == null);
       }
     }
       
@@ -740,32 +726,27 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   /**
-   * If the given storage is a good target, add it to the result list and
-   * update the set of excluded nodes.
-   * @return -1 if the given is not a good target;
-   *         otherwise, return the number of nodes added to excludedNodes set.
+   * Choose a good storage of given storage type from datanode, and add it to
+   * the result list.
+   *
+   * @param dnd datanode descriptor
+   * @param blockSize requested block size
+   * @param results the result storages
+   * @param storageType requested storage type
+   * @return the chosen datanode storage
    */
-  int addIfIsGoodTarget(DatanodeStorageInfo storage,
-      Set<Node> excludedNodes,
+  DatanodeStorageInfo chooseStorage4Block(DatanodeDescriptor dnd,
       long blockSize,
       List<DatanodeStorageInfo> results,
       StorageType storageType) {
-    if (isGoodTarget(storage, blockSize, results, storageType)) {
+    DatanodeStorageInfo storage =
+        dnd.chooseStorage4Block(storageType, blockSize);
+    if (storage != null) {
       results.add(storage);
-      // add node and related nodes to excludedNode
-      return addToExcludedNodes(storage.getDatanodeDescriptor(), excludedNodes);
-    } else { 
-      return -1;
+    } else {
+      logNodeIsNotChosen(dnd, "no good storage to place the block ");
     }
-  }
-
-  private static void logNodeIsNotChosen(DatanodeStorageInfo storage, String reason) {
-    if (LOG.isDebugEnabled()) {
-      // build the error message for later use.
-      debugLoggingBuilder.get()
-          .append("\n  Storage ").append(storage)
-          .append(" is not chosen since ").append(reason).append(".");
-    }
+    return storage;
   }
 
   private static void logNodeIsNotChosen(DatanodeDescriptor node,
@@ -830,52 +811,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     if (counter > maxTargetPerRack) {
       logNodeIsNotChosen(node, "the rack has too many chosen nodes ");
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Determine if a storage is a good target.
-   *
-   * @param storage The target storage
-   * @param blockSize Size of block
-   * @param results A list containing currently chosen nodes. Used to check if
-   *                too many nodes has been chosen in the target rack.
-   * @return Return true if <i>node</i> has enough space.
-   */
-  private boolean isGoodTarget(DatanodeStorageInfo storage,
-                               long blockSize,
-                               List<DatanodeStorageInfo> results,
-                               StorageType requiredStorageType) {
-    if (storage.getStorageType() != requiredStorageType) {
-      logNodeIsNotChosen(storage, "storage types do not match,"
-          + " where the required storage type is " + requiredStorageType);
-      return false;
-    }
-    if (storage.getState() == State.READ_ONLY_SHARED) {
-      logNodeIsNotChosen(storage, "storage is read-only");
-      return false;
-    }
-
-    if (storage.getState() == State.FAILED) {
-      logNodeIsNotChosen(storage, "storage has failed");
-      return false;
-    }
-
-    DatanodeDescriptor node = storage.getDatanodeDescriptor();
-
-    final long requiredSize = blockSize * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE;
-    final long scheduledSize = blockSize * node.getBlocksScheduled(storage.getStorageType());
-    final long remaining = node.getRemaining(storage.getStorageType(),
-        requiredSize);
-    if (requiredSize > remaining - scheduledSize) {
-      logNodeIsNotChosen(storage, "the node does not have enough "
-          + storage.getStorageType() + " space"
-          + " (required=" + requiredSize
-          + ", scheduled=" + scheduledSize
-          + ", remaining=" + remaining + ")");
       return false;
     }
 

@@ -31,14 +31,15 @@ import java.util.Queue;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
-
 import com.google.common.collect.ImmutableList;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -663,26 +664,39 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Return the sum of remaining spaces of the specified type. If the remaining
-   * space of a storage is less than minSize, it won't be counted toward the
-   * sum.
+   * Find whether the datanode contains good storage of given type to
+   * place block of size <code>blockSize</code>.
    *
-   * @param t The storage type. If null, the type is ignored.
-   * @param minSize The minimum free space required.
-   * @return the sum of remaining spaces that are bigger than minSize.
+   * <p>Currently datanode only cares about the storage type, in this
+   * method, the first storage of given type we see is returned.
+   *
+   * @param t requested storage type
+   * @param blockSize requested block size
+   * @return
    */
-  public long getRemaining(StorageType t, long minSize) {
+  public DatanodeStorageInfo chooseStorage4Block(StorageType t,
+      long blockSize) {
+    final long requiredSize =
+        blockSize * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE;
+    final long scheduledSize = blockSize * getBlocksScheduled(t);
     long remaining = 0;
+    DatanodeStorageInfo storage = null;
     for (DatanodeStorageInfo s : getStorageInfos()) {
       if (s.getState() == State.NORMAL &&
-          (t == null || s.getStorageType() == t)) {
+          s.getStorageType() == t) {
+        if (storage == null) {
+          storage = s;
+        }
         long r = s.getRemaining();
-        if (r >= minSize) {
+        if (r >= requiredSize) {
           remaining += r;
         }
       }
     }
-    return remaining;
+    if (requiredSize > remaining - scheduledSize) {
+      return null;
+    }
+    return storage;
   }
 
   /**
