@@ -443,4 +443,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           schedulingMode, currentResourceLimits, reservedContainer);
     }
   }
+
+  public void nodePartitionUpdated(RMContainer rmContainer, String oldPartition,
+      String newPartition) {
+    Resource containerResource = rmContainer.getAllocatedResource();
+    this.attemptResourceUsage.decUsed(oldPartition, containerResource);
+    this.attemptResourceUsage.incUsed(newPartition, containerResource);
+    getCSLeafQueue().decUsedResource(oldPartition, containerResource, this);
+    getCSLeafQueue().incUsedResource(newPartition, containerResource, this);
+  }
 }
