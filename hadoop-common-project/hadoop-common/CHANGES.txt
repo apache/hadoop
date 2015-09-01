@@ -756,6 +756,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
 
+    HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
+    (wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
