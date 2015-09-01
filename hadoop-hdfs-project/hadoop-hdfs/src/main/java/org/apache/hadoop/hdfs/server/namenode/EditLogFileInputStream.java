@@ -157,7 +157,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
               "flags from log");
         }
       }
-      reader = new FSEditLogOp.Reader(dataIn, tracker, logVersion);
+      reader = FSEditLogOp.Reader.create(dataIn, tracker, logVersion);
       reader.setMaxOpSize(maxOpSize);
       state = State.OPEN;
     } finally {

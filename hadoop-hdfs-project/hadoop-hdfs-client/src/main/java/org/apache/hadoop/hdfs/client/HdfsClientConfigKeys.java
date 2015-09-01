@@ -36,6 +36,14 @@ public interface HdfsClientConfigKeys {
   String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
+  String DFS_WEBHDFS_OAUTH_ENABLED_KEY = "dfs.webhdfs.oauth2.enabled";
+  boolean DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT = false;
+
+  String OAUTH_CLIENT_ID_KEY = "dfs.webhdfs.oauth2.client.id";
+  String OAUTH_REFRESH_URL_KEY = "dfs.webhdfs.oauth2.refresh.url";
+
+  String ACCESS_TOKEN_PROVIDER_KEY = "dfs.webhdfs.oauth2.access.token.provider";
+
   String PREFIX = "dfs.client.";
   String  DFS_NAMESERVICES = "dfs.nameservices";
   int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 50070;
@@ -112,6 +120,11 @@ public interface HdfsClientConfigKeys {
   String  DFS_HDFS_BLOCKS_METADATA_ENABLED =
       "dfs.datanode.hdfs-blocks-metadata.enabled";
   boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT = false;
+
+  String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY = "dfs.datanode.kerberos.principal";
+  String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";
+  long    DFS_DATANODE_READAHEAD_BYTES_DEFAULT = 4 * 1024 * 1024; // 4MB
+  String  DFS_ENCRYPTION_KEY_PROVIDER_URI = "dfs.encryption.key.provider.uri";
 
   String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
       PREFIX + "replica.accessor.builder.classes";

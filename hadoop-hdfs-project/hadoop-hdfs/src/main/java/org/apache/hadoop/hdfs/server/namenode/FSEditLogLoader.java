@@ -980,7 +980,7 @@ public class FSEditLogLoader {
       
       oldLastBlock.setNumBytes(pBlock.getNumBytes());
       if (!oldLastBlock.isComplete()) {
-        fsNamesys.getBlockManager().forceCompleteBlock(file, oldLastBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(oldLastBlock);
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
       }
     } else { // the penultimate block is null
@@ -1041,7 +1041,7 @@ public class FSEditLogLoader {
       if (!oldBlock.isComplete() &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
-        fsNamesys.getBlockManager().forceCompleteBlock(file, oldBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(oldBlock);
       }
       if (changeMade) {
         // The state or gen-stamp of the block has changed. So, we may be

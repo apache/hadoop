@@ -360,12 +360,12 @@ public class TestPBHelper {
   public void testConvertExtendedBlock() {
     ExtendedBlock b = getExtendedBlock();
     ExtendedBlockProto bProto = PBHelperClient.convert(b);
-    ExtendedBlock b1 = PBHelper.convert(bProto);
+    ExtendedBlock b1 = PBHelperClient.convert(bProto);
     assertEquals(b, b1);
     
     b.setBlockId(-1);
     bProto = PBHelperClient.convert(b);
-    b1 = PBHelper.convert(bProto);
+    b1 = PBHelperClient.convert(bProto);
     assertEquals(b, b1);
   }
   

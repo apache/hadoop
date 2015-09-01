@@ -97,21 +97,6 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   @Override
-  void replaceBlock(BlockInfo newBlock) {
-    assert newBlock instanceof BlockInfoContiguous;
-    for (int i = this.numNodes() - 1; i >= 0; i--) {
-      final DatanodeStorageInfo storage = this.getStorageInfo(i);
-      final boolean removed = storage.removeBlock(this);
-      assert removed : "currentBlock not found.";
-
-      final DatanodeStorageInfo.AddBlockResult result = storage.addBlock(
-          newBlock, newBlock);
-      assert result == DatanodeStorageInfo.AddBlockResult.ADDED :
-          "newBlock already exists.";
-    }
-  }
-
-  @Override
   public final boolean isStriped() {
     return false;
   }

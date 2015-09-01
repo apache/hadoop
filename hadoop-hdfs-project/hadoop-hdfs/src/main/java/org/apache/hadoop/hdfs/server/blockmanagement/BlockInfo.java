@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -35,6 +36,7 @@ import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
  * where the replicas of the block, or blocks belonging to the erasure coding
  * block group, are stored.
  */
+@InterfaceAudience.Private
 public abstract class BlockInfo extends Block
     implements LightWeightGSet.LinkedElement {
 
@@ -203,12 +205,6 @@ public abstract class BlockInfo extends Block
    */
   abstract boolean removeStorage(DatanodeStorageInfo storage);
 
-  /**
-   * Replace the current BlockInfo with the new one in corresponding
-   * DatanodeStorageInfo's linked list
-   */
-  abstract void replaceBlock(BlockInfo newBlock);
-
   public abstract boolean isStriped();
 
   /** @return true if there is no datanode storage associated with the block */
@@ -375,19 +371,12 @@ public abstract class BlockInfo extends Block
   }
 
   /**
-   * Convert an under construction block to a complete block.
-   *
-   * @return BlockInfo - a complete block.
-   * @throws IOException if the state of the block
-   * (the generation stamp and the length) has not been committed by
-   * the client or it does not have at least a minimal number of replicas
-   * reported from data-nodes.
+   * Convert an under construction block to complete.
    */
-  BlockInfo convertToCompleteBlock() throws IOException {
+  void convertToCompleteBlock() {
     assert getBlockUCState() != BlockUCState.COMPLETE :
         "Trying to convert a COMPLETE block";
     uc = null;
-    return this;
   }
 
   /**

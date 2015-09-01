@@ -23,9 +23,7 @@ import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
 import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherSuiteProto;
 import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -118,7 +116,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
@@ -141,6 +138,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
@@ -159,7 +157,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsPermissionProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsServerDefaultsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto;
@@ -233,21 +230,17 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
-import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Shorts;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes
@@ -600,13 +593,7 @@ public class PBHelper {
       return new NamenodeCommand(cmd.getAction());
     }
   }
-  
-  public static ExtendedBlock convert(ExtendedBlockProto eb) {
-    if (eb == null) return null;
-    return new ExtendedBlock( eb.getPoolId(),  eb.getBlockId(),   eb.getNumBytes(),
-       eb.getGenerationStamp());
-  }
-  
+
   public static RecoveringBlockProto convert(RecoveringBlock b) {
     if (b == null) {
       return null;
@@ -620,7 +607,7 @@ public class PBHelper {
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
-    ExtendedBlock block = convert(b.getBlock().getB());
+    ExtendedBlock block = PBHelperClient.convert(b.getBlock().getB());
     DatanodeInfo[] locs = convert(b.getBlock().getLocsList());
     return (b.hasTruncateBlock()) ?
         new RecoveringBlock(block, locs, PBHelper.convert(b.getTruncateBlock())) :
@@ -786,11 +773,11 @@ public class PBHelper {
 
     final LocatedBlock lb;
     if (indices == null) {
-      lb = new LocatedBlock(PBHelper.convert(proto.getB()), targets, storageIDs,
-          storageTypes, proto.getOffset(), proto.getCorrupt(),
+      lb = new LocatedBlock(PBHelperClient.convert(proto.getB()), targets,
+          storageIDs, storageTypes, proto.getOffset(), proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
     } else {
-      lb = new LocatedStripedBlock(PBHelper.convert(proto.getB()), targets,
+      lb = new LocatedStripedBlock(PBHelperClient.convert(proto.getB()), targets,
           storageIDs, storageTypes, indices, proto.getOffset(),
           proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
@@ -2193,12 +2180,6 @@ public class PBHelper {
     return builder.build();
   }
 
-  public static DatanodeLocalInfo convert(DatanodeLocalInfoProto proto) {
-    return new DatanodeLocalInfo(proto.getSoftwareVersion(),
-        proto.getConfigVersion(), proto.getUptime());
-  }
-
-
   private static AclEntryScopeProto convert(AclEntryScope v) {
     return AclEntryScopeProto.valueOf(v.ordinal());
   }
@@ -3011,7 +2992,7 @@ public class PBHelper {
   public static BlockECRecoveryInfo convertBlockECRecoveryInfo(
       BlockECRecoveryInfoProto blockEcRecoveryInfoProto) {
     ExtendedBlockProto blockProto = blockEcRecoveryInfoProto.getBlock();
-    ExtendedBlock block = convert(blockProto);
+    ExtendedBlock block = PBHelperClient.convert(blockProto);
 
     DatanodeInfosProto sourceDnInfosProto = blockEcRecoveryInfoProto
         .getSourceDnInfos();

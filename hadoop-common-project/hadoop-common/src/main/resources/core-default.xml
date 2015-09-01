@@ -565,6 +565,16 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.protected.directories</name>
+  <value></value>
+  <description>A comma-separated list of directories which cannot
+    be deleted even by the superuser unless they are empty. This
+    setting can be used to guard important system directories
+    against accidental deletion due to administrator error.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.file.impl</name>
   <value>org.apache.hadoop.fs.local.LocalFs</value>
   <description>The AbstractFileSystem for file: uris.</description>
@@ -783,7 +793,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.attempts.maximum</name>
-  <value>10</value>
+  <value>20</value>
   <description>How many times we should retry commands on transient errors.</description>
 </property>
 
@@ -795,7 +805,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>50000</value>
+  <value>200000</value>
   <description>Socket connection timeout in milliseconds.</description>
 </property>
 

@@ -812,16 +812,13 @@ public class TestDecommission {
       }
       assertEquals("Number of live nodes should be 0", 0, info.length);
       
-      // Test that non-live and bogus hostnames are considered "dead".
-      // The dead report should have an entry for (1) the DN  that is
-      // now considered dead because it is no longer allowed to connect
-      // and (2) the bogus entry in the hosts file (these entries are
-      // always added last)
+      // Test that bogus hostnames are considered "dead".
+      // The dead report should have an entry for the bogus entry in the hosts
+      // file.  The original datanode is excluded from the report because it
+      // is no longer in the included list.
       info = client.datanodeReport(DatanodeReportType.DEAD);
-      assertEquals("There should be 2 dead nodes", 2, info.length);
-      DatanodeID id = cluster.getDataNodes().get(0).getDatanodeId();
-      assertEquals(id.getHostName(), info[0].getHostName());
-      assertEquals(bogusIp, info[1].getHostName());
+      assertEquals("There should be 1 dead node", 1, info.length);
+      assertEquals(bogusIp, info[0].getHostName());
     }
   }
   

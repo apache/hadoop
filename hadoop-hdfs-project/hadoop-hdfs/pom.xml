@@ -213,6 +213,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>leveldbjni-all</artifactId>
       <version>1.8</version>
     </dependency>
+    <dependency>
+      <groupId>org.mock-server</groupId>
+      <artifactId>mockserver-netty</artifactId>
+      <version>3.9.2</version>
+      <scope>test</scope>
+    </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.bouncycastle</groupId>

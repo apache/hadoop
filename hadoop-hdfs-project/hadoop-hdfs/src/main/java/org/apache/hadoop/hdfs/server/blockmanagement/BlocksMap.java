@@ -220,20 +220,4 @@ class BlocksMap {
   int getCapacity() {
     return capacity;
   }
-
-  /**
-   * Replace a block in the block map by a new block.
-   * The new block and the old one have the same key.
-   * @param newBlock - block for replacement
-   * @return new block
-   */
-  BlockInfo replaceBlock(BlockInfo newBlock) {
-    BlockInfo currentBlock = blocks.get(newBlock);
-    assert currentBlock != null : "the block if not in blocksMap";
-    // replace block in data-node lists
-    currentBlock.replaceBlock(newBlock);
-    // replace block in the map itself
-    blocks.put(newBlock);
-    return newBlock;
-  }
 }

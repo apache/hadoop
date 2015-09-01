@@ -28,8 +28,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.EnumSet;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -55,6 +53,9 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a wrapper around connection to datanode
@@ -85,16 +86,18 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class RemoteBlockReader2  implements BlockReader {
 
-  static final Log LOG = LogFactory.getLog(RemoteBlockReader2.class);
-  
+  static final Logger LOG = LoggerFactory.getLogger(RemoteBlockReader2.class);
+  static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB;
+
   final private Peer peer;
   final private DatanodeID datanodeID;
   final private PeerCache peerCache;
   final private long blockId;
   private final ReadableByteChannel in;
+
   private DataChecksum checksum;
-  
   private final PacketReceiver packetReceiver = new PacketReceiver(true);
+
   private ByteBuffer curDataSlice = null;
 
   /** offset in block of the last chunk received */
@@ -457,7 +460,7 @@ public class RemoteBlockReader2  implements BlockReader {
   public int available() throws IOException {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
-    return DFSClient.TCP_WINDOW_SIZE;
+    return TCP_WINDOW_SIZE;
   }
   
   @Override

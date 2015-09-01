@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ReadOption;
@@ -45,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
+import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -54,6 +53,9 @@ import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * BlockReaderLocalLegacy enables local short circuited reads. If the DFS client is on
@@ -79,7 +81,8 @@ import org.apache.htrace.TraceScope;
  */
 @InterfaceAudience.Private
 class BlockReaderLocalLegacy implements BlockReader {
-  private static final Log LOG = LogFactory.getLog(BlockReaderLocalLegacy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      BlockReaderLocalLegacy.class);
 
   //Stores the cache and proxy for a local datanode.
   private static class LocalDatanodeInfo {
@@ -112,7 +115,7 @@ class BlockReaderLocalLegacy implements BlockReader {
           proxy = ugi.doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
             @Override
             public ClientDatanodeProtocol run() throws Exception {
-              return DFSUtil.createClientDatanodeProtocolProxy(node, conf,
+              return DFSUtilClient.createClientDatanodeProtocolProxy(node, conf,
                   socketTimeout, connectToDnViaHostname);
             }
           });
@@ -244,7 +247,7 @@ class BlockReaderLocalLegacy implements BlockReader {
     } catch (IOException e) {
       // remove from cache
       localDatanodeInfo.removeBlockLocalPathInfo(blk);
-      DFSClient.LOG.warn("BlockReaderLocalLegacy: Removing " + blk
+      LOG.warn("BlockReaderLocalLegacy: Removing " + blk
           + " from cache because local file " + pathinfo.getBlockPath()
           + " could not be opened.");
       throw e;
@@ -689,7 +692,7 @@ class BlockReaderLocalLegacy implements BlockReader {
 
   @Override
   public synchronized void close() throws IOException {
-    IOUtils.cleanup(LOG, dataIn, checksumIn);
+    IOUtilsClient.cleanup(LOG, dataIn, checksumIn);
     if (slowReadBuff != null) {
       bufferPool.returnBuffer(slowReadBuff);
       slowReadBuff = null;

@@ -357,6 +357,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8131. Implement a space balanced block placement policy (Liu Shaohui
     via kihwal)
 
+    HDFS-8155. Support OAuth2 in WebHDFS. (jghoman)
+
   IMPROVEMENTS
 
     HDFS-2390. dfsadmin -setBalancerBandwidth does not validate -ve value
@@ -855,6 +857,23 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8865. Improve quota initialization performance. (kihwal)
 
+    HDFS-8938. Extract BlockToMarkCorrupt and ReplicationWork as standalone
+    classes from BlockManager. (Mingliang Liu via wheat9)
+
+    HDFS-8925. Move BlockReaderLocal to hdfs-client.
+    (Mingliang Liu via wheat9)
+
+    HDFS-8983. NameNode support for protected directories. (Arpit Agarwal)
+
+    HDFS-8980. Remove unnecessary block replacement in INodeFile. (jing9)
+
+    HDFS-8990. Move RemoteBlockReader to hdfs-client module.
+    (Mingliang via wheat9)
+
+    HDFS-8946. Improve choosing datanode storage for block placement. (yliu)
+
+    HDFS-8965. Harden edit log reading code against out of memory errors (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1247,6 +1266,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8963. Fix incorrect sign extension of xattr length in HDFS-8900.
     (Colin Patrick McCabe via yliu)
+
+    HDFS-8950. NameNode refresh doesn't remove DataNodes that are no longer in
+    the allowed list (Daniel Templeton)
 
 Release 2.7.2 - UNRELEASED
 

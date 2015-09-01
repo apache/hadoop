@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -543,6 +544,32 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
   
+  @Override
+  public void incUsedResource(String nodeLabel, Resource resourceToInc,
+      SchedulerApplicationAttempt application) {
+    if (nodeLabel == null) {
+      nodeLabel = RMNodeLabelsManager.NO_LABEL;
+    }
+    // ResourceUsage has its own lock, no addition lock needs here.
+    queueUsage.incUsed(nodeLabel, resourceToInc);
+    if (null != parent) {
+      parent.incUsedResource(nodeLabel, resourceToInc, null);
+    }
+  }
+
+  @Override
+  public void decUsedResource(String nodeLabel, Resource resourceToDec,
+      SchedulerApplicationAttempt application) {
+    if (nodeLabel == null) {
+      nodeLabel = RMNodeLabelsManager.NO_LABEL;
+    }
+    // ResourceUsage has its own lock, no addition lock needs here.
+    queueUsage.decUsed(nodeLabel, resourceToDec);
+    if (null != parent) {
+      parent.decUsedResource(nodeLabel, resourceToDec, null);
+    }
+  }
+
   /**
    * Return if the queue has pending resource on given nodePartition and
    * schedulingMode. 

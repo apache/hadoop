@@ -804,6 +804,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
     has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
+    YARN-4082. Container shouldn't be killed when node's label updated.
+    (Wangda Tan via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -821,6 +824,11 @@ Release 2.7.2 - UNRELEASED
     YARN-3978. Configurably turn off the saving of container info in Generic AHS
     (Eric Payne via jeagles)
 
+    YARN-4092. Fixed UI redirection to print useful messages when both RMs are
+    in standby mode. (Xuan Gong via jianhe)
+
+    YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
+    G R  via ozawa)
 
   OPTIMIZATIONS
 
@@ -1453,7 +1461,7 @@ Release 2.7.0 - 2015-04-20
     YARN-2914. [YARN-1492] Potential race condition in Singleton implementation of 
     SharedCacheUploaderMetrics, CleanerMetrics, ClientSCMMetrics. (Varun Saxena via kasha)
 
-    YARN-2964. FSLeafQueue#assignContainer - document the reason for using both write and
+    YARN-2945. FSLeafQueue#assignContainer - document the reason for using both write and
     read locks. (Tsuyoshi Ozawa via kasha)
 
     YARN-2944. InMemorySCMStore can not be instantiated with ReflectionUtils#newInstance.

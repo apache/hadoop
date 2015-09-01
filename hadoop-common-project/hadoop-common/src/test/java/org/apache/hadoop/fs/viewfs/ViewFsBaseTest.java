@@ -76,7 +76,7 @@ import org.mockito.Mockito;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public class ViewFsBaseTest {
+abstract public class ViewFsBaseTest {
   FileContext fcView; // the view file system - the mounts are here
   FileContext fcTarget; // the target file system - the mount will point here
   Path targetTestRoot;

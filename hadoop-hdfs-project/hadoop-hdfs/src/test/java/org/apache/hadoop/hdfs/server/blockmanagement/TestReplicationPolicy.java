@@ -181,7 +181,7 @@ public class TestReplicationPolicy {
    * considered.
    */
   @Test
-  public void testChooseNodeWithMultipleStorages() throws Exception {
+  public void testChooseNodeWithMultipleStorages1() throws Exception {
     updateHeartbeatWithUsage(dataNodes[5],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L,
@@ -196,6 +196,30 @@ public class TestReplicationPolicy {
         new ArrayList<DatanodeStorageInfo>(), null);
     assertEquals(1, targets.length);
     assertEquals(storages[4], targets[0]);
+
+    resetHeartbeatForStorages();
+  }
+
+  /**
+   * Test whether all storages on the datanode are considered while
+   * choosing target to place block.
+   */
+  @Test
+  public void testChooseNodeWithMultipleStorages2() throws Exception {
+    updateHeartbeatWithUsage(dataNodes[5],
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L,
+        0L, 0L, 0, 0);
+
+    updateHeartbeatForExtraStorage(
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L);
+
+    DatanodeStorageInfo[] targets;
+    targets = chooseTarget (1, dataNodes[5],
+        new ArrayList<DatanodeStorageInfo>(), null);
+    assertEquals(1, targets.length);
+    assertEquals(dataNodes[5], targets[0].getDatanodeDescriptor());
 
     resetHeartbeatForStorages();
   }

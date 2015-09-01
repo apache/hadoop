@@ -45,7 +45,7 @@ public class Constants {
 
   // number of times we should retry errors
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 20;
 
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT = "fs.s3a.connection.establish.timeout";
@@ -53,7 +53,7 @@ public class Constants {
   
   // seconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
-  public static final int DEFAULT_SOCKET_TIMEOUT = 50000;
+  public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
   // number of records to get while paging through a directory listing
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";

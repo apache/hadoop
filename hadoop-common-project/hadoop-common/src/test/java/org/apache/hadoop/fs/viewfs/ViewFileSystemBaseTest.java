@@ -77,7 +77,7 @@ import org.junit.Test;
  * </p>
  */
 
-public class ViewFileSystemBaseTest {
+abstract public class ViewFileSystemBaseTest {
   FileSystem fsView;  // the view file system - the mounts are here
   FileSystem fsTarget;  // the target file system - the mount will point here
   Path targetTestRoot;

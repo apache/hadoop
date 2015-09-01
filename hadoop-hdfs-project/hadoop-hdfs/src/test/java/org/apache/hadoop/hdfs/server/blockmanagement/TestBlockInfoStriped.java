@@ -197,36 +197,6 @@ public class TestBlockInfoStriped {
   }
 
   @Test
-  public void testReplaceBlock() {
-    DatanodeStorageInfo[] storages = DFSTestUtil.createDatanodeStorageInfos(
-        TOTAL_NUM_BLOCKS);
-    Block[] blocks = createReportedBlocks(TOTAL_NUM_BLOCKS);
-    // add block/storage 0, 2, 4 into the BlockInfoStriped
-    for (int i = 0; i < storages.length; i += 2) {
-      Assert.assertEquals(AddBlockResult.ADDED,
-          storages[i].addBlock(info, blocks[i]));
-    }
-
-    BlockInfoStriped newBlockInfo = new BlockInfoStriped(info,
-        info.getErasureCodingPolicy());
-    newBlockInfo.setBlockCollectionId(info.getBlockCollectionId());
-    info.replaceBlock(newBlockInfo);
-
-    // make sure the newBlockInfo is correct
-    byte[] indices = (byte[]) Whitebox.getInternalState(newBlockInfo, "indices");
-    for (int i = 0; i < storages.length; i += 2) {
-      int index = newBlockInfo.findStorageInfo(storages[i]);
-      Assert.assertEquals(i, index);
-      Assert.assertEquals(index, indices[i]);
-
-      // make sure the newBlockInfo is added to the linked list of the storage
-      Assert.assertSame(newBlockInfo, storages[i].getBlockListHeadForTesting());
-      Assert.assertEquals(1, storages[i].numBlocks());
-      Assert.assertNull(newBlockInfo.getNext());
-    }
-  }
-
-  @Test
   public void testWrite() {
     long blkID = 1;
     long numBytes = 1;

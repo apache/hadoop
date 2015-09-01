@@ -22,22 +22,32 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.SocketFactory;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
@@ -454,5 +464,63 @@ public class DFSUtilClient {
     }
     localAddrMap.put(addr.getHostAddress(), local);
     return local;
+  }
+
+  /** Create a {@link ClientDatanodeProtocol} proxy */
+  public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      boolean connectToDnViaHostname, LocatedBlock locatedBlock) throws IOException {
+    return new ClientDatanodeProtocolTranslatorPB(datanodeid, conf, socketTimeout,
+        connectToDnViaHostname, locatedBlock);
+  }
+
+  /** Create {@link ClientDatanodeProtocol} proxy using kerberos ticket */
+  public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      boolean connectToDnViaHostname) throws IOException {
+    return new ClientDatanodeProtocolTranslatorPB(
+        datanodeid, conf, socketTimeout, connectToDnViaHostname);
+  }
+
+  /** Create a {@link ClientDatanodeProtocol} proxy */
+  public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory) throws IOException {
+    return new ClientDatanodeProtocolTranslatorPB(addr, ticket, conf, factory);
+  }
+
+  /**
+   * Creates a new KeyProvider from the given Configuration.
+   *
+   * @param conf Configuration
+   * @return new KeyProvider, or null if no provider was found.
+   * @throws IOException if the KeyProvider is improperly specified in
+   *                             the Configuration
+   */
+  public static KeyProvider createKeyProvider(
+      final Configuration conf) throws IOException {
+    final String providerUriStr =
+        conf.getTrimmed(HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
+    // No provider set in conf
+    if (providerUriStr.isEmpty()) {
+      return null;
+    }
+    final URI providerUri;
+    try {
+      providerUri = new URI(providerUriStr);
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+    KeyProvider keyProvider = KeyProviderFactory.get(providerUri, conf);
+    if (keyProvider == null) {
+      throw new IOException("Could not instantiate KeyProvider from " +
+          HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI + " setting of '"
+          + providerUriStr + "'");
+    }
+    if (keyProvider.isTransient()) {
+      throw new IOException("KeyProvider " + keyProvider.toString()
+          + " was found but it is a transient provider.");
+    }
+    return keyProvider;
   }
 }

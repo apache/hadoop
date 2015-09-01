@@ -482,7 +482,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AbandonBlockResponseProto abandonBlock(RpcController controller,
       AbandonBlockRequestProto req) throws ServiceException {
     try {
-      server.abandonBlock(PBHelper.convert(req.getB()), req.getFileId(),
+      server.abandonBlock(PBHelperClient.convert(req.getB()), req.getFileId(),
           req.getSrc(), req.getHolder());
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -500,7 +500,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       LocatedBlock result = server.addBlock(
           req.getSrc(),
           req.getClientName(),
-          req.hasPrevious() ? PBHelper.convert(req.getPrevious()) : null,
+          req.hasPrevious() ? PBHelperClient.convert(req.getPrevious()) : null,
           (excl == null || excl.size() == 0) ? null : PBHelper.convert(excl
               .toArray(new DatanodeInfoProto[excl.size()])), req.getFileId(),
           (favor == null || favor.size() == 0) ? null : favor
@@ -521,7 +521,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       List<String> existingStorageIDsList = req.getExistingStorageUuidsList();
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
       LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
-          req.getFileId(), PBHelper.convert(req.getBlk()),
+          req.getFileId(), PBHelperClient.convert(req.getBlk()),
           PBHelper.convert(existingList.toArray(
               new DatanodeInfoProto[existingList.size()])),
           existingStorageIDsList.toArray(
@@ -543,7 +543,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       boolean result = 
           server.complete(req.getSrc(), req.getClientName(),
-          req.hasLast() ? PBHelper.convert(req.getLast()) : null,
+          req.hasLast() ? PBHelperClient.convert(req.getLast()) : null,
           req.hasFileId() ? req.getFileId() : HdfsConstants.GRANDFATHER_INODE_ID);
       return CompleteResponseProto.newBuilder().setResult(result).build();
     } catch (IOException e) {
@@ -962,7 +962,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       LocatedBlockProto result = PBHelper.convertLocatedBlock(
-          server.updateBlockForPipeline(PBHelper.convert(req.getBlock()),
+          server.updateBlockForPipeline(PBHelperClient.convert(req.getBlock()),
               req.getClientName()));
       return UpdateBlockForPipelineResponseProto.newBuilder().setBlock(result)
           .build();
@@ -978,8 +978,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       List<DatanodeIDProto> newNodes = req.getNewNodesList();
       List<String> newStorageIDs = req.getStorageIDsList();
       server.updatePipeline(req.getClientName(),
-          PBHelper.convert(req.getOldBlock()),
-          PBHelper.convert(req.getNewBlock()),
+          PBHelperClient.convert(req.getOldBlock()),
+          PBHelperClient.convert(req.getNewBlock()),
           PBHelper.convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])),
           newStorageIDs.toArray(new String[newStorageIDs.size()]));
       return VOID_UPDATEPIPELINE_RESPONSE;

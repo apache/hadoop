@@ -194,25 +194,6 @@ public class BlockInfoStriped extends BlockInfo {
     }
   }
 
-  @Override
-  void replaceBlock(BlockInfo newBlock) {
-    assert newBlock instanceof BlockInfoStriped;
-    BlockInfoStriped newBlockGroup = (BlockInfoStriped) newBlock;
-    final int size = getCapacity();
-    newBlockGroup.ensureCapacity(size, false);
-    for (int i = 0; i < size; i++) {
-      final DatanodeStorageInfo storage = this.getStorageInfo(i);
-      if (storage != null) {
-        final int blockIndex = indices[i];
-        final boolean removed = storage.removeBlock(this);
-        assert removed : "currentBlock not found.";
-
-        newBlockGroup.addStorage(storage, i, blockIndex);
-        storage.insertToList(newBlockGroup);
-      }
-    }
-  }
-
   public long spaceConsumed() {
     // In case striped blocks, total usage by this striped blocks should
     // be the total of data blocks and parity blocks because

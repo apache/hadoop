@@ -85,6 +85,13 @@ public class CommonConfigurationKeysPublic {
   /** Default value for FS_TRASH_CHECKPOINT_INTERVAL_KEY */
   public static final long    FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT = 0;
 
+  /**
+   * Directories that cannot be removed unless empty, even by an
+   * administrator.
+   */
+  public static final String FS_PROTECTED_DIRECTORIES =
+      "fs.protected.directories";
+
   // TBD: Code is still using hardcoded values (e.g. "fs.automatic.close")
   // instead of constant (e.g. FS_AUTOMATIC_CLOSE_KEY)
   //
