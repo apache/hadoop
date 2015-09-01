@@ -175,6 +175,12 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
     (hzlu via benoyantony)
 
+    HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
+    (wang)
+
+    HADOOP-12367. Move TestFileUtil's test resources to resources folder.
+    (wang via yliu)
+
   BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
@@ -245,9 +251,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
-
-    HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
-    (wang)
 
  OPTIMIZATIONS
 
