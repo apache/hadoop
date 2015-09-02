@@ -871,6 +871,7 @@ public class FSImage implements Closeable {
     RecursiveAction task = new InitQuotaTask(root, counts);
     p.execute(task);
     task.join();
+    p.shutdown();
     LOG.info("Quota initialization completed in " + (Time.now() - start) +
         " milliseconds\n" + counts);
   }

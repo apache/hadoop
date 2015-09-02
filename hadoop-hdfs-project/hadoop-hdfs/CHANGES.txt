@@ -32,6 +32,8 @@ Release 2.6.6 - UNRELEASED
 
     HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
 
+    HDFS-9003. ForkJoin thread pool leaks. (Kihwal Lee via jing9)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
