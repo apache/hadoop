@@ -868,6 +868,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3857: Memory leak in ResourceManager with SIMPLE mode.
     (mujunchao via zxu)
 
+    YARN-3893. Both RM in active state when Admin#transitionToActive failure 
+    from refeshAll() (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
