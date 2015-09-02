@@ -239,6 +239,12 @@ public interface NameNodeMXBean {
   public String getNNStarted();
 
   /**
+   * Gets the NN start time in milliseconds.
+   * @return the NN start time in msec
+   */
+  long getNNStartedTimeInMillis();
+
+  /**
    * Get the compilation information which contains date, user and branch
    *
    * @return the compilation information, as a JSON string.
