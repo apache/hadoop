@@ -146,7 +146,7 @@
     var HELPERS = {
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
-        return chunk.write('' + new Date(Number(value)).toLocaleString());
+        return chunk.write('' + moment(Number(value)).format('ddd MMM DD HH:mm:ss ZZ YYYY'));
       }
     };
     var url = '/webhdfs/v1' + encode_path(dir) + '?op=LISTSTATUS';

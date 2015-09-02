@@ -6131,6 +6131,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getStartTime().toString();
   }
 
+  @Override // NameNodeMXBean
+  public long getNNStartedTimeInMillis() {
+    return startTime;
+  }
+
   @Override  // NameNodeMXBean
   public String getCompileInfo() {
     return VersionInfo.getDate() + " by " + VersionInfo.getUser() +

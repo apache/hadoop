@@ -192,6 +192,8 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `PutImageNumOps` | Total number of fsimage uploads to SecondaryNameNode |
 | `PutImageAvgTime` | Average fsimage upload time in milliseconds |
 | `TotalFileOps`| Total number of file operations performed |
+| `NNStarted`| NameNode start time |
+| `NNStartedTimeInMillis`| NameNode start time in milliseconds |
 
 FSNamesystem
 ------------

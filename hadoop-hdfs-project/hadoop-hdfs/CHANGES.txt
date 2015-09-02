@@ -1270,6 +1270,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8950. NameNode refresh doesn't remove DataNodes that are no longer in
     the allowed list (Daniel Templeton)
 
+    HDFS-8388. Time and Date format need to be in sync in NameNode UI page.
+    (Surendra Singh Lilhore via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
