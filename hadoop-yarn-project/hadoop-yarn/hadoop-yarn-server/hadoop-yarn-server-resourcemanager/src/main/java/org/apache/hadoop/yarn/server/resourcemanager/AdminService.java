@@ -285,6 +285,7 @@ public class AdminService extends CompositeService implements
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
@@ -300,10 +301,6 @@ public class AdminService extends CompositeService implements
     checkHaStateChange(reqInfo);
     try {
       rm.transitionToActive();
-      // call all refresh*s for active RM to get the updated configurations.
-      refreshAll();
-      RMAuditLogger.logSuccess(user.getShortUserName(),
-          "transitionToActive", "RMHAProtocolService");
     } catch (Exception e) {
       RMAuditLogger.logFailure(user.getShortUserName(), "transitionToActive",
           "", "RMHAProtocolService",
@@ -311,6 +308,21 @@ public class AdminService extends CompositeService implements
       throw new ServiceFailedException(
           "Error when transitioning to Active mode", e);
     }
+    try {
+      // call all refresh*s for active RM to get the updated configurations.
+      refreshAll();
+    } catch (Exception e) {
+      LOG.error("RefreshAll failed so firing fatal event", e);
+      rmContext
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+          new RMFatalEvent(RMFatalEventType.TRANSITION_TO_ACTIVE_FAILED, e));
+      throw new ServiceFailedException(
+          "Error on refreshAll during transistion to Active", e);
+    }
+    RMAuditLogger.logSuccess(user.getShortUserName(), "transitionToActive",
+        "RMHAProtocolService");
   }
 
   @Override
