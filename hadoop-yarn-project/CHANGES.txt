@@ -807,6 +807,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4082. Container shouldn't be killed when node's label updated.
     (Wangda Tan via vvasudev)
 
+    YARN-4073. Removed unused ApplicationACLsManager in ContainerManagerImpl constructor.
+    (Naganarasimha G R via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

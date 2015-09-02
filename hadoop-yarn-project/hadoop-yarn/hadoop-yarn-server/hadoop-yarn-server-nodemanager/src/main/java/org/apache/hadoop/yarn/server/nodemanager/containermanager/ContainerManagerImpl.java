@@ -134,7 +134,6 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -167,7 +166,6 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected LocalDirsHandlerService dirsHandler;
   protected final AsyncDispatcher dispatcher;
-  private final ApplicationACLsManager aclsManager;
 
   private final DeletionService deletionService;
   private AtomicBoolean blockNewContainerRequests = new AtomicBoolean(false);
@@ -179,8 +177,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-      NodeManagerMetrics metrics, ApplicationACLsManager aclsManager,
-      LocalDirsHandlerService dirsHandler) {
+      NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(ContainerManagerImpl.class.getName());
     this.context = context;
     this.dirsHandler = dirsHandler;
@@ -198,7 +195,6 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(containersLauncher);
 
     this.nodeStatusUpdater = nodeStatusUpdater;
-    this.aclsManager = aclsManager;
 
     // Start configurable services
     auxiliaryServices = new AuxServices();
