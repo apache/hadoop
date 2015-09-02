@@ -26,5 +26,8 @@ public enum RMFatalEventType {
   STATE_STORE_OP_FAILED,
 
   // Source <- Embedded Elector
-  EMBEDDED_ELECTOR_FAILED
+  EMBEDDED_ELECTOR_FAILED,
+
+  // Source <- Admin Service
+  TRANSITION_TO_ACTIVE_FAILED
 }
