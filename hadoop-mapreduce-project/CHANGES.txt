@@ -509,9 +509,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6389. Fix BaileyBorweinPlouffe CLI usage message. (Brahma Reddy Battula
     via devaraj)
 
-    MAPREDUCE-6363. [NNBench] Lease mismatch error when running with multiple
-    mappers. (Brahma Reddy Battula via aajisaka)
-
     MAPREDUCE-6373. The logger reports total input paths but it is referring
     to input files. (Bibin A Chundatt via devaraj)
 
