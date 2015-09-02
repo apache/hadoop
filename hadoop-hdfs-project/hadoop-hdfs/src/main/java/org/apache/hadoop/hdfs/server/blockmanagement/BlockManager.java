@@ -953,28 +953,39 @@ public class BlockManager implements BlockStatsMXBean {
 
   /**
    * Check whether the replication parameter is within the range
-   * determined by system configuration.
+   * determined by system configuration and throw an exception if it's not.
+   *
+   * @param src the path to the target file
+   * @param replication the requested replication factor
+   * @param clientName the name of the client node making the request
+   * @throws java.io.IOException thrown if the requested replication factor
+   * is out of bounds
    */
    public void verifyReplication(String src,
                           short replication,
                           String clientName) throws IOException {
 
-    if (replication >= minReplication && replication <= maxReplication) {
-      //common case. avoid building 'text'
-      return;
+    if (replication < minReplication || replication > maxReplication) {
+      StringBuilder msg = new StringBuilder("Requested replication factor of ");
+
+      msg.append(replication);
+
+      if (replication > maxReplication) {
+        msg.append(" exceeds maximum of ");
+        msg.append(maxReplication);
+      } else {
+        msg.append(" is less than the required minimum of ");
+        msg.append(minReplication);
+      }
+
+      msg.append(" for ").append(src);
+
+      if (clientName != null) {
+        msg.append(" from ").append(clientName);
+      }
+
+      throw new IOException(msg.toString());
     }
-    
-    String text = "file " + src 
-      + ((clientName != null) ? " on client " + clientName : "")
-      + ".\n"
-      + "Requested replication " + replication;
-
-    if (replication > maxReplication)
-      throw new IOException(text + " exceeds maximum " + maxReplication);
-
-    if (replication < minReplication)
-      throw new IOException(text + " is less than the required minimum " +
-                            minReplication);
   }
 
   /**
