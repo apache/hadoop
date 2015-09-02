@@ -880,6 +880,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-328. Improve fs -setrep error message for invalid replication factors.
     (Daniel Templeton via wang)
 
+    HDFS-8890. Allow admin to specify which blockpools the balancer should run
+    on. (Chris Trezzo via mingma)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

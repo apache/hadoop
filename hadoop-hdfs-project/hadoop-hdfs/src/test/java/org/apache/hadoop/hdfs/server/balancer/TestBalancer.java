@@ -644,7 +644,7 @@ public class TestBalancer {
             Balancer.Parameters.DEFAULT.maxIdleIteration,
             nodes.getNodesToBeExcluded(), nodes.getNodesToBeIncluded(),
             Balancer.Parameters.DEFAULT.sourceNodes,
-            false);
+            Balancer.Parameters.DEFAULT.blockpools, false);
       }
 
       int expectedExcludedNodes = 0;
@@ -885,7 +885,7 @@ public class TestBalancer {
           Balancer.Parameters.DEFAULT.maxIdleIteration,
           datanodes, Balancer.Parameters.DEFAULT.includedNodes,
           Balancer.Parameters.DEFAULT.sourceNodes,
-          false);
+          Balancer.Parameters.DEFAULT.blockpools, false);
       final int r = Balancer.run(namenodes, p, conf);
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
     } finally {
@@ -1067,6 +1067,34 @@ public class TestBalancer {
     } catch (IllegalArgumentException e) {
 
     }
+
+    parameters = new String[] { "-blockpools" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail("IllegalArgumentException is expected when a value "
+          + "is not specified for the blockpool flag");
+    } catch (IllegalArgumentException e) {
+
+    }
+  }
+
+  @Test
+  public void testBalancerCliParseBlockpools() {
+    String[] parameters = new String[] { "-blockpools", "bp-1,bp-2,bp-3" };
+    Balancer.Parameters p = Balancer.Cli.parse(parameters);
+    assertEquals(3, p.blockpools.size());
+
+    parameters = new String[] { "-blockpools", "bp-1" };
+    p = Balancer.Cli.parse(parameters);
+    assertEquals(1, p.blockpools.size());
+
+    parameters = new String[] { "-blockpools", "bp-1,,bp-2" };
+    p = Balancer.Cli.parse(parameters);
+    assertEquals(3, p.blockpools.size());
+
+    parameters = new String[] { "-blockpools", "bp-1," };
+    p = Balancer.Cli.parse(parameters);
+    assertEquals(1, p.blockpools.size());
   }
 
   /**
@@ -1385,7 +1413,7 @@ public class TestBalancer {
               Parameters.DEFAULT.excludedNodes,
               Parameters.DEFAULT.includedNodes,
               Parameters.DEFAULT.sourceNodes,
-              true);
+              Balancer.Parameters.DEFAULT.blockpools, true);
       assertEquals(ExitStatus.SUCCESS.getExitCode(),
           Balancer.run(namenodes, runDuringUpgrade, conf));
 
@@ -1588,7 +1616,8 @@ public class TestBalancer {
             BalancingPolicy.Node.INSTANCE, 1,
             NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
             Collections.<String> emptySet(), Collections.<String> emptySet(),
-            Collections.<String> emptySet(), false);
+            Collections.<String> emptySet(),
+            Balancer.Parameters.DEFAULT.blockpools, false);
 
         conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
         final int r = Balancer.run(namenodes, p, conf);
@@ -1607,7 +1636,7 @@ public class TestBalancer {
           BalancingPolicy.Node.INSTANCE, 1,
           NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
           Collections.<String> emptySet(), Collections.<String> emptySet(),
-          sourceNodes, false);
+          sourceNodes, Balancer.Parameters.DEFAULT.blockpools, false);
 
         conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
         final int r = Balancer.run(namenodes, p, conf);
@@ -1622,7 +1651,7 @@ public class TestBalancer {
           BalancingPolicy.Node.INSTANCE, 1,
           NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
           Collections.<String> emptySet(), Collections.<String> emptySet(),
-          sourceNodes, false);
+          sourceNodes, Balancer.Parameters.DEFAULT.blockpools, false);
 
         conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
         final int r = Balancer.run(namenodes, p, conf);
@@ -1639,7 +1668,7 @@ public class TestBalancer {
           BalancingPolicy.Node.INSTANCE, 1,
           NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
           Collections.<String> emptySet(), Collections.<String> emptySet(),
-          sourceNodes, false);
+          sourceNodes, Balancer.Parameters.DEFAULT.blockpools, false);
 
         conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
         final int r = Balancer.run(namenodes, p, conf);

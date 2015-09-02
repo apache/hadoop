@@ -179,6 +179,8 @@ public class Balancer {
       + "\tExcludes the specified datanodes."
       + "\n\t[-include [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tIncludes only the specified datanodes."
+      + "\n\t[-blockpools <comma-separated list of blockpool ids>]"
+      + "\tThe balancer will only run on blockpools included in this list."
       + "\n\t[-idleiterations <idleiterations>]"
       + "\tNumber of consecutive idle iterations (-1 for Infinite) before "
       + "exit."
@@ -652,22 +654,27 @@ public class Balancer {
         done = true;
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
-          final Balancer b = new Balancer(nnc, p, conf);
-          final Result r = b.runOneIteration();
-          r.print(iteration, System.out);
+          if (p.blockpools.size() == 0
+              || p.blockpools.contains(nnc.getBlockpoolID())) {
+            final Balancer b = new Balancer(nnc, p, conf);
+            final Result r = b.runOneIteration();
+            r.print(iteration, System.out);
 
-          // clean all lists
-          b.resetData(conf);
-          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
-            done = false;
-          } else if (r.exitStatus != ExitStatus.SUCCESS) {
-            //must be an error statue, return.
-            return r.exitStatus.getExitCode();
+            // clean all lists
+            b.resetData(conf);
+            if (r.exitStatus == ExitStatus.IN_PROGRESS) {
+              done = false;
+            } else if (r.exitStatus != ExitStatus.SUCCESS) {
+              // must be an error statue, return.
+              return r.exitStatus.getExitCode();
+            }
+
+            if (!done) {
+              Thread.sleep(sleeptime);
+            }
+          } else {
+            LOG.info("Skipping blockpool " + nnc.getBlockpoolID());
           }
-        }
-
-        if (!done) {
-          Thread.sleep(sleeptime);
         }
       }
     } finally {
@@ -699,12 +706,12 @@ public class Balancer {
   }
 
   static class Parameters {
-    static final Parameters DEFAULT = new Parameters(
-        BalancingPolicy.Node.INSTANCE, 10.0,
-        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
-        Collections.<String>emptySet(), Collections.<String>emptySet(),
-        Collections.<String>emptySet(),
-        false);
+    static final Parameters DEFAULT =
+        new Parameters(BalancingPolicy.Node.INSTANCE, 10.0,
+            NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
+            Collections.<String> emptySet(), Collections.<String> emptySet(),
+            Collections.<String> emptySet(), Collections.<String> emptySet(),
+            false);
 
     final BalancingPolicy policy;
     final double threshold;
@@ -718,19 +725,25 @@ public class Balancer {
      */
     final Set<String> sourceNodes;
     /**
+     * A set of block pools to run the balancer on.
+     */
+    final Set<String> blockpools;
+    /**
      * Whether to run the balancer during upgrade.
      */
     final boolean runDuringUpgrade;
 
     Parameters(BalancingPolicy policy, double threshold, int maxIdleIteration,
         Set<String> excludedNodes, Set<String> includedNodes,
-        Set<String> sourceNodes, boolean runDuringUpgrade) {
+        Set<String> sourceNodes, Set<String> blockpools,
+        boolean runDuringUpgrade) {
       this.policy = policy;
       this.threshold = threshold;
       this.maxIdleIteration = maxIdleIteration;
       this.excludedNodes = excludedNodes;
       this.includedNodes = includedNodes;
       this.sourceNodes = sourceNodes;
+      this.blockpools = blockpools;
       this.runDuringUpgrade = runDuringUpgrade;
     }
 
@@ -742,10 +755,11 @@ public class Balancer {
               + " #excluded nodes = %s,"
               + " #included nodes = %s,"
               + " #source nodes = %s,"
+              + " #blockpools = %s,"
               + " run during upgrade = %s]",
-          Balancer.class.getSimpleName(), getClass().getSimpleName(),
-          policy, threshold, maxIdleIteration,
-          excludedNodes.size(), includedNodes.size(), sourceNodes.size(),
+          Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
+          threshold, maxIdleIteration, excludedNodes.size(),
+          includedNodes.size(), sourceNodes.size(), blockpools.size(),
           runDuringUpgrade);
     }
   }
@@ -789,6 +803,7 @@ public class Balancer {
       Set<String> excludedNodes = Parameters.DEFAULT.excludedNodes;
       Set<String> includedNodes = Parameters.DEFAULT.includedNodes;
       Set<String> sourceNodes = Parameters.DEFAULT.sourceNodes;
+      Set<String> blockpools = Parameters.DEFAULT.blockpools;
       boolean runDuringUpgrade = Parameters.DEFAULT.runDuringUpgrade;
 
       if (args != null) {
@@ -828,6 +843,14 @@ public class Balancer {
             } else if ("-source".equalsIgnoreCase(args[i])) {
               sourceNodes = new HashSet<>();
               i = processHostList(args, i, "source", sourceNodes);
+            } else if ("-blockpools".equalsIgnoreCase(args[i])) {
+              checkArgument(
+                  ++i < args.length,
+                  "blockpools value is missing: args = "
+                      + Arrays.toString(args));
+              blockpools = parseBlockPoolList(args[i]);
+              LOG.info("Balancer will run on the following blockpools: "
+                  + blockpools.toString());
             } else if ("-idleiterations".equalsIgnoreCase(args[i])) {
               checkArgument(++i < args.length,
                   "idleiterations value is missing: args = " + Arrays
@@ -853,8 +876,8 @@ public class Balancer {
         }
       }
       
-      return new Parameters(policy, threshold, maxIdleIteration,
-          excludedNodes, includedNodes, sourceNodes, runDuringUpgrade);
+      return new Parameters(policy, threshold, maxIdleIteration, excludedNodes,
+          includedNodes, sourceNodes, blockpools, runDuringUpgrade);
     }
 
     private static int processHostList(String[] args, int i, String type,
@@ -879,6 +902,11 @@ public class Balancer {
         nodes.addAll(Arrays.asList(addresses));
       }
       return i;
+    }
+
+    private static Set<String> parseBlockPoolList(String string) {
+      String[] addrs = StringUtils.getTrimmedStrings(string);
+      return new HashSet<String>(Arrays.asList(addrs));
     }
 
     private static void printUsage(PrintStream out) {
