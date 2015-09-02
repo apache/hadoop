@@ -1261,10 +1261,7 @@ public class DataNode extends ReconfigurableBase
    */
   synchronized void bpRegistrationSucceeded(DatanodeRegistration bpRegistration,
       String blockPoolId) throws IOException {
-    // Set the ID if we haven't already
-    if (null == id) {
-      id = bpRegistration;
-    }
+    id = bpRegistration;
 
     if(!storage.getDatanodeUuid().equals(bpRegistration.getDatanodeUuid())) {
       throw new IOException("Inconsistent Datanode IDs. Name-node returned "

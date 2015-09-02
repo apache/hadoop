@@ -1302,6 +1302,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8891. HDFS concat should keep srcs order. (Yong Zhang via jing9)
 
+    HDFS-8995. Flaw in registration bookeeping can make DN die on reconnect.
+    (Kihwal Lee via yliu)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
