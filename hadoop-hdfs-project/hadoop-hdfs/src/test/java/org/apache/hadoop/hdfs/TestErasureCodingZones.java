@@ -166,14 +166,8 @@ public class TestErasureCodingZones {
     fs.create(fooFile, FsPermission.getFileDefault(), true,
         conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
         (short)0, fs.getDefaultBlockSize(fooFile), null);
-
-    try {
-      fs.setReplication(fooFile, (short) 3);
-      fail("Shouldn't allow to set replication to a file with striped blocks");
-    } catch (IOException e) {
-      assertExceptionContains(
-          "Cannot set replication to a file with striped blocks", e);
-    }
+    // set replication should be a no-op
+    fs.setReplication(fooFile, (short) 3);
   }
 
   @Test

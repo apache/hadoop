@@ -406,3 +406,6 @@
 
     HDFS-8909. Erasure coding: update BlockInfoContiguousUC and BlockInfoStripedUC
     to use BlockUnderConstructionFeature. (Jing Zhao via waltersu4549)
+
+    HDFS-8937. Erasure coding: do not throw exception when setting replication on
+    EC file. (Gao Rui via jing9)

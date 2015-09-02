@@ -405,15 +405,12 @@ public class FSDirAttrOp {
     final BlockManager bm = fsd.getBlockManager();
     final INodesInPath iip = fsd.getINodesInPath4Write(src, true);
     final INode inode = iip.getLastINode();
-    if (inode == null || !inode.isFile()) {
+    if (inode == null || !inode.isFile() || inode.asFile().isStriped()) {
+      // TODO we do not support replication on stripe layout files yet
       return null;
     }
-    INodeFile file = inode.asFile();
-    if (file.isStriped()) {
-      throw new UnsupportedActionException(
-          "Cannot set replication to a file with striped blocks");
-    }
 
+    INodeFile file = inode.asFile();
     // Make sure the directory has sufficient quotas
     short oldBR = file.getPreferredBlockReplication();
 
