@@ -113,4 +113,9 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     }
     return path;
   }
+
+  public String getHAZookeeperConnectionState() {
+    return rm.getRMContext().getRMAdminService()
+      .getHAZookeeperConnectionState();
+  }
 }

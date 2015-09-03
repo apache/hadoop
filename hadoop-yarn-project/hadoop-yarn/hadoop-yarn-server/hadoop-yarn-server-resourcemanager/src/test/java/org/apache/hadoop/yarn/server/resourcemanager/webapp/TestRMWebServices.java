@@ -261,6 +261,8 @@ public class TestRMWebServices extends JerseyTest {
           WebServicesTestUtils.getXmlLong(element, "startedOn"),
           WebServicesTestUtils.getXmlString(element, "state"),
           WebServicesTestUtils.getXmlString(element, "haState"),
+          WebServicesTestUtils.getXmlString(
+              element, "haZooKeeperConnectionState"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersionBuiltOn"),
           WebServicesTestUtils.getXmlString(element, "hadoopBuildVersion"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersion"),
@@ -276,9 +278,10 @@ public class TestRMWebServices extends JerseyTest {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("clusterInfo");
-    assertEquals("incorrect number of elements", 11, info.length());
+    assertEquals("incorrect number of elements", 12, info.length());
     verifyClusterGeneric(info.getLong("id"), info.getLong("startedOn"),
         info.getString("state"), info.getString("haState"),
+        info.getString("haZooKeeperConnectionState"),
         info.getString("hadoopVersionBuiltOn"),
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("resourceManagerVersionBuiltOn"),
@@ -288,7 +291,8 @@ public class TestRMWebServices extends JerseyTest {
   }
 
   public void verifyClusterGeneric(long clusterid, long startedon,
-      String state, String haState, String hadoopVersionBuiltOn,
+      String state, String haState, String haZooKeeperConnectionState,
+      String hadoopVersionBuiltOn,
       String hadoopBuildVersion, String hadoopVersion,
       String resourceManagerVersionBuiltOn, String resourceManagerBuildVersion,
       String resourceManagerVersion) {

@@ -11,6 +11,9 @@ Release 2.6.2 - UNRELEASED
     YARN-4092. Fixed UI redirection to print useful messages when both RMs are
     in standby mode. (Xuan Gong via jianhe)
 
+    YARN-4101. RM should print alert messages if Zookeeper and Resourcemanager
+    gets connection issue. (Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
