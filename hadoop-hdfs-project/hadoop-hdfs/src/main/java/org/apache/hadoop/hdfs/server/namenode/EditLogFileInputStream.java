@@ -301,8 +301,17 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return getName();
   }
 
-  static FSEditLogLoader.EditLogValidation validateEditLog(File file)
-      throws IOException {
+  /**
+   * @param file File being validated.
+   * @param maxTxIdToValidate Maximum Tx ID to try to validate. Validation
+   *                          returns after reading this or a higher ID.
+   *                          The file portion beyond this ID is potentially
+   *                          being updated.
+   * @return Result of the validation
+   * @throws IOException
+   */
+  static FSEditLogLoader.EditLogValidation validateEditLog(File file,
+      long maxTxIdToValidate) throws IOException {
     EditLogFileInputStream in;
     try {
       in = new EditLogFileInputStream(file);
@@ -315,7 +324,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     }
     
     try {
-      return FSEditLogLoader.validateEditLog(in);
+      return FSEditLogLoader.validateEditLog(in, maxTxIdToValidate);
     } finally {
       IOUtils.closeStream(in);
     }
