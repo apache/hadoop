@@ -1287,6 +1287,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8885. ByteRangeInputStream used in webhdfs does not override
     available(). (Shradha Revankar via aajisaka)
 
+    HDFS-9009. Send metrics logs to NullAppender by default. (Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
