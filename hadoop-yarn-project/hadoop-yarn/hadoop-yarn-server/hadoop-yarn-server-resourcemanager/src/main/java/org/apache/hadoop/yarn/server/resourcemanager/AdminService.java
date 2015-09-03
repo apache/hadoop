@@ -782,4 +782,13 @@ public class AdminService extends CompositeService implements
       throw logAndWrapException(e, user.getShortUserName(), argName, msg);
     }
   }
+
+  public String getHAZookeeperConnectionState() {
+    if (!rmContext.isHAEnabled()) {
+      return "ResourceManager HA is not enabled.";
+    } else if (!autoFailoverEnabled) {
+      return "Auto Failover is not enabled.";
+    }
+    return this.embeddedElector.getHAZookeeperConnectionState();
+  }
 }

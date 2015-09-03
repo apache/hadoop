@@ -58,6 +58,7 @@ public class RMWebAppFilter extends GuiceContainer {
   private String path;
   private static final int BASIC_SLEEP_TIME = 5;
   private static final int MAX_SLEEP_TIME = 5 * 60;
+  private static final Random randnum = new Random();
 
   @Inject
   public RMWebAppFilter(Injector injector, Configuration conf) {
@@ -126,6 +127,8 @@ public class RMWebAppFilter extends GuiceContainer {
         String redirectMsg =
             doRetry ? "Can not find any active RM. Will retry in next " + next
                 + " seconds." : "There is no active RM right now.";
+        redirectMsg += "\nHA Zookeeper Connection State: "
+            + rmWebApp.getHAZookeeperConnectionState();
         PrintWriter out = response.getWriter();
         out.println(redirectMsg);
         if (doRetry) {
@@ -172,6 +175,6 @@ public class RMWebAppFilter extends GuiceContainer {
 
   private static int calculateExponentialTime(int retries) {
     long baseTime = BASIC_SLEEP_TIME * (1L << retries);
-    return (int) (baseTime * ((new Random()).nextDouble() + 0.5));
+    return (int) (baseTime * (randnum.nextDouble() + 0.5));
   }
 }
