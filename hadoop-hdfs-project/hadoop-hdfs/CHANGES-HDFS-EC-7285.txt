@@ -409,3 +409,6 @@
 
     HDFS-8937. Erasure coding: do not throw exception when setting replication on
     EC file. (Gao Rui via jing9)
+
+    HDFS-8978. Erasure coding: fix 2 failed tests of DFSStripedOutputStream.
+    (Walter Su via jing9)

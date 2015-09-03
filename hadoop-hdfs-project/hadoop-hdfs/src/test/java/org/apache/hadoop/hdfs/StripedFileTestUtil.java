@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -25,6 +26,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream;
 import org.junit.Assert;
 
@@ -32,7 +35,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
 
 public class StripedFileTestUtil {
   public static final Log LOG = LogFactory.getLog(StripedFileTestUtil.class);
@@ -221,6 +227,57 @@ public class StripedFileTestUtil {
       } catch (InterruptedException ignored) {
         return null;
       }
+    }
+  }
+
+  /**
+   * If the length of blockGroup is less than a full stripe, it returns the the
+   * number of actual data internal blocks. Otherwise returns NUM_DATA_BLOCKS.
+   */
+  public static short getRealDataBlockNum(int numBytes) {
+    return (short) Math.min(dataBlocks,
+        (numBytes - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
+  }
+
+  public static short getRealTotalBlockNum(int numBytes) {
+    return (short) (getRealDataBlockNum(numBytes) + parityBlocks);
+  }
+
+  /**
+   * Wait for all the internalBlocks of the blockGroups of the given file to be reported.
+   */
+  public static void waitBlockGroupsReported(DistributedFileSystem fs, String src)
+      throws IOException, InterruptedException, TimeoutException {
+    boolean success;
+    final int ATTEMPTS = 40;
+    int count = 0;
+
+    do {
+      success = true;
+      count++;
+      LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0);
+      for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+        short expected = getRealTotalBlockNum((int) lb.getBlockSize());
+        int reported = lb.getLocations().length;
+        if (reported != expected){
+          success = false;
+          System.out.println("blockGroup " + lb.getBlock() + " of file " + src
+              + " has reported internalBlocks " + reported
+              + " (desired " + expected + "); locations "
+              + Joiner.on(' ').join(lb.getLocations()));
+          Thread.sleep(1000);
+          break;
+        }
+      }
+      if (success) {
+        System.out.println("All blockGroups of file " + src
+            + " verified to have all internalBlocks.");
+      }
+    } while (!success && count < ATTEMPTS);
+
+    if (count == ATTEMPTS) {
+      throw new TimeoutException("Timed out waiting for " + src +
+          " to have all the internalBlocks");
     }
   }
 

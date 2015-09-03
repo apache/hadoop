@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -62,6 +63,9 @@ public class TestReadStripedFileWithDecoding {
 
   @Before
   public void setup() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
         .numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
@@ -80,7 +84,7 @@ public class TestReadStripedFileWithDecoding {
    * Verify the decoding works correctly.
    */
   @Test(timeout=300000)
-  public void testReadWithDNFailure() throws IOException {
+  public void testReadWithDNFailure() throws Exception {
     for (int fileLength : fileLengths) {
       for (int dnFailureNum : dnFailureNums) {
         try {
@@ -161,7 +165,7 @@ public class TestReadStripedFileWithDecoding {
   }
 
   private void testReadWithDNFailure(int fileLength, int dnFailureNum)
-      throws IOException {
+      throws Exception {
     String fileType = fileLength < (blockSize * dataBlocks) ?
         "smallFile" : "largeFile";
     String src = "/dnFailure_" + dnFailureNum + "_" + fileType;
@@ -172,6 +176,7 @@ public class TestReadStripedFileWithDecoding {
     Path testPath = new Path(src);
     final byte[] bytes = StripedFileTestUtil.generateBytes(fileLength);
     DFSTestUtil.writeFile(fs, testPath, bytes);
+    StripedFileTestUtil.waitBlockGroupsReported(fs, src);
 
     // shut down the DN that holds an internal data block
     BlockLocation[] locs = fs.getFileBlockLocations(testPath, cellSize * 5,

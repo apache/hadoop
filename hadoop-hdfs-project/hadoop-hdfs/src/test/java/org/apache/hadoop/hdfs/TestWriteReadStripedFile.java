@@ -45,7 +45,7 @@ import static org.apache.hadoop.hdfs.StripedFileTestUtil.stripesPerBlock;
 public class TestWriteReadStripedFile {
   public static final Log LOG = LogFactory.getLog(TestWriteReadStripedFile.class);
   private static MiniDFSCluster cluster;
-  private static FileSystem fs;
+  private static DistributedFileSystem fs;
   private static Configuration conf = new HdfsConfiguration();
 
   static {
@@ -69,32 +69,32 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileEmpty() throws IOException {
+  public void testFileEmpty() throws Exception {
     testOneFileUsingDFSStripedInputStream("/EmptyFile", 0);
     testOneFileUsingDFSStripedInputStream("/EmptyFile2", 0, true);
   }
 
   @Test
-  public void testFileSmallerThanOneCell1() throws IOException {
+  public void testFileSmallerThanOneCell1() throws Exception {
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneCell", 1);
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneCell2", 1, true);
   }
 
   @Test
-  public void testFileSmallerThanOneCell2() throws IOException {
+  public void testFileSmallerThanOneCell2() throws Exception {
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneCell", cellSize - 1);
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneCell2", cellSize - 1,
         true);
   }
 
   @Test
-  public void testFileEqualsWithOneCell() throws IOException {
+  public void testFileEqualsWithOneCell() throws Exception {
     testOneFileUsingDFSStripedInputStream("/EqualsWithOneCell", cellSize);
     testOneFileUsingDFSStripedInputStream("/EqualsWithOneCell2", cellSize, true);
   }
 
   @Test
-  public void testFileSmallerThanOneStripe1() throws IOException {
+  public void testFileSmallerThanOneStripe1() throws Exception {
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe",
         cellSize * dataBlocks - 1);
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe2",
@@ -102,7 +102,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileSmallerThanOneStripe2() throws IOException {
+  public void testFileSmallerThanOneStripe2() throws Exception {
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe",
         cellSize + 123);
     testOneFileUsingDFSStripedInputStream("/SmallerThanOneStripe2",
@@ -110,7 +110,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileEqualsWithOneStripe() throws IOException {
+  public void testFileEqualsWithOneStripe() throws Exception {
     testOneFileUsingDFSStripedInputStream("/EqualsWithOneStripe",
         cellSize * dataBlocks);
     testOneFileUsingDFSStripedInputStream("/EqualsWithOneStripe2",
@@ -118,7 +118,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileMoreThanOneStripe1() throws IOException {
+  public void testFileMoreThanOneStripe1() throws Exception {
     testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe1",
         cellSize * dataBlocks + 123);
     testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe12",
@@ -126,7 +126,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileMoreThanOneStripe2() throws IOException {
+  public void testFileMoreThanOneStripe2() throws Exception {
     testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe2",
         cellSize * dataBlocks + cellSize * dataBlocks + 123);
     testOneFileUsingDFSStripedInputStream("/MoreThanOneStripe22",
@@ -134,7 +134,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testLessThanFullBlockGroup() throws IOException {
+  public void testLessThanFullBlockGroup() throws Exception {
     testOneFileUsingDFSStripedInputStream("/LessThanFullBlockGroup",
         cellSize * dataBlocks * (stripesPerBlock - 1) + cellSize);
     testOneFileUsingDFSStripedInputStream("/LessThanFullBlockGroup2",
@@ -142,7 +142,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileFullBlockGroup() throws IOException {
+  public void testFileFullBlockGroup() throws Exception {
     testOneFileUsingDFSStripedInputStream("/FullBlockGroup",
         blockSize * dataBlocks);
     testOneFileUsingDFSStripedInputStream("/FullBlockGroup2",
@@ -150,7 +150,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileMoreThanABlockGroup1() throws IOException {
+  public void testFileMoreThanABlockGroup1() throws Exception {
     testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup1",
         blockSize * dataBlocks + 123);
     testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup12",
@@ -158,7 +158,7 @@ public class TestWriteReadStripedFile {
   }
 
   @Test
-  public void testFileMoreThanABlockGroup2() throws IOException {
+  public void testFileMoreThanABlockGroup2() throws Exception {
     testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup2",
         blockSize * dataBlocks + cellSize + 123);
     testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup22",
@@ -167,7 +167,7 @@ public class TestWriteReadStripedFile {
 
 
   @Test
-  public void testFileMoreThanABlockGroup3() throws IOException {
+  public void testFileMoreThanABlockGroup3() throws Exception {
     testOneFileUsingDFSStripedInputStream("/MoreThanABlockGroup3",
         blockSize * dataBlocks * 3 + cellSize * dataBlocks
             + cellSize + 123);
@@ -177,15 +177,16 @@ public class TestWriteReadStripedFile {
   }
 
   private void testOneFileUsingDFSStripedInputStream(String src, int fileLength)
-      throws IOException {
+      throws Exception {
     testOneFileUsingDFSStripedInputStream(src, fileLength, false);
   }
 
   private void testOneFileUsingDFSStripedInputStream(String src, int fileLength,
-      boolean withDataNodeFailure) throws IOException {
+      boolean withDataNodeFailure) throws Exception {
     final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);
     Path srcPath = new Path(src);
     DFSTestUtil.writeFile(fs, srcPath, new String(expected));
+    StripedFileTestUtil.waitBlockGroupsReported(fs, src);
 
     StripedFileTestUtil.verifyLength(fs, srcPath, fileLength);
 

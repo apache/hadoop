@@ -67,7 +67,7 @@ public class StripedDataStreamer extends DataStreamer {
       this.queue = queue;
     }
 
-    T poll(final int i) throws InterruptedIOException {
+    T poll(final int i) throws IOException {
       for(;;) {
         synchronized(queue) {
           final T polled = queue.poll(i);
@@ -80,6 +80,7 @@ public class StripedDataStreamer extends DataStreamer {
               return queue.poll(i);
             } catch(IOException ioe) {
               LOG.warn("Failed to populate, " + this, ioe);
+              throw ioe;
             }
           }
         }

@@ -44,13 +44,14 @@ public class TestReadStripedFileWithMissingBlocks {
   public static final Log LOG = LogFactory
       .getLog(TestReadStripedFileWithMissingBlocks.class);
   private static MiniDFSCluster cluster;
-  private static FileSystem fs;
+  private static DistributedFileSystem fs;
   private static Configuration conf = new HdfsConfiguration();
   private final int fileLength = blockSize * dataBlocks + 123;
 
   @Before
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
     fs = cluster.getFileSystem();
@@ -64,42 +65,43 @@ public class TestReadStripedFileWithMissingBlocks {
   }
 
   @Test
-  public void testReadFileWithMissingBlocks1() throws IOException {
+  public void testReadFileWithMissingBlocks1() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 0);
   }
 
   @Test
-  public void testReadFileWithMissingBlocks2() throws IOException {
+  public void testReadFileWithMissingBlocks2() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 1);
   }
 
   @Test
-  public void testReadFileWithMissingBlocks3() throws IOException {
+  public void testReadFileWithMissingBlocks3() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 1, 2);
   }
 
   @Test
-  public void testReadFileWithMissingBlocks4() throws IOException {
+  public void testReadFileWithMissingBlocks4() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 2, 0);
   }
 
   @Test
-  public void testReadFileWithMissingBlocks5() throws IOException {
+  public void testReadFileWithMissingBlocks5() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 2, 1);
   }
 
   @Test
-  public void testReadFileWithMissingBlocks6() throws IOException {
+  public void testReadFileWithMissingBlocks6() throws Exception {
     readFileWithMissingBlocks(new Path("/foo"), fileLength, 3, 0);
   }
 
   private void readFileWithMissingBlocks(Path srcPath, int fileLength,
       int missingDataNum, int missingParityNum)
-      throws IOException {
+      throws Exception {
     LOG.info("readFileWithMissingBlocks: (" + missingDataNum + ","
         + missingParityNum + ")");
     final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);
     DFSTestUtil.writeFile(fs, srcPath, new String(expected));
+    StripedFileTestUtil.waitBlockGroupsReported(fs, srcPath.toUri().getPath());
     StripedFileTestUtil.verifyLength(fs, srcPath, fileLength);
     int dataBlocks = (fileLength - 1) / cellSize + 1;
     BlockLocation[] locs = fs.getFileBlockLocations(srcPath, 0, cellSize);

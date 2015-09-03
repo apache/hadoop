@@ -56,6 +56,7 @@ import org.junit.Test;
 
 import com.google.common.base.Preconditions;
 
+
 public class TestDFSStripedOutputStreamWithFailure {
   public static final Log LOG = LogFactory.getLog(
       TestDFSStripedOutputStreamWithFailure.class);
@@ -135,6 +136,7 @@ public class TestDFSStripedOutputStreamWithFailure {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 6000L);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     return conf;
   }
 
@@ -331,6 +333,13 @@ public class TestDFSStripedOutputStreamWithFailure {
       }
     }
     out.close();
+
+    short expectedReported = StripedFileTestUtil.getRealTotalBlockNum(length);
+    if (length > dnIndex * CELL_SIZE || dnIndex >= NUM_DATA_BLOCKS) {
+      expectedReported--;
+    }
+    DFSTestUtil.waitReplication(dfs, p, expectedReported);
+
     Assert.assertTrue(killed);
 
     // check file length

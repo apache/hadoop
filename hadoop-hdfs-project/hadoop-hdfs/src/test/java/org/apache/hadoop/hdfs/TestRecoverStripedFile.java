@@ -182,9 +182,12 @@ public class TestRecoverStripedFile {
     }
     
     Path file = new Path(fileName);
-    
-    testCreateStripedFile(file, fileLen);
-    
+
+    final byte[] data = new byte[fileLen];
+    ThreadLocalRandom.current().nextBytes(data);
+    DFSTestUtil.writeFile(fs, file, data);
+    StripedFileTestUtil.waitBlockGroupsReported(fs, fileName);
+
     LocatedBlocks locatedBlocks = getLocatedBlocks(file);
     assertEquals(locatedBlocks.getFileLength(), fileLen);
     
@@ -379,22 +382,5 @@ public class TestRecoverStripedFile {
   
   private LocatedBlocks getLocatedBlocks(Path file) throws IOException {
     return fs.getClient().getLocatedBlocks(file.toString(), 0, Long.MAX_VALUE);
-  }
-  
-  private void testCreateStripedFile(Path file, int dataLen)
-      throws IOException {
-    final byte[] data = new byte[dataLen];
-    ThreadLocalRandom.current().nextBytes(data);
-    writeContents(file, data);
-  }
-  
-  void writeContents(Path file, byte[] contents)
-      throws IOException {
-    FSDataOutputStream out = fs.create(file);
-    try {
-      out.write(contents, 0, contents.length);
-    } finally {
-      out.close();
-    }
   }
 }
