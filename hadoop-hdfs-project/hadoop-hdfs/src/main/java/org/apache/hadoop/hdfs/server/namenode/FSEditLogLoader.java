@@ -1112,8 +1112,14 @@ public class FSEditLogLoader {
    * If there are invalid or corrupt transactions in the middle of the stream,
    * validateEditLog will skip over them.
    * This reads through the stream but does not close it.
+   *
+   * @param maxTxIdToValidate Maximum Tx ID to try to validate. Validation
+   *                          returns after reading this or a higher ID.
+   *                          The file portion beyond this ID is potentially
+   *                          being updated.
    */
-  static EditLogValidation validateEditLog(EditLogInputStream in) {
+  static EditLogValidation validateEditLog(EditLogInputStream in,
+      long maxTxIdToValidate) {
     long lastPos = 0;
     long lastTxId = HdfsServerConstants.INVALID_TXID;
     long numValid = 0;
@@ -1136,6 +1142,10 @@ public class FSEditLogLoader {
           || op.getTransactionId() > lastTxId) {
         lastTxId = op.getTransactionId();
       }
+      if (lastTxId >= maxTxIdToValidate) {
+        break;
+      }
+
       numValid++;
     }
     return new EditLogValidation(lastPos, lastTxId, false);

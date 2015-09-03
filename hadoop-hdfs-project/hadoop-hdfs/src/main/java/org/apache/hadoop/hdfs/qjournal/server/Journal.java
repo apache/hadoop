@@ -151,7 +151,7 @@ public class Journal implements Closeable {
     
     EditLogFile latest = scanStorageForLatestEdits();
     if (latest != null) {
-      highestWrittenTxId = latest.getLastTxId();
+      updateHighestWrittenTxId(latest.getLastTxId());
     }
   }
 
@@ -266,7 +266,17 @@ public class Journal implements Closeable {
   synchronized long getHighestWrittenTxId() {
     return highestWrittenTxId;
   }
-  
+
+  /**
+   * Update the highest Tx ID that has been written to the journal. Also update
+   * the {@link FileJournalManager#lastReadableTxId} of the underlying fjm.
+   * @param val The new value
+   */
+  private void updateHighestWrittenTxId(long val) {
+    highestWrittenTxId = val;
+    fjm.setLastReadableTxId(val);
+  }
+
   @VisibleForTesting
   JournalMetrics getMetricsForTests() {
     return metrics;
@@ -399,7 +409,7 @@ public class Journal implements Closeable {
     metrics.bytesWritten.incr(records.length);
     metrics.txnsWritten.incr(numTxns);
     
-    highestWrittenTxId = lastTxnId;
+    updateHighestWrittenTxId(lastTxnId);
     nextTxId = lastTxnId + 1;
   }
 
@@ -782,8 +792,8 @@ public class Journal implements Closeable {
             ": no current segment in place");
         
         // Update the highest txid for lag metrics
-        highestWrittenTxId = Math.max(segment.getEndTxId(),
-            highestWrittenTxId);
+        updateHighestWrittenTxId(Math.max(segment.getEndTxId(),
+            highestWrittenTxId));
       } else {
         LOG.info("Synchronizing log " + TextFormat.shortDebugString(segment) +
             ": old segment " + TextFormat.shortDebugString(currentSegment) +
@@ -812,7 +822,7 @@ public class Journal implements Closeable {
         // If we're shortening the log, update our highest txid
         // used for lag metrics.
         if (txnRange(currentSegment).containsLong(highestWrittenTxId)) {
-          highestWrittenTxId = segment.getEndTxId();
+          updateHighestWrittenTxId(segment.getEndTxId());
         }
       }
       syncedFile = syncLog(reqInfo, segment, fromUrl);
