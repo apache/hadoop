@@ -1091,6 +1091,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12362. Set hadoop.tmp.dir and hadoop.log.dir in pom.
     (Charlie Helin via wang)
 
+    HADOOP-10318. Incorrect reference to nodeFile in RumenToSLSConverter
+    error message. (Wei Yan via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -110,7 +110,7 @@ public class RumenToSLSConverter {
     if (! nodeFile.getParentFile().exists()
             && ! nodeFile.getParentFile().mkdirs()) {
       System.err.println("ERROR: Cannot create output directory in path: "
-              + jsonFile.getParentFile().getAbsoluteFile());
+              + nodeFile.getParentFile().getAbsoluteFile());
       System.exit(1);
     }
 
