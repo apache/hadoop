@@ -871,6 +871,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3893. Both RM in active state when Admin#transitionToActive failure 
     from refeshAll() (Bibin A Chundatt via rohithsharmaks)
 
+    YARN-4101. RM should print alert messages if Zookeeper and Resourcemanager
+    gets connection issue. (Xuan Gong via jianhe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
