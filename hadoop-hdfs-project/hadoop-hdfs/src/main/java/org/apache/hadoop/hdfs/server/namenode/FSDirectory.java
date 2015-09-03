@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -1004,7 +1005,7 @@ public class FSDirectory implements Closeable {
                   HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
                       xattr.getValue());
               ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                  PBHelper.convert(ezProto.getSuite()),
+                  PBHelperClient.convert(ezProto.getSuite()),
                   PBHelper.convert(ezProto.getCryptoProtocolVersion()),
                   ezProto.getKeyName());
             } catch (InvalidProtocolBufferException e) {

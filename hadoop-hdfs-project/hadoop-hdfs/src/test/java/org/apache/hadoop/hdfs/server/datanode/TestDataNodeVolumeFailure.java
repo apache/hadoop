@@ -43,12 +43,12 @@ import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -525,7 +525,7 @@ public class TestDataNodeVolumeFailure {
           try {
             sock.connect(addr, HdfsConstants.READ_TIMEOUT);
             sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
-            peer = TcpPeerServer.peerFromSocket(sock);
+            peer = DFSUtilClient.peerFromSocket(sock);
           } finally {
             if (peer == null) {
               IOUtils.closeSocket(sock);

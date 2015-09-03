@@ -57,8 +57,8 @@ public interface Peer extends Closeable {
    * Set the write timeout on this peer.
    *
    * Note: this is not honored for BasicInetPeer.
-   * See {@link BasicSocketPeer#setWriteTimeout} for details.
-   * 
+   * See {@link BasicInetPeer#setWriteTimeout} for details.
+   *
    * @param timeoutMs       The timeout in milliseconds.
    */
   public void setWriteTimeout(int timeoutMs) throws IOException;
@@ -76,13 +76,13 @@ public interface Peer extends Closeable {
   public void close() throws IOException;
 
   /**
-   * @return               A string representing the remote end of our 
+   * @return               A string representing the remote end of our
    *                       connection to the peer.
    */
   public String getRemoteAddressString();
 
   /**
-   * @return               A string representing the local end of our 
+   * @return               A string representing the local end of our
    *                       connection to the peer.
    */
   public String getLocalAddressString();
