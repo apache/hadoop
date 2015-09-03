@@ -122,7 +122,8 @@ public class RMAppBlock extends AppBlock{
         continue;
       }
       AppAttemptInfo attemptInfo =
-          new AppAttemptInfo(rmAppAttempt, rmApp.getUser());
+          new AppAttemptInfo(rmAppAttempt, rmApp.getUser(),
+              WebAppUtils.getHttpSchemePrefix(conf));
       String nodeLink = attemptInfo.getNodeHttpAddress();
       if (nodeLink != null) {
         nodeLink = WebAppUtils.getHttpSchemePrefix(conf) + nodeLink;
