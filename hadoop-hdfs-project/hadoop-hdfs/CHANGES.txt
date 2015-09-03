@@ -1284,6 +1284,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9003. ForkJoin thread pool leaks. (Kihwal Lee via jing9)
 
+    HDFS-8885. ByteRangeInputStream used in webhdfs does not override
+    available(). (Shradha Revankar via aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

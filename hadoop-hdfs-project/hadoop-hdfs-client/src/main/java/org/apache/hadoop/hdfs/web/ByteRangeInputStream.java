@@ -274,4 +274,15 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     }
     status = StreamStatus.CLOSED;
   }
+
+  @Override
+  public synchronized int available() throws IOException{
+    getInputStream();
+    if(fileLength != null){
+      long remaining = fileLength - currentPos;
+      return remaining <= Integer.MAX_VALUE ? (int) remaining : Integer.MAX_VALUE;
+    }else {
+      return Integer.MAX_VALUE;
+    }
+  }
 }
