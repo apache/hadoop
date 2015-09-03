@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.protocolPB;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
     .EncryptionZoneProto;
-import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherSuiteProto;
 import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
 
 import java.io.IOException;
@@ -2315,7 +2314,7 @@ public class PBHelper {
     return EncryptionZoneProto.newBuilder()
         .setId(zone.getId())
         .setPath(zone.getPath())
-        .setSuite(convert(zone.getSuite()))
+        .setSuite(PBHelperClient.convert(zone.getSuite()))
         .setCryptoProtocolVersion(convert(zone.getVersion()))
         .setKeyName(zone.getKeyName())
         .build();
@@ -2323,7 +2322,7 @@ public class PBHelper {
 
   public static EncryptionZone convert(EncryptionZoneProto proto) {
     return new EncryptionZone(proto.getId(), proto.getPath(),
-        convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
+        PBHelperClient.convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
         proto.getKeyName());
   }
 
@@ -2624,106 +2623,6 @@ public class PBHelper {
     return GetEditsFromTxidResponseProto.newBuilder().setEventsList(
         builder.build()).build();
   }
-  
-  public static CipherOptionProto convert(CipherOption option) {
-    if (option != null) {
-      CipherOptionProto.Builder builder = CipherOptionProto.
-          newBuilder();
-      if (option.getCipherSuite() != null) {
-        builder.setSuite(convert(option.getCipherSuite()));
-      }
-      if (option.getInKey() != null) {
-        builder.setInKey(ByteString.copyFrom(option.getInKey()));
-      }
-      if (option.getInIv() != null) {
-        builder.setInIv(ByteString.copyFrom(option.getInIv()));
-      }
-      if (option.getOutKey() != null) {
-        builder.setOutKey(ByteString.copyFrom(option.getOutKey()));
-      }
-      if (option.getOutIv() != null) {
-        builder.setOutIv(ByteString.copyFrom(option.getOutIv()));
-      }
-      return builder.build();
-    }
-    return null;
-  }
-  
-  public static CipherOption convert(CipherOptionProto proto) {
-    if (proto != null) {
-      CipherSuite suite = null;
-      if (proto.getSuite() != null) {
-        suite = convert(proto.getSuite());
-      }
-      byte[] inKey = null;
-      if (proto.getInKey() != null) {
-        inKey = proto.getInKey().toByteArray();
-      }
-      byte[] inIv = null;
-      if (proto.getInIv() != null) {
-        inIv = proto.getInIv().toByteArray();
-      }
-      byte[] outKey = null;
-      if (proto.getOutKey() != null) {
-        outKey = proto.getOutKey().toByteArray();
-      }
-      byte[] outIv = null;
-      if (proto.getOutIv() != null) {
-        outIv = proto.getOutIv().toByteArray();
-      }
-      return new CipherOption(suite, inKey, inIv, outKey, outIv);
-    }
-    return null;
-  }
-  
-  public static List<CipherOptionProto> convertCipherOptions(
-      List<CipherOption> options) {
-    if (options != null) {
-      List<CipherOptionProto> protos = 
-          Lists.newArrayListWithCapacity(options.size());
-      for (CipherOption option : options) {
-        protos.add(convert(option));
-      }
-      return protos;
-    }
-    return null;
-  }
-  
-  public static List<CipherOption> convertCipherOptionProtos(
-      List<CipherOptionProto> protos) {
-    if (protos != null) {
-      List<CipherOption> options = 
-          Lists.newArrayListWithCapacity(protos.size());
-      for (CipherOptionProto proto : protos) {
-        options.add(convert(proto));
-      }
-      return options;
-    }
-    return null;
-  }
-
-  public static CipherSuiteProto convert(CipherSuite suite) {
-    switch (suite) {
-    case UNKNOWN:
-      return CipherSuiteProto.UNKNOWN;
-    case AES_CTR_NOPADDING:
-      return CipherSuiteProto.AES_CTR_NOPADDING;
-    default:
-      return null;
-    }
-  }
-
-  public static CipherSuite convert(CipherSuiteProto proto) {
-    switch (proto) {
-    case AES_CTR_NOPADDING:
-      return CipherSuite.AES_CTR_NOPADDING;
-    default:
-      // Set to UNKNOWN and stash the unknown enum value
-      CipherSuite suite = CipherSuite.UNKNOWN;
-      suite.setUnknownValue(proto.getNumber());
-      return suite;
-    }
-  }
 
   public static List<CryptoProtocolVersionProto> convert(
       CryptoProtocolVersion[] versions) {
@@ -2776,7 +2675,7 @@ public class PBHelper {
       return null;
     }
     return HdfsProtos.FileEncryptionInfoProto.newBuilder()
-        .setSuite(convert(info.getCipherSuite()))
+        .setSuite(PBHelperClient.convert(info.getCipherSuite()))
         .setCryptoProtocolVersion(convert(info.getCryptoProtocolVersion()))
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
@@ -2803,7 +2702,7 @@ public class PBHelper {
       return null;
     }
     return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
-        .setSuite(convert(suite))
+        .setSuite(PBHelperClient.convert(suite))
         .setCryptoProtocolVersion(convert(version))
         .setKeyName(keyName)
         .build();
@@ -2814,7 +2713,7 @@ public class PBHelper {
     if (proto == null) {
       return null;
     }
-    CipherSuite suite = convert(proto.getSuite());
+    CipherSuite suite = PBHelperClient.convert(proto.getSuite());
     CryptoProtocolVersion version = convert(proto.getCryptoProtocolVersion());
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();

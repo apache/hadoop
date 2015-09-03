@@ -126,6 +126,20 @@ public interface HdfsClientConfigKeys {
   long    DFS_DATANODE_READAHEAD_BYTES_DEFAULT = 4 * 1024 * 1024; // 4MB
   String  DFS_ENCRYPTION_KEY_PROVIDER_URI = "dfs.encryption.key.provider.uri";
 
+  String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
+      "dfs.encrypt.data.transfer.cipher.suites";
+
+  String DFS_DATA_TRANSFER_PROTECTION_KEY = "dfs.data.transfer.protection";
+  String DFS_DATA_TRANSFER_PROTECTION_DEFAULT = "";
+  String DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY =
+      "dfs.data.transfer.saslproperties.resolver.class";
+
+  String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
+      "dfs.encrypt.data.transfer.cipher.key.bitlength";
+  int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
+
+  String DFS_TRUSTEDCHANNEL_RESOLVER_CLASS = "dfs.trustedchannel.resolver.class";
+
   String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
       PREFIX + "replica.accessor.builder.classes";
 

@@ -21,7 +21,7 @@ import java.net.InetAddress;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -45,7 +45,7 @@ public class TrustedChannelResolver implements Configurable {
   public static TrustedChannelResolver getInstance(Configuration conf) {
     Class<? extends TrustedChannelResolver> clazz =
       conf.getClass(
-          DFSConfigKeys.DFS_TRUSTEDCHANNEL_RESOLVER_CLASS,
+          HdfsClientConfigKeys.DFS_TRUSTEDCHANNEL_RESOLVER_CLASS,
           TrustedChannelResolver.class, TrustedChannelResolver.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }

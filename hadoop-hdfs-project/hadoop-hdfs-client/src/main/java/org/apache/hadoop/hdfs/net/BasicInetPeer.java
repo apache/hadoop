@@ -23,44 +23,37 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.hadoop.net.SocketInputStream;
-import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.net.unix.DomainSocket;
 
 /**
- * Represents a peer that we communicate with by using non-blocking I/O 
- * on a Socket.
+ * Represents a peer that we communicate with by using a basic Socket
+ * that has no associated Channel.
+ *
  */
-class NioInetPeer implements Peer {
+public class BasicInetPeer implements Peer {
   private final Socket socket;
-
-  /**
-   * An InputStream which simulates blocking I/O with timeouts using NIO.
-   */
-  private final SocketInputStream in;
-  
-  /**
-   * An OutputStream which simulates blocking I/O with timeouts using NIO.
-   */
-  private final SocketOutputStream out;
-
+  private final OutputStream out;
+  private final InputStream in;
   private final boolean isLocal;
 
-  NioInetPeer(Socket socket) throws IOException {
+  public BasicInetPeer(Socket socket) throws IOException {
     this.socket = socket;
-    this.in = new SocketInputStream(socket.getChannel(), 0);
-    this.out = new SocketOutputStream(socket.getChannel(), 0);
+    this.out = socket.getOutputStream();
+    this.in = socket.getInputStream();
     this.isLocal = socket.getInetAddress().equals(socket.getLocalAddress());
   }
 
   @Override
   public ReadableByteChannel getInputStreamChannel() {
-    return in;
+    /*
+     * This Socket has no channel, so there's nothing to return here.
+     */
+    return null;
   }
 
   @Override
   public void setReadTimeout(int timeoutMs) throws IOException {
-    in.setTimeout(timeoutMs);
+    socket.setSoTimeout(timeoutMs);
   }
 
   @Override
@@ -74,8 +67,18 @@ class NioInetPeer implements Peer {
   }
 
   @Override
-  public void setWriteTimeout(int timeoutMs) throws IOException {
-    out.setTimeout(timeoutMs);
+  public void setWriteTimeout(int timeoutMs) {
+   /* 
+    * We can't implement write timeouts. :(
+    * 
+    * Java provides no facility to set a blocking write timeout on a Socket.
+    * You can simulate a blocking write with a timeout by using
+    * non-blocking I/O.  However, we can't use nio here, because this Socket
+    * doesn't have an associated Channel.
+    * 
+    * See http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4031100 for
+    * more details.
+    */
   }
 
   @Override
@@ -85,13 +88,7 @@ class NioInetPeer implements Peer {
 
   @Override
   public void close() throws IOException {
-    // We always close the outermost streams-- in this case, 'in' and 'out'
-    // Closing either one of these will also close the Socket.
-    try {
-      in.close();
-    } finally {
-      out.close();
-    }
+    socket.close();
   }
 
   @Override
@@ -103,7 +100,7 @@ class NioInetPeer implements Peer {
   public String getLocalAddressString() {
     return socket.getLocalSocketAddress().toString();
   }
-
+  
   @Override
   public InputStream getInputStream() throws IOException {
     return in;
@@ -121,7 +118,7 @@ class NioInetPeer implements Peer {
 
   @Override
   public String toString() {
-    return "NioInetPeer(" + socket.toString() + ")";
+    return "BasicInetPeer(" + socket.toString() + ")";
   }
 
   @Override
