@@ -391,17 +391,13 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-d] [-h] [-R] [-t] [-S] [-r] [-u] <args> `
+Usage: `hadoop fs -ls [-d] [-h] [-R] <args> `
 
 Options:
 
 * -d: Directories are listed as plain files.
 * -h: Format file sizes in a human-readable fashion (eg 64.0m instead of 67108864).
 * -R: Recursively list subdirectories encountered.
-* -t: Sort output by modification time (most recent first).
-* -S: Sort output by file size.
-* -r: Reverse the sort order.
-* -u: Use access time rather than modification time for display and sorting.  
 
 For a file ls returns stat on the file with the following format:
 

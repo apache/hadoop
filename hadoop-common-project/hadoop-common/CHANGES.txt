@@ -38,6 +38,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-10365. BufferedOutputStream in FileUtil#unpackEntries() should be
     closed in finally block. (Kiran Kumar M R and Sanghyun Yun via ozawa)
 
+    HADOOP-12006. Remove unimplemented option for `hadoop fs -ls` from
+    document in branch-2.7. (Akira AJISAKA via ozawa)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
