@@ -64,15 +64,20 @@ function jira_determine_issue
   declare patchnamechunk
   declare maybeissue
 
+  if [[ -n ${JIRA_ISSUE} ]]; then
+    return 0
+  fi
+
   # shellcheck disable=SC2016
   patchnamechunk=$(echo "${input}" | ${AWK} -F/ '{print $NF}')
 
   maybeissue=$(echo "${patchnamechunk}" | cut -f1,2 -d-)
 
   if [[ ${maybeissue} =~ ${JIRA_ISSUE_RE} ]]; then
+    # shellcheck disable=SC2034
     ISSUE=${maybeissue}
     JIRA_ISSUE=${maybeissue}
-    add_footer_table "JIRA Issue" "${ISSUE}"
+    add_footer_table "JIRA Issue" "${JIRA_ISSUE}"
     return 0
   fi
 
@@ -123,6 +128,7 @@ function jira_locate_patch
   # send this to the github plugin to process.
   if [[ -n "${GITHUB_BASE_URL}"
       && $(${GREP} -c  "${GITHUB_BASE_URL}"'[^ ]*patch' "${PATCH_DIR}/jira") != 0 ]]; then
+    jira_determine_issue "${input}"
     echo "${input} appears to be a Github PR. Switching Modes."
     github_jira_bridge "${fileloc}"
     return $?

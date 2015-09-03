@@ -89,12 +89,9 @@ function github_jira_bridge
   # we use this to prevent loops later on
   GITHUB_BRIDGED=true
 
-  # the JIRA issue has already been downloaded.  So let's
-  # find the URL.  This is currently hard-coded to github.com
-  # Sorry Github Enterprise users. :(
-
+  # the JIRA issue has already been downloaded. So let's find the URL.
   # shellcheck disable=SC2016
-  urlfromjira=$(${AWK} 'match($0,"https://github.com/.*patch"){print $1}' "${PATCH_DIR}/jira" | tail -1)
+  urlfromjira=$(${AWK} "match(\$0,\"${GITHUB_BASE_URL}/[^ ]*patch\"){print substr(\$0,RSTART,RLENGTH)}" "${PATCH_DIR}/jira" | tail -1)
   github_breakup_url "${urlfromjira}"
   github_locate_patch "${GITHUB_ISSUE}" "${fileloc}"
 }
