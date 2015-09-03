@@ -1297,6 +1297,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
 
+    HADOOP-5323. Trash documentation should describe its directory structure and
+    configurations. (Weiwei Yang via ozawa)
+
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
