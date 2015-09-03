@@ -41,6 +41,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12006. Remove unimplemented option for `hadoop fs -ls` from
     document in branch-2.7. (Akira AJISAKA via ozawa)
 
+    HADOOP-12213. Interrupted exception can occur when Client#stop is called.
+    (Kuhu Shukla via ozawa)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES

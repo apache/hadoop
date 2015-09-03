@@ -194,9 +194,10 @@ public class Client {
             clientExecutor.shutdownNow();
           }
         } catch (InterruptedException e) {
-          LOG.error("Interrupted while waiting for clientExecutor" +
-              "to stop", e);
+          LOG.warn("Interrupted while waiting for clientExecutor" +
+              " to stop");
           clientExecutor.shutdownNow();
+          Thread.currentThread().interrupt();
         }
         clientExecutor = null;
       }
@@ -253,6 +254,10 @@ public class Client {
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
   }
 
+  @VisibleForTesting
+  public static final ExecutorService getClientExecutor() {
+    return Client.clientExcecutorFactory.clientExecutor;
+  }
   /**
    * Increment this client's reference count
    *
