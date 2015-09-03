@@ -187,6 +187,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3250. Support admin cli interface in for Application Priority.
     (Rohith Sharma K S via jianhe)
 
+    YARN-3970. Add REST api support for Application Priority.
+    (Naganarasimha G R via vvasudev)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

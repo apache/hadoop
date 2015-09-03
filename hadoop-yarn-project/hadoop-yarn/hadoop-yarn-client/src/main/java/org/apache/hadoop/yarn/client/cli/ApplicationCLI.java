@@ -645,7 +645,7 @@ public class ApplicationCLI extends YarnCLI {
     Priority newAppPriority = Priority.newInstance(Integer.parseInt(priority));
     sysout.println("Updating priority of an aplication " + applicationId);
     client.updateApplicationPriority(appId, newAppPriority);
-    sysout.println("Successfully updated the priority of any application "
-        + applicationId);
+    sysout.println("Successfully updated the application with id "
+        + applicationId + " with priority '" + priority + "'");
   }
 }

@@ -970,6 +970,92 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
   }
 
   @Test(timeout = 90000)
+  public void testUpdateAppPriority() throws Exception {
+    client().addFilter(new LoggingFilter(System.out));
+
+    if (!(rm.getResourceScheduler() instanceof CapacityScheduler)) {
+      // till the fair scheduler modifications for priority is completed
+      return;
+    }
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
+    cs.setClusterMaxPriority(conf);
+
+    // default root queue allows anyone to have admin acl
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    String[] queues = { "default", "test" };
+    csconf.setQueues("root", queues);
+    csconf.setCapacity("root.default", 50.0f);
+    csconf.setCapacity("root.test", 50.0f);
+    csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl("root.test", QueueACL.ADMINISTER_QUEUE, "someuser");
+    rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
+
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    String[] mediaTypes =
+        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+    MediaType[] contentTypes =
+        { MediaType.APPLICATION_JSON_TYPE, MediaType.APPLICATION_XML_TYPE };
+    for (String mediaType : mediaTypes) {
+      for (MediaType contentType : contentTypes) {
+        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        amNodeManager.nodeHeartbeat(true);
+        int modifiedPriority = 8;
+        AppPriority priority = new AppPriority(modifiedPriority);
+        Object entity;
+        if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
+          entity = appPriorityToJSON(priority);
+        } else {
+          entity = priority;
+        }
+        ClientResponse response = this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+                "priority")
+            .entity(entity, contentType).accept(mediaType)
+            .put(ClientResponse.class);
+
+        if (!isAuthenticationEnabled()) {
+          assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+          continue;
+        }
+        assertEquals(Status.OK, response.getClientResponseStatus());
+        if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+          verifyAppPriorityJson(response, modifiedPriority);
+        } else {
+          verifyAppPriorityXML(response, modifiedPriority);
+        }
+
+        response = this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+                "priority")
+            .accept(mediaType).get(ClientResponse.class);
+        assertEquals(Status.OK, response.getClientResponseStatus());
+        if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+          verifyAppPriorityJson(response, modifiedPriority);
+        } else {
+          verifyAppPriorityXML(response, modifiedPriority);
+        }
+
+        // check unauthorized
+        app = rm.submitApp(CONTAINER_MB, "", "someuser");
+        amNodeManager.nodeHeartbeat(true);
+        response = this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+                "priority")
+            .entity(entity, contentType).accept(mediaType)
+            .put(ClientResponse.class);
+        assertEquals(Status.FORBIDDEN, response.getClientResponseStatus());
+      }
+    }
+    rm.stop();
+  }
+
+  @Test(timeout = 90000)
   public void testAppMove() throws Exception {
 
     client().addFilter(new LoggingFilter(System.out));
@@ -1049,12 +1135,46 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     rm.stop();
   }
 
+  protected static String appPriorityToJSON(AppPriority targetPriority)
+      throws Exception {
+    StringWriter sw = new StringWriter();
+    JSONJAXBContext ctx = new JSONJAXBContext(AppPriority.class);
+    JSONMarshaller jm = ctx.createJSONMarshaller();
+    jm.marshallToJSON(targetPriority, sw);
+    return sw.toString();
+  }
+
   protected static String appQueueToJSON(AppQueue targetQueue) throws Exception {
     StringWriter sw = new StringWriter();
     JSONJAXBContext ctx = new JSONJAXBContext(AppQueue.class);
     JSONMarshaller jm = ctx.createJSONMarshaller();
     jm.marshallToJSON(targetQueue, sw);
     return sw.toString();
+  }
+ protected static void verifyAppPriorityJson(ClientResponse response,
+      int expectedPriority) throws JSONException {
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    int responsePriority = json.getInt("priority");
+    assertEquals(expectedPriority, responsePriority);
+  }
+
+  protected static void verifyAppPriorityXML(ClientResponse response,
+      int expectedPriority)
+          throws ParserConfigurationException, IOException, SAXException {
+    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    String xml = response.getEntity(String.class);
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList nodes = dom.getElementsByTagName("applicationpriority");
+    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    Element element = (Element) nodes.item(0);
+    int responsePriority = WebServicesTestUtils.getXmlInt(element, "priority");
+    assertEquals(expectedPriority, responsePriority);
   }
 
   protected static void
