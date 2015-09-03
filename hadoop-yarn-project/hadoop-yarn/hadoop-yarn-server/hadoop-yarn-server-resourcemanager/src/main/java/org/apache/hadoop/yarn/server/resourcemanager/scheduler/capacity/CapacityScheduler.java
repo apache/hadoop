@@ -1832,7 +1832,7 @@ public class CapacityScheduler extends
 
       LOG.info("Application '" + applicationId
           + "' is submitted without priority "
-          + "hence considering default queue/cluster priority:"
+          + "hence considering default queue/cluster priority: "
           + priorityFromContext.getPriority());
     }
 
@@ -1846,8 +1846,8 @@ public class CapacityScheduler extends
     appPriority = priorityFromContext;
 
     LOG.info("Priority '" + appPriority.getPriority()
-        + "' is acceptable in queue :" + queueName + "for application:"
-        + applicationId + "for the user: " + user);
+        + "' is acceptable in queue : " + queueName + " for application: "
+        + applicationId + " for the user: " + user);
 
     return appPriority;
   }
@@ -1876,13 +1876,13 @@ public class CapacityScheduler extends
           + "' is not present, hence could not change priority.");
     }
 
-    if (application.getPriority().equals(newPriority)) {
-      return;
-    }
-
     RMApp rmApp = rmContext.getRMApps().get(applicationId);
     appPriority = checkAndGetApplicationPriority(newPriority, rmApp.getUser(),
         rmApp.getQueue(), applicationId);
+
+    if (application.getPriority().equals(appPriority)) {
+      return;
+    }
 
     // Update new priority in Submission Context to keep track in HA
     rmApp.getApplicationSubmissionContext().setPriority(appPriority);
@@ -1909,7 +1909,7 @@ public class CapacityScheduler extends
     }
 
     LOG.info("Priority '" + appPriority + "' is updated in queue :"
-        + rmApp.getQueue() + "for application:" + applicationId
-        + "for the user: " + rmApp.getUser());
+        + rmApp.getQueue() + " for application: " + applicationId
+        + " for the user: " + rmApp.getUser());
   }
 }
