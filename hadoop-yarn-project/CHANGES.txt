@@ -877,6 +877,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4101. RM should print alert messages if Zookeeper and Resourcemanager
     gets connection issue. (Xuan Gong via jianhe)
 
+    YARN-4103. RM WebServices missing scheme for appattempts logLinks.
+    (Jonathan Eagles via vvasudeb)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
