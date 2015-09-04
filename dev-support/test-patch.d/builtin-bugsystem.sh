@@ -35,7 +35,7 @@ function generic_locate_patch
           --output "${output}" \
          "${input}"
   if [[ $? != 0 ]]; then
-    yetus_debug "jira_locate_patch: not a JIRA."
+    yetus_debug "generic_locate_patch: failed to download the patch."
     return 1
   fi
   return 0
