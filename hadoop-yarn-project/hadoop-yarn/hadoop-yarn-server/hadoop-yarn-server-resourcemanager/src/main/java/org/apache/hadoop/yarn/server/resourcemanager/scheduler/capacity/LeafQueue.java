@@ -931,7 +931,7 @@ public class LeafQueue extends AbstractCSQueue {
      *
      */
     Resource headroom = 
-      Resources.min(resourceCalculator, clusterResource,
+      Resources.componentwiseMin(
         Resources.subtract(userLimit, user.getUsed()),
         Resources.subtract(currentResourceLimit, queueUsage.getUsed())
         );
