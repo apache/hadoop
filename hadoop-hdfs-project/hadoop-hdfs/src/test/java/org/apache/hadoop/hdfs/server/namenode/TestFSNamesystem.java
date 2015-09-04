@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
@@ -123,13 +124,15 @@ public class TestFSNamesystem {
 
     FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
     FSNamesystem fsn = Mockito.spy(fsNamesystem);
+    BlockManager bm = fsn.getBlockManager();
+    Whitebox.setInternalState(bm, "namesystem", fsn);
 
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
     HAState haState = Mockito.mock(HAState.class);
     Mockito.when(haContext.getState()).thenReturn(haState);
     Mockito.when(haState.shouldPopulateReplQueues()).thenReturn(true);
-    Whitebox.setInternalState(fsn, "haContext", haContext);
+    Mockito.when(fsn.getHAContext()).thenReturn(haContext);
 
     //Make NameNode.getNameNodeMetrics() not return null
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
@@ -137,15 +140,15 @@ public class TestFSNamesystem {
     fsn.enterSafeMode(false);
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues were being populated during very first "
-        + "safemode", !fsn.isPopulatingReplQueues());
+        + "safemode", !bm.isPopulatingReplQueues());
     fsn.leaveSafeMode();
     assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated even after leaving "
-      + "safemode", fsn.isPopulatingReplQueues());
+      + "safemode", bm.isPopulatingReplQueues());
     fsn.enterSafeMode(false);
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated after entering "
-      + "safemode 2nd time", fsn.isPopulatingReplQueues());
+      + "safemode 2nd time", bm.isPopulatingReplQueues());
   }
   
   @Test
