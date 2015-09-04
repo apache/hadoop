@@ -813,6 +813,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4073. Removed unused ApplicationACLsManager in ContainerManagerImpl constructor.
     (Naganarasimha G R via rohithsharmaks)
 
+    YARN-4024. YARN RM should avoid unnecessary resolving IP when NMs doing heartbeat.
+    (Hong Zhiguo via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
