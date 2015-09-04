@@ -1153,7 +1153,7 @@ class BlockReceiver implements Closeable {
 
       synchronized(this) {
         if (sending) {
-          wait(PipelineAck.getOOBTimeout(ackStatus));
+          wait(datanode.getOOBTimeout(ackStatus));
           // Didn't get my turn in time. Give up.
           if (sending) {
             throw new IOException("Could not send OOB reponse in time: "
