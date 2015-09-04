@@ -255,6 +255,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
 
+    HADOOP-12358. Add -safely flag to rm to prompt when deleting many files.
+    (xyao via wang)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

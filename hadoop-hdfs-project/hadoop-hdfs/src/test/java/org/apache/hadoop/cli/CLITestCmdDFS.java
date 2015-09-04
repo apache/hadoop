@@ -22,6 +22,7 @@ import org.apache.hadoop.cli.util.CLICommandTypes;
 import org.apache.hadoop.cli.util.CLITestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.FSCmdExecutor;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
 public class CLITestCmdDFS extends CLITestCmd {
@@ -30,9 +31,10 @@ public class CLITestCmdDFS extends CLITestCmd {
   }
 
   @Override
-  public CommandExecutor getExecutor(String tag) throws IllegalArgumentException {
+  public CommandExecutor getExecutor(String tag, Configuration conf)
+      throws IllegalArgumentException {
     if (getType() instanceof CLICommandDFSAdmin)
-      return new FSCmdExecutor(tag, new DFSAdmin());
-    return super.getExecutor(tag);
+      return new FSCmdExecutor(tag, new DFSAdmin(conf));
+    return super.getExecutor(tag, conf);
   }
 }
