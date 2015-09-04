@@ -40,6 +40,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OOB_TIMEOUT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OOB_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT;
@@ -359,6 +361,8 @@ public class DataNode extends ReconfigurableBase
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
 
+  private long[] oobTimeouts; /** timeout value of each OOB type */
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -373,6 +377,7 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
+    initOOBTimeout();
   }
 
   /**
@@ -446,6 +451,8 @@ public class DataNode extends ReconfigurableBase
                 return ret;
               }
             });
+
+    initOOBTimeout();
   }
 
   @Override  // ReconfigurableBase
@@ -3225,5 +3232,36 @@ public class DataNode extends ReconfigurableBase
   public void removeSpanReceiver(long id) throws IOException {
     checkSuperuserPrivilege();
     spanReceiverHost.removeSpanReceiver(id);
+  }
+
+  /**
+   * Get timeout value of each OOB type from configuration
+   */
+  private void initOOBTimeout() {
+    final int oobStart = Status.OOB_RESTART_VALUE; // the first OOB type
+    final int oobEnd = Status.OOB_RESERVED3_VALUE; // the last OOB type
+    final int numOobTypes = oobEnd - oobStart + 1;
+    oobTimeouts = new long[numOobTypes];
+
+    final String[] ele = conf.get(DFS_DATANODE_OOB_TIMEOUT_KEY,
+        DFS_DATANODE_OOB_TIMEOUT_DEFAULT).split(",");
+    for (int i = 0; i < numOobTypes; i++) {
+      oobTimeouts[i] = (i < ele.length) ? Long.parseLong(ele[i]) : 0;
+    }
+  }
+
+  /**
+   * Get the timeout to be used for transmitting the OOB type
+   * @return the timeout in milliseconds
+   */
+  public long getOOBTimeout(Status status)
+      throws IOException {
+    if (status.getNumber() < Status.OOB_RESTART_VALUE ||
+        status.getNumber() > Status.OOB_RESERVED3_VALUE) {
+      // Not an OOB.
+      throw new IOException("Not an OOB status: " + status);
+    }
+
+    return oobTimeouts[status.getNumber() - Status.OOB_RESTART_VALUE];
   }
 }
