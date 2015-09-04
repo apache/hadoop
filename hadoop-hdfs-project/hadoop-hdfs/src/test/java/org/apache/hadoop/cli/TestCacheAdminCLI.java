@@ -29,6 +29,7 @@ import org.apache.hadoop.cli.util.CLITestCmd;
 import org.apache.hadoop.cli.util.CacheAdminCmdExecutor;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -119,18 +120,18 @@ public class TestCacheAdminCLI extends CLITestHelper {
     }
 
     @Override
-    public CommandExecutor getExecutor(String tag)
+    public CommandExecutor getExecutor(String tag, Configuration conf)
         throws IllegalArgumentException {
       if (getType() instanceof CLICommandCacheAdmin) {
         return new CacheAdminCmdExecutor(tag, new CacheAdmin(conf));
       }
-      return super.getExecutor(tag);
+      return super.getExecutor(tag, conf);
     }
   }
 
   @Override
   protected Result execute(CLICommand cmd) throws Exception {
-    return cmd.getExecutor("").executeCommand(cmd.getCmd());
+    return cmd.getExecutor("", conf).executeCommand(cmd.getCmd());
   }
 
   @Test

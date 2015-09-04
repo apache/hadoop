@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.cli.util;
 
+import org.apache.hadoop.conf.Configuration;
+
 /**
  * This interface is to generalize types of test command for upstream projects
  */
 public interface CLICommand {
-  public CommandExecutor getExecutor(String tag) throws IllegalArgumentException;
+  public CommandExecutor getExecutor(String tag, Configuration conf)
+      throws IllegalArgumentException;
   public CLICommandTypes getType();
   public String getCmd();
   @Override

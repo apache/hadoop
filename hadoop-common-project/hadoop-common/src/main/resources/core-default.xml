@@ -1962,4 +1962,15 @@ for ldap providers in the same way as above does.
     <name>hadoop.shell.missing.defaultFs.warning</name>
     <value>false</value>
   </property>
+
+  <property>
+    <name>hadoop.shell.safely.delete.limit.num.files</name>
+    <value>100</value>
+    <description>Used by -safely option of hadoop fs shell -rm command to avoid
+      accidental deletion of large directories. When enabled, the -rm command
+      requires confirmation if the number of files to be deleted is greater than
+      this limit.  The default limit is 100 files. The warning is disabled if
+      the limit is 0 or the -safely is not specified in -rm command.
+    </description>
+  </property>
 </configuration>
