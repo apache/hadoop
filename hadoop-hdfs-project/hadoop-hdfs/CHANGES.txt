@@ -36,6 +36,9 @@ Trunk (Unreleased)
 
     HDFS-8895. Remove deprecated BlockStorageLocation APIs. (wang)
 
+    HDFS-8981. Adding revision to data node jmx getVersion() method. (Siqi Li
+    via mingma)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)

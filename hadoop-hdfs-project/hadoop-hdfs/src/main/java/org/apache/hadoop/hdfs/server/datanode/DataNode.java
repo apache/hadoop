@@ -2900,10 +2900,15 @@ public class DataNode extends ReconfigurableBase
     return NetUtils.createSocketAddr(
         conf.getTrimmed(DFS_DATANODE_ADDRESS_KEY, DFS_DATANODE_ADDRESS_DEFAULT));
   }
-  
+
+  @Override // DataNodeMXBean
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
+  }
+
   @Override // DataNodeMXBean
   public String getVersion() {
-    return VersionInfo.getVersion();
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
   }
   
   @Override // DataNodeMXBean
@@ -2917,7 +2922,11 @@ public class DataNode extends ReconfigurableBase
   public String getHttpPort(){
     return this.getConf().get("dfs.datanode.info.port");
   }
-  
+
+  public String getRevision() {
+    return VersionInfo.getRevision();
+  }
+
   /**
    * @return the datanode's http port
    */
