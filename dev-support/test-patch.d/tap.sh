@@ -53,7 +53,7 @@ function tap_process_tests
 
   if [[ -n "${filenames}" ]]; then
     module_failed_tests=$(echo "${filenames}" \
-      | sed -e "s,${TAP_LOG_DIR},,g" -e s,^/,,g )
+      | ${SED} -e "s,${TAP_LOG_DIR},,g" -e s,^/,,g )
     # shellcheck disable=SC2086
     cat ${filenames} >> "${PATCH_DIR}/patch-${filefrag}.tap"
     TAP_LOGS="${TAP_LOGS} @@BASE@@/patch-${filefrag}.tap"
