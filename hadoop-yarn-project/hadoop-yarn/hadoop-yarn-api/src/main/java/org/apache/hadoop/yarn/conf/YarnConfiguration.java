@@ -746,6 +746,11 @@ public class YarnConfiguration extends Configuration {
       + "proxy-user-privileges.enabled";
   public static final boolean DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED = false;
 
+  /** The expiry interval for node IP caching. -1 disables the caching */
+  public static final String RM_NODE_IP_CACHE_EXPIRY_INTERVAL_SECS = RM_PREFIX
+      + "node-ip-cache.expiry-interval-secs";
+  public static final int DEFAULT_RM_NODE_IP_CACHE_EXPIRY_INTERVAL_SECS = -1;
+
   /**
    * How many diagnostics/failure messages can be saved in RM for
    * log aggregation. It also defines the number of diagnostics/failure
