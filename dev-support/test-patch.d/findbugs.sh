@@ -64,7 +64,7 @@ function findbugs_parse_args
 ## @return       1 findbugs is missing some component
 function findbugs_is_installed
 {
-  if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
+  if [[ ! -x "${FINDBUGS_HOME}/bin/findbugs" ]]; then
     printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
     add_vote_table -1 findbugs "Findbugs is not installed."
     return 1
