@@ -880,6 +880,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4103. RM WebServices missing scheme for appattempts logLinks.
     (Jonathan Eagles via vvasudeb)
 
+    YARN-4105. Capacity Scheduler headroom for DRF is wrong (Chang Li via
+    jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
