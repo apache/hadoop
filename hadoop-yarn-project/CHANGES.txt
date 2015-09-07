@@ -816,6 +816,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4024. YARN RM should avoid unnecessary resolving IP when NMs doing heartbeat.
     (Hong Zhiguo via wangda)
 
+    YARN-3591. Resource localization on a bad disk causes subsequent containers failure.
+    (Lavkesh Lahngir via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

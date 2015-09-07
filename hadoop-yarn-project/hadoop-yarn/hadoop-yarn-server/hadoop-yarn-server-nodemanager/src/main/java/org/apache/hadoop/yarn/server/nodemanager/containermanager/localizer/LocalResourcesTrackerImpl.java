@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRecoveredEvent;
@@ -65,6 +67,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   private final Dispatcher dispatcher;
   private final ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc;
   private Configuration conf;
+  private LocalDirsHandlerService dirsHandler;
   /*
    * This flag controls whether this resource tracker uses hierarchical
    * directories or not. For PRIVATE and PUBLIC resource trackers it
@@ -92,27 +95,38 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
       Configuration conf, NMStateStoreService stateStore) {
     this(user, appId, dispatcher,
-      new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
-      useLocalCacheDirectoryManager, conf, stateStore);
+        new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
+        useLocalCacheDirectoryManager, conf, stateStore, null);
+  }
+
+  public LocalResourcesTrackerImpl(String user, ApplicationId appId,
+      Dispatcher dispatcher, boolean useLocalCacheDirectoryManager,
+      Configuration conf, NMStateStoreService stateStore,
+      LocalDirsHandlerService dirHandler) {
+    this(user, appId, dispatcher,
+        new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
+        useLocalCacheDirectoryManager, conf, stateStore, dirHandler);
   }
 
   LocalResourcesTrackerImpl(String user, ApplicationId appId,
       Dispatcher dispatcher,
-      ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc,
+      ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc,
       boolean useLocalCacheDirectoryManager, Configuration conf,
-      NMStateStoreService stateStore) {
+      NMStateStoreService stateStore, LocalDirsHandlerService dirHandler) {
     this.appId = appId;
     this.user = user;
     this.dispatcher = dispatcher;
     this.localrsrc = localrsrc;
     this.useLocalCacheDirectoryManager = useLocalCacheDirectoryManager;
-    if ( this.useLocalCacheDirectoryManager) {
-      directoryManagers = new ConcurrentHashMap<Path, LocalCacheDirectoryManager>();
+    if (this.useLocalCacheDirectoryManager) {
+      directoryManagers =
+          new ConcurrentHashMap<Path, LocalCacheDirectoryManager>();
       inProgressLocalResourcesMap =
-        new ConcurrentHashMap<LocalResourceRequest, Path>();
+          new ConcurrentHashMap<LocalResourceRequest, Path>();
     }
     this.conf = conf;
     this.stateStore = stateStore;
+    this.dirsHandler = dirHandler;
   }
 
   /*
@@ -312,11 +326,45 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
         toString());
       if (!file.exists()) {
         ret = false;
+      } else if (dirsHandler != null) {
+        ret = checkLocalResource(rsrc);
       }
     }
     return ret;
   }
-  
+
+  /**
+   * Check if the rsrc is Localized on a good dir.
+   *
+   * @param rsrc
+   * @return
+   */
+  @VisibleForTesting
+  boolean checkLocalResource(LocalizedResource rsrc) {
+    List<String> localDirs = dirsHandler.getLocalDirsForRead();
+    for (String dir : localDirs) {
+      if (isParent(rsrc.getLocalPath().toUri().getPath(), dir)) {
+        return true;
+      } else {
+        continue;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param path
+   * @param parentdir
+   * @return true if parentdir is parent of path else false.
+   */
+  private boolean isParent(String path, String parentdir) {
+    // Add separator if not present.
+    if (path.charAt(path.length() - 1) != File.separatorChar) {
+      path += File.separator;
+    }
+    return path.startsWith(parentdir);
+  }
+
   @Override
   public boolean remove(LocalizedResource rem, DeletionService delService) {
  // current synchronization guaranteed by crude RLS event for cleanup
