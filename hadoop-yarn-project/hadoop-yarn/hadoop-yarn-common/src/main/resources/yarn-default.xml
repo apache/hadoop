@@ -349,9 +349,12 @@
 
   <property>
     <description>Should YARN fail fast if it encounters any errors.
+      This is a global config for all other components including RM,NM etc.
+      If no value is set for component-specific config (e.g yarn.resourcemanager.fail-fast),
+      this value will be the default.
     </description>
     <name>yarn.fail-fast</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>

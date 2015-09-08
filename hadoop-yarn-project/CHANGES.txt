@@ -889,6 +889,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4105. Capacity Scheduler headroom for DRF is wrong (Chang Li via
     jlowe)
 
+    YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
+    state-store error occurs. (Jian He via xgong)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

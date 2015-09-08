@@ -402,7 +402,7 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
   public static final String YARN_FAIL_FAST = YARN_PREFIX + "fail-fast";
-  public static final boolean DEFAULT_YARN_FAIL_FAST = true;
+  public static final boolean DEFAULT_YARN_FAIL_FAST = false;
 
   public static final String RM_FAIL_FAST = RM_PREFIX + "fail-fast";
 
