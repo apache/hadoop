@@ -425,6 +425,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1556. NPE getting application report with a null appId. (Weiwei Yang via 
     junping_du)
 
+    YARN-4121. Fix typos in capacity scheduler documentation.
+    (Kai Sasaki via vvasudev)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
