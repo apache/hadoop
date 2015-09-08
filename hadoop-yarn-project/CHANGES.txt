@@ -898,6 +898,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
     state-store error occurs. (Jian He via xgong)
 
+    YARN-4096. App local logs are leaked if log aggregation fails to initialize
+    for the app. (Jason Lowe via zxu)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
