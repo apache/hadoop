@@ -2259,4 +2259,38 @@
     <value></value>
   </property>
 
+  <property>
+    <description>
+    Enable/Disable AMRMProxyService in the node manager. This service is used to intercept
+    calls from the application masters to the resource manager.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    The address of the AMRMProxyService listener.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.address</name>
+    <value>0.0.0.0:8048</value>
+  </property>
+
+  <property>
+    <description>
+    The number of threads used to handle requests by the AMRMProxyService.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.client.thread-count</name>
+    <value>25</value>
+  </property>
+
+  <property>
+    <description>
+    The comma separated list of class names that implement the RequestInterceptor interface. This is used by the
+    AMRMProxyService to create the request processing pipeline for applications.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor</value>
+  </property>
+
 </configuration>

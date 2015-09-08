@@ -187,6 +187,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3970. Add REST api support for Application Priority.
     (Naganarasimha G R via vvasudev)
 
+    YARN-2884. Added a proxy service in NM to proxy the the communication
+    between AM and RM. (Kishore Chaliparambil via jianhe) 
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
