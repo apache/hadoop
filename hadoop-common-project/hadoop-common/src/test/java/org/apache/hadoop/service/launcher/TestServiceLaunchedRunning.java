@@ -34,14 +34,14 @@ public class TestServiceLaunchedRunning extends AbstractServiceLauncherTestBase 
     Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
-        LaunchableRunningService.NAME,
         LauncherArguments.ARG_CONF,
-        configFile(conf));
+        configFile(conf),
+        LaunchableRunningService.NAME
+        );
   }
 
   @Test
   public void testArgBinding() throws Throwable {
-    Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_OTHER_FAILURE,
         "",
         LaunchableRunningService.NAME,

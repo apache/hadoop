@@ -36,9 +36,11 @@ public class TestServiceLaunchNoArgsAllowed extends AbstractServiceLauncherTestB
 
   @Test
   public void testConfsStripped() throws Throwable {
-    assertRuns(NoArgsAllowedService.NAME,
+    assertRuns(
         LauncherArguments.ARG_CONF,
-        configFile(newConf())); 
+        configFile(newConf()),
+        NoArgsAllowedService.NAME
+        );
   }
 
 }
