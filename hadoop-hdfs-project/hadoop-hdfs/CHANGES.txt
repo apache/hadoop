@@ -27,6 +27,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-8046. Allow better control of getContentSummary (kihwal)
 
+    HDFS-8384. Allow NN to startup if there are files having a lease but are not
+    under construction. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using
