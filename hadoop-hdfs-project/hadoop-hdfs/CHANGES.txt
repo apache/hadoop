@@ -41,6 +41,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8995. Flaw in registration bookeeping can make DN die on reconnect.
     (Kihwal Lee via yliu)
 
+    HDFS-8384. Allow NN to startup if there are files having a lease but are not
+    under construction. (jing9)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

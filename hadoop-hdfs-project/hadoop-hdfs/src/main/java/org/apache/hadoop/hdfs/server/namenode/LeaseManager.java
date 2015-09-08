@@ -116,7 +116,11 @@ public class LeaseManager {
         final INodeFile cons;
         try {
           cons = this.fsnamesystem.getFSDirectory().getINode(path).asFile();
-          Preconditions.checkState(cons.isUnderConstruction());
+          if (!cons.isUnderConstruction()) {
+            LOG.warn("The file " + cons.getFullPathName()
+                + " is not under construction but has lease.");
+            continue;
+          }
         } catch (UnresolvedLinkException e) {
           throw new AssertionError("Lease files should reside on this FS");
         }
@@ -444,8 +448,12 @@ public class LeaseManager {
       // verify that path exists in namespace
       try {
         INodeFile node = INodeFile.valueOf(fsnamesystem.dir.getINode(p), p);
-        Preconditions.checkState(node.isUnderConstruction());
-        inodes.put(p, node);
+        if (node.isUnderConstruction()) {
+          inodes.put(p, node);
+        } else {
+          LOG.warn("Ignore the lease of file " + p
+              + " for checkpoint since the file is not under construction");
+        }
       } catch (IOException ioe) {
         LOG.error(ioe);
       }
