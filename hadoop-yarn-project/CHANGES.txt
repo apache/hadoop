@@ -144,9 +144,6 @@ Release 2.8.0 - UNRELEASED
     YARN-2003. Support for Application priority : Changes in RM and Capacity 
     Scheduler. (Sunil G via wangda)
 
-    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
-    in ZKRMStateStore. (Jian He via junping_du)
-
     YARN-3656. LowCost: A Cost-Based Placement Agent for YARN Reservations. 
     (Jonathan Yaniv and Ishai Menache via curino)
 
@@ -824,6 +821,9 @@ Release 2.7.2 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
+    in ZKRMStateStore. (Jian He via junping_du)
 
   IMPROVEMENTS
 
