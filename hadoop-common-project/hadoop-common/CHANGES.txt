@@ -1100,6 +1100,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10318. Incorrect reference to nodeFile in RumenToSLSConverter
     error message. (Wei Yan via ozawa)
 
+    HADOOP-12388. Fix components' version information in the web page
+    'About the Cluster'. (Jun Gong via zxu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
