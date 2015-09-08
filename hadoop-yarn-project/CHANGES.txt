@@ -21,6 +21,9 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
+    YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
+    state-store error occurs. (Jian He via xgong)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
