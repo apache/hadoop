@@ -136,7 +136,7 @@ function github_find_jira_title
     return 1
   fi
 
-  title=$(GREP title "${PATCH_DIR}/github-pull.json" \
+  title=$(${GREP} title "${PATCH_DIR}/github-pull.json" \
     | cut -f4 -d\")
 
   # people typically do two types:  JIRA-ISSUE: and [JIRA-ISSUE]
