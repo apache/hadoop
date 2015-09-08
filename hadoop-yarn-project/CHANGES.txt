@@ -6,6 +6,9 @@ Release 2.6.2 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
+    in ZKRMStateStore. (Jian He via junping_du)
+
   IMPROVEMENTS
 
     YARN-4092. Fixed UI redirection to print useful messages when both RMs are
