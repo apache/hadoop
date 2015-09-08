@@ -768,6 +768,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12358. Add -safely flag to rm to prompt when deleting many files.
     (xyao via wang)
 
+    HADOOP-12384. Add "-direct" flag option for fs copy so that user can choose
+    not to create "._COPYING_" file (J.Andreina via vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
