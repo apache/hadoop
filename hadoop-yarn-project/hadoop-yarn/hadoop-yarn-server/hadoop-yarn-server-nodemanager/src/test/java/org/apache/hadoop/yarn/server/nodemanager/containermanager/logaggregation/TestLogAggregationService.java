@@ -705,9 +705,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-        
+
+    DeletionService spyDelSrvc = spy(this.delSrvc);
     LogAggregationService logAggregationService = spy(
-        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+        new LogAggregationService(dispatcher, this.context, spyDelSrvc,
                                   super.dirsHandler));
     logAggregationService.init(this.conf);
     logAggregationService.start();
@@ -715,6 +716,11 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     ApplicationId appId =
         BuilderUtils.newApplicationId(System.currentTimeMillis(),
           (int) (Math.random() * 1000));
+
+    File appLogDir =
+        new File(localLogDir, ConverterUtils.toString(appId));
+    appLogDir.mkdir();
+
     Exception e = new RuntimeException("KABOOM!");
     doThrow(e)
       .when(logAggregationService).createAppDir(any(String.class),
@@ -730,9 +736,6 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
-    // filesystems may have been instantiated
-    verify(logAggregationService).closeFileSystems(
-        any(UserGroupInformation.class));
 
     // verify trying to collect logs for containers/apps we don't know about
     // doesn't blow up and tear down the NM
@@ -745,6 +748,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     logAggregationService.stop();
     assertEquals(0, logAggregationService.getNumAggregators());
+    verify(spyDelSrvc).delete(eq(user), any(Path.class),
+        Mockito.<Path>anyVararg());
+    verify(logAggregationService).closeFileSystems(
+        any(UserGroupInformation.class));
   }
 
   private void writeContainerLogs(File appLogDir, ContainerId containerId,
