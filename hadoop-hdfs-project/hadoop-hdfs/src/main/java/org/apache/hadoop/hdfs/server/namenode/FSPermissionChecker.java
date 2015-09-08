@@ -227,7 +227,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
     final INodeAttributes last = inodeAttrs[inodeAttrs.length - 1];
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
         && inodeAttrs.length > 1 && last != null) {
-      checkStickyBit(inodeAttrs[inodeAttrs.length - 2], last);
+      checkStickyBit(inodeAttrs[inodeAttrs.length - 2], last, path);
     }
     if (ancestorAccess != null && inodeAttrs.length > 1) {
       check(inodeAttrs, path, ancestorIndex, ancestorAccess);
@@ -430,8 +430,8 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkStickyBit(INodeAttributes parent, INodeAttributes inode
-      ) throws AccessControlException {
+  private void checkStickyBit(INodeAttributes parent, INodeAttributes inode,
+      String path) throws AccessControlException {
     if (!parent.getFsPermission().getStickyBit()) {
       return;
     }
@@ -446,8 +446,14 @@ class FSPermissionChecker implements AccessControlEnforcer {
       return;
     }
 
-    throw new AccessControlException("Permission denied by sticky bit setting:" +
-      " user=" + getUser() + ", inode=" + inode);
+    throw new AccessControlException(String.format(
+        "Permission denied by sticky bit: user=%s, path=\"%s\":%s:%s:%s%s, " +
+        "parent=\"%s\":%s:%s:%s%s", user,
+        path, inode.getUserName(), inode.getGroupName(),
+        inode.isDirectory() ? "d" : "-", inode.getFsPermission().toString(),
+        path.substring(0, path.length() - inode.toString().length() - 1 ),
+        parent.getUserName(), parent.getGroupName(),
+        parent.isDirectory() ? "d" : "-", parent.getFsPermission().toString()));
   }
 
   /**

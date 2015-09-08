@@ -93,6 +93,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-5802. NameNode does not check for inode type before traversing down a
     path. (Xiao Chen via Yongjun Zhang)
 
+    HDFS-9019. Adding informative message to sticky bit permission denied
+    exception. (xyao)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
