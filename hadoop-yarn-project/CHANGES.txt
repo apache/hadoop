@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.6.1 - UNRELEASED
+Release 2.6.1 - 2015-09-09
 
   INCOMPATIBLE CHANGES
 
