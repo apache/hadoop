@@ -3128,12 +3128,8 @@ public class DataNode extends ReconfigurableBase
     blockPoolTokenSecretManager.clearAllKeysForTesting();
   }
 
-  /**
-   * Get current value of the max balancer bandwidth in bytes per second.
-   *
-   * @return Balancer bandwidth in bytes per second for this datanode.
-   */
-  public Long getBalancerBandwidth() {
+  @Override // ClientDatanodeProtocol
+  public long getBalancerBandwidth() {
     DataXceiverServer dxcs =
                        (DataXceiverServer) this.dataXceiverServer.getRunnable();
     return dxcs.balanceThrottler.getBandwidth();

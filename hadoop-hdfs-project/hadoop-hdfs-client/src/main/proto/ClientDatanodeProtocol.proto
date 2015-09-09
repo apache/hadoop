@@ -162,6 +162,16 @@ message ListReconfigurablePropertiesResponseProto {
   repeated string name = 1;
 }
 
+message GetBalancerBandwidthRequestProto {
+}
+
+/**
+ * bandwidth - balancer bandwidth value of the datanode.
+ */
+message GetBalancerBandwidthResponseProto {
+  required uint64 bandwidth = 1;
+}
+
 /**
  * Protocol used from client to the Datanode.
  * See the request and response for details of rpc call.
@@ -211,4 +221,10 @@ service ClientDatanodeProtocolService {
 
   rpc triggerBlockReport(TriggerBlockReportRequestProto)
       returns(TriggerBlockReportResponseProto);
+
+  /**
+   * Returns the balancer bandwidth value of datanode.
+   */
+  rpc getBalancerBandwidth(GetBalancerBandwidthRequestProto)
+      returns(GetBalancerBandwidthResponseProto);
 }
