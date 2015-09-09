@@ -921,6 +921,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8862. BlockManager#excessReplicateMap should use a HashMap. (yliu)
 
+    HDFS-8929. Add a metric to expose the timestamp of the last journal
+    (surendra singh lilhore via vinayakumarb)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
