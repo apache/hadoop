@@ -1358,6 +1358,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8995. Flaw in registration bookeeping can make DN die on reconnect.
     (Kihwal Lee via yliu)
 
+    HDFS-9033. dfsadmin -metasave prints "NaN" for cache used%.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

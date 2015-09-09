@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -149,6 +150,16 @@ public class TestMetaSave {
       assertTrue(line.equals("Mis-replicated blocks that have been postponed:"));
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Blocks being replicated: 0"));
+      line = reader.readLine();
+      assertTrue(line.equals("Metasave: Blocks 2 waiting deletion from 1 datanodes."));
+     //skip 2 lines to reach HDFS-9033 scenario.
+      line = reader.readLine();
+      line = reader.readLine();
+      line = reader.readLine();
+      assertTrue(line.equals("Metasave: Number of datanodes: 2"));
+      line = reader.readLine();
+      assertFalse(line.contains("NaN"));
+
     } finally {
       if (reader != null)
         reader.close();
