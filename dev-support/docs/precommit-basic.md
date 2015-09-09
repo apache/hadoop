@@ -37,7 +37,7 @@ This is a modification to Hadoop's version of test-patch so that we may bring to
 
 test-patch has the following requirements:
 
-* Ant- or Maven-based project (and ant/maven installed)
+* A project with a supported build tool (ant, gradle, maven, ...)
 * git-based project (and git 1.7.3 or higher installed)
 * bash v3.2 or higher
 * findbugs 3.x installed
@@ -52,7 +52,7 @@ test-patch has the following requirements:
 * file command
 * smart-apply-patch.sh (included!)
 
-Maven plugins requirements:
+Maven plug-ins requirements:
 
 * Apache RAT
 * Apache FindBugs
@@ -61,6 +61,7 @@ Optional:
 
 * JIRA-based issue tracking
 * GitHub-based issue tracking
+* Some other supported bug system
 
 The locations of these files are (mostly) assumed to be in the file path, but may be overridden via command line options.  For Solaris and Solaris-like operating systems, the default location for the POSIX binaries is in /usr/xpg4/bin and the default location for the GNU binaries is /usr/gnu/bin.
 

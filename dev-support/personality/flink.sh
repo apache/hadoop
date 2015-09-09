@@ -57,7 +57,7 @@ function flinklib_preapply
 
   pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/branch-flinklib-root.txt" \
-     "${MVN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+     "${MAVEN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   if [[ $? != 0 ]]; then
      add_vote_table -1 flinklib "Unable to determine flink libs in ${PATCH_BRANCH}."
   fi
@@ -78,7 +78,7 @@ function flinklib_postapply
 
   pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/patch-flinklib-root.txt" \
-     "${MVN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+     "${MAVEN}" "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   FLINK_POST_LIB_FILES=$(flinklib_count)
   popd >/dev/null
 
@@ -97,57 +97,14 @@ function flinklib_postapply
   return 0
 }
 
-function personality_modules
+function flinklib_rebuild
 {
-  local repostatus=$1
-  local testtype=$2
-  local extra=""
+  declare repostatus=$1
 
-  yetus_debug "Personality: ${repostatus} ${testtype}"
-
-  clear_personality_queue
-
-  case ${testtype} in
-    mvninstall)
-      if [[ ${repostatus} == branch ]]; then
-        personality_enqueue_module . -DskipTests
-        return
-      fi
-      return
-      ;;
-    asflicense)
-      # this is very fast and provides the full path if we do it from
-      # the root of the source
-      personality_enqueue_module .
-      return
-    ;;
-    unit)
-      if [[ ${TEST_PARALLEL} == "true" ]] ; then
-        extra="-Pparallel-tests"
-        if [[ -n ${TEST_THREADS:-} ]]; then
-          extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
-        fi
-      fi
-    ;;
-    *)
-      extra="-DskipTests"
-    ;;
-  esac
-
-  for module in ${CHANGED_MODULES}; do
-    # shellcheck disable=SC2086
-    personality_enqueue_module ${module} ${extra}
-  done
-}
-
-function personality_file_tests
-{
-  local filename=$1
-
-  yetus_debug "Using personality_file_tests, but calling the built-in:"
-  builtin_personality_file_tests "${1}"
-
-  if [[ ${filename} =~ \.scala$ ]]; then
-    add_test unit
+  if [[ "${repostatus}" = branch ]]; then
+    flinklib_preapply
+  else
+    flinklib_postinstall
   fi
 }
+

@@ -34,6 +34,8 @@ function hadoop_module_manipulation
   local startingmodules=${1:-normal}
   local module
   local hdfs_modules
+  local mapred_modules
+  local yarn_modules
   local ordered_modules
   local tools_modules
   local passed_modules
@@ -67,9 +69,12 @@ function hadoop_module_manipulation
 
   yetus_debug "hmm pre-ordering: ${startingmodules}"
 
-  # yarn will almost always be after common in the sort order
-  # so really just need to make sure that common comes before
-  # everything else and tools comes last
+  # Hadoop's compilation rules are complex
+  # Precedence: common > [hdfs|yarn] > mapred > tools
+  #  - everything depends upon common
+  #  - hdfs needs common's native bits for unit tests
+  #  - mapred depends upon yarn since it is a yarn app
+  #  - tools can require anything
 
   for module in ${passed_modules}; do
     yetus_debug "Personality ordering ${module}"
@@ -85,12 +90,16 @@ function hadoop_module_manipulation
       ordered_modules="${ordered_modules} ${module}"
     elif [[ ${module} = hadoop-tools* ]]; then
       tools_modules="${tools_modules} ${module}"
+    elif [[ ${module} = hadoop-mapreduce-project* ]]; then
+      mapred_modules="${mapred_modules} ${module}"
+    elif [[ ${module} = hadoop-yarn-project* ]]; then
+      yarn_modules="${yarn_modules} ${module}"
     else
       ordered_modules="${ordered_modules} ${module}"
     fi
   done
 
-  HADOOP_MODULES="${ordered_modules} ${hdfs_modules} ${tools_modules}"
+  HADOOP_MODULES="${ordered_modules} ${hdfs_modules} ${yarn_modules} ${mapred_modules} ${tools_modules}"
 
   yetus_debug "hmm out: ${HADOOP_MODULES}"
 }
@@ -121,7 +130,7 @@ function hadoop_unittest_prereqs
     pushd "${BASEDIR}/${module}" >/dev/null
     # shellcheck disable=SC2086
     echo_and_redirect "${PATCH_DIR}/maven-unit-prereq-${fn}-install.txt" \
-      "${MVN}" "${MAVEN_ARGS[@]}" install -DskipTests ${flags}
+      "${MAVEN}" "${MAVEN_ARGS[@]}" install -DskipTests ${flags}
     popd >/dev/null
   fi
 }
@@ -212,7 +221,7 @@ function personality_modules
       ordering="union"
       extra="-DskipTests"
     ;;
-    javac)
+    compile)
       ordering="union"
       extra="-DskipTests"
       needflags=true
@@ -223,6 +232,10 @@ function personality_modules
         ordering="."
       fi
       ;;
+    distclean)
+      ordering="."
+      extra="-DskipTests"
+    ;;
     javadoc)
       if [[ ${repostatus} = patch ]]; then
         echo "javadoc pre-reqs:"
@@ -232,7 +245,7 @@ function personality_modules
             pushd "${BASEDIR}/${i}" >/dev/null
             echo "cd ${i}"
             echo_and_redirect "${PATCH_DIR}/maven-${fn}-install.txt" \
-              "${MVN}" "${MAVEN_ARGS[@]}" install
+              "${MAVEN}" "${MAVEN_ARGS[@]}" install
             popd >/dev/null
         done
       fi

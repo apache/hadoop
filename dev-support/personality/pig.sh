@@ -43,7 +43,7 @@ function personality_modules
       ANT_FINDBUGSXML="${BASEDIR}/build/test/findbugs/pig-findbugs-report.xml"
       extra="-Dfindbugs.home=${FINDBUGS_HOME}"
     ;;
-    javac)
+    compile)
       extra="${extra} -Djavac.args=-Xlint -Dcompile.c++=yes clean piggybank"
       ;;
     javadoc)

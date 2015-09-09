@@ -138,3 +138,14 @@ function rubocop_postapply
   add_vote_table +1 rubocop "There were no new rubocop issues."
   return 0
 }
+
+function rubocop_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    rubocop_preapply
+  else
+    rubocop_postapply
+  fi
+}

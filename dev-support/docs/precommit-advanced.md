@@ -16,8 +16,6 @@ test-patch
 ==========
 
 * [Docker Support](#Docker_Support)
-* [Maven Specific](#Maven_Specific)
-* [Ant Specific](#Ant_Specific)
 * [Plug-ins](#Plug-ins)
 * [Configuring for Other Projects](#Configuring_for_Other_Projects)
 * [Important Variables](#Important_Variables)
@@ -32,107 +30,71 @@ NOTE: If you are using Boot2Docker, you must use directories under /Users (OSX) 
 
 Dockerfile images will be named with a test-patch prefix and suffix with either a date or a git commit hash. By using this information, test-patch will automatically manage broken/stale container images that are hanging around if it is run in --jenkins mode.  In this way, if Docker fails to build the image, the disk space should eventually be cleaned and returned back to the system.
 
-# Maven Specific
-
-## Command Arguments
-
-test-patch always passes --batch-mode to maven to force it into non-interactive mode.  Additionally, some tests will also force -fae in order to get all of messages/errors during that mode.  It *does not* pass -DskipTests.  Additional arguments should be handled via the personality.
-
-## Test Profile
-
-By default, test-patch will pass -Ptest-patch to Maven. This will allow you to configure special actions that should only happen when running underneath test-patch.
-
-# Ant Specific
-
-## Command Arguments
-
-test-patch always passes -noinput to Ant.  This force ant to be non-interactive.
 
 # Plug-ins
 
-test-patch allows one to add to its basic feature set via plug-ins.  There is a directory called test-patch.d off of the directory where test-patch.sh lives.  Inside this directory one may place some bash shell fragments that, if setup with proper functions, will allow for test-patch to call it as necessary.
+test-patch allows one to add to its basic feature set via plug-ins.  There is a directory called test-patch.d off of the directory where test-patch.sh lives.  Inside this directory one may place some bash shell fragments that, if setup with proper functions, will allow for test-patch to call it as necessary.  Different plug-ins have specific functions for that particular functionality.  In this document, the common functions as well as test functions are covered.  See other documentat for pertinent information for the other plug-in types.
 
-## Test Plug-ins
+## Common Plug-in Functions
 
-Every test plugin must have one line in order to be recognized:
+Every plug-in must have one line in order to be recognized, usually an 'add' statement.  Test plug-ins, for example, have this statement:
 
 ```bash
 add_plugin <pluginname>
 ```
 
-This function call registers the `pluginname` so that test-patch knows that it exists.  This plug-in name also acts as the key to the custom functions that you can define. For example:
+This function call registers the `pluginname` so that test-patch knows that it exists.  The `pluginname` also acts as the key to the custom functions that you can define. For example:
 
 ```bash
 function pluginname_filefilter
 ```
 
-This function gets called for every file that a patch may contain.  This allows the plug-in author to determine if this plug-in should be called, what files it might need to analyze, etc.
+defines the filefilter for the `pluginname` plug-in.
 
 Similarly, there are other functions that may be defined during the test-patch run:
 
-* pluginname\_postcheckout
-    - executed prior to the patch being applied but after the git repository is setup.  This is useful for any early error checking that might need to be done before any heavier work.
+    HINT: It is recommended to make the pluginname relatively small, 10 characters at the most.  Otherwise, the ASCII output table may be skewed.
 
-* pluginname\_preapply
-    - executed prior to the patch being applied.  This is useful for any "before"-type data collection for later comparisons.
+* pluginname\_initialize
+    - After argument parsing and prior to any other work, the initialize step allows a plug-in to do any precursor work, set internal defaults, etc.
 
-* pluginname\_postapply
-    - executed after the patch has been applied.  This is useful for any "after"-type data collection.
+* pluginname\_usage
+    - executed when the help message is displayed. This is used to display the plug-in specific options for the user.
 
-* pluginname\_postinstall
-    - executed after the mvn install test has been done.  If any tests require the Maven repository to be up-to-date with the contents of the patch, this is the place.
+* pluginname\_parse\_args
+    - executed prior to any other above functions except for pluginname\_usage. This is useful for parsing the arguments passed from the user and setting up the execution environment.
+
+* pluginname\_precheck
+    - executed prior to the patch being applied but after the git repository is setup.  Returning a fail status here will exit test-patch.
+
+* pluginname\_precompile
+    - executed prior to the compilation part of the lifecycle. This is useful for doing setup work required by the compilation process.
+
+* pluginname\_compile
+    - executed immediately after the actual compilation. This is step is intended to be used to verify the results and add extra checking of the compile phase and it's stdout/stderr.
+
+* pluginname\_postcompile
+    - This step happens after the compile phase.
+
+* pluginname\_rebuild
+    - Any non-unit tests that require the source to be rebuilt in a destructive way should be run here.
+
+Test Plug-ins
+=============
+
+Plugins geared towards independent tests are registed via:
+
+
+```bash
+add_plugin <pluginname>
+```
+
++ pluginname\_filefilter
+    - executed while determine which files trigger which tests.  This function should use 'add_test pluginname' to add the plug-in to the test list.
 
 * pluginname\_tests
     - executed after the unit tests have completed.
 
-If the plug-in has some specific options, one can use following functions:
-
-* pluginname\_usage
-
-    - executed when the help message is displayed. This is used to display the plug-in specific options for the user.
-
-* pluginname\_parse\_args
-
-    - executed prior to any other above functions except for pluginname_usage. This is useful for parsing the arguments passed from the user and setting up the execution environment.
-
-    HINT: It is recommended to make the pluginname relatively small, 10 characters at the most.  Otherwise, the ASCII output table may be skewed.
-
-## Bug System Plug-ins
-
-Similar to tests, the ability to add support for bug tracking systems is also handled via a plug-in mechanism.
-
-* pluginname_usage
-
-    - executed when the help message is displayed. This is used to display the plug-in specific options for the user.
-
-* pluginname\_parse\_args
-
-    - executed prior to any other above functions except for pluginname_usage. This is useful for parsing the arguments passed from the user and setting up the execution environment.
-
-
-* pluginname\_locate\_patch
-
-    - Given input from the user, download the patch if possible.
-
-* pluginname\_determine\_branch
-
-    - Using any heuristics available, return the branch to process, if possible.
-
-* pluginname\_determine\_issue
-
-    - Using any heuristics available, set the issue, bug number, etc, for this bug system, if possible.  This is typically used to fill in supplementary information in the final output table.
-
-* pluginname\_writecomment
-
-    - Given text input, write this output to the bug system as a comment.  NOTE: It is the bug system's responsibility to format appropriately.
-
-* pluginname\_linecomments
-
-    - This function allows for the system to write specific comments on specific lines if the bug system supports code review comments.
-
-* pluginname\_finalreport
-
-    - Write the final result table to the bug system.
 
 # Configuring for Other Projects
 
@@ -197,7 +159,6 @@ The second is `personality_enqueue_module`.  This function takes two parameters.
 
 For example, let's say your project uses a special configuration to skip unit tests (-DskipTests).  Running unit tests during a javadoc build isn't very useful and wastes a lot of time. We can write a simple personality check to disable the unit tests:
 
-
 ```bash
 function personality_modules
 {
@@ -213,8 +174,6 @@ function personality_modules
 ```
 
 This function will tell test-patch that when the javadoc test is being run, do the documentation build at the base of the source repository and make sure the -DskipTests flag is passed to our build tool.
-
-
 
 # Important Variables
 

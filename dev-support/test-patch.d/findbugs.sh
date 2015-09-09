@@ -89,14 +89,11 @@ function findbugs_runner
   local savestop
 
   personality_modules "${name}" findbugs
-  case ${BUILDTOOL} in
-    maven)
-      modules_workers "${name}" findbugs test-compile findbugs:findbugs
-    ;;
-    ant)
-      modules_workers "${name}" findbugs findbugs
-    ;;
-  esac
+  "${BUILDTOOL}_modules_worker" "${name}" findbugs
+
+  if [[ ${UNSUPPORTED_TEST} = true ]]; then
+    return 0
+  fi
 
   #shellcheck disable=SC2153
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -118,6 +115,7 @@ function findbugs_runner
         file="${ANT_FINDBUGSXML}"
       ;;
     esac
+
 
     if [[ ! -f ${file} ]]; then
       module_status ${i} -1 "" "${name}/${module} no findbugs output file (${file})"
@@ -185,12 +183,9 @@ function findbugs_preapply
   local module_findbugs_warnings
   local result=0
 
-  big_console_header "Pre-patch findbugs detection"
-
   verify_needed_test findbugs
 
   if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need findbugs tests."
     return 0
   fi
 
@@ -199,8 +194,14 @@ function findbugs_preapply
     return 1
   fi
 
+  big_console_header "Pre-patch findbugs detection"
+
   findbugs_runner branch
   result=$?
+
+  if [[ ${UNSUPPORTED_TEST} = true ]]; then
+    return 0
+  fi
 
   if [[ "${FINDBUGS_WARNINGS_FAIL_PRECHECK}" == "true" ]]; then
     until [[ $i -eq ${#MODULE[@]} ]]; do
@@ -262,14 +263,13 @@ function findbugs_postinstall
   local result=0
   local savestop
 
-  big_console_header "Patch findbugs detection"
-
   verify_needed_test findbugs
 
   if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need findbugs tests."
     return 0
   fi
+
+  big_console_header "Patch findbugs detection"
 
   findbugs_is_installed
   if [[ $? != 0 ]]; then
@@ -277,6 +277,10 @@ function findbugs_postinstall
   fi
 
   findbugs_runner patch
+
+  if [[ ${UNSUPPORTED_TEST} = true ]]; then
+    return 0
+  fi
 
   until [[ $i -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
@@ -287,7 +291,11 @@ function findbugs_postinstall
     start_clock
     offset_clock "${MODULE_STATUS_TIMER[${i}]}"
     module="${MODULE[${i}]}"
-    pushd "${module}" >/dev/null
+
+    if [[ ${BUILDTOOLCWD} == true ]]; then
+      pushd "${module}" >/dev/null
+    fi
+
     fn=$(module_file_fragment "${module}")
 
     combined_xml="${PATCH_DIR}/combined-findbugs-${fn}.xml"
@@ -306,7 +314,9 @@ function findbugs_postinstall
             "${branchxml}" \
             "${patchxml}"
     if [[ $? != 0 ]]; then
-      popd >/dev/null
+      if [[ ${BUILDTOOLCWD} == true ]]; then
+        popd >/dev/null
+      fi
       module_status ${i} -1 "" "${module} cannot run computeBugHistory from findbugs"
       ((result=result+1))
       savestop=$(stop_clock)
@@ -378,4 +388,15 @@ function findbugs_postinstall
     return 1
   fi
   return 0
+}
+
+function findbugs_rebuild
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    findbugs_preapply
+  else
+    findbugs_postinstall
+  fi
 }

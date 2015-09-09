@@ -30,49 +30,55 @@
 
 test-patch works effectively under several different phases:
 
-## Setup
+## Initialize
 
 This is where test-patch configures and validates the environment.  Some things done in this phase:
 
 * Defaults
 * Parameter handling
-* Importing plugins and personalities
+* Importing plug-ins and personalities
 * Docker container launching
 * Re-exec support
 * Patch file downloading
 * git repository management (fresh pull, branch switching, etc)
 
-## Post-checkout
+## Precheck
 
 Checks done here are *fatal*.
 
 This acts as a verification of all of the setup parts and is the final place to short-cut the full test cycle.  The most significant built-in check done here is verifying the patch file is a valid.
 
-## Pre-apply
+## Patch File Tests
 
-This is where the 'before' work is handled.  Some things that typically get checked in this phase:
+Tests that only require the patch file are run.  Note that the repository is still from the initial checkout!
+
+## Compile Cycle (Branch)
+
+When compilation must be done, we follow these five steps:
+
+* The list of modules that require analysis is built.
+* A precompile step to set things up for the actual compile
+* The actual compile
+* A postcompile to do analysis on the output of that compile phase
+* A rebuild phase to run tests that require recompiles
+
+The first time this is done is with the pristine checkout.  This is called the "branch compile".  For this pass, this is where the 'before' work is handled.  Some things that typically get checked in this phase:
 
 * The first pass of files and modules that will get patched
 * Validation and information gathering of the source tree pre-patch
-* Author checks
-* Check for modified unit tests
+* javadoc, scaladoc, etc
 
-## Patch is Applied
+## Distribution Clean
 
-The patch gets applied.  Then a second pass to determine which modules and files have been changed in order to handle any modules that might have added or moved.
+This step is to wipe the repository clean back to a pristine state such that the previous cycle will not impact the next cycle.
 
-## Post-apply
+## Patch Application
 
-Now that the patch has been applied, many of the same checks performed in the Pre-apply step are done again to build an 'after' picture.
+The patch gets applied.
 
-## Post-install
+## Compile Cycle (Patch)
 
-Some tests only work correctly when the repo is up-to-date. So
-mvn install is run to update the local repo and we enter this phase.  Some example tests performed here:
-
-* javadoc
-* Findbugs
-* Maven eclipse integration still works
+Now that the patch has been applied the steps to compile we outlined in the compilation (branch) phase are repeated but with the patch applied. This is where a lot of 'after' checks are performed.
 
 ## Unit Tests
 

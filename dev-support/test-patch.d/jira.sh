@@ -248,7 +248,7 @@ function jira_determine_branch
     count="${PATCH_BRANCH//[^.]}"
     total=${#count}
     ((total = total + 1 ))
-    until [[ ${total} -eq 1 ]]; do
+    until [[ ${total} -lt 1 ]]; do
       PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1-${total} -d. )
       yetus_debug "Determine branch: ISSUE-branch[.##] = ${PATCH_BRANCH}"
       ((total=total-1))

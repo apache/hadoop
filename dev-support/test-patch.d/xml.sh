@@ -18,21 +18,26 @@ add_plugin xml
 
 function xml_filefilter
 {
-  local filename=$1
+  declare filename=$1
 
   if [[ ${filename} =~ \.xml$ ]]; then
     add_test xml
   fi
 }
 
-function xml_postapply
+function xml_postcompile
 {
-  local js
-  local i
-  local count
+  declare repostatus=$1
+  declare js
+  declare i
+  declare count
 
   verify_needed_test xml
   if [[ $? == 0 ]]; then
+    return 0
+  fi
+
+  if [[ "${repostatus}" = branch ]]; then
     return 0
   fi
 

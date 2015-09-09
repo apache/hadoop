@@ -60,20 +60,27 @@ function checkstyle_runner
     modulesuffix=$(basename "${MODULE[${i}]}")
     output="${PATCH_DIR}/${repostatus}-checkstyle-${fn}.txt"
     logfile="${PATCH_DIR}/maven-${repostatus}-checkstyle-${fn}.txt"
-    pushd "${BASEDIR}/${MODULE[${i}]}" >/dev/null
+
+    if [[ ${BUILDTOOLCWD} == true ]]; then
+      pushd "${BASEDIR}/${MODULE[${i}]}" >/dev/null
+    fi
 
     case ${BUILDTOOL} in
-      maven)
-        cmd="${MVN} ${MAVEN_ARGS[*]} \
-           checkstyle:checkstyle \
-          -Dcheckstyle.consoleOutput=true \
-          ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} -Ptest-patch"
-      ;;
       ant)
         cmd="${ANT}  \
           -Dcheckstyle.consoleOutput=true \
           ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} \
           ${ANT_ARGS[*]} checkstyle"
+      ;;
+      maven)
+        cmd="${MAVEN} ${MAVEN_ARGS[*]} \
+           checkstyle:checkstyle \
+          -Dcheckstyle.consoleOutput=true \
+          ${MODULEEXTRAPARAM[${i}]//@@@MODULEFN@@@/${fn}} -Ptest-patch"
+      ;;
+      *)
+        UNSUPPORTED_TEST=true
+        return 0
       ;;
     esac
 
@@ -101,8 +108,10 @@ function checkstyle_runner
     done
 
     rm "${tmp}" 2>/dev/null
-    # shellcheck disable=SC2086
-    popd >/dev/null
+
+    if [[ ${BUILDTOOLCWD} == true ]]; then
+      popd >/dev/null
+    fi
     ((i=i+1))
   done
 
@@ -114,19 +123,29 @@ function checkstyle_runner
   return 0
 }
 
+function checkstyle_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    checkstyle_preapply
+  else
+    checkstyle_postapply
+  fi
+}
+
 function checkstyle_preapply
 {
   local result
 
+  verify_needed_test checkstyle
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
+
   big_console_header "${PATCH_BRANCH} checkstyle"
 
   start_clock
-
-  verify_needed_test checkstyle
-  if [[ $? == 0 ]]; then
-    echo "Patch does not need checkstyle testing."
-    return 0
-  fi
 
   personality_modules branch checkstyle
   checkstyle_runner branch
@@ -151,20 +170,22 @@ function checkstyle_postapply
   local numpostpatch=0
   local diffpostpatch=0
 
+  verify_needed_test checkstyle
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
+
   big_console_header "Patch checkstyle plugin"
 
   start_clock
-
-  verify_needed_test checkstyle
-  if [[ $? == 0 ]]; then
-    echo "Patch does not need checkstyle testing."
-    return 0
-  fi
 
   personality_modules patch checkstyle
   checkstyle_runner patch
   result=$?
 
+  if [[ ${UNSUPPORTED_TEST} = true ]]; then
+    return 0
+  fi
 
   # add our previous elapsed to our new timer
   # by setting the clock back

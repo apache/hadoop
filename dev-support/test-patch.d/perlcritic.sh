@@ -138,3 +138,14 @@ function perlcritic_postapply
   add_vote_table +1 perlcritic "There were no new perlcritic issues."
   return 0
 }
+
+function perlcritic_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    perlcritic_preapply
+  else
+    perlcritic_postapply
+  fi
+}

@@ -138,3 +138,14 @@ function ruby_lint_postapply
   add_vote_table +1 ruby-lint "There were no new ruby-lint issues."
   return 0
 }
+
+function ruby_lint_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    ruby_lint_preapply
+  else
+    ruby_lint_postapply
+  fi
+}

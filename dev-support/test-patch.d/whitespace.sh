@@ -16,17 +16,16 @@
 
 add_plugin whitespace
 
-
 function whitespace_linecomment_reporter
 {
-  local file=$1
+  declare file=$1
   shift
-  local comment=$*
-  local tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
+  declare comment=$*
+  declare tmpfile="${PATCH_DIR}/wlr.$$.${RANDOM}"
 
   while read -r line; do
     {
-      #shellcheck disable=SC2086
+      # shellcheck disable=SC2086
       printf "%s" "$(echo ${line} | cut -f1-2 -d:)"
       echo "${comment}"
     } >> "${tmpfile}"
@@ -36,10 +35,15 @@ function whitespace_linecomment_reporter
   rm "${tmpfile}"
 }
 
-function whitespace_postapply
+function whitespace_postcompile
 {
-  local count
-  local result=0
+  declare repostatus=$1
+  declare count
+  declare result=0
+
+  if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
 
   big_console_header "Checking for whitespace at the end of lines"
   start_clock

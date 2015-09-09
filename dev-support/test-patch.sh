@@ -34,8 +34,6 @@ GLOBALTIMER=$(date +"%s")
 QATESTMODE=false
 
 # global arrays
-declare -a MAVEN_ARGS=("--batch-mode")
-declare -a ANT_ARGS=("-noinput")
 declare -a TP_HEADER
 declare -a TP_VOTE_TABLE
 declare -a TP_TEST_TABLE
@@ -44,6 +42,7 @@ declare -a MODULE_STATUS
 declare -a MODULE_STATUS_TIMER
 declare -a MODULE_STATUS_MSG
 declare -a MODULE_STATUS_LOG
+declare -a MODULE_COMPILE_LOG
 declare -a MODULE
 
 TP_HEADER_COUNTER=0
@@ -57,18 +56,6 @@ TP_FOOTER_COUNTER=0
 ## @replaceable  no
 function setup_defaults
 {
-  if [[ -z "${MAVEN_HOME:-}" ]]; then
-    MVN=mvn
-  else
-    MVN=${MAVEN_HOME}/bin/mvn
-  fi
-
-  if [[ -z "${ANT_HOME:-}" ]]; then
-    ANT=ant
-  else
-    ANT=${ANT_HOME}/bin/ant
-  fi
-
   PROJECT_NAME=yetus
   DOCKERFILE="${BINDIR}/test-patch-docker/Dockerfile-startstub"
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
@@ -81,10 +68,10 @@ function setup_defaults
   ALLOWSUMMARIES=true
 
   DOCKERSUPPORT=false
-  ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
   PATCH_BRANCH_DEFAULT="master"
+  BUILDTOOLCWD=true
 
   # shellcheck disable=SC2034
   CHANGED_MODULES=""
@@ -102,7 +89,7 @@ function setup_defaults
   OSTYPE=$(uname -s)
   BUILDTOOL=maven
   TESTFORMATS=""
-  JDK_TEST_LIST="javac javadoc unit"
+  JDK_TEST_LIST="compile javadoc unit"
 
   # Solaris needs POSIX, not SVID
   case ${OSTYPE} in
@@ -227,7 +214,33 @@ function stop_global_clock
 ## @param        seconds
 function offset_clock
 {
-  ((TIMER=TIMER-$1))
+  declare off=$1
+
+  yetus_debug "offset clock by ${off}"
+
+  if [[ -n ${off} ]]; then
+    ((TIMER=TIMER-off))
+  else
+    yetus_error "ASSERT: no offset passed to offset_clock: ${index}"
+    generate_stack
+  fi
+}
+
+## @description generate a stack trace when in debug mode
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @return       exits
+function generate_stack
+{
+  declare frame
+
+  if [[ -n "${TP_SHELL_SCRIPT_DEBUG}" ]]; then
+    while caller "${frame}"; do
+      ((frame++));
+    done
+  fi
+  exit 1
 }
 
 ## @description  Add to the header of the display
@@ -319,30 +332,6 @@ function verify_multijdk_test
   return 0
 }
 
-## @description  Absolute path the JDK_DIR_LIST and JAVA_HOME.
-## @description  if JAVA_HOME is in JDK_DIR_LIST, it is positioned last
-## @stability    stable
-## @audience     private
-## @replaceable  yes
-function fullyqualifyjdks
-{
-  local i
-  local jdkdir
-  local tmplist
-
-  JAVA_HOME=$(cd -P -- "${JAVA_HOME}" >/dev/null && pwd -P)
-
-  for i in ${JDK_DIR_LIST}; do
-    jdkdir=$(cd -P -- "${i}" >/dev/null && pwd -P)
-    if [[ ${jdkdir} != "${JAVA_HOME}" ]]; then
-      tmplist="${tmplist} ${jdkdir}"
-    fi
-  done
-
-  JDK_DIR_LIST="${tmplist} ${JAVA_HOME}"
-  JDK_DIR_LIST=${JDK_DIR_LIST/ }
-}
-
 ## @description  Put the opening environment information at the bottom
 ## @description  of the footer table
 ## @stability     stable
@@ -350,28 +339,14 @@ function fullyqualifyjdks
 ## @replaceable  yes
 function prepopulate_footer
 {
-  # shellcheck disable=SC2016
-  local javaversion
-  local listofjdks
-  local -r unamea=$(uname -a)
-  local i
+  # shellcheck disable=SC2155
+  declare -r unamea=$(uname -a)
 
   add_footer_table "uname" "${unamea}"
   add_footer_table "Build tool" "${BUILDTOOL}"
 
   if [[ -n ${PERSONALITY} ]]; then
     add_footer_table "Personality" "${PERSONALITY}"
-  fi
-
-  javaversion=$(report_jvm_version "${JAVA_HOME}")
-  add_footer_table "Default Java" "${javaversion}"
-  if [[ -n ${JDK_DIR_LIST}
-    &&  ${JDK_DIR_LIST} != "${JAVA_HOME}" ]]; then
-    for i in ${JDK_DIR_LIST}; do
-      javaversion=$(report_jvm_version "${i}")
-      listofjdks="${listofjdks} ${i}:${javaversion}"
-    done
-    add_footer_table "Multi-JDK versions" "${listofjdks}"
   fi
 }
 
@@ -503,40 +478,6 @@ function findlargest
     i=$((i+1))
   done
   echo "${maxlen}"
-}
-
-## @description  Verify that ${JAVA_HOME} is defined
-## @audience     public
-## @stability    stable
-## @replaceable  no
-## @return       1 - no JAVA_HOME
-## @return       0 - JAVA_HOME defined
-function find_java_home
-{
-  start_clock
-  if [[ -z ${JAVA_HOME:-} ]]; then
-    case ${OSTYPE} in
-      Darwin)
-        if [[ -z "${JAVA_HOME}" ]]; then
-          if [[ -x /usr/libexec/java_home ]]; then
-            JAVA_HOME="$(/usr/libexec/java_home)"
-            export JAVA_HOME
-          else
-            export JAVA_HOME=/Library/Java/Home
-          fi
-        fi
-      ;;
-      *)
-      ;;
-    esac
-  fi
-
-  if [[ -z ${JAVA_HOME:-} ]]; then
-    echo "JAVA_HOME is not defined."
-    add_vote_table -1 pre-patch "JAVA_HOME is not defined."
-    return 1
-  fi
-  return 0
 }
 
 ## @description Write the contents of a file to all of the bug systems
@@ -691,13 +632,15 @@ function compute_unidiff
   for fn in ${CHANGED_FILES}; do
     filen=${fn##./}
 
-    ${GIT} diff ${filen} \
-      | tail -n +6 \
-      | ${GREP} -n '^+' \
-      | ${GREP} -vE '^[0-9]*:\+\+\+' \
-      | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
-        -e s,^,./${filen}:,g \
-            >>  "${tmpfile}"
+    if [[ -f "${filen}" ]]; then
+      ${GIT} diff ${filen} \
+        | tail -n +6 \
+        | ${GREP} -n '^+' \
+        | ${GREP} -vE '^[0-9]*:\+\+\+' \
+        | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
+          -e s,^,./${filen}:,g \
+              >>  "${tmpfile}"
+    fi
   done
 
   # at this point, tmpfile should be in the same format
@@ -782,8 +725,8 @@ function testpatch_usage
   echo "--branch=<ref>         Forcibly set the branch"
   echo "--branch-default=<ref> If the branch isn't forced and we don't detect one in the patch name, use this branch (default 'master')"
   echo "--build-native=<bool>  If true, then build native components (default 'true')"
-  echo "--build-tool=<tool>    Pick which build tool to focus around (maven, ant)"
-  echo "--bugcomments=<bug>    Only write comments to the screen and this comma delimited list"
+  echo "--build-tool=<tool>    Pick which build tool to focus around (${BUILDTOOLS})"
+  echo "--bugcomments=<bug>    Only write comments to the screen and this comma delimited list (${BUGSYSTEMS})"
   echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default: ${HOW_TO_CONTRIBUTE} )"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
@@ -809,14 +752,12 @@ function testpatch_usage
   echo "--test-threads=<int>   Number of tests to run in parallel (default defined in ${PROJECT_NAME} build)"
   echo ""
   echo "Shell binary overrides:"
-  echo "--ant-cmd=<cmd>        The 'ant' command to use (default \${ANT_HOME}/bin/ant, or 'ant')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
   echo "--curl-cmd=<cmd>       The 'curl' command to use (default 'curl')"
   echo "--diff-cmd=<cmd>       The GNU-compatible 'diff' command to use (default 'diff')"
   echo "--file-cmd=<cmd>       The 'file' command to use (default 'file')"
   echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
-  echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \${MAVEN_HOME}/bin/mvn, or 'mvn')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
   echo "--sed-cmd=<cmd>        The 'sed' command to use (default 'sed')"
 
@@ -824,12 +765,11 @@ function testpatch_usage
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
   echo "--build-url            Set the build location web page"
-  echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
 
   importplugins
 
-  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
+  for plugin in ${BUILDTOOLS} ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
     if declare -f ${plugin}_usage >/dev/null 2>&1; then
       echo
       "${plugin}_usage"
@@ -851,9 +791,6 @@ function parse_args
 
   for i in "$@"; do
     case ${i} in
-      --ant-cmd=*)
-        ANT=${i#*=}
-      ;;
       --awk-cmd=*)
         AWK=${i#*=}
       ;;
@@ -903,9 +840,6 @@ function parse_args
       --dockermode)
         DOCKERMODE=true
       ;;
-      --eclipse-home=*)
-        ECLIPSE_HOME=${i#*=}
-      ;;
       --file-cmd=*)
         FILE=${i#*=}
       ;;
@@ -944,9 +878,6 @@ function parse_args
         JDK_TEST_LIST=${i#*=}
         JDK_TEST_LIST=${JDK_TEST_LIST//,/ }
         yetus_debug "Multi-JVM test list: ${JDK_TEST_LIST}"
-      ;;
-      --mvn-cmd=*)
-        MVN=${i#*=}
       ;;
       --mv-patch-dir)
         RELOCATE_PATCH_DIR=true;
@@ -1036,12 +967,6 @@ function parse_args
     add_vote_table 0 reexec "docker mode."
   fi
 
-  # if we requested offline, pass that to mvn
-  if [[ ${OFFLINE} == "true" ]]; then
-    MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
-    ANT_ARGS=(${ANT_ARGS[@]} -Doffline=)
-  fi
-
   if [[ -z "${PATCH_OR_ISSUE}" ]]; then
     testpatch_usage
     exit 1
@@ -1075,8 +1000,6 @@ function parse_args
     echo "Running in Jenkins mode"
     ISSUE=${PATCH_OR_ISSUE}
     RESETREPO=true
-    # shellcheck disable=SC2034
-    ECLIPSE_PROPERTY="-Declipse.home=${ECLIPSE_HOME}"
   else
     if [[ ${RESETREPO} == "true" ]] ; then
       echo "Running in destructive (--resetrepo) developer mode"
@@ -1194,19 +1117,13 @@ function find_changed_modules
   local dir
   local buildfile
 
-  case ${BUILDTOOL} in
-    maven)
-      buildfile=pom.xml
-    ;;
-    ant)
-      buildfile=build.xml
-    ;;
-    *)
-      yetus_error "ERROR: Unsupported build tool."
-      bugsystem_finalreport 1
-      cleanup_and_exit 1
-    ;;
-  esac
+  buildfile=$("${BUILDTOOL}_buildfile")
+
+  if [[ $? != 0 ]]; then
+    yetus_error "ERROR: Unsupported build tool."
+    bugsystem_finalreport 1
+    cleanup_and_exit 1
+  fi
 
   changed_dirs=$(for i in ${CHANGED_FILES}; do dirname "${i}"; done | sort -u)
 
@@ -1218,7 +1135,7 @@ function find_changed_modules
       continue
     fi
 
-    builddir=$(find_buildfile_dir ${buildfile} "${i}")
+    builddir=$(find_buildfile_dir "${buildfile}" "${i}")
     if [[ -z ${builddir} ]]; then
       yetus_error "ERROR: ${buildfile} is not found. Make sure the target is a ${BUILDTOOL}-based project."
       bugsystem_finalreport 1
@@ -1231,7 +1148,6 @@ function find_changed_modules
   CHANGED_UNFILTERED_MODULES=$(echo ${builddirs} ${USER_MODULE_LIST} | tr ' ' '\n' | sort -u)
   #shellcheck disable=SC2086,SC2116
   CHANGED_UNFILTERED_MODULES=$(echo ${CHANGED_UNFILTERED_MODULES})
-
 
   if [[ ${BUILDTOOL} = maven ]]; then
     # Filter out modules without code
@@ -1283,7 +1199,7 @@ function find_changed_modules
   fi
 
   yetus_debug "Finding union of ${builddir}"
-  builddir=$(find_buildfile_dir ${buildfile} "${builddir}" || true)
+  builddir=$(find_buildfile_dir "${buildfile}" "${builddir}" || true)
 
   #shellcheck disable=SC2034
   CHANGED_UNION_MODULES="${builddir}"
@@ -1536,7 +1452,24 @@ function add_test
     NEEDED_TESTS=${testname}
   elif [[ ! ${NEEDED_TESTS} =~ ${testname} ]] ; then
     yetus_debug "Adding ${testname}"
-    NEEDED_TESTS="${NEEDED_TESTS} ${testname}"
+    NEEDED_TESTS="${NEEDED_TESTS} ${testname} "
+  fi
+}
+
+## @description  Remove the given test type
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        test
+function delete_test
+{
+  local testname=$1
+
+  yetus_debug "Testing against ${testname}"
+
+  if [[ ${NEEDED_TESTS} =~ ${testname} ]] ; then
+    yetus_debug "Removing ${testname}"
+    NEEDED_TESTS="${NEEDED_TESTS// ${testname} }"
   fi
 }
 
@@ -1697,7 +1630,7 @@ function verify_patch_file
 ## @return       exit on failure
 function apply_patch_file
 {
-  big_console_header "Applying patch"
+  big_console_header "Applying patch to ${PATCH_BRANCH}"
 
   export PATCH
   "${BINDIR}/smart-apply-patch.sh" "${PATCH_DIR}/patch"
@@ -1912,6 +1845,7 @@ function modules_reset
   MODULE_STATUS_TIMER=()
   MODULE_STATUS_MSG=()
   MODULE_STATUS_LOG=()
+  MODULE_COMPILE_LOG=()
 }
 
 ## @description  Utility to print standard module errors
@@ -2023,16 +1957,13 @@ function module_status
     MODULE_STATUS_MSG[${index}]="${*}"
   else
     yetus_error "ASSERT: module_status given bad index: ${index}"
-    local frame=0
-    while caller $frame; do
-      ((frame++));
-    done
-    echo "$*"
+    yetus_error "ASSERT: module_stats $*"
+    generate_stack
     exit 1
   fi
 }
 
-## @description  run the maven tests for the queued modules
+## @description  run the tests for the queued modules
 ## @audience     public
 ## @stability    evolving
 ## @replaceable  no
@@ -2078,7 +2009,9 @@ function modules_workers
     fn=$(module_file_fragment "${MODULE[${modindex}]}")
     fn="${fn}${jdk}"
     modulesuffix=$(basename "${MODULE[${modindex}]}")
-    pushd "${BASEDIR}/${MODULE[${modindex}]}" >/dev/null
+    if [[ ${BUILDTOOLCWD} == true ]]; then
+      pushd "${BASEDIR}/${MODULE[${modindex}]}" >/dev/null
+    fi
 
     if [[ ${modulesuffix} == . ]]; then
       modulesuffix="root"
@@ -2090,26 +2023,11 @@ function modules_workers
       continue
     fi
 
-    case ${BUILDTOOL} in
-      maven)
-        #shellcheck disable=SC2086
-        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
-          ${MVN} "${MAVEN_ARGS[@]}" \
-            "${@//@@@MODULEFN@@@/${fn}}" \
-             ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} -Ptest-patch
-      ;;
-      ant)
-        #shellcheck disable=SC2086
-        echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
-          "${ANT}" "${ANT_ARGS[@]}" \
-          ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} \
-          "${@//@@@MODULEFN@@@/${fn}}"
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    # shellcheck disable=2086,2046
+    echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
+      $("${BUILDTOOL}_executor") \
+      ${MODULEEXTRAPARAM[${modindex}]//@@@MODULEFN@@@/${fn}} \
+      "${@//@@@MODULEFN@@@/${fn}}"
 
     if [[ $? == 0 ]] ; then
       module_status \
@@ -2125,11 +2043,20 @@ function modules_workers
         "${modulesuffix} in ${repo} failed${statusjdk}."
       ((result = result + 1))
     fi
+
+    # compile is special
+    if [[ ${testtype} = compile ]]; then
+      MODULE_COMPILE_LOG[${modindex}]="${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt"
+      yetus_debug "Comile log set to ${MODULE_COMPILE_LOG[${modindex}]}"
+    fi
+
     savestop=$(stop_clock)
     MODULE_STATUS_TIMER[${modindex}]=${savestop}
     # shellcheck disable=SC2086
     echo "Elapsed: $(clock_display ${savestop})"
-    popd >/dev/null
+    if [[ ${BUILDTOOLCWD} == true ]]; then
+      popd >/dev/null
+    fi
     ((modindex=modindex+1))
   done
 
@@ -2167,694 +2094,6 @@ function personality_enqueue_module
   MODULE[${MODCOUNT}]=${module}
   MODULEEXTRAPARAM[${MODCOUNT}]=${*}
   ((MODCOUNT=MODCOUNT+1))
-}
-
-## @description  Confirm compilation pre-patch
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_javac
-{
-  local result=0
-  local -r savejavahome=${JAVA_HOME}
-  local multijdkmode=false
-  local jdkindex=0
-
-  big_console_header "Pre-patch ${PATCH_BRANCH} javac compilation"
-
-  verify_needed_test javac
-  if [[ $? == 0 ]]; then
-     echo "Patch does not appear to need javac tests."
-     return 0
-  fi
-
-  verify_multijdk_test javac
-  if [[ $? == 1 ]]; then
-    multijdkmode=true
-  fi
-
-  for jdkindex in ${JDK_DIR_LIST}; do
-    if [[ ${multijdkmode} == true ]]; then
-      JAVA_HOME=${jdkindex}
-    fi
-
-    personality_modules branch javac
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers branch javac clean test-compile
-      ;;
-      ant)
-        modules_workers branch javac
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
-
-    ((result=result + $?))
-    modules_messages branch javac true
-
-  done
-  JAVA_HOME=${savejavahome}
-
-  if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Confirm Javadoc pre-patch
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_javadoc
-{
-  local result=0
-  local -r savejavahome=${JAVA_HOME}
-  local multijdkmode=false
-  local jdkindex=0
-
-  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc verification"
-
-  verify_needed_test javadoc
-  if [[ $? == 0 ]]; then
-     echo "Patch does not appear to need javadoc tests."
-     return 0
-  fi
-
-  verify_multijdk_test javadoc
-  if [[ $? == 1 ]]; then
-    multijdkmode=true
-  fi
-
-  for jdkindex in ${JDK_DIR_LIST}; do
-    if [[ ${multijdkmode} == true ]]; then
-      JAVA_HOME=${jdkindex}
-    fi
-
-    personality_modules branch javadoc
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers branch javadoc clean javadoc:javadoc
-      ;;
-      ant)
-        modules_workers branch javadoc clean javadoc
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
-
-    ((result=result + $?))
-    modules_messages branch javadoc true
-
-  done
-  JAVA_HOME=${savejavahome}
-
-  if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Confirm site pre-patch
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_site
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Pre-patch ${PATCH_BRANCH} site verification"
-
-  verify_needed_test site
-  if [[ $? == 0 ]];then
-    echo "Patch does not appear to need site tests."
-    return 0
-  fi
-
-  personality_modules branch site
-  modules_workers branch site clean site site:stage
-  result=$?
-  modules_messages branch site true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Confirm the source environment pre-patch
-## @audience     private
-## @stability    stable
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_without_patch
-{
-  local result=0
-
-  precheck_mvninstall
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
-  fi
-
-  precheck_javac
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
-  fi
-
-  precheck_javadoc
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
-  fi
-
-  precheck_site
-
-  if [[ $? -gt 0 ]]; then
-    ((result = result +1 ))
-  fi
-
-  if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-
-  return 0
-}
-
-## @description  Check the current directory for @author tags
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_author
-{
-  local authorTags
-  local -r appname=$(basename "${BASH_SOURCE-$0}")
-
-  big_console_header "Checking there are no @author tags in the patch."
-
-  start_clock
-
-  if [[ ${CHANGED_FILES} =~ ${appname} ]]; then
-    echo "Skipping @author checks as ${appname} has been patched."
-    add_vote_table 0 @author "Skipping @author checks as ${appname} has been patched."
-    return 0
-  fi
-
-  authorTags=$("${GREP}" -c -i '^[^-].*@author' "${PATCH_DIR}/patch")
-  echo "There appear to be ${authorTags} @author tags in the patch."
-  if [[ ${authorTags} != 0 ]] ; then
-    add_vote_table -1 @author \
-      "The patch appears to contain ${authorTags} @author tags which the" \
-      " community has agreed to not allow in code contributions."
-    return 1
-  fi
-  add_vote_table +1 @author "The patch does not contain any @author tags."
-  return 0
-}
-
-## @description  Check the patch file for changed/new tests
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_modified_unittests
-{
-  local testReferences=0
-  local i
-
-  big_console_header "Checking there are new or changed tests in the patch."
-
-  verify_needed_test unit
-
-  if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need new or modified tests."
-    return 0
-  fi
-
-  start_clock
-
-  for i in ${CHANGED_FILES}; do
-    if [[ ${i} =~ (^|/)test/ ]]; then
-      ((testReferences=testReferences + 1))
-    fi
-  done
-
-  echo "There appear to be ${testReferences} test file(s) referenced in the patch."
-  if [[ ${testReferences} == 0 ]] ; then
-    add_vote_table -1 "test4tests" \
-      "The patch doesn't appear to include any new or modified tests. " \
-      "Please justify why no new tests are needed for this patch." \
-      "Also please list what manual steps were performed to verify this patch."
-    return 1
-  fi
-  add_vote_table +1 "test4tests" \
-    "The patch appears to include ${testReferences} new or modified test files."
-  return 0
-}
-
-## @description  Helper for check_patch_javac
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function count_javac_probs
-{
-  local warningfile=$1
-  local val1
-  local val2
-
-  case ${BUILDTOOL} in
-    maven)
-      #shellcheck disable=SC2016,SC2046
-      ${GREP} '\[WARNING\]' "${warningfile}" | ${AWK} '{sum+=1} END {print sum}'
-    ;;
-    ant)
-      #shellcheck disable=SC2016
-      val1=$(${GREP} -E "\[javac\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      #shellcheck disable=SC2016
-      val2=$(${GREP} -E "\[javac\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      echo $((val1+val2))
-    ;;
-  esac
-}
-
-## @description  Count and compare the number of javac warnings pre- and post- patch
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_patch_javac
-{
-  local i
-  local result=0
-  local fn
-  local -r savejavahome=${JAVA_HOME}
-  local multijdkmode=false
-  local jdk=""
-  local jdkindex=0
-  local statusjdk
-  declare -i numbranch=0
-  declare -i numpatch=0
-
-  big_console_header "Determining number of patched javac errors"
-
-  verify_needed_test javac
-
-  if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need javac tests."
-    return 0
-  fi
-
-  verify_multijdk_test javac
-  if [[ $? == 1 ]]; then
-    multijdkmode=true
-  fi
-
-  for jdkindex in ${JDK_DIR_LIST}; do
-    if [[ ${multijdkmode} == true ]]; then
-      JAVA_HOME=${jdkindex}
-      jdk=$(report_jvm_version "${JAVA_HOME}")
-      yetus_debug "Using ${JAVA_HOME} to run this set of tests"
-      statusjdk=" with JDK v${jdk}"
-      jdk="-jdk${jdk}"
-      jdk=${jdk// /}
-    fi
-
-    personality_modules patch javac
-
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch javac clean test-compile
-      ;;
-      ant)
-        modules_workers patch javac
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
-
-    i=0
-    until [[ ${i} -eq ${#MODULE[@]} ]]; do
-      if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
-        ((result=result+1))
-        ((i=i+1))
-        continue
-      fi
-
-      fn=$(module_file_fragment "${MODULE[${i}]}")
-      fn="${fn}${jdk}"
-      module_suffix=$(basename "${MODULE[${i}]}")
-      if [[ ${module_suffix} == \. ]]; then
-        module_suffix=root
-      fi
-
-      # if it was a new module, this won't exist.
-      if [[ -f "${PATCH_DIR}/branch-javac-${fn}.txt" ]]; then
-        ${GREP} -i warning "${PATCH_DIR}/branch-javac-${fn}.txt" \
-          > "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
-      else
-        touch "${PATCH_DIR}/branch-javac-${fn}.txt" \
-          "${PATCH_DIR}/branch-javac-${fn}-warning.txt"
-      fi
-
-      if [[ -f "${PATCH_DIR}/patch-javac-${fn}.txt" ]]; then
-        ${GREP} -i warning "${PATCH_DIR}/patch-javac-${fn}.txt" \
-          > "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
-      else
-        touch "${PATCH_DIR}/patch-javac-${fn}.txt" \
-          "${PATCH_DIR}/patch-javac-${fn}-warning.txt"
-      fi
-
-      numbranch=$(count_javac_probs "${PATCH_DIR}/branch-javac-${fn}-warning.txt")
-      numpatch=$(count_javac_probs "${PATCH_DIR}/patch-javac-${fn}-warning.txt")
-
-      if [[ -n ${numbranch}
-          && -n ${numpatch}
-          && ${numpatch} -gt ${numbranch} ]]; then
-
-        ${DIFF} -u "${PATCH_DIR}/branch-javac-${fn}-warning.txt" \
-          "${PATCH_DIR}/patch-javac-${fn}-warning.txt" \
-          > "${PATCH_DIR}/javac-${fn}-diff.txt"
-
-        module_status ${i} -1 "javac-${fn}-diff.txt" \
-          "Patched ${module_suffix} generated "\
-          "$((numpatch-numbranch)) additional warning messages${statusjdk}." \
-
-        ((result=result+1))
-      fi
-      ((i=i+1))
-    done
-
-    modules_messages patch javac true
-  done
-  JAVA_HOME=${savejavahome}
-
-  if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Helper for check_patch_javadoc
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function count_javadoc_probs
-{
-  local warningfile=$1
-  local val1
-  local val2
-
-  case ${BUILDTOOL} in
-    maven)
-      #shellcheck disable=SC2016,SC2046
-      ${GREP} -E "^[0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}'
-    ;;
-    ant)
-      #shellcheck disable=SC2016
-      val1=$(${GREP} -E "\[javadoc\] [0-9]+ errors?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      #shellcheck disable=SC2016
-      val2=$(${GREP} -E "\[javadoc\] [0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$2} END {print sum}')
-      echo $((val1+val2))
-    ;;
-  esac
-}
-
-## @description  Count and compare the number of JavaDoc warnings pre- and post- patch
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_patch_javadoc
-{
-  local i
-  local result=0
-  local fn
-  local -r savejavahome=${JAVA_HOME}
-  local multijdkmode=false
-  local jdk=""
-  local jdkindex=0
-  local statusjdk
-  declare -i numbranch=0
-  declare -i numpatch=0
-
-  big_console_header "Determining number of patched javadoc warnings"
-
-  verify_needed_test javadoc
-    if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need javadoc tests."
-    return 0
-  fi
-
-  verify_multijdk_test javadoc
-  if [[ $? == 1 ]]; then
-    multijdkmode=true
-  fi
-
-  for jdkindex in ${JDK_DIR_LIST}; do
-    if [[ ${multijdkmode} == true ]]; then
-      JAVA_HOME=${jdkindex}
-      jdk=$(report_jvm_version "${JAVA_HOME}")
-      yetus_debug "Using ${JAVA_HOME} to run this set of tests"
-      statusjdk=" with JDK v${jdk}"
-      jdk="-jdk${jdk}"
-      jdk=${jdk// /}
-    fi
-
-    personality_modules patch javadoc
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch javadoc clean javadoc:javadoc
-      ;;
-      ant)
-        modules_workers patch javadoc clean javadoc
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
-
-    i=0
-    until [[ ${i} -eq ${#MODULE[@]} ]]; do
-      if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
-        ((result=result+1))
-        ((i=i+1))
-        continue
-      fi
-
-      fn=$(module_file_fragment "${MODULE[${i}]}")
-      fn="${fn}${jdk}"
-      module_suffix=$(basename "${MODULE[${i}]}")
-      if [[ ${module_suffix} == \. ]]; then
-        module_suffix=root
-      fi
-
-      if [[ -f "${PATCH_DIR}/branch-javadoc-${fn}.txt" ]]; then
-        ${GREP} -i warning "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
-          > "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt"
-      else
-        touch "${PATCH_DIR}/branch-javadoc-${fn}.txt" \
-          "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt"
-      fi
-
-      if [[ -f "${PATCH_DIR}/patch-javadoc-${fn}.txt" ]]; then
-        ${GREP} -i warning "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
-          > "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt"
-      else
-        touch "${PATCH_DIR}/patch-javadoc-${fn}.txt" \
-          "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt"
-      fi
-
-      numbranch=$(count_javadoc_probs "${PATCH_DIR}/branch-javadoc-${fn}.txt")
-      numpatch=$(count_javadoc_probs "${PATCH_DIR}/patch-javadoc-${fn}.txt")
-
-      if [[ -n ${numbranch}
-          && -n ${numpatch}
-          && ${numpatch} -gt ${numbranch} ]] ; then
-
-        ${DIFF} -u "${PATCH_DIR}/branch-javadoc-${fn}-warning.txt" \
-          "${PATCH_DIR}/patch-javadoc-${fn}-warning.txt" \
-          > "${PATCH_DIR}/javadoc-${fn}-diff.txt"
-
-        module_status ${i} -1  "javadoc-${fn}-diff.txt" \
-          "Patched ${module_suffix} generated "\
-          "$((numpatch-numbranch)) additional warning messages${statusjdk}."
-
-        ((result=result+1))
-      fi
-      ((i=i+1))
-    done
-
-    modules_messages patch javadoc true
-  done
-  JAVA_HOME=${savejavahome}
-
-  if [[ ${result} -gt 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Make sure site still compiles
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_site
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Determining number of patched site errors"
-
-  verify_needed_test site
-  if [[ $? == 0 ]]; then
-    echo "Patch does not appear to need site tests."
-    return 0
-  fi
-
-  personality_modules patch site
-  modules_workers patch site clean site site:stage -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages patch site true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Verify mvn install works
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function precheck_mvninstall
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn install works"
-
-  verify_needed_test javadoc
-  result=$?
-
-  verify_needed_test javac
-  ((result = result + $? ))
-  if [[ ${result} == 0 ]]; then
-    echo "This patch does not appear to need mvn install checks."
-    return 0
-  fi
-
-  personality_modules branch mvninstall
-  modules_workers branch mvninstall -fae clean install -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages branch mvninstall true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Verify mvn install works
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_mvninstall
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn install still works"
-
-  verify_needed_test javadoc
-  result=$?
-
-  verify_needed_test javac
-  ((result = result + $? ))
-  if [[ ${result} == 0 ]]; then
-    echo "This patch does not appear to need mvn install checks."
-    return 0
-  fi
-
-  personality_modules patch mvninstall
-  modules_workers patch mvninstall clean install -Dmaven.javadoc.skip=true
-  result=$?
-  modules_messages patch mvninstall true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
-}
-
-## @description  Make sure Maven's eclipse generation works.
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_mvn_eclipse
-{
-  local result=0
-
-  if [[ ${BUILDTOOL} != maven ]]; then
-    return 0
-  fi
-
-  big_console_header "Verifying mvn eclipse:eclipse still works"
-
-  verify_needed_test javac
-  if [[ $? == 0 ]]; then
-    echo "Patch does not touch any java files. Skipping mvn eclipse:eclipse"
-    return 0
-  fi
-
-  personality_modules patch eclipse
-  modules_workers patch eclipse eclipse:eclipse
-  result=$?
-  modules_messages patch eclipse true
-  if [[ ${result} != 0 ]]; then
-    return 1
-  fi
-  return 0
 }
 
 ## @description  Utility to push many tests into the failure list
@@ -2901,14 +2140,13 @@ function check_unittests
   local needlog
   local unitlogs
 
-  big_console_header "Running unit tests"
-
   verify_needed_test unit
 
   if [[ $? == 0 ]]; then
-    echo "Existing unit tests do not test patched files. Skipping."
     return 0
   fi
+
+  big_console_header "Running unit tests"
 
   verify_multijdk_test unit
   if [[ $? == 1 ]]; then
@@ -2925,18 +2163,8 @@ function check_unittests
     fi
 
     personality_modules patch unit
-    case ${BUILDTOOL} in
-      maven)
-        modules_workers patch unit clean test -fae
-      ;;
-      ant)
-        modules_workers patch unit
-      ;;
-      *)
-        yetus_error "ERROR: Unsupported build tool."
-        return 1
-      ;;
-    esac
+    "${BUILDTOOL}_modules_worker" patch unit
+
     ((result=result+$?))
 
     modules_messages patch unit false
@@ -2951,7 +2179,9 @@ function check_unittests
       fn="${fn}${jdk}"
       test_logfile="${PATCH_DIR}/patch-unit-${fn}.txt"
 
-      pushd "${MODULE[${i}]}" >/dev/null
+      if [[ ${BUILDTOOLCWD} == true ]]; then
+        pushd "${MODULE[${i}]}" >/dev/null
+      fi
 
       needlog=0
       for testsys in ${TESTFORMATS}; do
@@ -2970,7 +2200,9 @@ function check_unittests
         unitlogs="${unitlogs} @@BASE@@/patch-unit-${fn}.txt"
       fi
 
-      popd >/dev/null
+      if [[ ${BUILDTOOLCWD} == true ]]; then
+        popd >/dev/null
+      fi
 
       ((i=i+1))
     done
@@ -3077,150 +2309,6 @@ function cleanup_and_exit
   exit ${result}
 }
 
-## @description  Driver to execute _postcheckout routines
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-function postcheckout
-{
-  local routine
-  local plugin
-
-  for routine in find_java_home verify_patch_file; do
-    verify_patchdir_still_exists
-
-    yetus_debug "Running ${routine}"
-    ${routine}
-
-    (( RESULT = RESULT + $? ))
-    if [[ ${RESULT} != 0 ]] ; then
-      bugsystem_finalreport 1
-      cleanup_and_exit 1
-    fi
-  done
-
-  for plugin in ${PLUGINS}; do
-    verify_patchdir_still_exists
-
-    if declare -f ${plugin}_postcheckout >/dev/null 2>&1; then
-
-      yetus_debug "Running ${plugin}_postcheckout"
-      #shellcheck disable=SC2086
-      ${plugin}_postcheckout
-
-      (( RESULT = RESULT + $? ))
-      if [[ ${RESULT} != 0 ]] ; then
-        bugsystem_finalreport 1
-        cleanup_and_exit 1
-      fi
-    fi
-  done
-}
-
-## @description  Driver to execute _preapply routines
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-function preapply
-{
-  local routine
-  local plugin
-
-  for routine in precheck_without_patch check_author \
-                 check_modified_unittests
-  do
-    verify_patchdir_still_exists
-
-    yetus_debug "Running ${routine}"
-    ${routine}
-
-    (( RESULT = RESULT + $? ))
-  done
-
-  for plugin in ${PLUGINS}; do
-    verify_patchdir_still_exists
-
-    if declare -f ${plugin}_preapply >/dev/null 2>&1; then
-
-      yetus_debug "Running ${plugin}_preapply"
-      #shellcheck disable=SC2086
-      ${plugin}_preapply
-
-      (( RESULT = RESULT + $? ))
-    fi
-  done
-}
-
-## @description  Driver to execute _postapply routines
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-function postapply
-{
-  local routine
-  local plugin
-  local retval
-
-  compute_gitdiff
-
-  check_patch_javac
-  retval=$?
-  if [[ ${retval} -gt 1 ]] ; then
-    bugsystem_finalreport 1
-    cleanup_and_exit 1
-  fi
-
-  ((RESULT = RESULT + retval))
-
-  # shellcheck disable=SC2043
-  for routine in check_site
-  do
-    verify_patchdir_still_exists
-    yetus_debug "Running ${routine}"
-    ${routine}
-    (( RESULT = RESULT + $? ))
-  done
-
-  for plugin in ${PLUGINS}; do
-    verify_patchdir_still_exists
-    if declare -f ${plugin}_postapply >/dev/null 2>&1; then
-      yetus_debug "Running ${plugin}_postapply"
-      #shellcheck disable=SC2086
-      ${plugin}_postapply
-      (( RESULT = RESULT + $? ))
-    fi
-  done
-}
-
-## @description  Driver to execute _postinstall routines
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-function postinstall
-{
-  local routine
-  local plugin
-
-  verify_patchdir_still_exists
-  for routine in check_patch_javadoc check_mvn_eclipse
-  do
-    verify_patchdir_still_exists
-    yetus_debug "Running ${routine}"
-    ${routine}
-    (( RESULT = RESULT + $? ))
-  done
-
-  for plugin in ${PLUGINS}; do
-    verify_patchdir_still_exists
-    if declare -f ${plugin}_postinstall >/dev/null 2>&1; then
-      yetus_debug "Running ${plugin}_postinstall"
-      #shellcheck disable=SC2086
-      ${plugin}_postinstall
-      (( RESULT = RESULT + $? ))
-    fi
-  done
-}
-
 ## @description  Driver to execute _tests routines
 ## @audience     private
 ## @stability    evolving
@@ -3241,6 +2329,7 @@ function runtests
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_tests >/dev/null 2>&1; then
+      modules_reset
       yetus_debug "Running ${plugin}_tests"
       #shellcheck disable=SC2086
       ${plugin}_tests
@@ -3302,7 +2391,7 @@ function importplugins
 ## @replaceable  no
 function parse_args_plugins
 {
-  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS}; do
+  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS} ${BUILDTOOLS}; do
     if declare -f ${plugin}_parse_args >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_parse_args"
       #shellcheck disable=SC2086
@@ -3317,6 +2406,24 @@ function parse_args_plugins
   fi
 
   BUGLINECOMMENTS=${BUGLINECOMMENTS:-${BUGCOMMENTS}}
+}
+
+## @description  Let plugins also get a copy of the arguments
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function plugins_initialize
+{
+  declare plugin
+
+  for plugin in ${PLUGINS} ${BUGSYSTEMS} ${TESTFORMATS} ${BUILDTOOLS}; do
+    if declare -f ${plugin}_initialize >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_initialize"
+      #shellcheck disable=SC2086
+      ${plugin}_initialize
+      (( RESULT = RESULT + $? ))
+    fi
+  done
 }
 
 ## @description  Register test-patch.d plugins
@@ -3344,6 +2451,15 @@ function add_bugsystem
 function add_test_format
 {
   TESTFORMATS="${TESTFORMATS} $1"
+}
+
+## @description  Register test-patch.d build tools
+## @audience     public
+## @stability    stable
+## @replaceable  no
+function add_build_tool
+{
+  BUILDTOOLS="${BUILDTOOLS} $1"
 }
 
 ## @description  Calculate the differences between the specified files
@@ -3384,65 +2500,503 @@ function calcdiffs
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
 
-###############################################################################
-###############################################################################
-###############################################################################
+## @description  Helper routine for plugins to ask projects, etc
+## @description  to count problems in a log file
+## @description  and output it to stdout.
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @return       number of issues
+function generic_count_probs
+{
+  declare testtype=$1
+  declare input=$2
 
-big_console_header "Bootstrapping test harness"
-
-setup_defaults
-
-parse_args "$@"
-
-importplugins
-
-parse_args_plugins "$@"
-
-finish_docker_stats
-
-locate_patch
-
-# from here on out, we'll be in ${BASEDIR} for cwd
-# routines need to pushd/popd if they change.
-git_checkout
-RESULT=$?
-if [[ ${JENKINS} == "true" ]] ; then
-  if [[ ${RESULT} != 0 ]] ; then
-    exit 100
+  if declare -f ${PROJECT}_${testtype}_count_probs >/dev/null; then
+    "${PROJECT}_${testtype}_count_probs" "${input}"
+  elif declare -f ${BUILDTOOL}_${testtype}_count_probs >/dev/null; then
+    "${BUILDTOOL}_${testtype}_count_probs" "${input}"
+  else
+    yetus_error "ERROR: ${testtype}: No function defined to count problems."
+    echo 0
   fi
-fi
+}
 
-find_changed_files
+## @description  Helper routine for plugins to do a pre-patch prun
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        testype
+## @param        multijdk
+## @return       1 on failure
+## @return       0 on success
+function generic_pre_handler
+{
+  declare testtype=$1
+  declare multijdkmode=$2
+  declare result=0
+  declare -r savejavahome=${JAVA_HOME}
+  declare multijdkmode=false
+  declare jdkindex=0
 
-check_reexec
+  verify_needed_test "${testtype}"
+  if [[ $? == 0 ]]; then
+     return 0
+  fi
 
-determine_needed_tests
+  big_console_header "Pre-patch ${testtype} verification on ${PATCH_BRANCH}"
 
-postcheckout
+  verify_multijdk_test "${testtype}"
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
 
-fullyqualifyjdks
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+    fi
 
-prepopulate_footer
+    personality_modules branch "${testtype}"
+    "${BUILDTOOL}_modules_worker" branch "${testtype}"
 
-find_changed_modules
+    ((result=result + $?))
+    modules_messages branch "${testtype}" true
 
-preapply
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Generic post-patch log handler
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+## @param        origlog
+## @param        testtype
+## @param        multijdkmode
+function generic_postlog_compare
+{
+  declare origlog=$1
+  declare testtype=$2
+  declare multijdk=$3
+  declare result=0
+  declare i
+  declare fn
+  declare jdk
+  declare statusjdk
+
+  if [[ ${multijdk} == true ]]; then
+    jdk=$(report_jvm_version "${JAVA_HOME}")
+    statusjdk=" with JDK v${jdk}"
+    jdk="-jdk${jdk}"
+    jdk=${jdk// /}
+  fi
+
+  i=0
+  until [[ ${i} -eq ${#MODULE[@]} ]]; do
+    if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
+      ((result=result+1))
+      ((i=i+1))
+      continue
+    fi
+
+    fn=$(module_file_fragment "${MODULE[${i}]}")
+    fn="${fn}${jdk}"
+    module_suffix=$(basename "${MODULE[${i}]}")
+    if [[ ${module_suffix} == \. ]]; then
+      module_suffix=root
+    fi
+
+    yetus_debug "${testtype}: branch-${origlog}-${fn}.txt vs. patch-${origlog}-${fn}.txt"
+
+    # if it was a new module, this won't exist.
+    if [[ -f "${PATCH_DIR}/branch-${origlog}-${fn}.txt" ]]; then
+      ${GREP} -i warning "${PATCH_DIR}/branch-${origlog}-${fn}.txt" \
+        > "${PATCH_DIR}/branch-${testtype}-${fn}-warning.txt"
+    else
+      touch "${PATCH_DIR}/branch-${origlog}-${fn}.txt" \
+        "${PATCH_DIR}/branch-${testtype}-${fn}-warning.txt"
+    fi
+
+    if [[ -f "${PATCH_DIR}/patch-${origlog}-${fn}.txt" ]]; then
+      ${GREP} -i warning "${PATCH_DIR}/patch-${origlog}-${fn}.txt" \
+        > "${PATCH_DIR}/patch-${testtype}-${fn}-warning.txt"
+    else
+      touch "${PATCH_DIR}/patch-${origlog}-${fn}.txt" \
+        "${PATCH_DIR}/patch-${testtype}-${fn}-warning.txt"
+    fi
+
+    numbranch=$("generic_count_probs" "${testtype}" "${PATCH_DIR}/branch-${testtype}-${fn}-warning.txt")
+    numpatch=$("generic_count_probs" "${testtype}" "${PATCH_DIR}/patch-${testtype}-${fn}-warning.txt")
+
+    yetus_debug "${testtype}: old: ${numbranch} vs new: ${numpatch}"
+
+    if [[ -n ${numbranch}
+       && -n ${numpatch}
+       && ${numpatch} -gt ${numbranch} ]]; then
+
+      ${DIFF} -u "${PATCH_DIR}/branch-${testtype}-${fn}-warning.txt" \
+        "${PATCH_DIR}/patch-${testtype}-${fn}-warning.txt" \
+        > "${PATCH_DIR}/${testtype}-${fn}-diff.txt"
+
+      add_vote_table -1 "${testtype}" "${fn}${statusjdk} has problems."
+      add_footer_table "${testtype}" "${fn}: @@BASE@@/${testtype}-${fn}-diff.txt"
+
+      ((result=result+1))
+    fi
+    ((i=i+1))
+  done
+  modules_messages patch "${testtype}" true
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Generic post-patch handler
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+## @param        origlog
+## @param        testtype
+## @param        multijdkmode
+## @param        run commands
+function generic_post_handler
+{
+  declare origlog=$1
+  declare testtype=$2
+  declare multijdkmode=$3
+  declare need2run=$4
+  declare i
+  declare result=0
+  declare fn
+  declare -r savejavahome=${JAVA_HOME}
+  declare jdk=""
+  declare jdkindex=0
+  declare statusjdk
+  declare -i numbranch=0
+  declare -i numpatch=0
+
+  verify_needed_test "${testtype}"
+  if [[ $? == 0 ]]; then
+    yetus_debug "${testtype} not needed"
+    return 0
+  fi
+
+  big_console_header "Patch ${testtype} verification"
+
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+      yetus_debug "Using ${JAVA_HOME} to run this set of tests"
+    fi
+
+    if [[ ${need2run} = true ]]; then
+      personality_modules "${codebase}" "${testtype}"
+      "${BUILDTOOL}_modules_worker" "${codebase}" "${testtype}"
+
+      if [[ ${UNSUPPORTED_TEST} = true ]]; then
+        return 0
+      fi
+    fi
+
+    generic_postlog_compare "${origlog}" "${testtype}" "${multijdkmode}"
+    ((result=result+$?))
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Execute the compile phase. This will callout
+## @description  to _compile
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        branch|patch
+## @return       0 on success
+## @return       1 on failure
+function compile
+{
+  declare codebase=$1
+  declare result=0
+  declare -r savejavahome=${JAVA_HOME}
+  declare multijdkmode=false
+  declare jdkindex=0
+
+  verify_needed_test compile
+  if [[ $? == 0 ]]; then
+     return 0
+  fi
+
+  if [[ ${codebase} = "branch" ]]; then
+    big_console_header "Pre-patch ${PATCH_BRANCH} compilation"
+  else
+    big_console_header "Patch compilation"
+  fi
+
+  verify_multijdk_test compile
+  if [[ $? == 1 ]]; then
+    multijdkmode=true
+  fi
+
+  for jdkindex in ${JDK_DIR_LIST}; do
+    if [[ ${multijdkmode} == true ]]; then
+      JAVA_HOME=${jdkindex}
+    fi
+
+    personality_modules "${codebase}" compile
+    "${BUILDTOOL}_modules_worker" "${codebase}" compile
+    modules_messages "${codebase}" compile true
+
+    for plugin in ${PLUGINS}; do
+      verify_patchdir_still_exists
+      if declare -f ${plugin}_compile >/dev/null 2>&1; then
+        yetus_debug "Running ${plugin}_compile ${codebase} ${multijdkmode}"
+        "${plugin}_compile" "${codebase}" "${multijdkmode}"
+        ((result = result + $?))
+      fi
+    done
+
+  done
+  JAVA_HOME=${savejavahome}
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Execute the static analysis test cycle.
+## @description  This will callout to _precompile, compile, and _postcompile
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        branch|patch
+## @return       0 on success
+## @return       1 on failure
+function compile_cycle
+{
+  declare codebase=$1
+  declare result=0
+  declare plugin
+
+  find_changed_modules
+
+  for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${PLUGINS} ${TESTFORMATS}; do
+    if declare -f ${plugin}_precompile >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_precompile"
+      #shellcheck disable=SC2086
+      ${plugin}_precompile ${codebase}
+      if [[ $? -gt 0 ]]; then
+        ((result = result+1))
+      fi
+    fi
+  done
+
+  compile "${codebase}"
+
+  for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${PLUGINS} ${TESTFORMATS}; do
+    if declare -f ${plugin}_postcompile >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_postcompile"
+      #shellcheck disable=SC2086
+      ${plugin}_postcompile ${codebase}
+      if [[ $? -gt 0 ]]; then
+        ((result = result+1))
+      fi
+    fi
+  done
+
+  for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${PLUGINS} ${TESTFORMATS}; do
+    if declare -f ${plugin}_rebuild >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_rebuild"
+      #shellcheck disable=SC2086
+      ${plugin}_rebuild ${codebase}
+      if [[ $? -gt 0 ]]; then
+        ((result = result+1))
+      fi
+    fi
+  done
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Execute the patch file test phase. Calls out to
+## @description  to _patchfile
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        branch|patch
+## @return       0 on success
+## @return       1 on failure
+function patchfiletests
+{
+  declare plugin
+  declare result=0
+
+  for plugin in ${BUILDTOOL} ${PLUGINS} ${TESTFORMATS}; do
+    if declare -f ${plugin}_patchfile >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_patchfile"
+      #shellcheck disable=SC2086
+      ${plugin}_patchfile "${PATCH_DIR}/patch"
+      if [[ $? -gt 0 ]]; then
+        ((result = result+1))
+      fi
+    fi
+  done
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+
+## @description  Wipe the repo clean to not invalidate tests
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @return       0 on success
+## @return       1 on failure
+function distclean
+{
+  declare result=0
+  declare plugin
+
+  personality_modules branch distclean
+
+  for plugin in ${PLUGINS} ${TESTFORMATS}; do
+    if declare -f ${plugin}_clean >/dev/null 2>&1; then
+      yetus_debug "Running ${plugin}_distclean"
+      #shellcheck disable=SC2086
+      ${plugin}_clean
+      if [[ $? -gt 0 ]]; then
+        ((result = result+1))
+      fi
+    fi
+  done
+
+  if [[ ${result} -gt 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
+## @description  Setup to execute
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        $@
+## @return       0 on success
+## @return       1 on failure
+function initialize
+{
+  setup_defaults
+
+  parse_args "$@"
+
+  importplugins
+
+  parse_args_plugins "$@"
+
+  plugins_initialize
+
+  finish_docker_stats
+
+  locate_patch
+
+  # from here on out, we'll be in ${BASEDIR} for cwd
+  # plugins need to pushd/popd if they change.
+  git_checkout
+  RESULT=$?
+  if [[ ${JENKINS} == "true" ]] ; then
+    if [[ ${RESULT} != 0 ]] ; then
+      exit 1
+    fi
+  fi
+
+  find_changed_files
+
+  check_reexec
+
+  determine_needed_tests
+
+  prepopulate_footer
+}
+
+## @description perform prechecks
+## @audience private
+## @stability evolving
+## @return   exits on failure
+function prechecks
+{
+  declare plugin
+  declare result=0
+
+  verify_patch_file
+  (( result = result + $? ))
+  if [[ ${result} != 0 ]] ; then
+    bugsystem_finalreport 1
+    cleanup_and_exit 1
+  fi
+
+  for plugin in ${BUILDTOOL} ${PLUGINS} ${TESTFORMATS}; do
+    verify_patchdir_still_exists
+
+    if declare -f ${plugin}_precheck >/dev/null 2>&1; then
+
+      yetus_debug "Running ${plugin}_precheck"
+      #shellcheck disable=SC2086
+      ${plugin}_precheck
+
+      (( result = result + $? ))
+      if [[ ${result} != 0 ]] ; then
+        bugsystem_finalreport 1
+        cleanup_and_exit 1
+      fi
+    fi
+  done
+}
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+initialize "$@"
+
+prechecks
+
+patchfiletests
+((RESULT=RESULT+$?))
+
+compile_cycle branch
+((RESULT=RESULT+$?))
+
+distclean
 
 apply_patch_file
 
-# we find changed modules again
-# in case the patch adds or removes a module
-# this also means that test suites need to be
-# aware that there might not be a 'before'
-find_changed_modules
+compute_gitdiff
 
-postapply
-
-check_mvninstall
-
-postinstall
+compile_cycle patch
+((RESULT=RESULT+$?))
 
 runtests
+((RESULT=RESULT+$?))
 
 finish_vote_table
 

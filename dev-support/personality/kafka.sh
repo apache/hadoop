@@ -15,10 +15,44 @@
 # limitations under the License.
 
 #shellcheck disable=SC2034
-PATCH_BRANCH_DEFAULT=master
+PATCH_BRANCH_DEFAULT=trunk
 #shellcheck disable=SC2034
-JIRA_ISSUE_RE='^TAJO-[0-9]+$'
+JIRA_ISSUE_RE='^KAFKA-[0-9]+$'
 #shellcheck disable=SC2034
-GITHUB_REPO="apache/tajo"
+HOW_TO_CONTRIBUTE="http://kafka.apache.org/contributing.html"
+# shellcheck disable=SC2034
+BUILDTOOL=gradle
 #shellcheck disable=SC2034
-HOW_TO_CONTRIBUTE="https://cwiki.apache.org/confluence/display/TAJO/How+to+Contribute+to+Tajo"
+GITHUB_REPO="apache/kafka"
+
+function personality_modules
+{
+  declare repostatus=$1
+  declare testtype=$2
+  declare module
+  declare extra=""
+
+  yetus_debug "Using kafka personality_modules"
+  yetus_debug "Personality: ${repostatus} ${testtype}"
+
+  clear_personality_queue
+
+  case ${testtype} in
+    gradleboot)
+      # kafka's bootstrap is broken
+      if [[ ${testtype} == gradleboot ]]; then
+        pushd "${BASEDIR}" >/dev/null
+        echo_and_redirect "${PATCH_DIR}/kafka-configure-gradle.txt" gradle
+        popd >/dev/null
+      fi
+    ;;
+    compile)
+      extra="clean jar"
+    ;;
+  esac
+
+  for module in ${CHANGED_MODULES}; do
+    # shellcheck disable=SC2086
+    personality_enqueue_module ${module} ${extra}
+  done
+}

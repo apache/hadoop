@@ -166,3 +166,14 @@ function pylint_postapply
   add_vote_table +1 pylint "There were no new pylint issues."
   return 0
 }
+
+function pylint_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    pylint_preapply
+  else
+    pylint_postapply
+  fi
+}

@@ -161,3 +161,14 @@ function shellcheck_postapply
   add_vote_table +1 shellcheck "There were no new shellcheck issues."
   return 0
 }
+
+function shellcheck_postcompile
+{
+  declare repostatus=$1
+
+  if [[ "${repostatus}" = branch ]]; then
+    shellcheck_preapply
+  else
+    shellcheck_postapply
+  fi
+}

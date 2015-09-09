@@ -24,7 +24,7 @@ GITHUB_REPO="apache/hbase"
 HOW_TO_CONTRIBUTE=""
 
 # All supported Hadoop versions that we want to test the compilation with
-HADOOP2_VERSIONS="2.4.1 2.5.2 2.6.0"
+HBASE_HADOOP_VERSIONS="2.4.1 2.5.2 2.6.0"
 
 # Override the maven options
 MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
@@ -39,48 +39,30 @@ function personality_modules
 
   clear_personality_queue
 
-  case ${testtype} in
-    javac)
-      personality_enqueue_module . -DskipTests
-      return
-      ;;
-    mvninstall)
-      extra="-DskipTests -DHBasePatchProcess"
-      if [[ ${repostatus} == branch ]]; then
-        personality_enqueue_module . "${extra}"
-        return
+  extra="-DHBasePatchProcess"
+
+  if [[ ${repostatus} == branch
+     && ${testtype} == mvninstall ]];then
+     personality_enqueue_module . ${extra}
+     return
+   fi
+
+  if [[ ${testtype} = findbugs ]]; then
+    for module in ${CHANGED_MODULES}; do
+      # skip findbugs on hbase-shell
+      if [[ ${module} == hbase-shell ]]; then
+        continue
+      else
+        # shellcheck disable=SC2086
+        personality_enqueue_module ${module} ${extra}
       fi
-      return
-      ;;
-    asflicense)
-      # this is very fast and provides the full path if we do it from
-      # the root of the source
-      personality_enqueue_module . -DHBasePatchProcess
-      return
-    ;;
-    unit)
-      if [[ ${TEST_PARALLEL} == "true" ]] ; then
-        extra="-Pparallel-tests -DHBasePatchProcess"
-        if [[ -n ${TEST_THREADS:-} ]]; then
-          extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
-        fi
-      fi
-    ;;
-    *)
-      extra="-DskipTests -DHBasePatchProcess"
-    ;;
-  esac
+    done
+    return
+  fi
 
   for module in ${CHANGED_MODULES}; do
-
-    # skip findbugs on hbase-shell
-    if [[ ${module} == hbase-shell
-      && ${testtype} == findbugs ]]; then
-      continue
-    else
-      # shellcheck disable=SC2086
-      personality_enqueue_module ${module} ${extra}
-    fi
+    # shellcheck disable=SC2086
+    personality_enqueue_module ${module} ${extra}
   done
 }
 
@@ -97,25 +79,30 @@ function hadoopcheck_filefilter
   fi
 }
 
-function hadoopcheck_postapply
+function hadoopcheck_rebuild
 {
-  local HADOOP2_VERSION
+  local repostatus=$1
+  local hadoopver
   local logfile
   local count
   local result=0
 
+  if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
+
   big_console_header "Compiling against various Hadoop versions"
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  for HADOOP2_VERSION in ${HADOOP2_VERSIONS}; do
-    logfile="${PATCH_DIR}/patch-javac-${HADOOP2_VERSION}.txt"
+  for hadoopver in ${HBASE_HADOOP_VERSIONS}; do
+    logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
     echo_and_redirect "${logfile}" \
-      "${MVN}" clean install \
+      "${MAVEN}" clean install \
         -DskipTests -DHBasePatchProcess \
-        -Dhadoop-two.version="${HADOOP2_VERSION}"
+        -Dhadoop-two.version="${hadoopver}"
     count=$(${GREP} -c ERROR "${logfile}")
     if [[ ${count} -gt 0 ]]; then
-      add_vote_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${HADOOP2_VERSION}."
+      add_vote_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${hadoopver}."
       ((result=result+1))
     fi
   done
@@ -124,7 +111,7 @@ function hadoopcheck_postapply
     return 1
   fi
 
-  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HADOOP2_VERSIONS}."
+  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HBASE_HADOOP_VERSIONS}."
   return 0
 }
 
@@ -141,7 +128,7 @@ function hbaseprotoc_filefilter
   fi
 }
 
-function hbaseprotoc_postapply
+function hbaseprotoc_rebuild
 {
   local i=0
   local fn
@@ -150,15 +137,19 @@ function hbaseprotoc_postapply
   local count
   local result
 
+  if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
+
+  verify_needed_test hbaseprotoc
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
+
   big_console_header "Patch HBase protoc plugin"
 
   start_clock
 
-  verify_needed_test hbaseprotoc
-  if [[ $? == 0 ]]; then
-    echo "Patch does not need hbaseprotoc testing."
-    return 0
-  fi
 
   personality_modules patch hbaseprotoc
   modules_workers patch hbaseprotoc compile -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
@@ -204,28 +195,28 @@ function hbaseanti_filefilter
   fi
 }
 
-function hbaseanti_preapply
+function hbaseanti_patchfile
 {
+  local patchfile=$1
   local warnings
   local result
+
+  verify_needed_test hbaseanti
+  if [[ $? == 0 ]]; then
+    return 0
+  fi
 
   big_console_header "Checking for known anti-patterns"
 
   start_clock
 
-  verify_needed_test hbaseanti
-  if [[ $? == 0 ]]; then
-    echo "Patch does not need hbaseanti testing."
-    return 0
-  fi
-
-  warnings=$(${GREP} 'new TreeMap<byte.*()' "${PATCH_DIR}/patch")
+  warnings=$(${GREP} 'new TreeMap<byte.*()' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
     add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: ${warnings}."
     ((result=result+1))
   fi
 
-  warnings=$(${GREP} 'import org.apache.hadoop.classification' "${PATCH_DIR}/patch")
+  warnings=$(${GREP} 'import org.apache.hadoop.classification' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
     add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase: ${warnings}."
     ((result=result+1))

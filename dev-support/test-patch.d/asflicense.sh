@@ -14,11 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ ${BUILDTOOL} == maven
-  || ${BUILDTOOL} == ant ]]; then
-  add_plugin asflicense
-  add_test asflicense
-fi
+
+add_plugin asflicense
+add_test asflicense
 
 ## @description  Verify all files have an Apache License
 ## @audience     private
@@ -26,7 +24,7 @@ fi
 ## @replaceable  no
 ## @return       0 on success
 ## @return       1 on failure
-function asflicense_postapply
+function asflicense_tests
 {
   local numpatch
 
@@ -36,11 +34,14 @@ function asflicense_postapply
 
   personality_modules patch asflicense
   case ${BUILDTOOL} in
-    maven)
-      modules_workers patch asflicense apache-rat:check
-    ;;
     ant)
       modules_workers patch asflicense releaseaudit
+    ;;
+    gradle)
+      modules_workers patch asflicense rat
+    ;;
+    maven)
+      modules_workers patch asflicense apache-rat:check
     ;;
     *)
       return 0
@@ -55,7 +56,9 @@ function asflicense_postapply
   fi
 
   #shellcheck disable=SC2038
-  find "${BASEDIR}" -name rat.txt -o -name releaseaudit_report.txt \
+  find "${BASEDIR}" -name rat.txt \
+        -o -name releaseaudit_report.txt \
+        -o -name rat-report.txt \
     | xargs cat > "${PATCH_DIR}/patch-asflicense.txt"
 
   if [[ -s "${PATCH_DIR}/patch-asflicense.txt" ]] ; then
@@ -77,7 +80,7 @@ function asflicense_postapply
       add_footer_table asflicense "@@BASE@@/patch-asflicense-problems.txt"
     fi
   else
-    # if we're here, then maven actually failed
+    # if we're here, then build actually failed
     modules_messages patch asflicense true
   fi
   return 1
