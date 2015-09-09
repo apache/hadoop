@@ -470,6 +470,18 @@
 </property>
 
 <property>
+  <name>dfs.namenode.safemode.replication.min</name>
+  <value></value>
+  <description>
+      a separate minimum replication factor for calculating safe block count.
+      This is an expert level setting.
+      Setting this lower than the dfs.namenode.replication.min
+      is not recommend and/or dangerous for production setups.
+      When it's not set it takes value from dfs.namenode.replication.min
+  </description>
+</property>
+
+<property>
   <name>dfs.blocksize</name>
   <value>134217728</value>
   <description>
