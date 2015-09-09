@@ -63,6 +63,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StopWatch;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -131,6 +132,8 @@ public class Journal implements Closeable {
   private final FileJournalManager fjm;
 
   private final JournalMetrics metrics;
+
+  private long lastJournalTimestamp = 0;
 
   /**
    * Time threshold for sync calls, beyond which a warning should be logged to the console.
@@ -253,7 +256,11 @@ public class Journal implements Closeable {
   synchronized long getCommittedTxnIdForTests() throws IOException {
     return committedTxnId.get();
   }
-  
+
+  synchronized long getLastJournalTimestamp() {
+    return lastJournalTimestamp;
+  }
+
   synchronized long getCurrentLagTxns() throws IOException {
     long committed = committedTxnId.get();
     if (committed == 0) {
@@ -411,6 +418,7 @@ public class Journal implements Closeable {
     
     updateHighestWrittenTxId(lastTxnId);
     nextTxId = lastTxnId + 1;
+    lastJournalTimestamp = Time.now();
   }
 
   public void heartbeat(RequestInfo reqInfo) throws IOException {
