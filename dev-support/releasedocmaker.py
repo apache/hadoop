@@ -31,6 +31,7 @@ except ImportError:
 
 RELEASE_VERSION = {}
 NAME_PATTERN = re.compile(r' \([0-9]+\)')
+RELNOTE_PATTERN = re.compile('^\<\!\-\- ([a-z]+) \-\-\>')
 
 ASF_LICENSE = '''
 <!---
@@ -87,6 +88,17 @@ def notableclean(_str):
     _str = _str.replace("*", r"\*")
     _str = _str.rstrip()
     return _str
+
+# if release notes have a special marker,
+# we'll treat them as already in markdown format
+def processrelnote(_str):
+  fmt = RELNOTE_PATTERN.match(_str)
+  if fmt is None:
+      return notableclean(_str)
+  else:
+      return {
+        'markdown' : tableclean(_str),
+      }.get(fmt.group(1),notableclean(_str))
 
 # clean output dir
 def clean_output_dir(directory):
@@ -519,7 +531,7 @@ def main():
             if len(jira.get_release_note()) > 0:
                 reloutputs.write_key_raw(jira.get_project(), "\n---\n\n")
                 reloutputs.write_key_raw(jira.get_project(), line)
-                line = '\n%s\n\n' % (tableclean(jira.get_release_note()))
+                line = '\n%s\n\n' % (processrelnote(jira.get_release_note()))
                 reloutputs.write_key_raw(jira.get_project(), line)
 
         if options.lint is True:

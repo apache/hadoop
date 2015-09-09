@@ -61,6 +61,12 @@ $ releasedocmaker.py --project HBASE --version 1.2.0
 
 ... will create a 1.2.0 directory and inside that directory will be CHANGES.1.2.0.md and RELEASENOTES.1.2.0.md .
 
+By default, release notes are expected to be in plain text.  However, you can write them in markdown if you include a header at the top of your release note:
+
+```xml
+<!-- markdown -->
+remaining text
+```
 
 # Changing the Header
 
