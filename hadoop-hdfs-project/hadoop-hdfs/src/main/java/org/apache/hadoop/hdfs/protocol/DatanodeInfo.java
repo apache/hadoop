@@ -370,9 +370,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long c = getCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
+    float usedPercent = getDfsUsedPercent();
     long cc = getCacheCapacity();
     long cr = getCacheRemaining();
     long cu = getCacheUsed();
+    float cacheUsedPercent = getCacheUsedPercent();
     buffer.append(getName());
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append(" "+location);
@@ -386,11 +388,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     buffer.append(" " + c + "(" + StringUtils.byteDesc(c)+")");
     buffer.append(" " + u + "(" + StringUtils.byteDesc(u)+")");
-    buffer.append(" " + percent2String(u/(double)c));
+    buffer.append(" " + percent2String(usedPercent));
     buffer.append(" " + r + "(" + StringUtils.byteDesc(r)+")");
     buffer.append(" " + cc + "(" + StringUtils.byteDesc(cc)+")");
     buffer.append(" " + cu + "(" + StringUtils.byteDesc(cu)+")");
-    buffer.append(" " + percent2String(cu/(double)cc));
+    buffer.append(" " + percent2String(cacheUsedPercent));
     buffer.append(" " + cr + "(" + StringUtils.byteDesc(cr)+")");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();

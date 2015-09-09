@@ -44,6 +44,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8384. Allow NN to startup if there are files having a lease but are not
     under construction. (jing9)
 
+    HDFS-9033. dfsadmin -metasave prints "NaN" for cache used%.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
