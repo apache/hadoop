@@ -13,9 +13,6 @@ Release 2.7.2 - UNRELEASED
     HADOOP-5323. Trash documentation should describe its directory structure and
     configurations. (Weiwei Yang via ozawa)
 
-    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
-    files rather than the entire DFSClient. (mingma)
-
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
@@ -1147,6 +1144,9 @@ Release 2.6.1 - 2015-09-09
 
     HDFS-7213. processIncrementalBlockReport performance degradation.
     (Eric Payne via kihwal)
+
+    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
+    files rather than the entire DFSClient. (mingma)
 
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
