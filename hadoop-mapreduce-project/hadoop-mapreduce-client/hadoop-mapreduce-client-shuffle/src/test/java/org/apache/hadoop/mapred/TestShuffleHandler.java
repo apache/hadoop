@@ -22,6 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.MockitoMaker.make;
 import static org.apache.hadoop.test.MockitoMaker.stub;
+import static org.junit.Assert.assertTrue;
 import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -79,17 +80,65 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.mockito.Mockito;
 import org.mortbay.jetty.HttpHeaders;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024; 
   private static final Log LOG = LogFactory.getLog(TestShuffleHandler.class);
+
+  class MockShuffleHandler extends org.apache.hadoop.mapred.ShuffleHandler {
+    @Override
+    protected Shuffle getShuffle(final Configuration conf) {
+      return new Shuffle(conf) {
+        @Override
+        protected void verifyRequest(String appid, ChannelHandlerContext ctx,
+            HttpRequest request, HttpResponse response, URL requestUri)
+            throws IOException {
+        }
+        @Override
+        protected MapOutputInfo getMapOutputInfo(String base, String mapId,
+            int reduce, String user) throws IOException {
+          // Do nothing.
+          return null;
+        }
+        @Override
+        protected void populateHeaders(List<String> mapIds, String jobId,
+            String user, int reduce, HttpRequest request,
+            HttpResponse response, boolean keepAliveParam,
+            Map<String, MapOutputInfo> infoMap) throws IOException {
+          // Do nothing.
+        }
+        @Override
+        protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+            Channel ch, String user, String mapId, int reduce,
+            MapOutputInfo info) throws IOException {
+
+          ShuffleHeader header =
+              new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+          DataOutputBuffer dob = new DataOutputBuffer();
+          header.write(dob);
+          ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+          dob = new DataOutputBuffer();
+          for (int i = 0; i < 100; ++i) {
+            header.write(dob);
+          }
+          return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+        }
+      };
+    }
+  }
 
   /**
    * Test the validation of ShuffleHandler's meta-data's serialization and
@@ -933,5 +982,85 @@ public class TestShuffleHandler {
       shuffleHandler.stop();
       FileUtil.fullyDelete(absLogDir);
     }
+  }
+
+  @Test(timeout = 4000)
+  public void testSendMapCount() throws Exception {
+    final List<ShuffleHandler.ReduceMapFileCount> listenerList =
+        new ArrayList<ShuffleHandler.ReduceMapFileCount>();
+
+    final ChannelHandlerContext mockCtx =
+        Mockito.mock(ChannelHandlerContext.class);
+    final MessageEvent mockEvt = Mockito.mock(MessageEvent.class);
+    final Channel mockCh = Mockito.mock(AbstractChannel.class);
+
+    // Mock HttpRequest and ChannelFuture
+    final HttpRequest mockHttpRequest = createMockHttpRequest();
+    final ChannelFuture mockFuture = createMockChannelFuture(mockCh,
+        listenerList);
+
+    // Mock Netty Channel Context and Channel behavior
+    Mockito.doReturn(mockCh).when(mockCtx).getChannel();
+    Mockito.when(mockCtx.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(mockFuture).when(mockCh).write(Mockito.any(Object.class));
+    Mockito.when(mockCh.write(Object.class)).thenReturn(mockFuture);
+
+    //Mock MessageEvent behavior
+    Mockito.doReturn(mockCh).when(mockEvt).getChannel();
+    Mockito.when(mockEvt.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
+
+    final ShuffleHandler sh = new MockShuffleHandler();
+    Configuration conf = new Configuration();
+    sh.init(conf);
+    sh.start();
+    int maxOpenFiles =conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
+        ShuffleHandler.DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
+    sh.getShuffle(conf).messageReceived(mockCtx, mockEvt);
+    assertTrue("Number of Open files should not exceed the configured " +
+            "value!-Not Expected",
+        listenerList.size() <= maxOpenFiles);
+    while(!listenerList.isEmpty()) {
+      listenerList.remove(0).operationComplete(mockFuture);
+      assertTrue("Number of Open files should not exceed the configured " +
+              "value!-Not Expected",
+          listenerList.size() <= maxOpenFiles);
+    }
+    sh.close();
+  }
+
+  public ChannelFuture createMockChannelFuture(Channel mockCh,
+      final List<ShuffleHandler.ReduceMapFileCount> listenerList) {
+    final ChannelFuture mockFuture = Mockito.mock(ChannelFuture.class);
+    Mockito.when(mockFuture.getChannel()).thenReturn(mockCh);
+    Mockito.doReturn(true).when(mockFuture).isSuccess();
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        //Add ReduceMapFileCount listener to a list
+        if (invocation.getArguments()[0].getClass() ==
+            ShuffleHandler.ReduceMapFileCount.class)
+          listenerList.add((ShuffleHandler.ReduceMapFileCount)
+              invocation.getArguments()[0]);
+        return null;
+      }
+    }).when(mockFuture).addListener(Mockito.any(
+        ShuffleHandler.ReduceMapFileCount.class));
+    return mockFuture;
+  }
+
+  public HttpRequest createMockHttpRequest() {
+    HttpRequest mockHttpRequest = Mockito.mock(HttpRequest.class);
+    Mockito.doReturn(HttpMethod.GET).when(mockHttpRequest).getMethod();
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        String uri = "/mapOutput?job=job_12345_1&reduce=1";
+        for (int i = 0; i < 100; i++)
+          uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
+        return uri;
+      }
+    }).when(mockHttpRequest).getUri();
+    return mockHttpRequest;
   }
 }
