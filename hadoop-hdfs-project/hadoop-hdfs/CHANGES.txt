@@ -914,6 +914,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8974. Convert docs in xdoc format to markdown.
     (Masatake Iwasaki via aajisaka)
 
+    HDFS-6763. Initialize file system-wide quota once on transitioning to active
+    (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
