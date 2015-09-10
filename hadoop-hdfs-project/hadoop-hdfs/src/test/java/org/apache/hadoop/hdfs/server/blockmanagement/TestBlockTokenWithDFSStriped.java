@@ -56,7 +56,7 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     conf = getConf();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient()
-        .createErasureCodingZone("/", null);
+        .setErasureCodingPolicy("/", null);
     try {
       cluster.waitActive();
       doTestRead(conf, cluster, true);

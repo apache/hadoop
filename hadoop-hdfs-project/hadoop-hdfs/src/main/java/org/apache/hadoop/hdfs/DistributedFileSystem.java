@@ -73,7 +73,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -2263,20 +2262,20 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Create the erasurecoding zone
-   * 
-   * @param path Directory to create the ec zone
-   * @param ecPolicy erasure coding policy for the zone. If not specified default will be used.
+   * Set the source path to the specified erasure coding policy.
+   *
+   * @param path     The directory to set the policy
+   * @param ecPolicy The erasure coding policy. If not specified default will be used.
    * @throws IOException
    */
-  public void createErasureCodingZone(final Path path, final ErasureCodingPolicy ecPolicy)
+  public void setErasureCodingPolicy(final Path path, final ErasureCodingPolicy ecPolicy)
       throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        dfs.createErasureCodingZone(getPathName(p), ecPolicy);
+        dfs.setErasureCodingPolicy(getPathName(p), ecPolicy);
         return null;
       }
 
@@ -2284,42 +2283,43 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          myDfs.createErasureCodingZone(p, ecPolicy);
+          myDfs.setErasureCodingPolicy(p, ecPolicy);
           return null;
         }
         throw new UnsupportedOperationException(
-            "Cannot createErasureCodingZone through a symlink to a "
+            "Cannot setErasureCodingPolicy through a symlink to a "
                 + "non-DistributedFileSystem: " + path + " -> " + p);
       }
     }.resolve(this, absF);
   }
 
   /**
-   * Get ErasureCoding zone information for the specified path
-   * 
-   * @param path
-   * @return Returns the zone information if path is in EC zone, null otherwise
+   * Get erasure coding policy information for the specified path
+   *
+   * @param path The path of the file or directory
+   * @return Returns the policy information if file or directory on the path
+   * is erasure coded, null otherwise
    * @throws IOException
    */
-  public ErasureCodingZone getErasureCodingZone(final Path path)
+  public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
       throws IOException {
     Path absF = fixRelativePart(path);
-    return new FileSystemLinkResolver<ErasureCodingZone>() {
+    return new FileSystemLinkResolver<ErasureCodingPolicy>() {
       @Override
-      public ErasureCodingZone doCall(final Path p) throws IOException,
+      public ErasureCodingPolicy doCall(final Path p) throws IOException,
           UnresolvedLinkException {
-        return dfs.getErasureCodingZone(getPathName(p));
+        return dfs.getErasureCodingPolicy(getPathName(p));
       }
 
       @Override
-      public ErasureCodingZone next(final FileSystem fs, final Path p)
+      public ErasureCodingPolicy next(final FileSystem fs, final Path p)
           throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          return myDfs.getErasureCodingZone(p);
+          return myDfs.getErasureCodingPolicy(p);
         }
         throw new UnsupportedOperationException(
-            "Cannot getErasureCodingZone through a symlink to a "
+            "Cannot getErasureCodingPolicy through a symlink to a "
                 + "non-DistributedFileSystem: " + path + " -> " + p);
       }
     }.resolve(this, absF);

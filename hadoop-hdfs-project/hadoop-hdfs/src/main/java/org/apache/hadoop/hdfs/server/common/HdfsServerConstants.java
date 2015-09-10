@@ -387,8 +387,8 @@ public interface HdfsServerConstants {
       "raw.hdfs.crypto.file.encryption.info";
   String SECURITY_XATTR_UNREADABLE_BY_SUPERUSER =
       "security.hdfs.unreadable.by.superuser";
-  String XATTR_ERASURECODING_ZONE =
-      "raw.hdfs.erasurecoding.zone";
+  String XATTR_ERASURECODING_POLICY =
+      "raw.hdfs.erasurecoding.policy";
 
   long BLOCK_GROUP_INDEX_MASK = 15;
   byte MAX_BLOCKS_IN_GROUP = 16;

@@ -114,7 +114,6 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -2901,12 +2900,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return new EncryptionZoneIterator(namenode, traceSampler);
   }
 
-  public void createErasureCodingZone(String src, ErasureCodingPolicy ecPolicy)
+
+  public void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
       throws IOException {
     checkOpen();
-    TraceScope scope = getPathTraceScope("createErasureCodingZone", src);
+    TraceScope scope = getPathTraceScope("setErasureCodingPolicy", src);
     try {
-      namenode.createErasureCodingZone(src, ecPolicy);
+      namenode.setErasureCodingPolicy(src, ecPolicy);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           SafeModeException.class,
@@ -3223,17 +3223,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Get the erasure coding zone information for the specified path
-   * 
+   * Get the erasure coding policy information for the specified path
+   *
    * @param src path to get the information for
-   * @return Returns the zone information if path is in EC Zone, null otherwise
+   * @return Returns the policy information if file or directory on the path is
+   * erasure coded, null otherwise
    * @throws IOException
    */
-  public ErasureCodingZone getErasureCodingZone(String src) throws IOException {
+
+  public ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException {
     checkOpen();
-    TraceScope scope = getPathTraceScope("getErasureCodingZone", src);
+    TraceScope scope = getPathTraceScope("getErasureCodingPolicy", src);
     try {
-      return namenode.getErasureCodingZone(src);
+      return namenode.getErasureCodingPolicy(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
           AccessControlException.class, UnresolvedPathException.class);

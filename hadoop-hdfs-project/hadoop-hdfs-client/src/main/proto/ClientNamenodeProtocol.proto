@@ -867,14 +867,14 @@ service ClientNamenodeProtocol {
       returns(ListEncryptionZonesResponseProto);
   rpc getEZForPath(GetEZForPathRequestProto)
       returns(GetEZForPathResponseProto);
-  rpc createErasureCodingZone(CreateErasureCodingZoneRequestProto)
-      returns(CreateErasureCodingZoneResponseProto);
+  rpc setErasureCodingPolicy(SetErasureCodingPolicyRequestProto)
+      returns(SetErasureCodingPolicyResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
       returns(GetEditsFromTxidResponseProto);
   rpc getErasureCodingPolicies(GetErasureCodingPoliciesRequestProto)
       returns(GetErasureCodingPoliciesResponseProto);
-  rpc getErasureCodingZone(GetErasureCodingZoneRequestProto)
-      returns(GetErasureCodingZoneResponseProto);
+  rpc getErasureCodingPolicy(GetErasureCodingPolicyRequestProto)
+      returns(GetErasureCodingPolicyResponseProto);
 }

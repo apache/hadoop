@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -486,8 +485,8 @@ class FSDirWriteFileOp {
     Preconditions.checkNotNull(existing);
     assert fsd.hasWriteLock();
     try {
-      // check if the file is in an EC zone
-      final boolean isStriped = FSDirErasureCodingOp.isInErasureCodingZone(
+      // check if the file has an EC policy
+      final boolean isStriped = FSDirErasureCodingOp.hasErasureCodingPolicy(
           fsd.getFSNamesystem(), existing);
       if (underConstruction) {
         newNode = newINodeFile(id, permissions, modificationTime,
@@ -533,9 +532,8 @@ class FSDirWriteFileOp {
       // associate new last block for the file
       final BlockInfo blockInfo;
       if (isStriped) {
-        ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+        ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
             fsd.getFSNamesystem(), inodesInPath);
-        ErasureCodingPolicy ecPolicy = ecZone.getErasureCodingPolicy();
         short numDataUnits = (short) ecPolicy.getNumDataUnits();
         short numParityUnits = (short) ecPolicy.getNumParityUnits();
         short numLocations = (short) (numDataUnits + numParityUnits);
@@ -586,7 +584,7 @@ class FSDirWriteFileOp {
     INodesInPath newiip;
     fsd.writeLock();
     try {
-      final boolean isStriped = FSDirErasureCodingOp.isInErasureCodingZone(
+      final boolean isStriped = FSDirErasureCodingOp.hasErasureCodingPolicy(
           fsd.getFSNamesystem(), existing);
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
           modTime, modTime, replication, preferredBlockSize, isStriped);

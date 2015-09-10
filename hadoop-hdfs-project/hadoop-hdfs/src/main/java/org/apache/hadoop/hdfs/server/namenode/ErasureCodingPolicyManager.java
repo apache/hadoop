@@ -83,7 +83,7 @@ public final class ErasureCodingPolicyManager {
 
   /**
    * Get system-wide default policy, which can be used by default
-   * when no policy is specified for an EC zone.
+   * when no policy is specified for a path.
    * @return ecPolicy
    */
   public static ErasureCodingPolicy getSystemDefaultPolicy() {

@@ -36,7 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
@@ -416,9 +416,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
           fsDir.getFSNamesystem(), iip);
-      updateBlocks(fsDir, addCloseOp, iip, newFile, ecZone);
+      updateBlocks(fsDir, addCloseOp, iip, newFile, ecPolicy);
       break;
     }
     case OP_CLOSE: {
@@ -438,9 +438,9 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
           fsDir.getFSNamesystem(), iip);
-      updateBlocks(fsDir, addCloseOp, iip, file, ecZone);
+      updateBlocks(fsDir, addCloseOp, iip, file, ecPolicy);
 
       // Now close the file
       if (!file.isUnderConstruction() &&
@@ -498,9 +498,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, true);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // Update in-memory data structures
-      ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
           fsDir.getFSNamesystem(), iip);
-      updateBlocks(fsDir, updateOp, iip, oldFile, ecZone);
+      updateBlocks(fsDir, updateOp, iip, oldFile, ecPolicy);
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(updateOp.rpcClientId, updateOp.rpcCallId);
@@ -517,9 +517,9 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(path, true);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // add the new block to the INodeFile
-      ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+      ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
           fsDir.getFSNamesystem(), iip);
-      addNewBlock(addBlockOp, oldFile, ecZone);
+      addNewBlock(addBlockOp, oldFile, ecPolicy);
       break;
     }
     case OP_SET_REPLICATION: {
@@ -961,7 +961,7 @@ public class FSEditLogLoader {
    * Add a new block into the given INodeFile
    */
   private void addNewBlock(AddBlockOp op, INodeFile file,
-      ErasureCodingZone ecZone) throws IOException {
+      ErasureCodingPolicy ecPolicy) throws IOException {
     BlockInfo[] oldBlocks = file.getBlocks();
     Block pBlock = op.getPenultimateBlock();
     Block newBlock= op.getLastBlock();
@@ -988,10 +988,9 @@ public class FSEditLogLoader {
     }
     // add the new block
     final BlockInfo newBlockInfo;
-    boolean isStriped = ecZone != null;
+    boolean isStriped = ecPolicy != null;
     if (isStriped) {
-      newBlockInfo = new BlockInfoStriped(newBlock,
-          ecZone.getErasureCodingPolicy());
+      newBlockInfo = new BlockInfoStriped(newBlock, ecPolicy);
     } else {
       newBlockInfo = new BlockInfoContiguous(newBlock,
           file.getPreferredBlockReplication());
@@ -1008,7 +1007,7 @@ public class FSEditLogLoader {
    * @throws IOException
    */
   private void updateBlocks(FSDirectory fsDir, BlockListUpdatingOp op,
-      INodesInPath iip, INodeFile file, ErasureCodingZone ecZone)
+      INodesInPath iip, INodeFile file, ErasureCodingPolicy ecPolicy)
       throws IOException {
     // Update its block list
     BlockInfo[] oldBlocks = file.getBlocks();
@@ -1068,7 +1067,7 @@ public class FSEditLogLoader {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }
     } else if (newBlocks.length > oldBlocks.length) {
-      final boolean isStriped = ecZone != null;
+      final boolean isStriped = ecPolicy != null;
       // We're adding blocks
       for (int i = oldBlocks.length; i < newBlocks.length; i++) {
         Block newBlock = newBlocks[i];
@@ -1078,8 +1077,7 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           if (isStriped) {
-            newBI = new BlockInfoStriped(newBlock,
-                ecZone.getErasureCodingPolicy());
+            newBI = new BlockInfoStriped(newBlock, ecPolicy);
           } else {
             newBI = new BlockInfoContiguous(newBlock,
                 file.getPreferredBlockReplication());

@@ -437,6 +437,20 @@ public class INodeFile extends INodeWithAdditionalFields
     setStoragePolicyID(storagePolicyId);
   }
 
+
+  /**
+   * @return The ID of the erasure coding policy on the file. 0 represents no
+   *          EC policy (file is in contiguous format). 1 represents the system
+   *          default EC policy:
+   *          {@link ErasureCodingPolicyManager#SYS_DEFAULT_POLICY}.
+   * TODO: support more policies by reusing {@link HeaderFormat#REPLICATION}.
+   */
+  @VisibleForTesting
+  @Override
+  public byte getErasureCodingPolicyID() {
+    return isStriped() ? (byte)1 : (byte)0;
+  }
+
   /**
    * @return true if the file is in the striping layout.
    */

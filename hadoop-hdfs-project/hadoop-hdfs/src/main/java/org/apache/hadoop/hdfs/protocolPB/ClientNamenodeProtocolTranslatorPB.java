@@ -58,7 +58,6 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -168,9 +167,9 @@ import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathR
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingZoneResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CreateErasureCodingZoneRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
@@ -1420,17 +1419,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void createErasureCodingZone(String src, ErasureCodingPolicy ecPolicy)
+  public void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
       throws IOException {
-    final CreateErasureCodingZoneRequestProto.Builder builder =
-        CreateErasureCodingZoneRequestProto.newBuilder();
+    final SetErasureCodingPolicyRequestProto.Builder builder =
+        SetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
     if (ecPolicy != null) {
       builder.setEcPolicy(PBHelper.convertErasureCodingPolicy(ecPolicy));
     }
-    CreateErasureCodingZoneRequestProto req = builder.build();
+    SetErasureCodingPolicyRequestProto req = builder.build();
     try {
-      rpcProxy.createErasureCodingZone(null, req);
+      rpcProxy.setErasureCodingPolicy(null, req);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -1577,14 +1576,14 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ErasureCodingZone getErasureCodingZone(String src) throws IOException {
-    GetErasureCodingZoneRequestProto req = GetErasureCodingZoneRequestProto.newBuilder()
+  public ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException {
+    GetErasureCodingPolicyRequestProto req = GetErasureCodingPolicyRequestProto.newBuilder()
         .setSrc(src).build();
     try {
-      GetErasureCodingZoneResponseProto response = rpcProxy.getErasureCodingZone(
+      GetErasureCodingPolicyResponseProto response = rpcProxy.getErasureCodingPolicy(
           null, req);
-      if (response.hasECZone()) {
-        return PBHelper.convertErasureCodingZone(response.getECZone());
+      if (response.hasEcPolicy()) {
+        return PBHelper.convertErasureCodingPolicy(response.getEcPolicy());
       }
       return null;
     } catch (ServiceException e) {

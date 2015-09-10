@@ -48,39 +48,39 @@
     </test>
 
     <test>
-      <description>help: createZone command</description>
+      <description>help: setPolicy command</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -help createZone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -help setPolicy</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^[ \t]*Create a zone to encode files using a specified policy( )*</expected-output>
+          <expected-output>^[ \t]*Set a specified erasure coding policy to a directory( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-createZone \[-s &lt;policyName&gt;\] &lt;path&gt;(.)*</expected-output>
+          <expected-output>^-setPolicy \[-s &lt;policyName&gt;\] &lt;path&gt;(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>help: getZone command</description>
+      <description>help: getPolicy command</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -help getZone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -help getPolicy</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Get information about the EC zone at specified path</expected-output>
+          <expected-output>Get erasure coding policy information about at specified path</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getZone &lt;path&gt;(.)*</expected-output>
+          <expected-output>^-getPolicy &lt;path&gt;(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -106,63 +106,63 @@
 
   <!-- Test erasure code commands -->
     <test>
-      <description>createZone : create a zone to encode files</description>
+      <description>setPolicy : set erasure coding policy on a directory to encode files</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -s RS-6-3-64k /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>EC Zone created successfully at NAMENODE/eczone</expected-output>
+          <expected-output>EC policy set successfully at NAMENODE/ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>createZone : create a zone twice</description>
+      <description>setPolicy : set a policy twice</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Directory /eczone is already in an erasure coding zone</expected-output>
+          <expected-output>Directory /ecdir already has an erasure coding policy</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>createZone : default policy</description>
+      <description>setPolicy : default policy</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : get information about the EC zone at specified path not in zone</description>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /noec</command>
-        <ec-admin-command>-fs NAMENODE -getZone /noec</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /noec</ec-admin-command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /noec</command>
@@ -170,45 +170,45 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Path NAMENODE/noec is not in EC zone</expected-output>
+          <expected-output>Path NAMENODE/noec is not erasure coded</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : get information about the EC zone at specified path</description>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
-        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -s RS-6-3-64k /ecdir</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : get EC zone at specified file path</description>
+      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s RS-6-3-64k /eczone</ec-admin-command>
-        <command>-fs NAMENODE -touchz /eczone/ecfile</command>
-        <ec-admin-command>-fs NAMENODE -getZone /eczone/ecfile</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -s RS-6-3-64k /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/ecfile</command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir/ecfile</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm /eczone/ecfile</command>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rm /ecdir/ecfile</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Dir: /eczone, Policy: ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
+          <expected-output>ErasureCodingPolicy=[Name=RS-6-3-64k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -230,64 +230,64 @@
 
 <!-- Test illegal parameters -->
     <test>
-      <description>createZone : illegal parameters - path is missing</description>
+      <description>setPolicy : illegal parameters - path is missing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-createZone: &lt;path&gt; is missing(.)*</expected-output>
+          <expected-output>^-setPolicy: &lt;path&gt; is missing(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>createZone : illegal parameters - policy name is missing</description>
+      <description>setPolicy : illegal parameters - policy name is missing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -s</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-createZone: option -s requires 1 argument(.)*</expected-output>
+          <expected-output>^-setPolicy: option -s requires 1 argument(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>createZone : illegal parameters - too many arguments</description>
+      <description>setPolicy : illegal parameters - too many arguments</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone /eczone1 /eczone2</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir1 /ecdir2</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>-createZone: Too many arguments</expected-output>
+          <expected-output>-setPolicy: Too many arguments</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>createZone : illegal parameters - invalidpolicy</description>
+      <description>setPolicy : illegal parameters - invalidpolicy</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /eczone</command>
-        <ec-admin-command>-fs NAMENODE -createZone -s invalidpolicy /eczone</ec-admin-command>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -s invalidpolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmdir /eczone</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -298,62 +298,62 @@
     </test>
 
     <test>
-      <description>createZone : illegal parameters - no such file</description>
+      <description>setPolicy : illegal parameters - no such file</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -createZone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -setPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^createZone: `/eczone': No such file or directory(.)*</expected-output>
+          <expected-output>^setPolicy: `/ecdir': No such file or directory(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : illegal parameters - path is missing</description>
+      <description>getPolicy : illegal parameters - path is missing</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZone </ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy </ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getZone: &lt;path&gt; is missing(.)*</expected-output>
+          <expected-output>^-getPolicy: &lt;path&gt; is missing(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : illegal parameters - too many arguments</description>
+      <description>getPolicy : illegal parameters - too many arguments</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZone /eczone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rm /eczone</command>
+        <command>-fs NAMENODE -rm /ecdir</command>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>-getZone: Too many arguments</expected-output>
+          <expected-output>-getPolicy: Too many arguments</expected-output>
         </comparator>
       </comparators>
     </test>
 
     <test>
-      <description>getZone : illegal parameters - no such file</description>
+      <description>getPolicy : illegal parameters - no such file</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -getZone /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -getPolicy /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^getZone: `/eczone': No such file or directory(.)*</expected-output>
+          <expected-output>^getPolicy: `/ecdir': No such file or directory(.)*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -361,7 +361,7 @@
     <test>
       <description>listPolicies : illegal parameters - too many parameters</description>
       <test-commands>
-        <ec-admin-command>-fs NAMENODE -listPolicies /eczone</ec-admin-command>
+        <ec-admin-command>-fs NAMENODE -listPolicies /ecdir</ec-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>

@@ -217,8 +217,8 @@ public class TestStripedINodeFile {
     try {
       final int len = 1024;
       final Path parentDir = new Path("/parentDir");
-      final Path zone = new Path(parentDir, "zone");
-      final Path zoneFile = new Path(zone, "zoneFile");
+      final Path ecDir = new Path(parentDir, "ecDir");
+      final Path ecFile = new Path(ecDir, "ecFile");
       final Path contiguousFile = new Path(parentDir, "someFile");
       final DistributedFileSystem dfs;
       final Configuration conf = new Configuration();
@@ -232,18 +232,18 @@ public class TestStripedINodeFile {
 
       FSNamesystem fsn = cluster.getNamesystem();
       dfs = cluster.getFileSystem();
-      dfs.mkdirs(zone);
+      dfs.mkdirs(ecDir);
 
-      // create erasure zone
-      dfs.createErasureCodingZone(zone, null);
-      DFSTestUtil.createFile(dfs, zoneFile, len, (short) 1, 0xFEED);
+      // set erasure coding policy
+      dfs.setErasureCodingPolicy(ecDir, null);
+      DFSTestUtil.createFile(dfs, ecFile, len, (short) 1, 0xFEED);
       DFSTestUtil.createFile(dfs, contiguousFile, len, (short) 1, 0xFEED);
       final FSDirectory fsd = fsn.getFSDirectory();
 
       // Case-1: Verify the behavior of striped blocks
       // Get blocks of striped file
-      INode inodeStriped = fsd.getINode("/parentDir/zone/zoneFile");
-      assertTrue("Failed to get INodeFile for /parentDir/zone/zoneFile",
+      INode inodeStriped = fsd.getINode("/parentDir/ecDir/ecFile");
+      assertTrue("Failed to get INodeFile for /parentDir/ecDir/ecFile",
           inodeStriped instanceof INodeFile);
       INodeFile inodeStripedFile = (INodeFile) inodeStriped;
       BlockInfo[] stripedBlks = inodeStripedFile.getBlocks();
@@ -252,8 +252,8 @@ public class TestStripedINodeFile {
             blockInfo.isDeleted());
       }
 
-      // delete erasure zone directory
-      dfs.delete(zone, true);
+      // delete directory with erasure coding policy
+      dfs.delete(ecDir, true);
       for (BlockInfo blockInfo : stripedBlks) {
         assertTrue("Didn't mark the block as deleted!", blockInfo.isDeleted());
       }

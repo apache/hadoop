@@ -71,7 +71,7 @@ public class TestSequentialBlockGroupId {
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private SequentialBlockGroupIdGenerator blockGrpIdGenerator;
-  private Path eczone = new Path("/eczone");
+  private Path ecDir = new Path("/ecDir");
 
   @Before
   public void setup() throws Exception {
@@ -84,9 +84,9 @@ public class TestSequentialBlockGroupId {
     fs = cluster.getFileSystem();
     blockGrpIdGenerator = cluster.getNamesystem().getBlockIdManager()
         .getBlockGroupIdGenerator();
-    fs.mkdirs(eczone);
+    fs.mkdirs(ecDir);
     cluster.getFileSystem().getClient()
-        .createErasureCodingZone("/eczone", null);
+        .setErasureCodingPolicy("/ecDir", null);
   }
 
   @After
@@ -104,7 +104,7 @@ public class TestSequentialBlockGroupId {
     long blockGroupIdInitialValue = blockGrpIdGenerator.getCurrentValue();
 
     // Create a file that is 4 blocks long.
-    Path path = new Path(eczone, "testBlockGrpIdGeneration.dat");
+    Path path = new Path(ecDir, "testBlockGrpIdGeneration.dat");
     DFSTestUtil.createFile(fs, path, cellSize, fileLen, blockSize, REPLICATION,
         SEED);
     List<LocatedBlock> blocks = DFSTestUtil.getAllBlocks(fs, path);
@@ -134,7 +134,7 @@ public class TestSequentialBlockGroupId {
 
     // Create a file with a few blocks to rev up the global block ID
     // counter.
-    Path path1 = new Path(eczone, "testBlockGrpIdCollisionDetection_file1.dat");
+    Path path1 = new Path(ecDir, "testBlockGrpIdCollisionDetection_file1.dat");
     DFSTestUtil.createFile(fs, path1, cellSize, fileLen, blockSize,
         REPLICATION, SEED);
     List<LocatedBlock> blocks1 = DFSTestUtil.getAllBlocks(fs, path1);
@@ -145,7 +145,7 @@ public class TestSequentialBlockGroupId {
     blockGrpIdGenerator.setCurrentValue(blockGroupIdInitialValue);
 
     // Trigger collisions by creating a new file.
-    Path path2 = new Path(eczone, "testBlockGrpIdCollisionDetection_file2.dat");
+    Path path2 = new Path(ecDir, "testBlockGrpIdCollisionDetection_file2.dat");
     DFSTestUtil.createFile(fs, path2, cellSize, fileLen, blockSize,
         REPLICATION, SEED);
     List<LocatedBlock> blocks2 = DFSTestUtil.getAllBlocks(fs, path2);
@@ -204,7 +204,7 @@ public class TestSequentialBlockGroupId {
     // Reset back to the initial value to trigger collision
     blockGrpIdGenerator.setCurrentValue(blockGroupIdInitialValue);
     // Trigger collisions by creating a new file.
-    Path path2 = new Path(eczone, "testCollisionWithLegacyBlock_file2.dat");
+    Path path2 = new Path(ecDir, "testCollisionWithLegacyBlock_file2.dat");
     DFSTestUtil.createFile(fs, path2, cellSize, fileLen, blockSize,
         REPLICATION, SEED);
     List<LocatedBlock> blocks2 = DFSTestUtil.getAllBlocks(fs, path2);

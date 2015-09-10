@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.cellSize;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.dataBlocks;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.parityBlocks;
@@ -48,7 +47,7 @@ public class TestWriteStripedFileWithFailure {
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
+    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
     fs = cluster.getFileSystem();
   }
 

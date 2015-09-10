@@ -38,24 +38,24 @@ public class TestFileStatusWithECPolicy {
 
   @Test
   public void testFileStatusWithECPolicy() throws Exception {
-    // test directory not in EC zone
+    // test directory doesn't have an EC policy
     final Path dir = new Path("/foo");
     assertTrue(fs.mkdir(dir, FsPermission.getDirDefault()));
     assertNull(client.getFileInfo(dir.toString()).getErasureCodingPolicy());
-    // test file not in EC zone
+    // test file doesn't have an EC policy
     final Path file = new Path(dir, "foo");
     fs.create(file).close();
     assertNull(client.getFileInfo(file.toString()).getErasureCodingPolicy());
     fs.delete(file, true);
 
     final ErasureCodingPolicy ecPolicy1 = ErasureCodingPolicyManager.getSystemDefaultPolicy();
-    // create EC zone on dir
-    fs.createErasureCodingZone(dir, ecPolicy1);
+    // set EC policy on dir
+    fs.setErasureCodingPolicy(dir, ecPolicy1);
     final ErasureCodingPolicy ecPolicy2 = client.getFileInfo(dir.toUri().getPath()).getErasureCodingPolicy();
     assertNotNull(ecPolicy2);
     assertTrue(ecPolicy1.equals(ecPolicy2));
 
-    // test file in EC zone
+    // test file doesn't have an EC policy
     fs.create(file).close();
     final ErasureCodingPolicy ecPolicy3 =
         fs.getClient().getFileInfo(file.toUri().getPath()).getErasureCodingPolicy();

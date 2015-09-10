@@ -177,7 +177,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -187,7 +186,6 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -2133,7 +2131,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      if (!FSDirErasureCodingOp.isInErasureCodingZone(this, src)) {
+      if (!FSDirErasureCodingOp.hasErasureCodingPolicy(this, src)) {
         blockManager.verifyReplication(src, replication, clientMachine);
       }
     } finally {
@@ -3206,9 +3204,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final long diff;
     final short replicationFactor;
     if (fileINode.isStriped()) {
-      final ErasureCodingZone ecZone = FSDirErasureCodingOp
-          .getErasureCodingZone(this, iip);
-      final ErasureCodingPolicy ecPolicy = ecZone.getErasureCodingPolicy();
+      final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
+          .getErasureCodingPolicy(this, iip);
       final short numDataUnits = (short) ecPolicy.getNumDataUnits();
       final short numParityUnits = (short) ecPolicy.getNumParityUnits();
 
@@ -6241,11 +6238,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return ecPolicyManager;
   }
 
-  /** @return the ErasureCodingZoneManager. */
-  public ErasureCodingZoneManager getErasureCodingZoneManager() {
-    return dir.ecZoneManager;
-  }
-
   @Override  // NameNodeMXBean
   public String getCorruptFiles() {
     List<String> list = new ArrayList<String>();
@@ -7192,15 +7184,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Create an erasure coding zone on directory src.
-   * @param srcArg  the path of a directory which will be the root of the
-   *                erasure coding zone. The directory must be empty.
-   * @param ecPolicy  erasure coding policy for the erasure coding zone
+   * Set an erasure coding policy on the given path.
+   * @param srcArg  The path of the target directory.
+   * @param ecPolicy The erasure coding policy to set on the target directory.
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void createErasureCodingZone(final String srcArg, final ErasureCodingPolicy
+  void setErasureCodingPolicy(final String srcArg, final ErasureCodingPolicy
       ecPolicy, final boolean logRetryCache) throws IOException,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     checkSuperuserPrivilege();
@@ -7210,8 +7201,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot create erasure coding zone on " + srcArg);
-      resultingStat = FSDirErasureCodingOp.createErasureCodingZone(this,
+      checkNameNodeSafeMode("Cannot set erasure coding policy on " + srcArg);
+      resultingStat = FSDirErasureCodingOp.setErasureCodingPolicy(this,
           srcArg, ecPolicy, logRetryCache);
       success = true;
     } finally {
@@ -7219,21 +7210,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (success) {
         getEditLog().logSync();
       }
-      logAuditEvent(success, "createErasureCodingZone", srcArg, null,
+      logAuditEvent(success, "setErasureCodingPolicy", srcArg, null,
           resultingStat);
     }
   }
 
   /**
-   * Get the erasure coding zone information for specified path
+   * Get the erasure coding policy information for specified path
    */
-  ErasureCodingZone getErasureCodingZone(String src)
+  ErasureCodingPolicy getErasureCodingPolicy(String src)
       throws AccessControlException, UnresolvedLinkException, IOException {
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return getErasureCodingZoneForPath(src);
+      return getErasureCodingPolicyForPath(src);
     } finally {
       readUnlock();
     }
@@ -7461,9 +7452,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override
-  public ErasureCodingZone getErasureCodingZoneForPath(String src)
+  public ErasureCodingPolicy getErasureCodingPolicyForPath(String src)
       throws IOException {
-    return FSDirErasureCodingOp.getErasureCodingZone(this, src);
+    return FSDirErasureCodingOp.getErasureCodingPolicy(this, src);
   }
 }
 

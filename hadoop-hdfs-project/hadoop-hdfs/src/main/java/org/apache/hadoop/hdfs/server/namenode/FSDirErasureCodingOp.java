@@ -17,14 +17,27 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.WritableUtils;
+
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
 
 /**
  * Helper class to perform erasure coding related operations.
@@ -38,18 +51,17 @@ final class FSDirErasureCodingOp {
   private FSDirErasureCodingOp() {}
 
   /**
-   * Create an erasure coding zone on directory src.
+   * Set an erasure coding policy on the given path.
    *
-   * @param fsn namespace
-   * @param srcArg the path of a directory which will be the root of the
-   *          erasure coding zone. The directory must be empty.
-   * @param ecPolicy erasure coding policy for the erasure coding zone
+   * @param fsn The namespace
+   * @param srcArg The path of the target directory.
+   * @param ecPolicy The erasure coding policy to set on the target directory.
    * @param logRetryCache whether to record RPC ids in editlog for retry
    *          cache rebuilding
    * @return {@link HdfsFileStatus}
    * @throws IOException
    */
-  static HdfsFileStatus createErasureCodingZone(final FSNamesystem fsn,
+  static HdfsFileStatus setErasureCodingPolicy(final FSNamesystem fsn,
       final String srcArg, final ErasureCodingPolicy ecPolicy,
       final boolean logRetryCache) throws IOException {
     assert fsn.hasWriteLock();
@@ -66,8 +78,7 @@ final class FSDirErasureCodingOp {
     fsd.writeLock();
     try {
       iip = fsd.getINodesInPath4Write(src, false);
-      xAttrs = fsn.getErasureCodingZoneManager().createErasureCodingZone(
-          iip, ecPolicy);
+      xAttrs = createErasureCodingPolicyXAttr(fsn, iip, ecPolicy);
     } finally {
       fsd.writeUnlock();
     }
@@ -75,62 +86,83 @@ final class FSDirErasureCodingOp {
     return fsd.getAuditFileInfo(iip);
   }
 
+  static List<XAttr> createErasureCodingPolicyXAttr(final FSNamesystem fsn,
+      final INodesInPath srcIIP, ErasureCodingPolicy ecPolicy) throws IOException {
+    FSDirectory fsd = fsn.getFSDirectory();
+    assert fsd.hasWriteLock();
+    Preconditions.checkNotNull(srcIIP, "INodes cannot be null");
+    String src = srcIIP.getPath();
+    if (srcIIP.getLastINode() != null &&
+        !srcIIP.getLastINode().isDirectory()) {
+      throw new IOException("Attempt to set an erasure coding policy " +
+          "for a file " + src);
+    }
+    if (getErasureCodingPolicyForPath(fsn, srcIIP) != null) {
+      throw new IOException("Directory " + src + " already has an " +
+          "erasure coding policy.");
+    }
+
+    // System default erasure coding policy will be used since no specified.
+    if (ecPolicy == null) {
+      ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    }
+
+    final XAttr ecXAttr;
+    DataOutputStream dOut = null;
+    try {
+      ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+      dOut = new DataOutputStream(bOut);
+      WritableUtils.writeString(dOut, ecPolicy.getName());
+      ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_POLICY,
+          bOut.toByteArray());
+    } finally {
+      IOUtils.closeStream(dOut);
+    }
+    final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+    xattrs.add(ecXAttr);
+    FSDirXAttrOp.unprotectedSetXAttrs(fsd, src, xattrs,
+        EnumSet.of(XAttrSetFlag.CREATE));
+    return xattrs;
+  }
+
   /**
-   * Get the erasure coding zone information for specified path.
+   * Get the erasure coding policy information for specified path.
    *
    * @param fsn namespace
    * @param src path
-   * @return {@link ErasureCodingZone}
+   * @return {@link ErasureCodingPolicy}
    * @throws IOException
    */
-  static ErasureCodingZone getErasureCodingZone(final FSNamesystem fsn,
+  static ErasureCodingPolicy getErasureCodingPolicy(final FSNamesystem fsn,
       final String src) throws IOException {
     assert fsn.hasReadLock();
 
     final INodesInPath iip = getINodesInPath(fsn, src);
-    return getErasureCodingZoneForPath(fsn, iip);
+    return getErasureCodingPolicyForPath(fsn, iip);
   }
 
   /**
-   * Get erasure coding zone information for specified path.
-   *
-   * @param fsn namespace
-   * @param iip inodes in the path containing the file
-   * @return {@link ErasureCodingZone}
-   * @throws IOException
-   */
-  static ErasureCodingZone getErasureCodingZone(final FSNamesystem fsn,
-      final INodesInPath iip) throws IOException {
-    assert fsn.hasReadLock();
-
-    return getErasureCodingZoneForPath(fsn, iip);
-  }
-
-  /**
-   * Check if the file is in erasure coding zone.
+   * Check if the file or directory has an erasure coding policy.
    *
    * @param fsn namespace
    * @param srcArg path
-   * @return true represents the file is in erasure coding zone, false otw
+   * @return Whether the file or directory has an erasure coding policy.
    * @throws IOException
    */
-  static boolean isInErasureCodingZone(final FSNamesystem fsn,
+  static boolean hasErasureCodingPolicy(final FSNamesystem fsn,
       final String srcArg) throws IOException {
-    assert fsn.hasReadLock();
-
-    final INodesInPath iip = getINodesInPath(fsn, srcArg);
-    return getErasureCodingPolicyForPath(fsn, iip) != null;
+    return hasErasureCodingPolicy(fsn, getINodesInPath(fsn, srcArg));
   }
 
   /**
-   * Check if the file is in erasure coding zone.
+   * Check if the file or directory has an erasure coding policy.
    *
    * @param fsn namespace
    * @param iip inodes in the path containing the file
-   * @return true represents the file is in erasure coding zone, false otw
+   * @return Whether the file or directory has an erasure coding policy.
    * @throws IOException
    */
-  static boolean isInErasureCodingZone(final FSNamesystem fsn,
+  static boolean hasErasureCodingPolicy(final FSNamesystem fsn,
       final INodesInPath iip) throws IOException {
     return getErasureCodingPolicy(fsn, iip) != null;
   }
@@ -178,25 +210,46 @@ final class FSDirErasureCodingOp {
     return iip;
   }
 
-  private static ErasureCodingZone getErasureCodingZoneForPath(
-      final FSNamesystem fsn, final INodesInPath iip) throws IOException {
-    final FSDirectory fsd = fsn.getFSDirectory();
+  private static ErasureCodingPolicy getErasureCodingPolicyForPath(FSNamesystem fsn,
+      INodesInPath iip) throws IOException {
+    Preconditions.checkNotNull(iip, "INodes cannot be null");
+    FSDirectory fsd = fsn.getFSDirectory();
     fsd.readLock();
     try {
-      return fsn.getErasureCodingZoneManager().getErasureCodingZone(iip);
+      List<INode> inodes = iip.getReadOnlyINodes();
+      for (int i = inodes.size() - 1; i >= 0; i--) {
+        final INode inode = inodes.get(i);
+        if (inode == null) {
+          continue;
+        }
+        /**
+         * TODO: lookup {@link ErasureCodingPolicyManager#getSystemPolices()}
+         */
+        if (inode.isFile()) {
+          return inode.asFile().getErasureCodingPolicyID() == 0 ?
+              null : ErasureCodingPolicyManager.getSystemDefaultPolicy();
+        }
+        // We don't allow setting EC policies on paths with a symlink. Thus
+        // if a symlink is encountered, the dir shouldn't have EC policy.
+        // TODO: properly support symlinks
+        if (inode.isSymlink()) {
+          return null;
+        }
+        final XAttrFeature xaf = inode.getXAttrFeature();
+        if (xaf != null) {
+          XAttr xattr = xaf.getXAttr(XATTR_ERASURECODING_POLICY);
+          if (xattr != null) {
+            ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
+            DataInputStream dIn = new DataInputStream(bIn);
+            String ecPolicyName = WritableUtils.readString(dIn);
+            return fsd.getFSNamesystem().getErasureCodingPolicyManager().
+                getPolicy(ecPolicyName);
+          }
+        }
+      }
     } finally {
       fsd.readUnlock();
     }
-  }
-
-  private static ErasureCodingPolicy getErasureCodingPolicyForPath(final FSNamesystem fsn,
-      final INodesInPath iip) throws IOException {
-    final FSDirectory fsd = fsn.getFSDirectory();
-    fsd.readLock();
-    try {
-      return fsn.getErasureCodingZoneManager().getErasureCodingPolicy(iip);
-    } finally {
-      fsd.readUnlock();
-    }
+    return null;
   }
 }

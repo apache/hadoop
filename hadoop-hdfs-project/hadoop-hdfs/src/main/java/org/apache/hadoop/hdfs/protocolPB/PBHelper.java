@@ -75,7 +75,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -132,7 +131,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ErasureCodingZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaOptionEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
@@ -2974,19 +2972,6 @@ public class PBHelper {
         .setSchema(convertECSchema(policy.getSchema()))
         .setCellSize(policy.getCellSize());
     return builder.build();
-  }
-
-  public static ErasureCodingZoneProto convertErasureCodingZone(
-      ErasureCodingZone ecZone) {
-    return ErasureCodingZoneProto.newBuilder().setDir(ecZone.getDir())
-        .setEcPolicy(convertErasureCodingPolicy(ecZone.getErasureCodingPolicy()))
-        .build();
-  }
-
-  public static ErasureCodingZone convertErasureCodingZone(
-      ErasureCodingZoneProto ecZoneProto) {
-    return new ErasureCodingZone(ecZoneProto.getDir(),
-        convertErasureCodingPolicy(ecZoneProto.getEcPolicy()));
   }
   
   public static BlockECRecoveryInfo convertBlockECRecoveryInfo(

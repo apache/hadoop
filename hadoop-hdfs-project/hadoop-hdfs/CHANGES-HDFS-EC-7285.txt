@@ -412,3 +412,6 @@
 
     HDFS-8978. Erasure coding: fix 2 failed tests of DFSStripedOutputStream.
     (Walter Su via jing9)
+
+    HDFS-8833. Erasure coding: store EC schema and cell size in INodeFile and 
+    eliminate notion of EC zones. (zhz)

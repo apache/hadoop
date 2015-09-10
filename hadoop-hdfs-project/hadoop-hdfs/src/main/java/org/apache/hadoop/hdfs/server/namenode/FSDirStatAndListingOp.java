@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -182,12 +181,12 @@ class FSDirStatAndListingOp {
 
       final FileEncryptionInfo feInfo = isReservedName ? null
           : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
-      final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
-          fsd.getFSNamesystem(), iip);
+      final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
+          getErasureCodingPolicy(fsd.getFSNamesystem(), iip);
 
       final LocatedBlocks blocks = bm.createLocatedBlocks(
           inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
-          length, needBlockToken, iip.isSnapshot(), feInfo, ecZone);
+          length, needBlockToken, iip.isSnapshot(), feInfo, ecPolicy);
 
       // Set caching information for the located blocks.
       for (LocatedBlock lb : blocks.getLocatedBlocks()) {
@@ -447,10 +446,8 @@ class FSDirStatAndListingOp {
     final FileEncryptionInfo feInfo = isRawPath ? null :
         fsd.getFileEncryptionInfo(node, snapshot, iip);
 
-    final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+    final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
         fsd.getFSNamesystem(), iip);
-    final ErasureCodingPolicy ecPolicy =
-        ecZone != null ? ecZone.getErasureCodingPolicy() : null;
 
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
@@ -505,7 +502,7 @@ class FSDirStatAndListingOp {
     final boolean isEncrypted;
     final FileEncryptionInfo feInfo = isRawPath ? null :
         fsd.getFileEncryptionInfo(node, snapshot, iip);
-    final ErasureCodingZone ecZone = FSDirErasureCodingOp.getErasureCodingZone(
+    final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(
         fsd.getFSNamesystem(), iip);
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
@@ -520,7 +517,7 @@ class FSDirStatAndListingOp {
 
       loc = fsd.getBlockManager().createLocatedBlocks(
           fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
-          inSnapshot, feInfo, ecZone);
+          inSnapshot, feInfo, ecPolicy);
       if (loc == null) {
         loc = new LocatedBlocks();
       }
@@ -531,8 +528,6 @@ class FSDirStatAndListingOp {
     }
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
-    final ErasureCodingPolicy ecPolicy =
-        ecZone != null ? ecZone.getErasureCodingPolicy() : null;
 
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,

@@ -23,20 +23,12 @@ package hadoop.hdfs;
 
 import "hdfs.proto";
 
-/**
- * ErasureCodingZone
- */
-message ErasureCodingZoneProto {
-  required string dir = 1;
-  required ErasureCodingPolicyProto ecPolicy = 2;
-}
-
-message CreateErasureCodingZoneRequestProto {
+message SetErasureCodingPolicyRequestProto {
   required string src = 1;
   optional ErasureCodingPolicyProto ecPolicy = 2;
 }
 
-message CreateErasureCodingZoneResponseProto {
+message SetErasureCodingPolicyResponseProto {
 }
 
 message GetErasureCodingPoliciesRequestProto { // void request
@@ -46,12 +38,12 @@ message GetErasureCodingPoliciesResponseProto {
   repeated ErasureCodingPolicyProto ecPolicies = 1;
 }
 
-message GetErasureCodingZoneRequestProto {
-  required string src = 1; // path to get the zone info
+message GetErasureCodingPolicyRequestProto {
+  required string src = 1; // path to get the policy info
 }
 
-message GetErasureCodingZoneResponseProto {
-  optional ErasureCodingZoneProto ECZone = 1;
+message GetErasureCodingPolicyResponseProto {
+  optional ErasureCodingPolicyProto ecPolicy = 1;
 }
 
 /**

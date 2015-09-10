@@ -1485,11 +1485,13 @@ public interface ClientProtocol {
   EventBatchList getEditsFromTxid(long txid) throws IOException;
 
   /**
-   * Create an erasure coding zone with specified policy, if any, otherwise
-   * default
+   * Set an erasure coding policy on a specified path.
+   * @param src The path to set policy on.
+   * @param ecPolicy The erasure coding policy. If null, default policy will
+   *                 be used
    */
   @AtMostOnce
-  void createErasureCodingZone(String src, ErasureCodingPolicy ecPolicy)
+  void setErasureCodingPolicy(String src, ErasureCodingPolicy ecPolicy)
       throws IOException;
 
   /**
@@ -1501,11 +1503,11 @@ public interface ClientProtocol {
   ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException;
 
   /**
-   * Get the information about the EC zone for the path
-   * 
+   * Get the information about the EC policy for the path
+   *
    * @param src path to get the info for
    * @throws IOException
    */
   @Idempotent
-  ErasureCodingZone getErasureCodingZone(String src) throws IOException;
+  ErasureCodingPolicy getErasureCodingPolicy(String src) throws IOException;
 }

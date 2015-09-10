@@ -1892,12 +1892,12 @@ public class DFSTestUtil {
   public static void createStripedFile(MiniDFSCluster cluster, Path file, Path dir,
       int numBlocks, int numStripesPerBlk, boolean toMkdir) throws Exception {
     DistributedFileSystem dfs = cluster.getFileSystem();
-    // If outer test already created EC zone, dir should be left as null
+    // If outer test already set EC policy, dir should be left as null
     if (toMkdir) {
       assert dir != null;
       dfs.mkdirs(dir);
       try {
-        dfs.getClient().createErasureCodingZone(dir.toString(), null);
+        dfs.getClient().setErasureCodingPolicy(dir.toString(), null);
       } catch (IOException e) {
         if (!e.getMessage().contains("non-empty directory")) {
           throw e;

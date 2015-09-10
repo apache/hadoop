@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.util.StringUtils;
@@ -45,9 +44,9 @@ public abstract class ECCommand extends Command {
   public static void registerCommands(CommandFactory factory) {
     // Register all commands of Erasure CLI, with a '-' at the beginning in name
     // of the command.
-    factory.addClass(CreateECZoneCommand.class, "-" + CreateECZoneCommand.NAME);
-    factory.addClass(GetECZoneCommand.class, "-"
-        + GetECZoneCommand.NAME);
+    factory.addClass(SetECPolicyCommand.class, "-" + SetECPolicyCommand.NAME);
+    factory.addClass(GetECPolicyCommand.class, "-"
+        + GetECPolicyCommand.NAME);
     factory.addClass(ListPolicies.class, "-" + ListPolicies.NAME);
   }
 
@@ -76,17 +75,18 @@ public abstract class ECCommand extends Command {
   }
 
   /**
-   * A command to create an EC zone for a path, with a erasure coding policy name.
+   * A command to set the erasure coding policy for a directory, with the name
+   * of the policy.
    */
-  static class CreateECZoneCommand extends ECCommand {
-    public static final String NAME = "createZone";
+  static class SetECPolicyCommand extends ECCommand {
+    public static final String NAME = "setPolicy";
     public static final String USAGE = "[-s <policyName>] <path>";
     public static final String DESCRIPTION = 
-        "Create a zone to encode files using a specified policy\n"
+        "Set a specified erasure coding policy to a directory\n"
         + "Options :\n"
         + "  -s <policyName> : erasure coding policy name to encode files. "
         + "If not passed the default policy will be used\n"
-        + "  <path>  : Path to an empty directory. Under this directory "
+        + "  <path>  : Path to a directory. Under this directory "
         + "files will be encoded using specified erasure coding policy";
     private String ecPolicyName;
     private ErasureCodingPolicy ecPolicy = null;
@@ -129,23 +129,23 @@ public abstract class ECCommand extends Command {
             throw new HadoopIllegalArgumentException(sb.toString());
           }
         }
-        dfs.createErasureCodingZone(item.path, ecPolicy);
-        out.println("EC Zone created successfully at " + item.path);
+        dfs.setErasureCodingPolicy(item.path, ecPolicy);
+        out.println("EC policy set successfully at " + item.path);
       } catch (IOException e) {
-        throw new IOException("Unable to create EC zone for the path "
+        throw new IOException("Unable to set EC policy for the path "
             + item.path + ". " + e.getMessage());
       }
     }
   }
 
   /**
-   * Get the information about the zone
+   * Get the erasure coding policy of a file or directory
    */
-  static class GetECZoneCommand extends ECCommand {
-    public static final String NAME = "getZone";
+  static class GetECPolicyCommand extends ECCommand {
+    public static final String NAME = "getPolicy";
     public static final String USAGE = "<path>";
     public static final String DESCRIPTION =
-        "Get information about the EC zone at specified path\n";
+        "Get erasure coding policy information about at specified path\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -162,14 +162,14 @@ public abstract class ECCommand extends Command {
       super.processPath(item);
       DistributedFileSystem dfs = (DistributedFileSystem) item.fs;
       try {
-        ErasureCodingZone ecZone = dfs.getErasureCodingZone(item.path);
-        if (ecZone != null) {
-          out.println(ecZone.toString());
+        ErasureCodingPolicy ecPolicy = dfs.getErasureCodingPolicy(item.path);
+        if (ecPolicy != null) {
+          out.println(ecPolicy.toString());
         } else {
-          out.println("Path " + item.path + " is not in EC zone");
+          out.println("Path " + item.path + " is not erasure coded.");
         }
       } catch (IOException e) {
-        throw new IOException("Unable to get EC zone for the path "
+        throw new IOException("Unable to get EC policy for the path "
             + item.path + ". " + e.getMessage());
       }
     }

@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingZone;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
@@ -367,31 +366,33 @@ public class HdfsAdmin {
   }
 
   /**
-   * Create the ErasureCoding zone
+   * Set the source path to the specified erasure coding policy.
    *
-   * @param path Directory to create the ErasureCoding zone
-   * @param ecPolicy erasure coding policy for the zone. If null, the default will be used.
+   * @param path The source path referring to a directory.
+   * @param ecPolicy The erasure coding policy for the directory.
+   *                 If null, the default will be used.
    * @throws IOException
    */
-  public void createErasureCodingZone(final Path path,
+  public void setErasureCodingPolicy(final Path path,
       final ErasureCodingPolicy ecPolicy) throws IOException {
-    dfs.createErasureCodingZone(path, ecPolicy);
+    dfs.setErasureCodingPolicy(path, ecPolicy);
   }
 
   /**
-   * Get the ErasureCoding zone information for the specified path
+   * Get the erasure coding policy information for the specified path
    *
    * @param path
-   * @return Returns the zone information if path is in EC zone, null otherwise
+   * @return Returns the policy information if file or directory on the path is
+   *          erasure coded. Null otherwise.
    * @throws IOException
    */
-  public ErasureCodingZone getErasureCodingZone(final Path path)
+  public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
       throws IOException {
-    return dfs.getErasureCodingZone(path);
+    return dfs.getErasureCodingPolicy(path);
   }
 
   /**
-   * Get the ErasureCoding policies supported.
+   * Get the Erasure coding policies supported.
    *
    * @throws IOException
    */

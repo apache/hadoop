@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
+
 /**
  * The attributes of a file.
  */
@@ -31,6 +31,9 @@ public interface INodeFileAttributes extends INodeAttributes {
 
   /** @return whether the file is striped (instead of contiguous) */
   public boolean isStriped();
+
+  /** @return whether the file is striped (instead of contiguous) */
+  public byte getErasureCodingPolicyID();
 
   /** @return preferred block size in bytes */
   public long getPreferredBlockSize();
@@ -75,6 +78,11 @@ public interface INodeFileAttributes extends INodeAttributes {
     @Override
     public boolean isStriped() {
       return HeaderFormat.isStriped(header);
+    }
+
+    @Override
+    public byte getErasureCodingPolicyID() {
+      return isStriped() ? (byte)1 : (byte)0;
     }
 
     @Override
