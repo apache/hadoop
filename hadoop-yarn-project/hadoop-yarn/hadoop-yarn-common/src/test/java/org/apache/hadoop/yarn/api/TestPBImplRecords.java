@@ -139,6 +139,8 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceAllocationRequest;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -346,6 +348,8 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     typeValueCache.put(SerializedException.class,
         SerializedException.newInstance(new IOException("exception for test")));
     generateByNewInstance(ExecutionTypeRequest.class);
+    typeValueCache.put(ResourceInformation.class, ResourceInformation
+        .newInstance("localhost.test/sample", 1l));
     generateByNewInstance(LogAggregationContext.class);
     generateByNewInstance(ApplicationId.class);
     generateByNewInstance(ApplicationAttemptId.class);

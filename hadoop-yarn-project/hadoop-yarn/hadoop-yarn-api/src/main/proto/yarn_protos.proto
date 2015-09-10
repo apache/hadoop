@@ -53,9 +53,21 @@ message ContainerIdProto {
   optional int64 id = 3;
 }
 
+enum ResourceTypesProto {
+  COUNTABLE = 0;
+}
+
+message ResourceInformationProto {
+  required string key = 1;
+  optional int64 value = 2;
+  optional string units = 3;
+  optional ResourceTypesProto type = 4;
+}
+
 message ResourceProto {
   optional int64 memory = 1;
   optional int32 virtual_cores = 2;
+  repeated ResourceInformationProto resource_value_map = 3;
 }
 
 message ResourceUtilizationProto {
