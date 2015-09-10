@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -73,6 +74,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryPolicyProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypesProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
@@ -448,6 +450,17 @@ public class ProtoUtils {
   public static YarnServiceProtos.UpdateContainerErrorProto
       convertToProtoFormat(UpdateContainerError t) {
     return ((UpdateContainerErrorPBImpl) t).getProto();
+  }
+
+  /*
+   * ResourceTypes
+   */
+  public static ResourceTypesProto converToProtoFormat(ResourceTypes e) {
+    return ResourceTypesProto.valueOf(e.name());
+  }
+
+  public static ResourceTypes convertFromProtoFormat(ResourceTypesProto e) {
+    return ResourceTypes.valueOf(e.name());
   }
 }
 
