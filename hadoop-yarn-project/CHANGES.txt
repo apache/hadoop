@@ -824,6 +824,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3591. Resource localization on a bad disk causes subsequent containers failure.
     (Lavkesh Lahngir via vvasudev)
 
+    YARN-4106. NodeLabels for NM in distributed mode is not updated even after
+    clusterNodelabel addition in RM. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

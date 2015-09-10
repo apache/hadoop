@@ -897,6 +897,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     private final NodeLabelsProvider nodeLabelsProvider;
     private Set<NodeLabel> previousNodeLabels;
     private boolean updatedLabelsSentToRM;
+    private long lastNodeLabelSendFailMills = 0L;
+    // TODO : Need to check which conf to use.Currently setting as 1 min
+    private static final long FAILEDLABELRESENDINTERVAL = 60000;
 
     @Override
     public Set<NodeLabel> getNodeLabelsForRegistration() {
@@ -938,12 +941,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       // take some action only on modification of labels
       boolean areNodeLabelsUpdated =
           nodeLabelsForHeartbeat.size() != previousNodeLabels.size()
-              || !previousNodeLabels.containsAll(nodeLabelsForHeartbeat);
+              || !previousNodeLabels.containsAll(nodeLabelsForHeartbeat)
+              || checkResendLabelOnFailure();
 
       updatedLabelsSentToRM = false;
       if (areNodeLabelsUpdated) {
         previousNodeLabels = nodeLabelsForHeartbeat;
         try {
+          LOG.info("Modified labels from provider: "
+              + StringUtils.join(",", previousNodeLabels));
           validateNodeLabels(nodeLabelsForHeartbeat);
           updatedLabelsSentToRM = true;
         } catch (IOException e) {
@@ -980,16 +986,33 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       }
     }
 
+    /*
+     * In case of failure when RM doesnt accept labels need to resend Labels to
+     * RM. This method checks whether we need to resend
+     */
+    public boolean checkResendLabelOnFailure() {
+      if (lastNodeLabelSendFailMills > 0L) {
+        long lastFailTimePassed =
+            System.currentTimeMillis() - lastNodeLabelSendFailMills;
+        if (lastFailTimePassed > FAILEDLABELRESENDINTERVAL) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     @Override
     public void verifyRMHeartbeatResponseForNodeLabels(
         NodeHeartbeatResponse response) {
       if (updatedLabelsSentToRM) {
         if (response.getAreNodeLabelsAcceptedByRM()) {
+          lastNodeLabelSendFailMills = 0L;
           LOG.info("Node Labels {" + StringUtils.join(",", previousNodeLabels)
               + "} were Accepted by RM ");
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
+          lastNodeLabelSendFailMills = System.currentTimeMillis();
           LOG.error(
               "NM node labels {" + StringUtils.join(",", previousNodeLabels)
                   + "} were not accepted by RM and message from RM : "
