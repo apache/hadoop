@@ -731,9 +731,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8742. Inotify: Support event for OP_TRUNCATE.
     (Surendra Singh Lilhore via aajisaka)
 
-    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
-    files rather than the entire DFSClient. (mingma)
-
     HDFS-8794. Improve CorruptReplicasMap#corruptReplicasMap. (yliu)
 
     HDFS-7483. Display information per tier on the Namenode UI.
@@ -2453,6 +2450,9 @@ Release 2.6.1 - 2015-09-09
 
     HDFS-7213. processIncrementalBlockReport performance degradation.
     (Eric Payne via kihwal)
+
+    HDFS-7314. When the DFSClient lease cannot be renewed, abort open-for-write
+    files rather than the entire DFSClient. (mingma)
 
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
