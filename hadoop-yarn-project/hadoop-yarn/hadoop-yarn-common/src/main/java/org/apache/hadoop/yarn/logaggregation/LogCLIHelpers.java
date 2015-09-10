@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -61,8 +62,9 @@ public class LogCLIHelpers implements Configurable {
         YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
+    ApplicationId applicationId = ConverterUtils.toApplicationId(appId);
     Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
-        remoteRootLogDir, ConverterUtils.toApplicationId(appId), jobOwner,
+        remoteRootLogDir, applicationId, jobOwner,
         suffix);
     RemoteIterator<FileStatus> nodeFiles;
     try {
@@ -80,6 +82,12 @@ public class LogCLIHelpers implements Configurable {
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
       String fileName = thisNodeFile.getPath().getName();
+      if (fileName.equals(applicationId + ".har")) {
+        Path p = new Path("har:///"
+            + thisNodeFile.getPath().toUri().getRawPath());
+        nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
+        continue;
+      }
       if (fileName.contains(LogAggregationUtils.getNodeString(nodeId))
           && !fileName.endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
         AggregatedLogFormat.LogReader reader = null;
@@ -207,6 +215,12 @@ public class LogCLIHelpers implements Configurable {
     boolean foundAnyLogs = false;
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
+      if (thisNodeFile.getPath().getName().equals(appId + ".har")) {
+        Path p = new Path("har:///"
+            + thisNodeFile.getPath().toUri().getRawPath());
+        nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
+        continue;
+      }
       if (!thisNodeFile.getPath().getName()
         .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
         AggregatedLogFormat.LogReader reader =

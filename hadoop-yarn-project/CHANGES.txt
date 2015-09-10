@@ -428,6 +428,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4121. Fix typos in capacity scheduler documentation.
     (Kai Sasaki via vvasudev)
 
+    YARN-4086. Allow Aggregated Log readers to handle HAR files (rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
