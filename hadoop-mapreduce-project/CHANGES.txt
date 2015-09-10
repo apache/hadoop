@@ -448,9 +448,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6349. Fix typo in property org.apache.hadoop.mapreduce.
     lib.chain.Chain.REDUCER_INPUT_VALUE_CLASS. (Ray Chiang via ozawa)
 
-    MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
-    (Gera Shegalov via jlowe)
-
     MAPREDUCE-6165. [JDK8] TestCombineFileInputFormat failed on JDK8.
     (Akira AJISAKA via ozawa)
 
@@ -605,14 +602,6 @@ Release 2.7.1 - 2015-07-06
 
   BUG FIXES
 
-    MAPREDUCE-6300. Task list sort by task id broken. (Siqi Li via aajisaka)
-
-    MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
-    which is a regression from MR1 (zxu via rkanter)
-
-    MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
-    tokens when they roll-over. (Jason Lowe via vinodkv)
-
     MAPREDUCE-6252. JobHistoryServer should not fail when encountering a 
     missing directory. (Craig Welch via devaraj)
 
@@ -628,10 +617,6 @@ Release 2.7.1 - 2015-07-06
     MAPREDUCE-6251. Added a new config for JobClient to retry JobStatus calls so
     that they don't fail on history-server backed by DFSes with not so strong
     guarantees. (Craig Welch via vinodkv)
-
-    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
-    copySucceeded() in one thread and copyFailed() in another thread on the
-    same host. (Junping Du via ozawa)
 
     MAPREDUCE-6387. Serialize the recently added Task#encryptedSpillKey field at 
     the end. (Arun Suresh via kasha)
@@ -714,9 +699,6 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-6248. Exposed the internal MapReduce job's information as a public
     API in DistCp. (Jing Zhao via vinodkv)
 
-    MAPREDUCE-6267. Refactor JobSubmitter#copyAndConfigureFiles into it's own 
-    class. (Chris Trezzo via kasha)
-
     MAPREDUCE-6263. Configurable timeout between YARNRunner terminate the 
     application and forcefully kill. (Eric Payne via junping_du)
 
@@ -766,9 +748,6 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-4879. TeraOutputFormat may overwrite an existing output
     directory. (gera)
 
-    MAPREDUCE-6166. Reducers do not validate checksum of map outputs when
-    fetching directly to disk. (Eric Payne via gera)
-
     MAPREDUCE-6045. need close the DataInputStream after open it in
     TestMapReduce.java (zxu via rkanter)
 
@@ -777,9 +756,6 @@ Release 2.7.0 - 2015-04-20
 
     MAPREDUCE-3283. mapred classpath CLI does not display the complete classpath
     (Varun Saxena via cnauroth)
-
-    MAPREDUCE-6230. Fixed RMContainerAllocator to update the new AMRMToken
-    service name properly. (Jason Lowe via jianhe)
 
     MAPREDUCE-6231. Grep example job is not working on a fully-distributed
     cluster. (aajisaka)
@@ -831,9 +807,6 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-6285. ClientServiceDelegate should not retry upon
     AuthenticationException. (Jonathan Eagles via ozawa)
 
-    MAPREDUCE-6303. Read timeout when retrying a fetch error can be fatal 
-    to a reducer. (Jason Lowe via junping_du)
-
 Release 2.6.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -846,7 +819,7 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.1 - UNRELEASED
+Release 2.6.1 - 2015-09-09
 
   INCOMPATIBLE CHANGES
 
@@ -860,6 +833,33 @@ Release 2.6.1 - UNRELEASED
 
     MAPREDUCE-6237. Multiple mappers with DBInputFormat don't work because of
     reusing conections. (Kannan Rajah via ozawa)
+
+    MAPREDUCE-6166. Reducers do not validate checksum of map outputs when
+    fetching directly to disk. (Eric Payne via gera)
+
+    MAPREDUCE-6230. Fixed RMContainerAllocator to update the new AMRMToken
+    service name properly. (Jason Lowe via jianhe)
+
+    MAPREDUCE-6303. Read timeout when retrying a fetch error can be fatal 
+    to a reducer. (Jason Lowe via junping_du)
+
+    MAPREDUCE-6300. Task list sort by task id broken. (Siqi Li via aajisaka)
+
+    MAPREDUCE-6267. Refactor JobSubmitter#copyAndConfigureFiles into it's own 
+    class. (Chris Trezzo via kasha)
+
+    MAPREDUCE-6238. MR2 can't run local jobs with -libjars command options
+    which is a regression from MR1 (zxu via rkanter)
+
+    MAPREDUCE-6324. Fixed MapReduce uber jobs to not fail the udpate of AM-RM
+    tokens when they roll-over. (Jason Lowe via vinodkv)
+
+    MAPREDUCE-5649. Reduce cannot use more than 2G memory for the final merge
+    (Gera Shegalov via jlowe)
+
+    MAPREDUCE-6361. NPE issue in shuffle caused by concurrent issue between
+    copySucceeded() in one thread and copyFailed() in another thread on the
+    same host. (Junping Du via ozawa)
 
 Release 2.6.0 - 2014-11-18
 

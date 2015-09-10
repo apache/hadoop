@@ -342,9 +342,6 @@ Trunk (Unreleased)
     HADOOP-7256. Resource leak during failure scenario of closing
     of resources. (Ramkrishna S. Vasudevan via harsh)
 
-    HADOOP-8151. Error handling in snappy decompressor throws invalid
-    exceptions. (Matt Foley via harsh)
-
     HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
     to RPC Server and Client classes. (Brandon Li via suresh)
 
@@ -742,9 +739,6 @@ Release 2.8.0 - UNRELEASED
     command-line arguments passed by the user (Masatake Iwasaki via Colin P.
     McCabe)
 
-    HADOOP-12280. Skip unit tests based on maven profile rather than
-    NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
-
     HADOOP-12318. Expose underlying LDAP exceptions in SaslPlainServer. (Mike
     Yoder via atm)
 
@@ -775,9 +769,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
     buildListing (Zoran Dimitrijevic via Colin P. McCabe)
-
-    HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
-    split calculation (gera)
 
     HADOOP-11970. Replace uses of ThreadLocal<Random> with JDK7
     ThreadLocalRandom.  (Sean Busbey via Colin P. McCabe)
@@ -813,9 +804,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
     before deleting (Casey Brotherton via harsh)
-
-    HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
-    is an I/O error during requestShortCircuitShm (cmccabe)
 
     HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
     jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
@@ -864,9 +852,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11866. increase readability and reliability of checkstyle,
     shellcheck, and whitespace reports (aw)
-
-    HADOOP-11491. HarFs incorrectly declared as requiring an authority.
-    (Brahma Reddy Battula via gera)
 
     HADOOP-11889. Make checkstyle runnable from root project
     (Gera Shegalov via jeagles)
@@ -1129,9 +1114,6 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12304. Applications using FileContext fail with the default file
     system configured to be wasb/s3/etc. (cnauroth)
 
-    HADOOP-11932. MetricsSinkAdapter may hang  when being stopped.
-    (Brahma Reddy Battula via jianhe)
-
     HADOOP-12061. Incorrect command in single cluster setup document.
     (Kengo Seki via aajisaka)
 
@@ -1162,12 +1144,6 @@ Release 2.7.1 - 2015-07-06
     HADOOP-11868. Invalid user logins trigger large backtraces in server log
     (Chang Li via jlowe)
 
-    HADOOP-11730. Regression: s3n read failure recovery broken.
-    (Takenori Sato via stevel)
-
-    HADOOP-11802. DomainSocketWatcher thread terminates sometimes after there
-    is an I/O error during requestShortCircuitShm (cmccabe)
-
     HADOOP-11891. OsSecureRandom should lazily fill its reservoir (asuresh)
 
     HADOOP-9658. SnappyCodec#checkNativeCodeLoaded may unexpectedly fail when
@@ -1181,9 +1157,6 @@ Release 2.7.1 - 2015-07-06
 
     HADOOP-11973. Ensure ZkDelegationTokenSecretManager namespace znodes get
     created with ACLs. (Gregory Chanan via asuresh)
-
-    HADOOP-11934. Use of JavaKeyStoreProvider in LdapGroupsMapping causes
-    infinite loop. (Larry McCay via cnauroth)
 
     HADOOP-12058. Fix dead links to DistCp and Hadoop Archives pages.
     (Kazuho Fujii via aajisaka)
@@ -1448,17 +1421,11 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
     (Wilfred Spiegelenburg via wang)
 
-    HADOOP-11238. Update the NameNode's Group Cache in the background when
-    possible (Chris Li via Colin P. McCabe)
-
     HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
     Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
 
     HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
     full. (Eric Hanson via cnauroth)
-
-    HADOOP-11506. Configuration variable expansion regex expensive for long
-    values. (Gera Shegalov via gera)
 
     HADOOP-11620. Add support for load balancing across a group of KMS for HA.
     (Arun Suresh via wang)
@@ -1566,9 +1533,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11355. When accessing data in HDFS and the key has been deleted,
     a Null Pointer Exception is shown. (Arun Suresh via wang)
 
-    HADOOP-11343. Overflow is not properly handled in caclulating final iv for
-    AES CTR. (Jerry Chen via wang)
-
     HADOOP-11354. ThrottledInputStream doesn't perform effective throttling.
     (Ted Yu via jing9)
 
@@ -1583,9 +1547,6 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11369. Fix new findbugs warnings in hadoop-mapreduce-client,
     non-core directories. (Li Lu via wheat9)
-
-    HADOOP-11368. Fix SSLFactory truststore reloader thread leak in
-    KMSClientProvider. (Arun Suresh via wang)
 
     HADOOP-11372. Fix new findbugs warnings in mapreduce-examples.
     (Li Lu via wheat9)
@@ -1682,9 +1643,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11462. TestSocketIOWithTimeout needs change for PowerPC platform.
     (Ayappan via cnauroth)
 
-    HADOOP-11350. The size of header buffer of HttpServer is too small when
-    HTTPS is enabled. (Benoy Antony via wheat9)
-
     HADOOP-10542 Potential null pointer dereference in Jets3tFileSystemStore
     retrieveBlock(). (Ted Yu via stevel)	
 
@@ -1708,9 +1666,6 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11507 Hadoop RPC Authentication problem with different user locale.
     (Talat UYARER via stevel)
-
-    HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
-    user. Contributed by Arun Suresh.
 
     HADOOP-11499. Check of executorThreadsStarted in
     ValueQueue#submitRefillTask() evades lock acquisition (Ted Yu via jlowe)
@@ -1780,9 +1735,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11570. S3AInputStream.close() downloads the remaining bytes of
     the object from S3. (Dan Hecht via stevel).
 
-    HADOOP-11295. RPC Server Reader thread can't shutdown if RPCCallQueue is
-    full. (Ming Ma via kihwal)
-
     HADOOP-11599. Client#getTimeout should use IPC_CLIENT_PING_DEFAULT when 
     IPC_CLIENT_PING_KEY is not configured. (zhihai xu via ozawa)
 
@@ -1794,9 +1746,6 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-9087. Queue size metric for metric sinks isn't actually maintained
     (Akira AJISAKA via jlowe)
-
-    HADOOP-11604. Prevent ConcurrentModificationException while closing domain
-    sockets during shutdown of DomainSocketWatcher thread. (cnauroth)
 
     HADOOP-11612. Workaround for Curator's ChildReaper requiring Guava 15+.
     (rkanter)
@@ -1831,9 +1780,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-11605. FilterFileSystem#create with ChecksumOpt should propagate it
     to wrapped FS. (gera)
 
-    HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
-    should be non static. (Sean Busbey via yliu)
-
     HADOOP-11670. Regression: s3a auth setup broken. (Adam Budde via stevel)
 
     HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
@@ -1846,9 +1792,6 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11693. Azure Storage FileSystem rename operations are throttled too
     aggressively to complete HBase WAL archiving. (Duo Xu via cnauroth)
-
-    HADOOP-11710. Make CryptoOutputStream behave like DFSOutputStream wrt
-    synchronization. (Sean Busbey via yliu)
 
     HADOOP-11558. Fix dead links to doc of hadoop-tools. (Jean-Pierre 
     Matsumoto via ozawa)
@@ -1925,7 +1868,7 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.1 - UNRELEASED
+Release 2.6.1 - 2015-09-09
 
   INCOMPATIBLE CHANGES
 
@@ -1936,11 +1879,20 @@ Release 2.6.1 - UNRELEASED
     HADOOP-7139. Allow appending to existing SequenceFiles
     (kanaka kumar avvaru via vinayakumarb)
 
+    HADOOP-12280. Skip unit tests based on maven profile rather than
+    NativeCodeLoader.isNativeCodeLoaded (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
+
+    HADOOP-11238. Update the NameNode's Group Cache in the background when
+    possible (Chris Li via Colin P. McCabe)
+
+    HADOOP-11506. Configuration variable expansion regex expensive for long
+    values. (Gera Shegalov via gera)
 
   BUG FIXES
 
-    HADOOP-11466. FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
+    HADOOP-11466: FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
     architecture because it is slower there (Suman Somasundar via Colin P.
     McCabe)
 
@@ -1948,6 +1900,51 @@ Release 2.6.1 - UNRELEASED
 
     HADOOP-11333. Fix deadlock in DomainSocketWatcher when the notification
     pipe is full (zhaoyunjiong via cmccabe)
+
+    HADOOP-11343. Overflow is not properly handled in caclulating final iv for
+    AES CTR. (Jerry Chen via wang)
+
+    HADOOP-11368. Fix SSLFactory truststore reloader thread leak in
+    KMSClientProvider. (Arun Suresh via wang)
+
+    HADOOP-11350. The size of header buffer of HttpServer is too small when
+    HTTPS is enabled. (Benoy Antony via wheat9)
+
+    HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
+    user. Contributed by Arun Suresh.
+
+    HADOOP-11295. RPC Server Reader thread can't shutdown if RPCCallQueue is
+    full. (Ming Ma via kihwal)
+
+    HADOOP-11604. Prevent ConcurrentModificationException while closing domain
+    sockets during shutdown of DomainSocketWatcher thread. (cnauroth)
+
+    HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
+    should be non static. (Sean Busbey via yliu)
+
+    HADOOP-11710. Make CryptoOutputStream behave like DFSOutputStream wrt
+    synchronization. (Sean Busbey via yliu)
+
+    HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
+    split calculation (gera)
+
+    HADOOP-11730. Regression: s3n read failure recovery broken.
+    (Takenori Sato via stevel)
+
+    HADOOP-11802: DomainSocketWatcher thread terminates sometimes after there
+    is an I/O error during requestShortCircuitShm (cmccabe)
+
+    HADOOP-11491. HarFs incorrectly declared as requiring an authority.
+    (Brahma Reddy Battula via gera)
+
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
+
+    HADOOP-11932. MetricsSinkAdapter may hang  when being stopped.
+    (Brahma Reddy Battula via jianhe)
+
+    HADOOP-11934. Use of JavaKeyStoreProvider in LdapGroupsMapping causes
+    infinite loop. (Larry McCay via cnauroth)
 
 Release 2.6.0 - 2014-11-18
 
