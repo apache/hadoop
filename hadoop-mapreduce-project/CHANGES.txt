@@ -290,6 +290,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6304. Specifying node labels when submitting MR jobs.
    (Naganarasimha G R via wangda)
 
+   MAPREDUCE-6415. Create a tool to combine aggregated logs into HAR files. 
+   (Robert Kanter via kasha)
+
   IMPROVEMENTS
 
     MAPREDUCE-6291. Correct mapred queue usage command.
