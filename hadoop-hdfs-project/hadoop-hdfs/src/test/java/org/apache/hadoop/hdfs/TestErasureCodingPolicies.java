@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -208,4 +209,26 @@ public class TestErasureCodingPolicies {
     assertEquals("Actually used ecPolicy should be equal with target ecPolicy",
         usingECPolicy, ecPolicy);
   }
+
+  @Test
+  public void testCreationErasureCodingZoneWithInvalidPolicy()
+      throws IOException {
+    ECSchema rsSchema = new ECSchema("rs", 4, 2);
+    String policyName = "RS-4-2-128k";
+    int cellSize = 128 * 1024;
+    ErasureCodingPolicy ecPolicy=
+        new ErasureCodingPolicy(policyName,rsSchema,cellSize);
+    String src = "/ecZone4-2";
+    final Path ecDir = new Path(src);
+    try {
+      fs.mkdir(ecDir, FsPermission.getDirDefault());
+      fs.getClient().setErasureCodingPolicy(src, ecPolicy);
+      fail("HadoopIllegalArgumentException should be thrown for"
+          + "setting an invalid erasure coding policy");
+    } catch (Exception e) {
+      assertExceptionContains("Policy [ RS-4-2-128k ] does not match " +
+          "any of the supported policies",e);
+    }
+  }
+
 }

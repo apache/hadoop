@@ -28,6 +28,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -105,6 +107,26 @@ final class FSDirErasureCodingOp {
     // System default erasure coding policy will be used since no specified.
     if (ecPolicy == null) {
       ecPolicy = ErasureCodingPolicyManager.getSystemDefaultPolicy();
+    } else {
+      // If ecPolicy is specified check if it is one among active policies.
+      boolean validPolicy = false;
+      ErasureCodingPolicy[] activePolicies =
+          FSDirErasureCodingOp.getErasureCodingPolicies(fsd.getFSNamesystem());
+      for (ErasureCodingPolicy activePolicy : activePolicies) {
+        if (activePolicy.equals(ecPolicy)) {
+          validPolicy = true;
+          break;
+        }
+      }
+      if (!validPolicy) {
+        List<String> ecPolicyNames = new ArrayList<String>();
+        for (ErasureCodingPolicy activePolicy : activePolicies) {
+          ecPolicyNames.add(activePolicy.getName());
+        }
+        throw new HadoopIllegalArgumentException("Policy [ " +
+            ecPolicy.getName()+ " ] does not match any of the " +
+            "supported policies. Please select any one of " + ecPolicyNames);
+      }
     }
 
     final XAttr ecXAttr;
