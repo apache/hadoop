@@ -135,6 +135,18 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_masterindex</exclude>
+            <exclude>src/test/resources/application_1440536969523_0001.har/_SUCCESS</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
