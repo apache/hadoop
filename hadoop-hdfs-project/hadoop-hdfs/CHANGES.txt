@@ -454,9 +454,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8101. DFSClient use of non-constant DFSConfigKeys pulls in WebHDFS
     classes at runtime. (Sean Busbey via atm)
 
-    HDFS-8099. Change "DFSInputStream has been closed already" message to
-    debug log level (Charles Lamb via Colin P. McCabe)
-
     HDFS-8102. Separate webhdfs retry configuration keys from DFSConfigKeys.
     (wheat9)
 
@@ -1330,6 +1327,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-5323. Trash documentation should describe its directory structure and
     configurations. (Weiwei Yang via ozawa)
+
+    HDFS-8099. Change "DFSInputStream has been closed already" message to
+    debug log level (Charles Lamb via Colin P. McCabe)
 
   OPTIMIZATIONS
 
