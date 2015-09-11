@@ -100,6 +100,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3814. REST API implementation for getting raw entities in
     TimelineReader (Varun Saxena via sjlee)
 
+    YARN-4102. Add a "skip existing table" mode for timeline schema creator (Li
+    Lu via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via

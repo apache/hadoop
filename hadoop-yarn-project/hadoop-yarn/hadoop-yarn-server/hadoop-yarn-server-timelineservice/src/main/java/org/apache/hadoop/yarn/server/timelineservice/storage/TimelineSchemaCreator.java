@@ -54,6 +54,11 @@ public class TimelineSchemaCreator {
   final static String NAME = TimelineSchemaCreator.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(TimelineSchemaCreator.class);
   private static final String PHOENIX_OPTION_SHORT = "p";
+  private static final String SKIP_EXISTING_TABLE_OPTION_SHORT = "s";
+  private static final String APP_TABLE_NAME_SHORT = "a";
+  private static final String APP_TO_FLOW_TABLE_NAME_SHORT = "a2f";
+  private static final String TTL_OPTION_SHORT = "m";
+  private static final String ENTITY_TABLE_NAME_SHORT = "e";
 
   public static void main(String[] args) throws Exception {
 
@@ -66,22 +71,25 @@ public class TimelineSchemaCreator {
     CommandLine commandLine = parseArgs(otherArgs);
 
     // Grab the entityTableName argument
-    String entityTableName = commandLine.getOptionValue("e");
+    String entityTableName
+        = commandLine.getOptionValue(ENTITY_TABLE_NAME_SHORT);
     if (StringUtils.isNotBlank(entityTableName)) {
       hbaseConf.set(EntityTable.TABLE_NAME_CONF_NAME, entityTableName);
     }
-    String entityTableTTLMetrics = commandLine.getOptionValue("m");
+    String entityTableTTLMetrics = commandLine.getOptionValue(TTL_OPTION_SHORT);
     if (StringUtils.isNotBlank(entityTableTTLMetrics)) {
       int metricsTTL = Integer.parseInt(entityTableTTLMetrics);
       new EntityTable().setMetricsTTL(metricsTTL, hbaseConf);
     }
     // Grab the appToflowTableName argument
-    String appToflowTableName = commandLine.getOptionValue("a2f");
+    String appToflowTableName = commandLine.getOptionValue(
+        APP_TO_FLOW_TABLE_NAME_SHORT);
     if (StringUtils.isNotBlank(appToflowTableName)) {
       hbaseConf.set(AppToFlowTable.TABLE_NAME_CONF_NAME, appToflowTableName);
     }
     // Grab the applicationTableName argument
-    String applicationTableName = commandLine.getOptionValue("a");
+    String applicationTableName = commandLine.getOptionValue(
+        APP_TABLE_NAME_SHORT);
     if (StringUtils.isNotBlank(applicationTableName)) {
       hbaseConf.set(ApplicationTable.TABLE_NAME_CONF_NAME,
           applicationTableName);
@@ -89,7 +97,13 @@ public class TimelineSchemaCreator {
 
     List<Exception> exceptions = new ArrayList<>();
     try {
-      createAllTables(hbaseConf);
+      boolean skipExisting
+          = commandLine.hasOption(SKIP_EXISTING_TABLE_OPTION_SHORT);
+      if (skipExisting) {
+        LOG.info("Will skip existing tables and continue on htable creation "
+            + "exceptions!");
+      }
+      createAllTables(hbaseConf, skipExisting);
       LOG.info("Successfully created HBase schema. ");
     } catch (IOException e) {
       LOG.error("Error in creating hbase tables: " + e.getMessage());
@@ -135,26 +149,39 @@ public class TimelineSchemaCreator {
     Options options = new Options();
 
     // Input
-    Option o = new Option("e", "entityTableName", true, "entity table name");
+    Option o = new Option(ENTITY_TABLE_NAME_SHORT, "entityTableName", true,
+        "entity table name");
     o.setArgName("entityTableName");
     o.setRequired(false);
     options.addOption(o);
 
-    o = new Option("m", "metricsTTL", true, "TTL for metrics column family");
+    o = new Option(TTL_OPTION_SHORT, "metricsTTL", true,
+        "TTL for metrics column family");
     o.setArgName("metricsTTL");
     o.setRequired(false);
     options.addOption(o);
 
-    o = new Option("a2f", "appToflowTableName", true, "app to flow table name");
+    o = new Option(APP_TO_FLOW_TABLE_NAME_SHORT, "appToflowTableName", true,
+        "app to flow table name");
     o.setArgName("appToflowTableName");
-    o = new Option("a", "applicationTableName", true, "application table name");
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(APP_TABLE_NAME_SHORT, "applicationTableName", true,
+        "application table name");
     o.setArgName("applicationTableName");
     o.setRequired(false);
     options.addOption(o);
 
+    // Options without an argument
+    // No need to set arg name since we do not need an argument here
     o = new Option(PHOENIX_OPTION_SHORT, "usePhoenix", false,
         "create Phoenix offline aggregation tables");
-    // No need to set arg name since we do not need an argument here
+    o.setRequired(false);
+    options.addOption(o);
+
+    o = new Option(SKIP_EXISTING_TABLE_OPTION_SHORT, "skipExistingTable",
+        false, "skip existing Hbase tables and continue to create new tables");
     o.setRequired(false);
     options.addOption(o);
 
@@ -172,8 +199,8 @@ public class TimelineSchemaCreator {
     return commandLine;
   }
 
-  private static void createAllTables(Configuration hbaseConf)
-      throws IOException {
+  private static void createAllTables(Configuration hbaseConf,
+      boolean skipExisting) throws IOException {
 
     Connection conn = null;
     try {
@@ -182,9 +209,33 @@ public class TimelineSchemaCreator {
       if (admin == null) {
         throw new IOException("Cannot create table since admin is null");
       }
-      new EntityTable().createTable(admin, hbaseConf);
-      new AppToFlowTable().createTable(admin, hbaseConf);
-      new ApplicationTable().createTable(admin, hbaseConf);
+      try {
+        new EntityTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new AppToFlowTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new ApplicationTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
     } finally {
       if (conn != null) {
         conn.close();
