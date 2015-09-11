@@ -1,5 +1,5 @@
-set(CLIENT_PROTO_DIR ${CMAKE_SOURCE_DIR}/../proto)
-set(COMMON_PROTO_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common/src/main/proto)
+set(CLIENT_PROTO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../proto)
+set(COMMON_PROTO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../../../hadoop-common-project/hadoop-common/src/main/proto)
 set(PROTOBUF_IMPORT_DIRS ${CLIENT_PROTO_DIR} ${COMMON_PROTO_DIR})
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
