@@ -1091,6 +1091,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12388. Fix components' version information in the web page
     'About the Cluster'. (Jun Gong via zxu)
 
+    HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with
+    wrong time unit parameter. (zxu via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

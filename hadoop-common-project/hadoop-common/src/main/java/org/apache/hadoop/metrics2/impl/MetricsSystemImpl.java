@@ -262,7 +262,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     checkNotNull(config, "config");
     MetricsConfig conf = sourceConfigs.get(name);
     MetricsSourceAdapter sa = new MetricsSourceAdapter(prefix, name, desc,
-        source, injectedTags, period, conf != null ? conf
+        source, injectedTags, period * 1000L, conf != null ? conf
             : config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
@@ -359,7 +359,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       return;
     }
     logicalTime = 0;
-    long millis = period * 1000;
+    long millis = period * 1000L;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
           @Override
@@ -550,7 +550,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private void registerSystemSource() {
     MetricsConfig sysConf = sourceConfigs.get(MS_NAME);
     sysSource = new MetricsSourceAdapter(prefix, MS_STATS_NAME, MS_STATS_DESC,
-        MetricsAnnotations.makeSource(this), injectedTags, period,
+        MetricsAnnotations.makeSource(this), injectedTags, period * 1000L,
         sysConf == null ? config.subset(SOURCE_KEY) : sysConf);
     sysSource.start();
   }
