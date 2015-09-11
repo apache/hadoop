@@ -25,6 +25,8 @@
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/stubs/common.h>
 
+#include <memory>
+
 using ::google::protobuf::FileDescriptor;
 using ::google::protobuf::MethodDescriptor;
 using ::google::protobuf::ServiceDescriptor;
