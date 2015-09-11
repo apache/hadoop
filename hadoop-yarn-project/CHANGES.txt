@@ -818,6 +818,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4106. NodeLabels for NM in distributed mode is not updated even after
     clusterNodelabel addition in RM. (Bibin A Chundatt via wangda)
 
+    YARN-4115. Reduce loglevel of ContainerManagementProtocolProxy to Debug
+    (adhoot via rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
