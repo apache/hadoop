@@ -184,6 +184,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12369. Point hadoop-project/pom.xml java.security.krb5.conf
     within target folder. (wang)
 
+    HADOOP-12324. Better exception reporting in SaslPlainServer.
+    (Mike Yoder via stevel)
+
   BUG FIXES
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
