@@ -889,6 +889,10 @@ Release 2.7.2 - UNRELEASED
     YARN-4096. App local logs are leaked if log aggregation fails to initialize
     for the app. (Jason Lowe via zxu)
 
+    YARN-4136. LinuxContainerExecutor loses info when forwarding
+    ResourceHandlerException. (Bibin A Chundatt via vvasudev)
+
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
