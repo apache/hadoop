@@ -13,6 +13,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-5323. Trash documentation should describe its directory structure and
     configurations. (Weiwei Yang via ozawa)
 
+    HDFS-8099. Change "DFSInputStream has been closed already" message to
+    debug log level (Charles Lamb via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
