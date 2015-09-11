@@ -427,6 +427,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4086. Allow Aggregated Log readers to handle HAR files (rkanter)
 
+    YARN-4145. Make RMHATestBase abstract so its not run when running all
+    tests under that namespace (adhoot via rkanter)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
