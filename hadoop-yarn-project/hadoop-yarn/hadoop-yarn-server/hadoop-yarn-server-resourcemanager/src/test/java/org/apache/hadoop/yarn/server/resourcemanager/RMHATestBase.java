@@ -45,7 +45,7 @@ import org.junit.Assert;
 import org.junit.Before;
 
 
-public class RMHATestBase extends ClientBaseWithFixes{
+public abstract class RMHATestBase extends ClientBaseWithFixes{
 
   private static final int ZK_TIMEOUT_MS = 5000;
   private static StateChangeRequestInfo requestInfo =
