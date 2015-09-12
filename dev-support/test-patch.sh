@@ -2779,7 +2779,7 @@ function compile
 }
 
 ## @description  Execute the static analysis test cycle.
-## @description  This will callout to _precompile, compile, and _postcompile
+## @description  This will callout to _precompile, compile, _postcompile and _rebuild
 ## @audience     public
 ## @stability    evolving
 ## @replaceable  no
