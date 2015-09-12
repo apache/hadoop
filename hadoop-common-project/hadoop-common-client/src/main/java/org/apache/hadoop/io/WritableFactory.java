@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /** A factory for a class of Writable.
- * @see WritableFactories
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

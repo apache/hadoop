@@ -47,13 +47,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           </excludes>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <excludePackageNames>org.apache.hadoop.hdfs.protocol.proto</excludePackageNames>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
 </project>
