@@ -1028,6 +1028,12 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
     name using reflection. (Lei (Eddy) Xu)
 
+    HADOOP-12173. NetworkTopology::add calls toString always.
+    (Inigo Goiri via cdouglas)
+
+    HADOOP-12185. NetworkTopology is not efficient adding/getting/removing
+    nodes. (Inigo Goiri via cdouglas)
+
     HADOOP-12117. Potential NPE from Configuration#loadProperty with
     allowNullValueProperties set. (zhihai xu via vinayakumarb)
 
@@ -1048,6 +1054,13 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12088. KMSClientProvider uses equalsIgnoreCase("application/json").
     (Brahma Reddy Battula via stevel)
+
+    HADOOP-11797. releasedocmaker.py needs to put ASF headers on output (aw)
+
+    HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
+    time unit parameter. (zxu via rkanter)
+
+  OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
     over getMessage() in logging/span events. (Varun Saxena via stevel)
@@ -1101,9 +1114,6 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12388. Fix components' version information in the web page
     'About the Cluster'. (Jun Gong via zxu)
-
-    HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with
-    wrong time unit parameter. (zxu via rkanter)
 
 Release 2.7.2 - UNRELEASED
 
@@ -1160,6 +1170,9 @@ Release 2.7.1 - 2015-07-06
 
     HADOOP-11868. Invalid user logins trigger large backtraces in server log
     (Chang Li via jlowe)
+
+    HADOOP-11872. "hadoop dfs" command prints message about using "yarn jar" on
+    Windows(branch-2 only) (Varun Vasudev via cnauroth)
 
     HADOOP-11891. OsSecureRandom should lazily fill its reservoir (asuresh)
 
@@ -2043,7 +2056,7 @@ Release 2.6.0 - 2014-11-18
     HADOOP-10281. Create a scheduler, which assigns schedulables a priority
     level. (Chris Li via Arpit Agarwal)
 
-    HADOOP-8944. Shell command fs -count should include human readable option 
+    HADOOP-8944. Shell command fs -count should include human readable option
     (Jonathan Allen via aw)
 
     HADOOP-10231. Add some components in Native Libraries document (Akira 
