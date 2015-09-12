@@ -418,3 +418,7 @@
 
     HDFS-8853. Erasure Coding: Provide ECSchema validation when setting EC
     policy. (andreina via zhz)
+
+    HDFS-8975. Erasure coding : Fix random failure in TestSafeModeWithStripedFile
+    (J.Andreina via vinayakumarb)
+

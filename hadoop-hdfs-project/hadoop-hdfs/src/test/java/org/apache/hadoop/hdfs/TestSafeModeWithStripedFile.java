@@ -53,6 +53,7 @@ public class TestSafeModeWithStripedFile {
   public void setup() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 100);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
     cluster.waitActive();
@@ -124,6 +125,7 @@ public class TestSafeModeWithStripedFile {
     // so the safe blocks count doesn't increment.
     for (int i = 0; i < minStorages - 1; i++) {
       cluster.restartDataNode(dnprops.remove(0));
+      cluster.waitActive();
       cluster.triggerBlockReports();
       assertEquals(0, NameNodeAdapter.getSafeModeSafeBlocks(nn));
     }
@@ -131,17 +133,20 @@ public class TestSafeModeWithStripedFile {
     // the block of smallFile reaches minStorages,
     // so the safe blocks count increment.
     cluster.restartDataNode(dnprops.remove(0));
+    cluster.waitActive();
     cluster.triggerBlockReports();
     assertEquals(1, NameNodeAdapter.getSafeModeSafeBlocks(nn));
 
     // the 2 blocks of bigFile need DATA_BLK_NUM storages to be safe
     for (int i = minStorages; i < DATA_BLK_NUM - 1; i++) {
       cluster.restartDataNode(dnprops.remove(0));
+      cluster.waitActive();
       cluster.triggerBlockReports();
       assertTrue(nn.isInSafeMode());
     }
 
     cluster.restartDataNode(dnprops.remove(0));
+    cluster.waitActive();
     cluster.triggerBlockReports();
     assertFalse(nn.isInSafeMode());
   }
