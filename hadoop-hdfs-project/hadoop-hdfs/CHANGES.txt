@@ -1356,6 +1356,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9033. dfsadmin -metasave prints "NaN" for cache used%.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-9042. Update document for the Storage policy name
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
