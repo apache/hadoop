@@ -29,6 +29,9 @@ Trunk (Unreleased)
     HADOOP-11698. Remove DistCpV1 and Logalyzer.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11356. Removed deprecated o.a.h.fs.permission.AccessControlException.
+    (Li Lu via wheat9)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via
@@ -503,6 +506,9 @@ Trunk (Unreleased)
 
     HADOOP-12244. recover broken rebase during precommit (aw)
 
+    HADOOP-11942. Add links to SLGUserGuide to site index.
+    (Masatake Iwasaki via xyao)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -605,8 +611,7 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11917. test-patch.sh should work with ${BASEDIR}/patchprocess
     setups (aw)
 
-    HADOOP-11942. Add links to SLGUserGuide to site index.
-    (Masatake Iwasaki via xyao)
+    HADOOP-11925. backport trunk's smart-apply-patch.sh to branch-2 (aw)
 
     HADOOP-11906. test-patch.sh should use 'file' command for patch
     determinism (Sean Busbey via aw)
@@ -742,6 +747,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12318. Expose underlying LDAP exceptions in SaslPlainServer. (Mike
     Yoder via atm)
 
+    HADOOP-9891. CLIMiniCluster instructions fail with MiniYarnCluster
+    ClassNotFoundException (Darrell Taylor via aw)
+
     HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
 
     HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
@@ -808,6 +816,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12352. Delay in checkpointing Trash can leave trash for 2 intervals
     before deleting (Casey Brotherton via harsh)
 
+    HADOOP-11568. Description on usage of classpath in hadoop command is
+    incomplete. ( Archana T via vinayakumarb )
+
     HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
     jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
 
@@ -832,8 +843,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11859. PseudoAuthenticationHandler fails with httpcomponents v4.4.
     (Eugene Koifman via jitendra)
 
-    HADOOP-11848. Incorrect arguments to sizeof in DomainSocket.c (Malcolm
-    Kavalsky via Colin P. McCabe)
+    HADOOP-11848. Incorrect arguments to sizeof in DomainSocket.c
+    (Malcolm Kavalsky via Colin P. McCabe)
 
     HADOOP-11861. test-patch.sh rewrite addendum patch.
     (Allen Wittenauer via cnauroth)
@@ -1239,9 +1250,6 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11301. [optionally] update jmx cache to drop old metrics
     (Maysam Yabandeh via stack)
-
-    HADOOP-11356. Removed deprecated o.a.h.fs.permission.AccessControlException.
-    (Li Lu via wheat9)
 
     HADOOP-11313. Adding a document about NativeLibraryChecker.
     (Tsuyoshi OZAWA via cnauroth)
@@ -5992,7 +6000,6 @@ Release 0.23.1 - 2012-02-17
 
     HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
     (jitendra)
-
 
   OPTIMIZATIONS
 
