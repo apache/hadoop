@@ -31,7 +31,7 @@ import org.apache.hadoop.net.NodeBase;
  * for placing block replicas on environment with node-group layer.
  * The replica placement strategy is adjusted to:
  * If the writer is on a datanode, the 1st replica is placed on the local 
- *     node (or local node-group), otherwise a random datanode. 
+ *     node(or local node-group or on local rack), otherwise a random datanode.
  * The 2nd replica is placed on a datanode that is on a different rack with 1st
  *     replica node. 
  * The 3rd replica is placed on a datanode which is on a different node-group
@@ -165,7 +165,7 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   /* choose one node from the nodegroup that <i>localMachine</i> is on.
    * if no such node is available, choose one node from the nodegroup where
    * a second replica is on.
-   * if still no such node is available, choose a random node in the cluster.
+   * if still no such node is available, return null.
    * @return the chosen node
    */
   private DatanodeStorageInfo chooseLocalNodeGroup(
@@ -195,14 +195,12 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
               excludedNodes, blocksize, maxNodesPerRack, results,
               avoidStaleNodes, storageTypes);
         } catch(NotEnoughReplicasException e2) {
-          //otherwise randomly choose one from the network
-          return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
-              maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+          //otherwise return null
+          return null;
         }
       } else {
-        //otherwise randomly choose one from the network
-        return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
-            maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+        //otherwise return null
+        return null;
       }
     }
   }

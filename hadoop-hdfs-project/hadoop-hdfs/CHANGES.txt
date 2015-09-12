@@ -1315,6 +1315,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8581. ContentSummary on / skips further counts on yielding lock
     (J.Andreina via vinayakumarb)
 
+    HDFS-9036. In BlockPlacementPolicyWithNodeGroup#chooseLocalStorage , random
+    node is selected eventhough fallbackToLocalRack is true.
+    (J.Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
