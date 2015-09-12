@@ -38,6 +38,7 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11719. [Fsshell] Remove bin/hadoop reference from
     GenericOptionsParser default help text.
+    (Brahma Reddy Battula via harsh)
 
     HADOOP-11692. Improve authentication failure WARN message to avoid user
     confusion. (Yongjun Zhang)
@@ -170,24 +171,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11813. releasedocmaker.py should use today's date instead of
     unreleased (Darrell Taylor via aw)
 
-    HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
-
-    HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
-    (hzlu via benoyantony)
-
-    HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
-    (wang)
-
-    HADOOP-12367. Move TestFileUtil's test resources to resources folder.
-    (wang via yliu)
-
-    HADOOP-12369. Point hadoop-project/pom.xml java.security.krb5.conf
-    within target folder. (wang)
-
-    HADOOP-12324. Better exception reporting in SaslPlainServer.
-    (Mike Yoder via stevel)
-
-  BUG FIXES
+    HADOOP-12158. Improve error message in
+    TestCryptoStreamsWithOpensslAesCtrCryptoCodec when OpenSSL is not
+    installed. (wang)
 
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
 
@@ -252,14 +238,31 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9891. CLIMiniCluster instructions fail with MiniYarnCluster
     ClassNotFoundException (Darrell Taylor via aw)
 
+    HADOOP-12295. Improve NetworkTopology#InnerNode#remove logic. (yliu)
+
+    HADOOP-12050. Enable MaxInactiveInterval for hadoop http auth token
+    (hzlu via benoyantony)
+
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
+
+    HADOOP-12368. Mark ViewFileSystemBaseTest and ViewFsBaseTest as abstract.
+    (wang)
+
+    HADOOP-12367. Move TestFileUtil's test resources to resources folder.
+    (wang via yliu)
+
+    HADOOP-12369. Point hadoop-project/pom.xml java.security.krb5.conf
+    within target folder. (wang)
 
     HADOOP-12358. Add -safely flag to rm to prompt when deleting many files.
     (xyao via wang)
 
     HADOOP-12384. Add "-direct" flag option for fs copy so that user can choose
     not to create "._COPYING_" file (J.Andreina via vinayakumarb)
+
+    HADOOP-12324. Better exception reporting in SaslPlainServer.
+    (Mike Yoder via stevel)
 
   OPTIMIZATIONS
 
@@ -493,7 +496,7 @@ Release 2.8.0 - UNRELEASED
     (Brahma Reddy Battula via aajisaka)
 
     HADOOP-12076. Incomplete Cache Mechanism in CredentialProvider API.
-    (Larry McCay via cnauroth) 
+    (Larry McCay via cnauroth)
 
     HADOOP-12119. hadoop fs -expunge does not work for federated namespace
     (J.Andreina via vinayakumarb)
@@ -514,7 +517,7 @@ Release 2.8.0 - UNRELEASED
     cygwin in branch-2. (Li Lu via cnauroth)
 
     HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
-    name using reflection. (lei)
+    name using reflection. (Lei (Eddy) Xu)
 
     HADOOP-12173. NetworkTopology::add calls toString always.
     (Inigo Goiri via cdouglas)
@@ -536,6 +539,12 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12235 hadoop-openstack junit & mockito dependencies should be
     "provided". (Ted Yu via stevel)
+
+    HADOOP-12209 Comparable type should be in FileStatus.
+    (Yong Zhang via stevel)
+
+    HADOOP-12088. KMSClientProvider uses equalsIgnoreCase("application/json").
+    (Brahma Reddy Battula via stevel)
 
     HADOOP-11797. releasedocmaker.py needs to put ASF headers on output (aw)
 
@@ -896,8 +905,8 @@ Release 2.7.0 - 2015-04-20
 
     HADOOP-11607. Reduce log spew in S3AFileSystem. (Lei (Eddy) Xu via stevel)
 
-    HADOOP-11495. Convert site documentation from apt to markdown (Masatake
-    Iwasaki via aw)
+    HADOOP-11495. Convert site documentation from apt to markdown
+    (Masatake Iwasaki via aw)
 
     HADOOP-11632. Cleanup Find.java to remove SupressWarnings annotations.
     (Akira Ajisaka via ozawa)
@@ -1561,10 +1570,10 @@ Release 2.6.0 - 2014-11-18
     level. (Chris Li via Arpit Agarwal)
 
     HADOOP-8944. Shell command fs -count should include human readable option
-      (Jonathan Allen via aw)
+    (Jonathan Allen via aw)
 
     HADOOP-10231. Add some components in Native Libraries document (Akira 
-      AJISAKA via aw)
+    AJISAKA via aw)
 
     HADOOP-10650. Add ability to specify a reverse ACL (black list) of users
     and groups. (Benoy Antony via Arpit Agarwal)
@@ -1656,7 +1665,7 @@ Release 2.6.0 - 2014-11-18
     HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
 
     HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
-    for Unit testing. (Steve Lougran)
+    for Unit testing. (Hari via stevel)
 
     HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
 
@@ -1686,8 +1695,8 @@ Release 2.6.0 - 2014-11-18
     HADOOP-11101. How about inputstream close statement from catch block to
     finally block in FileContext#copy() ( skrho via vinayakumarb )
 
-    HADOOP-8808. Update FsShell documentation to mention deprecation of some 
-    of the commands, and mention alternatives (Akira AJISAKA via aw)
+    HADOOP-8808. Update FsShell documentation to mention deprecation of some of
+    the commands, and mention alternatives (Akira AJISAKA via aw)
 
     HADOOP-10954. Adding site documents of hadoop-tools (Masatake Iwasaki 
     via aw)
@@ -1829,6 +1838,8 @@ Release 2.6.0 - 2014-11-18
 
     HADOOP-10933. FileBasedKeyStoresFactory Should use Configuration.getPassword 
     for SSL Passwords. (lmccay via tucu)
+
+    HADOOP-10759. Remove hardcoded JAVA_HEAP_MAX. (Sam Liu via Eric Yang)
 
     HADOOP-10905. LdapGroupsMapping Should use configuration.getPassword for SSL
     and LDAP Passwords. (lmccay via brandonli)
