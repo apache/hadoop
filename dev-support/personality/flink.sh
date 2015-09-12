@@ -25,7 +25,7 @@ HOW_TO_CONTRIBUTE=""
 
 add_plugin flinklib
 
-function fliblib_filefilter
+function flinklib_filefilter
 {
   local filename=$1
 
