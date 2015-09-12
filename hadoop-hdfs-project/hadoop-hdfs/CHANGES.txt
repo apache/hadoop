@@ -1319,6 +1319,9 @@ Release 2.8.0 - UNRELEASED
     node is selected eventhough fallbackToLocalRack is true.
     (J.Andreina via vinayakumarb)
 
+    HDFS-9041. Move entries in META-INF/services/o.a.h.fs.FileSystem to
+    hdfs-client. (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
