@@ -59,7 +59,7 @@ function scalac_compile
   fi
 }
 
-## @description  Count and compare the number of JavaDoc warnings pre- and post- patch
+## @description  Count and compare the number of ScalaDoc warnings pre- and post- patch
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
