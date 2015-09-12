@@ -487,6 +487,25 @@ public class TestReplicationPolicyWithNodeGroup {
   }
 
   /**
+   * In this testcase, client is dataNodes[7], but it is not qualified
+   * to be chosen. And there is no other node available on client Node group.
+   * So the 1st replica should be placed on client local rack dataNodes[6]
+   * @throws Exception
+   */
+  @Test
+  public void testChooseTargetForLocalStorage() throws Exception {
+    updateHeartbeatWithUsage(dataNodes[7],
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
+        0L, 0L, 0, 0); // no space
+
+    DatanodeStorageInfo[] targets;
+    targets = chooseTarget(1, dataNodes[7]);
+    assertEquals(targets.length, 1);
+    assertTrue(targets[0].getDatanodeDescriptor().equals(dataNodes[6]));
+  }
+
+  /**
    * This testcase tests re-replication, when dataNodes[0] is already chosen.
    * So the 1st replica can be placed on random rack. 
    * the 2nd replica should be placed on different node and nodegroup by same rack as 
