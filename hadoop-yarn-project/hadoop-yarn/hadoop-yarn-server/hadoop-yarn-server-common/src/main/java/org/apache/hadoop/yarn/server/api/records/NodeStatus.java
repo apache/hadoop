@@ -46,7 +46,7 @@ public abstract class NodeStatus {
    * @param containerStatuses Status of the containers running in this node.
    * @param keepAliveApplications Applications to keep alive.
    * @param nodeHealthStatus Health status of the node.
-   * @param containersUtilizations Utilization of the containers in this node.
+   * @param containersUtilization Utilization of the containers in this node.
    * @param nodeUtilization Utilization of the node.
    * @return New {@code NodeStatus} with the provided information.
    */
