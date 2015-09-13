@@ -1060,6 +1060,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12348. MetricsSystemImpl creates MetricsSourceAdapter with wrong
     time unit parameter. (zxu via rkanter)
 
+    HADOOP-12087. [JDK8] Fix javadoc errors caused by incorrect or illegal
+    tags. (Akira AJISAKA via stevel).
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

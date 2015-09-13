@@ -404,7 +404,7 @@ public abstract class ApplicationReport {
   public abstract boolean isUnmanagedApp();
 
   /**
-   * @param value true if RM should not manage the AM
+   * @param unmanagedApplication true if RM should not manage the AM
    */
   @Public
   @Unstable

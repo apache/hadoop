@@ -827,7 +827,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   /**
    * Get mapping of labels info to nodes for specified set of labels.
    *
-   * @param nodelabels
+   * @param labels
    *          set of nodelabels for which labels to nodes mapping will be
    *          returned.
    * @return labels to nodes map

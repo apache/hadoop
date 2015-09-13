@@ -27,7 +27,6 @@ package org.apache.hadoop.yarn.server.api;
  * <li>{@link #APPLICATION_MASTER}
  * <li>{@link #TASK}
  * </ul>
- * </p>
  */
 public enum ContainerType {
   APPLICATION_MASTER, TASK
