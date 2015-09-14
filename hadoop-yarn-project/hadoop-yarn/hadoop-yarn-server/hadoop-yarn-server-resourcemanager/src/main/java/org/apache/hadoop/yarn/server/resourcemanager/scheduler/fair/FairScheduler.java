@@ -987,6 +987,13 @@ public class FairScheduler extends
       } catch (Throwable ex) {
         LOG.error("Error while attempting scheduling for node " + node +
             ": " + ex.toString(), ex);
+        if ((ex instanceof YarnRuntimeException) &&
+            (ex.getCause() instanceof InterruptedException)) {
+          // AsyncDispatcher translates InterruptedException to
+          // YarnRuntimeException with cause InterruptedException.
+          // Need to throw InterruptedException to stop schedulingThread.
+          throw (InterruptedException)ex.getCause();
+        }
       }
     }
 
@@ -1010,8 +1017,9 @@ public class FairScheduler extends
               nodes.get(n1).getAvailableResource());
     }
   }
-  
-  private synchronized void attemptScheduling(FSSchedulerNode node) {
+
+  @VisibleForTesting
+  synchronized void attemptScheduling(FSSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
       return;
