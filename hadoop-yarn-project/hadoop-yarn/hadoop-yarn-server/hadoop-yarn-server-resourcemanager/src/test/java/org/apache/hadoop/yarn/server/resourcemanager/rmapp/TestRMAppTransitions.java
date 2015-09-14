@@ -970,7 +970,7 @@ public class TestRMAppTransitions {
             appState.getApplicationSubmissionContext().getApplicationId(),
             rmContext, conf,
             submissionContext.getApplicationName(), null,
-            submissionContext.getQueue(), submissionContext, null, null,
+            submissionContext.getQueue(), submissionContext, scheduler, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(),
             BuilderUtils.newResourceRequest(
