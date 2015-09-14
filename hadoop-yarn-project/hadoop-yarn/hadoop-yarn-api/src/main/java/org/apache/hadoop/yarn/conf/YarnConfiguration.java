@@ -2025,6 +2025,15 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_PROVIDER_CONFIGURED_NODE_LABELS =
       NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-labels";
 
+  public static final String AM_BLACKLISTING_ENABLED =
+      YARN_PREFIX + "am.blacklisting.enabled";
+  public static final boolean DEFAULT_AM_BLACKLISTING_ENABLED = true;
+
+  public static final String AM_BLACKLISTING_DISABLE_THRESHOLD =
+      YARN_PREFIX + "am.blacklisting.disable-failure-threshold";
+  public static final float DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
+
+
   public YarnConfiguration() {
     super();
   }

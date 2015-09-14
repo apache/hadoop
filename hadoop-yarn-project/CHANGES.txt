@@ -430,6 +430,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4145. Make RMHATestBase abstract so its not run when running all
     tests under that namespace (adhoot via rkanter)
 
+    YARN-2005. Blacklisting support for scheduling AMs. (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -655,6 +656,11 @@ public class TestCapacityScheduler {
     RMAppImpl app = mock(RMAppImpl.class);
     when(app.getApplicationId()).thenReturn(appId);
     RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
+    Container container = mock(Container.class);
+    when(attempt.getMasterContainer()).thenReturn(container);
+    ApplicationSubmissionContext submissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
     when(app.getCurrentAppAttempt()).thenReturn(attempt);
@@ -715,6 +721,11 @@ public class TestCapacityScheduler {
     RMAppImpl app1 = mock(RMAppImpl.class);
     when(app1.getApplicationId()).thenReturn(appId1);
     RMAppAttemptImpl attempt1 = mock(RMAppAttemptImpl.class);
+    Container container = mock(Container.class);
+    when(attempt1.getMasterContainer()).thenReturn(container);
+    ApplicationSubmissionContext submissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(attempt1.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt1.getAppAttemptId()).thenReturn(appAttemptId1);
     when(attempt1.getRMAppAttemptMetrics()).thenReturn(attemptMetric1);
     when(app1.getCurrentAppAttempt()).thenReturn(attempt1);
@@ -739,6 +750,8 @@ public class TestCapacityScheduler {
     RMAppImpl app2 = mock(RMAppImpl.class);
     when(app2.getApplicationId()).thenReturn(appId2);
     RMAppAttemptImpl attempt2 = mock(RMAppAttemptImpl.class);
+    when(attempt2.getMasterContainer()).thenReturn(container);
+    when(attempt2.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt2.getAppAttemptId()).thenReturn(appAttemptId2);
     when(attempt2.getRMAppAttemptMetrics()).thenReturn(attemptMetric2);
     when(app2.getCurrentAppAttempt()).thenReturn(attempt2);
@@ -2876,6 +2889,11 @@ public class TestCapacityScheduler {
     RMAppImpl app = mock(RMAppImpl.class);
     when(app.getApplicationId()).thenReturn(appId);
     RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
+    Container container = mock(Container.class);
+    when(attempt.getMasterContainer()).thenReturn(container);
+    ApplicationSubmissionContext submissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
     when(app.getCurrentAppAttempt()).thenReturn(attempt);
@@ -2953,6 +2971,11 @@ public class TestCapacityScheduler {
     RMAppImpl app = mock(RMAppImpl.class);
     when(app.getApplicationId()).thenReturn(appId);
     RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
+    Container container = mock(Container.class);
+    when(attempt.getMasterContainer()).thenReturn(container);
+    ApplicationSubmissionContext submissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
     when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
     when(app.getCurrentAppAttempt()).thenReturn(attempt);
@@ -2976,6 +2999,8 @@ public class TestCapacityScheduler {
     RMAppImpl app2 = mock(RMAppImpl.class);
     when(app2.getApplicationId()).thenReturn(appId2);
     RMAppAttemptImpl attempt2 = mock(RMAppAttemptImpl.class);
+    when(attempt2.getMasterContainer()).thenReturn(container);
+    when(attempt2.getSubmissionContext()).thenReturn(submissionContext);
     when(attempt2.getAppAttemptId()).thenReturn(appAttemptId2);
     when(attempt2.getRMAppAttemptMetrics()).thenReturn(attemptMetric2);
     when(app2.getCurrentAppAttempt()).thenReturn(attempt2);
