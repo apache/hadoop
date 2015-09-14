@@ -319,7 +319,7 @@ public class TestFSEditLogLoader {
       rwf.close();
     }
     EditLogValidation validation =
-        EditLogFileInputStream.validateEditLog(logFile, Long.MAX_VALUE);
+        EditLogFileInputStream.scanEditLog(logFile, Long.MAX_VALUE, true);
     assertTrue(validation.hasCorruptHeader());
   }
 
@@ -334,7 +334,7 @@ public class TestFSEditLogLoader {
     File logFileBak = new File(testDir, logFile.getName() + ".bak");
     Files.copy(logFile, logFileBak);
     EditLogValidation validation =
-        EditLogFileInputStream.validateEditLog(logFile, Long.MAX_VALUE);
+        EditLogFileInputStream.scanEditLog(logFile, Long.MAX_VALUE, true);
     assertTrue(!validation.hasCorruptHeader());
     // We expect that there will be an OP_START_LOG_SEGMENT, followed by
     // NUM_TXNS opcodes, followed by an OP_END_LOG_SEGMENT.
@@ -347,8 +347,8 @@ public class TestFSEditLogLoader {
       // Restore backup, corrupt the txn opcode
       Files.copy(logFileBak, logFile);
       corruptByteInFile(logFile, txOffset);
-      validation = EditLogFileInputStream.validateEditLog(logFile,
-          Long.MAX_VALUE);
+      validation = EditLogFileInputStream.scanEditLog(logFile,
+          Long.MAX_VALUE, true);
       long expectedEndTxId = (txId == (NUM_TXNS + 1)) ?
           NUM_TXNS : (NUM_TXNS + 1);
       assertEquals("Failed when corrupting txn opcode at " + txOffset,
@@ -365,8 +365,8 @@ public class TestFSEditLogLoader {
       // Restore backup, corrupt the txn opcode
       Files.copy(logFileBak, logFile);
       truncateFile(logFile, txOffset);
-      validation = EditLogFileInputStream.validateEditLog(logFile,
-          Long.MAX_VALUE);
+      validation = EditLogFileInputStream.scanEditLog(logFile,
+          Long.MAX_VALUE, true);
       long expectedEndTxId = (txId == 0) ?
           HdfsServerConstants.INVALID_TXID : (txId - 1);
       assertEquals("Failed when corrupting txid " + txId + " txn opcode " +
@@ -384,7 +384,7 @@ public class TestFSEditLogLoader {
     // layout flags section.
     truncateFile(logFile, 8);
     EditLogValidation validation =
-        EditLogFileInputStream.validateEditLog(logFile, Long.MAX_VALUE);
+        EditLogFileInputStream.scanEditLog(logFile, Long.MAX_VALUE, true);
     assertTrue(!validation.hasCorruptHeader());
     assertEquals(HdfsServerConstants.INVALID_TXID, validation.getEndTxId());
   }

@@ -906,6 +906,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9027. Refactor o.a.h.hdfs.DataStreamer#isLazyPersist() method.
     (Mingliang Liu via Arpit Agarwal)
 
+    HDFS-8996. Consolidate validateLog and scanLog in FJM#EditLogFile (Zhe
+    Zhang via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
