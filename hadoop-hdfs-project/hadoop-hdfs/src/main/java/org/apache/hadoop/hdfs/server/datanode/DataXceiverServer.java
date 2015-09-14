@@ -278,7 +278,12 @@ class DataXceiverServer implements Runnable {
   synchronized int getNumPeersXceiver() {
     return peersXceiver.size();
   }
-  
+
+  @VisibleForTesting
+  PeerServer getPeerServer() {
+    return peerServer;
+  }
+
   synchronized void releasePeer(Peer peer) {
     peers.remove(peer);
     peersXceiver.remove(peer);

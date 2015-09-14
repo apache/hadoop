@@ -910,7 +910,10 @@ public class DataNode extends ReconfigurableBase
       tcpPeerServer = new TcpPeerServer(dnConf.socketWriteTimeout,
           DataNode.getStreamingAddr(conf));
     }
-    tcpPeerServer.setReceiveBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
+    if (dnConf.getTransferSocketRecvBufferSize() > 0) {
+      tcpPeerServer.setReceiveBufferSize(
+          dnConf.getTransferSocketRecvBufferSize());
+    }
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
@@ -958,8 +961,12 @@ public class DataNode extends ReconfigurableBase
     }
     DomainPeerServer domainPeerServer =
       new DomainPeerServer(domainSocketPath, port);
-    domainPeerServer.setReceiveBufferSize(
-        HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
+    int recvBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT);
+    if (recvBufferSize > 0) {
+      domainPeerServer.setReceiveBufferSize(recvBufferSize);
+    }
     return domainPeerServer;
   }
   

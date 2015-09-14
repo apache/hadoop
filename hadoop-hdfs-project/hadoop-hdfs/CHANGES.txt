@@ -928,6 +928,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8929. Add a metric to expose the timestamp of the last journal
     (surendra singh lilhore via vinayakumarb)
 
+    HDFS-8829. Make SO_RCVBUF and SO_SNDBUF size configurable for
+    DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
+    via Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
