@@ -144,9 +144,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
               YarnConfiguration.DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT);
 
       synchronized (waitForDrained) {
-        while (!drained && eventHandlingThread.isAlive()) {
+        while (!drained && eventHandlingThread != null
+            && eventHandlingThread.isAlive()
+            && System.currentTimeMillis() < endTime) {
           waitForDrained.wait(1000);
-          LOG.info("Waiting for AsyncDispatcher to drain.");
+          LOG.info("Waiting for AsyncDispatcher to drain. Thread state is :" +
+              eventHandlingThread.getState());
         }
       }
     }
