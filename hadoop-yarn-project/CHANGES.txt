@@ -73,6 +73,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-4153. TestAsyncDispatcher failed at branch-2.7 (Zhihai Xu via jianhe)
 
+    YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
+    (Zhihai Xu via kasha)
+
     YARN-4158. Remove duplicate close for LogWriter in
     AppLogAggregatorImpl#uploadLogsForContainers (Zhihai Xu via jlowe)
 
