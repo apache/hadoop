@@ -826,6 +826,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4115. Reduce loglevel of ContainerManagementProtocolProxy to Debug
     (adhoot via rkanter)
 
+    YARN-4151. Fix findbugs errors in hadoop-yarn-server-common module.
+    (Meng Ding via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
