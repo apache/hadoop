@@ -517,6 +517,10 @@ Release 2.7.3 - 2016-08-25
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
     Colin P. McCabe)
 
+    HDFS-8829. Make SO_RCVBUF and SO_SNDBUF size configurable for
+    DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
+    via Colin P. McCabe)
+
   BUG FIXES
 
     HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in

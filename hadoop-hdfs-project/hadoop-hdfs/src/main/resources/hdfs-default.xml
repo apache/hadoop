@@ -2640,4 +2640,26 @@
     </description>
   </property>
 
+<property>
+  <name>dfs.datanode.transfer.socket.send.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket send buffer size for DataXceiver (mirroring packets to downstream
+    in pipeline). This may affect TCP connection throughput.
+    If it is set to zero or negative value, no buffer size will be set
+    explicitly, thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.transfer.socket.recv.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket receive buffer size for DataXceiver (receiving packets from client
+    during block writing). This may affect TCP connection throughput.
+    If it is set to zero or negative value, no buffer size will be set
+    explicitly, thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
 </configuration>

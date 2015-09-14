@@ -137,6 +137,11 @@ public class TcpPeerServer implements PeerServer {
   }
 
   @Override
+  public int getReceiveBufferSize() throws IOException {
+    return this.serverSocket.getReceiveBufferSize();
+  }
+
+  @Override
   public Peer accept() throws IOException, SocketTimeoutException {
     Peer peer = peerFromSocket(serverSocket.accept());
     return peer;

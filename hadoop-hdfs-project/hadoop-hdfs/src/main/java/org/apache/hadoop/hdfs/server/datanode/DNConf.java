@@ -70,7 +70,9 @@ public class DNConf {
   final int socketTimeout;
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
-  
+  private final int transferSocketSendBufferSize;
+  private final int transferSocketRecvBufferSize;
+
   final boolean transferToAllowed;
   final boolean dropCacheBehindWrites;
   final boolean syncBehindWrites;
@@ -113,8 +115,14 @@ public class DNConf {
     socketKeepaliveTimeout = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY,
         DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT);
-    
-    /* Based on results on different platforms, we might need set the default 
+    this.transferSocketSendBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
+    this.transferSocketRecvBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT);
+
+    /* Based on results on different platforms, we might need set the default
      * to false on some of them. */
     transferToAllowed = conf.getBoolean(
         DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
@@ -279,5 +287,13 @@ public class DNConf {
 
   public long getBpReadyTimeout() {
     return bpReadyTimeout;
+  }
+
+  public int getTransferSocketRecvBufferSize() {
+    return transferSocketRecvBufferSize;
+  }
+
+  public int getTransferSocketSendBufferSize() {
+    return transferSocketSendBufferSize;
   }
 }
