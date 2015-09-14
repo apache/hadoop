@@ -38,6 +38,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -84,7 +85,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.filter.LoggingFilter;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 @RunWith(Parameterized.class)
@@ -246,6 +246,9 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     super.setUp();
     httpSpnegoKeytabFile.deleteOnExit();
     testRootDir.deleteOnExit();
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
   }
 
   @AfterClass
@@ -260,6 +263,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
   public void tearDown() throws Exception {
     rm.stop();
     super.tearDown();
+    UserGroupInformation.setConfiguration(new Configuration());
   }
 
   // Simple test - try to create a delegation token via web services and check

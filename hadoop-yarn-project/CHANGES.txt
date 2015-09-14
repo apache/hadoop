@@ -903,6 +903,8 @@ Release 2.7.2 - UNRELEASED
     YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
     (Zhihai Xu via kasha)
 
+    YARN-4126. RM should not issue delegation tokens in unsecure mode.
+    (Bibin A Chundatt via jianhe)
 
 Release 2.7.1 - 2015-07-06
 
