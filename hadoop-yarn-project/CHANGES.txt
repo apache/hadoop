@@ -900,6 +900,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4136. LinuxContainerExecutor loses info when forwarding
     ResourceHandlerException. (Bibin A Chundatt via vvasudev)
 
+    YARN-3697. FairScheduler: ContinuousSchedulingThread can fail to shutdown.
+    (Zhihai Xu via kasha)
+
 
 Release 2.7.1 - 2015-07-06
 

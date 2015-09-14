@@ -27,7 +27,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -4316,6 +4319,34 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     } catch (Exception e) {
       fail("Exception happened when doing continuous scheduling. " +
         e.toString());
+    }
+  }
+
+  @Test
+  public void testContinuousSchedulingInterruptedException()
+      throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    FairScheduler spyScheduler = spy(scheduler);
+    Assert.assertTrue("Continuous scheduling should be disabled.",
+        !spyScheduler.isContinuousSchedulingEnabled());
+    // Add one nodes
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    spyScheduler.handle(nodeEvent1);
+    Assert.assertEquals("We should have one alive node.",
+        1, spyScheduler.getNumClusterNodes());
+    InterruptedException ie = new InterruptedException();
+    doThrow(new YarnRuntimeException(ie)).when(spyScheduler).
+        attemptScheduling(isA(FSSchedulerNode.class));
+    // Invoke the continuous scheduling once
+    try {
+      spyScheduler.continuousSchedulingAttempt();
+      fail("Expected InterruptedException to stop schedulingThread");
+    } catch (InterruptedException e) {
+      Assert.assertEquals(ie, e);
     }
   }
 
