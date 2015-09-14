@@ -70,6 +70,9 @@ public class TestRMDelegationTokens {
   // Test the DT mast key in the state-store when the mast key is being rolled.
   @Test(timeout = 15000)
   public void testRMDTMasterKeyStateOnRollingMasterKey() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
     RMState rmState = memStore.getState();
