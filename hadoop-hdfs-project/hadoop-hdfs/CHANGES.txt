@@ -1322,6 +1322,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9041. Move entries in META-INF/services/o.a.h.fs.FileSystem to
     hdfs-client. (Mingliang Liu via wheat9)
 
+    HDFS-9069. TestNameNodeMetricsLogger failing -port in use.
+    (stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
