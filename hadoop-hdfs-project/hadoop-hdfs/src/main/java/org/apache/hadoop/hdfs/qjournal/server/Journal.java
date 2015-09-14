@@ -192,7 +192,7 @@ public class Journal implements Closeable {
     
     while (!files.isEmpty()) {
       EditLogFile latestLog = files.remove(files.size() - 1);
-      latestLog.scanLog();
+      latestLog.scanLog(Long.MAX_VALUE, false);
       LOG.info("Latest log is " + latestLog);
       if (latestLog.getLastTxId() == HdfsServerConstants.INVALID_TXID) {
         // the log contains no transactions
@@ -542,7 +542,7 @@ public class Journal implements Closeable {
       // If it's in-progress, it should only contain one transaction,
       // because the "startLogSegment" transaction is written alone at the
       // start of each segment. 
-      existing.scanLog();
+      existing.scanLog(Long.MAX_VALUE, false);
       if (existing.getLastTxId() != existing.getFirstTxId()) {
         throw new IllegalStateException("The log file " +
             existing + " seems to contain valid transactions");
@@ -605,7 +605,7 @@ public class Journal implements Closeable {
       if (needsValidation) {
         LOG.info("Validating log segment " + elf.getFile() + " about to be " +
             "finalized");
-        elf.scanLog();
+        elf.scanLog(Long.MAX_VALUE, false);
   
         checkSync(elf.getLastTxId() == endTxId,
             "Trying to finalize in-progress log segment %s to end at " +
@@ -693,7 +693,7 @@ public class Journal implements Closeable {
       return null;
     }
     if (elf.isInProgress()) {
-      elf.scanLog();
+      elf.scanLog(Long.MAX_VALUE, false);
     }
     if (elf.getLastTxId() == HdfsServerConstants.INVALID_TXID) {
       LOG.info("Edit log file " + elf + " appears to be empty. " +

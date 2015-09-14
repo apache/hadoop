@@ -1229,7 +1229,7 @@ public class TestEditLog {
 
     for (EditLogInputStream edits : editStreams) {
       FSEditLogLoader.EditLogValidation val =
-          FSEditLogLoader.validateEditLog(edits, Long.MAX_VALUE);
+          FSEditLogLoader.scanEditLog(edits, Long.MAX_VALUE);
       long read = (val.getEndTxId() - edits.getFirstTxId()) + 1;
       LOG.info("Loading edits " + edits + " read " + read);
       assertEquals(startTxId, edits.getFirstTxId());
