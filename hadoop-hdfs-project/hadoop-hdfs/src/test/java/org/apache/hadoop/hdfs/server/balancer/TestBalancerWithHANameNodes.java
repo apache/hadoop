@@ -97,10 +97,10 @@ public class TestBalancerWithHANameNodes {
       Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
       assertEquals(1, namenodes.size());
       assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
-      final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
+      final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
-          cluster, Balancer.Parameters.DEFAULT);
+          cluster, BalancerParameters.DEFAULT);
     } finally {
       cluster.shutdown();
     }
