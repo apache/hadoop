@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.balancer.BalancerParameters;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.log4j.Level;
@@ -84,10 +85,10 @@ public class TestBalancerWithMultipleNameNodes {
     final MiniDFSCluster cluster;
     final ClientProtocol[] clients;
     final short replication;
-    final Balancer.Parameters parameters;
+    final BalancerParameters parameters;
 
     Suite(MiniDFSCluster cluster, final int nNameNodes, final int nDataNodes,
-        Balancer.Parameters parameters, Configuration conf) throws IOException {
+        BalancerParameters parameters, Configuration conf) throws IOException {
       this.conf = conf;
       this.cluster = cluster;
       clients = new ClientProtocol[nNameNodes];
@@ -204,7 +205,7 @@ public class TestBalancerWithMultipleNameNodes {
       balanced = true;
       for(int d = 0; d < used.length; d++) {
         final double p = used[d]*100.0/cap[d];
-        balanced = p <= avg + s.parameters.threshold;
+        balanced = p <= avg + s.parameters.getThreshold();
         if (!balanced) {
           if (i % 100 == 0) {
             LOG.warn("datanodes " + d + " is not yet balanced: "
@@ -278,13 +279,14 @@ public class TestBalancerWithMultipleNameNodes {
     DatanodeStorageReport[]> getStorageReports(Suite s) throws IOException {
     Map<Integer, DatanodeStorageReport[]> reports =
         new HashMap<Integer, DatanodeStorageReport[]>();
-    if (s.parameters.blockpools.size() == 0) {
+    if (s.parameters.getBlockPools().size() == 0) {
       // the blockpools parameter was not set, so we don't need to track any
       // blockpools.
       return Collections.emptyMap();
     }
     for (int i = 0; i < s.clients.length; i++) {
-      if (s.parameters.blockpools.contains(s.cluster.getNamesystem(i)
+      if (s.parameters.getBlockPools().contains(
+          s.cluster.getNamesystem(i)
           .getBlockPoolId())) {
         // we want to ensure that blockpools not specified by the balancer
         // parameters were left alone. Therefore, if the pool was specified,
@@ -388,14 +390,10 @@ public class TestBalancerWithMultipleNameNodes {
         for (int i = 0; i < nNameNodesToBalance; i++) {
           blockpools.add(cluster.getNamesystem(i).getBlockPoolId());
         }
-        Balancer.Parameters params =
-            new Balancer.Parameters(Balancer.Parameters.DEFAULT.policy,
-                Balancer.Parameters.DEFAULT.threshold,
-                Balancer.Parameters.DEFAULT.maxIdleIteration,
-                Balancer.Parameters.DEFAULT.excludedNodes,
-                Balancer.Parameters.DEFAULT.includedNodes,
-                Balancer.Parameters.DEFAULT.sourceNodes, blockpools,
-                Balancer.Parameters.DEFAULT.runDuringUpgrade);
+        BalancerParameters.Builder b =
+            new BalancerParameters.Builder();
+        b.setBlockpools(blockpools);
+        BalancerParameters params = b.build();
         final Suite s =
             new Suite(cluster, nNameNodes, nDataNodes, params, conf);
         for(int n = 0; n < nNameNodes; n++) {
@@ -455,7 +453,7 @@ public class TestBalancerWithMultipleNameNodes {
       LOG.info("RUN_TEST 1");
       final Suite s =
           new Suite(cluster, nNameNodes, nDataNodes,
-              Balancer.Parameters.DEFAULT, conf);
+              BalancerParameters.DEFAULT, conf);
       long totalCapacity = TestBalancer.sum(capacities);
 
       LOG.info("RUN_TEST 2");
