@@ -439,6 +439,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3717. Expose app/am/queue's node-label-expression to RM web UI / 
     CLI / REST-API. (Naganarasimha G R via wangda)
 
+    YARN-4149. yarn logs -am should provide an option to fetch all the log files
+    (Varun Vasudev via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

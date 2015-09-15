@@ -168,7 +168,8 @@ public class TestLogsCLI {
     pw.println(" -help                           Displays help for all commands.");
     pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
     pw.println("                                 comma-separated value to get specified");
-    pw.println("                                 Container log files");
+    pw.println("                                 container log files. Use \"ALL\" to fetch");
+    pw.println("                                 all the log files for the container.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
     pw.close();
     String appReportStr = baos.toString("UTF-8");

@@ -129,7 +129,7 @@ public class NMWebServices {
           String msg = "Error: You must specify a non-empty string for the user";
           throw new BadRequestException(msg);
         }
-        if (!appInfo.getUser().toString().equals(userQuery)) {
+        if (!appInfo.getUser().equals(userQuery)) {
           continue;
         }
       }
@@ -158,7 +158,8 @@ public class NMWebServices {
   @GET
   @Path("/containers")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public ContainersInfo getNodeContainers() {
+  public ContainersInfo getNodeContainers(@javax.ws.rs.core.Context
+      HttpServletRequest hsr) {
     init();
     ContainersInfo allContainers = new ContainersInfo();
     for (Entry<ContainerId, Container> entry : this.nmContext.getContainers()
@@ -168,7 +169,7 @@ public class NMWebServices {
         continue;
       }
       ContainerInfo info = new ContainerInfo(this.nmContext, entry.getValue(),
-          uriInfo.getBaseUri().toString(), webapp.name());
+          uriInfo.getBaseUri().toString(), webapp.name(), hsr.getRemoteUser());
       allContainers.add(info);
     }
     return allContainers;
@@ -177,7 +178,8 @@ public class NMWebServices {
   @GET
   @Path("/containers/{containerid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public ContainerInfo getNodeContainer(@PathParam("containerid") String id) {
+  public ContainerInfo getNodeContainer(@javax.ws.rs.core.Context
+      HttpServletRequest hsr, @PathParam("containerid") String id) {
     ContainerId containerId = null;
     init();
     try {
@@ -191,7 +193,7 @@ public class NMWebServices {
       throw new NotFoundException("container with id, " + id + ", not found");
     }
     return new ContainerInfo(this.nmContext, container, uriInfo.getBaseUri()
-        .toString(), webapp.name());
+        .toString(), webapp.name(), hsr.getRemoteUser());
 
   }
   
