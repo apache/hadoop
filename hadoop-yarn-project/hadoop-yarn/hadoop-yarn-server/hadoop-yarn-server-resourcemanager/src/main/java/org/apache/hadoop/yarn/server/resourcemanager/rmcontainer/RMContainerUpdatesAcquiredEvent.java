@@ -18,33 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
-public enum RMContainerEventType {
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
+public class RMContainerUpdatesAcquiredEvent extends RMContainerEvent  {
+  private final boolean increasedContainer;
   
-  // when a container acquired by AM after
-  // it increased/decreased
-  ACQUIRE_UPDATED_CONTAINER, 
-
-  LAUNCHED,
-  FINISHED,
-
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
-
-  // Source: ContainerAllocationExpirer  
-  EXPIRE,
-
-  RECOVER,
+  public RMContainerUpdatesAcquiredEvent(ContainerId containerId,
+      boolean increasedContainer) {
+    super(containerId, RMContainerEventType.ACQUIRE_UPDATED_CONTAINER);
+    this.increasedContainer = increasedContainer; 
+  }
   
-  // Source: Scheduler
-  // Resource change approved by scheduler
-  CHANGE_RESOURCE,
-  
-  // NM reported resource change is done
-  NM_DONE_CHANGE_RESOURCE 
+  public boolean isIncreasedContainer() {
+    return increasedContainer;
+  }
 }

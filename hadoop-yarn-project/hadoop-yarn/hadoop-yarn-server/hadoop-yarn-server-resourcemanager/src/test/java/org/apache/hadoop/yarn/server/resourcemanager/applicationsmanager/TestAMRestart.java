@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -331,11 +332,15 @@ public class TestAMRestart {
     MockAM am2 = MockRM.launchAM(app1, rm1, nm1);
     RegisterApplicationMasterResponse registerResponse =
         am2.registerAppAttempt();
-    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+    rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
     // check am2 get the nm token from am1.
-    Assert.assertEquals(expectedNMTokens,
-      registerResponse.getNMTokensFromPreviousAttempts());
+    Assert.assertEquals(expectedNMTokens.size(),
+        registerResponse.getNMTokensFromPreviousAttempts().size());
+    for (int i = 0; i < expectedNMTokens.size(); i++) {
+      Assert.assertTrue(expectedNMTokens.get(i)
+          .equals(registerResponse.getNMTokensFromPreviousAttempts().get(i)));
+    }
 
     // am2 allocate 1 container on nm2
     containers = new ArrayList<Container>();
@@ -365,7 +370,7 @@ public class TestAMRestart {
     // restart am
     MockAM am3 = MockRM.launchAM(app1, rm1, nm1);
     registerResponse = am3.registerAppAttempt();
-    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+    rm1.waitForState(am3.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
 
     // check am3 get the NM token from both am1 and am2;
     List<NMToken> transferredTokens = registerResponse.getNMTokensFromPreviousAttempts();
@@ -430,7 +435,7 @@ public class TestAMRestart {
 
     ContainerStatus containerStatus =
         BuilderUtils.newContainerStatus(amContainer, ContainerState.COMPLETE,
-            "", ContainerExitStatus.DISKS_FAILED);
+            "", ContainerExitStatus.DISKS_FAILED, Resources.createResource(200));
     currentNode.containerStatus(containerStatus);
     am1.waitForState(RMAppAttemptState.FAILED);
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);

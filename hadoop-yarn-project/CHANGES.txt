@@ -220,6 +220,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3868. Recovery support for container resizing. (Meng Ding via jianhe)
 
+    YARN-1651. CapacityScheduler side changes to support container resize.
+    (Wangda Tan via jianhe)
+ 
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

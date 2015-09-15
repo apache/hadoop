@@ -19,7 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -37,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -51,6 +61,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -58,13 +69,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -87,7 +100,7 @@ public abstract class AbstractYarnScheduler
   protected Resource clusterResource = Resource.newInstance(0, 0);
 
   protected Resource minimumAllocation;
-  private Resource maximumAllocation;
+  protected Resource maximumAllocation;
   private Resource configuredMaximumAllocation;
   private int maxNodeMemory = -1;
   private int maxNodeVCores = -1;
@@ -230,6 +243,55 @@ public abstract class AbstractYarnScheduler
     }
 
     application.containerLaunchedOnNode(containerId, node.getNodeID());
+  }
+  
+  protected synchronized void containerIncreasedOnNode(ContainerId containerId,
+      SchedulerNode node, Container increasedContainerReportedByNM) {
+    // Get the application for the finished container
+    SchedulerApplicationAttempt application =
+        getCurrentAttemptForContainer(containerId);
+    if (application == null) {
+      LOG.info("Unknown application "
+          + containerId.getApplicationAttemptId().getApplicationId()
+          + " increased container " + containerId + " on node: " + node);
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
+      return;
+    }
+
+    RMContainer rmContainer = getRMContainer(containerId);
+    Resource rmContainerResource = rmContainer.getAllocatedResource();
+    Resource nmContainerResource = increasedContainerReportedByNM.getResource();
+    
+    
+    if (Resources.equals(nmContainerResource, rmContainerResource)){
+      // NM reported expected container size, tell RMContainer. Which will stop
+      // container expire monitor
+      rmContainer.handle(new RMContainerEvent(containerId,
+          RMContainerEventType.NM_DONE_CHANGE_RESOURCE));
+    } else if (Resources.fitsIn(getResourceCalculator(), clusterResource,
+        nmContainerResource, rmContainerResource)) {
+      // when rmContainerResource >= nmContainerResource, we won't do anything,
+      // it is possible a container increased is issued by RM, but AM hasn't
+      // told NM.
+    } else if (Resources.fitsIn(getResourceCalculator(), clusterResource,
+        rmContainerResource, nmContainerResource)) {
+      // When rmContainerResource <= nmContainerResource, it could happen when a
+      // container decreased by RM before it is increased in NM.
+      
+      // Tell NM to decrease the container
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeDecreaseContainerEvent(node.getNodeID(),
+              Arrays.asList(rmContainer.getContainer())));
+    } else {
+      // Something wrong happened, kill the container
+      LOG.warn("Something wrong happened, container size reported by NM"
+          + " is not expected, ContainerID=" + containerId
+          + " rm-size-resource:" + rmContainerResource + " nm-size-reosurce:"
+          + nmContainerResource);
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
+    }
   }
 
   public T getApplicationAttempt(ApplicationAttemptId applicationAttemptId) {
@@ -511,6 +573,36 @@ public abstract class AbstractYarnScheduler
           SchedulerUtils.RELEASED_CONTAINER), RMContainerEventType.RELEASED);
     }
   }
+  
+  protected void decreaseContainers(
+      List<SchedContainerChangeRequest> decreaseRequests,
+      SchedulerApplicationAttempt attempt) {
+    for (SchedContainerChangeRequest request : decreaseRequests) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing decrease request:" + request);
+      }
+      
+      boolean hasIncreaseRequest =
+          attempt.removeIncreaseRequest(request.getNodeId(),
+              request.getPriority(), request.getContainerId());
+      
+      if (hasIncreaseRequest) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("While processing decrease request, found a increase request "
+              + "for the same container "
+              + request.getContainerId()
+              + ", removed the increase request");
+        }
+      }
+      
+      // handle decrease request
+      decreaseContainer(request, attempt);
+    }
+  }
+
+  protected abstract void decreaseContainer(
+      SchedContainerChangeRequest decreaseRequest,
+      SchedulerApplicationAttempt attempt);
 
   public SchedulerNode getSchedulerNode(NodeId nodeId) {
     return nodes.get(nodeId);
@@ -734,5 +826,57 @@ public abstract class AbstractYarnScheduler
     }
     LOG.info("Updated the cluste max priority to maxClusterLevelAppPriority = "
         + maxClusterLevelAppPriority);
+  }
+  
+  /**
+   * Normalize container increase/decrease request, and return
+   * SchedulerContainerResourceChangeRequest according to given
+   * ContainerResourceChangeRequest.
+   * 
+   * <pre>
+   * - Returns non-null value means validation succeeded
+   * - Throw exception when any other error happens
+   * </pre>
+   */
+  private SchedContainerChangeRequest
+      checkAndNormalizeContainerChangeRequest(
+          ContainerResourceChangeRequest request, boolean increase)
+          throws YarnException {
+    // We have done a check in ApplicationMasterService, but RMContainer status
+    // / Node resource could change since AMS won't acquire lock of scheduler.
+    RMServerUtils.checkAndNormalizeContainerChangeRequest(rmContext, request,
+        increase);
+    ContainerId containerId = request.getContainerId();
+    RMContainer rmContainer = getRMContainer(containerId);
+    SchedulerNode schedulerNode =
+        getSchedulerNode(rmContainer.getAllocatedNode());
+    
+    return new SchedContainerChangeRequest(schedulerNode, rmContainer,
+        request.getCapability());
+  }
+
+  protected List<SchedContainerChangeRequest>
+      checkAndNormalizeContainerChangeRequests(
+          List<ContainerResourceChangeRequest> changeRequests,
+          boolean increase) {
+    if (null == changeRequests || changeRequests.isEmpty()) {
+      return Collections.EMPTY_LIST;
+    }
+    
+    List<SchedContainerChangeRequest> schedulerChangeRequests =
+        new ArrayList<SchedContainerChangeRequest>();
+    for (ContainerResourceChangeRequest r : changeRequests) {
+      SchedContainerChangeRequest sr = null;
+      try {
+        sr = checkAndNormalizeContainerChangeRequest(r, increase);
+      } catch (YarnException e) {
+        LOG.warn("Error happens when checking increase request, Ignoring.."
+            + " exception=", e);
+        continue;
+      }
+      schedulerChangeRequests.add(sr);
+    }
+
+    return schedulerChangeRequests;
   }
 }

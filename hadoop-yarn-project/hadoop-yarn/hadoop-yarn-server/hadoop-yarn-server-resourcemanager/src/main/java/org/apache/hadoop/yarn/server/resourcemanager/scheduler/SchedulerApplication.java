@@ -28,7 +28,7 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
 
   private Queue queue;
   private final String user;
-  private T currentAttempt;
+  private volatile T currentAttempt;
   private volatile Priority priority;
 
   public SchedulerApplication(Queue queue, String user) {

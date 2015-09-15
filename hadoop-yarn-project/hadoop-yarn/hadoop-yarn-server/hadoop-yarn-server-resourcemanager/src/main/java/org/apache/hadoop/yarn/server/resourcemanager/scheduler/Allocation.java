@@ -34,6 +34,9 @@ public class Allocation {
   final Set<ContainerId> fungibleContainers;
   final List<ResourceRequest> fungibleResources;
   final List<NMToken> nmTokens;
+  final List<Container> increasedContainers;
+  final List<Container> decreasedContainers;
+
 
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
@@ -45,12 +48,22 @@ public class Allocation {
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens) {
+    this(containers,  resourceLimit,strictContainers,  fungibleContainers,
+      fungibleResources, nmTokens, null, null);
+  }
+  
+  public Allocation(List<Container> containers, Resource resourceLimit,
+      Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
+      List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
+      List<Container> increasedContainers, List<Container> decreasedContainer) {
     this.containers = containers;
     this.resourceLimit = resourceLimit;
     this.strictContainers = strictContainers;
     this.fungibleContainers = fungibleContainers;
     this.fungibleResources = fungibleResources;
     this.nmTokens = nmTokens;
+    this.increasedContainers = increasedContainers;
+    this.decreasedContainers = decreasedContainer;
   }
 
   public List<Container> getContainers() {
@@ -76,5 +89,12 @@ public class Allocation {
   public List<NMToken> getNMTokens() {
     return nmTokens;
   }
-
+  
+  public List<Container> getIncreasedContainers() {
+    return increasedContainers;
+  }
+  
+  public List<Container> getDecreasedContainers() {
+    return decreasedContainers;
+  }
 }

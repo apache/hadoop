@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +36,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -49,10 +52,14 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -107,6 +114,89 @@ public class RMServerUtils {
           queueName, scheduler, rmContext, queueInfo);
     }
   }
+  
+  /**
+   * Normalize container increase/decrease request, it will normalize and update
+   * ContainerResourceChangeRequest.targetResource
+   * 
+   * <pre>
+   * - Throw exception when any other error happens
+   * </pre>
+   */
+  public static void checkAndNormalizeContainerChangeRequest(
+      RMContext rmContext, ContainerResourceChangeRequest request,
+      boolean increase) throws InvalidResourceRequestException {
+    ContainerId containerId = request.getContainerId();
+    ResourceScheduler scheduler = rmContext.getScheduler();
+    RMContainer rmContainer = scheduler.getRMContainer(containerId);
+    ResourceCalculator rc = scheduler.getResourceCalculator();
+    
+    if (null == rmContainer) {
+      String msg =
+          "Failed to get rmContainer for "
+              + (increase ? "increase" : "decrease")
+              + " request, with container-id=" + containerId;
+      throw new InvalidResourceRequestException(msg);
+    }
+
+    if (rmContainer.getState() != RMContainerState.RUNNING) {
+      String msg =
+          "rmContainer's state is not RUNNING, for "
+              + (increase ? "increase" : "decrease")
+              + " request, with container-id=" + containerId;
+      throw new InvalidResourceRequestException(msg);
+    }
+
+    Resource targetResource = Resources.normalize(rc, request.getCapability(),
+        scheduler.getMinimumResourceCapability(),
+        scheduler.getMaximumResourceCapability(),
+        scheduler.getMinimumResourceCapability());
+
+    // Compare targetResource and original resource
+    Resource originalResource = rmContainer.getAllocatedResource();
+
+    // Resource comparasion should be >= (or <=) for all resource vectors, for
+    // example, you cannot request target resource of a <10G, 10> container to
+    // <20G, 8>
+    if (increase) {
+      if (originalResource.getMemory() > targetResource.getMemory()
+          || originalResource.getVirtualCores() > targetResource
+              .getVirtualCores()) {
+        String msg =
+            "Trying to increase a container, but target resource has some"
+                + " resource < original resource, target=" + targetResource
+                + " original=" + originalResource + " containerId="
+                + containerId;
+        throw new InvalidResourceRequestException(msg);
+      }
+    } else {
+      if (originalResource.getMemory() < targetResource.getMemory()
+          || originalResource.getVirtualCores() < targetResource
+              .getVirtualCores()) {
+        String msg =
+            "Trying to decrease a container, but target resource has "
+                + "some resource > original resource, target=" + targetResource
+                + " original=" + originalResource + " containerId="
+                + containerId;
+        throw new InvalidResourceRequestException(msg);
+      }
+    }
+    
+    RMNode rmNode = rmContext.getRMNodes().get(rmContainer.getAllocatedNode());
+    
+    // Target resource of the increase request is more than NM can offer
+    if (!Resources.fitsIn(scheduler.getResourceCalculator(),
+        scheduler.getClusterResource(), targetResource,
+        rmNode.getTotalCapability())) {
+      String msg = "Target resource=" + targetResource + " of containerId="
+          + containerId + " is more than node's total resource="
+          + rmNode.getTotalCapability();
+      throw new InvalidResourceRequestException(msg);
+    }
+
+    // Update normalized target resource
+    request.setCapability(targetResource);
+  }
 
   /*
    * @throw <code>InvalidResourceBlacklistRequestException </code> if the
@@ -121,6 +211,80 @@ public class RMServerUtils {
         throw new InvalidResourceBlacklistRequestException(
             "Cannot add " + ResourceRequest.ANY + " to the blacklist!");
       }
+    }
+  }
+  
+  /**
+   * Check if we have:
+   * - Request for same containerId and different target resource
+   * - If targetResources violates maximum/minimumAllocation
+   */
+  public static void increaseDecreaseRequestSanityCheck(RMContext rmContext,
+      List<ContainerResourceChangeRequest> incRequests,
+      List<ContainerResourceChangeRequest> decRequests,
+      Resource maximumAllocation) throws InvalidResourceRequestException {
+    checkDuplicatedIncreaseDecreaseRequest(incRequests, decRequests);
+    validateIncreaseDecreaseRequest(rmContext, incRequests, maximumAllocation,
+        true);
+    validateIncreaseDecreaseRequest(rmContext, decRequests, maximumAllocation,
+        false);
+  }
+  
+  private static void checkDuplicatedIncreaseDecreaseRequest(
+      List<ContainerResourceChangeRequest> incRequests,
+      List<ContainerResourceChangeRequest> decRequests)
+          throws InvalidResourceRequestException {
+    String msg = "There're multiple increase or decrease container requests "
+        + "for same containerId=";
+    Set<ContainerId> existedContainerIds = new HashSet<ContainerId>();
+    if (incRequests != null) {
+      for (ContainerResourceChangeRequest r : incRequests) {
+        if (!existedContainerIds.add(r.getContainerId())) {
+          throw new InvalidResourceRequestException(msg + r.getContainerId());
+        }
+      }
+    }
+    
+    if (decRequests != null) {
+      for (ContainerResourceChangeRequest r : decRequests) {
+        if (!existedContainerIds.add(r.getContainerId())) {
+          throw new InvalidResourceRequestException(msg + r.getContainerId());
+        }
+      }
+    }
+  }
+  
+  private static void validateIncreaseDecreaseRequest(RMContext rmContext,
+      List<ContainerResourceChangeRequest> requests, Resource maximumAllocation,
+      boolean increase)
+      throws InvalidResourceRequestException {
+    if (requests == null) {
+      return;
+    }
+    for (ContainerResourceChangeRequest request : requests) {
+      if (request.getCapability().getMemory() < 0
+          || request.getCapability().getMemory() > maximumAllocation
+              .getMemory()) {
+        throw new InvalidResourceRequestException("Invalid "
+            + (increase ? "increase" : "decrease") + " request"
+            + ", requested memory < 0"
+            + ", or requested memory > max configured" + ", requestedMemory="
+            + request.getCapability().getMemory() + ", maxMemory="
+            + maximumAllocation.getMemory());
+      }
+      if (request.getCapability().getVirtualCores() < 0
+          || request.getCapability().getVirtualCores() > maximumAllocation
+              .getVirtualCores()) {
+        throw new InvalidResourceRequestException("Invalid "
+            + (increase ? "increase" : "decrease") + " request"
+            + ", requested virtual cores < 0"
+            + ", or requested virtual cores > max configured"
+            + ", requestedVirtualCores="
+            + request.getCapability().getVirtualCores() + ", maxVirtualCores="
+            + maximumAllocation.getVirtualCores());
+      }
+      
+      checkAndNormalizeContainerChangeRequest(rmContext, request, increase);
     }
   }
 
