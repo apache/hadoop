@@ -776,6 +776,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12324. Better exception reporting in SaslPlainServer.
     (Mike Yoder via stevel)
 
+    HADOOP-12413. AccessControlList should avoid calling getGroupNames in
+    isUserInList with empty groups. (Zhihai Xu via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
