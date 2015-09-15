@@ -1379,11 +1379,13 @@ Response Body:
           "allocatedVCores" : 0,
           "runningContainers" : 0,
 	  "applicationType" : "MAPREDUCE",
-	  "applicationTags" : ""
+	  "applicationTags" : "",
           "memorySeconds" : 151730,
           "vcoreSeconds" : 103,
-          "unmanagedApplication":"false"
-          "applicationPriority":0
+          "unmanagedApplication" : "false",
+          "applicationPriority" : 0,
+          "appNodeLabelExpression" : "",
+          "amnodeLabelExpression" : ""
        },
        {
           "finishedTime" : 1326815789546,
@@ -1406,11 +1408,13 @@ Response Body:
           "allocatedVCores" : 0,
           "runningContainers" : 1,
 	  "applicationType" : "YARN",
-	  "applicationTags" : "tag1"
+	  "applicationTags" : "tag1",
           "memorySeconds" : 640064,
-          "vcoreSeconds" : 442
-          "unmanagedApplication":"false"
-          "applicationPriority":0
+          "vcoreSeconds" : 442,
+          "unmanagedApplication" : "false",
+          "applicationPriority" : 0,
+          "appNodeLabelExpression" : "",
+          "amNodeLabelExpression" : ""
        }
     ]
   }
@@ -1462,6 +1466,8 @@ Response Body:
     <vcoreSeconds>103</vcoreSeconds>
     <unmanagedApplication>false</unmanagedApplication>
     <applicationPriority>0</applicationPriority>
+    <appNodeLabelExpression></appNodeLabelExpression>
+    <amNodeLabelExpression></amNodeLabelExpression>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1489,6 +1495,8 @@ Response Body:
     <vcoreSeconds>442</vcoreSeconds>
     <unmanagedApplication>false</unmanagedApplication>
     <applicationPriority>0</applicationPriority>
+    <appNodeLabelExpression></appNodeLabelExpression>
+    <amNodeLabelExpression></amNodeLabelExpression>
   </app>
 </apps>
 ```
@@ -1650,6 +1658,8 @@ Note that depending on security settings a user might not be able to see all the
 | vcoreSeconds | long | The amount of CPU resources the application has allocated (virtual core-seconds) |
 | unmanagedApplication | boolean | Is the application unmanaged. |
 | applicationPriority | int | priority of the submitted application |
+| appNodeLabelExpression | string | Node Label expression which is used to identify the nodes on which application's containers are expected to run by default.|
+| amNodeLabelExpression | string | Node Label expression which is used to identify the node on which application's  AM container is expected to run.|
 
 ### Response Examples
 
@@ -1690,8 +1700,10 @@ Response Body:
       "queue" : "a1",
       "memorySeconds" : 151730,
       "vcoreSeconds" : 103,
-      "unmanagedApplication":"false"
-      "applicationPriority":0
+      "unmanagedApplication" : "false",
+      "applicationPriority" : 0,
+      "appNodeLabelExpression" : "",
+      "amNodeLabelExpression" : ""
    }
 }
 ```
@@ -1735,6 +1747,8 @@ Response Body:
   <vcoreSeconds>103</vcoreSeconds>
   <unmanagedApplication>false</unmanagedApplication>
   <applicationPriority>0</applicationPriority>
+  <appNodeLabelExpression></appNodeLabelExpression>
+  <amNodeLabelExpression></amNodeLabelExpression>
 </app>
 ```
 

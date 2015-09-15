@@ -1089,7 +1089,10 @@ Response Body:
           "finishedTime":1430425008861,
           "elapsedTime":7857,
           "unmanagedApplication":"false",
-          "applicationPriority":0},
+          "applicationPriority":0,
+          "appNodeLabelExpression":"",
+          "amNodeLabelExpression":""
+          },
           {
           "appId":"application_1430424020775_0003",
           "currentAppAttemptId":"appattempt_1430424020775_0003_000001",
@@ -1110,7 +1113,10 @@ Response Body:
           "finishedTime":1430424963907,
           "elapsedTime":7257,
           "unmanagedApplication":"false",
-          "applicationPriority":0},
+          "applicationPriority":0,
+          "appNodeLabelExpression":"",
+          "amNodeLabelExpression":""
+          },
           {
           "appId":"application_1430424020775_0002",
           "currentAppAttemptId":"appattempt_1430424020775_0002_000001",
@@ -1131,7 +1137,10 @@ Response Body:
           "finishedTime":1430424776594,
           "elapsedTime":7199,
           "unmanagedApplication":"false",
-          "applicationPriority":0},
+          "applicationPriority":0,
+          "appNodeLabelExpression":"",
+          "amNodeLabelExpression":""
+          },
           {
           "appId":"application_1430424020775_0001",
           "currentAppAttemptId":"appattempt_1430424020775_0001_000001",
@@ -1153,7 +1162,9 @@ Response Body:
           "elapsedTime":18344,
           "applicationTags":"mrapplication,ta-example",
           "unmanagedApplication":"false",
-          "applicationPriority":0
+          "applicationPriority":0,
+          "appNodeLabelExpression":"",
+          "amNodeLabelExpression":""
           }
       ]
     }
@@ -1197,6 +1208,8 @@ Response Body:
         <elapsedTime>7857</elapsedTime>
         <unmanagedApplication>false</unmanagedApplication>
         <applicationPriority>0</applicationPriority>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
       </app>
       <app>
         <appId>application_1430424020775_0003</appId>
@@ -1219,6 +1232,8 @@ Response Body:
         <elapsedTime>7257</elapsedTime>
         <unmanagedApplication>false</unmanagedApplication>
         <applicationPriority>0</applicationPriority>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
       </app>
       <app>
         <appId>application_1430424020775_0002</appId>
@@ -1241,6 +1256,8 @@ Response Body:
         <elapsedTime>7199</elapsedTime>
         <unmanagedApplication>false</unmanagedApplication>
         <applicationPriority>0</applicationPriority>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
       </app>
       <app>
         <appId>application_1430424020775_0001</appId>
@@ -1264,6 +1281,8 @@ Response Body:
         <applicationTags>mrapplication,ta-example</applicationTags>
         <unmanagedApplication>false</unmanagedApplication>
         <applicationPriority>0</applicationPriority>
+        <appNodeLabelExpression></appNodeLabelExpression>
+        <amNodeLabelExpression></amNodeLabelExpression>
       </app>
     </apps>
 
@@ -1316,7 +1335,8 @@ None
 | `applicationTags` | string | The application tags. |
 | `unmanagedApplication` | boolean | Is the application unmanaged. |
 | `applicationPriority` | int | Priority of the submitted application. |
-
+| `appNodeLabelExpression` | string |Node Label expression which is used to identify the nodes on which application's containers are expected to run by default.|
+| `amNodeLabelExpression` | string | Node Label expression which is used to identify the node on which application's  AM container is expected to run.|
 ### Response Examples:
 
 #### JSON response
@@ -1353,8 +1373,10 @@ Response Body:
       "finishedTime": 1430424072153,
       "elapsedTime": 18344,
       "applicationTags": mrapplication,tag-example,
-      "unmanagedApplication":"false"
-      "applicationPriority":0
+      "unmanagedApplication": "false",
+      "applicationPriority": 0,
+      "appNodeLabelExpression": "",
+      "amNodeLabelExpression": ""
     }
 
 #### XML response
@@ -1395,6 +1417,8 @@ Response Body:
        <applicationTags>mrapplication,ta-example</applicationTags>
        <unmanagedApplication>false</unmanagedApplication>
        <applicationPriority>0</applicationPriority>
+       <appNodeLabelExpression><appNodeLabelExpression>
+       <amNodeLabelExpression><amNodeLabelExpression>
      </app>
 
 ## <a name="REST_API_APPLICATION_ATTEMPT_LIST"></a>Application Attempt List

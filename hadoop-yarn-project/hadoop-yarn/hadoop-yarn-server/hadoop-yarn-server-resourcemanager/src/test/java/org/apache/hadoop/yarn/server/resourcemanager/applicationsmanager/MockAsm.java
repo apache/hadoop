@@ -202,6 +202,16 @@ public abstract class MockAsm extends MockApps {
     public LogAggregationStatus getLogAggregationStatusForAppReport() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public String getAmNodeLabelExpression() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public String getAppNodeLabelExpression() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   public static RMApp newApplication(int i) {

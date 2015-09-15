@@ -300,6 +300,33 @@ public class TestClientRMService {
           report.getApplicationResourceUsageReport();
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
+      Assert.assertEquals("<Not set>", report.getAmNodeLabelExpression());
+      Assert.assertEquals("<Not set>", report.getAppNodeLabelExpression());
+
+      // if application has am node label set to blank
+      ApplicationId appId2 = getApplicationId(2);
+      when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+          ApplicationAccessType.VIEW_APP, null, appId2)).thenReturn(true);
+      request.setApplicationId(appId2);
+      response = rmService.getApplicationReport(request);
+      report = response.getApplicationReport();
+
+      Assert.assertEquals(NodeLabel.DEFAULT_NODE_LABEL_PARTITION,
+          report.getAmNodeLabelExpression());
+      Assert.assertEquals(NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET,
+          report.getAppNodeLabelExpression());
+
+      // if application has am node label set to blank
+      ApplicationId appId3 = getApplicationId(3);
+      when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+          ApplicationAccessType.VIEW_APP, null, appId3)).thenReturn(true);
+
+      request.setApplicationId(appId3);
+      response = rmService.getApplicationReport(request);
+      report = response.getApplicationReport();
+
+      Assert.assertEquals("high-mem", report.getAmNodeLabelExpression());
+      Assert.assertEquals("high-mem", report.getAppNodeLabelExpression());
 
       // if application id is null
       GetApplicationReportRequest invalidRequest = recordFactory
@@ -951,11 +978,11 @@ public class TestClientRMService {
     ApplicationId applicationId3 = getApplicationId(3);
     YarnConfiguration config = new YarnConfiguration();
     apps.put(applicationId1, getRMApp(rmContext, yarnScheduler, applicationId1,
-        config, "testqueue", 10, 3));
+        config, "testqueue", 10, 3,null,null));
     apps.put(applicationId2, getRMApp(rmContext, yarnScheduler, applicationId2,
-        config, "a", 20, 2));
+        config, "a", 20, 2,null,""));
     apps.put(applicationId3, getRMApp(rmContext, yarnScheduler, applicationId3,
-        config, "testqueue", 40, 5));
+        config, "testqueue", 40, 5,"high-mem","high-mem"));
     return apps;
   }
   
@@ -978,10 +1005,11 @@ public class TestClientRMService {
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName,
-      final long memorySeconds, final long vcoreSeconds) {
+      final long memorySeconds, final long vcoreSeconds,
+      String appNodeLabelExpression, String amNodeLabelExpression) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
-
+    when(asContext.getNodeLabelExpression()).thenReturn(appNodeLabelExpression);
     RMAppImpl app =
         spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
@@ -1002,7 +1030,7 @@ public class TestClientRMService {
                     return report;
                   }
               });
-
+    app.getAMResourceRequest().setNodeLabelExpression(amNodeLabelExpression);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,

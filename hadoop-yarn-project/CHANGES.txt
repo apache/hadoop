@@ -436,6 +436,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-2005. Blacklisting support for scheduling AMs. (Anubhav Dhoot via kasha)
 
+    YARN-3717. Expose app/am/queue's node-label-expression to RM web UI / 
+    CLI / REST-API. (Naganarasimha G R via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

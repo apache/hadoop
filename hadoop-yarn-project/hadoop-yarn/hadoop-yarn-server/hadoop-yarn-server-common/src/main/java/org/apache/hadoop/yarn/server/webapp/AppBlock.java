@@ -208,6 +208,12 @@ public class AppBlock extends HtmlBlock {
     overviewTable._("Diagnostics:",
         app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
     overviewTable._("Unmanaged Application:", app.isUnmanagedApp());
+    overviewTable._("Application Node Label expression:",
+        app.getAppNodeLabelExpression() == null ? "<Not set>"
+            : app.getAppNodeLabelExpression());
+    overviewTable._("AM container Node Label expression:",
+        app.getAmNodeLabelExpression() == null ? "<Not set>"
+            : app.getAmNodeLabelExpression());
 
     Collection<ApplicationAttemptReport> attempts;
     try {
