@@ -590,6 +590,9 @@ Release 2.7.2 - UNRELEASED
     MAPREDUCE-6474. ShuffleHandler can possibly exhaust nodemanager file
     descriptors (Kuhu Shukla via jlowe)
 
+    MAPREDUCE-6472. MapReduce AM should have java.io.tmpdir=./tmp to be
+    consistent with tasks (Naganarasimha G R via jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
