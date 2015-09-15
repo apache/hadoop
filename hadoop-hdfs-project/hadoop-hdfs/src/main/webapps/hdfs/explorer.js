@@ -78,6 +78,29 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
+  function delete_path(inode_name, absolute_file_path) {
+    $('#delete-modal-title').text("Delete - " + inode_name);
+    $('#delete-prompt').text("Are you sure you want to delete " + inode_name
+      + " ?");
+
+    $('#delete-button').click(function() {
+      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
+      var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
+        '?op=DELETE' + '&recursive=true';
+
+      $.ajax(url,
+        { type: 'DELETE'
+        }).done(function(data) {
+          browse_directory(current_directory);
+        }).error(network_error_handler(url)
+         ).complete(function() {
+           $('#delete-modal').modal('hide');
+           $('#delete-button').button('reset');
+        });
+    })
+    $('#delete-modal').modal();
+  }
+
   function encode_path(abs_path) {
     abs_path = encodeURIComponent(abs_path);
     var re = /%2F/g;
@@ -166,7 +189,7 @@
 
         $('.explorer-browse-links').click(function() {
           var type = $(this).attr('inode-type');
-          var path = $(this).attr('inode-path');
+          var path = $(this).closest('tr').attr('inode-path');
           var abs_path = append_path(current_directory, path);
           if (type == 'DIRECTORY') {
             browse_directory(abs_path);
@@ -174,6 +197,12 @@
             view_file_details(path, abs_path);
           }
         });
+
+        $('.explorer-entry .glyphicon-trash').click(function() {
+          var inode_name = $(this).closest('tr').attr('inode-path');
+          var absolute_file_path = append_path(current_directory, inode_name);
+          delete_path(inode_name, absolute_file_path);
+        })
       });
     }).error(network_error_handler(url));
   }
