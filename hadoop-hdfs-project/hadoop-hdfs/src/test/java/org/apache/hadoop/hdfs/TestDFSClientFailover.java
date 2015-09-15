@@ -115,7 +115,8 @@ public class TestDFSClientFailover {
     // to include a port number.
     Path withPort = new Path("hdfs://" +
         HATestUtil.getLogicalHostname(cluster) + ":" +
-        NameNode.DEFAULT_PORT + "/" + TEST_FILE.toUri().getPath());
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT + "/" +
+        TEST_FILE.toUri().getPath());
     FileSystem fs2 = withPort.getFileSystem(fs.getConf());
     assertTrue(fs2.exists(withPort));
 

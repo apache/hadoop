@@ -39,9 +39,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -111,6 +111,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY;
@@ -314,7 +315,12 @@ public class NameNode implements NameNodeStatusMXBean {
     }
   }
     
-  public static final int DEFAULT_PORT = 8020;
+  /**
+   * @deprecated Use {@link HdfsClientConfigKeys#DFS_NAMENODE_RPC_PORT_DEFAULT}
+   *             instead.
+   */
+  @Deprecated
+  public static final int DEFAULT_PORT = DFS_NAMENODE_RPC_PORT_DEFAULT;
   public static final Logger LOG =
       LoggerFactory.getLogger(NameNode.class.getName());
   public static final Logger stateChangeLog =
@@ -452,7 +458,7 @@ public class NameNode implements NameNodeStatusMXBean {
   }
 
   public static InetSocketAddress getAddress(String address) {
-    return NetUtils.createSocketAddr(address, DEFAULT_PORT);
+    return NetUtils.createSocketAddr(address, DFS_NAMENODE_RPC_PORT_DEFAULT);
   }
   
   /**
@@ -509,7 +515,8 @@ public class NameNode implements NameNodeStatusMXBean {
 
   public static URI getUri(InetSocketAddress namenode) {
     int port = namenode.getPort();
-    String portString = port == DEFAULT_PORT ? "" : (":"+port);
+    String portString = (port == DFS_NAMENODE_RPC_PORT_DEFAULT) ?
+        "" : (":" + port);
     return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
         + namenode.getHostName()+portString);
   }
