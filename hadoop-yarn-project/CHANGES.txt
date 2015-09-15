@@ -73,6 +73,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-4153. TestAsyncDispatcher failed at branch-2.7 (Zhihai Xu via jianhe)
 
+    YARN-4158. Remove duplicate close for LogWriter in
+    AppLogAggregatorImpl#uploadLogsForContainers (Zhihai Xu via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

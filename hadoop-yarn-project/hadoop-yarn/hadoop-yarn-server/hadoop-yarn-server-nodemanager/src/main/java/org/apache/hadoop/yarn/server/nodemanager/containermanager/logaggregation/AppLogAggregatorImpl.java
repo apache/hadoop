@@ -290,6 +290,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       if (writer != null) {
         writer.close();
+        writer = null;
       }
 
       final Path renamedPath = this.rollingMonitorInterval <= 0
