@@ -117,6 +117,28 @@
       </div>
     </div>
 
+  <div class="modal" id="delete-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+            aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="delete-modal-title">Delete</h4>
+        </div>
+        <div class="modal-body">
+          <div class="panel-body">
+            <div id="delete-prompt"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="delete-button"
+            data-complete-text="Deleting...">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
       <div class="row">
       <div class="col-xs-11">
         <form onsubmit="return false;">
@@ -159,11 +181,12 @@
             <th>Replication</th>
             <th>Block Size</th>
             <th>Name</th>
+            <th>Delete</th>
           </tr>
         </thead>
         <tbody>
           {#FileStatus}
-          <tr>
+          <tr inode-path="{pathSuffix}" class="explorer-entry">
             <td>{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</td>
             <td>{owner}</td>
             <td>{group}</td>
@@ -171,7 +194,8 @@
             <td>{#helper_date_tostring value="{modificationTime}"/}</td>
             <td>{replication}</td>
             <td>{blockSize|fmt_bytes}</td>
-            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links" inode-path="{pathSuffix}">{pathSuffix}</a></td>
+            <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
+            <td><span class="glyphicon glyphicon-trash"></span></td>
           </tr>
           {/FileStatus}
         </tbody>

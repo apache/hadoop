@@ -264,3 +264,6 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .dfshealth-node-legend li:before {
     padding-right: 5pt;
 }
+
+.explorer-entry .explorer-browse-links { cursor: pointer; }
+.explorer-entry .glyphicon-trash { cursor: pointer; }
