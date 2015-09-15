@@ -46,6 +46,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.BufferedOutputStream;
@@ -85,6 +87,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
@@ -148,6 +152,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.MetricsLoggerTask;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
@@ -277,6 +282,8 @@ public class DataNode extends ReconfigurableBase
       Collections.unmodifiableList(
           Arrays.asList(DFS_DATANODE_DATA_DIR_KEY));
 
+  public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
+
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
    */
@@ -363,6 +370,8 @@ public class DataNode extends ReconfigurableBase
 
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
+  private ScheduledThreadPoolExecutor metricsLoggerTimer;
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -382,7 +391,7 @@ public class DataNode extends ReconfigurableBase
 
   /**
    * Create the DataNode given a configuration, an array of dataDirs,
-   * and a namenode proxy
+   * and a namenode proxy.
    */
   DataNode(final Configuration conf,
            final List<StorageLocation> dataDirs,
@@ -1166,6 +1175,7 @@ public class DataNode extends ReconfigurableBase
     saslClient = new SaslDataTransferClient(dnConf.conf, 
         dnConf.saslPropsResolver, dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
+    startMetricsLogger(conf);
   }
 
   /**
@@ -1649,6 +1659,7 @@ public class DataNode extends ReconfigurableBase
    * Otherwise, deadlock might occur.
    */
   public void shutdown() {
+    stopMetricsLogger();
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -3275,5 +3286,42 @@ public class DataNode extends ReconfigurableBase
     }
 
     return oobTimeouts[status.getNumber() - Status.OOB_RESTART_VALUE];
+  }
+
+  /**
+   * Start a timer to periodically write DataNode metrics to the log file. This
+   * behavior can be disabled by configuration.
+   *
+   * @param metricConf
+   */
+  protected void startMetricsLogger(Configuration metricConf) {
+    long metricsLoggerPeriodSec = metricConf.getInt(
+        DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
+        DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT);
+
+    if (metricsLoggerPeriodSec <= 0) {
+      return;
+    }
+
+    MetricsLoggerTask.makeMetricsLoggerAsync(METRICS_LOG);
+
+    // Schedule the periodic logging.
+    metricsLoggerTimer = new ScheduledThreadPoolExecutor(1);
+    metricsLoggerTimer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+    metricsLoggerTimer.scheduleWithFixedDelay(new MetricsLoggerTask(METRICS_LOG,
+        "DataNode", (short) 0), metricsLoggerPeriodSec, metricsLoggerPeriodSec,
+        TimeUnit.SECONDS);
+  }
+
+  protected void stopMetricsLogger() {
+    if (metricsLoggerTimer != null) {
+      metricsLoggerTimer.shutdown();
+      metricsLoggerTimer = null;
+    }
+  }
+
+  @VisibleForTesting
+  ScheduledThreadPoolExecutor getMetricsLoggerTimer() {
+    return metricsLoggerTimer;
   }
 }

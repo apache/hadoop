@@ -1600,6 +1600,18 @@
 </property>
 
 <property>
+  <name>dfs.datanode.metrics.logger.period.seconds</name>
+  <value>600</value>
+  <description>
+    This setting controls how frequently the DataNode logs its metrics. The
+    logging configuration must also define one or more appenders for
+    DataNodeMetricsLog for the metrics to be logged.
+    DataNode metrics logging is disabled if this value is set to zero or
+    less than zero.
+  </description>
+</property>
+
+<property>
   <name>dfs.metrics.percentiles.intervals</name>
   <value></value>
   <description>

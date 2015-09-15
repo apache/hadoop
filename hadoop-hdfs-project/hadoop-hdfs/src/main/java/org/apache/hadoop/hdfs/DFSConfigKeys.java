@@ -364,6 +364,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.metrics.logger.period.seconds";
   public static final int     DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =
       600;
+  public static final String DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY =
+      "dfs.datanode.metrics.logger.period.seconds";
+  public static final int DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =
+      600;
 
   public static final String  DFS_BALANCER_MOVEDWINWIDTH_KEY = "dfs.balancer.movedWinWidth";
   public static final long    DFS_BALANCER_MOVEDWINWIDTH_DEFAULT = 5400*1000L;
