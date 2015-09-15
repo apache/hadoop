@@ -103,6 +103,9 @@
           b.capacityUsedPercentage = b.capacityUsed * 100.0 / b.capacityTotal;
           b.capacityRemainingPercentage = b.capacityRemaining * 100.0 / b.capacityTotal;
         }
+
+        data.fs.ObjectsTotal = data.fs.FilesTotal + data.fs.BlocksTotal;
+
         render();
       }),
       function (url, jqxhr, text, err) {
