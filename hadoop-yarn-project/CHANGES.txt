@@ -919,6 +919,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4126. RM should not issue delegation tokens in unsecure mode.
     (Bibin A Chundatt via jianhe)
 
+    YARN-4158. Remove duplicate close for LogWriter in
+    AppLogAggregatorImpl#uploadLogsForContainers (Zhihai Xu via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
