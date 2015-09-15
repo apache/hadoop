@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -146,4 +147,12 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
+  
+  /**
+   * Update containers to be decreased
+   */
+  public void updateNodeHeartbeatResponseForContainersDecreasing(
+      NodeHeartbeatResponse response);
+  
+  public List<Container> pullNewlyIncreasedContainers();
 }

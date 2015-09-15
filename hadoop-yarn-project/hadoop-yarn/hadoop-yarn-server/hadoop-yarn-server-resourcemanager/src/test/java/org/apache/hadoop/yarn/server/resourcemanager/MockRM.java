@@ -191,6 +191,19 @@ public class MockRM extends ResourceManager {
     }
   }
 
+  public void waitForContainerState(ContainerId containerId,
+      RMContainerState state) throws Exception {
+    int timeoutSecs = 0;
+    RMContainer container = getResourceScheduler().getRMContainer(containerId);
+    while ((container == null || container.getState() != state)
+        && timeoutSecs++ < 40) {
+      System.out.println(
+          "Waiting for" + containerId + " state to be:" + state.name());
+      Thread.sleep(200);
+    }
+    Assert.assertTrue(container.getState() == state);
+  }
+
   public void waitForContainerAllocated(MockNM nm, ContainerId containerId)
       throws Exception {
     int timeoutSecs = 0;

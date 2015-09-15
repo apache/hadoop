@@ -209,4 +209,10 @@ public class DominantResourceCalculator extends ResourceCalculator {
         );
   }
 
+  @Override
+  public boolean fitsIn(Resource cluster,
+      Resource smaller, Resource bigger) {
+    return smaller.getMemory() <= bigger.getMemory()
+        && smaller.getVirtualCores() <= bigger.getVirtualCores();
+  }
 }

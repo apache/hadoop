@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -58,7 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.RegularContainerAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -83,7 +84,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   private ResourceScheduler scheduler;
   
-  private ContainerAllocator containerAllocator;
+  private AbstractContainerAllocator containerAllocator;
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
@@ -118,7 +119,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       rc = scheduler.getResourceCalculator();
     }
     
-    containerAllocator = new RegularContainerAllocator(this, rc, rmContext);
+    containerAllocator = new ContainerAllocator(this, rc, rmContext);
   }
 
   synchronized public boolean containerCompleted(RMContainer rmContainer,
@@ -207,22 +208,24 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return rmContainer;
   }
 
-  public boolean unreserve(Priority priority,
+  public synchronized boolean unreserve(Priority priority,
       FiCaSchedulerNode node, RMContainer rmContainer) {
+    // Cancel increase request (if it has reserved increase request 
+    rmContainer.cancelIncreaseReservation();
+    
     // Done with the reservation?
-    if (unreserve(node, priority)) {
+    if (internalUnreserve(node, priority)) {
       node.unreserveResource(this);
 
       // Update reserved metrics
       queue.getMetrics().unreserveResource(getUser(),
-          rmContainer.getContainer().getResource());
+          rmContainer.getReservedResource());
       return true;
     }
     return false;
   }
 
-  @VisibleForTesting
-  public synchronized boolean unreserve(FiCaSchedulerNode node, Priority priority) {
+  private boolean internalUnreserve(FiCaSchedulerNode node, Priority priority) {
     Map<NodeId, RMContainer> reservedContainers =
       this.reservedContainers.get(priority);
 
@@ -241,7 +244,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         // Reset the re-reservation count
         resetReReservations(priority);
 
-        Resource resource = reservedContainer.getContainer().getResource();
+        Resource resource = reservedContainer.getReservedResource();
         this.attemptResourceUsage.decReserved(node.getPartition(), resource);
 
         LOG.info("Application " + getApplicationId() + " unreserved "
@@ -311,13 +314,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     ResourceRequest rr = ResourceRequest.newInstance(
         Priority.UNDEFINED, ResourceRequest.ANY,
         minimumAllocation, numCont);
-    ContainersAndNMTokensAllocation allocation =
-        pullNewlyAllocatedContainersAndNMTokens();
+    List<Container> newlyAllocatedContainers = pullNewlyAllocatedContainers();
+    List<Container> newlyIncreasedContainers = pullNewlyIncreasedContainers();
+    List<Container> newlyDecreasedContainers = pullNewlyDecreasedContainers();
+    List<NMToken> updatedNMTokens = pullUpdatedNMTokens();
     Resource headroom = getHeadroom();
     setApplicationHeadroomForMetrics(headroom);
-    return new Allocation(allocation.getContainerList(), headroom, null,
-      currentContPreemption, Collections.singletonList(rr),
-      allocation.getNMTokenList());
+    return new Allocation(newlyAllocatedContainers, headroom, null,
+        currentContPreemption, Collections.singletonList(rr), updatedNMTokens,
+        newlyIncreasedContainers, newlyDecreasedContainers);
   }
   
   synchronized public NodeId getNodeIdToUnreserve(Priority priority,
@@ -332,15 +337,23 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     if ((reservedContainers != null) && (!reservedContainers.isEmpty())) {
       for (Map.Entry<NodeId, RMContainer> entry : reservedContainers.entrySet()) {
         NodeId nodeId = entry.getKey();
-        Resource containerResource = entry.getValue().getContainer().getResource();
+        RMContainer reservedContainer = entry.getValue();
+        if (reservedContainer.hasIncreaseReservation()) {
+          // Currently, only regular container allocation supports continuous
+          // reservation looking, we don't support canceling increase request
+          // reservation when allocating regular container.
+          continue;
+        }
+        
+        Resource reservedResource = reservedContainer.getReservedResource();
         
         // make sure we unreserve one with at least the same amount of
         // resources, otherwise could affect capacity limits
-        if (Resources.lessThanOrEqual(rc, clusterResource,
-            resourceNeedUnreserve, containerResource)) {
+        if (Resources.fitsIn(rc, clusterResource, resourceNeedUnreserve,
+            reservedResource)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("unreserving node with reservation size: "
-                + containerResource
+                + reservedResource
                 + " in order to allocate container with size: " + resourceNeedUnreserve);
           }
           return nodeId;
@@ -373,6 +386,25 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     super.transferStateFromPreviousAttempt(appAttempt);
     this.headroomProvider = 
       ((FiCaSchedulerApp) appAttempt).getHeadroomProvider();
+  }
+  
+  public boolean reserveIncreasedContainer(Priority priority, 
+      FiCaSchedulerNode node,
+      RMContainer rmContainer, Resource reservedResource) {
+    // Inform the application
+    if (super.reserveIncreasedContainer(node, priority, rmContainer,
+        reservedResource)) {
+
+      queue.getMetrics().reserveResource(getUser(), reservedResource);
+
+      // Update the node
+      node.reserveResource(this, priority, rmContainer);
+      
+      // Succeeded
+      return true;
+    }
+    
+    return false;
   }
 
   public void reserve(Priority priority,

@@ -110,4 +110,9 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         );
   }
 
+  @Override
+  public boolean fitsIn(Resource cluster,
+      Resource smaller, Resource bigger) {
+    return smaller.getMemory() <= bigger.getMemory();
+  }
 }

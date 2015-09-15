@@ -56,6 +56,8 @@ public class RMAuditLogger {
     public static final String RELEASE_CONTAINER = "AM Released Container";
     public static final String UPDATE_APP_PRIORITY =
         "Update Application Priority Request";
+    public static final String CHANGE_CONTAINER_RESOURCE =
+        "AM Changed Container Resource";
 
     // Some commonly used descriptions
     public static final String UNAUTHORIZED_USER = "Unauthorized user";

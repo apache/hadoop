@@ -19,9 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -36,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -131,6 +136,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* the list of applications that are running on this node */
   private final List<ApplicationId> runningApplications =
       new ArrayList<ApplicationId>();
+  
+  private final Map<ContainerId, Container> toBeDecreasedContainers =
+      new HashMap<>();
+  
+  private final Map<ContainerId, Container> nmReportedIncreasedContainers =
+      new HashMap<>();
 
   private NodeHeartbeatResponse latestNodeHeartBeatResponse = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
@@ -180,6 +191,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
       .addTransition(NodeState.RUNNING, NodeState.RUNNING,
           RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenRunningTransition())
+      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
+          RMNodeEventType.DECREASE_CONTAINER,
+          new DecreaseContainersTransition())
       .addTransition(NodeState.RUNNING, NodeState.SHUTDOWN,
           RMNodeEventType.SHUTDOWN,
           new DeactivateNodeTransition(NodeState.SHUTDOWN))
@@ -484,6 +498,24 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       this.writeLock.unlock();
     }
   };
+  
+  @VisibleForTesting
+  public Collection<Container> getToBeDecreasedContainers() {
+    return toBeDecreasedContainers.values(); 
+  }
+  
+  @Override
+  public void updateNodeHeartbeatResponseForContainersDecreasing(
+      NodeHeartbeatResponse response) {
+    this.writeLock.lock();
+    
+    try {
+      response.addAllContainersToDecrease(toBeDecreasedContainers.values());
+      toBeDecreasedContainers.clear();
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
 
   @Override
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse() {
@@ -836,6 +868,19 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           RMNodeFinishedContainersPulledByAMEvent) event).getContainers());
     }
   }
+  
+  public static class DecreaseContainersTransition
+      implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+ 
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      RMNodeDecreaseContainerEvent de = (RMNodeDecreaseContainerEvent) event;
+
+      for (Container c : de.getToBeDecreasedContainers()) {
+        rmNode.toBeDecreasedContainers.put(c.getId(), c);
+      }
+    }
+  }
 
   public static class DeactivateNodeTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
@@ -986,6 +1031,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       rmNode.handleContainerStatus(statusEvent.getContainers());
+      rmNode.handleReportedIncreasedContainers(
+          statusEvent.getNMReportedIncreasedContainers());
 
       List<LogAggregationReport> logAggregationReportsForApps =
           statusEvent.getLogAggregationReportsForApps();
@@ -1079,6 +1126,34 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
     return nlm.getLabelsOnNode(nodeId);
   }
+  
+  private void handleReportedIncreasedContainers(
+      List<Container> reportedIncreasedContainers) {
+    for (Container container : reportedIncreasedContainers) {
+      ContainerId containerId = container.getId();
+
+      // Don't bother with containers already scheduled for cleanup, or for
+      // applications already killed. The scheduler doens't need to know any
+      // more about this container
+      if (containersToClean.contains(containerId)) {
+        LOG.info("Container " + containerId + " already scheduled for "
+            + "cleanup, no further processing");
+        continue;
+      }
+
+      ApplicationId containerAppId =
+          containerId.getApplicationAttemptId().getApplicationId();
+
+      if (finishedApplications.contains(containerAppId)) {
+        LOG.info("Container " + containerId
+            + " belongs to an application that is already killed,"
+            + " no further processing");
+        continue;
+      }
+      
+      this.nmReportedIncreasedContainers.put(containerId, container);
+    }
+  }
 
   private void handleContainerStatus(List<ContainerStatus> containerStatuses) {
     // Filter the map to only obtain just launched containers and finished
@@ -1149,4 +1224,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  @Override
+  public List<Container> pullNewlyIncreasedContainers() {
+    try {
+      writeLock.lock();
+
+      if (nmReportedIncreasedContainers.isEmpty()) {
+        return Collections.EMPTY_LIST;
+      } else {
+        List<Container> container =
+            new ArrayList<Container>(nmReportedIncreasedContainers.values());
+        nmReportedIncreasedContainers.clear();
+        return container;
+      }
+      
+    } finally {
+      writeLock.unlock();
+    }
+   }
  }
