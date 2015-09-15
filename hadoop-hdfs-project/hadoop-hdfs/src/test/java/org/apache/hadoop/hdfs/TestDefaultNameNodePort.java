@@ -24,7 +24,9 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+
 import org.junit.Test;
 
 /** Test NameNode port defaulting code. */
@@ -33,9 +35,9 @@ public class TestDefaultNameNodePort {
   @Test
   public void testGetAddressFromString() throws Exception {
     assertEquals(NameNode.getAddress("foo").getPort(),
-                 NameNode.DEFAULT_PORT);
+                 HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     assertEquals(NameNode.getAddress("hdfs://foo/").getPort(),
-                 NameNode.DEFAULT_PORT);
+                 HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     assertEquals(NameNode.getAddress("hdfs://foo:555").getPort(),
                  555);
     assertEquals(NameNode.getAddress("foo:555").getPort(),
@@ -46,11 +48,13 @@ public class TestDefaultNameNodePort {
   public void testGetAddressFromConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://foo/");
-    assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
+    assertEquals(NameNode.getAddress(conf).getPort(),
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     FileSystem.setDefaultUri(conf, "hdfs://foo:555/");
     assertEquals(NameNode.getAddress(conf).getPort(), 555);
     FileSystem.setDefaultUri(conf, "foo");
-    assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
+    assertEquals(NameNode.getAddress(conf).getPort(),
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
   }
 
   @Test
@@ -58,7 +62,7 @@ public class TestDefaultNameNodePort {
     assertEquals(NameNode.getUri(new InetSocketAddress("foo", 555)),
                  URI.create("hdfs://foo:555"));
     assertEquals(NameNode.getUri(new InetSocketAddress("foo",
-                                                       NameNode.DEFAULT_PORT)),
-                 URI.create("hdfs://foo"));
+            HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT)),
+        URI.create("hdfs://foo"));
   }
 }

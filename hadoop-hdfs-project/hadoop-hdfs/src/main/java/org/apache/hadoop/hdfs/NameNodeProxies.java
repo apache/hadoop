@@ -509,7 +509,8 @@ public class NameNodeProxies {
     // Check the port in the URI, if it is logical.
     if (checkPort && providerNN.useLogicalURI()) {
       int port = nameNodeUri.getPort();
-      if (port > 0 && port != NameNode.DEFAULT_PORT) {
+      if (port > 0 &&
+          port != HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) {
         // Throwing here without any cleanup is fine since we have not
         // actually created the underlying proxies yet.
         throw new IOException("Port " + port + " specified in URI "

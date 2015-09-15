@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
@@ -89,7 +90,7 @@ public class TestAppendSnapshotTruncate {
     cluster = new MiniDFSCluster.Builder(conf)
         .format(true)
         .numDataNodes(DATANODE_NUM)
-        .nameNodePort(NameNode.DEFAULT_PORT)
+        .nameNodePort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT)
         .waitSafeMode(true)
         .build();
     dfs = cluster.getFileSystem();
