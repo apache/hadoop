@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
@@ -85,6 +87,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResp
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -600,6 +603,55 @@ public class AdminService extends CompositeService implements
     UpdateNodeResourceResponse response = 
         UpdateNodeResourceResponse.newInstance();
     return response;
+  }
+
+  @Override
+  public RefreshNodesResourcesResponse refreshNodesResources(
+      RefreshNodesResourcesRequest request)
+      throws YarnException, StandbyException {
+    String argName = "refreshNodesResources";
+    UserGroupInformation user = checkAcls(argName);
+    final String msg = "refresh nodes.";
+
+    checkRMStatus(user.getShortUserName(), argName, msg);
+
+    RefreshNodesResourcesResponse response =
+        recordFactory.newRecordInstance(RefreshNodesResourcesResponse.class);
+
+    try {
+      Configuration conf = getConfig();
+      Configuration configuration = new Configuration(conf);
+      DynamicResourceConfiguration newconf;
+
+      InputStream DRInputStream =
+        this.rmContext.getConfigurationProvider()
+        .getConfigurationInputStream(configuration,
+          YarnConfiguration.DR_CONFIGURATION_FILE);
+      if (DRInputStream != null) {
+        configuration.addResource(DRInputStream);
+        newconf = new DynamicResourceConfiguration(configuration, false);
+      } else {
+        newconf = new DynamicResourceConfiguration(configuration, true);
+      }
+
+      if (newconf.getNodes().length == 0) {
+        RMAuditLogger.logSuccess(user.getShortUserName(), argName,
+            "AdminService");
+        return response;
+      } else {
+        Map<NodeId, ResourceOption> nodeResourceMap =
+          newconf.getNodeResourceMap();
+
+        UpdateNodeResourceRequest updateRequest =
+          UpdateNodeResourceRequest.newInstance(nodeResourceMap);
+        updateNodeResource(updateRequest);
+        RMAuditLogger.logSuccess(user.getShortUserName(), argName,
+          "AdminService");
+        return response;
+      }
+    } catch (IOException ioe) {
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
+    }
   }
 
   private synchronized Configuration getConfiguration(Configuration conf,

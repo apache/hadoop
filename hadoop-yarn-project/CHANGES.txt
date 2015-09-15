@@ -190,6 +190,10 @@ Release 2.8.0 - UNRELEASED
     YARN-2884. Added a proxy service in NM to proxy the the communication
     between AM and RM. (Kishore Chaliparambil via jianhe) 
 
+    YARN-313. Add Admin API for supporting node resource configuration in
+    command line. (Inigo Goiri, Kenji Kikushima and Junping Du 
+    via junping_du)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
