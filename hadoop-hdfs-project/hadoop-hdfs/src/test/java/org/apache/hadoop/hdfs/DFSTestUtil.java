@@ -68,6 +68,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.UnhandledException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -133,6 +134,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
@@ -1856,4 +1858,21 @@ public class DFSTestUtil {
     }
   }
 
+  public static void waitForMetric(final JMXGet jmx, final String metricName, final int expectedValue)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          final int currentValue = Integer.parseInt(jmx.getValue(metricName));
+          LOG.info("Waiting for " + metricName +
+                       " to reach value " + expectedValue +
+                       ", current value = " + currentValue);
+          return currentValue == expectedValue;
+        } catch (Exception e) {
+          throw new UnhandledException("Test failed due to unexpected exception", e);
+        }
+      }
+    }, 1000, Integer.MAX_VALUE);
+  }
 }

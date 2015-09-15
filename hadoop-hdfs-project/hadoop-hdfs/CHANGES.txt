@@ -1338,6 +1338,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9069. TestNameNodeMetricsLogger failing -port in use.
     (stevel)
 
+    HDFS-9067. o.a.h.hdfs.server.datanode.fsdataset.impl.TestLazyWriter
+    is failing in trunk (Surendra Singh Lilhore via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
