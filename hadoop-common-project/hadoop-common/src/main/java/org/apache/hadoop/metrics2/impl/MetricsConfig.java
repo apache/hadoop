@@ -58,6 +58,9 @@ class MetricsConfig extends SubsetConfiguration {
   static final String PERIOD_KEY = "period";
   static final int PERIOD_DEFAULT = 10; // seconds
 
+  // For testing, this will have the priority.
+  static final String PERIOD_MILLIS_KEY = "periodMillis";
+
   static final String QUEUE_CAPACITY_KEY = "queue.capacity";
   static final int QUEUE_CAPACITY_DEFAULT = 1;
 
