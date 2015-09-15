@@ -424,3 +424,6 @@
 
     HDFS-7351. Document the HDFS Erasure Coding feature.
     (umamahesh and Zhe Zhang via wang)
+
+    HDFS-8899. Erasure Coding: use threadpool for EC recovery tasks on DataNode.
+    (Rakesh R via zhz)
