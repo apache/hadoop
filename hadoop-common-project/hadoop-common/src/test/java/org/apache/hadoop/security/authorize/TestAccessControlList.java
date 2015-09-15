@@ -37,6 +37,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Test;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class TestAccessControlList {
@@ -449,6 +453,11 @@ public class TestAccessControlList {
     assertUserAllowed(susan, acl);
     assertUserAllowed(barbara, acl);
     assertUserAllowed(ian, acl);
+
+    acl = new AccessControlList("");
+    UserGroupInformation spyUser = spy(drwho);
+    acl.isUserAllowed(spyUser);
+    verify(spyUser, never()).getGroupNames();
   }
 
   private void assertUserAllowed(UserGroupInformation ugi,
