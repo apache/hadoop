@@ -84,7 +84,7 @@ public class TestDistributedShell {
     if (yarnCluster == null) {
       yarnCluster =
           new MiniYARNCluster(TestDistributedShell.class.getSimpleName(), 1,
-              numNodeManager, 1, 1);
+              numNodeManager, 1, 1, true);
       yarnCluster.init(conf);
       
       yarnCluster.start();
