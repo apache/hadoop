@@ -422,3 +422,5 @@
     HDFS-8975. Erasure coding : Fix random failure in TestSafeModeWithStripedFile
     (J.Andreina via vinayakumarb)
 
+    HDFS-7351. Document the HDFS Erasure Coding feature.
+    (umamahesh and Zhe Zhang via wang)

@@ -36,6 +36,7 @@ HDFS Commands Guide
     * [crypto](#crypto)
     * [datanode](#datanode)
     * [dfsadmin](#dfsadmin)
+    * [erasurecode](#erasurecode)
     * [haadmin](#haadmin)
     * [journalnode](#journalnode)
     * [mover](#mover)
@@ -378,6 +379,25 @@ Usage:
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 Runs a HDFS dfsadmin client.
+
+### `erasurecode`
+
+Usage:
+
+       hdfs erasurecode [generic options]
+         [-setPolicy [-s <policyName>] <path>]
+         [-getPolicy <path>]
+         [-listPolicies]
+         [-usage [cmd ...]]
+         [-help [cmd ...]]
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+|-setPolicy| Set a specified ErasureCoding policy to a directory|
+|-getPolicy| Get ErasureCoding policy information about a specified path|
+|-listPolicies| Lists all supported ErasureCoding policies|
+
+Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.
 
 ### `haadmin`
 

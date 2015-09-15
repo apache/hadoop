@@ -98,6 +98,7 @@
       <item name="Storage Policies" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
       <item name="Memory Storage Support" href="hadoop-project-dist/hadoop-hdfs/MemoryStorage.html"/>
       <item name="Synthetic Load Generator" href="hadoop-project-dist/hadoop-hdfs/SLGUserGuide.html"/>
+      <item name="Erasure Coding" href="hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
