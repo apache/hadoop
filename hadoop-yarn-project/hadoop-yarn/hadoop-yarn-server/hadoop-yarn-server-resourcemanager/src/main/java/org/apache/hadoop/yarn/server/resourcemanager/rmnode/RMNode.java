@@ -37,9 +37,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
  */
 public interface RMNode {
 
-  /** negative value means no timeout */
-  public static final int OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT = -1;
-  
   /**
    * the node id of of this node.
    * @return the node id of this node.

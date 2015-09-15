@@ -39,6 +39,9 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 public class YarnConfiguration extends Configuration {
 
   @Private
+  public static final String DR_CONFIGURATION_FILE= "dynamic-resources.xml";
+
+  @Private
   public static final String CS_CONFIGURATION_FILE= "capacity-scheduler.xml";
 
   @Private
@@ -57,6 +60,7 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final List<String> RM_CONFIGURATION_FILES =
       Collections.unmodifiableList(Arrays.asList(
+          DR_CONFIGURATION_FILE,
           CS_CONFIGURATION_FILE,
           HADOOP_POLICY_CONFIGURATION_FILE,
           YARN_SITE_CONFIGURATION_FILE,

@@ -76,6 +76,12 @@ message UpdateNodeResourceRequestProto {
 message UpdateNodeResourceResponseProto {
 }
 
+message RefreshNodesResourcesRequestProto {
+}
+
+message RefreshNodesResourcesResponseProto {
+}
+
 message AddToClusterNodeLabelsRequestProto {
   repeated NodeLabelProto nodeLabels = 1;
 }

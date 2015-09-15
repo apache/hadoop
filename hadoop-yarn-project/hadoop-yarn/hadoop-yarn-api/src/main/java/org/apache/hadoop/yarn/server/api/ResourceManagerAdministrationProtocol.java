@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.api;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
@@ -51,6 +52,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -74,7 +77,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Private
   @Idempotent
-  public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
+  RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
   throws StandbyException, YarnException, IOException;
 
@@ -107,9 +110,14 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Private
   @Idempotent
   public UpdateNodeResourceResponse updateNodeResource(
-      UpdateNodeResourceRequest request) 
-  throws YarnException, IOException;
-   
+      UpdateNodeResourceRequest request) throws YarnException, IOException;
+
+  @Private
+  @Evolving
+  @Idempotent
+  public RefreshNodesResourcesResponse refreshNodesResources(
+      RefreshNodesResourcesRequest request) throws YarnException, IOException;
+
   @Private
   @Idempotent
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(

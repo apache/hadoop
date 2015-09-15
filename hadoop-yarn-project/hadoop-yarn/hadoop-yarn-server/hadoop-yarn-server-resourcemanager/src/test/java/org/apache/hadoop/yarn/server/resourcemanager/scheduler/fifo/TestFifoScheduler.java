@@ -327,7 +327,7 @@ public class TestFifoScheduler {
     
     NodeResourceUpdateSchedulerEvent node0ResourceUpdate = new 
         NodeResourceUpdateSchedulerEvent(node0, ResourceOption.newInstance(
-            newResource, RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT));
+            newResource, ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT));
     scheduler.handle(node0ResourceUpdate);
     
     // SchedulerNode's total resource and available resource are changed.

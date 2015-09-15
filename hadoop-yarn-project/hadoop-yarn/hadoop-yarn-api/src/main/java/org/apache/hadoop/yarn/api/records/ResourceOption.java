@@ -36,6 +36,9 @@ public abstract class ResourceOption {
     return resourceOption;
   }
 
+  /** Negative value means no timeout. */
+  public static final int OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT = -1;
+
   /**
    * Get the <em>resource</em> of the ResourceOption.
    * @return <em>resource</em> of the ResourceOption
