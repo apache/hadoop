@@ -480,6 +480,7 @@ public abstract class LazyPersistTestCase {
 
   protected final void verifyRamDiskJMXMetric(String metricName,
       long expectedValue) throws Exception {
+    waitForMetric(metricName, (int)expectedValue);
     assertEquals(expectedValue, Integer.parseInt(jmx.getValue(metricName)));
   }
 
