@@ -21,12 +21,15 @@
 #include <asio/error_code.hpp>
 #include <asio/buffer.hpp>
 #include <asio/streambuf.hpp>
+#include <asio/io_service.hpp>
+
 #include <gmock/gmock.h>
 
 namespace hdfs {
 
 class MockConnectionBase {
 public:
+  MockConnectionBase(::asio::io_service *io_service);
   virtual ~MockConnectionBase();
   typedef std::pair<asio::error_code, std::string> ProducerResult;
   template <class MutableBufferSequence, class Handler>
@@ -34,7 +37,7 @@ public:
     if (produced_.size() == 0) {
       ProducerResult r = Produce();
       if (r.first) {
-        handler(r.first, 0);
+        io_service_->post(std::bind(handler, r.first, 0));
       }
       asio::mutable_buffers_1 data = produced_.prepare(r.second.size());
       asio::buffer_copy(data, asio::buffer(r.second));
@@ -44,17 +47,18 @@ public:
     size_t len = std::min(asio::buffer_size(buf), produced_.size());
     asio::buffer_copy(buf, produced_.data());
     produced_.consume(len);
-    handler(asio::error_code(), len);
+    io_service_->post(std::bind(handler, asio::error_code(), len));
   }
 
   template <class ConstBufferSequence, class Handler>
   void async_write_some(const ConstBufferSequence &buf, Handler &&handler) {
     // CompletionResult res = OnWrite(buf);
-    handler(asio::error_code(), asio::buffer_size(buf));
+    io_service_->post(std::bind(handler, asio::error_code(), asio::buffer_size(buf)));
   }
 
 protected:
   virtual ProducerResult Produce() = 0;
+  ::asio::io_service *io_service_;
 
 private:
   asio::streambuf produced_;
