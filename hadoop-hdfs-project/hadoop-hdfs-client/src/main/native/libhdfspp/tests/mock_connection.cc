@@ -20,6 +20,10 @@
 
 namespace hdfs {
 
+MockConnectionBase::MockConnectionBase(::asio::io_service *io_service)
+    : io_service_(io_service)
+{}
+
 MockConnectionBase::~MockConnectionBase() {}
 
 }
