@@ -113,6 +113,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -1950,8 +1951,7 @@ public class TestCapacityScheduler {
   @Test
   public void testMoveAllAppsInvalidDestination() throws Exception {
     MockRM rm = setUpMove();
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm.getResourceScheduler();
+    YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
     RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
@@ -2009,8 +2009,7 @@ public class TestCapacityScheduler {
   @Test
   public void testMoveAllAppsInvalidSource() throws Exception {
     MockRM rm = setUpMove();
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm.getResourceScheduler();
+    YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
     RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
@@ -2113,8 +2112,7 @@ public class TestCapacityScheduler {
   @Test
   public void testKillAllAppsInvalidSource() throws Exception {
     MockRM rm = setUpMove();
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm.getResourceScheduler();
+    YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
     RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");

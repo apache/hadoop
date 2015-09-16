@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -177,9 +176,8 @@ public class AppInfo {
             allocatedVCores = usedResources.getVirtualCores();
             runningContainers = resourceReport.getNumUsedContainers();
           }
-          resourceRequests =
-              ((AbstractYarnScheduler) rm.getRMContext().getScheduler())
-                .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
+          resourceRequests = rm.getRMContext().getScheduler()
+              .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
         }
       }
 

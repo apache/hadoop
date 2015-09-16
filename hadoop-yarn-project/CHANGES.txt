@@ -842,6 +842,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4151. Fix findbugs errors in hadoop-yarn-server-common module.
     (Meng Ding via wangda)
 
+    YARN-4078. Add getPendingResourceRequestForAttempt in YarnScheduler interface.
+    (Naganarasimha G R via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

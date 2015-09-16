@@ -337,4 +337,10 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @throws YarnException
    */
   void setClusterMaxPriority(Configuration conf) throws YarnException;
+
+  /**
+   * @param attemptId
+   */
+  List<ResourceRequest> getPendingResourceRequestsForAttempt(
+      ApplicationAttemptId attemptId);
 }
