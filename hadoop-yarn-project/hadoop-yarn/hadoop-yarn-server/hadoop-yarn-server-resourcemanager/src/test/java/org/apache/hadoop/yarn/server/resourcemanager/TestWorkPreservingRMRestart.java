@@ -23,14 +23,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,10 +58,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueNotFoundException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
@@ -73,9 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
@@ -616,8 +610,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Wait for RM to settle down on recovering containers;
     Thread.sleep(3000);
 
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm2.getResourceScheduler();
+    YarnScheduler scheduler = rm2.getResourceScheduler();
     // Previous AM failed, The failed AM should once again release the
     // just-recovered containers.
     assertNull(scheduler.getRMContainer(runningContainer.getContainerId()));
@@ -669,8 +662,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Wait for RM to settle down on recovering containers;
     Thread.sleep(3000);
 
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm2.getResourceScheduler();
+    YarnScheduler scheduler = rm2.getResourceScheduler();
 
     // scheduler should not recover containers for finished apps.
     assertNull(scheduler.getRMContainer(runningContainer.getContainerId()));
@@ -724,9 +716,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     MockAM am1_1 = MockRM.launchAndRegisterAM(app1_1, rm1, nm1);
     
     RMAppAttempt attempt0 = app1_1.getCurrentAppAttempt();
-    AbstractYarnScheduler scheduler =
-        ((AbstractYarnScheduler) rm1.getResourceScheduler());
-    
+    YarnScheduler scheduler = rm1.getResourceScheduler();
+
     Assert.assertTrue(scheduler.getRMContainer(
         attempt0.getMasterContainer().getId()).isAMContainer());
 
@@ -742,7 +733,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
 
-    scheduler = ((AbstractYarnScheduler) rm2.getResourceScheduler());
+    scheduler = rm2.getResourceScheduler();
     Assert.assertTrue(scheduler.getRMContainer(
         attempt0.getMasterContainer().getId()).isAMContainer());
   }
