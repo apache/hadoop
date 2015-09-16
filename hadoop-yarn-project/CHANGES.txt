@@ -928,6 +928,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4158. Remove duplicate close for LogWriter in
     AppLogAggregatorImpl#uploadLogsForContainers (Zhihai Xu via jlowe)
 
+    YARN-3433. Jersey tests failing with Port in Use -again.
+    (Brahma Reddy Battula)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
