@@ -87,7 +87,6 @@
 	<button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
 	<div class="alert-body" id="alert-panel-body"></div>
       </div>
-
     <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
       aria-hidden="true">
       <div class="modal-dialog">
@@ -169,6 +168,46 @@
 
     </div>
 
+    <script type="text/x-template" id="explorer-popover-perm-info">
+      <div class="explorer-popover-perm-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="text-center">User</th>
+              <th class="text-center">Group</th>
+              <th class="text-center">Other</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><label><input type="checkbox" data-bit="8" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="5" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="2" /> Read</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="7" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="4" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="1" /> Write</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="6" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="3" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="0" /> Execute</label></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="text-align: right; margin-right: 10px">
+          <label><input type="checkbox" id="explorer-perm-sticky" data-bit="9" /> Sticky bit</label>
+        </div>
+        <hr/>
+        <div style="text-align: right">
+          <button type="button" class="btn" id="explorer-perm-cancel">Cancel</button>
+          <button type="button" class="btn btn-success" id="explorer-set-perm-button"
+                  data-complete-text="Updating...">Set</button>
+        </div>
+      </div>
+    </script>
+
     <script type="text/x-dust-template" id="tmpl-explorer">
       <table class="table">
         <thead>
@@ -181,13 +220,17 @@
             <th>Replication</th>
             <th>Block Size</th>
             <th>Name</th>
-            <th>Delete</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {#FileStatus}
-          <tr inode-path="{pathSuffix}" class="explorer-entry">
-            <td>{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</td>
+          <tr inode-path="{pathSuffix}" data-permission="{permission}"
+            class="explorer-entry">
+            <td><span class="explorer-perm-links editable-click">
+              {type|helper_to_directory}{permission|helper_to_permission}
+              {aclBit|helper_to_acl_bit}
+              </span></td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>

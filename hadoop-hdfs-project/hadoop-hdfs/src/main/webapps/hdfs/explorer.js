@@ -22,6 +22,7 @@
   // in the preview.
   var TAIL_CHUNK_SIZE = 32768;
 
+  //This stores the current directory which is being browsed
   var current_directory = "";
 
   function show_err_msg(msg) {
@@ -99,6 +100,50 @@
         });
     })
     $('#delete-modal').modal();
+  }
+
+  /* This method loads the checkboxes on the permission info modal. It accepts
+   * the octal permissions, eg. '644' or '755' and infers the checkboxes that
+   * should be true and false
+   */
+  function view_perm_details(e, filename, abs_path, perms) {
+    $('.explorer-perm-links').popover('destroy');
+    e.popover({html: true, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
+      .on('shown.bs.popover', function(e) {
+        var popover = $(this), parent = popover.parent();
+        //Convert octal to binary permissions
+        var bin_perms = parseInt(perms, 8).toString(2);
+        bin_perms = bin_perms.length == 9 ? "0" + bin_perms : bin_perms;
+        parent.find('#explorer-perm-cancel').on('click', function() { popover.popover('destroy'); });
+        parent.find('#explorer-set-perm-button').off().click(function() { set_permissions(abs_path); });
+        parent.find('input[type=checkbox]').each(function(idx, element) {
+          var e = $(element);
+          e.prop('checked', bin_perms.charAt(9 - e.attr('data-bit')) == '1');
+        });
+      })
+      .popover('show');
+  }
+
+  // Use WebHDFS to set permissions on an absolute path
+  function set_permissions(abs_path) {
+    var p = 0;
+    $.each($('.popover .explorer-popover-perm-body input:checked'), function(idx, e) {
+      p |= 1 << (+$(e).attr('data-bit'));
+    });
+
+    var permission_mask = p.toString(8);
+
+    // PUT /webhdfs/v1/<path>?op=SETPERMISSION&permission=<permission>
+    var url = '/webhdfs/v1' + encode_path(abs_path) +
+      '?op=SETPERMISSION' + '&permission=' + permission_mask;
+
+    $.ajax(url, { type: 'PUT'
+      }).done(function(data) {
+        browse_directory(current_directory);
+      }).error(network_error_handler(url))
+      .complete(function() {
+        $('.explorer-perm-links').popover('destroy');
+      });
   }
 
   function encode_path(abs_path) {
@@ -198,6 +243,14 @@
           }
         });
 
+        //Set the handler for changing permissions
+        $('.explorer-perm-links').click(function() {
+          var filename = $(this).closest('tr').attr('inode-path');
+          var abs_path = append_path(current_directory, filename);
+          var perms = $(this).closest('tr').attr('data-permission');
+          view_perm_details($(this), filename, abs_path, perms);
+        });
+
         $('.explorer-entry .glyphicon-trash').click(function() {
           var inode_name = $(this).closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
@@ -223,8 +276,7 @@
   }
 
   $('#btn-create-directory').on('show.bs.modal', function(event) {
-    var modal = $(this)
-    $('#new_directory_pwd').html(current_directory);
+    $('#new_directory_pwd').text(current_directory);
   });
 
   $('#btn-create-directory-send').click(function () {
