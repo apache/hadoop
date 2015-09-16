@@ -22,6 +22,9 @@ Release 2.7.3 - UNRELEASED
     ImpersonationProvider, DefaultImpersonationProvider, and DistCp.
     (Arshad Mohammad via aajisaka)
 
+    HADOOP-12374. Updated expunge command description.
+    (WeiWei Yang via eyang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

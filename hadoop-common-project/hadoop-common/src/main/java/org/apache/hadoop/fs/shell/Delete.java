@@ -179,11 +179,14 @@ class Delete {
     }
   }
 
-  /** empty the trash */
+  // delete files from the trash that are older
+  // than the retention threshold.
   static class Expunge extends FsCommand {
     public static final String NAME = "expunge";
     public static final String USAGE = "";
-    public static final String DESCRIPTION = "Empty the Trash";
+    public static final String DESCRIPTION =
+        "Delete files from the trash that are older " +
+            "than the retention threshold";
 
     // TODO: should probably allow path arguments for the filesystems
     @Override
