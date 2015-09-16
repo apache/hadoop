@@ -521,6 +521,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11746. rewrite test-patch.sh (aw)
 
+    HADOOP-12416. Trash messages should be handled by Logger instead of being
+    delivered on System.out. (Mingliang Liu via aajisaka)
+
   NEW FEATURES
 
     HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
