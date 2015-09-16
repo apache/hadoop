@@ -1352,6 +1352,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9067. o.a.h.hdfs.server.datanode.fsdataset.impl.TestLazyWriter
     is failing in trunk (Surendra Singh Lilhore via vinayakumarb)
 
+    HDFS-9072. Fix random failures in TestJMXGet.
+    (J.Andreina via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
