@@ -713,6 +713,7 @@ public abstract class AbstractYarnScheduler
     // specific scheduler.
   }
 
+  @Override
   public Priority getMaxClusterLevelAppPriority() {
     return maxClusterLevelAppPriority;
   }

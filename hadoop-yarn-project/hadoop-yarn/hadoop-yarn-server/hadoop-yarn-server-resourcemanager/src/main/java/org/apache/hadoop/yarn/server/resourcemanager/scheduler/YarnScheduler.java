@@ -343,4 +343,11 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    */
   List<ResourceRequest> getPendingResourceRequestsForAttempt(
       ApplicationAttemptId attemptId);
+
+  /**
+   * Get cluster max priority.
+   * 
+   * @return maximum priority of cluster
+   */
+  Priority getMaxClusterLevelAppPriority();
 }

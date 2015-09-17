@@ -194,6 +194,9 @@ Release 2.8.0 - UNRELEASED
     command line. (Inigo Goiri, Kenji Kikushima and Junping Du 
     via junping_du)
 
+    YARN-4034. Render cluster Max Priority in scheduler metrics in RM web
+    UI. (Rohith Sharma K S via jianhe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

@@ -158,7 +158,9 @@ class CapacitySchedulerPage extends RmView {
       _("Default Node Label Expression:",
               lqinfo.getDefaultNodeLabelExpression() == null
                   ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
-                  : lqinfo.getDefaultNodeLabelExpression());
+                  : lqinfo.getDefaultNodeLabelExpression()).
+      _("Default Application Priority:",
+              Integer.toString(lqinfo.getDefaultApplicationPriority()));
     }
   }
 
