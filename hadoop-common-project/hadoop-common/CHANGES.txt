@@ -1129,6 +1129,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12407. Test failing: hadoop.ipc.TestSaslRPC. (stevel)
 
+    HADOOP-12417. TestWebDelegationToken failing with port in use.
+    (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
