@@ -41,6 +41,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
   protected String defaultNodeLabelExpression;
+  protected int defaultPriority;
 
   @XmlTransient
   protected String orderingPolicyInfo;
@@ -64,6 +65,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     preemptionDisabled = q.getPreemptionDisabled();
     orderingPolicyInfo = q.getOrderingPolicy().getInfo();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
+    defaultPriority = q.getDefaultApplicationPriority().getPriority();
   }
 
   public int getNumActiveApplications() {
@@ -121,5 +123,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public String getDefaultNodeLabelExpression() {
     return defaultNodeLabelExpression;
+  }
+
+  public int getDefaultApplicationPriority() {
+    return defaultPriority;
   }
 }
