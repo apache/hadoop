@@ -429,3 +429,6 @@
     (Rakesh R via zhz)
 
     HDFS-9088. Cleanup erasure coding documentation. (wang via zhz)
+
+    HDFS-9097. Erasure coding: update EC command "-s" flag to "-p" when 
+    specifying policy. (zhz)

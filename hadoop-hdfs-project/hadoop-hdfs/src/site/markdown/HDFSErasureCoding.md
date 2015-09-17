@@ -110,7 +110,7 @@ Deployment
   HDFS provides an `erasurecode` subcommand to perform administrative commands related to erasure coding.
 
        hdfs erasurecode [generic options]
-         [-setPolicy [-s <policyName>] <path>]
+         [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
          [-listPolicies]
          [-usage [cmd ...]]
@@ -118,7 +118,7 @@ Deployment
 
 Below are the details about each command.
 
- *  `[-setPolicy [-s <policyName>] <path>]`
+ *  `[-setPolicy [-p <policyName>] <path>]`
 
     Sets an ErasureCoding policy on a directory at the specified path.
 

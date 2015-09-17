@@ -80,11 +80,11 @@ public abstract class ECCommand extends Command {
    */
   static class SetECPolicyCommand extends ECCommand {
     public static final String NAME = "setPolicy";
-    public static final String USAGE = "[-s <policyName>] <path>";
+    public static final String USAGE = "[-p <policyName>] <path>";
     public static final String DESCRIPTION = 
         "Set a specified erasure coding policy to a directory\n"
         + "Options :\n"
-        + "  -s <policyName> : erasure coding policy name to encode files. "
+        + "  -p <policyName> : erasure coding policy name to encode files. "
         + "If not passed the default policy will be used\n"
         + "  <path>  : Path to a directory. Under this directory "
         + "files will be encoded using specified erasure coding policy";
@@ -93,7 +93,7 @@ public abstract class ECCommand extends Command {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      ecPolicyName = StringUtils.popOptionWithArgument("-s", args);
+      ecPolicyName = StringUtils.popOptionWithArgument("-p", args);
       if (args.isEmpty()) {
         throw new HadoopIllegalArgumentException("<path> is missing");
       }
