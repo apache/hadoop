@@ -19,6 +19,8 @@
 #define LIB_RPC_RPC_CONNECTION_H_
 
 #include "rpc_engine.h"
+
+#include "common/logging.h"
 #include "common/util.h"
 
 #include <asio/connect.hpp>
@@ -30,7 +32,7 @@ namespace hdfs {
 template <class NextLayer> class RpcConnectionImpl : public RpcConnection {
 public:
   RpcConnectionImpl(RpcEngine *engine);
-  virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+  virtual void Connect(const ::asio::ip::tcp::endpoint &server,
                        Callback &&handler) override;
   virtual void Handshake(Callback &&handler) override;
   virtual void Shutdown() override;
@@ -39,23 +41,22 @@ public:
   virtual void OnRecvCompleted(const ::asio::error_code &ec,
                                size_t transferred) override;
 
+  NextLayer &next_layer() { return next_layer_; }
 private:
+  const Options options_;
   NextLayer next_layer_;
 };
 
 template <class NextLayer>
 RpcConnectionImpl<NextLayer>::RpcConnectionImpl(RpcEngine *engine)
-    : RpcConnection(engine)
-    , next_layer_(engine->io_service())
-{}
+    : RpcConnection(engine), options_(engine->options()),
+      next_layer_(engine->io_service()) {}
 
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Connect(
-    const std::vector<::asio::ip::tcp::endpoint> &server, Callback &&handler) {
-  ::asio::async_connect(
-      next_layer_, server.begin(), server.end(),
-      [handler](const ::asio::error_code &ec,
-                std::vector<::asio::ip::tcp::endpoint>::const_iterator) {
+    const ::asio::ip::tcp::endpoint &server, Callback &&handler) {
+  next_layer_.async_connect(server,
+      [handler](const ::asio::error_code &ec) {
         handler(ToStatus(ec));
       });
 }
@@ -79,9 +80,10 @@ void RpcConnectionImpl<NextLayer>::OnSendCompleted(const ::asio::error_code &ec,
 
   request_over_the_wire_.reset();
   if (ec) {
-    // TODO: Current RPC has failed -- we should abandon the
+    // Current RPC has failed -- abandon the
     // connection and do proper clean up
-    assert(false && "Unimplemented");
+    ClearAndDisconnect(ec);
+    return;
   }
 
   if (!pending_requests_.size()) {
@@ -93,7 +95,10 @@ void RpcConnectionImpl<NextLayer>::OnSendCompleted(const ::asio::error_code &ec,
   requests_on_fly_[req->call_id()] = req;
   request_over_the_wire_ = req;
 
-  // TODO: set the timeout for the RPC request
+  req->timer().expires_from_now(
+      std::chrono::milliseconds(options_.rpc_timeout));
+  req->timer().async_wait(std::bind(
+      &RpcConnectionImpl<NextLayer>::HandleRpcTimeout, this, req, _1));
 
   asio::async_write(
       next_layer_, asio::buffer(req->payload()),
@@ -115,7 +120,9 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
     // The event loop has been shut down. Ignore the error.
     return;
   default:
-    assert(false && "Unimplemented");
+    LOG_WARN() << "Network error during RPC: " << ec.message();
+    ClearAndDisconnect(ec);
+    return;
   }
 
   if (resp_state_ == kReadLength) {
@@ -131,7 +138,8 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
     resp_length_ = ntohl(resp_length_);
     resp_data_.resize(resp_length_);
     asio::async_read(next_layer_, ::asio::buffer(resp_data_),
-                     std::bind(&RpcConnectionImpl<NextLayer>::OnRecvCompleted, this, _1, _2));
+                     std::bind(&RpcConnectionImpl<NextLayer>::OnRecvCompleted,
+                               this, _1, _2));
 
   } else if (resp_state_ == kParseResponse) {
     resp_state_ = kReadLength;
@@ -142,6 +150,7 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ec,
 }
 
 template <class NextLayer> void RpcConnectionImpl<NextLayer>::Shutdown() {
+  next_layer_.cancel();
   next_layer_.close();
 }
 }

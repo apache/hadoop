@@ -1,21 +1,19 @@
-set(CLIENT_PROTO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../proto)
-set(COMMON_PROTO_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../../../hadoop-common-project/hadoop-common/src/main/proto)
-set(PROTOBUF_IMPORT_DIRS ${CLIENT_PROTO_DIR} ${COMMON_PROTO_DIR})
+set(PROTOBUF_IMPORT_DIRS ${PROTO_HDFS_DIR} ${PROTO_HADOOP_DIR})
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
-  ${CLIENT_PROTO_DIR}/datatransfer.proto
-  ${CLIENT_PROTO_DIR}/ClientDatanodeProtocol.proto
-  ${CLIENT_PROTO_DIR}/ClientNamenodeProtocol.proto
-  ${CLIENT_PROTO_DIR}/acl.proto
-  ${CLIENT_PROTO_DIR}/datatransfer.proto
-  ${CLIENT_PROTO_DIR}/encryption.proto
-  ${CLIENT_PROTO_DIR}/hdfs.proto
-  ${CLIENT_PROTO_DIR}/inotify.proto
-  ${CLIENT_PROTO_DIR}/xattr.proto
-  ${COMMON_PROTO_DIR}/IpcConnectionContext.proto
-  ${COMMON_PROTO_DIR}/ProtobufRpcEngine.proto
-  ${COMMON_PROTO_DIR}/RpcHeader.proto
-  ${COMMON_PROTO_DIR}/Security.proto
+  ${PROTO_HDFS_DIR}/datatransfer.proto
+  ${PROTO_HDFS_DIR}/ClientDatanodeProtocol.proto
+  ${PROTO_HDFS_DIR}/ClientNamenodeProtocol.proto
+  ${PROTO_HDFS_DIR}/acl.proto
+  ${PROTO_HDFS_DIR}/datatransfer.proto
+  ${PROTO_HDFS_DIR}/encryption.proto
+  ${PROTO_HDFS_DIR}/hdfs.proto
+  ${PROTO_HDFS_DIR}/inotify.proto
+  ${PROTO_HDFS_DIR}/xattr.proto
+  ${PROTO_HADOOP_DIR}/IpcConnectionContext.proto
+  ${PROTO_HADOOP_DIR}/ProtobufRpcEngine.proto
+  ${PROTO_HADOOP_DIR}/RpcHeader.proto
+  ${PROTO_HADOOP_DIR}/Security.proto
 )
 
 add_executable(protoc-gen-hrpc protoc_gen_hrpc.cc)
@@ -59,7 +57,7 @@ function(GEN_HRPC SRCS)
 endfunction()
 
 gen_hrpc(HRPC_SRCS
-  ${CLIENT_PROTO_DIR}/ClientNamenodeProtocol.proto
+  ${PROTO_HDFS_DIR}/ClientNamenodeProtocol.proto
 )
 
 add_library(proto ${PROTO_SRCS} ${PROTO_HDRS} ${HRPC_SRCS})

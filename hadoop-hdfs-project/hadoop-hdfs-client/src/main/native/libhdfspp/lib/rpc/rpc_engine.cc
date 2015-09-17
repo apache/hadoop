@@ -26,18 +26,18 @@
 
 namespace hdfs {
 
-RpcEngine::RpcEngine(::asio::io_service *io_service,
+RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
                      const std::string &client_name, const char *protocol_name,
                      int protocol_version)
-    : io_service_(io_service), client_name_(client_name),
+    : io_service_(io_service), options_(options), client_name_(client_name),
       protocol_name_(protocol_name), protocol_version_(protocol_version),
-      call_id_(0)
-    , conn_(new RpcConnectionImpl<::asio::ip::tcp::socket>(this))
-{}
+      call_id_(0) {
+}
 
-void RpcEngine::Connect(const std::vector<::asio::ip::tcp::endpoint> &servers,
+void RpcEngine::Connect(const ::asio::ip::tcp::endpoint &server,
                         const std::function<void(const Status &)> &handler) {
-  conn_->Connect(servers, [this, handler](const Status &stat) {
+  conn_.reset(new RpcConnectionImpl<::asio::ip::tcp::socket>(this));
+  conn_->Connect(server, [this, handler](const Status &stat) {
     if (!stat.ok()) {
       handler(stat);
     } else {
@@ -50,6 +50,10 @@ void RpcEngine::Start() { conn_->Start(); }
 
 void RpcEngine::Shutdown() {
   io_service_->post([this]() { conn_->Shutdown(); });
+}
+
+void RpcEngine::TEST_SetRpcConnection(std::unique_ptr<RpcConnection> *conn) {
+  conn_.reset(conn->release());
 }
 
 void RpcEngine::AsyncRpc(

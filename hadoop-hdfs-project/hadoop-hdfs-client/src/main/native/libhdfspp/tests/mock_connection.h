@@ -38,6 +38,7 @@ public:
       ProducerResult r = Produce();
       if (r.first) {
         io_service_->post(std::bind(handler, r.first, 0));
+        return;
       }
       asio::mutable_buffers_1 data = produced_.prepare(r.second.size());
       asio::buffer_copy(data, asio::buffer(r.second));

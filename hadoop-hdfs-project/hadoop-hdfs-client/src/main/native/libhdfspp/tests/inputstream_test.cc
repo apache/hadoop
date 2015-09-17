@@ -76,7 +76,8 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
       0,
   };
   IoServiceImpl io_service;
-  FileSystemImpl fs(&io_service);
+  Options options;
+  FileSystemImpl fs(&io_service, options);
   InputStreamImpl is(&fs, &blocks);
   Status stat;
   size_t read = 0;
@@ -109,7 +110,8 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
       0,
   };
   IoServiceImpl io_service;
-  FileSystemImpl fs(&io_service);
+  Options options;
+  FileSystemImpl fs(&io_service, options);
   InputStreamImpl is(&fs, &blocks);
   Status stat;
   size_t read = 0;
@@ -144,7 +146,8 @@ TEST(InputStreamTest, TestReadError) {
       0,
   };
   IoServiceImpl io_service;
-  FileSystemImpl fs(&io_service);
+  Options options;
+  FileSystemImpl fs(&io_service, options);
   InputStreamImpl is(&fs, &blocks);
   Status stat;
   size_t read = 0;
@@ -190,7 +193,8 @@ TEST(InputStreamTest, TestExcludeDataNode) {
       0,
   };
   IoServiceImpl io_service;
-  FileSystemImpl fs(&io_service);
+  Options options;
+  FileSystemImpl fs(&io_service, options);
   InputStreamImpl is(&fs, &blocks);
   Status stat;
   size_t read = 0;

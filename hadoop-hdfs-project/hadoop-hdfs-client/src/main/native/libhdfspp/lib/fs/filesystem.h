@@ -28,7 +28,7 @@ namespace hdfs {
 
 class FileSystemImpl : public FileSystem {
 public:
-  FileSystemImpl(IoService *io_service);
+  FileSystemImpl(IoService *io_service, const Options &options);
   void Connect(const std::string &server, const std::string &service,
                std::function<void(const Status &)> &&handler);
   virtual void Open(const std::string &path,

@@ -35,10 +35,10 @@ using ::asio::ip::tcp;
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(
-    IoService *io_service, const std::string &server,
+    IoService *io_service, const Options &options, const std::string &server,
     const std::string &service,
     const std::function<void(const Status &, FileSystem *)> &handler) {
-  FileSystemImpl *impl = new FileSystemImpl(io_service);
+  FileSystemImpl *impl = new FileSystemImpl(io_service, options);
   impl->Connect(server, service, [impl, handler](const Status &stat) {
     if (stat.ok()) {
       handler(stat, impl);
@@ -49,10 +49,11 @@ void FileSystem::New(
   });
 }
 
-FileSystemImpl::FileSystemImpl(IoService *io_service)
+FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
     : io_service_(static_cast<IoServiceImpl *>(io_service)),
-      engine_(&io_service_->io_service(), RpcEngine::GetRandomClientName(),
-              kNamenodeProtocol, kNamenodeProtocolVersion),
+      engine_(&io_service_->io_service(), options,
+              RpcEngine::GetRandomClientName(), kNamenodeProtocol,
+              kNamenodeProtocolVersion),
       namenode_(&engine_) {}
 
 void FileSystemImpl::Connect(const std::string &server,
@@ -64,7 +65,7 @@ void FileSystemImpl::Connect(const std::string &server,
   m->Push(Resolve(&io_service_->io_service(), server, service,
                   std::back_inserter(m->state())))
       .Push(Bind([this, m](const Continuation::Next &next) {
-        engine_.Connect(m->state(), next);
+        engine_.Connect(m->state().front(), next);
       }));
   m->Run([this, handler](const Status &status, const State &) {
     if (status.ok()) {
