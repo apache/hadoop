@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -26,6 +27,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 /**
  * Identifies fully qualified columns for the {@link EntityTable}.
@@ -81,9 +83,9 @@ public enum EntityColumn implements Column<EntityTable> {
 
   public void store(byte[] rowKey,
       TypedBufferedMutator<EntityTable> tableMutator, Long timestamp,
-      Object inputValue) throws IOException {
+      Object inputValue, Attribute... attributes) throws IOException {
     column.store(rowKey, tableMutator, columnQualifierBytes, timestamp,
-        inputValue);
+        inputValue, attributes);
   }
 
   public Object readResult(Result result) throws IOException {
