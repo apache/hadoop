@@ -427,3 +427,5 @@
 
     HDFS-8899. Erasure Coding: use threadpool for EC recovery tasks on DataNode.
     (Rakesh R via zhz)
+
+    HDFS-9088. Cleanup erasure coding documentation. (wang via zhz)
