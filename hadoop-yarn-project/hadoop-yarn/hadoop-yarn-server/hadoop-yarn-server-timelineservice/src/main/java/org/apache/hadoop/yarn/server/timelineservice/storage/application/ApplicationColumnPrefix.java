@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 /**
  * Identifies partially qualified columns for the application table.
@@ -112,7 +113,8 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   public void store(byte[] rowKey,
       TypedBufferedMutator<ApplicationTable> tableMutator, byte[] qualifier,
-      Long timestamp, Object inputValue) throws IOException {
+      Long timestamp, Object inputValue, Attribute... attributes)
+      throws IOException {
 
     // Null check
     if (qualifier == null) {
@@ -123,8 +125,9 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
     byte[] columnQualifier =
         ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
 
-    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue);
-  }
+    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
+        attributes);
+ }
 
   /*
    * (non-Javadoc)
@@ -137,7 +140,8 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   public void store(byte[] rowKey,
       TypedBufferedMutator<ApplicationTable> tableMutator, String qualifier,
-      Long timestamp, Object inputValue) throws IOException {
+      Long timestamp, Object inputValue, Attribute...attributes)
+      throws IOException {
 
     // Null check
     if (qualifier == null) {
@@ -148,7 +152,8 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
     byte[] columnQualifier =
         ColumnHelper.getColumnQualifier(this.columnPrefixBytes, qualifier);
 
-    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue);
+    column.store(rowKey, tableMutator, columnQualifier, timestamp, inputValue,
+        attributes);
   }
 
   /*

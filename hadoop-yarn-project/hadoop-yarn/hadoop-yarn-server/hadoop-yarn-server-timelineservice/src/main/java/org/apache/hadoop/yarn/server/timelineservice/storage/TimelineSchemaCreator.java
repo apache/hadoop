@@ -42,6 +42,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
 /**
  * This creates the schema for a hbase based backend for storing application
@@ -199,7 +201,7 @@ public class TimelineSchemaCreator {
     return commandLine;
   }
 
-  private static void createAllTables(Configuration hbaseConf,
+  public static void createAllTables(Configuration hbaseConf,
       boolean skipExisting) throws IOException {
 
     Connection conn = null;
@@ -229,6 +231,24 @@ public class TimelineSchemaCreator {
       }
       try {
         new ApplicationTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new FlowRunTable().createTable(admin, hbaseConf);
+      } catch (IOException e) {
+        if (skipExisting) {
+          LOG.warn("Skip and continue on: " + e.getMessage());
+        } else {
+          throw e;
+        }
+      }
+      try {
+        new FlowActivityTable().createTable(admin, hbaseConf);
       } catch (IOException e) {
         if (skipExisting) {
           LOG.warn("Skip and continue on: " + e.getMessage());
