@@ -566,6 +566,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6452. NPE when intermediate encrypt enabled for LocalRunner.
     (Zhihai Xu)
 
+    MAPREDUCE-6481. LineRecordReader may give incomplete record and wrong
+    position/key information for uncompressed input sometimes. (Zhihai Xu via
+    jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

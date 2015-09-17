@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -356,5 +357,142 @@ public class TestLineRecordReader {
         testSplitRecordsForFile(conf, splitSize, inputData.length(), inputFile);
       }
     }
+  }
+
+  @Test
+  public void testUncompressedInputCustomDelimiterPosValue()
+      throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "1234567890ab12ab345";
+    Path inputFile = createInputFile(conf, inputData);
+    conf.setInt("io.file.buffer.size", 10);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    String delimiter = "ab";
+    byte[] recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
+    FileSplit split = new FileSplit(inputFile, 0, 15, (String[])null);
+    LineRecordReader reader = new LineRecordReader(conf, split,
+        recordDelimiterBytes);
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    reader.next(key, value);
+    // Get first record:"1234567890"
+    assertEquals(10, value.getLength());
+    // Position should be 12 right after "1234567890ab"
+    assertEquals(12, reader.getPos());
+    reader.next(key, value);
+    // Get second record:"12"
+    assertEquals(2, value.getLength());
+    // Position should be 16 right after "1234567890ab12ab"
+    assertEquals(16, reader.getPos());
+    reader.next(key, value);
+    // Get third record:"345"
+    assertEquals(3, value.getLength());
+    // Position should be 19 right after "1234567890ab12ab345"
+    assertEquals(19, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(19, reader.getPos());
+
+    split = new FileSplit(inputFile, 15, 4, (String[])null);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
+    // No record is in the second split because the second split dropped
+    // the first record, which was already reported by the first split.
+    // The position should be 19 right after "1234567890ab12ab345"
+    assertEquals(19, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(19, reader.getPos());
+
+    inputData = "123456789aab";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 12, (String[])null);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
+    reader.next(key, value);
+    // Get first record:"123456789a"
+    assertEquals(10, value.getLength());
+    // Position should be 12 right after "123456789aab"
+    assertEquals(12, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(12, reader.getPos());
+
+    inputData = "123456789a";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 10, (String[])null);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
+    reader.next(key, value);
+    // Get first record:"123456789a"
+    assertEquals(10, value.getLength());
+    // Position should be 10 right after "123456789a"
+    assertEquals(10, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(10, reader.getPos());
+
+    inputData = "123456789ab";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 11, (String[])null);
+    reader = new LineRecordReader(conf, split, recordDelimiterBytes);
+    reader.next(key, value);
+    // Get first record:"123456789"
+    assertEquals(9, value.getLength());
+    // Position should be 11 right after "123456789ab"
+    assertEquals(11, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(11, reader.getPos());
+  }
+
+  @Test
+  public void testUncompressedInputDefaultDelimiterPosValue()
+      throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "1234567890\r\n12\r\n345";
+    Path inputFile = createInputFile(conf, inputData);
+    conf.setInt("io.file.buffer.size", 10);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    FileSplit split = new FileSplit(inputFile, 0, 15, (String[])null);
+    LineRecordReader reader = new LineRecordReader(conf, split,
+        null);
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    reader.next(key, value);
+    // Get first record:"1234567890"
+    assertEquals(10, value.getLength());
+    // Position should be 12 right after "1234567890\r\n"
+    assertEquals(12, reader.getPos());
+    reader.next(key, value);
+    // Get second record:"12"
+    assertEquals(2, value.getLength());
+    // Position should be 16 right after "1234567890\r\n12\r\n"
+    assertEquals(16, reader.getPos());
+    assertFalse(reader.next(key, value));
+
+    split = new FileSplit(inputFile, 15, 4, (String[])null);
+    reader = new LineRecordReader(conf, split, null);
+    // The second split dropped the first record "\n"
+    // The position should be 16 right after "1234567890\r\n12\r\n"
+    assertEquals(16, reader.getPos());
+    reader.next(key, value);
+    // Get third record:"345"
+    assertEquals(3, value.getLength());
+    // Position should be 19 right after "1234567890\r\n12\r\n345"
+    assertEquals(19, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(19, reader.getPos());
+
+    inputData = "123456789\r\r\n";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 12, (String[])null);
+    reader = new LineRecordReader(conf, split, null);
+    reader.next(key, value);
+    // Get first record:"123456789"
+    assertEquals(9, value.getLength());
+    // Position should be 10 right after "123456789\r"
+    assertEquals(10, reader.getPos());
+    reader.next(key, value);
+    // Get second record:""
+    assertEquals(0, value.getLength());
+    // Position should be 12 right after "123456789\r\r\n"
+    assertEquals(12, reader.getPos());
+    assertFalse(reader.next(key, value));
+    assertEquals(12, reader.getPos());
   }
 }
