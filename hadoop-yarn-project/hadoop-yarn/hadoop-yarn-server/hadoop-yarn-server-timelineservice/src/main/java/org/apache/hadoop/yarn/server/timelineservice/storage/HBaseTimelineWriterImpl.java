@@ -33,11 +33,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
-import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
+import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
@@ -53,23 +52,36 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
 /**
- * This implements a hbase based backend for storing application timeline entity
+ * This implements a hbase based backend for storing the timeline entity
  * information.
+ * It writes to multiple tables at the backend
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class HBaseTimelineWriterImpl extends AbstractService implements
     TimelineWriter {
 
+  private static final Log LOG = LogFactory
+      .getLog(HBaseTimelineWriterImpl.class);
+
   private Connection conn;
   private TypedBufferedMutator<EntityTable> entityTable;
   private TypedBufferedMutator<AppToFlowTable> appToFlowTable;
   private TypedBufferedMutator<ApplicationTable> applicationTable;
-
-  private static final Log LOG = LogFactory
-      .getLog(HBaseTimelineWriterImpl.class);
+  private TypedBufferedMutator<FlowActivityTable> flowActivityTable;
+  private TypedBufferedMutator<FlowRunTable> flowRunTable;
 
   public HBaseTimelineWriterImpl() {
     super(HBaseTimelineWriterImpl.class.getName());
@@ -91,6 +103,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     entityTable = new EntityTable().getTableMutator(hbaseConf, conn);
     appToFlowTable = new AppToFlowTable().getTableMutator(hbaseConf, conn);
     applicationTable = new ApplicationTable().getTableMutator(hbaseConf, conn);
+    flowRunTable = new FlowRunTable().getTableMutator(hbaseConf, conn);
+    flowActivityTable = new FlowActivityTable().getTableMutator(hbaseConf, conn);
   }
 
   /**
@@ -111,7 +125,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
       // if the entity is the application, the destination is the application
       // table
-      boolean isApplication = isApplicationEntity(te);
+      boolean isApplication = TimelineWriterUtils.isApplicationEntity(te);
       byte[] rowKey = isApplication ?
           ApplicationRowKey.getRowKey(clusterId, userId, flowName, flowRunId,
               appId) :
@@ -124,37 +138,139 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       storeMetrics(rowKey, te.getMetrics(), isApplication);
       storeRelations(rowKey, te, isApplication);
 
-      if (isApplicationCreated(te)) {
-        onApplicationCreated(
-            clusterId, userId, flowName, flowVersion, flowRunId, appId, te);
+      if (isApplication) {
+        if (TimelineWriterUtils.isApplicationCreated(te)) {
+          onApplicationCreated(clusterId, userId, flowName, flowVersion,
+              flowRunId, appId, te);
+        }
+        // if it's an application entity, store metrics
+        storeFlowMetricsAppRunning(clusterId, userId, flowName, flowRunId,
+            appId, te);
+        // if application has finished, store it's finish time and write final
+        // values
+        // of all metrics
+        if (TimelineWriterUtils.isApplicationFinished(te)) {
+          onApplicationFinished(clusterId, userId, flowName, flowVersion,
+              flowRunId, appId, te);
+        }
       }
     }
     return putStatus;
   }
 
-  private static boolean isApplicationEntity(TimelineEntity te) {
-    return te.getType().equals(TimelineEntityType.YARN_APPLICATION.toString());
-  }
-
-  private static boolean isApplicationCreated(TimelineEntity te) {
-    if (isApplicationEntity(te)) {
-      for (TimelineEvent event : te.getEvents()) {
-        if (event.getId().equals(
-            ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   private void onApplicationCreated(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRunId, String appId,
+      TimelineEntity te) throws IOException {
+    // store in App to flow table
+    storeInAppToFlowTable(clusterId, userId, flowName, flowVersion, flowRunId,
+        appId, te);
+    // store in flow run table
+    storeAppCreatedInFlowRunTable(clusterId, userId, flowName, flowVersion,
+        flowRunId, appId, te);
+    // store in flow activity table
+    storeInFlowActivityTable(clusterId, userId, flowName, flowVersion,
+        flowRunId, appId, te);
+  }
+
+  /*
+   * updates the {@link FlowActivityTable} with the Application TimelineEntity
+   * information
+   */
+  private void storeInFlowActivityTable(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRunId, String appId,
+      TimelineEntity te) throws IOException {
+    byte[] rowKey = FlowActivityRowKey.getRowKey(clusterId, userId, flowName);
+    byte[] qualifier = GenericObjectMapper.write(flowRunId);
+    FlowActivityColumnPrefix.RUN_ID.store(rowKey, flowActivityTable, qualifier,
+        null, flowVersion,
+        AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId));
+  }
+
+  /*
+   * updates the {@link FlowRunTable} with Application Created information
+   */
+  private void storeAppCreatedInFlowRunTable(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRunId, String appId,
+      TimelineEntity te) throws IOException {
+    byte[] rowKey = FlowRunRowKey.getRowKey(clusterId, userId, flowName,
+        flowRunId);
+    FlowRunColumn.MIN_START_TIME.store(rowKey, flowRunTable, null,
+        te.getCreatedTime(),
+        AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId));
+  }
+
+  private void storeInAppToFlowTable(String clusterId, String userId,
       String flowName, String flowVersion, long flowRunId, String appId,
       TimelineEntity te) throws IOException {
     byte[] rowKey = AppToFlowRowKey.getRowKey(clusterId, appId);
     AppToFlowColumn.FLOW_ID.store(rowKey, appToFlowTable, null, flowName);
-    AppToFlowColumn.FLOW_RUN_ID.store(
-        rowKey, appToFlowTable, null, flowRunId);
+    AppToFlowColumn.FLOW_RUN_ID.store(rowKey, appToFlowTable, null, flowRunId);
+  }
+
+  /*
+   * updates the {@link FlowRunTable} and {@link FlowActivityTable} when an
+   * application has finished
+   */
+  private void onApplicationFinished(String clusterId, String userId,
+      String flowName, String flowVersion, long flowRunId, String appId,
+      TimelineEntity te) throws IOException {
+    // store in flow run table
+    storeAppFinishedInFlowRunTable(clusterId, userId, flowName, flowRunId,
+        appId, te);
+
+    // indicate in the flow activity table that the app has finished
+    storeInFlowActivityTable(clusterId, userId, flowName, flowVersion,
+        flowRunId, appId, te);
+  }
+
+  /*
+   * Update the {@link FlowRunTable} with Application Finished information
+   */
+  private void storeAppFinishedInFlowRunTable(String clusterId, String userId,
+      String flowName, long flowRunId, String appId, TimelineEntity te)
+      throws IOException {
+    byte[] rowKey = FlowRunRowKey.getRowKey(clusterId, userId, flowName,
+        flowRunId);
+    Attribute attributeAppId = AggregationCompactionDimension.APPLICATION_ID
+        .getAttribute(appId);
+    FlowRunColumn.MAX_END_TIME.store(rowKey, flowRunTable, null,
+        TimelineWriterUtils.getApplicationFinishedTime(te), attributeAppId);
+
+    // store the final value of metrics since application has finished
+    Set<TimelineMetric> metrics = te.getMetrics();
+    if (metrics != null) {
+      storeFlowMetrics(rowKey, metrics, attributeAppId,
+          AggregationOperation.SUM_FINAL.getAttribute());
+    }
+  }
+
+  /*
+   * Updates the {@link FlowRunTable} with Application Metrics
+   */
+  private void storeFlowMetricsAppRunning(String clusterId, String userId,
+      String flowName, long flowRunId, String appId, TimelineEntity te)
+      throws IOException {
+    Set<TimelineMetric> metrics = te.getMetrics();
+    if (metrics != null) {
+      byte[] rowKey = FlowRunRowKey.getRowKey(clusterId, userId, flowName,
+          flowRunId);
+      storeFlowMetrics(rowKey, metrics,
+          AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId));
+    }
+  }
+
+  private void storeFlowMetrics(byte[] rowKey, Set<TimelineMetric> metrics,
+      Attribute... attributes) throws IOException {
+    for (TimelineMetric metric : metrics) {
+      String metricColumnQualifier = metric.getId();
+      Map<Long, Number> timeseries = metric.getValues();
+      for (Map.Entry<Long, Number> timeseriesEntry : timeseries.entrySet()) {
+        Long timestamp = timeseriesEntry.getKey();
+        FlowRunColumnPrefix.METRIC.store(rowKey, flowRunTable,
+            metricColumnQualifier, timestamp, timeseriesEntry.getValue(),
+            attributes);
+      }
+    }
   }
 
   private void storeRelations(byte[] rowKey, TimelineEntity te,
@@ -184,7 +300,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       // id3?id4?id5
       String compoundValue =
           Separator.VALUES.joinEncoded(connectedEntity.getValue());
-
       columnPrefix.store(rowKey, table, connectedEntity.getKey(), null,
           compoundValue);
     }
@@ -342,6 +457,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     entityTable.flush();
     appToFlowTable.flush();
     applicationTable.flush();
+    flowRunTable.flush();
+    flowActivityTable.flush();
   }
 
   /**
@@ -363,6 +480,16 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     if (applicationTable != null) {
       LOG.info("closing the application table");
       applicationTable.close();
+    }
+    if (flowRunTable != null) {
+      LOG.info("closing the flow run table");
+      // The close API performs flushing and releases any resources held
+      flowRunTable.close();
+    }
+    if (flowActivityTable != null) {
+      LOG.info("closing the flowActivityTable table");
+      // The close API performs flushing and releases any resources held
+      flowActivityTable.close();
     }
     if (conn != null) {
       LOG.info("closing the hbase Connection");

@@ -23,6 +23,7 @@ import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 /**
  * Used to represent a partially qualified column, where the actual column name
@@ -43,12 +44,36 @@ public interface ColumnPrefix<T> {
    * @param qualifier column qualifier. Nothing gets written when null.
    * @param timestamp version timestamp. When null the server timestamp will be
    *          used.
+   *@param attributes attributes for the mutation that are used by the coprocessor
+   *          to set/read the cell tags
    * @param inputValue the value to write to the rowKey and column qualifier.
    *          Nothing gets written when null.
    * @throws IOException
    */
   public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
-      String qualifier, Long timestamp, Object inputValue) throws IOException;
+      byte[] qualifier, Long timestamp, Object inputValue,
+      Attribute... attributes) throws IOException;
+
+  /**
+   * Sends a Mutation to the table. The mutations will be buffered and sent over
+   * the wire as part of a batch.
+   *
+   * @param rowKey identifying the row to write. Nothing gets written when null.
+   * @param tableMutator used to modify the underlying HBase table. Caller is
+   *          responsible to pass a mutator for the table that actually has this
+   *          column.
+   * @param qualifier column qualifier. Nothing gets written when null.
+   * @param timestamp version timestamp. When null the server timestamp will be
+   *          used.
+   *@param attributes attributes for the mutation that are used by the coprocessor
+   *          to set/read the cell tags
+   * @param inputValue the value to write to the rowKey and column qualifier.
+   *          Nothing gets written when null.
+   * @throws IOException
+   */
+  public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
+      String qualifier, Long timestamp, Object inputValue,
+      Attribute... attributes) throws IOException;
 
   /**
    * Get the latest version of this specified column. Note: this call clones the
@@ -81,4 +106,5 @@ public interface ColumnPrefix<T> {
    */
   public <V> NavigableMap<String, NavigableMap<Long, V>>
       readResultsWithTimestamps(Result result) throws IOException;
+
 }

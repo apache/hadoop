@@ -31,7 +31,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
-
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 /**
  * This class is meant to be used only by explicit Columns, and not directly to
  * write by clients.
@@ -58,31 +59,66 @@ public class ColumnHelper<T> {
    * Sends a Mutation to the table. The mutations will be buffered and sent over
    * the wire as part of a batch.
    *
-   * @param rowKey identifying the row to write. Nothing gets written when null.
-   * @param tableMutator used to modify the underlying HBase table
-   * @param columnQualifier column qualifier. Nothing gets written when null.
-   * @param timestamp version timestamp. When null the server timestamp will be
-   *          used.
-   * @param inputValue the value to write to the rowKey and column qualifier.
-   *          Nothing gets written when null.
+   * @param rowKey
+   *          identifying the row to write. Nothing gets written when null.
+   * @param tableMutator
+   *          used to modify the underlying HBase table
+   * @param columnQualifier
+   *          column qualifier. Nothing gets written when null.
+   * @param timestamp
+   *          version timestamp. When null the current timestamp multiplied with
+   *          TimestampGenerator.TS_MULTIPLIER and added with last 3 digits of
+   *          app id will be used
+   * @param inputValue
+   *          the value to write to the rowKey and column qualifier. Nothing
+   *          gets written when null.
    * @throws IOException
    */
   public void store(byte[] rowKey, TypedBufferedMutator<?> tableMutator,
-      byte[] columnQualifier, Long timestamp, Object inputValue)
-      throws IOException {
+      byte[] columnQualifier, Long timestamp, Object inputValue,
+      Attribute... attributes) throws IOException {
     if ((rowKey == null) || (columnQualifier == null) || (inputValue == null)) {
       return;
     }
     Put p = new Put(rowKey);
-
-    if (timestamp == null) {
-      p.addColumn(columnFamilyBytes, columnQualifier,
-          GenericObjectMapper.write(inputValue));
-    } else {
-      p.addColumn(columnFamilyBytes, columnQualifier, timestamp,
-          GenericObjectMapper.write(inputValue));
+    timestamp = getPutTimestamp(timestamp, attributes);
+    p.addColumn(columnFamilyBytes, columnQualifier, timestamp,
+        GenericObjectMapper.write(inputValue));
+    if ((attributes != null) && (attributes.length > 0)) {
+      for (Attribute attribute : attributes) {
+        p.setAttribute(attribute.getName(), attribute.getValue());
+      }
     }
     tableMutator.mutate(p);
+  }
+
+  /*
+   * Figures out the cell timestamp used in the Put For storing into flow run
+   * table. We would like to left shift the timestamp and supplement it with the
+   * AppId id so that there are no collisions in the flow run table's cells
+   */
+  private long getPutTimestamp(Long timestamp, Attribute[] attributes) {
+    if (timestamp == null) {
+      timestamp = System.currentTimeMillis();
+    }
+    String appId = getAppIdFromAttributes(attributes);
+    long supplementedTS = TimestampGenerator.getSupplementedTimestamp(
+        timestamp, appId);
+    return supplementedTS;
+  }
+
+  private String getAppIdFromAttributes(Attribute[] attributes) {
+    if (attributes == null) {
+      return null;
+    }
+    String appId = null;
+    for (Attribute attribute : attributes) {
+      if (AggregationCompactionDimension.APPLICATION_ID.toString().equals(
+          attribute.getName())) {
+        appId = Bytes.toString(attribute.getValue());
+      }
+    }
+    return appId;
   }
 
   /**
@@ -171,7 +207,9 @@ public class ColumnHelper<T> {
               for (Entry<Long, byte[]> cell : cells.entrySet()) {
                 V value =
                     (V) GenericObjectMapper.read(cell.getValue());
-                cellResults.put(cell.getKey(), value);
+                cellResults.put(
+                    TimestampGenerator.getTruncatedTimestamp(cell.getKey()),
+                    value);
               }
             }
             results.put(columnName, cellResults);
@@ -312,6 +350,27 @@ public class ColumnHelper<T> {
     return columnQualifier;
   }
 
+  /**
+   * @param columnPrefixBytes The byte representation for the column prefix.
+   *          Should not contain {@link Separator#QUALIFIERS}.
+   * @param qualifier for the remainder of the column.
+   * @return fully sanitized column qualifier that is a combination of prefix
+   *         and qualifier. If prefix is null, the result is simply the encoded
+   *         qualifier without any separator.
+   */
+  public static byte[] getColumnQualifier(byte[] columnPrefixBytes,
+      long qualifier) {
+
+    if (columnPrefixBytes == null) {
+      return Bytes.toBytes(qualifier);
+    }
+
+    // Convert qualifier to lower case, strip of separators and tag on column
+    // prefix.
+    byte[] columnQualifier =
+        Separator.QUALIFIERS.join(columnPrefixBytes, Bytes.toBytes(qualifier));
+    return columnQualifier;
+  }
   /**
    * @param columnPrefixBytes The byte representation for the column prefix.
    *          Should not contain {@link Separator#QUALIFIERS}.
