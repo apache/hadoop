@@ -17,33 +17,9 @@
  */
 package org.apache.hadoop.net;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Constructor;
-import java.net.BindException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.NoRouteToHostException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.net.ConnectException;
-import java.nio.channels.SocketChannel;
-import java.util.Map.Entry;
-import java.util.regex.Pattern;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.net.SocketFactory;
-
+import com.google.common.base.Preconditions;
+import com.google.common.net.HostAndPort;
+import com.google.common.net.InetAddresses;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.SubnetUtils;
@@ -56,15 +32,26 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.http.conn.util.InetAddressUtils;
 
-import com.google.common.base.Preconditions;
+import javax.net.SocketFactory;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Constructor;
+import java.net.*;
+import java.nio.channels.SocketChannel;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class NetUtils {
   private static final Log LOG = LogFactory.getLog(NetUtils.class);
   
-  private static Map<String, String> hostToResolved = 
+  private static Map<String, String> hostToResolved =
                                      new HashMap<String, String>();
   /** text to point users elsewhere: {@value} */
   private static final String FOR_MORE_DETAILS_SEE
@@ -611,9 +598,6 @@ public class NetUtils {
     }
   }
 
-  private static final Pattern ipPortPattern = // Pattern for matching ip[:port]
-    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(:\\d+)?");
-  
   /**
    * Attempt to obtain the host name of the given string which contains
    * an IP address and an optional port.
@@ -622,16 +606,25 @@ public class NetUtils {
    * @return Host name or null if the name can not be determined
    */
   public static String getHostNameOfIP(String ipPort) {
-    if (null == ipPort || !ipPortPattern.matcher(ipPort).matches()) {
+    String ip = null;
+    if (null == ipPort || ipPort.isEmpty()) {
       return null;
     }
-    
     try {
-      int colonIdx = ipPort.indexOf(':');
-      String ip = (-1 == colonIdx) ? ipPort
-          : ipPort.substring(0, ipPort.indexOf(':'));
+      HostAndPort hostAndPort = HostAndPort.fromString(ipPort);
+      ip = hostAndPort.getHostText();
+      if (!InetAddresses.isInetAddress(ip)) {
+        return null;
+      }
+    } catch (IllegalArgumentException e) {
+      LOG.debug("getHostNameOfIP: '" + ipPort
+          + "' is not a valid IP address or IP/Port pair.", e);
+      return null;
+    }
+    try {
       return InetAddress.getByName(ip).getHostName();
     } catch (UnknownHostException e) {
+      LOG.trace("getHostNameOfIP: '"+ipPort+"' name not resolved.", e);
       return null;
     }
   }
@@ -647,11 +640,88 @@ public class NetUtils {
   
   /**
    * Compose a "host:port" string from the address.
+   *
+   * Note that this preferentially returns the host name if available; if the
+   * IP address is desired, use getIPPortString(); if both are desired as in
+   * InetSocketAddress.toString, use getSocketAddressString()
    */
   public static String getHostPortString(InetSocketAddress addr) {
-    return addr.getHostName() + ":" + addr.getPort();
+    String hostName = addr.getHostName();
+    if (InetAddressUtils.isIPv6Address(hostName)) {
+      return "[" + hostName + "]:" + addr.getPort();
+    }
+    return hostName + ":" + addr.getPort();
   }
-  
+
+  /**
+   * Compose a "ip:port" string from the InetSocketAddress.
+   *
+   * Note that this may result in an NPE if passed an unresolved
+   * InetSocketAddress.
+   */
+  public static String getIPPortString(InetSocketAddress addr) {
+    final InetAddress ip = addr.getAddress();
+    // this is a judgement call, and we might arguably just guard against NPE
+    // by treating null as "" ; I think this is going to hide more bugs than it
+    // prevents
+    if (ip == null) {
+      throw new IllegalArgumentException(
+          "getIPPortString called with unresolved InetSocketAddress : "
+              + getSocketAddressString(addr));
+    }
+    String ipString = ip.getHostAddress();
+    if (ip instanceof Inet6Address) {
+      return "[" + ipString + "]:" + addr.getPort();
+    }
+    return ipString + ":" + addr.getPort();
+  }
+
+  public static String getIPPortString(String ipAddr, int port) {
+    String s;
+    if (ipAddr != null) {
+      s = ipAddr + ":" + port;
+    } else {
+      s = ":" + port;
+    }
+    //Blank eventually will get to treated as localhost if this gets down to
+    // InetAddress. Tests extensively use a blank address, and we don't want
+    // to change behavior here.
+    if (ipAddr != null && !ipAddr.isEmpty() && InetAddressUtils.isIPv6Address(ipAddr)) {
+      try {
+        InetAddress addr = InetAddress.getByName(ipAddr);
+        String cleanAddr = addr.getHostAddress();
+        if (addr instanceof Inet6Address) {
+          s = '[' + cleanAddr + ']' + ":" + port;
+        }
+      } catch (UnknownHostException e) {
+        // ignore anything that isn't an IPv6 literal and keep the old
+        // behavior. could add debug log here, but this should only happen
+        // if there's a bug in InetAddressUtils.isIPv6Address which accepts
+        // something that isn't an IPv6 literal.
+      }
+    }
+    return s;
+  }
+
+  /**
+   * An IPv6-safe version of InetSocketAddress.toString().
+   * Note that this will typically be of the form hostname/IP:port and is NOT
+   * a substitute for getHostPortString or getIPPortString.
+   */
+  public static String getSocketAddressString(InetSocketAddress addr) {
+    if (addr.isUnresolved()) {
+      return addr.toString();
+    }
+    InetAddress ip = addr.getAddress();
+    if (ip instanceof Inet6Address) {
+      String hostName = addr.getHostName();
+      return ((hostName != null) ? hostName : "")
+          + "/[" + ip.getHostAddress() + "]:" + addr.getPort();
+    } else {
+      return addr.toString();
+    }
+  }
+
   /**
    * Checks if {@code host} is a local host name and return {@link InetAddress}
    * corresponding to that address.
@@ -912,5 +982,37 @@ public class NetUtils {
       // Could not get a free port. Return default port 0.
     }
     return port;
+  }
+
+  /**
+   * Wrapper method on HostAndPort; returns the port from a host:port
+   * or IP:port pair.
+   *
+   * It's probably best to create your own HostAndPort.fromString(hp) and
+   * do a .getPort and .getHostText if you need both host and port in one
+   * scope.
+   */
+  public static int getPortFromHostPort(String hp) {
+    return HostAndPort.fromString(hp).getPort();
+  }
+
+  /**
+   * Wrapper method on HostAndPort; returns the host from a host:port
+   * or IP:port pair.
+   *
+   * It's probably best to create your own HostAndPort.fromString(hp) and
+   * do a .getPort and .getHostText if you need both host and port in one
+   * scope.
+   */
+  public static String getHostFromHostPort(String hp) {
+    return HostAndPort.fromString(hp).getHostText();
+  }
+
+  public static InetAddress getInetAddressFromInetSocketAddressString(
+      String remoteAddr) {
+    int slashIdx = remoteAddr.indexOf('/') + 1;
+    int colonIdx = remoteAddr.lastIndexOf(':');
+    String ipOnly = remoteAddr.substring(slashIdx, colonIdx);
+    return InetAddresses.forString(ipOnly);
   }
 }
