@@ -570,6 +570,9 @@ Release 2.8.0 - UNRELEASED
     position/key information for uncompressed input sometimes. (Zhihai Xu via
     jlowe)
 
+    MAPREDUCE-5002. AM could potentially allocate a reduce container to a map
+    attempt (Chang Li via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
