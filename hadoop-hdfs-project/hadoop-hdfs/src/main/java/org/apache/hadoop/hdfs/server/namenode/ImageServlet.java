@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -233,7 +234,7 @@ public class ImageServlet extends HttpServlet {
 
     validRequestors.add(SecurityUtil.getServerPrincipal(conf
         .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-        NameNode.getAddress(conf).getHostName()));
+        DFSUtilClient.getNNAddress(conf).getHostName()));
     try {
       validRequestors.add(
           SecurityUtil.getServerPrincipal(conf
@@ -256,7 +257,7 @@ public class ImageServlet extends HttpServlet {
       Configuration otherNnConf = HAUtil.getConfForOtherNode(conf);
       validRequestors.add(SecurityUtil.getServerPrincipal(otherNnConf
           .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-          NameNode.getAddress(otherNnConf).getHostName()));
+          DFSUtilClient.getNNAddress(otherNnConf).getHostName()));
     }
 
     for (String v : validRequestors) {

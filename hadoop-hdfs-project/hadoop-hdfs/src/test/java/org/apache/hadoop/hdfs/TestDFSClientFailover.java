@@ -300,7 +300,7 @@ public class TestDFSClientFailover {
         Class<T> xface) {
       try {
         this.proxy = NameNodeProxies.createNonHAProxy(conf,
-            NameNode.getAddress(uri), xface,
+            DFSUtilClient.getNNAddress(uri), xface,
             UserGroupInformation.getCurrentUser(), false).getProxy();
         this.xface = xface;
       } catch (IOException ioe) {

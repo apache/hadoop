@@ -38,9 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -78,7 +76,7 @@ public class TestFileStatus {
     fs = cluster.getFileSystem();
     fc = FileContext.getFileContext(cluster.getURI(0), conf);
     hftpfs = cluster.getHftpFileSystem(0);
-    dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
+    dfsClient = new DFSClient(DFSUtilClient.getNNAddress(conf), conf);
     file1 = new Path("filestatus.dat");
     writeFile(fs, file1, 1, fileSize, blockSize);
   }

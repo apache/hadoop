@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -272,7 +273,8 @@ public class TestStreamFile {
 
     Mockito.doReturn(CONF).when(mockServletContext).getAttribute(
         JspHelper.CURRENT_CONF);
-    Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
+    Mockito.doReturn(NetUtils.getHostPortString(DFSUtilClient.getNNAddress
+        (CONF)))
       .when(mockHttpServletRequest).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(mockHttpServletRequest)
       .getPathInfo();
