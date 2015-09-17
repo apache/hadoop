@@ -40,8 +40,6 @@ public class UncompressedSplitLineReader extends SplitLineReader {
   private long totalBytesRead = 0;
   private boolean finished = false;
   private boolean usingCRLF;
-  private int unusedBytes = 0;
-  private int lastBytesRead = 0;
 
   public UncompressedSplitLineReader(FSDataInputStream in, Configuration conf,
       byte[] recordDelimiterBytes, long splitLength) throws IOException {
@@ -59,7 +57,6 @@ public class UncompressedSplitLineReader extends SplitLineReader {
                                 (int)(splitLength - totalBytesRead));
     }
     int bytesRead = in.read(buffer, 0, maxBytesToRead);
-    lastBytesRead = bytesRead;
 
     // If the split ended in the middle of a record delimiter then we need
     // to read one additional record, as the consumer of the next split will
@@ -83,39 +80,17 @@ public class UncompressedSplitLineReader extends SplitLineReader {
   @Override
   public int readLine(Text str, int maxLineLength, int maxBytesToConsume)
       throws IOException {
-    long bytesRead = 0;
+    int bytesRead = 0;
     if (!finished) {
       // only allow at most one more record to be read after the stream
       // reports the split ended
       if (totalBytesRead > splitLength) {
         finished = true;
       }
-      bytesRead = totalBytesRead;
-      int bytesConsumed = super.readLine(str, maxLineLength, maxBytesToConsume);
-      bytesRead = totalBytesRead - bytesRead;
 
-      // No records left.
-      if (bytesConsumed == 0 && bytesRead == 0) {
-        return 0;
-      }
-
-      int bufferSize = getBufferSize();
-
-      // Add the remaining buffer size not used for the last call
-      // of fillBuffer method.
-      if (lastBytesRead <= 0) {
-        bytesRead += bufferSize;
-      } else if (bytesRead > 0) {
-        bytesRead += bufferSize - lastBytesRead;
-      }
-
-      // Adjust the size of the buffer not used for this record.
-      // The size is carried over for the next calculation.
-      bytesRead += unusedBytes;
-      unusedBytes = bufferSize - getBufferPosn();
-      bytesRead -= unusedBytes;
+      bytesRead = super.readLine(str, maxLineLength, maxBytesToConsume);
     }
-    return (int) bytesRead;
+    return bytesRead;
   }
 
   @Override
