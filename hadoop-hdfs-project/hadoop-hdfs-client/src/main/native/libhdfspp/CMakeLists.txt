@@ -50,6 +50,10 @@ include_directories(
   third_party/gmock-1.7.0
 )
 
+set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../proto)
+set(PROTO_HADOOP_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/main/proto)
+set(PROTO_HADOOP_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/test/proto)
+
 add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(lib)
 add_subdirectory(tests)
