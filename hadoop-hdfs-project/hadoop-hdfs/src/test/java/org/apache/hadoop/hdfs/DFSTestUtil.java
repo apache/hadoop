@@ -1797,8 +1797,8 @@ public class DFSTestUtil {
       URI nameNodeUri, UserGroupInformation ugi)
       throws IOException {
     return NameNodeProxies.createNonHAProxy(conf,
-        NameNode.getAddress(nameNodeUri), NamenodeProtocol.class, ugi, false).
-        getProxy();
+        DFSUtilClient.getNNAddress(nameNodeUri), NamenodeProtocol.class, ugi,
+        false).getProxy();
   }
 
   /**

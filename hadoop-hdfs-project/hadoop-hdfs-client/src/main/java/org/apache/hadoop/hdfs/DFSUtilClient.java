@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.BasicInetPeer;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
@@ -586,5 +588,44 @@ public class DFSUtilClient {
         IOUtilsClient.cleanup(null, peer);
       }
     }
+  }
+
+  public static InetSocketAddress getNNAddress(String address) {
+    return NetUtils.createSocketAddr(address,
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+  }
+
+  public static InetSocketAddress getNNAddress(Configuration conf) {
+    URI filesystemURI = FileSystem.getDefaultUri(conf);
+    return getNNAddress(filesystemURI);
+  }
+
+  /**
+   * @return address of file system
+   */
+  public static InetSocketAddress getNNAddress(URI filesystemURI) {
+    String authority = filesystemURI.getAuthority();
+    if (authority == null) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): %s has no authority.",
+          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
+    }
+    if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
+        filesystemURI.getScheme())) {
+      throw new IllegalArgumentException(String.format(
+          "Invalid URI for NameNode address (check %s): " +
+          "%s is not of scheme '%s'.", FileSystem.FS_DEFAULT_NAME_KEY,
+          filesystemURI.toString(), HdfsConstants.HDFS_URI_SCHEME));
+    }
+    return getNNAddress(authority);
+  }
+
+  public static URI getNNUri(InetSocketAddress namenode) {
+    int port = namenode.getPort();
+    String portString =
+        (port == HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) ?
+        "" : (":" + port);
+    return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
+        + namenode.getHostName() + portString);
   }
 }

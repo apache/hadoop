@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.COMMIT_STATUS;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
@@ -480,7 +480,7 @@ public class TestWrites {
     try {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
       cluster.waitActive();
-      client = new DFSClient(NameNode.getAddress(config), config);
+      client = new DFSClient(DFSUtilClient.getNNAddress(config), config);
 
       // Use emphral port in case tests are running in parallel
       config.setInt("nfs3.mountd.port", 0);
@@ -596,7 +596,8 @@ public class TestWrites {
       nfs3.startServiceInternal(false);
       nfsd = (RpcProgramNfs3) nfs3.getRpcProgram();
 
-      DFSClient dfsClient = new DFSClient(NameNode.getAddress(config), config);
+      DFSClient dfsClient = new DFSClient(DFSUtilClient.getNNAddress(config),
+          config);
       HdfsFileStatus status = dfsClient.getFileInfo("/");
       FileHandle rootHandle = new FileHandle(status.getFileId());
 

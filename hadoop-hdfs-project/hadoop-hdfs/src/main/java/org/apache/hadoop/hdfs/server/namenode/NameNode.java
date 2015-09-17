@@ -445,10 +445,6 @@ public class NameNode implements NameNodeStatusMXBean {
     return clientNamenodeAddress;
   }
 
-  public static InetSocketAddress getAddress(String address) {
-    return NetUtils.createSocketAddr(address, DFS_NAMENODE_RPC_PORT_DEFAULT);
-  }
-  
   /**
    * Set the configuration property for the service rpc address
    * to address
@@ -470,45 +466,18 @@ public class NameNode implements NameNodeStatusMXBean {
                                                         boolean fallback) {
     String addr = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
     if (addr == null || addr.isEmpty()) {
-      return fallback ? getAddress(conf) : null;
+      return fallback ? DFSUtilClient.getNNAddress(conf) : null;
     }
-    return getAddress(addr);
+    return DFSUtilClient.getNNAddress(addr);
   }
 
-  public static InetSocketAddress getAddress(Configuration conf) {
-    URI filesystemURI = FileSystem.getDefaultUri(conf);
-    return getAddress(filesystemURI);
-  }
-
-
+  @Deprecated
   /**
-   * @return address of file system
+   * @deprecated Use {@link DFSUtilClient#getNNUri(InetSocketAddress)} instead.
    */
-  public static InetSocketAddress getAddress(URI filesystemURI) {
-    String authority = filesystemURI.getAuthority();
-    if (authority == null) {
-      throw new IllegalArgumentException(String.format(
-          "Invalid URI for NameNode address (check %s): %s has no authority.",
-          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString()));
-    }
-    if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(
-        filesystemURI.getScheme())) {
-      throw new IllegalArgumentException(String.format(
-          "Invalid URI for NameNode address (check %s): %s is not of scheme '%s'.",
-          FileSystem.FS_DEFAULT_NAME_KEY, filesystemURI.toString(),
-          HdfsConstants.HDFS_URI_SCHEME));
-    }
-    return getAddress(authority);
-  }
-
   public static URI getUri(InetSocketAddress namenode) {
-    int port = namenode.getPort();
-    String portString = (port == DFS_NAMENODE_RPC_PORT_DEFAULT) ?
-        "" : (":" + port);
-    return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
-        + namenode.getHostName()+portString);
+    return DFSUtilClient.getNNUri(namenode);
   }
-
   //
   // Common NameNode methods implementation for the active name-node role.
   //
@@ -529,7 +498,7 @@ public class NameNode implements NameNodeStatusMXBean {
   }
 
   protected InetSocketAddress getRpcServerAddress(Configuration conf) {
-    return getAddress(conf);
+    return DFSUtilClient.getNNAddress(conf);
   }
   
   /** Given a configuration get the bind host of the service rpc server
@@ -564,7 +533,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   protected void setRpcServerAddress(Configuration conf,
       InetSocketAddress rpcAddress) {
-    FileSystem.setDefaultUri(conf, getUri(rpcAddress));
+    FileSystem.setDefaultUri(conf, DFSUtilClient.getNNUri(rpcAddress));
   }
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
@@ -1012,7 +981,7 @@ public class NameNode implements NameNodeStatusMXBean {
     checkAllowFormat(conf);
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      InetSocketAddress socAddr = getAddress(conf);
+      InetSocketAddress socAddr = DFSUtilClient.getNNAddress(conf);
       SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
           DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     }
@@ -1115,7 +1084,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      InetSocketAddress socAddr = getAddress(conf);
+      InetSocketAddress socAddr = DFSUtilClient.getNNAddress(conf);
       SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
           DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     }

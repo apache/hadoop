@@ -39,6 +39,7 @@ import org.apache.hadoop.ha.HealthMonitor;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -166,7 +167,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
 
   @Override
   public void loginAsFCUser() throws IOException {
-    InetSocketAddress socAddr = NameNode.getAddress(conf);
+    InetSocketAddress socAddr = DFSUtilClient.getNNAddress(conf);
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
   }

@@ -149,7 +149,6 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -250,17 +249,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       = new HashMap<Long, DFSOutputStream>();
 
   /**
-   * Same as this(NameNode.getAddress(conf), conf);
+   * Same as this(NameNode.getNNAddress(conf), conf);
    * @see #DFSClient(InetSocketAddress, Configuration)
    * @deprecated Deprecated at 0.21
    */
   @Deprecated
   public DFSClient(Configuration conf) throws IOException {
-    this(NameNode.getAddress(conf), conf);
+    this(DFSUtilClient.getNNAddress(conf), conf);
   }
   
   public DFSClient(InetSocketAddress address, Configuration conf) throws IOException {
-    this(NameNode.getUri(address), conf);
+    this(DFSUtilClient.getNNUri(address), conf);
   }
 
   /**

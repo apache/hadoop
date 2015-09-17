@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RemoteException;
@@ -193,8 +192,8 @@ public class TestGetBlocks {
       DatanodeInfo[] dataNodes = null;
       boolean notWritten;
       do {
-        final DFSClient dfsclient = new DFSClient(NameNode.getAddress(CONF),
-            CONF);
+        final DFSClient dfsclient = new DFSClient(
+            DFSUtilClient.getNNAddress(CONF), CONF);
         locatedBlocks = dfsclient.getNamenode()
             .getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
         assertEquals(2, locatedBlocks.size());
@@ -216,7 +215,7 @@ public class TestGetBlocks {
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
       NamenodeProtocol namenode = NameNodeProxies.createProxy(CONF,
-          NameNode.getUri(addr), NamenodeProtocol.class).getProxy();
+          DFSUtilClient.getNNUri(addr), NamenodeProtocol.class).getProxy();
 
       // get blocks of size fileLen from dataNodes[0]
       BlockWithLocations[] locs;

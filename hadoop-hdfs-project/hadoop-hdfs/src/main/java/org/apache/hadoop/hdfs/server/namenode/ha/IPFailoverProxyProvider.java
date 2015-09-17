@@ -24,9 +24,9 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -91,7 +91,7 @@ public class IPFailoverProxyProvider<T> extends
     if (nnProxyInfo == null) {
       try {
         // Create a proxy that is not wrapped in RetryProxy
-        InetSocketAddress nnAddr = NameNode.getAddress(nameNodeUri);
+        InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nameNodeUri);
         nnProxyInfo = new ProxyInfo<T>(NameNodeProxies.createNonHAProxy(
             conf, nnAddr, xface, UserGroupInformation.getCurrentUser(), 
             false).getProxy(), nnAddr.toString());
