@@ -18,6 +18,7 @@
 #ifndef LIBHDFSPP_HDFS_H_
 #define LIBHDFSPP_HDFS_H_
 
+#include "libhdfspp/options.h"
 #include "libhdfspp/status.h"
 
 #include <functional>
@@ -89,7 +90,7 @@ public:
    * FileSystem object.
    **/
   static void
-  New(IoService *io_service, const std::string &server,
+  New(IoService *io_service, const Options &options, const std::string &server,
       const std::string &service,
       const std::function<void(const Status &, FileSystem *)> &handler);
   /**

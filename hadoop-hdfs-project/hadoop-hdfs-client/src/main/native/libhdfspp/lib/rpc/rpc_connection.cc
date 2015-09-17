@@ -21,6 +21,7 @@
 #include "ProtobufRpcEngine.pb.h"
 #include "IpcConnectionContext.pb.h"
 
+#include "common/logging.h"
 #include "common/util.h"
 
 #include <asio/read.hpp>
@@ -57,7 +58,6 @@ ConstructPacket(std::string *res,
   os.WriteRaw(reinterpret_cast<const char *>(&net_len), sizeof(net_len));
 
   uint8_t *buf = os.GetDirectBufferForNBytesAndAdvance(len);
-  assert(buf && "Cannot allocate memory");
 
   std::for_each(
       headers.begin(), headers.end(), [&buf](const pb::MessageLite *v) {
@@ -146,20 +146,36 @@ void RpcConnection::HandleRpcResponse(const std::vector<char> &data) {
   RpcResponseHeaderProto h;
   ReadDelimitedPBMessage(&in, &h);
 
-  auto it = requests_on_fly_.find(h.callid());
-  if (it == requests_on_fly_.end()) {
-    // TODO: out of line RPC request
-    assert(false && "Out of line request with unknown call id");
+  auto req = RemoveFromRunningQueue(h.callid());
+  if (!req) {
+    LOG_WARN() << "RPC response with Unknown call id " << h.callid();
+    return;
   }
 
-  auto req = it->second;
-  requests_on_fly_.erase(it);
   Status stat;
   if (h.has_exceptionclassname()) {
     stat =
         Status::Exception(h.exceptionclassname().c_str(), h.errormsg().c_str());
   }
   req->OnResponseArrived(&in, stat);
+}
+
+void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
+                                     const ::asio::error_code &ec) {
+  if (ec.value() == asio::error::operation_aborted) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> state_lock(engine_state_lock_);
+  auto r = RemoveFromRunningQueue(req->call_id());
+  if (!r) {
+    // The RPC might have been finished and removed from the queue
+    return;
+  }
+
+  Status stat = ToStatus(ec ? ec : make_error_code(::asio::error::timed_out));
+
+  r->OnResponseArrived(nullptr, stat);
 }
 
 std::shared_ptr<std::string> RpcConnection::PrepareHandshakePacket() {
@@ -222,5 +238,33 @@ void RpcConnection::AsyncRawRpc(const std::string &method_name,
                                      std::move(wrapped_handler));
   pending_requests_.push_back(r);
   FlushPendingRequests();
+}
+
+void RpcConnection::ClearAndDisconnect(const ::asio::error_code &ec) {
+  Shutdown();
+  std::vector<std::shared_ptr<Request>> requests;
+  std::transform(requests_on_fly_.begin(), requests_on_fly_.end(),
+                 std::back_inserter(requests),
+                 std::bind(&RequestOnFlyMap::value_type::second, _1));
+  requests_on_fly_.clear();
+  requests.insert(requests.end(),
+                  std::make_move_iterator(pending_requests_.begin()),
+                  std::make_move_iterator(pending_requests_.end()));
+  pending_requests_.clear();
+  for (const auto &req : requests) {
+    req->OnResponseArrived(nullptr, ToStatus(ec));
+  }
+}
+
+std::shared_ptr<RpcConnection::Request>
+RpcConnection::RemoveFromRunningQueue(int call_id) {
+  auto it = requests_on_fly_.find(call_id);
+  if (it == requests_on_fly_.end()) {
+    return std::shared_ptr<Request>();
+  }
+
+  auto req = it->second;
+  requests_on_fly_.erase(it);
+  return req;
 }
 }

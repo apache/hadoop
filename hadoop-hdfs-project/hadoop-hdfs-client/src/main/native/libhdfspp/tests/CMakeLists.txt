@@ -18,6 +18,13 @@
 
 add_library(test_common OBJECT mock_connection.cc)
 
+set(PROTOBUF_IMPORT_DIRS ${PROTO_HADOOP_TEST_DIR})
+
+protobuf_generate_cpp(PROTO_TEST_SRCS PROTO_TEST_HDRS
+  ${PROTO_HADOOP_TEST_DIR}/test.proto
+  ${PROTO_HADOOP_TEST_DIR}/test_rpc_service.proto
+)
+
 add_executable(remote_block_reader_test remote_block_reader_test.cc $<TARGET_OBJECTS:test_common>)
 target_link_libraries(remote_block_reader_test reader proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_test(remote_block_reader remote_block_reader_test)
@@ -29,3 +36,8 @@ add_test(sasl_digest_md5 sasl_digest_md5_test)
 add_executable(inputstream_test inputstream_test.cc)
 target_link_libraries(inputstream_test fs rpc reader proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_test(inputstream inputstream_test)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS} $<TARGET_OBJECTS:test_common>)
+target_link_libraries(rpc_engine_test rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+add_test(rpc_engine rpc_engine_test)

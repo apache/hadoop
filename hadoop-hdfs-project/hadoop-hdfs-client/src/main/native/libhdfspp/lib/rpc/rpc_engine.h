@@ -18,6 +18,7 @@
 #ifndef LIB_RPC_RPC_ENGINE_H_
 #define LIB_RPC_RPC_ENGINE_H_
 
+#include "libhdfspp/options.h"
 #include "libhdfspp/status.h"
 
 #include <google/protobuf/message_lite.h>
@@ -39,7 +40,7 @@ public:
   typedef std::function<void(const Status &)> Callback;
   virtual ~RpcConnection();
   RpcConnection(RpcEngine *engine);
-  virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+  virtual void Connect(const ::asio::ip::tcp::endpoint &server,
                        Callback &&handler) = 0;
   virtual void Handshake(Callback &&handler) = 0;
   virtual void Shutdown() = 0;
@@ -54,6 +55,7 @@ public:
                    std::shared_ptr<std::string> resp, Callback &&handler);
 
 protected:
+  class Request;
   RpcEngine *const engine_;
   virtual void OnSendCompleted(const ::asio::error_code &ec,
                                size_t transferred) = 0;
@@ -66,7 +68,11 @@ protected:
   SerializeRpcRequest(const std::string &method_name,
                       const ::google::protobuf::MessageLite *req);
   void HandleRpcResponse(const std::vector<char> &data);
+  void HandleRpcTimeout(std::shared_ptr<Request> req,
+                        const ::asio::error_code &ec);
   void FlushPendingRequests();
+  void ClearAndDisconnect(const ::asio::error_code &ec);
+  std::shared_ptr<Request> RemoveFromRunningQueue(int call_id);
 
   enum ResponseState {
     kReadLength,
@@ -89,7 +95,8 @@ protected:
     ::asio::deadline_timer &timer() { return timer_; }
     const std::string &payload() const { return payload_; }
     void OnResponseArrived(::google::protobuf::io::CodedInputStream *is,
-                           const Status &status); 
+                           const Status &status);
+
   private:
     const int call_id_;
     ::asio::deadline_timer timer_;
@@ -102,7 +109,8 @@ protected:
   // Requests to be sent over the wire
   std::vector<std::shared_ptr<Request>> pending_requests_;
   // Requests that are waiting for responses
-  std::unordered_map<int, std::shared_ptr<Request>> requests_on_fly_;
+  typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
+  RequestOnFlyMap requests_on_fly_;
   // Lock for mutable parts of this class that need to be thread safe
   std::mutex engine_state_lock_;
 };
@@ -117,8 +125,9 @@ public:
     kCallIdPing = -4
   };
 
-  RpcEngine(::asio::io_service *io_service, const std::string &client_name,
-            const char *protocol_name, int protocol_version);
+  RpcEngine(::asio::io_service *io_service, const Options &options,
+            const std::string &client_name, const char *protocol_name,
+            int protocol_version);
 
   void AsyncRpc(const std::string &method_name,
                 const ::google::protobuf::MessageLite *req,
@@ -134,10 +143,11 @@ public:
    **/
   Status RawRpc(const std::string &method_name, const std::string &req,
                 std::shared_ptr<std::string> resp);
-  void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+  void Connect(const ::asio::ip::tcp::endpoint &server,
                const std::function<void(const Status &)> &handler);
   void Start();
   void Shutdown();
+  void TEST_SetRpcConnection(std::unique_ptr<RpcConnection> *conn);
 
   int NextCallId() { return ++call_id_; }
 
@@ -145,11 +155,12 @@ public:
   const std::string &protocol_name() const { return protocol_name_; }
   int protocol_version() const { return protocol_version_; }
   ::asio::io_service &io_service() { return *io_service_; }
-
+  const Options &options() { return options_; }
   static std::string GetRandomClientName();
 
 private:
   ::asio::io_service *io_service_;
+  Options options_;
   const std::string client_name_;
   const std::string protocol_name_;
   const int protocol_version_;
