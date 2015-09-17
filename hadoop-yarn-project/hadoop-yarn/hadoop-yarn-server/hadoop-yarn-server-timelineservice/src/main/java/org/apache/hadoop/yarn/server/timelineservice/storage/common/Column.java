@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 /**
  * A Column represents the way to store a fully qualified column in a specific
@@ -38,12 +39,15 @@ public interface Column<T> {
    *          column.
    * @param timestamp version timestamp. When null the server timestamp will be
    *          used.
+   * @param attributes Map of attributes for this mutation. used in the coprocessor
+   *          to set/read the cell tags. Can be null.
    * @param inputValue the value to write to the rowKey and column qualifier.
    *          Nothing gets written when null.
    * @throws IOException
    */
   public void store(byte[] rowKey, TypedBufferedMutator<T> tableMutator,
-      Long timestamp, Object inputValue) throws IOException;
+      Long timestamp, Object inputValue, Attribute... attributes)
+      throws IOException;
 
   /**
    * Get the latest version of this specified column. Note: this call clones the

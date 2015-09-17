@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
@@ -88,20 +87,15 @@ public class TestHBaseTimelineStorage {
   }
 
   private static void createSchema() throws IOException {
-    new EntityTable()
-        .createTable(util.getHBaseAdmin(), util.getConfiguration());
-    new AppToFlowTable()
-        .createTable(util.getHBaseAdmin(), util.getConfiguration());
-    new ApplicationTable()
-        .createTable(util.getHBaseAdmin(), util.getConfiguration());
+    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
   }
 
   @Test
   public void testWriteApplicationToHBase() throws Exception {
     TimelineEntities te = new TimelineEntities();
     ApplicationEntity entity = new ApplicationEntity();
-    String id = "hello";
-    entity.setId(id);
+    String appId = "application_1000178881110_2002";
+    entity.setId(appId);
     long cTime = 1425016501000L;
     long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
@@ -173,12 +167,12 @@ public class TestHBaseTimelineStorage {
       String flow = "some_flow_name";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      hbi.write(cluster, user, flow, flowVersion, runid, id, te);
+      hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
       hbi.stop();
 
       // retrieve the row
       byte[] rowKey =
-          ApplicationRowKey.getRowKey(cluster, user, flow, runid, id);
+          ApplicationRowKey.getRowKey(cluster, user, flow, runid, appId);
       Get get = new Get(rowKey);
       get.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
@@ -190,11 +184,11 @@ public class TestHBaseTimelineStorage {
       // check the row key
       byte[] row1 = result.getRow();
       assertTrue(isApplicationRowKeyCorrect(row1, cluster, user, flow, runid,
-          id));
+          appId));
 
       // check info column family
       String id1 = ApplicationColumn.ID.readResult(result).toString();
-      assertEquals(id, id1);
+      assertEquals(appId, id1);
 
       Number val =
           (Number) ApplicationColumn.CREATED_TIME.readResult(result);
@@ -252,17 +246,17 @@ public class TestHBaseTimelineStorage {
       assertEquals(metricValues, metricMap);
 
       // read the timeline entity using the reader this time
-      TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, id,
+      TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appId,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
       Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
-          id, entity.getType(), null, null, null, null, null, null, null,
+          appId, entity.getType(), null, null, null, null, null, null, null,
           null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
       assertEquals(1, es1.size());
 
       // verify attributes
-      assertEquals(id, e1.getId());
+      assertEquals(appId, e1.getId());
       assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
           e1.getType());
       assertEquals(cTime, e1.getCreatedTime());
@@ -576,7 +570,7 @@ public class TestHBaseTimelineStorage {
       String flow = "other_flow_name";
       String flowVersion = "1111F01C2287BA";
       long runid = 1009876543218L;
-      String appName = "some app name";
+      String appName = "application_123465899910_1001";
       hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
       hbi.stop();
 
