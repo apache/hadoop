@@ -544,10 +544,7 @@ public class MRApp extends MRAppMaster {
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {
       case CONTAINER_REMOTE_LAUNCH:
-        getContext().getEventHandler().handle(
-            new TaskAttemptContainerLaunchedEvent(event.getTaskAttemptID(),
-                shufflePort));
-        
+        containerLaunched(event.getTaskAttemptID(), shufflePort);
         attemptLaunched(event.getTaskAttemptID());
         break;
       case CONTAINER_REMOTE_CLEANUP:
@@ -559,6 +556,12 @@ public class MRApp extends MRAppMaster {
         break;
       }
     }
+  }
+
+  protected void containerLaunched(TaskAttemptId attemptID, int shufflePort) {
+    getContext().getEventHandler().handle(
+      new TaskAttemptContainerLaunchedEvent(attemptID,
+          shufflePort));
   }
 
   protected void attemptLaunched(TaskAttemptId attemptID) {
