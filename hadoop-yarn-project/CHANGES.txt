@@ -103,6 +103,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4102. Add a "skip existing table" mode for timeline schema creator (Li
     Lu via sjlee)
 
+    YARN-3901. Populate flow run data in the flow_run & flow activity tables
+    (Vrushali C via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
