@@ -95,16 +95,16 @@ public final class ErasureCodingWorker {
 
   private ThreadPoolExecutor STRIPED_BLK_RECOVERY_THREAD_POOL;
   private ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
-  private final int STRIPED_READ_THRESHOLD_MILLIS;
+  private final int STRIPED_READ_TIMEOUT_MILLIS;
   private final int STRIPED_READ_BUFFER_SIZE;
 
   public ErasureCodingWorker(Configuration conf, DataNode datanode) {
     this.datanode = datanode;
     this.conf = conf;
 
-    STRIPED_READ_THRESHOLD_MILLIS = conf.getInt(
-        DFSConfigKeys.DFS_DATANODE_STRIPED_READ_THRESHOLD_MILLIS_KEY,
-        DFSConfigKeys.DFS_DATANODE_STRIPED_READ_THRESHOLD_MILLIS_DEFAULT);
+    STRIPED_READ_TIMEOUT_MILLIS = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_STRIPED_READ_TIMEOUT_MILLIS_KEY,
+        DFSConfigKeys.DFS_DATANODE_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
     initializeStripedReadThreadPool(conf.getInt(
         DFSConfigKeys.DFS_DATANODE_STRIPED_READ_THREADS_KEY, 
         DFSConfigKeys.DFS_DATANODE_STRIPED_READ_THREADS_DEFAULT));
@@ -556,7 +556,7 @@ public final class ErasureCodingWorker {
         try {
           StripingChunkReadResult result =
               StripedBlockUtil.getNextCompletedStripedRead(
-                  readService, futures, STRIPED_READ_THRESHOLD_MILLIS);
+                  readService, futures, STRIPED_READ_TIMEOUT_MILLIS);
           int resultIndex = -1;
           if (result.state == StripingChunkReadResult.SUCCESSFUL) {
             resultIndex = result.index;

@@ -2403,23 +2403,23 @@
 </property>
 
 <property>
-  <name>dfs.datanode.stripedread.threshold.millis</name>
+  <name>dfs.datanode.stripedread.timeout.millis</name>
   <value>5000</value>
-  <description>datanode striped read threshold in millisecond.
+  <description>Datanode striped read timeout in milliseconds.
   </description>
 </property>
 
 <property>
   <name>dfs.datanode.stripedread.threads</name>
   <value>20</value>
-  <description>datanode striped read thread pool size.
+  <description>Number of threads used by the Datanode for background recovery work.
   </description>
 </property>
 
 <property>
   <name>dfs.datanode.stripedread.buffer.size</name>
   <value>262144</value>
-  <description>datanode striped read buffer size.
+  <description>Datanode striped read buffer size.
   </description>
 </property>
 

@@ -432,3 +432,6 @@
 
     HDFS-9097. Erasure coding: update EC command "-s" flag to "-p" when 
     specifying policy. (zhz)
+
+    HDFS-9086. Rename dfs.datanode.stripedread.threshold.millis to 
+    dfs.datanode.stripedread.timeout.millis. (wang via zhz)

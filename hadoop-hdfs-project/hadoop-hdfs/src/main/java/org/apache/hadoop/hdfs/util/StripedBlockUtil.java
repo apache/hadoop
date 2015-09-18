@@ -203,12 +203,12 @@ public class StripedBlockUtil {
    */
   public static StripingChunkReadResult getNextCompletedStripedRead(
       CompletionService<Void> readService, Map<Future<Void>, Integer> futures,
-      final long threshold) throws InterruptedException {
+      final long timeoutMillis) throws InterruptedException {
     Preconditions.checkArgument(!futures.isEmpty());
     Future<Void> future = null;
     try {
-      if (threshold > 0) {
-        future = readService.poll(threshold, TimeUnit.MILLISECONDS);
+      if (timeoutMillis > 0) {
+        future = readService.poll(timeoutMillis, TimeUnit.MILLISECONDS);
       } else {
         future = readService.take();
       }
