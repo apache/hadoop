@@ -25,6 +25,7 @@ import static org.apache.hadoop.io.retry.RetryPolicies.retryByRemoteException;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumTimeWithFixedSleep;
+import static org.apache.hadoop.io.retry.RetryPolicies.retryForeverWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
 import static org.junit.Assert.*;
 
@@ -110,7 +111,17 @@ public class TestRetryProxy {
     unreliable.failsOnceThenSucceeds();
     unreliable.failsTenTimesThenSucceeds();
   }
-  
+
+  @Test
+  public void testRetryForeverWithFixedSleep() throws UnreliableException {
+    UnreliableInterface unreliable = (UnreliableInterface) RetryProxy.create(
+        UnreliableInterface.class, unreliableImpl,
+        retryForeverWithFixedSleep(1, TimeUnit.MILLISECONDS));
+    unreliable.alwaysSucceeds();
+    unreliable.failsOnceThenSucceeds();
+    unreliable.failsTenTimesThenSucceeds();
+  }
+
   @Test
   public void testRetryUpToMaximumCountWithFixedSleep() throws UnreliableException {
     UnreliableInterface unreliable = (UnreliableInterface)
