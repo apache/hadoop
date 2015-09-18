@@ -610,23 +610,10 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
-      final ContentSummaryComputationContext summary) {
+      int snapshotId, final ContentSummaryComputationContext summary) {
     final ContentCounts counts = summary.getCounts();
-    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    final long fileLen;
-    if (sf == null) {
-      fileLen = computeFileSize();
-      counts.addContent(Content.FILE, 1);
-    } else {
-      final FileDiffList diffs = sf.getDiffs();
-      final int n = diffs.asList().size();
-      counts.addContent(Content.FILE, n);
-      if (n > 0 && sf.isCurrentFileDeleted()) {
-        fileLen =  diffs.getLast().getFileSize();
-      } else {
-        fileLen = computeFileSize();
-      }
-    }
+    counts.addContent(Content.FILE, 1);
+    final long fileLen = computeFileSize(snapshotId);
     counts.addContent(Content.LENGTH, fileLen);
     counts.addContent(Content.DISKSPACE, storagespaceConsumed(null)
         .getStorageSpace());
