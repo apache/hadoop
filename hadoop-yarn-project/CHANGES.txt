@@ -445,6 +445,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4149. yarn logs -am should provide an option to fetch all the log files
     (Varun Vasudev via xgong)
 
+    YARN-2597. MiniYARNCluster should propagate reason for AHS not starting.
+    (stevel)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
