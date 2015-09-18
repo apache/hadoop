@@ -1367,6 +1367,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9073. Fix failures in TestLazyPersistLockedMemory
     testReleaseOnEviction(). (J.Andreina via stevel)
 
+    HDFS-9063. Correctly handle snapshot path for getContentSummary. (jing9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
