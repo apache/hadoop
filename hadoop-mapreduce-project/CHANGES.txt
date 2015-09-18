@@ -521,10 +521,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6403. Fix typo in the usage of NNBench.
     (Jagadesh Kiran N via aajisaka)
 
-    MAPREDUCE-5948. org.apache.hadoop.mapred.LineRecordReader does not handle
-    multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
-    AJISAKA via jlowe)
-
     MAPREDUCE-6400. Multiple shuffle transfer fails because input is closed
     too early (Brahma Reddy Battula, Akira AJISAKA, and Gera Shegalov via
     jlowe)
@@ -566,10 +562,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6452. NPE when intermediate encrypt enabled for LocalRunner.
     (Zhihai Xu)
 
-    MAPREDUCE-6481. LineRecordReader may give incomplete record and wrong
-    position/key information for uncompressed input sometimes. (Zhihai Xu via
-    jlowe)
-
     MAPREDUCE-5002. AM could potentially allocate a reduce container to a map
     attempt (Chang Li via jlowe)
 
@@ -605,6 +597,14 @@ Release 2.7.2 - UNRELEASED
 
     MAPREDUCE-6472. MapReduce AM should have java.io.tmpdir=./tmp to be
     consistent with tasks (Naganarasimha G R via jlowe)
+
+    MAPREDUCE-5948. org.apache.hadoop.mapred.LineRecordReader does not handle
+    multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
+    AJISAKA via jlowe)
+
+    MAPREDUCE-6481. LineRecordReader may give incomplete record and wrong
+    position/key information for uncompressed input sometimes. (Zhihai Xu via
+    jlowe)
 
 Release 2.7.1 - 2015-07-06 
 
