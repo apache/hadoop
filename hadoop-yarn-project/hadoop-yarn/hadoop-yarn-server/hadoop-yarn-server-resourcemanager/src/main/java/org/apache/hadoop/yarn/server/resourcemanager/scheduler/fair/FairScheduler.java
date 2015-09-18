@@ -194,13 +194,23 @@ public class FairScheduler extends
   private AllocationFileLoaderService allocsLoader;
   @VisibleForTesting
   AllocationConfiguration allocConf;
-  
+
+  // Container size threshold for making a reservation.
+  @VisibleForTesting
+  Resource reservationThreshold;
+
   public FairScheduler() {
     super(FairScheduler.class.getName());
     clock = new SystemClock();
     allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
+  }
+
+  public boolean isAtLeastReservationThreshold(
+      ResourceCalculator resourceCalculator, Resource resource) {
+    return Resources.greaterThanOrEqual(
+        resourceCalculator, clusterResource, resource, reservationThreshold);
   }
 
   private void validateConf(Configuration conf) {
@@ -1325,6 +1335,7 @@ public class FairScheduler extends
       minimumAllocation = this.conf.getMinimumAllocation();
       initMaximumResourceCapability(this.conf.getMaximumAllocation());
       incrAllocation = this.conf.getIncrementAllocation();
+      updateReservationThreshold();
       continuousSchedulingEnabled = this.conf.isContinuousSchedulingEnabled();
       continuousSchedulingSleepMs =
           this.conf.getContinuousSchedulingSleepMs();
@@ -1389,6 +1400,14 @@ public class FairScheduler extends
     } catch (Exception e) {
       throw new IOException("Failed to initialize FairScheduler", e);
     }
+  }
+
+  private void updateReservationThreshold() {
+    Resource newThreshold = Resources.multiply(
+        getIncrementResourceCapability(),
+        this.conf.getReservationThresholdIncrementMultiple());
+
+    reservationThreshold = newThreshold;
   }
 
   private synchronized void startSchedulerThreads() {

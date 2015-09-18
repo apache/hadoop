@@ -710,9 +710,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
 
     // Asked for less than increment allocation.
-    assertEquals(FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
+    assertEquals(
+        FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
         scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+            getResourceUsage().getMemory());
 
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
     scheduler.handle(updateEvent2);
@@ -764,7 +765,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 is waiting with a reservation
     assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
-      getResourceUsage().getMemory());
+        getResourceUsage().getMemory());
     assertEquals(1024, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemory());
 
     // Now another node checks in with capacity
@@ -939,8 +940,88 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         getResourceUsage().getMemory());
   }
 
-  
+  @Test
+  public void testReservationThresholdGatesReservations() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+
+    // Set threshold to 2 * 1024 ==> 2048 MB & 2 * 1 ==> 2 vcores (test will
+    // use vcores)
+    conf.setFloat(FairSchedulerConfiguration.
+            RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+        2f);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add a node
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(4096, 4), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue 1 requests full capacity of node
+    createSchedulingRequest(4096, 4, "queue1", "user1", 1, 1);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+
+    scheduler.handle(updateEvent);
+
+    // Make sure queue 1 is allocated app capacity
+    assertEquals(4096, scheduler.getQueueManager().getQueue("queue1").
+        getResourceUsage().getMemory());
+
+    // Now queue 2 requests below threshold
+    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue2", "user1", 1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    // Make sure queue 2 has no reservation
+    assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+        getResourceUsage().getMemory());
+    assertEquals(0,
+        scheduler.getSchedulerApp(attId).getReservedContainers().size());
+
+    // Now queue requests CPU above threshold
+    createSchedulingRequestExistingApplication(1024, 3, 1, attId);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    // Make sure queue 2 is waiting with a reservation
+    assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
+        getResourceUsage().getMemory());
+    assertEquals(3, scheduler.getSchedulerApp(attId).getCurrentReservation()
+        .getVirtualCores());
+
+    // Now another node checks in with capacity
+    RMNode node2 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(1024, 4), 2, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+    scheduler.handle(updateEvent2);
+
+    // Make sure this goes to queue 2
+    assertEquals(3, scheduler.getQueueManager().getQueue("queue2").
+        getResourceUsage().getVirtualCores());
+
+    // The old reservation should still be there...
+    assertEquals(3, scheduler.getSchedulerApp(attId).getCurrentReservation()
+        .getVirtualCores());
+    // ... but it should disappear when we update the first node.
+    scheduler.handle(updateEvent);
+    assertEquals(0, scheduler.getSchedulerApp(attId).getCurrentReservation()
+        .getVirtualCores());
+  }
 
   @Test
   public void testEmptyQueueName() throws Exception {
