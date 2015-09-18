@@ -1072,6 +1072,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12087. [JDK8] Fix javadoc errors caused by incorrect or illegal
     tags. (Akira AJISAKA via stevel).
 
+    HADOOP-12386. RetryPolicies.RETRY_FOREVER should be able to specify a 
+    retry interval. (Sunil G via wangda)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

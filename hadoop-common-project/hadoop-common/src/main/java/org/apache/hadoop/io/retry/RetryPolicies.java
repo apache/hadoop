@@ -65,6 +65,17 @@ public class RetryPolicies {
 
   /**
    * <p>
+   * Keep trying forever with a fixed time between attempts.
+   * </p>
+   */
+  public static final RetryPolicy retryForeverWithFixedSleep(long sleepTime,
+      TimeUnit timeUnit) {
+    return new RetryUpToMaximumCountWithFixedSleep(Integer.MAX_VALUE,
+        sleepTime, timeUnit);
+  }
+
+  /**
+   * <p>
    * Keep trying a limited number of times, waiting a fixed time between attempts,
    * and then fail by re-throwing the exception.
    * </p>
@@ -151,7 +162,7 @@ public class RetryPolicies {
     return new FailoverOnNetworkExceptionRetry(fallbackPolicy, maxFailovers,
         maxRetries, delayMillis, maxDelayBase);
   }
-  
+
   static class TryOnceThenFail implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
