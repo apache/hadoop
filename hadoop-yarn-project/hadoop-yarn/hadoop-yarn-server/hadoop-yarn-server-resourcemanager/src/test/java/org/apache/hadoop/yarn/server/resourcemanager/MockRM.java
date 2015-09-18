@@ -156,7 +156,8 @@ public class MockRM extends ResourceManager {
     LOG.info("App State is : " + app.getState());
     if (waitedMsecs >= timeoutMsecs) {
       Assert.fail("App state is not correct (timedout): expected: " +
-          finalState + " actual: " + app.getState());
+          finalState + " actual: " + app.getState() +
+          " for the application " + appId);
     }
   }
   
@@ -185,7 +186,8 @@ public class MockRM extends ResourceManager {
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
     if (waitedMsecs >= timeoutMsecs) {
       Assert.fail("Attempt state is not correct (timedout): expected: "
-          + finalState + " actual: " + attempt.getAppAttemptState());
+          + finalState + " actual: " + attempt.getAppAttemptState()+
+          " for the application attempt " + attemptId);
     }
   }
 
