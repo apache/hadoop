@@ -399,7 +399,7 @@ public class NodesListManager extends CompositeService implements
       NodeId nodeId = entry.getKey();
       if (!isValidNode(nodeId.getHost())) {
         this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION_WITH_TIMEOUT));
+            new RMNodeEvent(nodeId, RMNodeEventType.GRACEFUL_DECOMMISSION));
       } else {
         // Recommissioning the nodes
         if (entry.getValue().getState() == NodeState.DECOMMISSIONING
