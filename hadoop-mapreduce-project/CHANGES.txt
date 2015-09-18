@@ -384,6 +384,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6477. Replace usage of deprecated NameNode.DEFAULT_PORT in
     TestFileSystem. (Mingliang Liu via wheat9)
 
+    MAPREDUCE-6483. Replace deprecated method NameNode.getUri() with
+    DFSUtilClient.getNNUri() in TestMRCredentials. (Mingliang Liu via wheat9)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
