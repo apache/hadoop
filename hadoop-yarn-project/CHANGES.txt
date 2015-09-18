@@ -900,6 +900,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4188. Make MoveApplicationAcrossQueues abstract, newInstance static.
     (Giovanni Matteo Fumarola via cdouglas)
 
+    YARN-4171. Fix findbugs warnings in YARN-1197 branch. (Wangda Tan via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

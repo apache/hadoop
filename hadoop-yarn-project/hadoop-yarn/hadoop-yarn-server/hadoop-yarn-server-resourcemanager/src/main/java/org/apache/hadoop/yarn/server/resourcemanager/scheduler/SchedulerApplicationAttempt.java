@@ -478,9 +478,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     ContainerType containerType = ContainerType.TASK;
     // The working knowledge is that masterContainer for AM is null as it
     // itself is the master container.
-    RMAppAttempt appAttempt = rmContext.getRMApps()
-        .get(container.getId().getApplicationAttemptId().getApplicationId())
-        .getCurrentAppAttempt();
     if (isWaitingForAMContainer(getApplicationId())) {
       containerType = ContainerType.APPLICATION_MASTER;
     }
