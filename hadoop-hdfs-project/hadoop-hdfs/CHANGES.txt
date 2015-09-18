@@ -90,6 +90,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10488. Updated WebHDFS documentation regarding CREATE and MKDIR default
     permissions. (Wellington Chevreuil via wang)
 
+    HDFS-5802. NameNode does not check for inode type before traversing down a
+    path. (Xiao Chen via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
