@@ -37,6 +37,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -708,32 +709,31 @@ public class MiniYARNCluster extends CompositeService {
 
     @Override
     protected synchronized void serviceStart() throws Exception {
-      try {
-        new Thread() {
-          public void run() {
-            appHistoryServer.start();
-          };
-        }.start();
-        int waitCount = 0;
-        while (appHistoryServer.getServiceState() == STATE.INITED
-            && waitCount++ < 60) {
-          LOG.info("Waiting for Timeline Server to start...");
-          Thread.sleep(1500);
-        }
-        if (appHistoryServer.getServiceState() != STATE.STARTED) {
-          // AHS could have failed.
-          throw new IOException(
-              "ApplicationHistoryServer failed to start. Final state is "
-                  + appHistoryServer.getServiceState());
-        }
-        super.serviceStart();
-      } catch (Throwable t) {
-        throw new YarnRuntimeException(t);
+
+      new Thread() {
+        public void run() {
+          appHistoryServer.start();
+        };
+      }.start();
+      int waitCount = 0;
+      while (appHistoryServer.getServiceState() == STATE.INITED
+          && waitCount++ < 60) {
+        LOG.info("Waiting for Timeline Server to start...");
+        Thread.sleep(1500);
+      }
+      if (appHistoryServer.getServiceState() != STATE.STARTED) {
+        // AHS could have failed.
+        IOException ioe = new IOException(
+            "ApplicationHistoryServer failed to start. Final state is "
+            + appHistoryServer.getServiceState());
+        ioe.initCause(appHistoryServer.getFailureCause());
+        throw ioe;
       }
       LOG.info("MiniYARN ApplicationHistoryServer address: "
           + getConfig().get(YarnConfiguration.TIMELINE_SERVICE_ADDRESS));
       LOG.info("MiniYARN ApplicationHistoryServer web address: "
           + getConfig().get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS));
+      super.serviceStart();
     }
 
     @Override
