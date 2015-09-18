@@ -451,6 +451,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2597. MiniYARNCluster should propagate reason for AHS not starting.
     (stevel)
 
+    MAPREDUCE-6478. Add an option to skip cleanupJob stage or ignore cleanup
+    failure during commitJob. (Junping Du via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
