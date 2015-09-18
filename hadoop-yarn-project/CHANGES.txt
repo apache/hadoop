@@ -197,6 +197,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4034. Render cluster Max Priority in scheduler metrics in RM web
     UI. (Rohith Sharma K S via jianhe)
 
+    YARN-3212. RMNode State Transition Update with DECOMMISSIONING state.
+    (Junping Du via wangda)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
