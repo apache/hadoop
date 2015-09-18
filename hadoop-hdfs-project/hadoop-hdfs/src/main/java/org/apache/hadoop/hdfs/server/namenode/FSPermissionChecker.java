@@ -192,6 +192,25 @@ class FSPermissionChecker implements AccessControlEnforcer {
         ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
   }
 
+  /**
+   * Check whether exception e is due to an ancestor inode's not being
+   * directory.
+   */
+  private void checkAncestorType(INode[] inodes, int ancestorIndex,
+      AccessControlException e) throws AccessControlException {
+    for (int i = 0; i <= ancestorIndex; i++) {
+      if (inodes[i] == null) {
+        break;
+      }
+      if (!inodes[i].isDirectory()) {
+        throw new AccessControlException(
+            e.getMessage() + " (Ancestor " + inodes[i].getFullPathName()
+                + " is not a directory).");
+      }
+    }
+    throw e;
+  }
+
   @Override
   public void checkPermission(String fsOwner, String supergroup,
       UserGroupInformation callerUgi, INodeAttributes[] inodeAttrs,
@@ -202,7 +221,11 @@ class FSPermissionChecker implements AccessControlEnforcer {
       throws AccessControlException {
     for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
         ancestorIndex--);
-    checkTraverse(inodeAttrs, path, ancestorIndex);
+    try {
+      checkTraverse(inodeAttrs, path, ancestorIndex);
+    } catch (AccessControlException e) {
+      checkAncestorType(inodes, ancestorIndex, e);
+    }
 
     final INodeAttributes last = inodeAttrs[inodeAttrs.length - 1];
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
