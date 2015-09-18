@@ -112,7 +112,6 @@ public class DFSStripedInputStream extends DFSInputStream {
      * offsets for all the block readers so that we can skip data if necessary.
      */
     long blockReaderOffset;
-    LocatedBlock targetBlock;
     /**
      * We use this field to indicate whether we should use this reader. In case
      * we hit any issue with this reader, we set this field to true and avoid
@@ -120,10 +119,8 @@ public class DFSStripedInputStream extends DFSInputStream {
      */
     boolean shouldSkip = false;
 
-    BlockReaderInfo(BlockReader reader, LocatedBlock targetBlock,
-        DatanodeInfo dn, long offset) {
+    BlockReaderInfo(BlockReader reader, DatanodeInfo dn, long offset) {
       this.reader = reader;
-      this.targetBlock = targetBlock;
       this.datanode = dn;
       this.blockReaderOffset = offset;
     }
@@ -649,8 +646,8 @@ public class DFSStripedInputStream extends DFSInputStream {
           }
         }
         if (reader != null) {
-          readerInfos[chunkIndex] = new BlockReaderInfo(reader, block,
-              dnInfo.info, alignedStripe.getOffsetInBlock());
+          readerInfos[chunkIndex] = new BlockReaderInfo(reader, dnInfo.info,
+              alignedStripe.getOffsetInBlock());
           return true;
         }
       }
@@ -826,7 +823,10 @@ public class DFSStripedInputStream extends DFSInputStream {
     void prepareDecodeInputs() {
       if (decodeInputs == null) {
         decodeInputs = new ByteBuffer[dataBlkNum + parityBlkNum];
-        ByteBuffer cur = curStripeBuf.duplicate();
+        final ByteBuffer cur;
+        synchronized (DFSStripedInputStream.this) {
+          cur = curStripeBuf.duplicate();
+        }
         StripedBlockUtil.VerticalRange range = alignedStripe.range;
         for (int i = 0; i < dataBlkNum; i++) {
           cur.limit(cur.capacity());

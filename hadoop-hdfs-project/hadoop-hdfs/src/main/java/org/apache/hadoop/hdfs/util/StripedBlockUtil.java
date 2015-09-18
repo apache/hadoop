@@ -372,7 +372,7 @@ public class StripedBlockUtil {
 
     // Step 4: calculate each chunk's position in destination buffer. Since the
     // whole read range is within a single stripe, the logic is simpler here.
-    int bufOffset = (int) (rangeStartInBlockGroup % (cellSize * dataBlkNum));
+    int bufOffset = (int) (rangeStartInBlockGroup % ((long) cellSize * dataBlkNum));
     for (StripingCell cell : cells) {
       long cellStart = cell.idxInInternalBlk * cellSize + cell.offset;
       long cellEnd = cellStart + cell.size - 1;

@@ -971,6 +971,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (isBlockTokenEnabled()) {
       // Use cached UGI if serving RPC calls.
       if (b.isStriped()) {
+        Preconditions.checkState(b instanceof LocatedStripedBlock);
         LocatedStripedBlock sb = (LocatedStripedBlock) b;
         int[] indices = sb.getBlockIndices();
         Token<BlockTokenIdentifier>[] blockTokens = new Token[indices.length];

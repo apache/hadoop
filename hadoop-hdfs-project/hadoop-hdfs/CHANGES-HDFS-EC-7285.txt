@@ -435,3 +435,6 @@
 
     HDFS-9086. Rename dfs.datanode.stripedread.threshold.millis to 
     dfs.datanode.stripedread.timeout.millis. (wang via zhz)
+
+    HDFS-8550. Erasure Coding: Fix FindBugs Multithreaded correctness Warning.
+    (Rakesh R via zhz)
