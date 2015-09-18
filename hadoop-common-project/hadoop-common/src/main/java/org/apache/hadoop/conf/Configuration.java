@@ -34,7 +34,9 @@ import java.io.Reader;
 import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
+import java.net.JarURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2531,7 +2533,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (url == null) {
       return null;
     }
-    return parse(builder, url.openStream(), url.toString());
+
+    URLConnection connection = url.openConnection();
+    if (connection instanceof JarURLConnection) {
+      // Disable caching for JarURLConnection to avoid sharing JarFile
+      // with other users.
+      connection.setUseCaches(false);
+    }
+    return parse(builder, connection.getInputStream(), url.toString());
   }
 
   private Document parse(DocumentBuilder builder, InputStream is,
