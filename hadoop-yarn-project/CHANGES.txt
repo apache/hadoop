@@ -454,6 +454,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6478. Add an option to skip cleanupJob stage or ignore cleanup
     failure during commitJob. (Junping Du via wangda)
 
+    YARN-3920. FairScheduler container reservation on a node should be
+    configurable to limit it to large containers (adhoot via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
