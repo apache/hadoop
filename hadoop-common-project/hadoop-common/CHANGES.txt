@@ -782,10 +782,6 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12413. AccessControlList should avoid calling getGroupNames in
     isUserInList with empty groups. (Zhihai Xu via cnauroth)
 
-    HADOOP-12404. Disable caching for JarURLConnection to avoid sharing
-    JarFile with other users when loading resource from URL in Configuration
-    class. (zxu)
-
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
