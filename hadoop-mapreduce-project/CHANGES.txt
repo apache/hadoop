@@ -30,6 +30,10 @@ Release 2.7.2 - UNRELEASED
     MAPREDUCE-6472. MapReduce AM should have java.io.tmpdir=./tmp to be
     consistent with tasks (Naganarasimha G R via jlowe)
 
+    MAPREDUCE-5948. org.apache.hadoop.mapred.LineRecordReader does not handle
+    multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
+    AJISAKA via jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
