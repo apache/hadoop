@@ -568,6 +568,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5002. AM could potentially allocate a reduce container to a map
     attempt (Chang Li via jlowe)
 
+    MAPREDUCE-6460. TestRMContainerAllocator.
+    testAttemptNotFoundCausesRMCommunicatorException fails. (Zhihai Xu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
