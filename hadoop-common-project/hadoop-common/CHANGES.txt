@@ -546,6 +546,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-5732. Add SFTP FileSystem. (Ramtin Boustani and Inigo Goiri via
     cdouglas)
 
+    HADOOP-12360. Create StatsD metrics2 sink. (Dave Marion via stevel)
+
   IMPROVEMENTS
 
     HADOOP-12271. Hadoop Jar Error Should Be More Explanatory
