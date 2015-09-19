@@ -471,13 +471,6 @@ public class NameNode implements NameNodeStatusMXBean {
     return DFSUtilClient.getNNAddress(addr);
   }
 
-  @Deprecated
-  /**
-   * @deprecated Use {@link DFSUtilClient#getNNUri(InetSocketAddress)} instead.
-   */
-  public static URI getUri(InetSocketAddress namenode) {
-    return DFSUtilClient.getNNUri(namenode);
-  }
   //
   // Common NameNode methods implementation for the active name-node role.
   //
