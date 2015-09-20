@@ -169,6 +169,9 @@ public class JsonUtil {
     m.put("xceiverCount", datanodeinfo.getXceiverCount());
     m.put("networkLocation", datanodeinfo.getNetworkLocation());
     m.put("adminState", datanodeinfo.getAdminState().name());
+    if (datanodeinfo.getUpgradeDomain() != null) {
+      m.put("upgradeDomain", datanodeinfo.getUpgradeDomain());
+    }
     return m;
   }
 

@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -76,6 +78,15 @@ public class TestNameNodeMXBean {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.waitActive();
 
+      // Set upgrade domain on the first DN.
+      String upgradeDomain = "abcd";
+      DatanodeManager dm = cluster.getNameNode().getNamesystem().
+          getBlockManager().getDatanodeManager();
+      DatanodeDescriptor dd = dm.getDatanode(
+          cluster.getDataNodes().get(0).getDatanodeId());
+      dd.setUpgradeDomain(upgradeDomain);
+      String dnXferAddrWithUpgradeDomainSet = dd.getXferAddr();
+
       FSNamesystem fsn = cluster.getNameNode().namesystem;
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
@@ -125,6 +136,15 @@ public class TestNameNodeMXBean {
         assertTrue(((Long)liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
         assertTrue(((Long)liveNode.get("numBlocks")) == 0);
+        // a. By default the upgrade domain isn't defined on any DN.
+        // b. If the upgrade domain is set on a DN, JMX should have the same
+        // value.
+        String xferAddr = (String)liveNode.get("xferaddr");
+        if (!xferAddr.equals(dnXferAddrWithUpgradeDomainSet)) {
+          assertTrue(!liveNode.containsKey("upgradeDomain"));
+        } else {
+          assertTrue(liveNode.get("upgradeDomain").equals(upgradeDomain));
+        }
       }
       assertEquals(fsn.getLiveNodes(), alivenodeinfo);
       // get attribute deadnodeinfo
