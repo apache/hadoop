@@ -5922,6 +5922,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             .put("estimatedCapacityLostTotal",
                 volumeFailureSummary.getEstimatedCapacityLostTotal());
       }
+      if (node.getUpgradeDomain() != null) {
+        innerinfo.put("upgradeDomain", node.getUpgradeDomain());
+      }
       info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
     }
     return JSON.toString(info);

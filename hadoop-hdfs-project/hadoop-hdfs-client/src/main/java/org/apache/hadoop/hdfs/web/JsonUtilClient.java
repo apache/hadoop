@@ -241,7 +241,8 @@ class JsonUtilClient {
         getLong(m, "lastUpdateMonotonic", 0l),
         getInt(m, "xceiverCount", 0),
         getString(m, "networkLocation", ""),
-        DatanodeInfo.AdminStates.valueOf(getString(m, "adminState", "NORMAL")));
+        DatanodeInfo.AdminStates.valueOf(getString(m, "adminState", "NORMAL")),
+        getString(m, "upgradeDomain", ""));
   }
 
   /** Convert an Object[] to a DatanodeInfo[]. */

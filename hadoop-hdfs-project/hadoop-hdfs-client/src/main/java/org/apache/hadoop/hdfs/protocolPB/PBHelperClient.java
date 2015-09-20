@@ -140,6 +140,9 @@ public class PBHelperClient {
     if (info.getNetworkLocation() != null) {
       builder.setLocation(info.getNetworkLocation());
     }
+    if (info.getUpgradeDomain() != null) {
+      builder.setUpgradeDomain(info.getUpgradeDomain());
+    }
     builder
       .setId(convert((DatanodeID) info))
       .setCapacity(info.getCapacity())

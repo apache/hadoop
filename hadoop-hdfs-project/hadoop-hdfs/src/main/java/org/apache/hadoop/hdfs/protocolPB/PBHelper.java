@@ -594,7 +594,8 @@ public class PBHelper {
         di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
         di.getBlockPoolUsed(), di.getCacheCapacity(), di.getCacheUsed(),
         di.getLastUpdate(), di.getLastUpdateMonotonic(),
-        di.getXceiverCount(), PBHelper.convert(di.getAdminState()));
+        di.getXceiverCount(), PBHelper.convert(di.getAdminState()),
+        di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
   }
   
   static public DatanodeInfo[] convert(DatanodeInfoProto di[]) {
