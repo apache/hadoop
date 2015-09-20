@@ -175,8 +175,13 @@ public final class ErasureCodingWorker {
    */
   public void processErasureCodingTasks(Collection<BlockECRecoveryInfo> ecTasks) {
     for (BlockECRecoveryInfo recoveryInfo : ecTasks) {
-      STRIPED_BLK_RECOVERY_THREAD_POOL.submit(new ReconstructAndTransferBlock(
-          recoveryInfo));
+      try {
+        STRIPED_BLK_RECOVERY_THREAD_POOL
+            .submit(new ReconstructAndTransferBlock(recoveryInfo));
+      } catch (Throwable e) {
+        LOG.warn("Failed to recover striped block "
+            + recoveryInfo.getExtendedBlock().getLocalBlock(), e);
+      }
     }
   }
 

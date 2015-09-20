@@ -438,3 +438,6 @@
 
     HDFS-8550. Erasure Coding: Fix FindBugs Multithreaded correctness Warning.
     (Rakesh R via zhz)
+
+    HDFS-9113. ErasureCodingWorker#processErasureCodingTasks should not fail to process
+    remaining tasks due to one invalid ECTask (umamahesh)
