@@ -863,6 +863,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4135. Improve the assertion message in MockRM while failing after waiting for the state.
     (Nijel S F via rohithsharmaks)
 
+    YARN-4167. NPE on RMActiveServices#serviceStop when store is null. (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
