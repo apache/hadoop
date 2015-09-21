@@ -93,7 +93,7 @@ size_t DigestMD5Authenticator::NextToken(const std::string &payload, size_t off,
 
 void DigestMD5Authenticator::GenerateCNonce() {
   if (!TEST_mock_cnonce_) {
-    char buf[8];
+    char buf[8] = {0,};
     RAND_pseudo_bytes(reinterpret_cast<unsigned char *>(buf), sizeof(buf));
     cnonce_ = Base64Encode(std::string(buf, sizeof(buf)));
   }
