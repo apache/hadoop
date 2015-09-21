@@ -592,7 +592,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
         try {
-          store.close();
+          if (null != store) {
+            store.close();
+          }
         } catch (Exception e) {
           LOG.error("Error closing store.", e);
         }

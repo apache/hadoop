@@ -19,6 +19,10 @@ Release 2.7.6 - UNRELEASED
     NodeLabelsManager.serviceInit failed. (Bibin A Chundatt via wangda)
     Backport YARN-6632 by Inigo Goiri.
 
+    YARN-4167. NPE on RMActiveServices#serviceStop when store is null.
+    (Bibin A Chundatt via rohithsharmaks)
+    Backport YARN-6633 by Inigo Goiri.
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
