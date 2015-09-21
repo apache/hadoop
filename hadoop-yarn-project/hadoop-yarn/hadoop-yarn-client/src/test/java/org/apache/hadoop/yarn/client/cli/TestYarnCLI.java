@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -104,7 +105,7 @@ public class TestYarnCLI {
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
-          null, null, false, Priority.newInstance(0));
+          null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       newApplicationReport.setPriority(Priority.newInstance(0));
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
@@ -134,6 +135,8 @@ public class TestYarnCLI {
       pw.println("\tLog Aggregation Status : SUCCEEDED");
       pw.println("\tDiagnostics : diagnostics");
       pw.println("\tUnmanaged Application : false");
+      pw.println("\tApplication Node Label Expression : high-mem");
+      pw.println("\tAM container Node Label Expression : high-mem");
       pw.close();
       String appReportStr = baos.toString("UTF-8");
       Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -1311,7 +1314,8 @@ public class TestYarnCLI {
     pw.println("\tCapacity : " + "40.0%");
     pw.println("\tCurrent Capacity : " + "50.0%");
     pw.println("\tMaximum Capacity : " + "80.0%");
-    pw.println("\tDefault Node Label expression : ");
+    pw.println("\tDefault Node Label expression : "
+        + NodeLabel.DEFAULT_NODE_LABEL_PARTITION);
     pw.println("\tAccessible Node Labels : ");
     pw.close();
     String queueInfoStr = baos.toString("UTF-8");

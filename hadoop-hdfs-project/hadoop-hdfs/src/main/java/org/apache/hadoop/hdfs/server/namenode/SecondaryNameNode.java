@@ -907,7 +907,7 @@ public class SecondaryNameNode implements Runnable,
             throw new RuntimeException(ioe);
           }
           FileJournalManager.addStreamsToCollectionFromFiles(editFiles, streams,
-              fromTxId, inProgressOk);
+              fromTxId, Long.MAX_VALUE, inProgressOk);
         }
       }
       

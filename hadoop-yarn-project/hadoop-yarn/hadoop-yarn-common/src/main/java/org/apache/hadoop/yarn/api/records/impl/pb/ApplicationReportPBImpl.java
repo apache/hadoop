@@ -630,4 +630,42 @@ public class ApplicationReportPBImpl extends ApplicationReport {
       builder.clearPriority();
     this.priority = priority;
   }
+
+  @Override
+  public String getAppNodeLabelExpression() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAppNodeLabelExpression()) {
+      return null;
+    }
+    return p.getAppNodeLabelExpression();
+  }
+
+  @Override
+  public void setAppNodeLabelExpression(String appNodeLabelExpression) {
+    maybeInitBuilder();
+    if (appNodeLabelExpression == null) {
+      builder.clearAppNodeLabelExpression();
+      return;
+    }
+    builder.setAppNodeLabelExpression((appNodeLabelExpression));
+  }
+
+  @Override
+  public String getAmNodeLabelExpression() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAmNodeLabelExpression()) {
+      return null;
+    }
+    return p.getAmNodeLabelExpression();
+  }
+
+  @Override
+  public void setAmNodeLabelExpression(String amNodeLabelExpression) {
+    maybeInitBuilder();
+    if (amNodeLabelExpression == null) {
+      builder.clearAmNodeLabelExpression();
+      return;
+    }
+    builder.setAmNodeLabelExpression((amNodeLabelExpression));
+  }
 }

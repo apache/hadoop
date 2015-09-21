@@ -73,14 +73,14 @@ The following is a typical storage policy table.
 
 | **Policy** **ID** | **Policy** **Name** | **Block Placement** **(n  replicas)** | **Fallback storages** **for creation** | **Fallback storages** **for replication** |
 |:---- |:---- |:---- |:---- |:---- |
-| 15 | Lasy\_Persist | RAM\_DISK: 1, DISK: *n*-1 | DISK | DISK |
+| 15 | Lazy\_Persist | RAM\_DISK: 1, DISK: *n*-1 | DISK | DISK |
 | 12 | All\_SSD | SSD: *n* | DISK | DISK |
 | 10 | One\_SSD | SSD: 1, DISK: *n*-1 | SSD, DISK | SSD, DISK |
 | 7 | Hot (default) | DISK: *n* | \<none\> | ARCHIVE |
 | 5 | Warm | DISK: 1, ARCHIVE: *n*-1 | ARCHIVE, DISK | ARCHIVE, DISK |
 | 2 | Cold | ARCHIVE: *n* | \<none\> | \<none\> |
 
-Note that the Lasy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+Note that the Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
 
 ### Storage Policy Resolution
 

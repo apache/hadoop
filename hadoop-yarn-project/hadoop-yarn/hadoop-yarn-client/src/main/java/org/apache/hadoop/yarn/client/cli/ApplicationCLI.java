@@ -554,7 +554,11 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.print("\tDiagnostics : ");
       appReportStr.println(appReport.getDiagnostics());
       appReportStr.print("\tUnmanaged Application : ");
-      appReportStr.print(appReport.isUnmanagedApp());
+      appReportStr.println(appReport.isUnmanagedApp());
+      appReportStr.print("\tApplication Node Label Expression : ");
+      appReportStr.println(appReport.getAppNodeLabelExpression());
+      appReportStr.print("\tAM container Node Label Expression : ");
+      appReportStr.print(appReport.getAmNodeLabelExpression());
     } else {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");
@@ -645,7 +649,7 @@ public class ApplicationCLI extends YarnCLI {
     Priority newAppPriority = Priority.newInstance(Integer.parseInt(priority));
     sysout.println("Updating priority of an aplication " + applicationId);
     client.updateApplicationPriority(appId, newAppPriority);
-    sysout.println("Successfully updated the priority of any application "
-        + applicationId);
+    sysout.println("Successfully updated the application with id "
+        + applicationId + " with priority '" + priority + "'");
   }
 }

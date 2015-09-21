@@ -878,7 +878,7 @@ public class LeafQueue extends AbstractCSQueue {
      *
      */
     Resource headroom = 
-      Resources.min(resourceCalculator, clusterResource,
+      Resources.componentwiseMin(
         Resources.subtract(userLimit, user.getUsed()),
         Resources.subtract(currentResourceLimit, queueUsage.getUsed())
         );
@@ -1163,8 +1163,8 @@ public class LeafQueue extends AbstractCSQueue {
     metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
     
     if (LOG.isDebugEnabled()) {
-      LOG.info(getQueueName() + 
-          " user=" + userName + 
+      LOG.debug(getQueueName() +
+          " user=" + userName +
           " used=" + queueUsage.getUsed() + " numContainers=" + numContainers +
           " headroom = " + application.getHeadroom() +
           " user-resources=" + user.getUsed()

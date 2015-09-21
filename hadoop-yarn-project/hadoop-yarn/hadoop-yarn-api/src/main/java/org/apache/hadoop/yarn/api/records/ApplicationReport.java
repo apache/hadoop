@@ -91,8 +91,9 @@ public abstract class ApplicationReport {
       YarnApplicationState state, String diagnostics, String url,
       long startTime, long finishTime, FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress, String applicationType, Token amRmToken,
-      Set<String> tags, boolean unmanagedApplication, Priority priority) {
+      float progress, String applicationType, Token amRmToken, Set<String> tags,
+      boolean unmanagedApplication, Priority priority,
+      String appNodeLabelExpression, String amNodeLabelExpression) {
     ApplicationReport report =
         newInstance(applicationId, applicationAttemptId, user, queue, name,
           host, rpcPort, clientToAMToken, state, diagnostics, url, startTime,
@@ -101,6 +102,8 @@ public abstract class ApplicationReport {
     report.setApplicationTags(tags);
     report.setUnmanagedApp(unmanagedApplication);
     report.setPriority(priority);
+    report.setAppNodeLabelExpression(appNodeLabelExpression);
+    report.setAmNodeLabelExpression(amNodeLabelExpression);
     return report;
   }
 
@@ -404,7 +407,7 @@ public abstract class ApplicationReport {
   public abstract boolean isUnmanagedApp();
 
   /**
-   * @param value true if RM should not manage the AM
+   * @param unmanagedApplication true if RM should not manage the AM
    */
   @Public
   @Unstable
@@ -422,4 +425,26 @@ public abstract class ApplicationReport {
   @Private
   @Unstable
   public abstract void setPriority(Priority priority);
+
+  /**
+   * Get the default Node Label expression for all the application's containers
+   *
+   * @return Application's NodeLabelExpression
+   */
+  @Unstable
+  public abstract String getAppNodeLabelExpression();
+
+  @Unstable
+  public abstract void setAppNodeLabelExpression(String appNodeLabelExpression);
+
+  /**
+   * Get the default Node Label expression for all the application's containers
+   *
+   * @return Application's NodeLabelExpression
+   */
+  @Unstable
+  public abstract String getAmNodeLabelExpression();
+
+  @Unstable
+  public abstract void setAmNodeLabelExpression(String amNodeLabelExpression);
 }

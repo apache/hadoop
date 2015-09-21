@@ -112,7 +112,8 @@ public class UniformSizeInputFormat
         FileSplit split = new FileSplit(listingFilePath, lastSplitStart,
             lastPosition - lastSplitStart, null);
         if (LOG.isDebugEnabled()) {
-          LOG.info ("Creating split : " + split + ", bytes in split: " + currentSplitSize);
+          LOG.debug("Creating split : " + split + ", bytes in split: "
+              + currentSplitSize);
         }
         splits.add(split);
       }

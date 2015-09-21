@@ -687,6 +687,7 @@ public abstract class AbstractYarnScheduler
     }
   }
 
+  @Override
   public List<ResourceRequest> getPendingResourceRequestsForAttempt(
       ApplicationAttemptId attemptId) {
     SchedulerApplicationAttempt attempt = getApplicationAttempt(attemptId);
@@ -712,6 +713,7 @@ public abstract class AbstractYarnScheduler
     // specific scheduler.
   }
 
+  @Override
   public Priority getMaxClusterLevelAppPriority() {
     return maxClusterLevelAppPriority;
   }

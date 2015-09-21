@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.input;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -37,6 +38,8 @@ import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -340,5 +343,163 @@ public class TestLineRecordReader {
         testSplitRecordsForFile(conf, splitSize, inputData.length(), inputFile);
       }
     }
+  }
+
+  @Test
+  public void testUncompressedInputCustomDelimiterPosValue()
+      throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "1234567890ab12ab345";
+    Path inputFile = createInputFile(conf, inputData);
+    conf.setInt("io.file.buffer.size", 10);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    String delimiter = "ab";
+    byte[] recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
+    FileSplit split = new FileSplit(inputFile, 0, 15, (String[])null);
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf,
+        new TaskAttemptID());
+    LineRecordReader reader = new LineRecordReader(recordDelimiterBytes);
+    reader.initialize(split, context);
+    LongWritable key;
+    Text value;
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"1234567890"
+    assertEquals(10, value.getLength());
+    assertEquals(0, key.get());
+    reader.nextKeyValue();
+    // Get second record:"12"
+    assertEquals(2, value.getLength());
+    // Key should be 12 right after "1234567890ab"
+    assertEquals(12, key.get());
+    reader.nextKeyValue();
+    // Get third record:"345"
+    assertEquals(3, value.getLength());
+    // Key should be 16 right after "1234567890ab12ab"
+    assertEquals(16, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 19 right after "1234567890ab12ab345"
+    assertEquals(19, key.get());
+
+    split = new FileSplit(inputFile, 15, 4, (String[])null);
+    reader = new LineRecordReader(recordDelimiterBytes);
+    reader.initialize(split, context);
+    // No record is in the second split because the second split dropped
+    // the first record, which was already reported by the first split.
+    assertFalse(reader.nextKeyValue());
+
+    inputData = "123456789aab";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 12, (String[])null);
+    reader = new LineRecordReader(recordDelimiterBytes);
+    reader.initialize(split, context);
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"123456789a"
+    assertEquals(10, value.getLength());
+    assertEquals(0, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 12 right after "123456789aab"
+    assertEquals(12, key.get());
+
+    inputData = "123456789a";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 10, (String[])null);
+    reader = new LineRecordReader(recordDelimiterBytes);
+    reader.initialize(split, context);
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"123456789a"
+    assertEquals(10, value.getLength());
+    assertEquals(0, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 10 right after "123456789a"
+    assertEquals(10, key.get());
+
+    inputData = "123456789ab";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 11, (String[])null);
+    reader = new LineRecordReader(recordDelimiterBytes);
+    reader.initialize(split, context);
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"123456789"
+    assertEquals(9, value.getLength());
+    assertEquals(0, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 11 right after "123456789ab"
+    assertEquals(11, key.get());
+  }
+
+  @Test
+  public void testUncompressedInputDefaultDelimiterPosValue()
+      throws Exception {
+    Configuration conf = new Configuration();
+    String inputData = "1234567890\r\n12\r\n345";
+    Path inputFile = createInputFile(conf, inputData);
+    conf.setInt("io.file.buffer.size", 10);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    FileSplit split = new FileSplit(inputFile, 0, 15, (String[])null);
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf,
+        new TaskAttemptID());
+    LineRecordReader reader = new LineRecordReader(null);
+    reader.initialize(split, context);
+    LongWritable key;
+    Text value;
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"1234567890"
+    assertEquals(10, value.getLength());
+    assertEquals(0, key.get());
+    reader.nextKeyValue();
+    // Get second record:"12"
+    assertEquals(2, value.getLength());
+    // Key should be 12 right after "1234567890\r\n"
+    assertEquals(12, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 16 right after "1234567890\r\n12\r\n"
+    assertEquals(16, key.get());
+
+    split = new FileSplit(inputFile, 15, 4, (String[])null);
+    reader = new LineRecordReader(null);
+    reader.initialize(split, context);
+    // The second split dropped the first record "\n"
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get third record:"345"
+    assertEquals(3, value.getLength());
+    // Key should be 16 right after "1234567890\r\n12\r\n"
+    assertEquals(16, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 19 right after "1234567890\r\n12\r\n345"
+    assertEquals(19, key.get());
+
+    inputData = "123456789\r\r\n";
+    inputFile = createInputFile(conf, inputData);
+    split = new FileSplit(inputFile, 0, 12, (String[])null);
+    reader = new LineRecordReader(null);
+    reader.initialize(split, context);
+    reader.nextKeyValue();
+    key = reader.getCurrentKey();
+    value = reader.getCurrentValue();
+    // Get first record:"123456789"
+    assertEquals(9, value.getLength());
+    assertEquals(0, key.get());
+    reader.nextKeyValue();
+    // Get second record:""
+    assertEquals(0, value.getLength());
+    // Key should be 10 right after "123456789\r"
+    assertEquals(10, key.get());
+    assertFalse(reader.nextKeyValue());
+    // Key should be 12 right after "123456789\r\r\n"
+    assertEquals(12, key.get());
   }
 }

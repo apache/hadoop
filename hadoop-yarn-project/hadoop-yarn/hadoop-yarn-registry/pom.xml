@@ -198,7 +198,7 @@
           <test.build.classes>${test.build.classes}</test.build.classes>
 
           <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
-          <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
+          <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
           <java.security.egd>${java.security.egd}</java.security.egd>
           <require.test.libhadoop>${require.test.libhadoop}</require.test.libhadoop>
         </systemPropertyVariables>

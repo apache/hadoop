@@ -2412,7 +2412,63 @@ public class TestDFSShell {
     }
   }
 
+  /**
+   * Test -setrep with a replication factor that is too low.  We have to test
+   * this here because the mini-cluster used with testHDFSConf.xml uses a
+   * replication factor of 1 (for good reason).
+   */
+  @Test (timeout = 30000)
+  public void testSetrepLow() throws Exception {
+    Configuration conf = new Configuration();
 
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
+    MiniDFSCluster cluster = builder.numDataNodes(2).format(true).build();
+    FsShell shell = new FsShell(conf);
+
+    cluster.waitActive();
+
+    final String testdir = "/tmp/TestDFSShell-testSetrepLow";
+    final Path hdfsFile = new Path(testdir, "testFileForSetrepLow");
+    final PrintStream origOut = System.out;
+    final PrintStream origErr = System.err;
+
+    try {
+      final FileSystem fs = cluster.getFileSystem();
+
+      assertTrue("Unable to create test directory",
+          fs.mkdirs(new Path(testdir)));
+
+      fs.create(hdfsFile, true).close();
+
+      // Capture the command output so we can examine it
+      final ByteArrayOutputStream bao = new ByteArrayOutputStream();
+      final PrintStream capture = new PrintStream(bao);
+
+      System.setOut(capture);
+      System.setErr(capture);
+
+      final String[] argv = new String[] { "-setrep", "1", hdfsFile.toString() };
+
+      try {
+        assertEquals("Command did not return the expected exit code",
+            1, shell.run(argv));
+      } finally {
+        System.setOut(origOut);
+        System.setErr(origErr);
+      }
+
+      assertEquals("Error message is not the expected error message",
+          "setrep: Requested replication factor of 1 is less than "
+              + "the required minimum of 2 for /tmp/TestDFSShell-"
+              + "testSetrepLow/testFileForSetrepLow\n",
+          bao.toString());
+    } finally {
+      shell.close();
+      cluster.shutdown();
+    }
+  }
 
   // setrep for file and directory.
   @Test (timeout = 30000)

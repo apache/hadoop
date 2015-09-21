@@ -336,7 +336,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-cp \[-f\] \[-p \| -p\[topax\]\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-cp \[-f\] \[-p \| -p\[topax\]\] \[-d\] &lt;src&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -376,7 +376,11 @@
         </comparator>
         <comparator>
             <type>RegexpComparator</type>
-            <expected-output>^\s*\(or absence\) of the \/\.reserved\/raw prefix and not by the -p option.( )*</expected-output>
+          <expected-output>^\s*\(or absence\) of the \/\.reserved\/raw prefix and not by the -p option\. Passing -d( )*</expected-output>
+        </comparator>
+        <comparator>
+            <type>RegexpComparator</type>
+            <expected-output>^\s*will skip creation of temporary file\(&lt;dst&gt;\._COPYING_\)\.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -391,7 +395,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-rm \[-f\] \[-r\|-R\] \[-skipTrash\] &lt;src&gt; \.\.\. :\s*</expected-output>
+          <expected-output>^-rm \[-f\] \[-r\|-R\] \[-skipTrash\] \[-safely\] &lt;src&gt; \.\.\. :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -403,7 +407,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-skipTrash\s+option bypasses trash, if enabled, and immediately deletes &lt;src&gt;( )*</expected-output>
+          <expected-output>^\s*-skipTrash\s+option bypasses trash, if enabled, and immediately deletes &lt;src&gt;\.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -415,7 +419,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s+-\[rR\]\s+Recursively deletes directories\s*</expected-output>
+          <expected-output>^\s+-\[rR\]\s+Recursively deletes directories\.\s*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -472,7 +476,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-put \[-f\] \[-p\] \[-l\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :( )*</expected-output>
+          <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -506,6 +510,10 @@
           <type>RegexpComparator</type>
           <expected-output>^\s*durability. Use with care.( )*</expected-output>
         </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-d  Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
+        </comparator>
       </comparators>
     </test>
 
@@ -519,7 +527,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

@@ -107,7 +107,7 @@ public interface OrderingPolicy<S extends SchedulableEntity> {
   void demandUpdated(S schedulableEntity);
 
   /**
-   * Display information regarding configuration & status
+   * Display information regarding configuration and status
    */
   public String getInfo();
   

@@ -62,13 +62,13 @@ public interface FsVolumeSpi {
   boolean isTransientStorage();
 
   /**
-   * Reserve disk space for an RBW block so a writer does not run out of
-   * space before the block is full.
+   * Reserve disk space for a block (RBW or Re-replicating)
+   * so a writer does not run out of space before the block is full.
    */
-  void reserveSpaceForRbw(long bytesToReserve);
+  void reserveSpaceForReplica(long bytesToReserve);
 
   /**
-   * Release disk space previously reserved for RBW block.
+   * Release disk space previously reserved for block opened for write.
    */
   void releaseReservedSpace(long bytesToRelease);
 

@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -91,7 +92,8 @@ class CapacitySchedulerPage extends RmView {
     }
 
     private void renderLeafQueueInfoWithPartition(Block html) {
-      nodeLabel = nodeLabel.length() == 0 ? "<DEFAULT_PARTITION>" : nodeLabel;
+      nodeLabel = nodeLabel.length() == 0
+          ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : nodeLabel;
       // first display the queue's label specific details :
       ResponseInfo ri =
           info("\'" + lqinfo.getQueuePath().substring(5)
@@ -152,7 +154,13 @@ class CapacitySchedulerPage extends RmView {
           "%.1f", lqinfo.getUserLimitFactor())).
       _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
       _("Ordering Policy: ", lqinfo.getOrderingPolicyInfo()).
-      _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
+      _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
+      _("Default Node Label Expression:",
+              lqinfo.getDefaultNodeLabelExpression() == null
+                  ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION
+                  : lqinfo.getDefaultNodeLabelExpression()).
+      _("Default Application Priority:",
+              Integer.toString(lqinfo.getDefaultApplicationPriority()));
     }
   }
 
@@ -363,9 +371,8 @@ class CapacitySchedulerPage extends RmView {
             csqinfo.csinfo = sinfo;
             csqinfo.qinfo = null;
             csqinfo.label = label.getLabelName();
-            String nodeLabel =
-                csqinfo.label.length() == 0 ? "<DEFAULT_PARTITION>"
-                    : csqinfo.label;
+            String nodeLabel = csqinfo.label.length() == 0
+                ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : csqinfo.label;
             QueueCapacities queueCapacities = root.getQueueCapacities();
             used = queueCapacities.getUsedCapacity(label.getLabelName());
             String partitionUiTag =

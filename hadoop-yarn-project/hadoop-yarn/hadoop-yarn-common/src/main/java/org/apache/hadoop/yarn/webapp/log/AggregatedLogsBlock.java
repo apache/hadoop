@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -120,6 +121,12 @@ public class AggregatedLogsBlock extends HtmlBlock {
         AggregatedLogFormat.LogReader reader = null;
         try {
           FileStatus thisNodeFile = nodeFiles.next();
+          if (thisNodeFile.getPath().getName().equals(applicationId + ".har")) {
+            Path p = new Path("har:///"
+                + thisNodeFile.getPath().toUri().getRawPath());
+            nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
+            continue;
+          }
           if (!thisNodeFile.getPath().getName()
             .contains(LogAggregationUtils.getNodeString(nodeId))
               || thisNodeFile.getPath().getName()

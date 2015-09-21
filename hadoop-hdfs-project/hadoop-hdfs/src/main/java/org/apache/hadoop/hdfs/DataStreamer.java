@@ -46,7 +46,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -69,7 +68,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
@@ -155,9 +153,7 @@ class DataStreamer extends Daemon {
    * @return if this file is lazy persist
    */
   static boolean isLazyPersist(HdfsFileStatus stat) {
-    final BlockStoragePolicy p = blockStoragePolicySuite.getPolicy(
-        HdfsConstants.MEMORY_STORAGE_POLICY_NAME);
-    return p != null && stat.getStoragePolicy() == p.getId();
+    return stat.getStoragePolicy() == HdfsConstants.MEMORY_STORAGE_POLICY_ID;
   }
 
   /**
@@ -392,8 +388,6 @@ class DataStreamer extends Daemon {
   private final LinkedList<DFSPacket> ackQueue = new LinkedList<>();
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private final ByteArrayManager byteArrayManager;
-  private static final BlockStoragePolicySuite blockStoragePolicySuite =
-      BlockStoragePolicySuite.createDefaultSuite();
   //persist blocks on namenode
   private final AtomicBoolean persistBlocks = new AtomicBoolean(false);
   private boolean failPacket = false;

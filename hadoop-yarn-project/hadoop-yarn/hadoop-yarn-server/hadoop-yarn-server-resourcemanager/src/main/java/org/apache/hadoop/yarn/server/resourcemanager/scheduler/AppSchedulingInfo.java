@@ -65,7 +65,8 @@ public class AppSchedulingInfo {
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
   final Map<Priority, Map<String, ResourceRequest>> requests =
     new ConcurrentHashMap<Priority, Map<String, ResourceRequest>>();
-  private Set<String> blacklist = new HashSet<String>();
+  private Set<String> userBlacklist = new HashSet<>();
+  private Set<String> amBlacklist = new HashSet<>();
 
   //private final ApplicationStore store;
   private ActiveUsersManager activeUsersManager;
@@ -217,21 +218,39 @@ public class AppSchedulingInfo {
   }
 
   /**
-   * The ApplicationMaster is updating the blacklist
+   * The ApplicationMaster is updating the userBlacklist used for containers
+   * other than AMs.
    *
-   * @param blacklistAdditions resources to be added to the blacklist
-   * @param blacklistRemovals resources to be removed from the blacklist
+   * @param blacklistAdditions resources to be added to the userBlacklist
+   * @param blacklistRemovals resources to be removed from the userBlacklist
    */
-  synchronized public void updateBlacklist(
+   public void updateBlacklist(
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
-    // Add to blacklist
-    if (blacklistAdditions != null) {
-      blacklist.addAll(blacklistAdditions);
-    }
+     updateUserOrAMBlacklist(userBlacklist, blacklistAdditions,
+         blacklistRemovals);
+  }
 
-    // Remove from blacklist
-    if (blacklistRemovals != null) {
-      blacklist.removeAll(blacklistRemovals);
+  /**
+   * RM is updating blacklist for AM containers.
+   * @param blacklistAdditions resources to be added to the amBlacklist
+   * @param blacklistRemovals resources to be added to the amBlacklist
+   */
+  public void updateAMBlacklist(
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
+    updateUserOrAMBlacklist(amBlacklist, blacklistAdditions,
+        blacklistRemovals);
+  }
+
+  void updateUserOrAMBlacklist(Set<String> blacklist,
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
+    synchronized (blacklist) {
+      if (blacklistAdditions != null) {
+        blacklist.addAll(blacklistAdditions);
+      }
+
+      if (blacklistRemovals != null) {
+        blacklist.removeAll(blacklistRemovals);
+      }
     }
   }
 
@@ -263,8 +282,23 @@ public class AppSchedulingInfo {
     return (request == null) ? null : request.getCapability();
   }
 
-  public synchronized boolean isBlacklisted(String resourceName) {
-    return blacklist.contains(resourceName);
+  /**
+   * Returns if the node is either blacklisted by the user or the system
+   * @param resourceName the resourcename
+   * @param useAMBlacklist true if it should check amBlacklist
+   * @return true if its blacklisted
+   */
+  public boolean isBlacklisted(String resourceName,
+      boolean useAMBlacklist) {
+    if (useAMBlacklist){
+      synchronized (amBlacklist) {
+        return amBlacklist.contains(resourceName);
+      }
+    } else {
+      synchronized (userBlacklist) {
+        return userBlacklist.contains(resourceName);
+      }
+    }
   }
   
   /**
@@ -473,19 +507,25 @@ public class AppSchedulingInfo {
     this.queue = queue;
   }
 
-  public synchronized Set<String> getBlackList() {
-    return this.blacklist;
+  public Set<String> getBlackList() {
+    return this.userBlacklist;
   }
 
-  public synchronized Set<String> getBlackListCopy() {
-    return new HashSet<>(this.blacklist);
+  public Set<String> getBlackListCopy() {
+    synchronized (userBlacklist) {
+      return new HashSet<>(this.userBlacklist);
+    }
   }
 
   public synchronized void transferStateFromPreviousAppSchedulingInfo(
       AppSchedulingInfo appInfo) {
     //    this.priorities = appInfo.getPriorities();
     //    this.requests = appInfo.getRequests();
-    this.blacklist = appInfo.getBlackList();
+    // This should not require locking the userBlacklist since it will not be
+    // used by this instance until after setCurrentAppAttempt.
+    // Should cleanup this to avoid sharing between instances and can
+    // then remove getBlacklist as well.
+    this.userBlacklist = appInfo.getBlackList();
   }
 
   public synchronized void recoverContainer(RMContainer rmContainer) {

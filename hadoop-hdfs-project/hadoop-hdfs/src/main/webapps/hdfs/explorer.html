@@ -87,7 +87,6 @@
 	<button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
 	<div class="alert-body" id="alert-panel-body"></div>
       </div>
-
     <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
       aria-hidden="true">
       <div class="modal-dialog">
@@ -116,6 +115,28 @@
         </div>
       </div>
     </div>
+
+  <div class="modal" id="delete-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+            aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="delete-modal-title">Delete</h4>
+        </div>
+        <div class="modal-body">
+          <div class="panel-body">
+            <div id="delete-prompt"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="delete-button"
+            data-complete-text="Deleting...">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
       <div class="row">
       <div class="col-xs-11">
@@ -147,6 +168,46 @@
 
     </div>
 
+    <script type="text/x-template" id="explorer-popover-perm-info">
+      <div class="explorer-popover-perm-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="text-center">User</th>
+              <th class="text-center">Group</th>
+              <th class="text-center">Other</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><label><input type="checkbox" data-bit="8" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="5" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="2" /> Read</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="7" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="4" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="1" /> Write</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="6" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="3" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="0" /> Execute</label></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="text-align: right; margin-right: 10px">
+          <label><input type="checkbox" id="explorer-perm-sticky" data-bit="9" /> Sticky bit</label>
+        </div>
+        <hr/>
+        <div style="text-align: right">
+          <button type="button" class="btn" id="explorer-perm-cancel">Cancel</button>
+          <button type="button" class="btn btn-success" id="explorer-set-perm-button"
+                  data-complete-text="Updating...">Set</button>
+        </div>
+      </div>
+    </script>
+
     <script type="text/x-dust-template" id="tmpl-explorer">
       <table class="table">
         <thead>
@@ -159,19 +220,25 @@
             <th>Replication</th>
             <th>Block Size</th>
             <th>Name</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {#FileStatus}
-          <tr>
-            <td>{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</td>
+          <tr inode-path="{pathSuffix}" data-permission="{permission}"
+            class="explorer-entry">
+            <td><span class="explorer-perm-links editable-click">
+              {type|helper_to_directory}{permission|helper_to_permission}
+              {aclBit|helper_to_acl_bit}
+              </span></td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>
             <td>{#helper_date_tostring value="{modificationTime}"/}</td>
             <td>{replication}</td>
             <td>{blockSize|fmt_bytes}</td>
-            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links" inode-path="{pathSuffix}">{pathSuffix}</a></td>
+            <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
+            <td><span class="glyphicon glyphicon-trash"></span></td>
           </tr>
           {/FileStatus}
         </tbody>
@@ -199,6 +266,7 @@
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
     </script><script type="text/javascript" src="/static/dfs-dust.js">
     </script><script type="text/javascript" src="explorer.js">
+    </script><script type="text/javascript" src="/static/moment.min.js">
     </script>
   </body>
 </html>

@@ -381,5 +381,11 @@ public class CommonConfigurationKeysPublic {
       "hadoop.shell.missing.defaultFs.warning";
   public static final boolean HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT =
       false;
+
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES =
+      "hadoop.shell.safely.delete.limit.num.files";
+  public static final long HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT =
+      100;
 }
 

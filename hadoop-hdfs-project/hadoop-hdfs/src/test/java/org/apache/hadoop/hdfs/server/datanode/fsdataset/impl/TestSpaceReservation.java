@@ -28,8 +28,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
@@ -60,10 +62,10 @@ import javax.management.ObjectName;
 
 /**
  * Ensure that the DN reserves disk space equivalent to a full block for
- * replica being written (RBW).
+ * replica being written (RBW) & Replica being copied from another DN.
  */
-public class TestRbwSpaceReservation {
-  static final Log LOG = LogFactory.getLog(TestRbwSpaceReservation.class);
+public class TestSpaceReservation {
+  static final Log LOG = LogFactory.getLog(TestSpaceReservation.class);
 
   private static final int DU_REFRESH_INTERVAL_MSEC = 500;
   private static final int STORAGES_PER_DATANODE = 1;
@@ -165,14 +167,14 @@ public class TestRbwSpaceReservation {
       int bytesWritten = buffer.length;
 
       // Check that space was reserved for a full block minus the bytesWritten.
-      assertThat(singletonVolume.getReservedForRbw(),
+      assertThat(singletonVolume.getReservedForReplicas(),
                  is((long) fileBlockSize - bytesWritten));
       out.close();
       out = null;
 
       // Check that the reserved space has been released since we closed the
       // file.
-      assertThat(singletonVolume.getReservedForRbw(), is(0L));
+      assertThat(singletonVolume.getReservedForReplicas(), is(0L));
 
       // Reopen the file for appends and write 1 more byte.
       out = fs.append(path);
@@ -182,7 +184,7 @@ public class TestRbwSpaceReservation {
 
       // Check that space was again reserved for a full block minus the
       // bytesWritten so far.
-      assertThat(singletonVolume.getReservedForRbw(),
+      assertThat(singletonVolume.getReservedForReplicas(),
                  is((long) fileBlockSize - bytesWritten));
 
       // Write once again and again verify the available space. This ensures
@@ -191,7 +193,7 @@ public class TestRbwSpaceReservation {
       out.write(buffer);
       out.hsync();
       bytesWritten += buffer.length;
-      assertThat(singletonVolume.getReservedForRbw(),
+      assertThat(singletonVolume.getReservedForReplicas(),
                  is((long) fileBlockSize - bytesWritten));
     } finally {
       if (out != null) {
@@ -282,7 +284,7 @@ public class TestRbwSpaceReservation {
         GenericTestUtils.waitFor(new Supplier<Boolean>() {
           @Override
           public Boolean get() {
-            return (volume.getReservedForRbw() == 0);
+            return (volume.getReservedForReplicas() == 0);
           }
         }, 500, Integer.MAX_VALUE); // Wait until the test times out.
       }
@@ -324,12 +326,30 @@ public class TestRbwSpaceReservation {
     }
 
     // Ensure RBW space reserved is released
-    assertTrue("Expected ZERO but got " + fsVolumeImpl.getReservedForRbw(),
-        fsVolumeImpl.getReservedForRbw() == 0);
+    assertTrue(
+        "Expected ZERO but got " + fsVolumeImpl.getReservedForReplicas(),
+        fsVolumeImpl.getReservedForReplicas() == 0);
+
+    // Reserve some bytes to verify double clearing space should't happen
+    fsVolumeImpl.reserveSpaceForReplica(1000);
+    try {
+      // Write 1 byte to the file
+      FSDataOutputStream os = fs.create(new Path("/" + methodName + ".02.dat"),
+          replication);
+      os.write(new byte[1]);
+      os.hsync();
+      os.close();
+      fail("Expecting IOException file creation failure");
+    } catch (IOException e) {
+      // Exception can be ignored (expected)
+    }
+
+    // Ensure RBW space reserved is released only once
+    assertTrue(fsVolumeImpl.getReservedForReplicas() == 1000);
   }
 
   @Test(timeout = 30000)
-  public void testRBWInJMXBean() throws Exception {
+  public void testReservedSpaceInJMXBean() throws Exception {
 
     final short replication = 1;
     startCluster(BLOCK_SIZE, replication, -1);
@@ -348,7 +368,111 @@ public class TestRbwSpaceReservation {
       final String volumeInfo = (String) mbs.getAttribute(mxbeanName,
           "VolumeInfo");
 
-      assertTrue(volumeInfo.contains("reservedSpaceForRBW"));
+      // verify reserved space for Replicas in JMX bean volume info
+      assertTrue(volumeInfo.contains("reservedSpaceForReplicas"));
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testTmpSpaceReserve() throws Exception {
+
+    final short replication = 2;
+    startCluster(BLOCK_SIZE, replication, -1);
+    final int byteCount1 = 100;
+    final int byteCount2 = 200;
+
+    final String methodName = GenericTestUtils.getMethodName();
+
+    // Test positive scenario
+    {
+      final Path file = new Path("/" + methodName + ".01.dat");
+
+      try (FSDataOutputStream os = fs.create(file, (short) 1)) {
+        // Write test data to the file
+        os.write(new byte[byteCount1]);
+        os.hsync();
+      }
+
+      BlockLocation[] blockLocations = fs.getFileBlockLocations(file, 0, 10);
+      String firstReplicaNode = blockLocations[0].getNames()[0];
+
+      int newReplicaDNIndex = 0;
+      if (firstReplicaNode.equals(cluster.getDataNodes().get(0)
+          .getDisplayName())) {
+        newReplicaDNIndex = 1;
+      }
+
+      FsVolumeImpl fsVolumeImpl = (FsVolumeImpl) cluster.getDataNodes()
+          .get(newReplicaDNIndex).getFSDataset().getFsVolumeReferences().get(0);
+
+      performReReplication(file, true);
+
+      assertEquals("Wrong reserve space for Tmp ", byteCount1,
+          fsVolumeImpl.getRecentReserved());
+
+      assertEquals("Reserved Tmp space is not released", 0,
+          fsVolumeImpl.getReservedForReplicas());
+    }
+
+    // Test when file creation fails
+    {
+      final Path file = new Path("/" + methodName + ".01.dat");
+
+      try (FSDataOutputStream os = fs.create(file, (short) 1)) {
+        // Write test data to the file
+        os.write(new byte[byteCount2]);
+        os.hsync();
+      }
+
+      BlockLocation[] blockLocations = fs.getFileBlockLocations(file, 0, 10);
+      String firstReplicaNode = blockLocations[0].getNames()[0];
+
+      int newReplicaDNIndex = 0;
+      if (firstReplicaNode.equals(cluster.getDataNodes().get(0)
+          .getDisplayName())) {
+        newReplicaDNIndex = 1;
+      }
+
+      BlockPoolSlice blockPoolSlice = Mockito.mock(BlockPoolSlice.class);
+      Mockito.when(blockPoolSlice.createTmpFile((Block) Mockito.any()))
+          .thenThrow(new IOException("Synthetic IO Exception Throgh MOCK"));
+
+      final FsVolumeImpl fsVolumeImpl = (FsVolumeImpl) cluster.getDataNodes()
+          .get(newReplicaDNIndex).getFSDataset().getFsVolumeReferences().get(0);
+
+      // Reserve some bytes to verify double clearing space should't happen
+      fsVolumeImpl.reserveSpaceForReplica(1000);
+
+      Field field = FsVolumeImpl.class.getDeclaredField("bpSlices");
+      field.setAccessible(true);
+      @SuppressWarnings("unchecked")
+      Map<String, BlockPoolSlice> bpSlices = (Map<String, BlockPoolSlice>) field
+          .get(fsVolumeImpl);
+      bpSlices.put(fsVolumeImpl.getBlockPoolList()[0], blockPoolSlice);
+
+      performReReplication(file, false);
+
+      assertEquals("Wrong reserve space for Tmp ", byteCount2,
+          fsVolumeImpl.getRecentReserved());
+
+      assertEquals("Tmp space is not released OR released twice", 1000,
+          fsVolumeImpl.getReservedForReplicas());
+    }
+  }
+
+  private void performReReplication(Path filePath, boolean waitForSuccess)
+      throws Exception {
+    fs.setReplication(filePath, (short) 2);
+
+    Thread.sleep(4000);
+    BlockLocation[] blockLocations = fs.getFileBlockLocations(filePath, 0, 10);
+
+    if (waitForSuccess) {
+      // Wait for the re replication
+      while (blockLocations[0].getNames().length < 2) {
+        Thread.sleep(2000);
+        blockLocations = fs.getFileBlockLocations(filePath, 0, 10);
+      }
     }
   }
 
@@ -387,7 +511,7 @@ public class TestRbwSpaceReservation {
              " files and hit " + numFailures + " failures");
 
     // Check no space was leaked.
-    assertThat(singletonVolume.getReservedForRbw(), is(0L));
+    assertThat(singletonVolume.getReservedForReplicas(), is(0L));
   }
 
   private static class Writer extends Daemon {

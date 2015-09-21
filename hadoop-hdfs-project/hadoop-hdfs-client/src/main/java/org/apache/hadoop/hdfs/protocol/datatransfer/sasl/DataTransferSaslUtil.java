@@ -19,11 +19,11 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyExceptio
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.slf4j.Logger;
@@ -240,7 +240,7 @@ public final class DataTransferSaslUtil {
       List<CipherOptionProto> optionProtos = proto.getCipherOptionList();
       if (optionProtos != null) {
         for (CipherOptionProto optionProto : optionProtos) {
-          cipherOptions.add(PBHelper.convert(optionProto));
+          cipherOptions.add(PBHelperClient.convert(optionProto));
         }
       }
       return proto.getPayload().toByteArray();
@@ -309,7 +309,7 @@ public final class DataTransferSaslUtil {
       builder.setPayload(ByteString.copyFrom(payload));
     }
     if (option != null) {
-      builder.addCipherOption(PBHelper.convert(option));
+      builder.addCipherOption(PBHelperClient.convert(option));
     }
     
     DataTransferEncryptorMessageProto proto = builder.build();
@@ -392,7 +392,7 @@ public final class DataTransferSaslUtil {
       builder.setPayload(ByteString.copyFrom(payload));
     }
     if (options != null) {
-      builder.addAllCipherOption(PBHelper.convertCipherOptions(options));
+      builder.addAllCipherOption(PBHelperClient.convertCipherOptions(options));
     }
     
     DataTransferEncryptorMessageProto proto = builder.build();
@@ -419,7 +419,7 @@ public final class DataTransferSaslUtil {
       throw new IOException(proto.getMessage());
     } else {
       byte[] response = proto.getPayload().toByteArray();
-      List<CipherOption> options = PBHelper.convertCipherOptionProtos(
+      List<CipherOption> options = PBHelperClient.convertCipherOptionProtos(
           proto.getCipherOptionList());
       CipherOption option = null;
       if (options != null && !options.isEmpty()) {

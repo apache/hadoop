@@ -62,6 +62,8 @@ public class AppInfo {
   private int allocatedCpuVcores;
   private int allocatedMemoryMB;
   protected boolean unmanagedApplication;
+  private String appNodeLabelExpression;
+  private String amNodeLabelExpression;
 
   public AppInfo() {
     // JAXB needs this
@@ -106,6 +108,8 @@ public class AppInfo {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
     }
     unmanagedApplication = app.isUnmanagedApp();
+    appNodeLabelExpression = app.getAppNodeLabelExpression();
+    amNodeLabelExpression = app.getAmNodeLabelExpression();
   }
 
   public String getAppId() {
@@ -202,5 +206,13 @@ public class AppInfo {
 
   public int getPriority() {
     return priority;
+  }
+
+  public String getAppNodeLabelExpression() {
+    return appNodeLabelExpression;
+  }
+
+  public String getAmNodeLabelExpression() {
+    return amNodeLabelExpression;
   }
 }

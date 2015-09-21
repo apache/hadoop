@@ -485,6 +485,52 @@ public class TestFsShellCopy {
     checkPath(dstPath, false);
   }
   
+  @Test
+  public void testDirectCopy() throws Exception {
+    Path testRoot = new Path(testRootDir, "testPutFile");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+
+    Path target_COPYING_File = new Path(testRoot, "target._COPYING_");
+    Path target_File = new Path(testRoot, "target");
+    Path srcFile = new Path(testRoot, new Path("srcFile"));
+    lfs.createNewFile(srcFile);
+
+    // If direct write is false , then creation of "file1" ,will delete file
+    // (file1._COPYING_) if already exist.
+    checkDirectCopy(srcFile, target_File, target_COPYING_File, false);
+    shell.run(new String[] { "-rm", target_File.toString() });
+
+    // If direct write is true , then creation of "file1", will not create a
+    // temporary file and will not delete (file1._COPYING_) if already exist.
+    checkDirectCopy(srcFile, target_File, target_COPYING_File, true);
+  }
+
+  private void checkDirectCopy(Path srcFile, Path target_File,
+      Path target_COPYING_File,boolean direct) throws Exception {
+    int directWriteExitCode = direct ? 0 : 1;
+    shell
+        .run(new String[] { "-copyFromLocal", srcFile.toString(),
+        target_COPYING_File.toString() });
+    int srcFileexist = shell
+        .run(new String[] { "-cat", target_COPYING_File.toString() });
+    assertEquals(0, srcFileexist);
+
+    if (!direct) {
+      shell.run(new String[] { "-copyFromLocal", srcFile.toString(),
+          target_File.toString() });
+    } else {
+      shell.run(new String[] { "-copyFromLocal", "-d", srcFile.toString(),
+          target_File.toString() });
+    }
+    // cat of "target._COPYING_" will return exitcode :
+    // as 1(file does not exist), if direct write is false.
+    // as 0, if direct write is true.
+    srcFileexist = shell.run(new String[] { "-cat",
+        target_COPYING_File.toString() });
+    assertEquals(directWriteExitCode, srcFileexist);
+  }
+
   private void createFile(Path ... paths) throws IOException {
     for (Path path : paths) {
       FSDataOutputStream out = lfs.create(path);

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -1013,18 +1014,20 @@ public abstract class RMStateStore extends AbstractService {
    */
   protected void notifyStoreOperationFailed(Exception failureCause) {
     LOG.error("State store operation failed ", failureCause);
-    if (failureCause instanceof StoreFencedException) {
+    if (HAUtil.isHAEnabled(getConfig())) {
+      LOG.warn("State-store fenced ! Transitioning RM to standby");
       updateFencedState();
       Thread standByTransitionThread =
           new Thread(new StandByTransitionThread());
       standByTransitionThread.setName("StandByTransitionThread Handler");
       standByTransitionThread.start();
+    } else if (YarnConfiguration.shouldRMFailFast(getConfig())) {
+      LOG.fatal("Fail RM now due to state-store error!");
+      rmDispatcher.getEventHandler().handle(
+          new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED,
+              failureCause));
     } else {
-      if (YarnConfiguration.shouldRMFailFast(getConfig())) {
-        rmDispatcher.getEventHandler().handle(
-            new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED,
-                failureCause));
-      }
+      LOG.warn("Skip the state-store error.");
     }
   }
  

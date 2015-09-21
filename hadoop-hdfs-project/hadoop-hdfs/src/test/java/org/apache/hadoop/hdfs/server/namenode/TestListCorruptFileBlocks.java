@@ -210,7 +210,8 @@ public class TestListCorruptFileBlocks {
       fs = cluster.getFileSystem();
 
       // wait until replication queues have been initialized
-      while (!cluster.getNameNode().namesystem.isPopulatingReplQueues()) {
+      while (!cluster.getNameNode().namesystem.getBlockManager()
+          .isPopulatingReplQueues()) {
         try {
           LOG.info("waiting for replication queues");
           Thread.sleep(1000);

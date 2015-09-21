@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -166,7 +168,8 @@ public class TestLogsCLI {
     pw.println(" -help                           Displays help for all commands.");
     pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
     pw.println("                                 comma-separated value to get specified");
-    pw.println("                                 Container log files");
+    pw.println("                                 container log files. Use \"ALL\" to fetch");
+    pw.println("                                 all the log files for the container.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
@@ -316,6 +319,54 @@ public class TestLogsCLI {
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
+  }
+
+  @Test (timeout = 15000)
+  public void testFetchApplictionLogsHar() throws Exception {
+    String remoteLogRootDir = "target/logs/";
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    configuration
+        .set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogRootDir);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    configuration.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    FileSystem fs = FileSystem.get(configuration);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    URL harUrl = ClassLoader.getSystemClassLoader()
+        .getResource("application_1440536969523_0001.har");
+    assertNotNull(harUrl);
+    Path path =
+        new Path(remoteLogRootDir + ugi.getShortUserName()
+            + "/logs/application_1440536969523_0001");
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+    assertTrue(fs.mkdirs(path));
+    Path harPath = new Path(path, "application_1440536969523_0001.har");
+    fs.copyFromLocalFile(false, new Path(harUrl.toURI()), harPath);
+    assertTrue(fs.exists(harPath));
+
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED);
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    cli.setConf(configuration);
+    int exitCode = cli.run(new String[]{"-applicationId",
+        "application_1440536969523_0001"});
+    assertTrue(exitCode == 0);
+    String out = sysOutStream.toString();
+    assertTrue(
+        out.contains("container_1440536969523_0001_01_000001 on host1_1111"));
+    assertTrue(out.contains("Hello stderr"));
+    assertTrue(out.contains("Hello stdout"));
+    assertTrue(out.contains("Hello syslog"));
+    assertTrue(
+        out.contains("container_1440536969523_0001_01_000002 on host2_2222"));
+    assertTrue(out.contains("Goodbye stderr"));
+    assertTrue(out.contains("Goodbye stdout"));
+    assertTrue(out.contains("Goodbye syslog"));
+    sysOutStream.reset();
+
+    fs.delete(new Path(remoteLogRootDir), true);
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,

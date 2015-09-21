@@ -542,7 +542,7 @@ public class DecommissionManager {
         if (blockManager.isNeededReplication(block, liveReplicas)) {
           if (!blockManager.neededReplications.contains(block) &&
               blockManager.pendingReplications.getNumReplicas(block) == 0 &&
-              namesystem.isPopulatingReplQueues()) {
+              blockManager.isPopulatingReplQueues()) {
             // Process these blocks only when active NN is out of safe mode.
             blockManager.neededReplications.add(block,
                 liveReplicas,

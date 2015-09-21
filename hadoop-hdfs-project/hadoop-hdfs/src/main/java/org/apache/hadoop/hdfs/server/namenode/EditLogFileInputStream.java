@@ -300,66 +300,32 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return getName();
   }
 
-  static FSEditLogLoader.EditLogValidation validateEditLog(File file)
-      throws IOException {
-    EditLogFileInputStream in;
-    try {
-      in = new EditLogFileInputStream(file);
-      in.getVersion(true); // causes us to read the header
-    } catch (LogHeaderCorruptException e) {
-      // If the header is malformed or the wrong value, this indicates a corruption
-      LOG.warn("Log file " + file + " has no valid header", e);
-      return new FSEditLogLoader.EditLogValidation(0,
-          HdfsServerConstants.INVALID_TXID, true);
-    }
-    
-    try {
-      return FSEditLogLoader.validateEditLog(in);
-    } finally {
-      IOUtils.closeStream(in);
-    }
-  }
-
-  static FSEditLogLoader.EditLogValidation scanEditLog(File file)
+  /**
+   * @param file          File being scanned and validated.
+   * @param maxTxIdToScan Maximum Tx ID to try to scan.
+   *                      The scan returns after reading this or a higher
+   *                      ID. The file portion beyond this ID is
+   *                      potentially being updated.
+   * @return Result of the validation
+   * @throws IOException
+   */
+  static FSEditLogLoader.EditLogValidation scanEditLog(File file,
+      long maxTxIdToScan, boolean verifyVersion)
       throws IOException {
     EditLogFileInputStream in;
     try {
       in = new EditLogFileInputStream(file);
       // read the header, initialize the inputstream, but do not check the
       // layoutversion
-      in.getVersion(false);
+      in.getVersion(verifyVersion);
     } catch (LogHeaderCorruptException e) {
       LOG.warn("Log file " + file + " has no valid header", e);
       return new FSEditLogLoader.EditLogValidation(0,
           HdfsServerConstants.INVALID_TXID, true);
     }
 
-    long lastPos = 0;
-    long lastTxId = HdfsServerConstants.INVALID_TXID;
-    long numValid = 0;
     try {
-      while (true) {
-        long txid = HdfsServerConstants.INVALID_TXID;
-        lastPos = in.getPosition();
-        try {
-          if ((txid = in.scanNextOp()) == HdfsServerConstants.INVALID_TXID) {
-            break;
-          }
-        } catch (Throwable t) {
-          FSImage.LOG.warn("Caught exception after scanning through "
-              + numValid + " ops from " + in
-              + " while determining its valid length. Position was "
-              + lastPos, t);
-          in.resync();
-          FSImage.LOG.warn("After resync, position is " + in.getPosition());
-          continue;
-        }
-        if (lastTxId == HdfsServerConstants.INVALID_TXID || txid > lastTxId) {
-          lastTxId = txid;
-        }
-        numValid++;
-      }
-      return new EditLogValidation(lastPos, lastTxId, false);
+      return FSEditLogLoader.scanEditLog(in, maxTxIdToScan);
     } finally {
       IOUtils.closeStream(in);
     }

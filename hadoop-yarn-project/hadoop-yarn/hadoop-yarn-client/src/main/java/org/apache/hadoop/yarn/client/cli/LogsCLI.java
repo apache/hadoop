@@ -19,12 +19,15 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -61,6 +64,9 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 @Public
 @Evolving
@@ -105,7 +111,8 @@ public class LogsCLI extends Configured implements Tool {
     opts.addOption(amOption);
     Option logFileOpt = new Option(CONTAINER_LOG_FILES, true,
       "Work with -am/-containerId and specify comma-separated value "
-      + "to get specified Container log files");
+        + "to get specified container log files. Use \"ALL\" to fetch all the "
+        + "log files for the container.");
     logFileOpt.setValueSeparator(',');
     logFileOpt.setArgs(Option.UNLIMITED_VALUES);
     logFileOpt.setArgName("Log File Name");
@@ -248,8 +255,8 @@ public class LogsCLI extends Configured implements Tool {
             logFiles, logCliHelper, appOwner, true);
         } else {
           System.out
-            .println("Can not get AMContainers logs for the application:"
-                + appId);
+            .println(
+                "Can not get AMContainers logs for the application:" + appId);
           System.out.println("This application:" + appId + " is finished."
               + " Please enable the application history service. Or Using "
               + "yarn logs -applicationId <appId> -containerId <containerId> "
@@ -264,9 +271,18 @@ public class LogsCLI extends Configured implements Tool {
       // if we provide the node address and the application is in the final
       // state, we could directly get logs from HDFS.
       if (nodeAddress != null && isApplicationFinished(appState)) {
+        // if user specified "ALL" as the logFiles param, pass null
+        // to logCliHelper so that it fetches all the logs
+        List<String> logs;
+        if (logFiles == null) {
+          logs = null;
+        } else if (fetchAllLogFiles(logFiles)) {
+          logs = null;
+        } else {
+          logs = Arrays.asList(logFiles);
+        }
         return logCliHelper.dumpAContainersLogsForALogType(appIdStr,
-            containerIdStr, nodeAddress, appOwner, logFiles == null ? null
-                : Arrays.asList(logFiles));
+            containerIdStr, nodeAddress, appOwner, logs);
       }
       try {
         // If the nodeAddress is not provided, we will try to get
@@ -288,10 +304,14 @@ public class LogsCLI extends Configured implements Tool {
             containerIdStr, nodeHttpAddress, nodeId, logFiles, logCliHelper,
             appOwner);
         } else {
+          String [] requestedLogFiles = logFiles;
+          if(fetchAllLogFiles(logFiles)) {
+            requestedLogFiles = null;
+          }
           // If the application is in the final state, we will directly
           // get the container logs from HDFS.
           printContainerLogsForFinishedApplication(appIdStr, containerIdStr,
-            nodeId, logFiles, logCliHelper, appOwner);
+            nodeId, requestedLogFiles, logCliHelper, appOwner);
         }
         return resultCode;
       } catch (IOException | YarnException ex) {
@@ -401,15 +421,69 @@ public class LogsCLI extends Configured implements Tool {
     return amContainersList;
   }
 
+  private boolean fetchAllLogFiles(String[] logFiles) {
+    if(logFiles != null) {
+      List<String> logs = Arrays.asList(logFiles);
+      if(logs.contains("ALL")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private String[] getContainerLogFiles(Configuration conf,
+      String containerIdStr, String nodeHttpAddress) throws IOException {
+    List<String> logFiles = new ArrayList<>();
+    Client webServiceClient = Client.create();
+    try {
+      WebResource webResource = webServiceClient
+          .resource(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
+      ClientResponse response =
+          webResource.path("ws").path("v1").path("node").path("containers")
+              .path(containerIdStr).accept(MediaType.APPLICATION_XML)
+              .get(ClientResponse.class);
+      if (response.getClientResponseStatus().equals(ClientResponse.Status.OK)) {
+        try {
+          String xml = response.getEntity(String.class);
+          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+          DocumentBuilder db = dbf.newDocumentBuilder();
+          InputSource is = new InputSource();
+          is.setCharacterStream(new StringReader(xml));
+          Document dom = db.parse(is);
+          NodeList elements = dom.getElementsByTagName("containerLogFiles");
+          for (int i = 0; i < elements.getLength(); i++) {
+            logFiles.add(elements.item(i).getTextContent());
+          }
+        } catch (Exception e) {
+          System.out.println("Unable to parse xml from webservice. Error:");
+          System.out.println(e.getMessage());
+          throw new IOException(e);
+        }
+      }
+
+    } catch (ClientHandlerException | UniformInterfaceException ex) {
+      System.out.println("Unable to fetch log files list");
+      throw new IOException(ex);
+    }
+    return logFiles.toArray(new String[0]);
+  }
+
   private void printContainerLogsFromRunningApplication(Configuration conf,
       String appId, String containerIdStr, String nodeHttpAddress,
       String nodeId, String[] logFiles, LogCLIHelpers logCliHelper,
       String appOwner) throws IOException {
+    String [] requestedLogFiles = logFiles;
+    // fetch all the log files for the container
+    if (fetchAllLogFiles(logFiles)) {
+      requestedLogFiles =
+          getContainerLogFiles(getConf(), containerIdStr, nodeHttpAddress);
+    }
     Client webServiceClient = Client.create();
     String containerString = "\n\nContainer: " + containerIdStr;
     System.out.println(containerString);
     System.out.println(StringUtils.repeat("=", containerString.length()));
-    for (String logFile : logFiles) {
+
+    for (String logFile : requestedLogFiles) {
       System.out.println("LogType:" + logFile);
       System.out.println("Log Upload Time:"
           + Times.format(System.currentTimeMillis()));
@@ -432,7 +506,7 @@ public class LogsCLI extends Configured implements Tool {
     }
     // for the case, we have already uploaded partial logs in HDFS
     logCliHelper.dumpAContainersLogsForALogType(appId, containerIdStr, nodeId,
-      appOwner, Arrays.asList(logFiles));
+      appOwner, Arrays.asList(requestedLogFiles));
   }
 
   private void printContainerLogsForFinishedApplication(String appId,
@@ -551,15 +625,25 @@ public class LogsCLI extends Configured implements Tool {
           }
         }
         if (nodeId != null && !nodeId.isEmpty()) {
+          String [] requestedLogFilesList = null;
+          if(!fetchAllLogFiles(logFiles)) {
+            requestedLogFilesList = logFiles;
+          }
           printContainerLogsForFinishedApplication(appId, containerId, nodeId,
-            logFiles, logCliHelper, appOwner);
+            requestedLogFilesList, logCliHelper, appOwner);
         }
       }
     } else {
       if (nodeHttpAddress != null && containerId != null
           && !nodeHttpAddress.isEmpty() && !containerId.isEmpty()) {
+        String [] requestedLogFiles = logFiles;
+        // fetch all the log files for the AM
+        if (fetchAllLogFiles(logFiles)) {
+          requestedLogFiles =
+              getContainerLogFiles(getConf(), containerId, nodeHttpAddress);
+        }
         printContainerLogsFromRunningApplication(conf, appId, containerId,
-          nodeHttpAddress, nodeId, logFiles, logCliHelper, appOwner);
+          nodeHttpAddress, nodeId, requestedLogFiles, logCliHelper, appOwner);
       }
     }
   }

@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,14 +46,10 @@ import java.util.concurrent.CyclicBarrier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
-import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -79,7 +74,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
@@ -123,11 +117,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -144,17 +136,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
@@ -168,31 +156,10 @@ public class TestClientRMService {
       .getRecordFactory(null);
 
   private String appType = "MockApp";
-
-  private static RMDelegationTokenSecretManager dtsm;
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
-  private final static String kerberosRule = "RULE:[1:$1@$0](.*@EXAMPLE.COM)s/@.*//\nDEFAULT";
-  static {
-    KerberosName.setRules(kerberosRule);
-  }
-  
-  @BeforeClass
-  public static void setupSecretManager() throws IOException {
-    RMContext rmContext = mock(RMContext.class);
-    when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
-    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000, rmContext);
-    dtsm.startThreads();  
-  }
 
-  @AfterClass
-  public static void teardownSecretManager() {
-    if (dtsm != null) {
-      dtsm.stopThreads();
-    }
-  }
-  
   @Test
   public void testGetClusterNodes() throws Exception {
     MockRM rm = new MockRM() {
@@ -333,6 +300,33 @@ public class TestClientRMService {
           report.getApplicationResourceUsageReport();
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
+      Assert.assertEquals("<Not set>", report.getAmNodeLabelExpression());
+      Assert.assertEquals("<Not set>", report.getAppNodeLabelExpression());
+
+      // if application has am node label set to blank
+      ApplicationId appId2 = getApplicationId(2);
+      when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+          ApplicationAccessType.VIEW_APP, null, appId2)).thenReturn(true);
+      request.setApplicationId(appId2);
+      response = rmService.getApplicationReport(request);
+      report = response.getApplicationReport();
+
+      Assert.assertEquals(NodeLabel.DEFAULT_NODE_LABEL_PARTITION,
+          report.getAmNodeLabelExpression());
+      Assert.assertEquals(NodeLabel.NODE_LABEL_EXPRESSION_NOT_SET,
+          report.getAppNodeLabelExpression());
+
+      // if application has am node label set to blank
+      ApplicationId appId3 = getApplicationId(3);
+      when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+          ApplicationAccessType.VIEW_APP, null, appId3)).thenReturn(true);
+
+      request.setApplicationId(appId3);
+      response = rmService.getApplicationReport(request);
+      report = response.getApplicationReport();
+
+      Assert.assertEquals("high-mem", report.getAmNodeLabelExpression());
+      Assert.assertEquals("high-mem", report.getAppNodeLabelExpression());
 
       // if application id is null
       GetApplicationReportRequest invalidRequest = recordFactory
@@ -617,229 +611,7 @@ public class TestClientRMService {
     Assert.assertEquals(0, applications1.size());
   }
 
-  private static final UserGroupInformation owner =
-      UserGroupInformation.createRemoteUser("owner");
-  private static final UserGroupInformation other =
-      UserGroupInformation.createRemoteUser("other");
-  private static final UserGroupInformation tester =
-      UserGroupInformation.createRemoteUser("tester");
-  private static final String testerPrincipal = "tester@EXAMPLE.COM";
-  private static final String ownerPrincipal = "owner@EXAMPLE.COM";
-  private static final String otherPrincipal = "other@EXAMPLE.COM";
-  private static final UserGroupInformation testerKerb =
-      UserGroupInformation.createRemoteUser(testerPrincipal);
-  private static final UserGroupInformation ownerKerb =
-      UserGroupInformation.createRemoteUser(ownerPrincipal);
-  private static final UserGroupInformation otherKerb =
-      UserGroupInformation.createRemoteUser(otherPrincipal);
   
-  @Test
-  public void testTokenRenewalByOwner() throws Exception {
-    owner.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenRenewal(owner, owner);
-        return null;
-      }
-    });
-  }
-  
-  @Test
-  public void testTokenRenewalWrongUser() throws Exception {
-    try {
-      owner.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          try {
-            checkTokenRenewal(owner, other);
-            return null;
-          } catch (YarnException ex) {
-            Assert.assertTrue(ex.getMessage().contains(owner.getUserName() +
-                " tries to renew a token with renewer " +
-                other.getUserName()));
-            throw ex;
-          }
-        }
-      });
-    } catch (Exception e) {
-      return;
-    }
-    Assert.fail("renew should have failed");
-  }
-
-  @Test
-  public void testTokenRenewalByLoginUser() throws Exception {
-    UserGroupInformation.getLoginUser().doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenRenewal(owner, owner);
-        checkTokenRenewal(owner, other);
-        return null;
-      }
-    });
-  }
-
-  private void checkTokenRenewal(UserGroupInformation owner,
-      UserGroupInformation renewer) throws IOException, YarnException {
-    RMDelegationTokenIdentifier tokenIdentifier =
-        new RMDelegationTokenIdentifier(
-            new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
-    Token<?> token =
-        new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
-    org.apache.hadoop.yarn.api.records.Token dToken = BuilderUtils.newDelegationToken(
-        token.getIdentifier(), token.getKind().toString(),
-        token.getPassword(), token.getService().toString());
-    RenewDelegationTokenRequest request =
-        Records.newRecord(RenewDelegationTokenRequest.class);
-    request.setDelegationToken(dToken);
-
-    RMContext rmContext = mock(RMContext.class);
-    ClientRMService rmService = new ClientRMService(
-        rmContext, null, null, null, null, dtsm);
-    rmService.renewDelegationToken(request);
-  }
-
-  @Test
-  public void testTokenCancellationByOwner() throws Exception {
-    // two tests required - one with a kerberos name
-    // and with a short name
-    RMContext rmContext = mock(RMContext.class);
-    final ClientRMService rmService =
-        new ClientRMService(rmContext, null, null, null, null, dtsm);
-    testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenCancellation(rmService, testerKerb, other);
-        return null;
-      }
-    });
-    owner.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenCancellation(owner, other);
-        return null;
-      }
-    });
-  }
-
-  @Test
-  public void testTokenCancellationByRenewer() throws Exception {
-    // two tests required - one with a kerberos name
-    // and with a short name
-    RMContext rmContext = mock(RMContext.class);
-    final ClientRMService rmService =
-        new ClientRMService(rmContext, null, null, null, null, dtsm);
-    testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenCancellation(rmService, owner, testerKerb);
-        return null;
-      }
-    });
-    other.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        checkTokenCancellation(owner, other);
-        return null;
-      }
-    });
-  }
-
-  @Test
-  public void testTokenCancellationByWrongUser() {
-    // two sets to test -
-    // 1. try to cancel tokens of short and kerberos users as a kerberos UGI
-    // 2. try to cancel tokens of short and kerberos users as a simple auth UGI
-
-    RMContext rmContext = mock(RMContext.class);
-    final ClientRMService rmService =
-        new ClientRMService(rmContext, null, null, null, null, dtsm);
-    UserGroupInformation[] kerbTestOwners =
-        { owner, other, tester, ownerKerb, otherKerb };
-    UserGroupInformation[] kerbTestRenewers =
-        { owner, other, ownerKerb, otherKerb };
-    for (final UserGroupInformation tokOwner : kerbTestOwners) {
-      for (final UserGroupInformation tokRenewer : kerbTestRenewers) {
-        try {
-          testerKerb.doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              try {
-                checkTokenCancellation(rmService, tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
-                    + tokOwner.getUserName() + ", renewer = "
-                    + tokRenewer.getUserName());
-                return null;
-              } catch (YarnException e) {
-                Assert.assertTrue(e.getMessage().contains(
-                  testerKerb.getUserName()
-                      + " is not authorized to cancel the token"));
-                return null;
-              }
-            }
-          });
-        } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
-        }
-      }
-    }
-
-    UserGroupInformation[] simpleTestOwners =
-        { owner, other, ownerKerb, otherKerb, testerKerb };
-    UserGroupInformation[] simpleTestRenewers =
-        { owner, other, ownerKerb, otherKerb };
-    for (final UserGroupInformation tokOwner : simpleTestOwners) {
-      for (final UserGroupInformation tokRenewer : simpleTestRenewers) {
-        try {
-          tester.doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              try {
-                checkTokenCancellation(tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
-                    + tokOwner.getUserName() + ", renewer = "
-                    + tokRenewer.getUserName());
-                return null;
-              } catch (YarnException ex) {
-                Assert.assertTrue(ex.getMessage().contains(
-                  tester.getUserName()
-                      + " is not authorized to cancel the token"));
-                return null;
-              }
-            }
-          });
-        } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
-        }
-      }
-    }
-  }
-
-  private void checkTokenCancellation(UserGroupInformation owner,
-      UserGroupInformation renewer) throws IOException, YarnException {
-    RMContext rmContext = mock(RMContext.class);
-    final ClientRMService rmService =
-        new ClientRMService(rmContext, null, null, null, null, dtsm);
-    checkTokenCancellation(rmService, owner, renewer);
-  }
-
-  private void checkTokenCancellation(ClientRMService rmService,
-      UserGroupInformation owner, UserGroupInformation renewer)
-      throws IOException, YarnException {
-    RMDelegationTokenIdentifier tokenIdentifier =
-        new RMDelegationTokenIdentifier(new Text(owner.getUserName()),
-          new Text(renewer.getUserName()), null);
-    Token<?> token =
-        new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
-    org.apache.hadoop.yarn.api.records.Token dToken =
-        BuilderUtils.newDelegationToken(token.getIdentifier(), token.getKind()
-          .toString(), token.getPassword(), token.getService().toString());
-    CancelDelegationTokenRequest request =
-        Records.newRecord(CancelDelegationTokenRequest.class);
-    request.setDelegationToken(dToken);
-    rmService.cancelDelegationToken(request);
-  }
-
   @Test (timeout = 30000)
   @SuppressWarnings ("rawtypes")
   public void testAppSubmit() throws Exception {
@@ -1206,11 +978,11 @@ public class TestClientRMService {
     ApplicationId applicationId3 = getApplicationId(3);
     YarnConfiguration config = new YarnConfiguration();
     apps.put(applicationId1, getRMApp(rmContext, yarnScheduler, applicationId1,
-        config, "testqueue", 10, 3));
+        config, "testqueue", 10, 3,null,null));
     apps.put(applicationId2, getRMApp(rmContext, yarnScheduler, applicationId2,
-        config, "a", 20, 2));
+        config, "a", 20, 2,null,""));
     apps.put(applicationId3, getRMApp(rmContext, yarnScheduler, applicationId3,
-        config, "testqueue", 40, 5));
+        config, "testqueue", 40, 5,"high-mem","high-mem"));
     return apps;
   }
   
@@ -1233,10 +1005,11 @@ public class TestClientRMService {
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName,
-      final long memorySeconds, final long vcoreSeconds) {
+      final long memorySeconds, final long vcoreSeconds,
+      String appNodeLabelExpression, String amNodeLabelExpression) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
-
+    when(asContext.getNodeLabelExpression()).thenReturn(appNodeLabelExpression);
     RMAppImpl app =
         spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
             queueName, asContext, yarnScheduler, null,
@@ -1257,7 +1030,7 @@ public class TestClientRMService {
                     return report;
                   }
               });
-
+    app.getAMResourceRequest().setNodeLabelExpression(amNodeLabelExpression);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,

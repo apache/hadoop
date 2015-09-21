@@ -261,10 +261,9 @@ public class TestRMAppTransitions {
     // but applicationId is still set for safety
     submissionContext.setApplicationId(applicationId);
 
-    RMApp application =
-        new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
-          submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN", null, null);
+    RMApp application = new RMAppImpl(applicationId, rmContext, conf, name,
+        user, queue, submissionContext, scheduler, masterService,
+        System.currentTimeMillis(), "YARN", null, mock(ResourceRequest.class));
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
@@ -970,7 +969,7 @@ public class TestRMAppTransitions {
             appState.getApplicationSubmissionContext().getApplicationId(),
             rmContext, conf,
             submissionContext.getApplicationName(), null,
-            submissionContext.getQueue(), submissionContext, null, null,
+            submissionContext.getQueue(), submissionContext, scheduler, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(),
             BuilderUtils.newResourceRequest(

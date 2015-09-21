@@ -60,7 +60,7 @@ public class TestApplicatonReport {
           "appname", "host", 124, null, YarnApplicationState.FINISHED,
           "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
           "N/A", 0.53789f, YarnConfiguration.DEFAULT_APPLICATION_TYPE, null,
-          null, false, Priority.newInstance(0));
+          null, false, Priority.newInstance(0),"","");
     return appReport;
   }
 

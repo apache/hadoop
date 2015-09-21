@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -58,6 +59,8 @@ public class TestWriteStripedFileWithFailure {
   }
 
   // Test writing file with some Datanodes failure
+  // TODO: enable this test after HDFS-8704 and HDFS-9040
+  @Ignore
   @Test(timeout = 300000)
   public void testWriteStripedFileWithDNFailure() throws IOException {
     for (int fileLength : fileLengths) {

@@ -273,6 +273,12 @@
   </property>
 
   <property>
+    <description>The expiry interval for node IP caching. -1 disables the caching</description>
+    <name>yarn.resourcemanager.node-ip-cache.expiry-interval-secs</name>
+    <value>-1</value>
+  </property>
+
+  <property>
     <description>Number of threads to handle resource tracker calls.</description>
     <name>yarn.resourcemanager.resource-tracker.client.thread-count</name>
     <value>50</value>
@@ -343,9 +349,12 @@
 
   <property>
     <description>Should YARN fail fast if it encounters any errors.
+      This is a global config for all other components including RM,NM etc.
+      If no value is set for component-specific config (e.g yarn.resourcemanager.fail-fast),
+      this value will be the default.
     </description>
     <name>yarn.fail-fast</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -2250,4 +2259,56 @@
     <value></value>
   </property>
 
+  <property>
+    <description>
+    Enable/Disable AMRMProxyService in the node manager. This service is used to intercept
+    calls from the application masters to the resource manager.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    The address of the AMRMProxyService listener.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.address</name>
+    <value>0.0.0.0:8048</value>
+  </property>
+
+  <property>
+    <description>
+    The number of threads used to handle requests by the AMRMProxyService.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.client.thread-count</name>
+    <value>25</value>
+  </property>
+
+  <property>
+    <description>
+    The comma separated list of class names that implement the RequestInterceptor interface. This is used by the
+    AMRMProxyService to create the request processing pipeline for applications.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor</value>
+  </property>
+
+ <property>
+    <description>
+    Enable/disable blacklisting of hosts for AM based on AM failures on those
+    hosts.
+    </description>
+    <name>yarn.am.blacklisting.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+    Threshold of ratio number of NodeManager hosts that are allowed to be
+    blacklisted for AM. Beyond this ratio there is no blacklisting to avoid
+    danger of blacklisting the entire cluster.
+    </description>
+    <name>yarn.am.blacklisting.disable-failure-threshold</name>
+    <value>0.8f</value>
+  </property>
 </configuration>

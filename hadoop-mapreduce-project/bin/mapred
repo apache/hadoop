@@ -20,6 +20,7 @@ MYNAME="${BASH_SOURCE-$0}"
 function hadoop_usage
 {
   hadoop_add_subcommand "archive" "create a hadoop archive"
+  hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
   hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
   hadoop_add_subcommand "distcp" "copy file or directories recursively"
   hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
@@ -67,6 +68,13 @@ case ${COMMAND} in
   ;;
   archive)
     CLASS=org.apache.hadoop.tools.HadoopArchives
+    hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
+    hadoop_add_classpath "${TOOL_PATH}"
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
+  archive-logs)
+    CLASS=org.apache.hadoop.tools.HadoopArchiveLogs
     hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
     hadoop_add_classpath "${TOOL_PATH}"
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"

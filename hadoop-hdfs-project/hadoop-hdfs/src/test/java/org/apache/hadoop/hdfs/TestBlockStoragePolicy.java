@@ -76,12 +76,12 @@ public class TestBlockStoragePolicy {
   static final long FILE_LEN = 1024;
   static final short REPLICATION = 3;
 
-  static final byte COLD = HdfsServerConstants.COLD_STORAGE_POLICY_ID;
-  static final byte WARM = HdfsServerConstants.WARM_STORAGE_POLICY_ID;
-  static final byte HOT  = HdfsServerConstants.HOT_STORAGE_POLICY_ID;
-  static final byte ONESSD  = HdfsServerConstants.ONESSD_STORAGE_POLICY_ID;
-  static final byte ALLSSD  = HdfsServerConstants.ALLSSD_STORAGE_POLICY_ID;
-  static final byte LAZY_PERSIST  = HdfsServerConstants.MEMORY_STORAGE_POLICY_ID;
+  static final byte COLD = HdfsConstants.COLD_STORAGE_POLICY_ID;
+  static final byte WARM = HdfsConstants.WARM_STORAGE_POLICY_ID;
+  static final byte HOT  = HdfsConstants.HOT_STORAGE_POLICY_ID;
+  static final byte ONESSD  = HdfsConstants.ONESSD_STORAGE_POLICY_ID;
+  static final byte ALLSSD  = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
+  static final byte LAZY_PERSIST  = HdfsConstants.MEMORY_STORAGE_POLICY_ID;
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
@@ -1317,19 +1317,15 @@ public class TestBlockStoragePolicy {
       HdfsFileStatus status = fs.getClient().getFileInfo(file);
       // 5. get file policy, it should be parent policy.
       Assert
-          .assertTrue(
-              "File storage policy should be HOT",
-              status.getStoragePolicy()
-              == HdfsServerConstants.HOT_STORAGE_POLICY_ID);
+          .assertTrue("File storage policy should be HOT",
+              status.getStoragePolicy() == HOT);
       // 6. restart NameNode for reloading edits logs.
       cluster.restartNameNode(true);
       // 7. get file policy, it should be parent policy.
       status = fs.getClient().getFileInfo(file);
       Assert
-          .assertTrue(
-              "File storage policy should be HOT",
-              status.getStoragePolicy()
-              == HdfsServerConstants.HOT_STORAGE_POLICY_ID);
+          .assertTrue("File storage policy should be HOT",
+              status.getStoragePolicy() == HOT);
 
     } finally {
       cluster.shutdown();

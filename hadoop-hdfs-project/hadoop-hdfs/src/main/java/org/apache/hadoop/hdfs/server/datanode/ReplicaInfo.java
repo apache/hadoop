@@ -197,22 +197,6 @@ abstract public class ReplicaInfo extends Block implements Replica {
   }
 
   /**
-   * check if this replica has already been unlinked.
-   * @return true if the replica has already been unlinked 
-   *         or no need to be detached; false otherwise
-   */
-  public boolean isUnlinked() {
-    return true;                // no need to be unlinked
-  }
-
-  /**
-   * set that this replica is unlinked
-   */
-  public void setUnlinked() {
-    // no need to be unlinked
-  }
-
-  /**
    * Number of bytes reserved for this replica on disk.
    */
   public long getBytesReserved() {
@@ -227,72 +211,6 @@ abstract public class ReplicaInfo extends Block implements Replica {
    */
   public long getOriginalBytesReserved() {
     return 0;
-  }
-
-   /**
-   * Copy specified file into a temporary file. Then rename the
-   * temporary file to the original name. This will cause any
-   * hardlinks to the original file to be removed. The temporary
-   * files are created in the same directory. The temporary files will
-   * be recovered (especially on Windows) on datanode restart.
-   */
-  private void unlinkFile(File file, Block b) throws IOException {
-    File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
-    try {
-      FileInputStream in = new FileInputStream(file);
-      try {
-        FileOutputStream out = new FileOutputStream(tmpFile);
-        try {
-          IOUtils.copyBytes(in, out, 16*1024);
-        } finally {
-          out.close();
-        }
-      } finally {
-        in.close();
-      }
-      if (file.length() != tmpFile.length()) {
-        throw new IOException("Copy of file " + file + " size " + file.length()+
-                              " into file " + tmpFile +
-                              " resulted in a size of " + tmpFile.length());
-      }
-      FileUtil.replaceFile(tmpFile, file);
-    } catch (IOException e) {
-      boolean done = tmpFile.delete();
-      if (!done) {
-        DataNode.LOG.info("detachFile failed to delete temporary file " +
-                          tmpFile);
-      }
-      throw e;
-    }
-  }
-
-  /**
-   * Remove a hard link by copying the block to a temporary place and 
-   * then moving it back
-   * @param numLinks number of hard links
-   * @return true if copy is successful; 
-   *         false if it is already detached or no need to be detached
-   * @throws IOException if there is any copy error
-   */
-  public boolean unlinkBlock(int numLinks) throws IOException {
-    if (isUnlinked()) {
-      return false;
-    }
-    File file = getBlockFile();
-    if (file == null || getVolume() == null) {
-      throw new IOException("detachBlock:Block not found. " + this);
-    }
-    File meta = getMetaFile();
-
-    if (HardLink.getLinkCount(file) > numLinks) {
-      DataNode.LOG.info("CopyOnWrite for block " + this);
-      unlinkFile(file, this);
-    }
-    if (HardLink.getLinkCount(meta) > numLinks) {
-      unlinkFile(meta, this);
-    }
-    setUnlinked();
-    return true;
   }
 
   @Override  //Object

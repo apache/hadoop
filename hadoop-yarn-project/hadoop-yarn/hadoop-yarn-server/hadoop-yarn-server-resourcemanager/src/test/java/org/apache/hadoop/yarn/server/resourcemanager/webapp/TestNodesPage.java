@@ -43,12 +43,11 @@ public class TestNodesPage {
   final int numberOfNodesPerRack = 8;
   // The following is because of the way TestRMWebApp.mockRMContext creates
   // nodes.
-  final int numberOfLostNodesPerRack = numberOfNodesPerRack
-      / NodeState.values().length;
+  final int numberOfLostNodesPerRack = 1;
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
-  final int numberOfThInMetricsTable = 21;
+  final int numberOfThInMetricsTable = 22;
   final int numberOfActualTableHeaders = 13;
 
   private Injector injector;

@@ -271,7 +271,7 @@ expunge
 
 Usage: `hadoop fs -expunge`
 
-Empty the Trash. Refer to the [HDFS Architecture Guide](../hadoop-hdfs/HdfsDesign.html) for more information on the Trash feature.
+If trash is enabled when a file is deleted, HDFS instead moves the deleted file to a trash directory. This command causes HDFS to permanently delete files from the trash that are older than the retention threshold. Refer to the [File Deletes and Undeletes Guide](../hadoop-hdfs/HdfsDesign.html#File_Deletes_and_Undeletes) in Space Reclamation section for more information on the Trash feature.
 
 find
 ----

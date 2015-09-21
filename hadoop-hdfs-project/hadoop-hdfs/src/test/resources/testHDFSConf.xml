@@ -5268,7 +5268,126 @@
     </test>
     
     <!-- Tests for getmerge -->
-    <!-- Manual Testing -->
+    <test> <!-- TESTED -->
+      <description>getmerge: basic</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1 CLITEST_DATA/file</command>
+        <command>-cat CLITEST_DATA/file</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
+        <command>rm data</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output>12345678901234
+12345678901234
+12345678901234
+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>getmerge: with file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1/data15bytes CLITEST_DATA/file</command>
+        <command>-cat CLITEST_DATA/file</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
+        <command>rm data</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output>12345678901234
+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>getmerge: with multiple files</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1/data15bytes /user/USERNAME/dir1/data30bytes CLITEST_DATA/file</command>
+        <command>-cat CLITEST_DATA/file</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
+        <command>rm data</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output>12345678901234
+12345678901234
+12345678901234
+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>getmerge: with newlines</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -getmerge -nl /user/USERNAME/dir1 CLITEST_DATA/file</command>
+        <command>-cat CLITEST_DATA/file</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
+        <command>rm data</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output>12345678901234
+
+12345678901234
+12345678901234
+
+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>getmerge: with multiple files and newlines</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
+        <command>-fs NAMENODE -getmerge -nl /user/USERNAME/dir1/data15bytes /user/USERNAME/dir1/data30bytes CLITEST_DATA/file</command>
+        <command>-cat CLITEST_DATA/file</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
+        <command>rm data</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output>12345678901234
+
+12345678901234
+12345678901234
+
+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
 
     <!-- Tests for cat -->
     <test> <!-- TESTED -->
@@ -6352,7 +6471,61 @@
         </comparator>
       </comparators>
     </test>
-    
+
+    <test> <!-- TESTED -->
+      <description>setrep: invalid replication factor -- too high</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /dir0</command>
+        <command>-fs NAMENODE -touchz /dir0/file0</command>
+        <command>-fs NAMENODE -setrep 1025 /dir0/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^setrep: Requested replication factor of 1025 exceeds maximum of [0-9]+ for /dir0/file0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>setrep: invalid replication factor -- 0</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -touchz dir0/file0</command>
+        <command>-fs NAMENODE -setrep 0 dir0/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-setrep: replication must be >= 1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>setrep: invalid replication factor -- NaN</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -touchz dir0/file0</command>
+        <command>-fs NAMENODE -setrep three dir0/file0</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^setrep: Illegal replication, a positive integer expected</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Tests for touchz-->
     <test> <!-- TESTED -->
       <description>touchz: touching file (absolute path) </description>
@@ -16511,27 +16684,6 @@
         <comparator>
           <type>ExactComparator</type>
           <expected-output></expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test>
-      <description>getmerge</description>
-      <test-commands>
-        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
-        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
-        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
-        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1 CLITEST_DATA/file</command>
-        <command>-cat CLITEST_DATA/file</command>
-      </test-commands>
-      <cleanup-commands>
-        <command>-fs NAMENODE -rm -r /user/USERNAME CLITEST_DATA/file</command>
-        <command>rm data</command>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>12345678901234.*</expected-output>
         </comparator>
       </comparators>
     </test>

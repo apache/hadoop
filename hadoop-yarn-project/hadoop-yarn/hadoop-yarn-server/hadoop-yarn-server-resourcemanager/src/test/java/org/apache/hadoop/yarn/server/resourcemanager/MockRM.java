@@ -156,7 +156,8 @@ public class MockRM extends ResourceManager {
     LOG.info("App State is : " + app.getState());
     if (waitedMsecs >= timeoutMsecs) {
       Assert.fail("App state is not correct (timedout): expected: " +
-          finalState + " actual: " + app.getState());
+          finalState + " actual: " + app.getState() +
+          " for the application " + appId);
     }
   }
   
@@ -185,7 +186,8 @@ public class MockRM extends ResourceManager {
     LOG.info("Attempt State is : " + attempt.getAppAttemptState());
     if (waitedMsecs >= timeoutMsecs) {
       Assert.fail("Attempt state is not correct (timedout): expected: "
-          + finalState + " actual: " + attempt.getAppAttemptState());
+          + finalState + " actual: " + attempt.getAppAttemptState()+
+          " for the application attempt " + attemptId);
     }
   }
 
@@ -750,15 +752,21 @@ public class MockRM extends ResourceManager {
 
   public static MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
-    rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
-    RMAppAttempt attempt = app.getCurrentAppAttempt();
-    waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
-    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.SCHEDULED);
+    RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
     System.out.println("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
     return am;
+  }
+
+  public static RMAppAttempt waitForAttemptScheduled(RMApp app, MockRM rm)
+      throws Exception {
+    rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.SCHEDULED);
+    return attempt;
   }
 
   public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm)

@@ -29,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBalancerBandwidthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoRequestProto;
@@ -121,7 +123,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     BlockLocalPathInfo resp;
     try {
-      resp = impl.getBlockLocalPathInfo(PBHelperClient.convert(request.getBlock()), PBHelper.convert(request.getToken()));
+      resp = impl.getBlockLocalPathInfo(
+                 PBHelperClient.convert(request.getBlock()),
+                 PBHelperClient.convert(request.getToken()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -148,7 +152,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     GetDatanodeInfoResponseProto res;
     try {
       res = GetDatanodeInfoResponseProto.newBuilder()
-          .setLocalInfo(PBHelper.convert(impl.getDatanodeInfo())).build();
+          .setLocalInfo(PBHelperClient.convert(impl.getDatanodeInfo())).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -230,5 +234,19 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return TRIGGER_BLOCK_REPORT_RESP;
+  }
+
+  @Override
+  public GetBalancerBandwidthResponseProto getBalancerBandwidth(
+      RpcController controller, GetBalancerBandwidthRequestProto request)
+      throws ServiceException {
+    long bandwidth;
+    try {
+      bandwidth = impl.getBalancerBandwidth();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return GetBalancerBandwidthResponseProto.newBuilder()
+        .setBandwidth(bandwidth).build();
   }
 }

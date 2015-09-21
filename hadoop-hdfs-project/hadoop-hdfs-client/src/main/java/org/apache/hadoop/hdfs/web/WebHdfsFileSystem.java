@@ -154,11 +154,11 @@ public class WebHdfsFileSystem extends FileSystem
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT);
 
     if(isOAuth) {
-      LOG.info("Enabling OAuth2 in WebHDFS");
+      LOG.debug("Enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
           .newOAuth2URLConnectionFactory(conf);
     } else {
-      LOG.info("Not enabling OAuth2 in WebHDFS");
+      LOG.debug("Not enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
           .newDefaultURLConnectionFactory(conf);
     }

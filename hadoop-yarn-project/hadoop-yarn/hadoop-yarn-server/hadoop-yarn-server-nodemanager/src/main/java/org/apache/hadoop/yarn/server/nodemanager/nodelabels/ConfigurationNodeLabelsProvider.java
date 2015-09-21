@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.TimerTask;
 
@@ -40,16 +39,6 @@ public class ConfigurationNodeLabelsProvider extends AbstractNodeLabelsProvider 
 
   public ConfigurationNodeLabelsProvider() {
     super("Configuration Based NodeLabels Provider");
-  }
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-    // In case timer is not configured avoid calling timertask.run thus avoiding
-    // unnecessary creation of YarnConfiguration Object
-    updateNodeLabelsFromConfig(conf);
-    if (intervalTime != DISABLE_NODE_LABELS_PROVIDER_FETCH_TIMER) {
-      startTime = new Date().getTime() + intervalTime;
-    }
   }
 
   private void updateNodeLabelsFromConfig(Configuration conf)

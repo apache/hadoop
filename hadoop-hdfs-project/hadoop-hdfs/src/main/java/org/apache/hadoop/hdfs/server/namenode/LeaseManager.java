@@ -108,7 +108,11 @@ public class LeaseManager {
     long numUCBlocks = 0;
     for (Long id : getINodeIdWithLeases()) {
       final INodeFile cons = fsnamesystem.getFSDirectory().getInode(id).asFile();
-      Preconditions.checkState(cons.isUnderConstruction());
+      if (!cons.isUnderConstruction()) {
+        LOG.warn("The file " + cons.getFullPathName()
+            + " is not under construction but has lease.");
+        continue;
+      }
       BlockInfo[] blocks = cons.getBlocks();
       if(blocks == null) {
         continue;

@@ -1310,14 +1310,29 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(element, "numNonAMContainerPreempted"),
           WebServicesTestUtils.getXmlInt(element, "numAMContainerPreempted"),
           WebServicesTestUtils.getXmlString(element, "logAggregationStatus"),
-          WebServicesTestUtils.getXmlBoolean(element, "unmanagedApplication"));
+          WebServicesTestUtils.getXmlBoolean(element, "unmanagedApplication"),
+          WebServicesTestUtils.getXmlString(element, "appNodeLabelExpression"),
+          WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"));
     }
   }
 
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    assertEquals("incorrect number of elements", 30, info.length());
+    int expectedNumberOfElements = 30;
+    String appNodeLabelExpression = null;
+    String amNodeLabelExpression = null;
+    if (app.getApplicationSubmissionContext()
+        .getNodeLabelExpression() != null) {
+      expectedNumberOfElements++;
+      appNodeLabelExpression = info.getString("appNodeLabelExpression");
+    }
+    if (app.getAMResourceRequest().getNodeLabelExpression() != null) {
+      expectedNumberOfElements++;
+      amNodeLabelExpression = info.getString("amNodeLabelExpression");
+    }
+    assertEquals("incorrect number of elements", expectedNumberOfElements,
+        info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
@@ -1334,7 +1349,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getInt("numNonAMContainerPreempted"),
         info.getInt("numAMContainerPreempted"),
         info.getString("logAggregationStatus"),
-        info.getBoolean("unmanagedApplication"));
+        info.getBoolean("unmanagedApplication"),
+        appNodeLabelExpression,
+        amNodeLabelExpression);
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
@@ -1345,7 +1362,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       int allocatedMB, int allocatedVCores, int numContainers,
       int preemptedResourceMB, int preemptedResourceVCores,
       int numNonAMContainerPreempted, int numAMContainerPreempted,
-      String logAggregationStatus, boolean unmanagedApplication)
+      String logAggregationStatus, boolean unmanagedApplication,
+      String appNodeLabelExpression, String amNodeLabelExpression)
       throws JSONException,
       Exception {
 
@@ -1400,6 +1418,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("unmanagedApplication doesn't match", app
         .getApplicationSubmissionContext().getUnmanagedAM(),
         unmanagedApplication);
+    assertEquals("unmanagedApplication doesn't match",
+        app.getApplicationSubmissionContext().getNodeLabelExpression(),
+        appNodeLabelExpression);
+    assertEquals("unmanagedApplication doesn't match",
+        app.getAMResourceRequest().getNodeLabelExpression(),
+        amNodeLabelExpression);
   }
 
   @Test
@@ -1635,7 +1659,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         .getMasterContainer().getNodeHttpAddress(), nodeHttpAddress);
     WebServicesTestUtils.checkStringMatch("nodeId", appAttempt
         .getMasterContainer().getNodeId().toString(), nodeId);
-    assertTrue("logsLink doesn't match", logsLink.startsWith("//"));
+    assertTrue("logsLink doesn't match ", logsLink.startsWith("http://"));
     assertTrue(
         "logsLink doesn't contain user info", logsLink.endsWith("/"
         + user));

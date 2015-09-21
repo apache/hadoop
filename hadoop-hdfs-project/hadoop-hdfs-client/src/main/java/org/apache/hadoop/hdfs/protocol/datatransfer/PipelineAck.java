@@ -23,15 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OOB_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OOB_TIMEOUT_DEFAULT;
 
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
@@ -46,9 +41,6 @@ public class PipelineAck {
   public final static long UNKOWN_SEQNO = -2;
   final static int OOB_START = Status.OOB_RESTART_VALUE; // the first OOB type
   final static int OOB_END = Status.OOB_RESERVED3_VALUE; // the last OOB type
-  final static int NUM_OOB_TYPES = OOB_END - OOB_START + 1;
-  // place holder for timeout value of each OOB type
-  final static long[] OOB_TIMEOUT;
 
   public enum ECN {
     DISABLED(0),
@@ -96,16 +88,6 @@ public class PipelineAck {
 
     public static int setECN(int old, ECN ecn) {
       return (int) ECN_BITS.BITS.combine(ecn.getValue(), old);
-    }
-  }
-
-  static {
-    OOB_TIMEOUT = new long[NUM_OOB_TYPES];
-    HdfsConfiguration conf = new HdfsConfiguration();
-    String[] ele = conf.get(DFS_DATANODE_OOB_TIMEOUT_KEY,
-        DFS_DATANODE_OOB_TIMEOUT_DEFAULT).split(",");
-    for (int i = 0; i < NUM_OOB_TYPES; i++) {
-      OOB_TIMEOUT[i] = (i < ele.length) ? Long.parseLong(ele[i]) : 0;
     }
   }
 
@@ -214,19 +196,6 @@ public class PipelineAck {
       }
     }
     return null;
-  }
-
-  /**
-   * Get the timeout to be used for transmitting the OOB type
-   * @return the timeout in milliseconds
-   */
-  public static long getOOBTimeout(Status status) throws IOException {
-    int index = status.getNumber() - OOB_START;
-    if (index >= 0 && index < NUM_OOB_TYPES) {
-      return OOB_TIMEOUT[index];
-    } 
-    // Not an OOB.
-    throw new IOException("Not an OOB status: " + status);
   }
 
   /** Get the Restart OOB ack status */

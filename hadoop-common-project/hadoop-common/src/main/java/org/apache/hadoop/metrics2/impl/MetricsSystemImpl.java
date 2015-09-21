@@ -105,7 +105,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private Map<String, MetricsConfig> sourceConfigs, sinkConfigs;
   private boolean monitoring = false;
   private Timer timer;
-  private int period; // seconds
+  private long period; // milliseconds
   private long logicalTime; // number of timer invocations * period
   private ObjectName mbeanName;
   private boolean publishSelfMetrics = true;
@@ -359,7 +359,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       return;
     }
     logicalTime = 0;
-    long millis = period * 1000;
+    long millis = period;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
           @Override
@@ -371,7 +371,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             }
           }
         }, millis, millis);
-    LOG.info("Scheduled snapshot period at "+ period +" second(s).");
+    LOG.info("Scheduled snapshot period at "+ (period/1000) +" second(s).");
   }
 
   synchronized void onTimerEvent() {
@@ -485,12 +485,15 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
   private synchronized void configureSinks() {
     sinkConfigs = config.getInstanceConfigs(SINK_KEY);
-    int confPeriod = 0;
+    long confPeriodMillis = 0;
     for (Entry<String, MetricsConfig> entry : sinkConfigs.entrySet()) {
       MetricsConfig conf = entry.getValue();
       int sinkPeriod = conf.getInt(PERIOD_KEY, PERIOD_DEFAULT);
-      confPeriod = confPeriod == 0 ? sinkPeriod
-                                   : ArithmeticUtils.gcd(confPeriod, sinkPeriod);
+      // Support configuring periodMillis for testing.
+      long sinkPeriodMillis =
+          conf.getLong(PERIOD_MILLIS_KEY, sinkPeriod * 1000);
+      confPeriodMillis = confPeriodMillis == 0 ? sinkPeriodMillis
+          : ArithmeticUtils.gcd(confPeriodMillis, sinkPeriodMillis);
       String clsName = conf.getClassName("");
       if (clsName == null) continue;  // sink can be registered later on
       String sinkName = entry.getKey();
@@ -503,8 +506,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         LOG.warn("Error creating sink '"+ sinkName +"'", e);
       }
     }
-    period = confPeriod > 0 ? confPeriod
-                            : config.getInt(PERIOD_KEY, PERIOD_DEFAULT);
+    long periodSec = config.getInt(PERIOD_KEY, PERIOD_DEFAULT);
+    period = confPeriodMillis > 0 ? confPeriodMillis
+        : config.getLong(PERIOD_MILLIS_KEY, periodSec * 1000);
   }
 
   static MetricsSinkAdapter newSink(String name, String desc, MetricsSink sink,

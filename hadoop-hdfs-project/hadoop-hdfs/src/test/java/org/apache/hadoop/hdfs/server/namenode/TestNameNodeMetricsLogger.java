@@ -25,6 +25,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -118,8 +119,8 @@ public class TestNameNodeMetricsLogger {
     return new TestNameNode(conf);
   }
 
-  private int getRandomPort() {
-    return 10000 + random.nextInt(50000);
+  private int getRandomPort() throws IOException {
+    return ServerSocketUtil.getPort(0, 10);
   }
 
   private void addAppender(Log log, Appender appender) {

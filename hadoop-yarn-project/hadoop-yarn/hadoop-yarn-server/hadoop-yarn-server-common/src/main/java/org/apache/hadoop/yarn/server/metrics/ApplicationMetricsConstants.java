@@ -80,4 +80,10 @@ public class ApplicationMetricsConstants {
 
   public static final String APPLICATION_PRIORITY_INFO =
       "YARN_APPLICATION_PRIORITY";
+
+  public static final String APP_NODE_LABEL_EXPRESSION =
+      "YARN_APP_NODE_LABEL_EXPRESSION";
+
+  public static final String AM_NODE_LABEL_EXPRESSION =
+      "YARN_AM_NODE_LABEL_EXPRESSION";
 }

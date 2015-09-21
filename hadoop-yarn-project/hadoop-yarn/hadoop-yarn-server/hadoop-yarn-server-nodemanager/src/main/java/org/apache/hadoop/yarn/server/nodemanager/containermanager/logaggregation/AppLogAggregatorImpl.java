@@ -359,6 +359,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       if (writer != null) {
         writer.close();
+        writer = null;
       }
 
       long currentTime = System.currentTimeMillis();
@@ -594,6 +595,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     LOG.info("Aborting log aggregation for " + this.applicationId);
     this.aborted.set(true);
     this.notifyAll();
+  }
+
+  @Override
+  public void disableLogAggregation() {
+    this.logAggregationDisabled = true;
   }
 
   @Private

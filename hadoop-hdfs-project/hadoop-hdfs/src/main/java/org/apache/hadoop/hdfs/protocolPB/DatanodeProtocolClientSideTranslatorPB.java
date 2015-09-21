@@ -139,7 +139,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
         .setFailedVolumes(failedVolumes)
         .setRequestFullBlockReportLease(requestFullBlockReportLease);
-    builder.addAllReports(PBHelper.convertStorageReports(reports));
+    builder.addAllReports(PBHelperClient.convertStorageReports(reports));
     if (cacheCapacity != 0) {
       builder.setCacheCapacity(cacheCapacity);
     }
@@ -164,7 +164,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     RollingUpgradeStatus rollingUpdateStatus = null;
     if (resp.hasRollingUpgradeStatus()) {
-      rollingUpdateStatus = PBHelper.convert(resp.getRollingUpgradeStatus());
+      rollingUpdateStatus = PBHelperClient.convert(resp.getRollingUpgradeStatus());
     }
     return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),
         rollingUpdateStatus, resp.getFullBlockReportLeaseId());
@@ -183,7 +183,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
     for (StorageBlockReport r : reports) {
       StorageBlockReportProto.Builder reportBuilder = StorageBlockReportProto
-          .newBuilder().setStorage(PBHelper.convert(r.getStorage()));
+          .newBuilder().setStorage(PBHelperClient.convert(r.getStorage()));
       BlockListAsLongs blocks = r.getBlocks();
       if (useBlocksBuffer) {
         reportBuilder.setNumberOfBlocks(blocks.getNumberOfBlocks());
@@ -240,7 +240,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       StorageReceivedDeletedBlocksProto.Builder repBuilder = 
           StorageReceivedDeletedBlocksProto.newBuilder();
       repBuilder.setStorageUuid(storageBlock.getStorage().getStorageID());  // Set for wire compatibility.
-      repBuilder.setStorage(PBHelper.convert(storageBlock.getStorage()));
+      repBuilder.setStorage(PBHelperClient.convert(storageBlock.getStorage()));
       for (ReceivedDeletedBlockInfo rdBlock : storageBlock.getBlocks()) {
         repBuilder.addBlocks(PBHelper.convert(rdBlock));
       }
@@ -281,7 +281,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     ReportBadBlocksRequestProto.Builder builder = ReportBadBlocksRequestProto
         .newBuilder();
     for (int i = 0; i < blocks.length; i++) {
-      builder.addBlocks(i, PBHelper.convertLocatedBlock(blocks[i]));
+      builder.addBlocks(i, PBHelperClient.convertLocatedBlock(blocks[i]));
     }
     ReportBadBlocksRequestProto req = builder.build();
     try {

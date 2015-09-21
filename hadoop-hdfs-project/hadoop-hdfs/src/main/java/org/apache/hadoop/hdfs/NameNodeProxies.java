@@ -165,8 +165,8 @@ public class NameNodeProxies {
   
     if (failoverProxyProvider == null) {
       // Non-HA case
-      return createNonHAProxy(conf, NameNode.getAddress(nameNodeUri), xface,
-          UserGroupInformation.getCurrentUser(), true,
+      return createNonHAProxy(conf, DFSUtilClient.getNNAddress(nameNodeUri),
+          xface, UserGroupInformation.getCurrentUser(), true,
           fallbackToSimpleAuth);
     } else {
       // HA case
@@ -183,10 +183,10 @@ public class NameNodeProxies {
                                                                 HdfsConstants.HDFS_URI_SCHEME);
       } else {
         dtService = SecurityUtil.buildTokenService(
-            NameNode.getAddress(nameNodeUri));
+            DFSUtilClient.getNNAddress(nameNodeUri));
       }
       return new ProxyAndInfo<T>(proxy, dtService,
-          NameNode.getAddress(nameNodeUri));
+          DFSUtilClient.getNNAddress(nameNodeUri));
     }
   }
   
@@ -249,10 +249,10 @@ public class NameNodeProxies {
                                                                 HdfsConstants.HDFS_URI_SCHEME);
       } else {
         dtService = SecurityUtil.buildTokenService(
-            NameNode.getAddress(nameNodeUri));
+            DFSUtilClient.getNNAddress(nameNodeUri));
       }
       return new ProxyAndInfo<T>(proxy, dtService,
-          NameNode.getAddress(nameNodeUri));
+          DFSUtilClient.getNNAddress(nameNodeUri));
     } else {
       LOG.warn("Currently creating proxy using " +
       		"LossyRetryInvocationHandler requires NN HA setup");
@@ -509,7 +509,8 @@ public class NameNodeProxies {
     // Check the port in the URI, if it is logical.
     if (checkPort && providerNN.useLogicalURI()) {
       int port = nameNodeUri.getPort();
-      if (port > 0 && port != NameNode.DEFAULT_PORT) {
+      if (port > 0 &&
+          port != HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) {
         // Throwing here without any cleanup is fine since we have not
         // actually created the underlying proxies yet.
         throw new IOException("Port " + port + " specified in URI "

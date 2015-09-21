@@ -29,10 +29,13 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -123,13 +126,15 @@ public class TestFSNamesystem {
 
     FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
     FSNamesystem fsn = Mockito.spy(fsNamesystem);
+    BlockManager bm = fsn.getBlockManager();
+    Whitebox.setInternalState(bm, "namesystem", fsn);
 
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
     HAState haState = Mockito.mock(HAState.class);
     Mockito.when(haContext.getState()).thenReturn(haState);
     Mockito.when(haState.shouldPopulateReplQueues()).thenReturn(true);
-    Whitebox.setInternalState(fsn, "haContext", haContext);
+    Mockito.when(fsn.getHAContext()).thenReturn(haContext);
 
     //Make NameNode.getNameNodeMetrics() not return null
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
@@ -137,15 +142,15 @@ public class TestFSNamesystem {
     fsn.enterSafeMode(false);
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues were being populated during very first "
-        + "safemode", !fsn.isPopulatingReplQueues());
+        + "safemode", !bm.isPopulatingReplQueues());
     fsn.leaveSafeMode();
     assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated even after leaving "
-      + "safemode", fsn.isPopulatingReplQueues());
+      + "safemode", bm.isPopulatingReplQueues());
     fsn.enterSafeMode(false);
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated after entering "
-      + "safemode 2nd time", fsn.isPopulatingReplQueues());
+      + "safemode 2nd time", bm.isPopulatingReplQueues());
   }
   
   @Test
@@ -260,5 +265,17 @@ public class TestFSNamesystem {
     latch.await();
     Assert.assertEquals("Expected number of blocked thread not found",
                         threadCount, rwLock.getQueueLength());
+  }
+
+  @Test
+  public void testSafemodeReplicationConf() throws IOException {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    SafeModeInfo safemodeInfo = fsn.getSafeModeInfoForTests();
+    assertTrue(safemodeInfo.toString().contains("Minimal replication = 2"));
   }
 }

@@ -50,7 +50,9 @@ public class TestAsyncDispatcher {
     disp.waitForEventThreadToWait();
     try {
       disp.getEventHandler().handle(event);
+      Assert.fail("Expected YarnRuntimeException");
     } catch (YarnRuntimeException e) {
+      Assert.assertTrue(e.getCause() instanceof InterruptedException);
     }
     // Queue should be empty and dispatcher should not hang on close
     Assert.assertTrue("Event Queue should have been empty",

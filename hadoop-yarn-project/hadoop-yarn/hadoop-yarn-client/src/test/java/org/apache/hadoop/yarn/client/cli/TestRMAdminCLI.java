@@ -204,7 +204,6 @@ public class TestRMAdminCLI {
     when(admin.checkForDecommissioningNodes(any(
         CheckForDecommissioningNodesRequest.class))).thenReturn(response);
     assertEquals(0, rmAdminCLI.run(args));
-//    verify(admin).refreshNodes(any(RefreshNodesRequest.class));
     verify(admin).refreshNodes(
         RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL));
 
@@ -343,12 +342,17 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper" +
-              "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
-              "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),label2(exclusive=false),label3\">]" +
-              " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode " +
-              "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] " +
+              "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in " +
+              "seconds]]] [-refreshNodesResources] [-refreshSuperUserGroups" +
+              "Configuration] [-refreshUserToGroupsMappings] " +
+              "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup " +
+              "[username]] [-addToClusterNodeLabels " +
+              "<\"label1(exclusive=true),label2(exclusive=false),label3\">] " +
+              "[-removeFromClusterNodeLabels <label1,label2,label3>] " +
+              "[-replaceLabelsOnNode " +
+              "<\"node1[:port]=label1,label2 node2[:port]=label1\">] " +
+              "[-directlyAccessNodeLabelStore]] [-updateNodeResource " +
+              "[NodeID] [MemSize] [vCores] ([OvercommitTimeout]) " +
               "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -359,6 +363,11 @@ public class TestRMAdminCLI {
           .toString()
           .contains(
               "-refreshNodes [-g [timeout in seconds]]: Refresh the hosts information at the " +
+              "ResourceManager."));
+      assertTrue(dataOut
+          .toString()
+          .contains(
+              "-refreshNodesResources: Refresh resources of NodeManagers at the " +
               "ResourceManager."));
       assertTrue(dataOut.toString().contains(
           "-refreshUserToGroupsMappings: Refresh user-to-groups mappings"));
@@ -387,6 +396,8 @@ public class TestRMAdminCLI {
           "Usage: yarn rmadmin [-refreshQueues]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodes" },
           "Usage: yarn rmadmin [-refreshNodes [-g [timeout in seconds]]]", dataErr, 0);
+      testError(new String[] { "-help", "-refreshNodesResources" },
+          "Usage: yarn rmadmin [-refreshNodesResources]", dataErr, 0);
       testError(new String[] { "-help", "-refreshUserToGroupsMappings" },
           "Usage: yarn rmadmin [-refreshUserToGroupsMappings]", dataErr, 0);
       testError(
@@ -423,13 +434,15 @@ public class TestRMAdminCLI {
       assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
       oldOutPrintStream.println(dataOut);
       String expectedHelpMsg = 
-          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] [-refreshSuper"
-              + "UserGroupsConfiguration] [-refreshUserToGroupsMappings] "
+          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] "
+              + "[-refreshNodesResources] [-refreshSuperUserGroupsConfiguration] "
+              + "[-refreshUserToGroupsMappings] "
               + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"
               + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
                   + "label2(exclusive=false),label3\">]"
               + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
               + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore]] "
+              + "[-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";

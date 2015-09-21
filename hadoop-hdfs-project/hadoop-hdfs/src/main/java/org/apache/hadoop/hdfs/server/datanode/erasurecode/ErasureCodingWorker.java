@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.RemoteBlockReader2;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
@@ -831,7 +832,7 @@ public final class ErasureCodingWorker {
       try {
         sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
         NetUtils.connect(sock, addr, socketTimeout);
-        peer = TcpPeerServer.peerFromSocketAndKey(datanode.getSaslClient(), 
+        peer = DFSUtilClient.peerFromSocketAndKey(datanode.getSaslClient(),
             sock, datanode.getDataEncryptionKeyFactoryForBlock(b),
             blockToken, datanodeId);
         peer.setReadTimeout(socketTimeout);

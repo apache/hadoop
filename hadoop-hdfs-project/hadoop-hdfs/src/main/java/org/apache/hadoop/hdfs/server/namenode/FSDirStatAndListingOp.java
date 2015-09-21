@@ -581,7 +581,8 @@ class FSDirStatAndListingOp {
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
                 fsd.getContentCountLimit(), fsd.getContentSleepMicroSec());
-        ContentSummary cs = targetNode.computeAndConvertContentSummary(cscc);
+        ContentSummary cs = targetNode.computeAndConvertContentSummary(
+            iip.getPathSnapshotId(), cscc);
         fsd.addYieldCount(cscc.getYieldCount());
         return cs;
       }

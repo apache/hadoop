@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
@@ -56,8 +56,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo.UpdatedReplicationInfo;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +69,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +141,7 @@ public class FSDirectory implements Closeable {
   private final long contentSleepMicroSec;
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
+  private int quotaInitThreads;
 
   private final int inodeXAttrsLimit; //inode xattrs max limit
 
@@ -311,6 +316,10 @@ public class FSDirectory implements Closeable {
     namesystem = ns;
     this.editLog = ns.getEditLog();
     ezManager = new EncryptionZoneManager(this, conf);
+
+    this.quotaInitThreads = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT);
   }
     
   FSNamesystem getFSNamesystem() {
@@ -499,6 +508,125 @@ public class FSDirectory implements Closeable {
     for (UpdatedReplicationInfo e : blocks) {
       BlockInfo b = e.block();
       bm.setReplication(b.getReplication(), e.targetReplication(), b);
+    }
+  }
+
+  /**
+   * Update the count of each directory with quota in the namespace.
+   * A directory's count is defined as the total number inodes in the tree
+   * rooted at the directory.
+   *
+   * This is an update of existing state of the filesystem and does not
+   * throw QuotaExceededException.
+   */
+  void updateCountForQuota(int initThreads) {
+    writeLock();
+    try {
+      int threads = (initThreads < 1) ? 1 : initThreads;
+      LOG.info("Initializing quota with " + threads + " thread(s)");
+      long start = Time.now();
+      QuotaCounts counts = new QuotaCounts.Builder().build();
+      ForkJoinPool p = new ForkJoinPool(threads);
+      RecursiveAction task = new InitQuotaTask(getBlockStoragePolicySuite(),
+          rootDir.getStoragePolicyID(), rootDir, counts);
+      p.execute(task);
+      task.join();
+      p.shutdown();
+      LOG.info("Quota initialization completed in " + (Time.now() - start) +
+          " milliseconds\n" + counts);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void updateCountForQuota() {
+    updateCountForQuota(quotaInitThreads);
+  }
+
+  /**
+   * parallel initialization using fork-join.
+   */
+  private static class InitQuotaTask extends RecursiveAction {
+    private final INodeDirectory dir;
+    private final QuotaCounts counts;
+    private final BlockStoragePolicySuite bsps;
+    private final byte blockStoragePolicyId;
+
+    public InitQuotaTask(BlockStoragePolicySuite bsps,
+        byte blockStoragePolicyId, INodeDirectory dir, QuotaCounts counts) {
+      this.dir = dir;
+      this.counts = counts;
+      this.bsps = bsps;
+      this.blockStoragePolicyId = blockStoragePolicyId;
+    }
+
+    public void compute() {
+      QuotaCounts myCounts =  new QuotaCounts.Builder().build();
+      dir.computeQuotaUsage4CurrentDirectory(bsps, blockStoragePolicyId,
+          myCounts);
+
+      ReadOnlyList<INode> children =
+          dir.getChildrenList(CURRENT_STATE_ID);
+
+      if (children.size() > 0) {
+        List<InitQuotaTask> subtasks = new ArrayList<InitQuotaTask>();
+        for (INode child : children) {
+          final byte childPolicyId =
+              child.getStoragePolicyIDForQuota(blockStoragePolicyId);
+          if (child.isDirectory()) {
+            subtasks.add(new InitQuotaTask(bsps, childPolicyId,
+                child.asDirectory(), myCounts));
+          } else {
+            // file or symlink. count using the local counts variable
+            myCounts.add(child.computeQuotaUsage(bsps, childPolicyId, false,
+                CURRENT_STATE_ID));
+          }
+        }
+        // invoke and wait for completion
+        invokeAll(subtasks);
+      }
+
+      if (dir.isQuotaSet()) {
+        // check if quota is violated. It indicates a software bug.
+        final QuotaCounts q = dir.getQuotaCounts();
+
+        final long nsConsumed = myCounts.getNameSpace();
+        final long nsQuota = q.getNameSpace();
+        if (Quota.isViolated(nsQuota, nsConsumed)) {
+          LOG.warn("Namespace quota violation in image for "
+              + dir.getFullPathName()
+              + " quota = " + nsQuota + " < consumed = " + nsConsumed);
+        }
+
+        final long ssConsumed = myCounts.getStorageSpace();
+        final long ssQuota = q.getStorageSpace();
+        if (Quota.isViolated(ssQuota, ssConsumed)) {
+          LOG.warn("Storagespace quota violation in image for "
+              + dir.getFullPathName()
+              + " quota = " + ssQuota + " < consumed = " + ssConsumed);
+        }
+
+        final EnumCounters<StorageType> tsConsumed = myCounts.getTypeSpaces();
+        for (StorageType t : StorageType.getTypesSupportingQuota()) {
+          final long typeSpace = tsConsumed.get(t);
+          final long typeQuota = q.getTypeSpaces().get(t);
+          if (Quota.isViolated(typeQuota, typeSpace)) {
+            LOG.warn("Storage type quota violation in image for "
+                + dir.getFullPathName()
+                + " type = " + t.toString() + " quota = "
+                + typeQuota + " < consumed " + typeSpace);
+          }
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Setting quota for " + dir + "\n" + myCounts);
+        }
+        dir.getDirectoryWithQuotaFeature().setSpaceConsumed(nsConsumed,
+            ssConsumed, tsConsumed);
+      }
+
+      synchronized(counts) {
+        counts.add(myCounts);
+      }
     }
   }
 
@@ -1004,8 +1132,8 @@ public class FSDirectory implements Closeable {
                   HdfsProtos.ZoneEncryptionInfoProto.parseFrom(
                       xattr.getValue());
               ezManager.unprotectedAddEncryptionZone(inode.getId(),
-                  PBHelper.convert(ezProto.getSuite()),
-                  PBHelper.convert(ezProto.getCryptoProtocolVersion()),
+                  PBHelperClient.convert(ezProto.getSuite()),
+                  PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
                   ezProto.getKeyName());
             } catch (InvalidProtocolBufferException e) {
               NameNode.LOG.warn("Error parsing protocol buffer of " +
@@ -1132,7 +1260,7 @@ public class FSDirectory implements Closeable {
       throws IOException {
     // Make the PB for the xattr
     final HdfsProtos.PerFileEncryptionInfoProto proto =
-        PBHelper.convertPerFileEncInfo(info);
+        PBHelperClient.convertPerFileEncInfo(info);
     final byte[] protoBytes = proto.toByteArray();
     final XAttr fileEncryptionAttr =
         XAttrHelper.buildXAttr(CRYPTO_XATTR_FILE_ENCRYPTION_INFO, protoBytes);
@@ -1198,7 +1326,7 @@ public class FSDirectory implements Closeable {
         HdfsProtos.PerFileEncryptionInfoProto fileProto =
             HdfsProtos.PerFileEncryptionInfoProto.parseFrom(
                 fileXAttr.getValue());
-        return PBHelper.convert(fileProto, suite, version, keyName);
+        return PBHelperClient.convert(fileProto, suite, version, keyName);
       } catch (InvalidProtocolBufferException e) {
         throw new IOException("Could not parse file encryption info for " +
             "inode " + inode, e);

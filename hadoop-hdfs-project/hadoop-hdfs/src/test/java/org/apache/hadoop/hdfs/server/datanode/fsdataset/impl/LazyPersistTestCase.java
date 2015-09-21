@@ -480,6 +480,7 @@ public abstract class LazyPersistTestCase {
 
   protected final void verifyRamDiskJMXMetric(String metricName,
       long expectedValue) throws Exception {
+    waitForMetric(metricName, (int)expectedValue);
     assertEquals(expectedValue, Integer.parseInt(jmx.getValue(metricName)));
   }
 
@@ -510,20 +511,7 @@ public abstract class LazyPersistTestCase {
 
   protected void waitForMetric(final String metricName, final int expectedValue)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          final int currentValue = Integer.parseInt(jmx.getValue(metricName));
-          LOG.info("Waiting for " + metricName +
-                       " to reach value " + expectedValue +
-                       ", current value = " + currentValue);
-          return currentValue == expectedValue;
-        } catch (Exception e) {
-          throw new UnhandledException("Test failed due to unexpected exception", e);
-        }
-      }
-    }, 1000, Integer.MAX_VALUE);
+    DFSTestUtil.waitForMetric(jmx, metricName, expectedValue);
   }
 
   protected void triggerEviction(DataNode dn) {

@@ -461,7 +461,8 @@ public class TestYARNRunner extends TestCase {
     int adminPos = -1;
     int userIndex = 0;
     int userPos = -1;
-    
+    int tmpDirPos = -1;
+
     for(String command : commands) {
       if(command != null) {
         assertFalse("Profiler should be disabled by default",
@@ -473,11 +474,16 @@ public class TestYARNRunner extends TestCase {
         userPos = command.indexOf("-Xmx1024m");
         if(userPos >= 0)
           userIndex = index;
+
+        tmpDirPos = command.indexOf("-Djava.io.tmpdir=");
       }
       
       index++;
     }
-    
+
+    // Check java.io.tmpdir opts are set in the commands
+    assertTrue("java.io.tmpdir is not set for AM", tmpDirPos > 0);
+
     // Check both admin java opts and user java opts are in the commands
     assertTrue("AM admin command opts not in the commands.", adminPos > 0);
     assertTrue("AM user command opts not in the commands.", userPos > 0);

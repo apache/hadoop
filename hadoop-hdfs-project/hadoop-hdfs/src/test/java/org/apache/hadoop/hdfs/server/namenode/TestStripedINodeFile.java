@@ -63,7 +63,7 @@ public class TestStripedINodeFile {
 
   private static INodeFile createStripedINodeFile() {
     return new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
-        null, (short)0, 1024L, HdfsServerConstants.COLD_STORAGE_POLICY_ID, true);
+        null, (short)0, 1024L, HdfsConstants.COLD_STORAGE_POLICY_ID, true);
   }
 
   @Test

@@ -435,7 +435,7 @@ public class TestNodeManagerResync {
         NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
         LocalDirsHandlerService dirsHandler) {
       return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-        metrics, aclsManager, dirsHandler){
+        metrics, dirsHandler){
         @Override
         public void setBlockNewContainerRequests(
             boolean blockNewContainerRequests) {

@@ -57,7 +57,7 @@
 
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
-        return chunk.write('' + new Date(Number(value)).toLocaleString());
+        return chunk.write('' + moment(Number(value)).format('ddd MMM DD HH:mm:ss ZZ YYYY'));
       }
     };
 
@@ -103,6 +103,9 @@
           b.capacityUsedPercentage = b.capacityUsed * 100.0 / b.capacityTotal;
           b.capacityRemainingPercentage = b.capacityRemaining * 100.0 / b.capacityTotal;
         }
+
+        data.fs.ObjectsTotal = data.fs.FilesTotal + data.fs.BlocksTotal;
+
         render();
       }),
       function (url, jqxhr, text, err) {
@@ -175,7 +178,7 @@
     var HELPERS = {
       'helper_relative_time' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
-        return chunk.write(moment().subtract(Number(value), 'seconds').format('YYYY-MM-DD HH:mm:ss'));
+        return chunk.write(moment().subtract(Number(value), 'seconds').format('ddd MMM DD HH:mm:ss ZZ YYYY'));
       },
       'helper_usage_bar' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
@@ -262,7 +265,7 @@
     var HELPERS = {
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
-        return chunk.write('' + new Date(Number(value)).toLocaleString());
+        return chunk.write('' + moment(Number(value)).format('ddd MMM DD HH:mm:ss ZZ YYYY'));
       }
     };
 

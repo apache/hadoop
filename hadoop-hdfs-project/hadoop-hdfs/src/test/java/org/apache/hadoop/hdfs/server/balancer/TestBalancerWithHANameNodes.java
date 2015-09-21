@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.junit.Test;
 
@@ -67,7 +67,7 @@ public class TestBalancerWithHANameNodes {
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
     NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
-    nn1Conf.setIpcPort(NameNode.DEFAULT_PORT);
+    nn1Conf.setIpcPort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
     Configuration copiedConf = new Configuration(conf);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -97,10 +97,10 @@ public class TestBalancerWithHANameNodes {
       Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
       assertEquals(1, namenodes.size());
       assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
-      final int r = Balancer.run(namenodes, Balancer.Parameters.DEFAULT, conf);
+      final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
-          cluster, Balancer.Parameters.DEFAULT);
+          cluster, BalancerParameters.DEFAULT);
     } finally {
       cluster.shutdown();
     }

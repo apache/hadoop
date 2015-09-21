@@ -363,18 +363,18 @@ public class LogAggregationService extends AbstractService implements
       throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }
     // wait until check for existing aggregator to create dirs
+    YarnRuntimeException appDirException = null;
     try {
       // Create the app dir
       createAppDir(user, appId, userUgi);
     } catch (Exception e) {
-      appLogAggregators.remove(appId);
-      closeFileSystems(userUgi);
+      appLogAggregator.disableLogAggregation();
       if (!(e instanceof YarnRuntimeException)) {
-        e = new YarnRuntimeException(e);
+        appDirException = new YarnRuntimeException(e);
+      } else {
+        appDirException = (YarnRuntimeException)e;
       }
-      throw (YarnRuntimeException)e;
     }
-
 
     // TODO Get the user configuration for the list of containers that need log
     // aggregation.
@@ -391,6 +391,10 @@ public class LogAggregationService extends AbstractService implements
       }
     };
     this.threadPool.execute(aggregatorWrapper);
+
+    if (appDirException != null) {
+      throw appDirException;
+    }
   }
 
   protected void closeFileSystems(final UserGroupInformation userUgi) {

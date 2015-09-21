@@ -149,4 +149,11 @@ public interface ClientDatanodeProtocol {
    */
   void triggerBlockReport(BlockReportOptions options)
     throws IOException;
+
+  /**
+   * Get current value of the balancer bandwidth in bytes per second.
+   *
+   * @return balancer bandwidth
+   */
+  long getBalancerBandwidth() throws IOException;
 }

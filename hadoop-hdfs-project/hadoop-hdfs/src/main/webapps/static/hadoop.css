@@ -264,3 +264,25 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .dfshealth-node-legend li:before {
     padding-right: 5pt;
 }
+
+.explorer-entry .explorer-browse-links { cursor: pointer; }
+.explorer-entry .glyphicon-trash { cursor: pointer; }
+
+.popover {
+  max-width: 400px;
+}
+
+.explorer-popover-perm-body table  {
+  width: 30rem;
+}
+
+.explorer-popover-perm-body table > tbody > tr > td {
+  text-align: center;
+}
+
+.explorer-popover-perm-body label {
+    display:inline;
+    margin-bottom: 0;
+    font-weight: normal;
+    cursor: pointer;
+}

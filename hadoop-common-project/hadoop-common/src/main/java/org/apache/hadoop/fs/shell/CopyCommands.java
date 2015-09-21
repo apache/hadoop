@@ -133,7 +133,8 @@ class CopyCommands {
 
   static class Cp extends CommandWithDestination {
     public static final String NAME = "cp";
-    public static final String USAGE = "[-f] [-p | -p[topax]] <src> ... <dst>";
+    public static final String USAGE =
+        "[-f] [-p | -p[topax]] [-d] <src> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> to a " +
       "destination.  When copying multiple files, the destination " +
@@ -147,13 +148,15 @@ class CopyCommands {
       "if (1) they are supported (HDFS only) and, (2) all of the source and " +
       "target pathnames are in the /.reserved/raw hierarchy. raw namespace " +
       "xattr preservation is determined solely by the presence (or absence) " +
-      "of the /.reserved/raw prefix and not by the -p option.\n";
+        "of the /.reserved/raw prefix and not by the -p option. Passing -d "+
+        "will skip creation of temporary file(<dst>._COPYING_).\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       popPreserveOption(args);
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "d");
       cf.parse(args);
+      setDirectWrite(cf.getOpt("d"));
       setOverwrite(cf.getOpt("f"));
       // should have a -r option
       setRecursive(true);
@@ -215,7 +218,8 @@ class CopyCommands {
    */
   public static class Put extends CommandWithDestination {
     public static final String NAME = "put";
-    public static final String USAGE = "[-f] [-p] [-l] <localsrc> ... <dst>";
+    public static final String USAGE =
+        "[-f] [-p] [-l] [-d] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files from the local file system " +
       "into fs. Copying fails if the file already " +
@@ -225,15 +229,18 @@ class CopyCommands {
       "  -f : Overwrites the destination if it already exists.\n" +
       "  -l : Allow DataNode to lazily persist the file to disk. Forces\n" +
       "       replication factor of 1. This flag will result in reduced\n" +
-      "       durability. Use with care.\n";
+      "       durability. Use with care.\n" +
+        "  -d : Skip creation of temporary file(<dst>._COPYING_).\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f", "p", "l");
+      CommandFormat cf =
+          new CommandFormat(1, Integer.MAX_VALUE, "f", "p", "l", "d");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
       setPreserve(cf.getOpt("p"));
       setLazyPersist(cf.getOpt("l"));
+      setDirectWrite(cf.getOpt("d"));
       getRemoteDestination(args);
       // should have a -r option
       setRecursive(true);

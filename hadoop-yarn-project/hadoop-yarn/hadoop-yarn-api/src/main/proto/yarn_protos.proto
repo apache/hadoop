@@ -197,6 +197,8 @@ message ApplicationReportProto {
   optional LogAggregationStatusProto log_aggregation_status = 21;
   optional bool unmanaged_application = 22 [default = false];
   optional PriorityProto priority = 23;
+  optional string appNodeLabelExpression = 24;
+  optional string amNodeLabelExpression = 25;
 }
 
 enum LogAggregationStatusProto {

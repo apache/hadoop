@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -101,7 +102,7 @@ public class BootstrapStandby implements Tool, Configurable {
     parseConfAndFindOtherNN();
     NameNode.checkAllowFormat(conf);
 
-    InetSocketAddress myAddr = NameNode.getAddress(conf);
+    InetSocketAddress myAddr = DFSUtilClient.getNNAddress(conf);
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, myAddr.getHostName());
 
@@ -374,7 +375,7 @@ public class BootstrapStandby implements Tool, Configurable {
           "or call saveNamespace on the active node.\n" +
           "Error: " + e.getLocalizedMessage();
       if (LOG.isDebugEnabled()) {
-        LOG.fatal(msg, e);
+        LOG.debug(msg, e);
       } else {
         LOG.fatal(msg);
       }

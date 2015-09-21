@@ -130,9 +130,9 @@
   <tr><th>Namenode ID:</th><td>{NamenodeID}</td></tr>
 {/HAInfo}
 {#nn}
-  <tr><th>Started:</th><td>{NNStarted}</td></tr>
+  <tr><th>Started:</th><td>{NNStartedTimeInMillis|date_tostring}</td></tr>
   <tr><th>Version:</th><td>{Version}</td></tr>
-  <tr><th>Compiled:</th><td>{CompileInfo}</td></tr>
+  <tr><th>Compiled:</th><td>{CompileInfo|format_compile_info}</td></tr>
   <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
   <tr><th>Block Pool ID:</th><td>{BlockPoolId}</td></tr>
 {/nn}
@@ -145,7 +145,7 @@
 
 <p>
   {#fs}
-  {FilesTotal} files and directories, {BlocksTotal} blocks = {@math key="{FilesTotal}" method="add" operand="{BlocksTotal}"/} total filesystem object(s).
+  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks = {ObjectsTotal|fmt_number} total filesystem object(s).
   {#helper_fs_max_objects/}
   {/fs}
 </p>
@@ -422,7 +422,6 @@ There are no reported volume failures.
 </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
 </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
 </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
-</script><script type="text/javascript" src="/static/moment.min.js">
 </script><script type="text/javascript" src="/static/moment.min.js">
 </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
 </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">

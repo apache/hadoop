@@ -106,8 +106,10 @@ public class ContainerManagementProtocolProxy {
     while (proxy != null
         && !proxy.token.getIdentifier().equals(
             nmTokenCache.getToken(containerManagerBindAddr).getIdentifier())) {
-      LOG.info("Refreshing proxy as NMToken got updated for node : "
-          + containerManagerBindAddr);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Refreshing proxy as NMToken got updated for node : "
+            + containerManagerBindAddr);
+      }
       // Token is updated. check if anyone has already tried closing it.
       if (!proxy.scheduledForClose) {
         // try closing the proxy. Here if someone is already using it
@@ -187,7 +189,9 @@ public class ContainerManagementProtocolProxy {
       ContainerManagementProtocolProxyData proxy) {
     proxy.activeCallers--;
     if (proxy.scheduledForClose && proxy.activeCallers < 0) {
-      LOG.info("Closing proxy : " + proxy.containerManagerBindAddr);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Closing proxy : " + proxy.containerManagerBindAddr);
+      }
       cmProxy.remove(proxy.containerManagerBindAddr);
       try {
         rpc.stopProxy(proxy.getContainerManagementProtocol(), conf);
@@ -257,7 +261,9 @@ public class ContainerManagementProtocolProxy {
       
       final InetSocketAddress cmAddr =
           NetUtils.createSocketAddr(containerManagerBindAddr);
-      LOG.info("Opening proxy : " + containerManagerBindAddr);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Opening proxy : " + containerManagerBindAddr);
+      }
       // the user in createRemoteUser in this context has to be ContainerID
       UserGroupInformation user =
           UserGroupInformation.createRemoteUser(containerId

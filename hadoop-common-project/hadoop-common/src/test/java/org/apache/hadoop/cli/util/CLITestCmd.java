@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.cli.util;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 
 /**
@@ -32,9 +33,10 @@ public class CLITestCmd implements CLICommand {
   }
 
   @Override
-  public CommandExecutor getExecutor(String tag) throws IllegalArgumentException {
+  public CommandExecutor getExecutor(String tag, Configuration conf)
+      throws IllegalArgumentException {
     if (getType() instanceof CLICommandFS)
-      return new FSCmdExecutor(tag, new FsShell());
+      return new FSCmdExecutor(tag, new FsShell(conf));
     throw new
         IllegalArgumentException("Unknown type of test command: " + getType());
   }

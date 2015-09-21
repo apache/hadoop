@@ -41,6 +41,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -58,12 +60,15 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -98,6 +103,8 @@ public class RMAdminCLI extends HAAdmin {
               + "[-g [timeout in seconds] is optional, if we specify the "
               + "timeout then ResourceManager will wait for timeout before "
               + "marking the NodeManager as decommissioned."))
+          .put("-refreshNodesResources", new UsageInfo("",
+              "Refresh resources of NodeManagers at the ResourceManager."))
           .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",
               "Refresh superuser proxy groups mappings"))
           .put("-refreshUserToGroupsMappings", new UsageInfo("",
@@ -136,7 +143,10 @@ public class RMAdminCLI extends HAAdmin {
           .put("-refreshClusterMaxPriority",
               new UsageInfo("",
                   "Refresh cluster max priority"))
-              .build();
+          .put("-updateNodeResource",
+              new UsageInfo("[NodeID] [MemSize] [vCores] ([OvercommitTimeout])",
+                  "Update resource on specific node."))
+          .build();
 
   public RMAdminCLI() {
     super();
@@ -221,6 +231,7 @@ public class RMAdminCLI extends HAAdmin {
     "yarn rmadmin" +
       " [-refreshQueues]" +
       " [-refreshNodes [-g [timeout in seconds]]]" +
+      " [-refreshNodesResources]" +
       " [-refreshSuperUserGroupsConfiguration]" +
       " [-refreshUserToGroupsMappings]" +
       " [-refreshAdminAcls]" +
@@ -230,7 +241,8 @@ public class RMAdminCLI extends HAAdmin {
                   + "label2(exclusive=false),label3\">]" +
       " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
       " [-replaceLabelsOnNode <\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
-      " [-directlyAccessNodeLabelStore]]");
+      " [-directlyAccessNodeLabelStore]]" +
+      " [-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])");
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
@@ -348,6 +360,15 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
+  private int refreshNodesResources() throws IOException, YarnException {
+    // Refresh the resources at the Nodemanager
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    RefreshNodesResourcesRequest request =
+    recordFactory.newRecordInstance(RefreshNodesResourcesRequest.class);
+    adminProtocol.refreshNodesResources(request);
+    return 0;
+  }
+
   private int refreshUserToGroupsMappings() throws IOException,
       YarnException {
     // Refresh the user-to-groups mappings
@@ -395,6 +416,22 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
   
+  private int updateNodeResource(String nodeIdStr, int memSize,
+      int cores, int overCommitTimeout) throws IOException, YarnException {
+    // Refresh the nodes
+    ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
+    UpdateNodeResourceRequest request =
+      recordFactory.newRecordInstance(UpdateNodeResourceRequest.class);
+    NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
+    Resource resource = Resources.createResource(memSize, cores);
+    Map<NodeId, ResourceOption> resourceMap =
+        new HashMap<NodeId, ResourceOption>();
+    resourceMap.put(
+        nodeId, ResourceOption.newInstance(resource, overCommitTimeout));
+    adminProtocol.updateNodeResource(request);
+    return 0;
+  }
+
   private int getGroups(String[] usernames) throws IOException {
     // Get groups users belongs to
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
@@ -653,6 +690,7 @@ public class RMAdminCLI extends HAAdmin {
     // verify that we have enough command line parameters
     //
     if ("-refreshAdminAcls".equals(cmd) || "-refreshQueues".equals(cmd) ||
+        "-refreshNodesResources".equals(cmd) ||
         "-refreshServiceAcl".equals(cmd) ||
         "-refreshUserToGroupsMappings".equals(cmd) ||
         "-refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -681,6 +719,8 @@ public class RMAdminCLI extends HAAdmin {
           printUsage(cmd, isHAEnabled);
           return -1;
         }
+      } else if ("-refreshNodesResources".equals(cmd)) {
+        exitCode = refreshNodesResources();
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
         exitCode = refreshUserToGroupsMappings();
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -694,6 +734,23 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-getGroups".equals(cmd)) {
         String[] usernames = Arrays.copyOfRange(args, i, args.length);
         exitCode = getGroups(usernames);
+      } else if ("-updateNodeResource".equals(cmd)) {
+        if (args.length < 4 || args.length > 5) {
+          System.err.println("Number of parameters specified for " +
+              "updateNodeResource is wrong.");
+          printUsage(cmd, isHAEnabled);
+          exitCode = -1;
+        } else {
+          String nodeID = args[i++];
+          String memSize = args[i++];
+          String cores = args[i++];
+          int overCommitTimeout = ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT;
+          if (i == args.length - 1) {
+            overCommitTimeout = Integer.parseInt(args[i]);
+          }
+          exitCode = updateNodeResource(nodeID, Integer.parseInt(memSize),
+              Integer.parseInt(cores), overCommitTimeout);
+        }
       } else if ("-addToClusterNodeLabels".equals(cmd)) {
         if (i >= args.length) {
           System.err.println(NO_LABEL_ERR_MSG);

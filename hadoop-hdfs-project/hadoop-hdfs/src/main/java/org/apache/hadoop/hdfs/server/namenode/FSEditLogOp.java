@@ -105,7 +105,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.EditLogProtos.AclEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.EditLogProtos.XAttrEditLogProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -410,7 +410,7 @@ public abstract class FSEditLogOp {
       return null;
     }
     XAttrEditLogProto proto = XAttrEditLogProto.parseDelimitedFrom(in);
-    return PBHelper.convertXAttrs(proto.getXAttrsList());
+    return PBHelperClient.convertXAttrs(proto.getXAttrsList());
   }
 
   @SuppressWarnings("unchecked")
@@ -554,7 +554,7 @@ public abstract class FSEditLogOp {
       if (this.opCode == OP_ADD) {
         AclEditLogUtil.write(aclEntries, out);
         XAttrEditLogProto.Builder b = XAttrEditLogProto.newBuilder();
-        b.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
+        b.addAllXAttrs(PBHelperClient.convertXAttrProto(xAttrs));
         b.build().writeDelimitedTo(out);
         FSImageSerialization.writeString(clientName,out);
         FSImageSerialization.writeString(clientMachine,out);
@@ -1631,7 +1631,7 @@ public abstract class FSEditLogOp {
       permissions.write(out);
       AclEditLogUtil.write(aclEntries, out);
       XAttrEditLogProto.Builder b = XAttrEditLogProto.newBuilder();
-      b.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
+      b.addAllXAttrs(PBHelperClient.convertXAttrProto(xAttrs));
       b.build().writeDelimitedTo(out);
     }
     
@@ -4158,7 +4158,7 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
       src = p.getSrc();
-      xAttrs = PBHelper.convertXAttrs(p.getXAttrsList());
+      xAttrs = PBHelperClient.convertXAttrs(p.getXAttrsList());
       readRpcIds(in, logVersion);
     }
 
@@ -4168,7 +4168,7 @@ public abstract class FSEditLogOp {
       if (src != null) {
         b.setSrc(src);
       }
-      b.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
+      b.addAllXAttrs(PBHelperClient.convertXAttrProto(xAttrs));
       b.build().writeDelimitedTo(out);
       // clientId and callId
       writeRpcIds(rpcClientId, rpcCallId, out);
@@ -4211,7 +4211,7 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
       src = p.getSrc();
-      xAttrs = PBHelper.convertXAttrs(p.getXAttrsList());
+      xAttrs = PBHelperClient.convertXAttrs(p.getXAttrsList());
       readRpcIds(in, logVersion);
     }
 
@@ -4221,7 +4221,7 @@ public abstract class FSEditLogOp {
       if (src != null) {
         b.setSrc(src);
       }
-      b.addAllXAttrs(PBHelper.convertXAttrProto(xAttrs));
+      b.addAllXAttrs(PBHelperClient.convertXAttrProto(xAttrs));
       b.build().writeDelimitedTo(out);
       // clientId and callId
       writeRpcIds(rpcClientId, rpcCallId, out);
@@ -4267,7 +4267,7 @@ public abstract class FSEditLogOp {
         throw new IOException("Failed to read fields from SetAclOp");
       }
       src = p.getSrc();
-      aclEntries = PBHelper.convertAclEntry(p.getEntriesList());
+      aclEntries = PBHelperClient.convertAclEntry(p.getEntriesList());
     }
 
     @Override
@@ -4275,7 +4275,7 @@ public abstract class FSEditLogOp {
       AclEditLogProto.Builder b = AclEditLogProto.newBuilder();
       if (src != null)
         b.setSrc(src);
-      b.addAllEntries(PBHelper.convertAclEntryProto(aclEntries));
+      b.addAllEntries(PBHelperClient.convertAclEntryProto(aclEntries));
       b.build().writeDelimitedTo(out);
     }
 
