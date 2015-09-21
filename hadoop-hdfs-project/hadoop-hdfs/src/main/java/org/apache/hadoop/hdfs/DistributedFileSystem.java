@@ -2324,4 +2324,15 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
+
+  /**
+   * Retrieve all the erasure coding policies supported by this file system.
+   *
+   * @return all erasure coding policies supported by this file system.
+   * @throws IOException
+   */
+  public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
+      throws IOException {
+    return Arrays.asList(dfs.getErasureCodingPolicies());
+  }
 }

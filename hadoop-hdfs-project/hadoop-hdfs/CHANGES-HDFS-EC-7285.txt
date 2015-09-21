@@ -441,3 +441,6 @@
 
     HDFS-9113. ErasureCodingWorker#processErasureCodingTasks should not fail to process
     remaining tasks due to one invalid ECTask (umamahesh)
+
+    HDFS-9091. Erasure Coding: Provide DistributedFilesystem API to 
+    getAllErasureCodingPolicies. (Rakesh R via zhz)

@@ -32,6 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.*;
@@ -231,4 +232,18 @@ public class TestErasureCodingPolicies {
     }
   }
 
+  @Test
+  public void testGetAllErasureCodingPolicies() throws Exception {
+    ErasureCodingPolicy[] sysECPolicies = ErasureCodingPolicyManager
+        .getSystemPolices();
+    assertTrue("System ecPolicies should be of only 1 for now",
+        sysECPolicies.length == 1);
+
+    Collection<ErasureCodingPolicy> allECPolicies = fs
+        .getAllErasureCodingPolicies();
+    assertTrue("All ecPolicies should be of only 1 for now",
+        allECPolicies.size() == 1);
+    assertEquals("Erasure coding policy mismatches",
+        sysECPolicies[0], allECPolicies.iterator().next());
+  }
 }
