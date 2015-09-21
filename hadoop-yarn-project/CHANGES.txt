@@ -865,6 +865,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4167. NPE on RMActiveServices#serviceStop when store is null. (Bibin A Chundatt via rohithsharmaks)
 
+    YARN-4113. RM should respect retry-interval when uses RetryPolicies.RETRY_FOREVER. 
+    (Sunil G via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
