@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationAttemptEnti
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ClusterEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.FlowEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.QueueEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -205,8 +205,8 @@ public class TimelineCollectorWebService {
           case YARN_CLUSTER:
             entitiesToReturn.addEntity(new ClusterEntity(entity));
             break;
-          case YARN_FLOW:
-            entitiesToReturn.addEntity(new FlowEntity(entity));
+          case YARN_FLOW_RUN:
+            entitiesToReturn.addEntity(new FlowRunEntity(entity));
             break;
           case YARN_APPLICATION:
             entitiesToReturn.addEntity(new ApplicationEntity(entity));

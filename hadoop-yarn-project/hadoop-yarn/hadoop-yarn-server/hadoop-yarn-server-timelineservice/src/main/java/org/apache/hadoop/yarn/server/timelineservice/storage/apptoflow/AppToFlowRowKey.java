@@ -24,6 +24,22 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
  * Represents a rowkey for the app_flow table.
  */
 public class AppToFlowRowKey {
+  private final String clusterId;
+  private final String appId;
+
+  public AppToFlowRowKey(String clusterId, String appId) {
+    this.clusterId = clusterId;
+    this.appId = appId;
+  }
+
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public String getAppId() {
+    return appId;
+  }
+
   /**
    * Constructs a row key prefix for the app_flow table as follows:
    * {@code clusterId!AppId}
@@ -36,4 +52,19 @@ public class AppToFlowRowKey {
     return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, appId));
   }
 
+  /**
+   * Given the raw row key as bytes, returns the row key as an object.
+   */
+  public static AppToFlowRowKey parseRowKey(byte[] rowKey) {
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
+
+    if (rowKeyComponents.length < 2) {
+      throw new IllegalArgumentException("the row key is not valid for " +
+          "the app-to-flow table");
+    }
+
+    String clusterId = Bytes.toString(rowKeyComponents[0]);
+    String appId = Bytes.toString(rowKeyComponents[1]);
+    return new AppToFlowRowKey(clusterId, appId);
+  }
 }
