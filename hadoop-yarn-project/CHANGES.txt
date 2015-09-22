@@ -457,6 +457,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3920. FairScheduler container reservation on a node should be
     configurable to limit it to large containers (adhoot via asuresh)
 
+    HADOOP-12428. Fix inconsistency between log-level guards and statements.
+    (Jagadesh Kiran N and Jackie Chang via ozawa)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

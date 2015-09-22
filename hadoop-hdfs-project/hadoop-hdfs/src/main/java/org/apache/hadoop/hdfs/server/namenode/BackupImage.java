@@ -200,7 +200,7 @@ public class BackupImage extends FSImage {
     assert backupInputStream.length() == 0 : "backup input stream is not empty";
     try {
       if (LOG.isTraceEnabled()) {
-        LOG.debug("data:" + StringUtils.byteToHexString(data));
+        LOG.trace("data:" + StringUtils.byteToHexString(data));
       }
 
       FSEditLogLoader logLoader =

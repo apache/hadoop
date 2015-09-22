@@ -375,7 +375,7 @@ public class BootstrapStandby implements Tool, Configurable {
           "or call saveNamespace on the active node.\n" +
           "Error: " + e.getLocalizedMessage();
       if (LOG.isDebugEnabled()) {
-        LOG.fatal(msg, e);
+        LOG.debug(msg, e);
       } else {
         LOG.fatal(msg);
       }

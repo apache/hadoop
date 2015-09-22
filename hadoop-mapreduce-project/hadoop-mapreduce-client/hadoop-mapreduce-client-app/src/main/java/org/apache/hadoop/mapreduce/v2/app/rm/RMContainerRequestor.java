@@ -506,7 +506,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     addResourceRequestToAsk(remoteRequest);
 
     if (LOG.isDebugEnabled()) {
-      LOG.info("AFTER decResourceRequest:" + " applicationId="
+      LOG.debug("AFTER decResourceRequest:" + " applicationId="
           + applicationId.getId() + " priority=" + priority.getPriority()
           + " resourceName=" + resourceName + " numContainers="
           + remoteRequest.getNumContainers() + " #asks=" + ask.size());

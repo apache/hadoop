@@ -260,7 +260,7 @@ public class EditLogTailer {
         throw elie;
       } finally {
         if (editsLoaded > 0 || LOG.isDebugEnabled()) {
-          LOG.info(String.format("Loaded %d edits starting from txid %d ",
+          LOG.debug(String.format("Loaded %d edits starting from txid %d ",
               editsLoaded, lastTxnId));
         }
       }

@@ -46,7 +46,7 @@ public class ContainerTokenSelector implements
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
       if (LOG.isDebugEnabled()) {
-        LOG.info("Looking for service: " + service + ". Current token is "
+        LOG.debug("Looking for service: " + service + ". Current token is "
             + token);
       }
       if (ContainerTokenIdentifier.KIND.equals(token.getKind()) && 

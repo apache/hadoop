@@ -387,6 +387,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6483. Replace deprecated method NameNode.getUri() with
     DFSUtilClient.getNNUri() in TestMRCredentials. (Mingliang Liu via wheat9)
 
+    HADOOP-12428. Fix inconsistency between log-level guards and statements.
+    (Jagadesh Kiran N and Jackie Chang via ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via

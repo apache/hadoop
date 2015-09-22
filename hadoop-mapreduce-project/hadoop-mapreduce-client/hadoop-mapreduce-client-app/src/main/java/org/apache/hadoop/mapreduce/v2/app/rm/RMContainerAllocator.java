@@ -1122,7 +1122,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       assignedRequests.add(allocated, assigned.attemptID);
 
       if (LOG.isDebugEnabled()) {
-        LOG.info("Assigned container (" + allocated + ") "
+        LOG.debug("Assigned container (" + allocated + ") "
             + " to task " + assigned.attemptID + " on node "
             + allocated.getNodeId().toString());
       }

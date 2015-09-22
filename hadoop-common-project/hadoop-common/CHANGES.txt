@@ -788,6 +788,9 @@ Release 2.8.0 - UNRELEASED
     JarFile with other users when loading resource from URL in Configuration
     class. (zxu)
 
+    HADOOP-12428. Fix inconsistency between log-level guards and statements.
+    (Jagadesh Kiran N and Jackie Chang via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
