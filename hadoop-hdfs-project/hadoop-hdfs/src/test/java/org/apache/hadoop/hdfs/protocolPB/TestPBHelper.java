@@ -154,7 +154,7 @@ public class TestPBHelper {
   public void testConvertDatanodeID() {
     DatanodeID dn = DFSTestUtil.getLocalDatanodeID();
     DatanodeIDProto dnProto = PBHelperClient.convert(dn);
-    DatanodeID dn2 = PBHelper.convert(dnProto);
+    DatanodeID dn2 = PBHelperClient.convert(dnProto);
     compare(dn, dn2);
   }
   
@@ -176,8 +176,8 @@ public class TestPBHelper {
   @Test
   public void testConvertBlock() {
     Block b = new Block(1, 100, 3);
-    BlockProto bProto = PBHelper.convert(b);
-    Block b2 = PBHelper.convert(bProto);
+    BlockProto bProto = PBHelperClient.convert(b);
+    Block b2 = PBHelperClient.convert(bProto);
     assertEquals(b, b2);
   }
 
@@ -399,7 +399,7 @@ public class TestPBHelper {
         "identifier".getBytes(), "password".getBytes(), new Text("kind"),
         new Text("service"));
     TokenProto tokenProto = PBHelperClient.convert(token);
-    Token<BlockTokenIdentifier> token2 = PBHelper.convert(tokenProto);
+    Token<BlockTokenIdentifier> token2 = PBHelperClient.convert(tokenProto);
     compare(token, token2);
   }
   
@@ -489,16 +489,16 @@ public class TestPBHelper {
   @Test
   public void testConvertLocatedBlock() {
     LocatedBlock lb = createLocatedBlock();
-    LocatedBlockProto lbProto = PBHelper.convert(lb);
-    LocatedBlock lb2 = PBHelper.convert(lbProto);
+    LocatedBlockProto lbProto = PBHelperClient.convert(lb);
+    LocatedBlock lb2 = PBHelperClient.convert(lbProto);
     compare(lb,lb2);
   }
 
   @Test
   public void testConvertLocatedBlockNoStorageMedia() {
     LocatedBlock lb = createLocatedBlockNoStorageMedia();
-    LocatedBlockProto lbProto = PBHelper.convert(lb);
-    LocatedBlock lb2 = PBHelper.convert(lbProto);
+    LocatedBlockProto lbProto = PBHelperClient.convert(lb);
+    LocatedBlock lb2 = PBHelperClient.convert(lbProto);
     compare(lb,lb2);
   }
 
@@ -508,8 +508,8 @@ public class TestPBHelper {
     for (int i=0;i<3;i++) {
       lbl.add(createLocatedBlock());
     }
-    List<LocatedBlockProto> lbpl = PBHelper.convertLocatedBlock2(lbl);
-    List<LocatedBlock> lbl2 = PBHelper.convertLocatedBlock(lbpl);
+    List<LocatedBlockProto> lbpl = PBHelperClient.convertLocatedBlock2(lbl);
+    List<LocatedBlock> lbl2 = PBHelperClient.convertLocatedBlock(lbpl);
     assertEquals(lbl.size(), lbl2.size());
     for (int i=0;i<lbl.size();i++) {
       compare(lbl.get(i), lbl2.get(2));
@@ -522,8 +522,8 @@ public class TestPBHelper {
     for (int i=0;i<3;i++) {
       lbl[i] = createLocatedBlock();
     }
-    LocatedBlockProto [] lbpl = PBHelper.convertLocatedBlock(lbl);
-    LocatedBlock [] lbl2 = PBHelper.convertLocatedBlock(lbpl);
+    LocatedBlockProto [] lbpl = PBHelperClient.convertLocatedBlock(lbl);
+    LocatedBlock [] lbl2 = PBHelperClient.convertLocatedBlock(lbpl);
     assertEquals(lbl.length, lbl2.length);
     for (int i=0;i<lbl.length;i++) {
       compare(lbl[i], lbl2[i]);
@@ -551,8 +551,8 @@ public class TestPBHelper {
     DatanodeStorage dns1 = new DatanodeStorage(
         "id1", DatanodeStorage.State.NORMAL, StorageType.SSD);
 
-    DatanodeStorageProto proto = PBHelper.convert(dns1);
-    DatanodeStorage dns2 = PBHelper.convert(proto);
+    DatanodeStorageProto proto = PBHelperClient.convert(dns1);
+    DatanodeStorage dns2 = PBHelperClient.convert(proto);
     compare(dns1, dns2);
   }
   
@@ -625,7 +625,7 @@ public class TestPBHelper {
             .setPermission(FsAction.NONE)
             .build() };
     AclEntry[] actual = Lists.newArrayList(
-        PBHelper.convertAclEntry(PBHelper.convertAclEntryProto(Lists
+        PBHelperClient.convertAclEntry(PBHelperClient.convertAclEntryProto(Lists
             .newArrayList(e1, e2, e3)))).toArray(new AclEntry[0]);
     Assert.assertArrayEquals(expected, actual);
   }
@@ -637,6 +637,6 @@ public class TestPBHelper {
         .setType(AclEntryType.OTHER).build();
     AclStatus s = new AclStatus.Builder().owner("foo").group("bar").addEntry(e)
         .build();
-    Assert.assertEquals(s, PBHelper.convert(PBHelper.convert(s)));
+    Assert.assertEquals(s, PBHelperClient.convert(PBHelperClient.convert(s)));
   }
 }

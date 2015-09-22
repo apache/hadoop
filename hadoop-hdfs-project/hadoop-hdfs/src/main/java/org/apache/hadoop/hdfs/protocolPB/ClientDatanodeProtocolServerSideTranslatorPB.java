@@ -123,7 +123,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     BlockLocalPathInfo resp;
     try {
-      resp = impl.getBlockLocalPathInfo(PBHelperClient.convert(request.getBlock()), PBHelper.convert(request.getToken()));
+      resp = impl.getBlockLocalPathInfo(
+                 PBHelperClient.convert(request.getBlock()),
+                 PBHelperClient.convert(request.getToken()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -150,7 +152,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     GetDatanodeInfoResponseProto res;
     try {
       res = GetDatanodeInfoResponseProto.newBuilder()
-          .setLocalInfo(PBHelper.convert(impl.getDatanodeInfo())).build();
+          .setLocalInfo(PBHelperClient.convert(impl.getDatanodeInfo())).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

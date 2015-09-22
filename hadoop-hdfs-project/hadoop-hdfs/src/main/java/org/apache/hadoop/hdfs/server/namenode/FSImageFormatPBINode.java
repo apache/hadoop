@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -337,7 +336,7 @@ public final class FSImageFormatPBINode {
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0, e = bp.size(); i < e; ++i) {
         blocks[i] =
-            new BlockInfoContiguous(PBHelper.convert(bp.get(i)), replication);
+            new BlockInfoContiguous(PBHelperClient.convert(bp.get(i)), replication);
       }
       final PermissionStatus permissions = loadPermission(f.getPermission(),
           parent.getLoaderContext().getStringTable());
@@ -447,7 +446,7 @@ public final class FSImageFormatPBINode {
             XATTR_NAMESPACE_EXT_OFFSET);
         xAttrCompactBuilder.setName(v);
         if (a.getValue() != null) {
-          xAttrCompactBuilder.setValue(PBHelper.getByteString(a.getValue()));
+          xAttrCompactBuilder.setValue(PBHelperClient.getByteString(a.getValue()));
         }
         b.addXAttrs(xAttrCompactBuilder.build());
       }
@@ -636,7 +635,7 @@ public final class FSImageFormatPBINode {
 
       if (n.getBlocks() != null) {
         for (Block block : n.getBlocks()) {
-          b.addBlocks(PBHelper.convert(block));
+          b.addBlocks(PBHelperClient.convert(block));
         }
       }
 
