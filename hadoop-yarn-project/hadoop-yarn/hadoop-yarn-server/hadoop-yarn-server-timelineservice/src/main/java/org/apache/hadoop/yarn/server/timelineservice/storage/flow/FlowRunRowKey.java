@@ -25,7 +25,34 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWrit
  * Represents a rowkey for the flow run table.
  */
 public class FlowRunRowKey {
-  // TODO: more methods are needed for this class like parse row key
+  private final String clusterId;
+  private final String userId;
+  private final String flowId;
+  private final long flowRunId;
+
+  public FlowRunRowKey(String clusterId, String userId, String flowId,
+      long flowRunId) {
+    this.clusterId = clusterId;
+    this.userId = userId;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
+  }
+
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public String getFlowId() {
+    return flowId;
+  }
+
+  public long getFlowRunId() {
+    return flowRunId;
+  }
 
   /**
    * Constructs a row key for the entity table as follows: {
@@ -47,4 +74,25 @@ public class FlowRunRowKey {
     return Separator.QUALIFIERS.join(first, second);
   }
 
+  /**
+   * Given the raw row key as bytes, returns the row key as an object.
+   */
+  public static FlowRunRowKey parseRowKey(byte[] rowKey) {
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
+
+    if (rowKeyComponents.length < 4) {
+      throw new IllegalArgumentException("the row key is not valid for " +
+          "a flow run");
+    }
+
+    String clusterId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
+    String userId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
+    String flowId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
+    long flowRunId =
+        TimelineWriterUtils.invert(Bytes.toLong(rowKeyComponents[3]));
+    return new FlowRunRowKey(clusterId, userId, flowId, flowRunId);
+  }
 }

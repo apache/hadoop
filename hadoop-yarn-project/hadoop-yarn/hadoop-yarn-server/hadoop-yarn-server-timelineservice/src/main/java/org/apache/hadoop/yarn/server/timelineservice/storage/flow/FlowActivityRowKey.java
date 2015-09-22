@@ -55,6 +55,10 @@ public class FlowActivityRowKey {
     return flowId;
   }
 
+  public static byte[] getRowKeyPrefix(String clusterId) {
+    return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, ""));
+  }
+
   /**
    * Constructs a row key for the flow activity table as follows:
    * {@code clusterId!dayTimestamp!user!flowId}
@@ -65,7 +69,8 @@ public class FlowActivityRowKey {
    * @param flowId
    * @return byte array with the row key prefix
    */
-  public static byte[] getRowKey(String clusterId, String userId, String flowId) {
+  public static byte[] getRowKey(String clusterId, String userId,
+      String flowId) {
     long dayTs = TimelineWriterUtils.getTopOfTheDayTimestamp(System
         .currentTimeMillis());
     return getRowKey(clusterId, dayTs, userId, flowId);
