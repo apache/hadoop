@@ -295,6 +295,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5045. UtilTest#isCygwin method appears to be unused
+    (Neelesh Srinivas Salian via harsh)
+
     MAPREDUCE-6291. Correct mapred queue usage command.
     (Brahma Reddu Battula via harsh)
 

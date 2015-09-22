@@ -117,11 +117,6 @@ class UtilTest {
     return collate(vargs, " ");
   }
 
-  public static boolean isCygwin() {
-    String OS = System.getProperty("os.name");
-    return (OS.indexOf("Windows") > -1);
-  }
-
   /**
    * Is perl supported on this machine ?
    * @return true if perl is available and is working as expected
