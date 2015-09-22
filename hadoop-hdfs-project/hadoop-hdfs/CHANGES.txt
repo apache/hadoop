@@ -1425,6 +1425,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9042. Update document for the Storage policy name
     (J.Andreina via vinayakumarb)
 
+    HDFS-9043. Doc updation for commands in HDFS Federation
+    (J.Andreina via vinayakumab)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

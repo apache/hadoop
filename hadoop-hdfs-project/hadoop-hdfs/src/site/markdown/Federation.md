@@ -219,7 +219,7 @@ The policy parameter can be any of the following:
   level which also balances at the Datanode level.
 
 Note that Balancer only balances the data and does not balance the namespace.
-For the complete command usage, see [balancer](../hadoop-common/CommandsManual.html#balancer).
+For the complete command usage, see [balancer](./HDFSCommands.html#balancer).
 
 ### Decommissioning
 
