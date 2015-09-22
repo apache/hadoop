@@ -19,14 +19,46 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 
 /**
  * Represents a rowkey for the application table.
  */
 public class ApplicationRowKey {
-  // TODO: more methods are needed for this class.
+  private final String clusterId;
+  private final String userId;
+  private final String flowId;
+  private final long flowRunId;
+  private final String appId;
 
-  // TODO: API needs to be cleaned up.
+  public ApplicationRowKey(String clusterId, String userId, String flowId,
+      long flowRunId, String appId) {
+    this.clusterId = clusterId;
+    this.userId = userId;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
+    this.appId = appId;
+  }
+
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public String getFlowId() {
+    return flowId;
+  }
+
+  public long getFlowRunId() {
+    return flowRunId;
+  }
+
+  public String getAppId() {
+    return appId;
+  }
 
   /**
    * Constructs a row key for the application table as follows:
@@ -46,22 +78,32 @@ public class ApplicationRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(ApplicationRowKey.invert(flowRunId));
+    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
     byte[] third = Bytes.toBytes(appId);
     return Separator.QUALIFIERS.join(first, second, third);
   }
 
   /**
-   * Converts a timestamp into its inverse timestamp to be used in (row) keys
-   * where we want to have the most recent timestamp in the top of the table
-   * (scans start at the most recent timestamp first).
-   *
-   * @param key value to be inverted so that the latest version will be first in
-   *          a scan.
-   * @return inverted long
+   * Given the raw row key as bytes, returns the row key as an object.
    */
-  public static long invert(Long key) {
-    return Long.MAX_VALUE - key;
-  }
+  public static ApplicationRowKey parseRowKey(byte[] rowKey) {
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
 
+    if (rowKeyComponents.length < 5) {
+      throw new IllegalArgumentException("the row key is not valid for " +
+          "an application");
+    }
+
+    String clusterId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
+    String userId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
+    String flowId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
+    long flowRunId =
+        TimelineWriterUtils.invert(Bytes.toLong(rowKeyComponents[3]));
+    String appId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[4]));
+    return new ApplicationRowKey(clusterId, userId, flowId, flowRunId, appId);
+  }
 }

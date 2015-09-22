@@ -45,7 +45,7 @@ class TestFlowDataGenerator {
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 1425016501000L;
+    long cTime = 1425016501000L;
     entity.setCreatedTime(cTime);
 
     // add metrics
@@ -54,8 +54,8 @@ class TestFlowDataGenerator {
     m1.setId(metric1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = System.currentTimeMillis();
-    metricValues.put(ts - 100000, 2);
-    metricValues.put(ts - 80000, 40);
+    metricValues.put(ts - 100000, 2L);
+    metricValues.put(ts - 80000, 40L);
     m1.setType(Type.TIME_SERIES);
     m1.setValues(metricValues);
     metrics.add(m1);
@@ -64,8 +64,8 @@ class TestFlowDataGenerator {
     m2.setId(metric2);
     metricValues = new HashMap<Long, Number>();
     ts = System.currentTimeMillis();
-    metricValues.put(ts - 100000, 31);
-    metricValues.put(ts - 80000, 57);
+    metricValues.put(ts - 100000, 31L);
+    metricValues.put(ts - 80000, 57L);
     m2.setType(Type.TIME_SERIES);
     m2.setValues(metricValues);
     metrics.add(m2);
@@ -80,7 +80,7 @@ class TestFlowDataGenerator {
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 1425016501000L;
+    long cTime = 1425016501000L;
     entity.setCreatedTime(cTime);
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
@@ -103,8 +103,8 @@ class TestFlowDataGenerator {
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 20000000000000L;
-    Long mTime = 1425026901000L;
+    long cTime = 20000000000000L;
+    long mTime = 1425026901000L;
     entity.setCreatedTime(cTime);
     entity.setModifiedTime(mTime);
     // add metrics
@@ -113,10 +113,10 @@ class TestFlowDataGenerator {
     m1.setId(metric1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = System.currentTimeMillis();
-    metricValues.put(ts - 120000, 100000000);
-    metricValues.put(ts - 100000, 200000000);
-    metricValues.put(ts - 80000, 300000000);
-    metricValues.put(ts - 60000, 400000000);
+    metricValues.put(ts - 120000, 100000000L);
+    metricValues.put(ts - 100000, 200000000L);
+    metricValues.put(ts - 80000, 300000000L);
+    metricValues.put(ts - 60000, 400000000L);
     metricValues.put(ts - 40000, 50000000000L);
     metricValues.put(ts - 20000, 60000000000L);
     m1.setType(Type.TIME_SERIES);
@@ -126,7 +126,7 @@ class TestFlowDataGenerator {
 
     TimelineEvent event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    Long expTs = 1436512802000L;
+    long expTs = 1436512802000L;
     event.setTimestamp(expTs);
     String expKey = "foo_event";
     Object expVal = "test";
@@ -142,9 +142,9 @@ class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntityGreaterStartTime() {
+  static TimelineEntity getEntityGreaterStartTime(long startTs) {
     TimelineEntity entity = new TimelineEntity();
-    entity.setCreatedTime(30000000000000L);
+    entity.setCreatedTime(startTs);
     entity.setId("flowRunHello with greater start time");
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setType(type);
@@ -173,14 +173,13 @@ class TestFlowDataGenerator {
     return entity;
   }
 
-  static TimelineEntity getEntityMinStartTime() {
+  static TimelineEntity getEntityMinStartTime(long startTs) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunHelloMInStartTime";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 10000000000000L;
-    entity.setCreatedTime(cTime);
+    entity.setCreatedTime(startTs);
     TimelineEvent event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
     event.setTimestamp(System.currentTimeMillis());
@@ -195,12 +194,12 @@ class TestFlowDataGenerator {
     String type = TimelineEntityType.YARN_APPLICATION.toString();
     entity.setId(id);
     entity.setType(type);
-    Long cTime = 1425016501000L;
+    long cTime = 1425016501000L;
     entity.setCreatedTime(cTime);
 
     TimelineEvent event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    Long expTs = 1436512802000L;
+    long expTs = 1436512802000L;
     event.setTimestamp(expTs);
     String expKey = "foo_event";
     Object expVal = "test";

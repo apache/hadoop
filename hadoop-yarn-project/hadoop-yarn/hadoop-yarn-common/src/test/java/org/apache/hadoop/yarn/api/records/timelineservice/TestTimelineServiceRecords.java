@@ -182,14 +182,14 @@ public class TestTimelineServiceRecords {
     ClusterEntity cluster = new ClusterEntity();
     cluster.setId("test cluster id");
 
-    FlowEntity flow1 = new FlowEntity();
+    FlowRunEntity flow1 = new FlowRunEntity();
     //flow1.setId("test flow id 1");
     flow1.setUser(user.getId());
     flow1.setName("test flow name 1");
     flow1.setVersion("test flow version 1");
     flow1.setRunId(1L);
 
-    FlowEntity flow2 = new FlowEntity();
+    FlowRunEntity flow2 = new FlowRunEntity();
     //flow2.setId("test flow run id 2");
     flow2.setUser(user.getId());
     flow2.setName("test flow name 2");
@@ -213,19 +213,19 @@ public class TestTimelineServiceRecords {
         ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1).toString());
 
-    cluster.addChild(TimelineEntityType.YARN_FLOW.toString(), flow1.getId());
+    cluster.addChild(TimelineEntityType.YARN_FLOW_RUN.toString(), flow1.getId());
     flow1
         .setParent(TimelineEntityType.YARN_CLUSTER.toString(), cluster.getId());
-    flow1.addChild(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
-    flow2.setParent(TimelineEntityType.YARN_FLOW.toString(), flow1.getId());
+    flow1.addChild(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
+    flow2.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow1.getId());
     flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
     flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app2.getId());
-    app1.setParent(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
+    app1.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
     app1.addChild(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
         appAttempt.getId());
     appAttempt
         .setParent(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
-    app2.setParent(TimelineEntityType.YARN_FLOW.toString(), flow2.getId());
+    app2.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
     appAttempt.addChild(TimelineEntityType.YARN_CONTAINER.toString(),
         container.getId());
     container.setParent(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),

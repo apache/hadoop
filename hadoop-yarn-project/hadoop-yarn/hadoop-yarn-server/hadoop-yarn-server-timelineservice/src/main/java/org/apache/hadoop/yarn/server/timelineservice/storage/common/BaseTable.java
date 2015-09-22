@@ -31,7 +31,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 
 /**
- * Implements behavior common to tables used in the timeline service storage.
+ * Implements behavior common to tables used in the timeline service storage. It
+ * is thread-safe, and can be used by multiple threads concurrently.
  *
  * @param <T> reference to the table instance class itself for type safety.
  */
