@@ -868,6 +868,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4113. RM should respect retry-interval when uses RetryPolicies.RETRY_FOREVER. 
     (Sunil G via wangda)
 
+    YARN-4188. Make MoveApplicationAcrossQueues abstract, newInstance static.
+    (Giovanni Matteo Fumarola via cdouglas)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
