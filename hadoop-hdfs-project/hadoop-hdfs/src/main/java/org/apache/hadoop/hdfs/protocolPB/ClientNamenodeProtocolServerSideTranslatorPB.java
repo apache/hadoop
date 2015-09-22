@@ -370,7 +370,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       Builder builder = GetBlockLocationsResponseProto
           .newBuilder();
       if (b != null) {
-        builder.setLocations(PBHelper.convert(b)).build();
+        builder.setLocations(PBHelperClient.convert(b)).build();
       }
       return builder.build();
     } catch (IOException e) {
@@ -385,7 +385,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       FsServerDefaults result = server.getServerDefaults();
       return GetServerDefaultsResponseProto.newBuilder()
-          .setServerDefaults(PBHelper.convert(result))
+          .setServerDefaults(PBHelperClient.convert(result))
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -398,14 +398,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       CreateRequestProto req) throws ServiceException {
     try {
       HdfsFileStatus result = server.create(req.getSrc(),
-          PBHelper.convert(req.getMasked()), req.getClientName(),
-          PBHelper.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
+          PBHelperClient.convert(req.getMasked()), req.getClientName(),
+          PBHelperClient.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
           (short) req.getReplication(), req.getBlockSize(),
-          PBHelper.convertCryptoProtocolVersions(
+          PBHelperClient.convertCryptoProtocolVersions(
               req.getCryptoProtocolVersionList()));
 
       if (result != null) {
-        return CreateResponseProto.newBuilder().setFs(PBHelper.convert(result))
+        return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))
             .build();
       }
       return VOID_CREATE_RESPONSE;
@@ -419,16 +419,16 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       AppendRequestProto req) throws ServiceException {
     try {
       EnumSetWritable<CreateFlag> flags = req.hasFlag() ?
-          PBHelper.convertCreateFlag(req.getFlag()) :
+          PBHelperClient.convertCreateFlag(req.getFlag()) :
           new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND));
       LastBlockWithStatus result = server.append(req.getSrc(),
           req.getClientName(), flags);
       AppendResponseProto.Builder builder = AppendResponseProto.newBuilder();
       if (result.getLastBlock() != null) {
-        builder.setBlock(PBHelper.convert(result.getLastBlock()));
+        builder.setBlock(PBHelperClient.convert(result.getLastBlock()));
       }
       if (result.getFileStatus() != null) {
-        builder.setStat(PBHelper.convert(result.getFileStatus()));
+        builder.setStat(PBHelperClient.convert(result.getFileStatus()));
       }
       return builder.build();
     } catch (IOException e) {
@@ -453,7 +453,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SetPermissionResponseProto setPermission(RpcController controller,
       SetPermissionRequestProto req) throws ServiceException {
     try {
-      server.setPermission(req.getSrc(), PBHelper.convert(req.getPermission()));
+      server.setPermission(req.getSrc(), PBHelperClient.convert(req.getPermission()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -496,12 +496,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           req.getSrc(),
           req.getClientName(),
           req.hasPrevious() ? PBHelperClient.convert(req.getPrevious()) : null,
-          (excl == null || excl.size() == 0) ? null : PBHelper.convert(excl
+          (excl == null || excl.size() == 0) ? null : PBHelperClient.convert(excl
               .toArray(new DatanodeInfoProto[excl.size()])), req.getFileId(),
           (favor == null || favor.size() == 0) ? null : favor
               .toArray(new String[favor.size()]));
       return AddBlockResponseProto.newBuilder()
-          .setBlock(PBHelper.convert(result)).build();
+          .setBlock(PBHelperClient.convert(result)).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -517,15 +517,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
       LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
           req.getFileId(), PBHelperClient.convert(req.getBlk()),
-          PBHelper.convert(existingList.toArray(
+          PBHelperClient.convert(existingList.toArray(
               new DatanodeInfoProto[existingList.size()])),
           existingStorageIDsList.toArray(
               new String[existingStorageIDsList.size()]),
-          PBHelper.convert(excludesList.toArray(
-              new DatanodeInfoProto[excludesList.size()])), 
+          PBHelperClient.convert(excludesList.toArray(
+              new DatanodeInfoProto[excludesList.size()])),
           req.getNumAdditionalNodes(), req.getClientName());
       return GetAdditionalDatanodeResponseProto.newBuilder().setBlock(
-          PBHelper.convert(result))
+          PBHelperClient.convert(result))
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -551,8 +551,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       ReportBadBlocksRequestProto req) throws ServiceException {
     try {
       List<LocatedBlockProto> bl = req.getBlocksList();
-      server.reportBadBlocks(PBHelper.convertLocatedBlock(
-              bl.toArray(new LocatedBlockProto[bl.size()])));
+      server.reportBadBlocks(PBHelperClient.convertLocatedBlock(
+          bl.toArray(new LocatedBlockProto[bl.size()])));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -623,7 +623,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       MkdirsRequestProto req) throws ServiceException {
     try {
       boolean result = server.mkdirs(req.getSrc(),
-          PBHelper.convert(req.getMasked()), req.getCreateParent());
+          PBHelperClient.convert(req.getMasked()), req.getCreateParent());
       return MkdirsResponseProto.newBuilder().setResult(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -639,7 +639,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           req.getNeedLocation());
       if (result !=null) {
         return GetListingResponseProto.newBuilder().setDirList(
-          PBHelper.convert(result)).build();
+          PBHelperClient.convert(result)).build();
       } else {
         return VOID_GETLISTING_RESPONSE;
       }
@@ -687,7 +687,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetFsStatsResponseProto getFsStats(RpcController controller,
       GetFsStatusRequestProto req) throws ServiceException {
     try {
-      return PBHelper.convert(server.getStats());
+      return PBHelperClient.convert(server.getStats());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -699,7 +699,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       List<? extends DatanodeInfoProto> result = PBHelperClient.convert(server
-          .getDatanodeReport(PBHelper.convert(req.getType())));
+          .getDatanodeReport(PBHelperClient.convert(req.getType())));
       return GetDatanodeReportResponseProto.newBuilder()
           .addAllDi(result).build();
     } catch (IOException e) {
@@ -712,8 +712,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDatanodeStorageReportRequestProto req)
       throws ServiceException {
     try {
-      List<DatanodeStorageReportProto> reports = PBHelper.convertDatanodeStorageReports(
-          server.getDatanodeStorageReport(PBHelper.convert(req.getType())));
+      List<DatanodeStorageReportProto> reports = PBHelperClient.convertDatanodeStorageReports(
+          server.getDatanodeStorageReport(PBHelperClient.convert(req.getType())));
       return GetDatanodeStorageReportResponseProto.newBuilder()
           .addAllDatanodeStorageReports(reports)
           .build();
@@ -739,7 +739,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SetSafeModeResponseProto setSafeMode(RpcController controller,
       SetSafeModeRequestProto req) throws ServiceException {
     try {
-      boolean result = server.setSafeMode(PBHelper.convert(req.getAction()),
+      boolean result = server.setSafeMode(PBHelperClient.convert(req.getAction()),
           req.getChecked());
       return SetSafeModeResponseProto.newBuilder().setResult(result).build();
     } catch (IOException e) {
@@ -801,10 +801,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RollingUpgradeRequestProto req) throws ServiceException {
     try {
       final RollingUpgradeInfo info = server.rollingUpgrade(
-          PBHelper.convert(req.getAction()));
+          PBHelperClient.convert(req.getAction()));
       final RollingUpgradeResponseProto.Builder b = RollingUpgradeResponseProto.newBuilder();
       if (info != null) {
-        b.setRollingUpgradeInfo(PBHelper.convert(info));
+        b.setRollingUpgradeInfo(PBHelperClient.convert(info));
       }
       return b.build();
     } catch (IOException e) {
@@ -820,7 +820,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       CorruptFileBlocks result = server.listCorruptFileBlocks(
           req.getPath(), req.hasCookie() ? req.getCookie(): null);
       return ListCorruptFileBlocksResponseProto.newBuilder()
-          .setCorrupt(PBHelper.convert(result))
+          .setCorrupt(PBHelperClient.convert(result))
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -847,7 +847,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
  
       if (result != null) {
         return GetFileInfoResponseProto.newBuilder().setFs(
-            PBHelper.convert(result)).build();
+            PBHelperClient.convert(result)).build();
       }
       return VOID_GETFILEINFO_RESPONSE;      
     } catch (IOException e) {
@@ -862,7 +862,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       HdfsFileStatus result = server.getFileLinkInfo(req.getSrc());
       if (result != null) {
         return GetFileLinkInfoResponseProto.newBuilder().setFs(
-            PBHelper.convert(result)).build();
+            PBHelperClient.convert(result)).build();
       } else {
         return VOID_GETFILELINKINFO_RESPONSE;      
       }
@@ -879,7 +879,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       ContentSummary result = server.getContentSummary(req.getPath());
       return GetContentSummaryResponseProto.newBuilder()
-          .setSummary(PBHelper.convert(result)).build();
+          .setSummary(PBHelperClient.convert(result)).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -927,7 +927,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       CreateSymlinkRequestProto req) throws ServiceException {
     try {
       server.createSymlink(req.getTarget(), req.getLink(),
-          PBHelper.convert(req.getDirPerm()), req.getCreateParent());
+          PBHelperClient.convert(req.getDirPerm()), req.getCreateParent());
       return VOID_CREATESYMLINK_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -955,7 +955,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, UpdateBlockForPipelineRequestProto req)
       throws ServiceException {
     try {
-      LocatedBlockProto result = PBHelper.convert(server
+      LocatedBlockProto result = PBHelperClient.convert(server
           .updateBlockForPipeline(PBHelperClient.convert(req.getBlock()),
               req.getClientName()));
       return UpdateBlockForPipelineResponseProto.newBuilder().setBlock(result)
@@ -974,7 +974,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       server.updatePipeline(req.getClientName(),
           PBHelperClient.convert(req.getOldBlock()),
           PBHelperClient.convert(req.getNewBlock()),
-          PBHelper.convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])),
+          PBHelperClient.convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])),
           newStorageIDs.toArray(new String[newStorageIDs.size()]));
       return VOID_UPDATEPIPELINE_RESPONSE;
     } catch (IOException e) {
@@ -1005,7 +1005,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, RenewDelegationTokenRequestProto req)
       throws ServiceException {
     try {
-      long result = server.renewDelegationToken(PBHelper
+      long result = server.renewDelegationToken(PBHelperClient
           .convertDelegationToken(req.getToken()));
       return RenewDelegationTokenResponseProto.newBuilder()
           .setNewExpiryTime(result).build();
@@ -1019,7 +1019,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, CancelDelegationTokenRequestProto req)
       throws ServiceException {
     try {
-      server.cancelDelegationToken(PBHelper.convertDelegationToken(req
+      server.cancelDelegationToken(PBHelperClient.convertDelegationToken(req
           .getToken()));
       return VOID_CANCELDELEGATIONTOKEN_RESPONSE;
     } catch (IOException e) {
@@ -1048,7 +1048,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           GetDataEncryptionKeyResponseProto.newBuilder();
       DataEncryptionKey encryptionKey = server.getDataEncryptionKey();
       if (encryptionKey != null) {
-        builder.setDataEncryptionKey(PBHelper.convert(encryptionKey));
+        builder.setDataEncryptionKey(PBHelperClient.convert(encryptionKey));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1127,7 +1127,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           .getSnapshottableDirListing();
       if (result != null) {
         return GetSnapshottableDirListingResponseProto.newBuilder().
-            setSnapshottableDirList(PBHelper.convert(result)).build();
+            setSnapshottableDirList(PBHelperClient.convert(result)).build();
       } else {
         return NULL_GET_SNAPSHOTTABLE_DIR_LISTING_RESPONSE;
       }
@@ -1145,7 +1145,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           request.getSnapshotRoot(), request.getFromSnapshot(),
           request.getToSnapshot());
       return GetSnapshotDiffReportResponseProto.newBuilder()
-          .setDiffReport(PBHelper.convert(report)).build();
+          .setDiffReport(PBHelperClient.convert(report)).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1169,8 +1169,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       long id = server.addCacheDirective(
-          PBHelper.convert(request.getInfo()),
-          PBHelper.convertCacheFlags(request.getCacheFlags()));
+          PBHelperClient.convert(request.getInfo()),
+          PBHelperClient.convertCacheFlags(request.getCacheFlags()));
       return AddCacheDirectiveResponseProto.newBuilder().
               setId(id).build();
     } catch (IOException e) {
@@ -1184,8 +1184,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       server.modifyCacheDirective(
-          PBHelper.convert(request.getInfo()),
-          PBHelper.convertCacheFlags(request.getCacheFlags()));
+          PBHelperClient.convert(request.getInfo()),
+          PBHelperClient.convertCacheFlags(request.getCacheFlags()));
       return ModifyCacheDirectiveResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1212,14 +1212,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           throws ServiceException {
     try {
       CacheDirectiveInfo filter =
-          PBHelper.convert(request.getFilter());
+          PBHelperClient.convert(request.getFilter());
       BatchedEntries<CacheDirectiveEntry> entries =
         server.listCacheDirectives(request.getPrevId(), filter);
       ListCacheDirectivesResponseProto.Builder builder =
           ListCacheDirectivesResponseProto.newBuilder();
       builder.setHasMore(entries.hasMore());
       for (int i=0, n=entries.size(); i<n; i++) {
-        builder.addElements(PBHelper.convert(entries.get(i)));
+        builder.addElements(PBHelperClient.convert(entries.get(i)));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1231,7 +1231,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AddCachePoolResponseProto addCachePool(RpcController controller,
       AddCachePoolRequestProto request) throws ServiceException {
     try {
-      server.addCachePool(PBHelper.convert(request.getInfo()));
+      server.addCachePool(PBHelperClient.convert(request.getInfo()));
       return AddCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1242,7 +1242,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ModifyCachePoolResponseProto modifyCachePool(RpcController controller,
       ModifyCachePoolRequestProto request) throws ServiceException {
     try {
-      server.modifyCachePool(PBHelper.convert(request.getInfo()));
+      server.modifyCachePool(PBHelperClient.convert(request.getInfo()));
       return ModifyCachePoolResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1270,7 +1270,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         ListCachePoolsResponseProto.newBuilder();
       responseBuilder.setHasMore(entries.hasMore());
       for (int i=0, n=entries.size(); i<n; i++) {
-        responseBuilder.addEntries(PBHelper.convert(entries.get(i)));
+        responseBuilder.addEntries(PBHelperClient.convert(entries.get(i)));
       }
       return responseBuilder.build();
     } catch (IOException e) {
@@ -1283,7 +1283,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, ModifyAclEntriesRequestProto req)
       throws ServiceException {
     try {
-      server.modifyAclEntries(req.getSrc(), PBHelper.convertAclEntry(req.getAclSpecList()));
+      server.modifyAclEntries(req.getSrc(), PBHelperClient.convertAclEntry(req.getAclSpecList()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1296,7 +1296,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       server.removeAclEntries(req.getSrc(),
-          PBHelper.convertAclEntry(req.getAclSpecList()));
+          PBHelperClient.convertAclEntry(req.getAclSpecList()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1330,7 +1330,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SetAclResponseProto setAcl(RpcController controller,
       SetAclRequestProto req) throws ServiceException {
     try {
-      server.setAcl(req.getSrc(), PBHelper.convertAclEntry(req.getAclSpecList()));
+      server.setAcl(req.getSrc(), PBHelperClient.convertAclEntry(req.getAclSpecList()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1341,7 +1341,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetAclStatusResponseProto getAclStatus(RpcController controller,
       GetAclStatusRequestProto req) throws ServiceException {
     try {
-      return PBHelper.convert(server.getAclStatus(req.getSrc()));
+      return PBHelperClient.convert(server.getAclStatus(req.getSrc()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1368,7 +1368,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           GetEZForPathResponseProto.newBuilder();
       final EncryptionZone ret = server.getEZForPath(req.getSrc());
       if (ret != null) {
-        builder.setZone(PBHelper.convert(ret));
+        builder.setZone(PBHelperClient.convert(ret));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1387,7 +1387,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           ListEncryptionZonesResponseProto.newBuilder();
       builder.setHasMore(entries.hasMore());
       for (int i=0; i<entries.size(); i++) {
-        builder.addZones(PBHelper.convert(entries.get(i)));
+        builder.addZones(PBHelperClient.convert(entries.get(i)));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1399,8 +1399,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SetXAttrResponseProto setXAttr(RpcController controller,
       SetXAttrRequestProto req) throws ServiceException {
     try {
-      server.setXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()), 
-          PBHelper.convert(req.getFlag()));
+      server.setXAttr(req.getSrc(), PBHelperClient.convertXAttr(req.getXAttr()),
+          PBHelperClient.convert(req.getFlag()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1411,8 +1411,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetXAttrsResponseProto getXAttrs(RpcController controller,
       GetXAttrsRequestProto req) throws ServiceException {
     try {
-      return PBHelper.convertXAttrsResponse(server.getXAttrs(req.getSrc(), 
-          PBHelper.convertXAttrs(req.getXAttrsList())));
+      return PBHelperClient.convertXAttrsResponse(server.getXAttrs(req.getSrc(),
+          PBHelperClient.convertXAttrs(req.getXAttrsList())));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1422,7 +1422,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListXAttrsResponseProto listXAttrs(RpcController controller,
     ListXAttrsRequestProto req) throws ServiceException {
     try {
-      return PBHelper.convertListXAttrsResponse(server.listXAttrs(req.getSrc()));
+      return PBHelperClient.convertListXAttrsResponse(server.listXAttrs(req.getSrc()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1432,7 +1432,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public RemoveXAttrResponseProto removeXAttr(RpcController controller,
       RemoveXAttrRequestProto req) throws ServiceException {
     try {
-      server.removeXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()));
+      server.removeXAttr(req.getSrc(), PBHelperClient.convertXAttr(req.getXAttr()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1443,7 +1443,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public CheckAccessResponseProto checkAccess(RpcController controller,
      CheckAccessRequestProto req) throws ServiceException {
     try {
-      server.checkAccess(req.getPath(), PBHelper.convert(req.getMode()));
+      server.checkAccess(req.getPath(), PBHelperClient.convert(req.getMode()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1467,7 +1467,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetStoragePolicyRequestProto request)
       throws ServiceException {
     try {
-      BlockStoragePolicyProto policy = PBHelper.convert(server
+      BlockStoragePolicyProto policy = PBHelperClient.convert(server
           .getStoragePolicy(request.getPath()));
       return GetStoragePolicyResponseProto.newBuilder()
           .setStoragePolicy(policy).build();
@@ -1488,7 +1488,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         return builder.build();
       }
       for (BlockStoragePolicy policy : policies) {
-        builder.addPolicies(PBHelper.convert(policy));
+        builder.addPolicies(PBHelperClient.convert(policy));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1510,7 +1510,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetEditsFromTxidResponseProto getEditsFromTxid(RpcController controller,
       GetEditsFromTxidRequestProto req) throws ServiceException {
     try {
-      return PBHelper.convertEditsResponse(server.getEditsFromTxid(
+      return PBHelperClient.convertEditsResponse(server.getEditsFromTxid(
           req.getTxid()));
     } catch (IOException e) {
       throw new ServiceException(e);

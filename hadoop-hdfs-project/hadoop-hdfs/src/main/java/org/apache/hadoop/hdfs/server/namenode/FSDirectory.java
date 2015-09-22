@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -1134,7 +1133,7 @@ public class FSDirectory implements Closeable {
                       xattr.getValue());
               ezManager.unprotectedAddEncryptionZone(inode.getId(),
                   PBHelperClient.convert(ezProto.getSuite()),
-                  PBHelper.convert(ezProto.getCryptoProtocolVersion()),
+                  PBHelperClient.convert(ezProto.getCryptoProtocolVersion()),
                   ezProto.getKeyName());
             } catch (InvalidProtocolBufferException e) {
               NameNode.LOG.warn("Error parsing protocol buffer of " +
@@ -1261,7 +1260,7 @@ public class FSDirectory implements Closeable {
       throws IOException {
     // Make the PB for the xattr
     final HdfsProtos.PerFileEncryptionInfoProto proto =
-        PBHelper.convertPerFileEncInfo(info);
+        PBHelperClient.convertPerFileEncInfo(info);
     final byte[] protoBytes = proto.toByteArray();
     final XAttr fileEncryptionAttr =
         XAttrHelper.buildXAttr(CRYPTO_XATTR_FILE_ENCRYPTION_INFO, protoBytes);
@@ -1327,7 +1326,7 @@ public class FSDirectory implements Closeable {
         HdfsProtos.PerFileEncryptionInfoProto fileProto =
             HdfsProtos.PerFileEncryptionInfoProto.parseFrom(
                 fileXAttr.getValue());
-        return PBHelper.convert(fileProto, suite, version, keyName);
+        return PBHelperClient.convert(fileProto, suite, version, keyName);
       } catch (InvalidProtocolBufferException e) {
         throw new IOException("Could not parse file encryption info for " +
             "inode " + inode, e);

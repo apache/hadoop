@@ -134,7 +134,9 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     BlockLocalPathInfo resp;
     try {
-      resp = impl.getBlockLocalPathInfo(PBHelperClient.convert(request.getBlock()), PBHelper.convert(request.getToken()));
+      resp = impl.getBlockLocalPathInfo(
+                 PBHelperClient.convert(request.getBlock()),
+                 PBHelperClient.convert(request.getToken()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -155,7 +157,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       List<Token<BlockTokenIdentifier>> tokens =
           new ArrayList<Token<BlockTokenIdentifier>>(request.getTokensCount());
       for (TokenProto b : request.getTokensList()) {
-        tokens.add(PBHelper.convert(b));
+        tokens.add(PBHelperClient.convert(b));
       }
       long[] blockIds = Longs.toArray(request.getBlockIdsList());
       
@@ -193,7 +195,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     GetDatanodeInfoResponseProto res;
     try {
       res = GetDatanodeInfoResponseProto.newBuilder()
-          .setLocalInfo(PBHelper.convert(impl.getDatanodeInfo())).build();
+          .setLocalInfo(PBHelperClient.convert(impl.getDatanodeInfo())).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
