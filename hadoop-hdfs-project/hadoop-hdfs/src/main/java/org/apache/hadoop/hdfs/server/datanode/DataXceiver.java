@@ -752,7 +752,7 @@ class DataXceiver extends Receiver implements Runnable {
             mirrorInStatus = connectAck.getStatus();
             firstBadLink = connectAck.getFirstBadLink();
             if (LOG.isDebugEnabled() || mirrorInStatus != SUCCESS) {
-              LOG.info("Datanode " + targets.length +
+              LOG.debug("Datanode " + targets.length +
                        " got response for connect ack " +
                        " from downstream datanode with firstbadlink as " +
                        firstBadLink);
@@ -791,7 +791,7 @@ class DataXceiver extends Receiver implements Runnable {
       // send connect-ack to source for clients and not transfer-RBW/Finalized
       if (isClient && !isTransfer) {
         if (LOG.isDebugEnabled() || mirrorInStatus != SUCCESS) {
-          LOG.info("Datanode " + targets.length +
+          LOG.debug("Datanode " + targets.length +
                    " forwarding connect ack to upstream firstbadlink is " +
                    firstBadLink);
         }
