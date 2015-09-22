@@ -1378,6 +1378,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9063. Correctly handle snapshot path for getContentSummary. (jing9)
 
+    HDFS-8780. Fetching live/dead datanode list with arg true for remove-
+    DecommissionNode,returns list with decom node. (J.Andreina via vinayakumab)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
