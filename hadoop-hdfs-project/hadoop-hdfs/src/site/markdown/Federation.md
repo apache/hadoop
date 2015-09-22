@@ -208,7 +208,7 @@ These commands can be run from any node where the HDFS configuration is availabl
 
 The Balancer has been changed to work with multiple Namenodes. The Balancer can be run using the command:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script $HADOOP_PREFIX/bin/hdfs start balancer [-policy <policy>]
+    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh start balancer [-policy <policy>]
 
 The policy parameter can be any of the following:
 
@@ -219,7 +219,7 @@ The policy parameter can be any of the following:
   level which also balances at the Datanode level.
 
 Note that Balancer only balances the data and does not balance the namespace.
-For the complete command usage, see [balancer](../hadoop-common/CommandsManual.html#balancer).
+For the complete command usage, see [balancer](./HDFSCommands.html#balancer).
 
 ### Decommissioning
 
