@@ -21,19 +21,16 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -42,26 +39,17 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
-import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
+import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnFamily;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnPrefix;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -119,11 +107,13 @@ public class TestHBaseStorageFlowActivity {
     String user = "testWriteFlowRunMinMaxToHBase_user1";
     String flow = "testing_flowRun_flow_name";
     String flowVersion = "CF7022C10F1354";
-    Long runid = 1002345678919L;
+    long runid = 1002345678919L;
     String appName = "application_100000000000_1111";
+    long minStartTs = 10000000000000L;
+    long greaterStartTs = 30000000000000L;
     long endTs = 1439750690000L;
     TimelineEntity entityMinStartTime = TestFlowDataGenerator
-        .getEntityMinStartTime();
+        .getEntityMinStartTime(minStartTs);
 
     try {
       hbi = new HBaseTimelineWriterImpl(c1);
@@ -146,7 +136,7 @@ public class TestHBaseStorageFlowActivity {
 
       // writer another entity with greater start time
       TimelineEntity entityGreaterStartTime = TestFlowDataGenerator
-          .getEntityGreaterStartTime();
+          .getEntityGreaterStartTime(greaterStartTs);
       te = new TimelineEntities();
       te.addEntity(entityGreaterStartTime);
       appName = "application_1000000000000000_2222";
@@ -181,6 +171,31 @@ public class TestHBaseStorageFlowActivity {
     assertEquals(dayTs, flowActivityRowKey.getDayTimestamp());
     assertEquals(1, values.size());
     checkFlowActivityRunId(runid, flowVersion, values);
+
+    // use the timeline reader to verify data
+    HBaseTimelineReaderImpl hbr = null;
+    try {
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
+      // get the flow activity entity
+      Set<TimelineEntity> entities =
+          hbr.getEntities(null, cluster, null, null, null,
+              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
+              null, null, null, null, null, null, null, null, null);
+      assertEquals(1, entities.size());
+      for (TimelineEntity e : entities) {
+        FlowActivityEntity flowActivity = (FlowActivityEntity)e;
+        assertEquals(cluster, flowActivity.getCluster());
+        assertEquals(user, flowActivity.getUser());
+        assertEquals(flow, flowActivity.getFlowName());
+        assertEquals(dayTs, flowActivity.getDate().getTime());
+        Set<FlowRunEntity> flowRuns = flowActivity.getFlowRuns();
+        assertEquals(1, flowRuns.size());
+      }
+    } finally {
+      hbr.close();
+    }
   }
 
   /**
@@ -193,7 +208,7 @@ public class TestHBaseStorageFlowActivity {
     String user = "testWriteFlowActivityOneFlow_user1";
     String flow = "flow_activity_test_flow_name";
     String flowVersion = "A122110F135BC4";
-    Long runid = 1001111178919L;
+    long runid = 1001111178919L;
 
     TimelineEntities te = new TimelineEntities();
     TimelineEntity entityApp1 = TestFlowDataGenerator.getFlowApp1();
@@ -212,10 +227,35 @@ public class TestHBaseStorageFlowActivity {
     }
     // check flow activity
     checkFlowActivityTable(cluster, user, flow, flowVersion, runid, c1);
+
+    // use the reader to verify the data
+    HBaseTimelineReaderImpl hbr = null;
+    try {
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
+
+      Set<TimelineEntity> entities =
+          hbr.getEntities(user, cluster, flow, null, null,
+              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
+              null, null, null, null, null, null, null, null, null);
+      assertEquals(1, entities.size());
+      for (TimelineEntity e : entities) {
+        FlowActivityEntity entity = (FlowActivityEntity)e;
+        NavigableSet<FlowRunEntity> flowRuns = entity.getFlowRuns();
+        assertEquals(1, flowRuns.size());
+        for (FlowRunEntity flowRun : flowRuns) {
+          assertEquals(runid, flowRun.getRunId());
+          assertEquals(flowVersion, flowRun.getVersion());
+        }
+      }
+    } finally {
+      hbr.close();
+    }
   }
 
   private void checkFlowActivityTable(String cluster, String user, String flow,
-      String flowVersion, Long runid, Configuration c1) throws IOException {
+      String flowVersion, long runid, Configuration c1) throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
     byte[] startRow = FlowActivityRowKey.getRowKey(cluster, user, flow);
@@ -263,7 +303,7 @@ public class TestHBaseStorageFlowActivity {
     String user = "testManyRunsFlowActivity_c_user1";
     String flow = "flow_activity_test_flow_name";
     String flowVersion1 = "A122110F135BC4";
-    Long runid1 = 11111111111L;
+    long runid1 = 11111111111L;
 
     String flowVersion2 = "A12222222222C4";
     long runid2 = 2222222222222L;
@@ -303,11 +343,50 @@ public class TestHBaseStorageFlowActivity {
     checkFlowActivityTableSeveralRuns(cluster, user, flow, c1, flowVersion1,
         runid1, flowVersion2, runid2, flowVersion3, runid3);
 
+    // use the timeline reader to verify data
+    HBaseTimelineReaderImpl hbr = null;
+    try {
+      hbr = new HBaseTimelineReaderImpl();
+      hbr.init(c1);
+      hbr.start();
+
+      Set<TimelineEntity> entities =
+          hbr.getEntities(null, cluster, null, null, null,
+              TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), 10L, null, null,
+              null, null, null, null, null, null, null, null, null);
+      assertEquals(1, entities.size());
+      for (TimelineEntity e : entities) {
+        FlowActivityEntity flowActivity = (FlowActivityEntity)e;
+        assertEquals(cluster, flowActivity.getCluster());
+        assertEquals(user, flowActivity.getUser());
+        assertEquals(flow, flowActivity.getFlowName());
+        long dayTs = TimelineWriterUtils.getTopOfTheDayTimestamp(System
+            .currentTimeMillis());
+        assertEquals(dayTs, flowActivity.getDate().getTime());
+        Set<FlowRunEntity> flowRuns = flowActivity.getFlowRuns();
+        assertEquals(3, flowRuns.size());
+        for (FlowRunEntity flowRun : flowRuns) {
+          long runId = flowRun.getRunId();
+          String version = flowRun.getVersion();
+          if (runId == runid1) {
+            assertEquals(flowVersion1, version);
+          } else if (runId == runid2) {
+            assertEquals(flowVersion2, version);
+          } else if (runId == runid3) {
+            assertEquals(flowVersion3, version);
+          } else {
+            fail("unknown run id: " + runId);
+          }
+        }
+      }
+    } finally {
+      hbr.close();
+    }
   }
 
   private void checkFlowActivityTableSeveralRuns(String cluster, String user,
-      String flow, Configuration c1, String flowVersion1, Long runid1,
-      String flowVersion2, Long runid2, String flowVersion3, Long runid3)
+      String flow, Configuration c1, String flowVersion1, long runid1,
+      String flowVersion2, long runid2, String flowVersion3, long runid3)
       throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
@@ -351,7 +430,7 @@ public class TestHBaseStorageFlowActivity {
     assertEquals(1, rowCount);
   }
 
-  private void checkFlowActivityRunId(Long runid, String flowVersion,
+  private void checkFlowActivityRunId(long runid, String flowVersion,
       Map<byte[], byte[]> values) throws IOException {
     byte[] rq = ColumnHelper.getColumnQualifier(
         FlowActivityColumnPrefix.RUN_ID.getColumnPrefixBytes(),

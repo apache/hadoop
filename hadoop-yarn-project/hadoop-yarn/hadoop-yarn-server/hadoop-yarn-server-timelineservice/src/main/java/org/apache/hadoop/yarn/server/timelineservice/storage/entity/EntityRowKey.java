@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
 
@@ -26,9 +25,52 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWrit
  * Represents a rowkey for the entity table.
  */
 public class EntityRowKey {
-  // TODO: more methods are needed for this class.
+  private final String clusterId;
+  private final String userId;
+  private final String flowId;
+  private final long flowRunId;
+  private final String appId;
+  private final String entityType;
+  private final String entityId;
 
-  // TODO: API needs to be cleaned up.
+  public EntityRowKey(String clusterId, String userId, String flowId,
+      long flowRunId, String appId, String entityType, String entityId) {
+    this.clusterId = clusterId;
+    this.userId = userId;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
+    this.appId = appId;
+    this.entityType = entityType;
+    this.entityId = entityId;
+  }
+
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public String getUserId() {
+    return userId;
+  }
+
+  public String getFlowId() {
+    return flowId;
+  }
+
+  public long getFlowRunId() {
+    return flowRunId;
+  }
+
+  public String getAppId() {
+    return appId;
+  }
+
+  public String getEntityType() {
+    return entityType;
+  }
+
+  public String getEntityId() {
+    return entityId;
+  }
 
   /**
    * Constructs a row key prefix for the entity table as follows:
@@ -106,4 +148,32 @@ public class EntityRowKey {
     return Separator.QUALIFIERS.join(first, second, third);
   }
 
+  /**
+   * Given the raw row key as bytes, returns the row key as an object.
+   */
+  public static EntityRowKey parseRowKey(byte[] rowKey) {
+    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
+
+    if (rowKeyComponents.length < 7) {
+      throw new IllegalArgumentException("the row key is not valid for " +
+          "an entity");
+    }
+
+    String userId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
+    String clusterId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
+    String flowId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
+    long flowRunId =
+        TimelineWriterUtils.invert(Bytes.toLong(rowKeyComponents[3]));
+    String appId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[4]));
+    String entityType =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[5]));
+    String entityId =
+        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[6]));
+    return new EntityRowKey(clusterId, userId, flowId, flowRunId, appId,
+        entityType, entityId);
+  }
 }

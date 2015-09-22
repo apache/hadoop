@@ -106,6 +106,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3901. Populate flow run data in the flow_run & flow activity tables
     (Vrushali C via sjlee)
 
+    YARN-4074. [timeline reader] implement support for querying for flows
+    and flow runs (sjlee via vrushali)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via

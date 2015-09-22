@@ -24,21 +24,25 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public enum TimelineEntityType {
   YARN_CLUSTER,
-  YARN_FLOW,
+  YARN_FLOW_RUN,
   YARN_APPLICATION,
   YARN_APPLICATION_ATTEMPT,
   YARN_CONTAINER,
   YARN_USER,
-  YARN_QUEUE;
+  YARN_QUEUE,
+  YARN_FLOW_ACTIVITY;
 
+  /**
+   * Whether the input type can be a parent of this entity.
+   */
   public boolean isParent(TimelineEntityType type) {
     switch (this) {
       case YARN_CLUSTER:
         return false;
-      case YARN_FLOW:
-        return YARN_FLOW == type || YARN_CLUSTER == type;
+      case YARN_FLOW_RUN:
+        return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
       case YARN_APPLICATION:
-        return YARN_FLOW == type || YARN_CLUSTER == type;
+        return YARN_FLOW_RUN == type || YARN_CLUSTER == type;
       case YARN_APPLICATION_ATTEMPT:
         return YARN_APPLICATION == type;
       case YARN_CONTAINER:
@@ -50,12 +54,15 @@ public enum TimelineEntityType {
     }
   }
 
+  /**
+   * Whether the input type can be a child of this entity.
+   */
   public boolean isChild(TimelineEntityType type) {
     switch (this) {
       case YARN_CLUSTER:
-        return YARN_FLOW == type || YARN_APPLICATION == type;
-      case YARN_FLOW:
-        return YARN_FLOW == type || YARN_APPLICATION == type;
+        return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
+      case YARN_FLOW_RUN:
+        return YARN_FLOW_RUN == type || YARN_APPLICATION == type;
       case YARN_APPLICATION:
         return YARN_APPLICATION_ATTEMPT == type;
       case YARN_APPLICATION_ATTEMPT:
@@ -67,5 +74,13 @@ public enum TimelineEntityType {
       default:
         return false;
     }
+  }
+
+  /**
+   * Whether the type of this entity matches the type indicated by the input
+   * argument.
+   */
+  public boolean matches(String typeString) {
+    return toString().equals(typeString);
   }
 }
