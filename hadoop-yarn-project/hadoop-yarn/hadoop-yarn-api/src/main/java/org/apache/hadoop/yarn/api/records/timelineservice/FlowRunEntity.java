@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
+import javax.xml.bind.annotation.XmlElement;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.xml.bind.annotation.XmlElement;
-
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class FlowEntity extends HierarchicalTimelineEntity {
+public class FlowRunEntity extends HierarchicalTimelineEntity {
   public static final String USER_INFO_KEY =
       TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "USER";
   public static final String FLOW_NAME_INFO_KEY =
@@ -33,30 +33,34 @@ public class FlowEntity extends HierarchicalTimelineEntity {
       TimelineEntity.SYSTEM_INFO_KEY_PREFIX +  "FLOW_VERSION";
   public static final String FLOW_RUN_ID_INFO_KEY =
       TimelineEntity.SYSTEM_INFO_KEY_PREFIX +  "FLOW_RUN_ID";
+  public static final String FLOW_RUN_END_TIME =
+      TimelineEntity.SYSTEM_INFO_KEY_PREFIX + "FLOW_RUN_END_TIME";
 
-  public FlowEntity() {
-    super(TimelineEntityType.YARN_FLOW.toString());
+  public FlowRunEntity() {
+    super(TimelineEntityType.YARN_FLOW_RUN.toString());
+    // set config to null
+    setConfigs(null);
   }
 
-  public FlowEntity(TimelineEntity entity) {
+  public FlowRunEntity(TimelineEntity entity) {
     super(entity);
-    if (!entity.getType().equals(TimelineEntityType.YARN_FLOW.toString())) {
+    if (!entity.getType().equals(TimelineEntityType.YARN_FLOW_RUN.toString())) {
       throw new IllegalArgumentException("Incompatible entity type: " + getId());
     }
+    // set config to null
+    setConfigs(null);
   }
 
   @XmlElement(name = "id")
   @Override
   public String getId() {
-    //Flow id schema: user@flow_name(or id)/version/run_id
+    //Flow id schema: user@flow_name(or id)/run_id
     String id = super.getId();
     if (id == null) {
       StringBuilder sb = new StringBuilder();
       sb.append(getInfo().get(USER_INFO_KEY).toString());
       sb.append('@');
       sb.append(getInfo().get(FLOW_NAME_INFO_KEY).toString());
-      sb.append('/');
-      sb.append(getInfo().get(FLOW_VERSION_INFO_KEY).toString());
       sb.append('/');
       sb.append(getInfo().get(FLOW_RUN_ID_INFO_KEY).toString());
       id = sb.toString();
@@ -66,8 +70,7 @@ public class FlowEntity extends HierarchicalTimelineEntity {
   }
 
   public String getUser() {
-    Object user = getInfo().get(USER_INFO_KEY);
-    return user == null ? null : user.toString();
+    return (String)getInfo().get(USER_INFO_KEY);
   }
 
   public void setUser(String user) {
@@ -75,8 +78,7 @@ public class FlowEntity extends HierarchicalTimelineEntity {
   }
 
   public String getName() {
-    Object name = getInfo().get(FLOW_NAME_INFO_KEY);
-    return name == null ? null : name.toString();
+    return (String)getInfo().get(FLOW_NAME_INFO_KEY);
   }
 
   public void setName(String name) {
@@ -84,8 +86,7 @@ public class FlowEntity extends HierarchicalTimelineEntity {
   }
 
   public String getVersion() {
-    Object version = getInfo().get(FLOW_VERSION_INFO_KEY);
-    return version == null ? null : version.toString();
+    return (String)getInfo().get(FLOW_VERSION_INFO_KEY);
   }
 
   public void setVersion(String version) {
@@ -99,5 +100,22 @@ public class FlowEntity extends HierarchicalTimelineEntity {
 
   public void setRunId(long runId) {
     addInfo(FLOW_RUN_ID_INFO_KEY, runId);
+  }
+
+  public long getStartTime() {
+    return getCreatedTime();
+  }
+
+  public void setStartTime(long startTime) {
+    setCreatedTime(startTime);
+  }
+
+  public long getMaxEndTime() {
+    Object time = getInfo().get(FLOW_RUN_END_TIME);
+    return time == null ? 0L : (Long)time;
+  }
+
+  public void setMaxEndTime(long endTime) {
+    addInfo(FLOW_RUN_END_TIME, endTime);
   }
 }

@@ -1,0 +1,223 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.yarn.server.timelineservice.storage;
+
+import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
+
+/**
+ * The base class for reading and deserializing timeline entities from the
+ * HBase storage. Different types can be defined for different types of the
+ * entities that are being requested.
+ */
+abstract class TimelineEntityReader {
+  protected final boolean singleEntityRead;
+
+  protected String userId;
+  protected String clusterId;
+  protected String flowId;
+  protected Long flowRunId;
+  protected String appId;
+  protected String entityType;
+  protected EnumSet<Field> fieldsToRetrieve;
+  // used only for a single entity read mode
+  protected String entityId;
+  // used only for multiple entity read mode
+  protected Long limit;
+  protected Long createdTimeBegin;
+  protected Long createdTimeEnd;
+  protected Long modifiedTimeBegin;
+  protected Long modifiedTimeEnd;
+  protected Map<String, Set<String>> relatesTo;
+  protected Map<String, Set<String>> isRelatedTo;
+  protected Map<String, Object> infoFilters;
+  protected Map<String, String> configFilters;
+  protected Set<String> metricFilters;
+  protected Set<String> eventFilters;
+
+  /**
+   * Main table the entity reader uses.
+   */
+  protected BaseTable<?> table;
+
+  /**
+   * Instantiates a reader for multiple-entity reads.
+   */
+  protected TimelineEntityReader(String userId, String clusterId,
+      String flowId, Long flowRunId, String appId, String entityType,
+      Long limit, Long createdTimeBegin, Long createdTimeEnd,
+      Long modifiedTimeBegin, Long modifiedTimeEnd,
+      Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
+      Map<String, Object> infoFilters, Map<String, String> configFilters,
+      Set<String> metricFilters, Set<String> eventFilters,
+      EnumSet<Field> fieldsToRetrieve) {
+    this.singleEntityRead = false;
+    this.userId = userId;
+    this.clusterId = clusterId;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
+    this.appId = appId;
+    this.entityType = entityType;
+    this.fieldsToRetrieve = fieldsToRetrieve;
+    this.limit = limit;
+    this.createdTimeBegin = createdTimeBegin;
+    this.createdTimeEnd = createdTimeEnd;
+    this.modifiedTimeBegin = modifiedTimeBegin;
+    this.modifiedTimeEnd = modifiedTimeEnd;
+    this.relatesTo = relatesTo;
+    this.isRelatedTo = isRelatedTo;
+    this.infoFilters = infoFilters;
+    this.configFilters = configFilters;
+    this.metricFilters = metricFilters;
+    this.eventFilters = eventFilters;
+
+    this.table = getTable();
+  }
+
+  /**
+   * Instantiates a reader for single-entity reads.
+   */
+  protected TimelineEntityReader(String userId, String clusterId,
+      String flowId, Long flowRunId, String appId, String entityType,
+      String entityId, EnumSet<Field> fieldsToRetrieve) {
+    this.singleEntityRead = true;
+    this.userId = userId;
+    this.clusterId = clusterId;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
+    this.appId = appId;
+    this.entityType = entityType;
+    this.fieldsToRetrieve = fieldsToRetrieve;
+    this.entityId = entityId;
+
+    this.table = getTable();
+  }
+
+  /**
+   * Reads and deserializes a single timeline entity from the HBase storage.
+   */
+  public TimelineEntity readEntity(Configuration hbaseConf, Connection conn)
+      throws IOException {
+    validateParams();
+    augmentParams(hbaseConf, conn);
+
+    Result result = getResult(hbaseConf, conn);
+    return parseEntity(result);
+  }
+
+  /**
+   * Reads and deserializes a set of timeline entities from the HBase storage.
+   * It goes through all the results available, and returns the number of
+   * entries as specified in the limit in the entity's natural sort order.
+   */
+  public Set<TimelineEntity> readEntities(Configuration hbaseConf,
+      Connection conn) throws IOException {
+    validateParams();
+    augmentParams(hbaseConf, conn);
+
+    NavigableSet<TimelineEntity> entities = new TreeSet<>();
+    Iterable<Result> results = getResults(hbaseConf, conn);
+    for (Result result : results) {
+      TimelineEntity entity = parseEntity(result);
+      if (entity == null) {
+        continue;
+      }
+      entities.add(entity);
+      if (entities.size() > limit) {
+        entities.pollLast();
+      }
+    }
+    return entities;
+  }
+
+  /**
+   * Returns the main table to be used by the entity reader.
+   */
+  protected abstract BaseTable<?> getTable();
+
+  /**
+   * Validates the required parameters to read the entities.
+   */
+  protected abstract void validateParams();
+
+  /**
+   * Sets certain parameters to defaults if the values are not provided.
+   */
+  protected abstract void augmentParams(Configuration hbaseConf,
+      Connection conn) throws IOException;
+
+  /**
+   * Fetches a {@link Result} instance for a single-entity read.
+   *
+   * @return the {@link Result} instance or null if no such record is found.
+   */
+  protected abstract Result getResult(Configuration hbaseConf, Connection conn)
+      throws IOException;
+
+  /**
+   * Fetches an iterator for {@link Result} instances for a multi-entity read.
+   */
+  protected abstract Iterable<Result> getResults(Configuration hbaseConf,
+      Connection conn) throws IOException;
+
+  /**
+   * Given a {@link Result} instance, deserializes and creates a
+   * {@link TimelineEntity}.
+   *
+   * @return the {@link TimelineEntity} instance, or null if the {@link Result}
+   * is null or empty.
+   */
+  protected abstract TimelineEntity parseEntity(Result result)
+      throws IOException;
+
+  /**
+   * Helper method for reading and deserializing {@link TimelineMetric} objects
+   * using the specified column prefix. The timeline metrics then are added to
+   * the given timeline entity.
+   */
+  protected void readMetrics(TimelineEntity entity, Result result,
+      ColumnPrefix<?> columnPrefix) throws IOException {
+    NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
+        columnPrefix.readResultsWithTimestamps(result);
+    for (Map.Entry<String, NavigableMap<Long, Number>> metricResult:
+        metricsResult.entrySet()) {
+      TimelineMetric metric = new TimelineMetric();
+      metric.setId(metricResult.getKey());
+      // Simply assume that if the value set contains more than 1 elements, the
+      // metric is a TIME_SERIES metric, otherwise, it's a SINGLE_VALUE metric
+      metric.setType(metricResult.getValue().size() > 1 ?
+          TimelineMetric.Type.TIME_SERIES : TimelineMetric.Type.SINGLE_VALUE);
+      metric.addValues(metricResult.getValue());
+      entity.addMetric(metric);
+    }
+  }
+}

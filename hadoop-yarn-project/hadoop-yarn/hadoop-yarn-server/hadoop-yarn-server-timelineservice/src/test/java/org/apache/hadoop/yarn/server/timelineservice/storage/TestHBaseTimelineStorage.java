@@ -508,32 +508,28 @@ public class TestHBaseTimelineStorage {
   private boolean isRowKeyCorrect(byte[] rowKey, String cluster, String user,
       String flow, long runid, String appName, TimelineEntity te) {
 
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
+    EntityRowKey key = EntityRowKey.parseRowKey(rowKey);
 
-    assertTrue(rowKeyComponents.length == 7);
-    assertEquals(user, Bytes.toString(rowKeyComponents[0]));
-    assertEquals(cluster, Bytes.toString(rowKeyComponents[1]));
-    assertEquals(flow, Bytes.toString(rowKeyComponents[2]));
-    assertEquals(TimelineWriterUtils.invert(runid),
-        Bytes.toLong(rowKeyComponents[3]));
-    assertEquals(appName, Bytes.toString(rowKeyComponents[4]));
-    assertEquals(te.getType(), Bytes.toString(rowKeyComponents[5]));
-    assertEquals(te.getId(), Bytes.toString(rowKeyComponents[6]));
+    assertEquals(user, key.getUserId());
+    assertEquals(cluster, key.getClusterId());
+    assertEquals(flow, key.getFlowId());
+    assertEquals(runid, key.getFlowRunId());
+    assertEquals(appName, key.getAppId());
+    assertEquals(te.getType(), key.getEntityType());
+    assertEquals(te.getId(), key.getEntityId());
     return true;
   }
 
   private boolean isApplicationRowKeyCorrect(byte[] rowKey, String cluster,
       String user, String flow, long runid, String appName) {
 
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
+    ApplicationRowKey key = ApplicationRowKey.parseRowKey(rowKey);
 
-    assertTrue(rowKeyComponents.length == 5);
-    assertEquals(cluster, Bytes.toString(rowKeyComponents[0]));
-    assertEquals(user, Bytes.toString(rowKeyComponents[1]));
-    assertEquals(flow, Bytes.toString(rowKeyComponents[2]));
-    assertEquals(TimelineWriterUtils.invert(runid),
-        Bytes.toLong(rowKeyComponents[3]));
-    assertEquals(appName, Bytes.toString(rowKeyComponents[4]));
+    assertEquals(cluster, key.getClusterId());
+    assertEquals(user, key.getUserId());
+    assertEquals(flow, key.getFlowId());
+    assertEquals(runid, key.getFlowRunId());
+    assertEquals(appName, key.getAppId());
     return true;
   }
 

@@ -107,7 +107,7 @@ public class TestTimelineServiceClientIntegration {
       client.start();
       ClusterEntity cluster = new ClusterEntity();
       cluster.setId(YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
-      FlowEntity flow = new FlowEntity();
+      FlowRunEntity flow = new FlowRunEntity();
       flow.setUser(UserGroupInformation.getCurrentUser().getShortUserName());
       flow.setName("test_flow_name");
       flow.setVersion("test_flow_version");
