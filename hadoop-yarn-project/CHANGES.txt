@@ -963,6 +963,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3433. Jersey tests failing with Port in Use -again.
     (Brahma Reddy Battula)
 
+    YARN-3975. WebAppProxyServlet should not redirect to RM page if AHS is
+    enabled (Mit Desai via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
