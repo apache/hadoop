@@ -258,9 +258,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3424. Change logs for ContainerMonitorImpl's resourse monitoring
     from info to debug. (Anubhav Dhoot via ozawa)
 
-    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
-    (Varun Vasudev via xgong)
-
     YARN-2901. Add errors and warning metrics page to RM, NM web UI. 
     (Varun Vasudev via wangda)
 
@@ -682,9 +679,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3716. Node-label-expression should be included by 
     ResourceRequestPBImpl.toString. (Xianyin Xin via wangda)
 
-    YARN-3740. Fixed the typo in the configuration name:
-    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
-
     YARN-3751. Fixed AppInfo to check if used resources are null. (Sunil G via
     zjshen)
 
@@ -1043,9 +1037,6 @@ Release 2.7.1 - 2015-07-06
 
     YARN-3485. FairScheduler headroom calculation doesn't consider 
     maxResources for Fifo and FairShare policies. (kasha)
-
-    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
-    (Xuan Gong via zjshen)
 
     YARN-3301. Fixed the format issue of the new RM attempt web page.
     (Xuan Gong via jianhe)
@@ -1689,16 +1680,10 @@ Release 2.7.0 - 2015-04-20
     YARN-3295. Fix documentation nits found in markdown conversion.
     (Masatake Iwasaki via ozawa)
 
-    YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
-    web page. (Xuan Gong via zjshen)
-
     YARN-3338. Exclude jline dependency from YARN. (Zhijie Shen via xgong)
 
     YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
     running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
-
-    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
-    in ATS / RM web ui. (Naganarasimha G R via xgong)
 
     YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in 
     doc comments. (Akira AJISAKA, Andrew Purtell, and Allen Wittenauer via ozawa)
@@ -1944,6 +1929,21 @@ Release 2.6.1 - 2015-09-09
 
     YARN-4047. ClientRMService getApplications has high scheduler lock contention.
     (Jason Lowe via jianhe)
+
+    YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
+    web page. (Xuan Gong via zjshen)
+
+    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
+    in ATS / RM web ui. (Naganarasimha G R via xgong)
+
+    YARN-3740. Fixed the typo in the configuration name:
+    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
+
+    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
+    (Varun Vasudev via xgong)
+
+    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
+    (Xuan Gong via zjshen)
 
 Release 2.6.0 - 2014-11-18
 
