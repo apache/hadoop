@@ -30,6 +30,7 @@ import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,6 +52,22 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 public class LocalDirsHandlerService extends AbstractService {
 
   private static Log LOG = LogFactory.getLog(LocalDirsHandlerService.class);
+
+  /**
+   * Good local directories, use internally,
+   * initial value is the same as NM_LOCAL_DIRS.
+   */
+  @Private
+  static final String NM_GOOD_LOCAL_DIRS =
+      YarnConfiguration.NM_PREFIX + "good-local-dirs";
+
+  /**
+   * Good log directories, use internally,
+   * initial value is the same as NM_LOG_DIRS.
+   */
+  @Private
+  static final String NM_GOOD_LOG_DIRS =
+      YarnConfiguration.NM_PREFIX + "good-log-dirs";
 
   /** Timer used to schedule disk health monitoring code execution */
   private Timer dirsHandlerScheduler;
@@ -113,9 +130,17 @@ public class LocalDirsHandlerService extends AbstractService {
           new DirectoryCollection(
             validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
             maxUsableSpacePercentagePerDisk, minFreeSpacePerDiskMB);
+
+      String local = conf.get(YarnConfiguration.NM_LOCAL_DIRS);
+      conf.set(NM_GOOD_LOCAL_DIRS,
+          (local != null) ? local : "");
       localDirsAllocator = new LocalDirAllocator(
-          YarnConfiguration.NM_LOCAL_DIRS);
-      logDirsAllocator = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
+          NM_GOOD_LOCAL_DIRS);
+      String log = conf.get(YarnConfiguration.NM_LOG_DIRS);
+      conf.set(NM_GOOD_LOG_DIRS,
+          (log != null) ? log : "");
+      logDirsAllocator = new LocalDirAllocator(
+          NM_GOOD_LOG_DIRS);
     }
 
     @Override
@@ -373,10 +398,10 @@ public class LocalDirsHandlerService extends AbstractService {
 
     Configuration conf = getConfig();
     List<String> localDirs = getLocalDirs();
-    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS,
+    conf.setStrings(NM_GOOD_LOCAL_DIRS,
                     localDirs.toArray(new String[localDirs.size()]));
     List<String> logDirs = getLogDirs();
-    conf.setStrings(YarnConfiguration.NM_LOG_DIRS,
+    conf.setStrings(NM_GOOD_LOG_DIRS,
                       logDirs.toArray(new String[logDirs.size()]));
     if (!areDisksHealthy()) {
       // Just log.

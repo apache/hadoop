@@ -120,6 +120,15 @@ public class TestLocalDirsHandlerService {
     Assert.assertEquals(0, nm.getGoodLocalDirsDiskUtilizationPerc());
     Assert.assertEquals(0, nm.getGoodLogDirsDiskUtilizationPerc());
 
+    Assert.assertEquals("",
+        dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOCAL_DIRS));
+    Assert.assertEquals("",
+        dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOG_DIRS));
+    Assert.assertEquals(localDir1 + "," + localDir2,
+        dirSvc.getConfig().get(YarnConfiguration.NM_LOCAL_DIRS));
+    Assert.assertEquals(logDir1 + "," + logDir2,
+        dirSvc.getConfig().get(YarnConfiguration.NM_LOG_DIRS));
+
     conf.setFloat(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE,
       100.0f);
     nm = NodeManagerMetrics.create();
@@ -140,6 +149,15 @@ public class TestLocalDirsHandlerService {
       nm.getGoodLocalDirsDiskUtilizationPerc());
     Assert
       .assertEquals(utilizationPerc, nm.getGoodLogDirsDiskUtilizationPerc());
+
+    Assert.assertEquals(localDir2,
+        dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOCAL_DIRS));
+    Assert.assertEquals(logDir2,
+        dirSvc.getConfig().get(LocalDirsHandlerService.NM_GOOD_LOG_DIRS));
+    Assert.assertEquals(localDir1 + "," + localDir2,
+        dirSvc.getConfig().get(YarnConfiguration.NM_LOCAL_DIRS));
+    Assert.assertEquals(logDir1 + "," + logDir2,
+        dirSvc.getConfig().get(YarnConfiguration.NM_LOG_DIRS));
 
     FileUtils.deleteDirectory(new File(localDir1));
     FileUtils.deleteDirectory(new File(localDir2));

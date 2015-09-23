@@ -460,6 +460,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12428. Fix inconsistency between log-level guards and statements.
     (Jagadesh Kiran N and Jackie Chang via ozawa)
 
+    YARN-4095. Avoid sharing AllocatorPerContext object in LocalDirAllocator
+    between ShuffleHandler and LocalDirsHandlerService. (Zhihai Xu via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
