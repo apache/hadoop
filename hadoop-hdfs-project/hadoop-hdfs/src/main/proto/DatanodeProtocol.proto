@@ -32,6 +32,7 @@ option java_generate_equals_and_hash = true;
 package hadoop.hdfs.datanode;
 
 import "hdfs.proto";
+import "HdfsServer.proto";
 
 /**
  * Information to identify a datanode to a namenode
