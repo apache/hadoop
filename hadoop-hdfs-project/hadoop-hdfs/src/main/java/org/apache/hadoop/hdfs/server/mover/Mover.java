@@ -185,7 +185,8 @@ public class Mover {
       for (int i = 0; i < indices.length; i++) {
         indices[i] = (byte) lsb.getBlockIndices()[i];
       }
-      db = new DBlockStriped(blk, indices, (short) ecPolicy.getNumDataUnits());
+      db = new DBlockStriped(blk, indices, (short) ecPolicy.getNumDataUnits(),
+          ecPolicy.getCellSize());
     } else {
       db = new DBlock(blk);
     }

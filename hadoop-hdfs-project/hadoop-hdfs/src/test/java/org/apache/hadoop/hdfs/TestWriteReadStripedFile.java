@@ -37,8 +37,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.cellSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.dataBlocks;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.stripesPerBlock;
 
@@ -46,6 +44,8 @@ public class TestWriteReadStripedFile {
   public static final Log LOG = LogFactory.getLog(TestWriteReadStripedFile.class);
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
+  private static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
+  private static short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private static Configuration conf = new HdfsConfiguration();
 
   static {

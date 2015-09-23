@@ -58,9 +58,9 @@ import org.junit.Test;
 public class TestRecoverStripedFile {
   public static final Log LOG = LogFactory.getLog(TestRecoverStripedFile.class);
   
-  private static final int dataBlkNum = HdfsConstants.NUM_DATA_BLOCKS;
-  private static final int parityBlkNum = HdfsConstants.NUM_PARITY_BLOCKS;
-  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private static final int dataBlkNum = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private static final int parityBlkNum = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private static final int blockSize = cellSize * 3;
   private static final int groupSize = dataBlkNum + parityBlkNum;
   private static final int dnNum = groupSize + parityBlkNum;

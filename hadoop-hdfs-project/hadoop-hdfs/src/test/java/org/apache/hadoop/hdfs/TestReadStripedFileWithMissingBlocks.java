@@ -32,8 +32,6 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.cellSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.dataBlocks;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
 
 /**
@@ -46,6 +44,8 @@ public class TestReadStripedFileWithMissingBlocks {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
   private static Configuration conf = new HdfsConfiguration();
+  private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int fileLength = blockSize * dataBlocks + 123;
 
   @Before
@@ -112,7 +112,7 @@ public class TestReadStripedFileWithMissingBlocks {
     }
     for (int i = 0; i < missingParityNum; i++) {
       missingDataNodes[i + missingDataNum] = i +
-          Math.min(StripedFileTestUtil.dataBlocks, dataBlocks);
+          Math.min(StripedFileTestUtil.NUM_DATA_BLOCKS, dataBlocks);
     }
     stopDataNodes(locs, missingDataNodes);
 

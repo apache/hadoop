@@ -21,9 +21,9 @@ package org.apache.hadoop.hdfs.util;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
@@ -77,10 +77,10 @@ import static org.junit.Assert.assertFalse;
  * TODO: test parity block logic
  */
 public class TestStripedBlockUtil {
-  private final short DATA_BLK_NUM = HdfsConstants.NUM_DATA_BLOCKS;
-  private final short PARITY_BLK_NUM = HdfsConstants.NUM_PARITY_BLOCKS;
-  private final short BLK_GROUP_WIDTH = DATA_BLK_NUM + PARITY_BLK_NUM;
-  private final int CELLSIZE = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final short DATA_BLK_NUM = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final short PARITY_BLK_NUM = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final short BLK_GROUP_WIDTH = (short) (DATA_BLK_NUM + PARITY_BLK_NUM);
+  private final int CELLSIZE = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int FULL_STRIPE_SIZE = DATA_BLK_NUM * CELLSIZE;
   /** number of full stripes in a full block group */
   private final int BLK_GROUP_STRIPE_NUM = 16;

@@ -204,9 +204,14 @@ class FSDirWriteFileOp {
     clientMachine = pendingFile.getFileUnderConstructionFeature()
         .getClientMachine();
     isStriped = pendingFile.isStriped();
-    numTargets = isStriped ?
-        HdfsConstants.NUM_DATA_BLOCKS + HdfsConstants.NUM_PARITY_BLOCKS :
-        pendingFile.getFileReplication();
+    ErasureCodingPolicy ecPolicy = null;
+    if (isStriped) {
+      ecPolicy = FSDirErasureCodingOp.getErasureCodingPolicy(fsn, src);
+      numTargets = (short) (ecPolicy.getSchema().getNumDataUnits()
+          + ecPolicy.getSchema().getNumParityUnits());
+    } else {
+      numTargets = pendingFile.getFileReplication();
+    }
     storagePolicyID = pendingFile.getStoragePolicyID();
     return new ValidateAddBlockResult(blockSize, numTargets, storagePolicyID,
                                       clientMachine, isStriped);

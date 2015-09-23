@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
@@ -31,9 +31,9 @@ import java.io.IOException;
 
 public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
 
-  private final static int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  private final static int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
-  private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final static int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final static int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final static int stripesPerBlock = 4;
   private final static int numDNs = dataBlocks + parityBlocks + 2;
   private static MiniDFSCluster cluster;

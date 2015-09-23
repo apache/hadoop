@@ -40,10 +40,10 @@ import static org.junit.Assert.assertTrue;
 
 public class TestSafeModeWithStripedFile {
 
-  static final short DATA_BLK_NUM = HdfsConstants.NUM_DATA_BLOCKS;
-  static final short PARITY_BLK_NUM = HdfsConstants.NUM_PARITY_BLOCKS;
+  static final short DATA_BLK_NUM = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  static final short PARITY_BLK_NUM = StripedFileTestUtil.NUM_PARITY_BLOCKS;
   static final int numDNs = DATA_BLK_NUM + PARITY_BLK_NUM;
-  static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   static final int blockSize = cellSize * 2;
 
   static MiniDFSCluster cluster;

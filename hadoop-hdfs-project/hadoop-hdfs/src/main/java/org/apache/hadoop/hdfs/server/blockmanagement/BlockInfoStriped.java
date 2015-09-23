@@ -22,8 +22,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
  *
@@ -65,6 +63,10 @@ public class BlockInfoStriped extends BlockInfo {
     return (short) ecPolicy.getNumParityUnits();
   }
 
+  public int getCellSize() {
+    return ecPolicy.getCellSize();
+  }
+
   /**
    * If the block is committed/completed and its length is less than a full
    * stripe, it returns the the number of actual data blocks.
@@ -73,7 +75,7 @@ public class BlockInfoStriped extends BlockInfo {
   public short getRealDataBlockNum() {
     if (isComplete() || getBlockUCState() == BlockUCState.COMMITTED) {
       return (short) Math.min(getDataBlockNum(),
-          (getNumBytes() - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
+          (getNumBytes() - 1) / ecPolicy.getCellSize() + 1);
     } else {
       return getDataBlockNum();
     }
@@ -200,7 +202,7 @@ public class BlockInfoStriped extends BlockInfo {
     // `getNumBytes` is the total of actual data block size.
     return StripedBlockUtil.spaceConsumedByStripedBlock(getNumBytes(),
         ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits(),
-        BLOCK_STRIPED_CELL_SIZE);
+        ecPolicy.getCellSize());
     }
 
   @Override

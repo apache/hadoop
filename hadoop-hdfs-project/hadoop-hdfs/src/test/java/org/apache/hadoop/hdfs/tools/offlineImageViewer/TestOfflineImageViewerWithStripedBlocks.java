@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -44,12 +44,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestOfflineImageViewerWithStripedBlocks {
-  private static int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  private static int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
+  private static int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private static int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
 
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
-  private static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private static final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private static final int stripesPerBlock = 3;
   private static final int blockSize = cellSize * stripesPerBlock;
 

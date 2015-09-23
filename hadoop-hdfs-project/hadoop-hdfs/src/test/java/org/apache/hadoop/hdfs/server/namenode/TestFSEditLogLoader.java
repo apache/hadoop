@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -450,8 +451,8 @@ public class TestFSEditLogLoader {
       long blkId = 1;
       long blkNumBytes = 1024;
       long timestamp = 1426222918;
-      short blockNum = HdfsConstants.NUM_DATA_BLOCKS;
-      short parityNum = HdfsConstants.NUM_PARITY_BLOCKS;
+      short blockNum = StripedFileTestUtil.NUM_DATA_BLOCKS;
+      short parityNum = StripedFileTestUtil.NUM_PARITY_BLOCKS;
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
@@ -522,8 +523,8 @@ public class TestFSEditLogLoader {
       long blkId = 1;
       long blkNumBytes = 1024;
       long timestamp = 1426222918;
-      short blockNum = HdfsConstants.NUM_DATA_BLOCKS;
-      short parityNum = HdfsConstants.NUM_PARITY_BLOCKS;
+      short blockNum = StripedFileTestUtil.NUM_DATA_BLOCKS;
+      short parityNum = StripedFileTestUtil.NUM_PARITY_BLOCKS;
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));

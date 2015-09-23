@@ -35,16 +35,16 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECRecoveryCommand.BlockECReco
 import org.junit.Test;
 import java.util.List;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_DATA_BLOCKS;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_PARITY_BLOCKS;
+import static org.apache.hadoop.hdfs.StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
+import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_DATA_BLOCKS;
+import static org.apache.hadoop.hdfs.StripedFileTestUtil.NUM_PARITY_BLOCKS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class TestRecoverStripedBlocks {
   private final short GROUP_SIZE =
-      NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
+      (short) (NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS);
   private MiniDFSCluster cluster;
   private final Path dirPath = new Path("/dir");
   private Path filePath = new Path(dirPath, "file");

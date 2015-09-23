@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -149,10 +150,10 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
   }
 
-  int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
+  int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
   int groupSize = dataBlocks + parityBlocks;
-  private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final static int stripesPerBlock = 4;
   static int DEFAULT_STRIPE_BLOCK_SIZE = cellSize * stripesPerBlock;
 

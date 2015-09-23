@@ -447,3 +447,6 @@
 
     HDFS-8920. Erasure Coding: when recovering lost blocks, logs can be too
     verbose and hurt performance. (Rui Li via Kai Zheng)
+
+    HDFS-8882. Erasure Coding: Use datablocks, parityblocks and cell size from
+    ErasureCodingPolicy (Vinayakumar B via zhz)

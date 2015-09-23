@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.web.ByteRangeInputStream;
@@ -38,18 +37,19 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-
 public class StripedFileTestUtil {
   public static final Log LOG = LogFactory.getLog(StripedFileTestUtil.class);
+  /*
+   * These values correspond to the values used by the system default erasure
+   * coding policy.
+   */
+  public static final short NUM_DATA_BLOCKS = (short) 6;
+  public static final short NUM_PARITY_BLOCKS = (short) 3;
+  public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
 
-  static int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  static int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
-
-  static final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
   static final int stripesPerBlock = 4;
-  static final int blockSize = cellSize * stripesPerBlock;
-  static final int numDNs = dataBlocks + parityBlocks + 2;
+  static final int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
+  static final int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS + 2;
 
   static final Random random = new Random();
 
@@ -85,9 +85,9 @@ public class StripedFileTestUtil {
   static void verifyPread(FileSystem fs, Path srcPath,  int fileLength,
       byte[] expected, byte[] buf) throws IOException {
     try (FSDataInputStream in = fs.open(srcPath)) {
-      int[] startOffsets = {0, 1, cellSize - 102, cellSize, cellSize + 102,
-          cellSize * (dataBlocks - 1), cellSize * (dataBlocks - 1) + 102,
-          cellSize * dataBlocks, fileLength - 102, fileLength - 1};
+      int[] startOffsets = {0, 1, BLOCK_STRIPED_CELL_SIZE - 102, BLOCK_STRIPED_CELL_SIZE, BLOCK_STRIPED_CELL_SIZE + 102,
+          BLOCK_STRIPED_CELL_SIZE * (NUM_DATA_BLOCKS - 1), BLOCK_STRIPED_CELL_SIZE * (NUM_DATA_BLOCKS - 1) + 102,
+          BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS, fileLength - 102, fileLength - 1};
       for (int startOffset : startOffsets) {
         startOffset = Math.max(0, Math.min(startOffset, fileLength - 1));
         int remaining = fileLength - startOffset;
@@ -158,21 +158,21 @@ public class StripedFileTestUtil {
       pos = 0;
       assertSeekAndRead(in, pos, fileLength);
 
-      if (fileLength > cellSize) {
+      if (fileLength > BLOCK_STRIPED_CELL_SIZE) {
         // seek to cellSize boundary
-        pos = cellSize - 1;
+        pos = BLOCK_STRIPED_CELL_SIZE - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
-      if (fileLength > cellSize * dataBlocks) {
+      if (fileLength > BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS) {
         // seek to striped cell group boundary
-        pos = cellSize * dataBlocks - 1;
+        pos = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
-      if (fileLength > blockSize * dataBlocks) {
+      if (fileLength > blockSize * NUM_DATA_BLOCKS) {
         // seek to striped block group boundary
-        pos = blockSize * dataBlocks - 1;
+        pos = blockSize * NUM_DATA_BLOCKS - 1;
         assertSeekAndRead(in, pos, fileLength);
       }
 
@@ -235,12 +235,12 @@ public class StripedFileTestUtil {
    * number of actual data internal blocks. Otherwise returns NUM_DATA_BLOCKS.
    */
   public static short getRealDataBlockNum(int numBytes) {
-    return (short) Math.min(dataBlocks,
+    return (short) Math.min(NUM_DATA_BLOCKS,
         (numBytes - 1) / BLOCK_STRIPED_CELL_SIZE + 1);
   }
 
   public static short getRealTotalBlockNum(int numBytes) {
-    return (short) (getRealDataBlockNum(numBytes) + parityBlocks);
+    return (short) (getRealDataBlockNum(numBytes) + NUM_PARITY_BLOCKS);
   }
 
   /**

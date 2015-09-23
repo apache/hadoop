@@ -536,6 +536,7 @@ message BlockWithLocationsProto {
 
   optional bytes indices = 5;
   optional uint32 dataBlockNum = 6;
+  optional uint32 cellSize = 7;
 }
 
 /**

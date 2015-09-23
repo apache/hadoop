@@ -95,16 +95,17 @@ public class BlocksWithLocations {
   public static class StripedBlockWithLocations extends BlockWithLocations {
     final byte[] indices;
     final short dataBlockNum;
+    final int cellSize;
 
     public StripedBlockWithLocations(BlockWithLocations blk, byte[] indices,
-         short dataBlockNum) {
+         short dataBlockNum, int cellSize) {
       super(blk.getBlock(), blk.getDatanodeUuids(), blk.getStorageIDs(),
           blk.getStorageTypes());
       Preconditions.checkArgument(
           blk.getDatanodeUuids().length == indices.length);
       this.indices = indices;
       this.dataBlockNum = dataBlockNum;
-
+      this.cellSize = cellSize;
     }
 
     public byte[] getIndices() {
@@ -113,6 +114,10 @@ public class BlocksWithLocations {
 
     public short getDataBlockNum() {
       return dataBlockNum;
+    }
+
+    public int getCellSize() {
+      return cellSize;
     }
   }
 

@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -58,9 +58,9 @@ public class TestSequentialBlockGroupId {
 
   private final short REPLICATION = 1;
   private final long SEED = 0;
-  private final int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  private final int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
-  private final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
 
   private final int stripesPerBlock = 2;
   private final int blockSize = cellSize * stripesPerBlock;

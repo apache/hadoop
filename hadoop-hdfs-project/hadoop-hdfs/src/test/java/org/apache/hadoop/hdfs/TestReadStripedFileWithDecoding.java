@@ -46,16 +46,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.blockSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.cellSize;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.dataBlocks;
 import static org.apache.hadoop.hdfs.StripedFileTestUtil.numDNs;
-import static org.apache.hadoop.hdfs.StripedFileTestUtil.parityBlocks;
 
 public class TestReadStripedFileWithDecoding {
   static final Log LOG = LogFactory.getLog(TestReadStripedFileWithDecoding.class);
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
+  private final short dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  private final short parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final int smallFileLength = blockSize * dataBlocks - 123;
   private final int largeFileLength = blockSize * dataBlocks + 123;
   private final int[] fileLengths = {smallFileLength, largeFileLength};

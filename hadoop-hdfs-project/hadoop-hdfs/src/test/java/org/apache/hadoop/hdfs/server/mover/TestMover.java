@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -415,9 +416,9 @@ public class TestMover {
     }
   }
 
-  int dataBlocks = HdfsConstants.NUM_DATA_BLOCKS;
-  int parityBlocks = HdfsConstants.NUM_PARITY_BLOCKS;
-  private final static int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
+  int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
+  private final static int cellSize = StripedFileTestUtil.BLOCK_STRIPED_CELL_SIZE;
   private final static int stripesPerBlock = 4;
   static int DEFAULT_STRIPE_BLOCK_SIZE = cellSize * stripesPerBlock;
 

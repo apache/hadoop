@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -222,8 +223,8 @@ public class TestStripedINodeFile {
       final Path contiguousFile = new Path(parentDir, "someFile");
       final DistributedFileSystem dfs;
       final Configuration conf = new Configuration();
-      final short GROUP_SIZE = HdfsConstants.NUM_DATA_BLOCKS
-          + HdfsConstants.NUM_PARITY_BLOCKS;
+      final short GROUP_SIZE = (short) (StripedFileTestUtil.NUM_DATA_BLOCKS
+          + StripedFileTestUtil.NUM_PARITY_BLOCKS);
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);
 
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
