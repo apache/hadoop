@@ -348,7 +348,7 @@ public class PBHelper {
         new RecoveringBlock(block, locs, PBHelperClient.convert(b.getTruncateBlock())) :
         new RecoveringBlock(block, locs, b.getNewGenStamp());
   }
-  
+
   public static ReplicaState convert(ReplicaStateProto state) {
     switch (state) {
     case RBW:

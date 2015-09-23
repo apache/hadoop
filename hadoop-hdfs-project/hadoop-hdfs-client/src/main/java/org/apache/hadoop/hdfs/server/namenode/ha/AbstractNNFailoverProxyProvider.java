@@ -26,7 +26,7 @@ import org.apache.hadoop.io.retry.FailoverProxyProvider;
 public abstract class AbstractNNFailoverProxyProvider<T> implements
    FailoverProxyProvider <T> {
 
-  protected AtomicBoolean fallbackToSimpleAuth;
+  private AtomicBoolean fallbackToSimpleAuth;
 
   /**
    * Inquire whether logical HA URI is used for the implementation. If it is
@@ -47,5 +47,9 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
   public synchronized void setFallbackToSimpleAuth(
       AtomicBoolean fallbackToSimpleAuth) {
     this.fallbackToSimpleAuth = fallbackToSimpleAuth;
+  }
+
+  public synchronized AtomicBoolean getFallbackToSimpleAuth() {
+    return fallbackToSimpleAuth;
   }
 }

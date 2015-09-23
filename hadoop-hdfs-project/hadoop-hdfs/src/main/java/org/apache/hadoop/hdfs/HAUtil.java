@@ -36,7 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
+import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -220,9 +220,9 @@ public class HAUtil {
   public static boolean useLogicalUri(Configuration conf, URI nameNodeUri) 
       throws IOException {
     // Create the proxy provider. Actual proxy is not created.
-    AbstractNNFailoverProxyProvider<ClientProtocol> provider = NameNodeProxies
+    AbstractNNFailoverProxyProvider<ClientProtocol> provider = NameNodeProxiesClient
         .createFailoverProxyProvider(conf, nameNodeUri, ClientProtocol.class,
-        false, null);
+            false, null);
 
     // No need to use logical URI since failover is not configured.
     if (provider == null) {
@@ -336,8 +336,7 @@ public class HAUtil {
     List<ProxyAndInfo<T>> proxies = new ArrayList<ProxyAndInfo<T>>(
         nnAddresses.size());
     for (InetSocketAddress nnAddress : nnAddresses.values()) {
-      NameNodeProxies.ProxyAndInfo<T> proxyInfo = null;
-      proxyInfo = NameNodeProxies.createNonHAProxy(conf,
+      ProxyAndInfo<T> proxyInfo = NameNodeProxies.createNonHAProxy(conf,
           nnAddress, xface,
           UserGroupInformation.getCurrentUser(), false);
       proxies.add(proxyInfo);

@@ -149,7 +149,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
     if (current.namenode == null) {
       try {
         current.namenode = factory.createProxy(conf,
-            current.address, xface, ugi, false, fallbackToSimpleAuth);
+            current.address, xface, ugi, false, getFallbackToSimpleAuth());
       } catch (IOException e) {
         LOG.error("Failed to create RPC proxy to NameNode", e);
         throw new RuntimeException(e);
