@@ -444,3 +444,6 @@
 
     HDFS-9091. Erasure Coding: Provide DistributedFilesystem API to 
     getAllErasureCodingPolicies. (Rakesh R via zhz)
+
+    HDFS-8920. Erasure Coding: when recovering lost blocks, logs can be too
+    verbose and hurt performance. (Rui Li via Kai Zheng)

@@ -1057,9 +1057,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       }
     }
     if (chosenNode == null) {
-      DFSClient.LOG.warn("No live nodes contain block " + block.getBlock() +
-          " after checking nodes = " + Arrays.toString(nodes) +
-          ", ignoredNodes = " + ignoredNodes);
+      reportLostBlock(block, ignoredNodes);
       return null;
     }
     final String dnAddr =
@@ -1069,6 +1067,17 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
     return new DNAddrPair(chosenNode, targetAddr, storageType);
+  }
+
+  /**
+   * Warn the user of a lost block
+   */
+  protected void reportLostBlock(LocatedBlock lostBlock,
+      Collection<DatanodeInfo> ignoredNodes) {
+    DatanodeInfo[] nodes = lostBlock.getLocations();
+    DFSClient.LOG.warn("No live nodes contain block " + lostBlock.getBlock() +
+        " after checking nodes = " + Arrays.toString(nodes) +
+        ", ignoredNodes = " + ignoredNodes);
   }
 
   private static String getBestNodeDNAddrPairErrorString(

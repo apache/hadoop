@@ -45,8 +45,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Collection;
 import java.util.Map;
@@ -153,6 +156,17 @@ public class DFSStripedInputStream extends DFSInputStream {
    */
   private StripeRange curStripeRange;
   private final CompletionService<Void> readingService;
+
+  /**
+   * When warning the user of a lost block in striping mode, we remember the
+   * dead nodes we've logged. All other striping blocks on these nodes can be
+   * considered lost too, and we don't want to log a warning for each of them.
+   * This is to prevent the log from being too verbose. Refer to HDFS-8920.
+   *
+   * To minimize the overhead, we only store the datanodeUuid in this set
+   */
+  private final Set<String> warnedNodes = Collections.newSetFromMap(
+      new ConcurrentHashMap<String, Boolean>());
 
   DFSStripedInputStream(DFSClient dfsClient, String src,
       boolean verifyChecksum, ErasureCodingPolicy ecPolicy,
@@ -524,6 +538,26 @@ public class DFSStripedInputStream extends DFSInputStream {
       for (BlockReaderInfo preaderInfo : preaderInfos) {
         closeReader(preaderInfo);
       }
+    }
+  }
+
+  @Override
+  protected void reportLostBlock(LocatedBlock lostBlock,
+      Collection<DatanodeInfo> ignoredNodes) {
+    DatanodeInfo[] nodes = lostBlock.getLocations();
+    if (nodes != null && nodes.length > 0) {
+      List<String> dnUUIDs = new ArrayList<>();
+      for (DatanodeInfo node : nodes) {
+        dnUUIDs.add(node.getDatanodeUuid());
+      }
+      if (!warnedNodes.containsAll(dnUUIDs)) {
+        DFSClient.LOG.warn(Arrays.toString(nodes) + " are unavailable and " +
+            "all striping blocks on them are lost. " +
+            "IgnoredNodes = " + ignoredNodes);
+        warnedNodes.addAll(dnUUIDs);
+      }
+    } else {
+      super.reportLostBlock(lostBlock, ignoredNodes);
     }
   }
 
