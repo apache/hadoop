@@ -1752,6 +1752,9 @@ Release 2.6.1 - 2015-09-09
     YARN-3978. Configurably turn off the saving of container info in Generic AHS
     (Eric Payne via jeagles)
 
+    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
+    (Varun Vasudev via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1938,9 +1941,6 @@ Release 2.6.1 - 2015-09-09
 
     YARN-3740. Fixed the typo in the configuration name:
     APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
-
-    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
-    (Varun Vasudev via xgong)
 
     YARN-3544. Got back AM logs link on the RM web UI for a completed app.
     (Xuan Gong via zjshen)
