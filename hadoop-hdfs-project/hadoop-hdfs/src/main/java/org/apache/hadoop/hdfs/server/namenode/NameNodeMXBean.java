@@ -232,13 +232,6 @@ public interface NameNodeMXBean {
   public String getJournalTransactionInfo();
 
   /**
-   * Gets the NN start time
-   *
-   * @return the NN start time
-   */
-  public String getNNStarted();
-
-  /**
    * Gets the NN start time in milliseconds.
    * @return the NN start time in msec
    */

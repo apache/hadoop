@@ -6110,11 +6110,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return JSON.toString(txnIdMap);
   }
   
-  @Override  // NameNodeMXBean
-  public String getNNStarted() {
-    return getStartTime().toString();
-  }
-
   @Override // NameNodeMXBean
   public long getNNStartedTimeInMillis() {
     return startTime;
