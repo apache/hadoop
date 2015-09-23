@@ -22,7 +22,7 @@ function gradle_usage
 {
   echo "gradle specific:"
   echo "--gradle-cmd=<cmd>        The 'gradle' command to use (default 'gradle')"
-  echo "--gradlew-cmd=<cmd>        The 'gradle' command to use (default 'basedir/gradlew')"
+  echo "--gradlew-cmd=<cmd>        The 'gradlew' command to use (default 'basedir/gradlew')"
 }
 
 function gradle_parse_args

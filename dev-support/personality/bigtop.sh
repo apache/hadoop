@@ -32,7 +32,7 @@ add_plugin bigtop
 function bigtop_usage
 {
   echo "Bigtop specific:"
-  echo "--bigtop-puppetsetup=[false|true]   execute the bigtop dev setup (needs sudo to root)"
+  echo "--bigtop-puppet=[false|true]   execute the bigtop puppet setup (needs sudo to root)"
 }
 
 function bigtop_parse_args
