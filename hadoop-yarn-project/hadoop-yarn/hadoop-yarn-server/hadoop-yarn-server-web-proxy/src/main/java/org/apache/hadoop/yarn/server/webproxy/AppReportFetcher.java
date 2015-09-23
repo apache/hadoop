@@ -26,7 +26,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.AHSProxy;
@@ -42,6 +41,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
  * This class abstracts away how ApplicationReports are fetched.
  */
 public class AppReportFetcher {
+  enum AppReportSource { RM, AHS }
   private static final Log LOG = LogFactory.getLog(AppReportFetcher.class);
   private final Configuration conf;
   private final ApplicationClientProtocol applicationsManager;
@@ -115,28 +115,29 @@ public class AppReportFetcher {
    * @throws YarnException on any error.
    * @throws IOException
    */
-  public ApplicationReport getApplicationReport(ApplicationId appId)
+  public FetchedAppReport getApplicationReport(ApplicationId appId)
   throws YarnException, IOException {
     GetApplicationReportRequest request = recordFactory
         .newRecordInstance(GetApplicationReportRequest.class);
     request.setApplicationId(appId);
 
-    GetApplicationReportResponse response;
+    ApplicationReport appReport;
+    FetchedAppReport fetchedAppReport;
     try {
-      response = applicationsManager.getApplicationReport(request);
-    } catch (YarnException e) {
+      appReport = applicationsManager.
+          getApplicationReport(request).getApplicationReport();
+      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.RM);
+    } catch (ApplicationNotFoundException e) {
       if (!isAHSEnabled) {
         // Just throw it as usual if historyService is not enabled.
         throw e;
       }
-      // Even if history-service is enabled, treat all exceptions still the same
-      // except the following
-      if (!(e.getClass() == ApplicationNotFoundException.class)) {
-        throw e;
-      }
-      response = historyManager.getApplicationReport(request);
+      //Fetch the application report from AHS
+      appReport = historyManager.
+          getApplicationReport(request).getApplicationReport();
+      fetchedAppReport = new FetchedAppReport(appReport, AppReportSource.AHS);
     }
-    return response.getApplicationReport();
+    return fetchedAppReport;
   }
 
   public void stop() {
@@ -145,6 +146,30 @@ public class AppReportFetcher {
     }
     if (this.historyManager != null) {
       RPC.stopProxy(this.historyManager);
+    }
+  }
+
+  /*
+   * This class creates a bundle of the application report and the source from
+   * where the the report was fetched. This allows the WebAppProxyServlet
+   * to make decisions for the application report based on the source.
+   */
+  static class FetchedAppReport {
+    private ApplicationReport appReport;
+    private AppReportSource appReportSource;
+
+    public FetchedAppReport(ApplicationReport appReport,
+        AppReportSource appReportSource) {
+      this.appReport = appReport;
+      this.appReportSource = appReportSource;
+    }
+
+    public AppReportSource getAppReportSource() {
+      return this.appReportSource;
+    }
+
+    public ApplicationReport getApplicationReport() {
+      return this.appReport;
     }
   }
 }

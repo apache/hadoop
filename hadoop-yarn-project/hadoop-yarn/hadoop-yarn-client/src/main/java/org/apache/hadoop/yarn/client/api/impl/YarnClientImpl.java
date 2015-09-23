@@ -428,14 +428,9 @@ public class YarnClientImpl extends YarnClient {
           .newRecord(GetApplicationReportRequest.class);
       request.setApplicationId(appId);
       response = rmClient.getApplicationReport(request);
-    } catch (YarnException e) {
+    } catch (ApplicationNotFoundException e) {
       if (!historyServiceEnabled) {
         // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
-      // Even if history-service is enabled, treat all exceptions still the same
-      // except the following
-      if (!(e.getClass() == ApplicationNotFoundException.class)) {
         throw e;
       }
       return historyClient.getApplicationReport(appId);
