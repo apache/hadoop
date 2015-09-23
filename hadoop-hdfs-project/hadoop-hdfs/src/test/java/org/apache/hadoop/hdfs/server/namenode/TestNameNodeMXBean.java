@@ -164,9 +164,6 @@ public class TestNameNodeMXBean {
           "JournalTransactionInfo");
       assertEquals("Bad value for NameTxnIds", fsn.getJournalTransactionInfo(),
           journalTxnInfo);
-      // get attribute "NNStarted"
-      String nnStarted = (String) mbs.getAttribute(mxbeanName, "NNStarted");
-      assertEquals("Bad value for NNStarted", fsn.getNNStarted(), nnStarted);
       // get attribute "CompileInfo"
       String compileInfo = (String) mbs.getAttribute(mxbeanName, "CompileInfo");
       assertEquals("Bad value for CompileInfo", fsn.getCompileInfo(), compileInfo);

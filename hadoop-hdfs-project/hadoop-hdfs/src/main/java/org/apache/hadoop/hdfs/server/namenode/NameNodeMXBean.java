@@ -233,9 +233,11 @@ public interface NameNodeMXBean {
 
   /**
    * Gets the NN start time
-   *
+   * @deprecated Use
+   * {@link #getNNStartedTimeInMillis()} instead.
    * @return the NN start time
    */
+  @Deprecated
   public String getNNStarted();
 
   /**
