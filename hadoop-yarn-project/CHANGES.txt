@@ -211,9 +211,6 @@ Release 2.6.1 - 2015-09-16
     YARN-3740. Fixed the typo in the configuration name:
     APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
 
-    YARN-3379. Fixed missing data in localityTable and ResourceRequests table
-    in RM WebUI. (Xuan Gong via jianhe)
-
     YARN-3248. Display count of nodes blacklisted by apps in the web UI.
     (Varun Vasudev via xgong)
 
