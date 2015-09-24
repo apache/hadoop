@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.net;
 
+import com.google.common.net.InetAddresses;
+import com.sun.istack.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,9 +29,11 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Vector;
 
 import javax.naming.NamingException;
@@ -68,7 +72,7 @@ public class DNS {
    * @return The host name associated with the provided IP
    * @throws NamingException If a NamingException is encountered
    */
-  public static String reverseDns(InetAddress hostIp, String ns)
+  public static String reverseDns(InetAddress hostIp, @Nullable String ns)
     throws NamingException {
     //
     // Builds the reverse IP lookup form
@@ -228,28 +232,44 @@ public class DNS {
    *            (e.g. eth0 or eth0:0)
    * @param nameserver
    *            The DNS host name
+   * @param tryfallbackResolution
+   *            if true and if reverse DNS resolution fails then attempt to
+   *            resolve the hostname with
+   *            {@link InetAddress#getCanonicalHostName()} which includes
+   *            hosts file resolution.
    * @return A string vector of all host names associated with the IPs tied to
    *         the specified interface
    * @throws UnknownHostException if the given interface is invalid
    */
-  public static String[] getHosts(String strInterface, String nameserver)
-    throws UnknownHostException {
-    String[] ips = getIPs(strInterface);
-    Vector<String> hosts = new Vector<String>();
-    for (int ctr = 0; ctr < ips.length; ctr++) {
+  public static String[] getHosts(String strInterface,
+                                  @Nullable String nameserver,
+                                  boolean tryfallbackResolution)
+      throws UnknownHostException {
+    final List<String> hosts = new Vector<String>();
+    final List<InetAddress> addresses =
+        getIPsAsInetAddressList(strInterface, true);
+    for (InetAddress address : addresses) {
       try {
-        hosts.add(reverseDns(InetAddress.getByName(ips[ctr]),
-                             nameserver));
-      } catch (UnknownHostException ignored) {
+        hosts.add(reverseDns(address, nameserver));
       } catch (NamingException ignored) {
       }
     }
-    if (hosts.isEmpty()) {
-      LOG.warn("Unable to determine hostname for interface " + strInterface);
-      return new String[] { cachedHostname };
-    } else {
-      return hosts.toArray(new String[hosts.size()]);
+    if (hosts.isEmpty() && tryfallbackResolution) {
+      for (InetAddress address : addresses) {
+        final String canonicalHostName = address.getCanonicalHostName();
+        // Don't use the result if it looks like an IP address.
+        if (!InetAddresses.isInetAddress(canonicalHostName)) {
+          hosts.add(canonicalHostName);
+        }
+      }
     }
+
+    if (hosts.isEmpty()) {
+      LOG.warn("Unable to determine hostname for interface " +
+          strInterface);
+      hosts.add(cachedHostname);
+    }
+    return hosts.toArray(new String[hosts.size()]);
   }
 
 
@@ -315,7 +335,7 @@ public class DNS {
    */
   public static String[] getHosts(String strInterface)
     throws UnknownHostException {
-    return getHosts(strInterface, null);
+    return getHosts(strInterface, null, false);
   }
 
   /**
@@ -331,17 +351,19 @@ public class DNS {
    * @throws UnknownHostException
    *             If one is encountered while querying the default interface
    */
-  public static String getDefaultHost(String strInterface, String nameserver)
+  public static String getDefaultHost(@Nullable String strInterface,
+                                      @Nullable String nameserver,
+                                      boolean tryfallbackResolution)
     throws UnknownHostException {
-    if ("default".equals(strInterface)) {
+    if (strInterface == null || "default".equals(strInterface)) {
       return cachedHostname;
     }
 
-    if ("default".equals(nameserver)) {
-      return getDefaultHost(strInterface);
+    if (nameserver != null && "default".equals(nameserver)) {
+      nameserver = null;
     }
 
-    String[] hosts = getHosts(strInterface, nameserver);
+    String[] hosts = getHosts(strInterface, nameserver, tryfallbackResolution);
     return hosts[0];
   }
 
@@ -357,9 +379,74 @@ public class DNS {
    * @throws UnknownHostException
    *             If one is encountered while querying the default interface
    */
-  public static String getDefaultHost(String strInterface)
+  public static String getDefaultHost(@Nullable String strInterface)
     throws UnknownHostException {
-    return getDefaultHost(strInterface, null);
+    return getDefaultHost(strInterface, null, false);
   }
 
+  /**
+   * Returns the default (first) host name associated by the provided
+   * nameserver with the address bound to the specified network interface.
+   *
+   * @param strInterface
+   *            The name of the network interface to query (e.g. eth0)
+   * @param nameserver
+   *            The DNS host name
+   * @throws UnknownHostException
+   *             If one is encountered while querying the default interface
+   */
+  public static String getDefaultHost(@Nullable String strInterface,
+                                      @Nullable String nameserver)
+      throws UnknownHostException {
+    return getDefaultHost(strInterface, nameserver, false);
+  }
+
+  /**
+   * Returns all the IPs associated with the provided interface, if any, as
+   * a list of InetAddress objects.
+   *
+   * @param strInterface
+   *            The name of the network interface or sub-interface to query
+   *            (eg eth0 or eth0:0) or the string "default"
+   * @param returnSubinterfaces
+   *            Whether to return IPs associated with subinterfaces of
+   *            the given interface
+   * @return A list of all the IPs associated with the provided
+   *         interface. The local host IP is returned if the interface
+   *         name "default" is specified or there is an I/O error looking
+   *         for the given interface.
+   * @throws UnknownHostException
+   *             If the given interface is invalid
+   *
+   */
+  public static List<InetAddress> getIPsAsInetAddressList(String strInterface,
+      boolean returnSubinterfaces) throws UnknownHostException {
+    if ("default".equals(strInterface)) {
+      return Arrays.asList(InetAddress.getByName(cachedHostAddress));
+    }
+    NetworkInterface netIf;
+    try {
+      netIf = NetworkInterface.getByName(strInterface);
+      if (netIf == null) {
+        netIf = getSubinterface(strInterface);
+      }
+    } catch (SocketException e) {
+      LOG.warn("I/O error finding interface " + strInterface +
+          ": " + e.getMessage());
+      return Arrays.asList(InetAddress.getByName(cachedHostAddress));
+    }
+    if (netIf == null) {
+      throw new UnknownHostException("No such interface " + strInterface);
+    }
+
+    // NB: Using a LinkedHashSet to preserve the order for callers
+    // that depend on a particular element being 1st in the array.
+    // For example, getDefaultIP always returns the first element.
+    LinkedHashSet<InetAddress> allAddrs = new LinkedHashSet<InetAddress>();
+    allAddrs.addAll(Collections.list(netIf.getInetAddresses()));
+    if (!returnSubinterfaces) {
+      allAddrs.removeAll(getSubinterfaceInetAddrs(netIf));
+    }
+    return new Vector<InetAddress>(allAddrs);
+  }
 }

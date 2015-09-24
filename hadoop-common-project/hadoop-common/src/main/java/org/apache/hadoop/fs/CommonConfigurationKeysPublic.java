@@ -299,6 +299,12 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL =
     "hadoop.security.auth_to_local";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_DNS_INTERFACE_KEY =
+    "hadoop.security.dns.interface";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_DNS_NAMESERVER_KEY =
+    "hadoop.security.dns.nameserver";
 
   @Deprecated
   /** Only used by HttpServer. */

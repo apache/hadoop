@@ -17,6 +17,8 @@
 package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_DNS_INTERFACE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_DNS_NAMESERVER_KEY;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -29,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import javax.annotation.Nullable;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
@@ -39,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -180,13 +184,38 @@ public class SecurityUtil {
       throws IOException {
     String fqdn = hostname;
     if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
-      fqdn = getLocalHostName();
+      fqdn = getLocalHostName(null);
     }
     return components[0] + "/" +
         StringUtils.toLowerCase(fqdn) + "@" + components[2];
   }
-  
-  static String getLocalHostName() throws UnknownHostException {
+
+  /**
+   * Retrieve the name of the current host. Multihomed hosts may restrict the
+   * hostname lookup to a specific interface and nameserver with {@link
+   * org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_SECURITY_DNS_INTERFACE_KEY}
+   * and {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic#HADOOP_SECURITY_DNS_NAMESERVER_KEY}
+   *
+   * @param conf Configuration object. May be null.
+   * @return
+   * @throws UnknownHostException
+   */
+  static String getLocalHostName(@Nullable Configuration conf)
+      throws UnknownHostException {
+    if (conf != null) {
+      String dnsInterface = conf.get(HADOOP_SECURITY_DNS_INTERFACE_KEY);
+      String nameServer = conf.get(HADOOP_SECURITY_DNS_NAMESERVER_KEY);
+
+      if (dnsInterface != null) {
+        return DNS.getDefaultHost(dnsInterface, nameServer, true);
+      } else if (nameServer != null) {
+        throw new IllegalArgumentException(HADOOP_SECURITY_DNS_NAMESERVER_KEY +
+            " requires " + HADOOP_SECURITY_DNS_INTERFACE_KEY + ". Check your" +
+            "configuration.");
+      }
+    }
+
+    // Fallback to querying the default hostname as we did before.
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
 
@@ -207,7 +236,7 @@ public class SecurityUtil {
   @InterfaceStability.Evolving
   public static void login(final Configuration conf,
       final String keytabFileKey, final String userNameKey) throws IOException {
-    login(conf, keytabFileKey, userNameKey, getLocalHostName());
+    login(conf, keytabFileKey, userNameKey, getLocalHostName(conf));
   }
 
   /**
