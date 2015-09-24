@@ -138,8 +138,8 @@ public class TestApplicationHistoryServer {
     HashMap<String, String> driver = new HashMap<String, String>();
     driver.put("", TimelineAuthenticationFilterInitializer.class.getName());
     driver.put(StaticUserWebFilter.class.getName(),
-      TimelineAuthenticationFilterInitializer.class.getName() + ","
-          + StaticUserWebFilter.class.getName());
+        StaticUserWebFilter.class.getName() + "," +
+            TimelineAuthenticationFilterInitializer.class.getName());
     driver.put(AuthenticationFilterInitializer.class.getName(),
       TimelineAuthenticationFilterInitializer.class.getName());
     driver.put(TimelineAuthenticationFilterInitializer.class.getName(),
