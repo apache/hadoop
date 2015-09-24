@@ -899,6 +899,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4152. NodeManager crash with NPE when LogAggregationService#stopContainer called for 
     absent container. (Bibin A Chundatt via rohithsharmaks)
 
+    YARN-4044. Running applications information changes such as movequeue is not published to 
+    TimeLine server. (Sunil G via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -18,19 +18,37 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
 
-public enum SystemMetricsEventType {
-  // app events
-  APP_CREATED,
-  APP_FINISHED,
-  APP_ACLS_UPDATED,
-  APP_UPDATED,
+public class ApplicationUpdatedEvent extends SystemMetricsEvent {
 
-  // app attempt events
-  APP_ATTEMPT_REGISTERED,
-  APP_ATTEMPT_FINISHED,
+  private ApplicationId appId;
+  private String queue;
+  private Priority applicationPriority;
 
-  // container events
-  CONTAINER_CREATED,
-  CONTAINER_FINISHED
+  public ApplicationUpdatedEvent(ApplicationId appId, String queue,
+      long updatedTime, Priority applicationPriority) {
+    super(SystemMetricsEventType.APP_UPDATED, updatedTime);
+    this.appId = appId;
+    this.queue = queue;
+    this.applicationPriority = applicationPriority;
+  }
+
+  @Override
+  public int hashCode() {
+    return appId.hashCode();
+  }
+
+  public ApplicationId getApplicationId() {
+    return appId;
+  }
+
+  public String getQueue() {
+    return queue;
+  }
+
+  public Priority getApplicationPriority() {
+    return applicationPriority;
+  }
 }

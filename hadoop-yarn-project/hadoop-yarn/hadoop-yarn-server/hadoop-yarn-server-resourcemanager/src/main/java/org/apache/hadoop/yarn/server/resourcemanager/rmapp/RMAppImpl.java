@@ -911,7 +911,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         moveEvent.getResult().setException(ex);
         return;
       }
-      
+
+      app.rmContext.getSystemMetricsPublisher().appUpdated(app,
+          System.currentTimeMillis());
+
       // TODO: Write out change to state store (YARN-1558)
       // Also take care of RM failover
       moveEvent.getResult().set(null);
