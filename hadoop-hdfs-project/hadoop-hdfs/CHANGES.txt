@@ -1400,6 +1400,9 @@ Release 2.8.0 - UNRELEASED
     TestSWebHdfsFileContextMainOperations fail due to invalid HDFS path on
     Windows. (Chris Nauroth via wheat9)
 
+    HDFS-9076. Log full path instead of inodeId in DFSClient
+    #closeAllFilesBeingWritten() (Surendra Singh Lilhore via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

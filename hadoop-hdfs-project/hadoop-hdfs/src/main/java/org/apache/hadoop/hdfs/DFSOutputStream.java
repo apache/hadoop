@@ -903,6 +903,13 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   /**
+   * Return the source of stream.
+   */
+  String getSrc() {
+    return src;
+  }
+
+  /**
    * Returns the data streamer object.
    */
   protected DataStreamer getStreamer() {
