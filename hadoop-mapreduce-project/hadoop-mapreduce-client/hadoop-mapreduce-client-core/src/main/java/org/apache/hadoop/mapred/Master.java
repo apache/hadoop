@@ -21,18 +21,23 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 @Private
 @Unstable
 public class Master {
-  
+
+  private static final Log LOG = LogFactory.getLog(Master.class);
+
   public enum State {
     INITIALIZING, RUNNING;
   }
@@ -53,8 +58,24 @@ public class Master {
     if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
       masterAddress = conf.get(MRConfig.MASTER_ADDRESS, "localhost:8012");
       return NetUtils.createSocketAddr(masterAddress, 8012, MRConfig.MASTER_ADDRESS);
-    } 
-    else {
+    } else if (framework.equals(MRConfig.YARN_FRAMEWORK_NAME) &&
+        HAUtil.isHAEnabled(conf)) {
+      YarnConfiguration yarnConf = new YarnConfiguration(conf);
+      if (yarnConf.get(YarnConfiguration.RM_HA_ID) == null) {
+        String[] rmIds = yarnConf.getStrings(YarnConfiguration.RM_HA_IDS);
+        if (rmIds != null && rmIds.length > 0) {
+          // If RM_HA_ID is not configured, use the first one.
+          // Because any valid RM HA ID should work.
+          yarnConf.set(YarnConfiguration.RM_HA_ID, rmIds[0]);
+        } else {
+          LOG.warn("RM_HA_IDS is not configured when RM HA is enabled");
+        }
+      }
+      return yarnConf.getSocketAddr(
+          YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_PORT);
+    } else {
       return conf.getSocketAddr(
           YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS,
