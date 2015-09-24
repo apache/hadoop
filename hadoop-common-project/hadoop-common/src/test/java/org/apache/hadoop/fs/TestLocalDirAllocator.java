@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 
 import org.junit.runner.RunWith;
@@ -312,7 +313,30 @@ public class TestLocalDirAllocator {
     } catch (IOException e) {
       assertEquals(CONTEXT + " not configured", e.getMessage());
     } catch (NullPointerException e) {
-      fail("Lack of configuration should not have thrown an NPE.");
+      fail("Lack of configuration should not have thrown a NPE.");
+    }
+
+    String  NEW_CONTEXT = CONTEXT + ".new";
+    conf1.set(NEW_CONTEXT, "");
+    LocalDirAllocator newDirAllocator = new LocalDirAllocator(NEW_CONTEXT);
+    try {
+      newDirAllocator.getLocalPathForWrite("/test", conf1);
+      fail("Exception not thrown when " + NEW_CONTEXT +
+          " is set to empty string");
+    } catch (IOException e) {
+      assertTrue(e instanceof DiskErrorException);
+    } catch (NullPointerException e) {
+      fail("Wrong configuration should not have thrown a NPE.");
+    }
+
+    try {
+      newDirAllocator.getLocalPathToRead("/test", conf1);
+      fail("Exception not thrown when " + NEW_CONTEXT +
+          " is set to empty string");
+    } catch (IOException e) {
+      assertTrue(e instanceof DiskErrorException);
+    } catch (NullPointerException e) {
+      fail("Wrong configuration should not have thrown a NPE.");
     }
   }
 
