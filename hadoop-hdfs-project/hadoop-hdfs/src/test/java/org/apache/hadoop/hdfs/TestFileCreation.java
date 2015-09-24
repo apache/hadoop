@@ -216,7 +216,7 @@ public class TestFileCreation {
       throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (netIf != null) {
-      conf.set(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
+      conf.set(HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
     }
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
     if (useDnHostname) {

@@ -22,9 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
@@ -189,7 +189,7 @@ public class TestTracing {
   public static void setup() throws IOException {
     conf = new Configuration();
     conf.setLong("dfs.blocksize", 100 * 1024);
-    conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
         SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
         SetSpanReceiver.class.getName());
   }

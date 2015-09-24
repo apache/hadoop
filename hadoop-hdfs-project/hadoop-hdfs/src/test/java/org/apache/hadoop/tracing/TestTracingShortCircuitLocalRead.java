@@ -64,7 +64,7 @@ public class TestTracingShortCircuitLocalRead {
   public void testShortCircuitTraceHooks() throws IOException {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS);
     conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
+    conf.set(HdfsClientConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
         SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
         SetSpanReceiver.class.getName());
     conf.setLong("dfs.blocksize", 100 * 1024);
