@@ -1390,6 +1390,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-9013. Deprecate NameNodeMXBean#getNNStarted in branch2 and remove from
     trunk (Surendra Singh Lilhore via vinayakumarb)
 
+    HDFS-9128. TestWebHdfsFileContextMainOperations and
+    TestSWebHdfsFileContextMainOperations fail due to invalid HDFS path on
+    Windows. (Chris Nauroth via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

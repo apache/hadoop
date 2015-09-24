@@ -94,6 +94,11 @@ public class TestSWebHdfsFileContextMainOperations
   }
 
   @Override
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper("/tmp/TestSWebHdfsFileContextMainOperations");
+  }
+
+  @Override
   public URI getWebhdfsUrl() {
     return webhdfsUrl;
   }
