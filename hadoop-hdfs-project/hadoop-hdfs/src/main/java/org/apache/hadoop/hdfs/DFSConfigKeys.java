@@ -49,8 +49,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
   public static final int     DFS_BYTES_PER_CHECKSUM_DEFAULT =
       HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
-  public static final String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
-  public static final String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
+  @Deprecated
+  public static final String  DFS_USER_HOME_DIR_PREFIX_KEY =
+      HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY;
+  @Deprecated
+  public static final String  DFS_USER_HOME_DIR_PREFIX_DEFAULT =
+      HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT;
   public static final String  DFS_CHECKSUM_TYPE_KEY = HdfsClientConfigKeys
       .DFS_CHECKSUM_TYPE_KEY;
   public static final String  DFS_CHECKSUM_TYPE_DEFAULT =
@@ -65,9 +69,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // HDFS HTrace configuration is controlled by dfs.htrace.spanreceiver.classes,
   // etc.
   public static final String  DFS_SERVER_HTRACE_PREFIX = "dfs.htrace.";
-
-  // HDFS client HTrace configuration.
-  public static final String  DFS_CLIENT_HTRACE_PREFIX = "dfs.client.htrace.";
+  @Deprecated
+  public static final String  DFS_CLIENT_HTRACE_PREFIX =
+      HdfsClientConfigKeys.DFS_CLIENT_HTRACE_PREFIX;
 
   // HA related configuration
   public static final String  DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY = "dfs.datanode.restart.replica.expiration";
@@ -1124,9 +1128,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   @Deprecated
   public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT
       = HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT;
-
-  public static final String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
-
+  @Deprecated
+  public static final String  DFS_CLIENT_LOCAL_INTERFACES =
+      HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES;
 
   @Deprecated
   public static final String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
@@ -1135,10 +1139,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
 
-  // The number of NN response dropped by client proactively in each RPC call.
-  // For testing NN retry cache, we can set this property with positive value.
-  public static final String  DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY = "dfs.client.test.drop.namenode.response.number";
-  public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT = 0;
+  @Deprecated
+  public static final String  DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY =
+      HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT =
+      HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 
   @Deprecated
   public static final String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =

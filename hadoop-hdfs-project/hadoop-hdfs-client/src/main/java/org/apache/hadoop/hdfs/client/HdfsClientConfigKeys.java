@@ -143,6 +143,17 @@ public interface HdfsClientConfigKeys {
   String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
       PREFIX + "replica.accessor.builder.classes";
 
+  // The number of NN response dropped by client proactively in each RPC call.
+  // For testing NN retry cache, we can set this property with positive value.
+  String  DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY =
+      "dfs.client.test.drop.namenode.response.number";
+  int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT = 0;
+  String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
+  // HDFS client HTrace configuration.
+  String  DFS_CLIENT_HTRACE_PREFIX = "dfs.client.htrace.";
+  String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
+  String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
+
   /** dfs.client.retry configuration properties */
   interface Retry {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "retry.";
