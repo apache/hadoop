@@ -1869,6 +1869,10 @@ public class CapacityScheduler extends
           application.getCurrentAppAttempt());
     }
 
+    // Update the changed application state to timeline server
+    rmContext.getSystemMetricsPublisher().appUpdated(rmApp,
+        System.currentTimeMillis());
+
     LOG.info("Priority '" + appPriority + "' is updated in queue :"
         + rmApp.getQueue() + " for application: " + applicationId
         + " for the user: " + rmApp.getUser());
