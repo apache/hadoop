@@ -21,7 +21,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,7 +45,7 @@ public class TestWebHdfsWithMultipleNameNodes {
   static final Log LOG = WebHdfsTestUtil.LOG;
 
   static private void setLogLevel() {
-    ((Log4JLogger)LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.ALL);
     GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.ALL);
 
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);

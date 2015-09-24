@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,6 +60,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,12 +74,11 @@ import com.google.common.collect.Maps;
 public class TestStorageMover {
   static final Log LOG = LogFactory.getLog(TestStorageMover.class);
   static {
-    ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class)
-        ).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(Dispatcher.class)
-        ).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(DataTransferProtocol.class)).getLogger()
-        .setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(BlockPlacementPolicy.class),
+        Level.ALL);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(Dispatcher.class),
+        Level.ALL);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
   }
 
   private static final int BLOCK_SIZE = 1024;

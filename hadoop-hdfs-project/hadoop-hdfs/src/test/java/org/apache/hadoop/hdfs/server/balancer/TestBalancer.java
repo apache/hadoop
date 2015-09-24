@@ -51,7 +51,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -94,7 +93,7 @@ public class TestBalancer {
   private static final Log LOG = LogFactory.getLog(TestBalancer.class);
 
   static {
-    ((Log4JLogger)Balancer.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(Balancer.LOG, Level.ALL);
   }
 
   final static long CAPACITY = 5000L;

@@ -28,7 +28,6 @@ import java.io.PrintStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -52,7 +52,7 @@ import com.google.common.io.Files;
  */
 public class TestDFSHAAdminMiniCluster {
   static {
-    ((Log4JLogger)LogFactory.getLog(HAAdmin.class)).getLogger().setLevel(
+    GenericTestUtils.setLogLevel(LogFactory.getLog(HAAdmin.class),
         Level.ALL);
   }
   private static final Log LOG = LogFactory.getLog(TestDFSHAAdminMiniCluster.class);
