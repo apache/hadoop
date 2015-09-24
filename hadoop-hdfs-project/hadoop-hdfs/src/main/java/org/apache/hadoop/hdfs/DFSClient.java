@@ -589,8 +589,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             out.close();
           }
         } catch(IOException ie) {
-          LOG.error("Failed to " + (abort? "abort": "close") +
-                  " inode " + inodeId, ie);
+          LOG.error("Failed to " + (abort ? "abort" : "close") + " file: "
+              + out.getSrc() + " with inode: " + inodeId, ie);
         }
       }
     }
