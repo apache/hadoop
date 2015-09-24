@@ -22,7 +22,6 @@ import com.google.common.base.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.core.Is.is;
@@ -93,8 +92,8 @@ public class TestSpaceReservation {
   }
 
   static {
-    ((Log4JLogger) FsDatasetImpl.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
   }
 
   /**

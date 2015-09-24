@@ -45,9 +45,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
@@ -99,7 +97,7 @@ public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
 
   static {
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
   }
 
   private boolean dualPortTesting = false;
@@ -517,7 +515,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testFileChecksum() throws Exception {
-    ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(HftpFileSystem.LOG, Level.ALL);
 
     final long seed = RAN.nextLong();
     System.out.println("seed=" + seed);
@@ -780,9 +778,9 @@ public class TestDistributedFileSystem {
   @Test(timeout=60000)
   public void testGetFileBlockStorageLocationsBatching() throws Exception {
     final Configuration conf = getTestConfiguration();
-    ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.TRACE);
-    ((Log4JLogger)BlockStorageLocationUtil.LOG).getLogger().setLevel(Level.TRACE);
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(ProtobufRpcEngine.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockStorageLocationUtil.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
 
     conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
         true);

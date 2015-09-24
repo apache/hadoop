@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -93,8 +93,8 @@ public class TestNameNodeMetrics {
         "" + PERCENTILES_INTERVAL);
     // Enable stale DataNodes checking
     CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
-    ((Log4JLogger)LogFactory.getLog(MetricsAsserts.class))
-      .getLogger().setLevel(Level.DEBUG);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(MetricsAsserts.class),
+        Level.DEBUG);
   }
   
   private MiniDFSCluster cluster;
