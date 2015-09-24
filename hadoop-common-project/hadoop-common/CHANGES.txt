@@ -1144,6 +1144,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12417. TestWebDelegationToken failing with port in use.
     (Mingliang Liu via wheat9)
 
+    HADOOP-12438. Reset RawLocalFileSystem.useDeprecatedFileStatus in
+    TestLocalFileSystem. (Chris Nauroth via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
