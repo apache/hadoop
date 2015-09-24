@@ -178,7 +178,8 @@ class FSDirStatAndListingOp {
       }
 
       final FileEncryptionInfo feInfo = isReservedName ? null
-          : fsd.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
+          : FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, inode,
+              iip.getPathSnapshotId(), iip);
 
       final LocatedBlocks blocks = bm.createLocatedBlocks(
           inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
@@ -439,18 +440,20 @@ class FSDirStatAndListingOp {
     long blocksize = 0;
     final boolean isEncrypted;
 
-    final FileEncryptionInfo feInfo = isRawPath ? null :
-        fsd.getFileEncryptionInfo(node, snapshot, iip);
+    final FileEncryptionInfo feInfo = isRawPath ? null : FSDirEncryptionZoneOp
+        .getFileEncryptionInfo(fsd, node, snapshot, iip);
 
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
       blocksize = fileNode.getPreferredBlockSize();
-      isEncrypted = (feInfo != null) ||
-          (isRawPath && fsd.isInAnEZ(INodesInPath.fromINode(node)));
+      isEncrypted = (feInfo != null)
+          || (isRawPath && FSDirEncryptionZoneOp.isInAnEZ(fsd,
+              INodesInPath.fromINode(node)));
     } else {
-      isEncrypted = fsd.isInAnEZ(INodesInPath.fromINode(node));
+      isEncrypted = FSDirEncryptionZoneOp.isInAnEZ(fsd,
+          INodesInPath.fromINode(node));
     }
 
     int childrenNum = node.isDirectory() ?
@@ -492,8 +495,8 @@ class FSDirStatAndListingOp {
     long blocksize = 0;
     LocatedBlocks loc = null;
     final boolean isEncrypted;
-    final FileEncryptionInfo feInfo = isRawPath ? null :
-        fsd.getFileEncryptionInfo(node, snapshot, iip);
+    final FileEncryptionInfo feInfo = isRawPath ? null : FSDirEncryptionZoneOp
+        .getFileEncryptionInfo(fsd, node, snapshot, iip);
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
@@ -511,10 +514,12 @@ class FSDirStatAndListingOp {
       if (loc == null) {
         loc = new LocatedBlocks();
       }
-      isEncrypted = (feInfo != null) ||
-          (isRawPath && fsd.isInAnEZ(INodesInPath.fromINode(node)));
+      isEncrypted = (feInfo != null)
+          || (isRawPath && FSDirEncryptionZoneOp.isInAnEZ(fsd,
+              INodesInPath.fromINode(node)));
     } else {
-      isEncrypted = fsd.isInAnEZ(INodesInPath.fromINode(node));
+      isEncrypted = FSDirEncryptionZoneOp.isInAnEZ(fsd,
+          INodesInPath.fromINode(node));
     }
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;

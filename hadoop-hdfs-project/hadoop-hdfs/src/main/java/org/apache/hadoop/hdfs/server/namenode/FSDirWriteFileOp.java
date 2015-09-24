@@ -370,7 +370,7 @@ class FSDirWriteFileOp {
 
     FileEncryptionInfo feInfo = null;
 
-    final EncryptionZone zone = fsd.getEZForPath(iip);
+    final EncryptionZone zone = FSDirEncryptionZoneOp.getEZForPath(fsd, iip);
     if (zone != null) {
       // The path is now within an EZ, but we're missing encryption parameters
       if (suite == null || edek == null) {
@@ -423,7 +423,7 @@ class FSDirWriteFileOp {
         newNode.getFileUnderConstructionFeature().getClientName(),
         newNode.getId());
     if (feInfo != null) {
-      fsd.setFileEncryptionInfo(src, feInfo);
+      FSDirEncryptionZoneOp.setFileEncryptionInfo(fsd, src, feInfo);
       newNode = fsd.getInode(newNode.getId()).asFile();
     }
     setNewINodeStoragePolicy(fsd.getBlockManager(), newNode, iip,
@@ -445,7 +445,7 @@ class FSDirWriteFileOp {
     src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip = fsd.getINodesInPath4Write(src);
     // Nothing to do if the path is not within an EZ
-    final EncryptionZone zone = fsd.getEZForPath(iip);
+    final EncryptionZone zone = FSDirEncryptionZoneOp.getEZForPath(fsd, iip);
     if (zone == null) {
       return null;
     }
