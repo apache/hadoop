@@ -71,6 +71,7 @@ public class TestLocalFileSystem {
     FileUtil.setWritable(base, true);
     FileUtil.fullyDelete(base);
     assertTrue(!base.exists());
+    RawLocalFileSystem.useStatIfAvailable();
   }
 
   /**
