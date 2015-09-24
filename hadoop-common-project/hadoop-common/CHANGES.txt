@@ -1084,6 +1084,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12386. RetryPolicies.RETRY_FOREVER should be able to specify a 
     retry interval. (Sunil G via wangda)
 
+    HADOOP-12252. LocalDirAllocator should not throw NPE with empty string
+    configuration. (Zhihai Xu)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
