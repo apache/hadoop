@@ -82,8 +82,8 @@ Release 2.7.2 - UNRELEASED
     YARN-3975. WebAppProxyServlet should not redirect to RM page if AHS is
     enabled (Mit Desai via jlowe)
 
-    YARN-3740. Fixed the typo in the configuration name:
-    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
+    YARN-3624. ApplicationHistoryServer should not reverse the order of the
+    filters it gets. (Mit Desai via xgong)
 
 Release 2.7.1 - 2015-07-06
 
