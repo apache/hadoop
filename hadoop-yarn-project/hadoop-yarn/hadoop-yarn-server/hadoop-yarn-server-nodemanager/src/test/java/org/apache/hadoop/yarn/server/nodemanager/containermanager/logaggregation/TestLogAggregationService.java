@@ -1509,6 +1509,25 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     verifyLogAggFinishEvent(appId);
   }
 
+  @Test(timeout = 50000)
+  public void testLogAggregationAbsentContainer() throws Exception {
+    ApplicationId appId = createApplication();
+    LogAggregationService logAggregationService =
+        createLogAggregationService(appId,
+            FailedOrKilledContainerLogAggregationPolicy.class, null);
+    ApplicationAttemptId appAttemptId1 =
+        BuilderUtils.newApplicationAttemptId(appId, 1);
+    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId1, 2l);
+    try {
+      logAggregationService.handle(new LogHandlerContainerFinishedEvent(
+          containerId, 100));
+      assertTrue("Should skip when null containerID", true);
+    } catch (Exception e) {
+      Assert.assertFalse("Exception not expected should skip null containerid",
+          true);
+    }
+  }
+
   @Test (timeout = 50000)
   @SuppressWarnings("unchecked")
   public void testAMOnlyContainerPolicy() throws Exception {

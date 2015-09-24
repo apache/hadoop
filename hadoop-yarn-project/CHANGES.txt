@@ -896,6 +896,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4171. Fix findbugs warnings in YARN-1197 branch. (Wangda Tan via jianhe)
 
+    YARN-4152. NodeManager crash with NPE when LogAggregationService#stopContainer called for 
+    absent container. (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
