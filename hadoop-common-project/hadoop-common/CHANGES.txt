@@ -1147,6 +1147,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12438. Reset RawLocalFileSystem.useDeprecatedFileStatus in
     TestLocalFileSystem. (Chris Nauroth via wheat9)
 
+    HADOOP-12437. Allow SecurityUtil to lookup alternate hostnames.
+    (Arpit Agarwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
