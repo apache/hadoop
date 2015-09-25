@@ -26,12 +26,14 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
@@ -43,13 +45,15 @@ import org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster;
 import org.apache.hadoop.yarn.applications.distributedshell.Client;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -71,6 +75,7 @@ public class HadoopArchiveLogs implements Tool {
   private static final String MIN_NUM_LOG_FILES_OPTION = "minNumberLogFiles";
   private static final String MAX_TOTAL_LOGS_SIZE_OPTION = "maxTotalLogsSize";
   private static final String MEMORY_OPTION = "memory";
+  private static final String VERBOSE_OPTION = "verbose";
 
   private static final int DEFAULT_MAX_ELIGIBLE = -1;
   private static final int DEFAULT_MIN_NUM_LOG_FILES = 20;
@@ -85,9 +90,10 @@ public class HadoopArchiveLogs implements Tool {
   long maxTotalLogsSize = DEFAULT_MAX_TOTAL_LOGS_SIZE * 1024L * 1024L;
   @VisibleForTesting
   long memory = DEFAULT_MEMORY;
+  private boolean verbose = false;
 
   @VisibleForTesting
-  Set<ApplicationReport> eligibleApplications;
+  Set<AppInfo> eligibleApplications;
 
   private JobConf conf;
 
@@ -122,17 +128,20 @@ public class HadoopArchiveLogs implements Tool {
   public int run(String[] args) throws Exception {
     handleOpts(args);
 
-    findAggregatedApps();
-
     FileSystem fs = null;
     Path remoteRootLogDir = new Path(conf.get(
         YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
     Path workingDir = new Path(remoteRootLogDir, "archive-logs-work");
+    if (verbose) {
+      LOG.info("Remote Log Dir Root: " + remoteRootLogDir);
+      LOG.info("Log Suffix: " + suffix);
+      LOG.info("Working Dir: " + workingDir);
+    }
     try {
       fs = FileSystem.get(conf);
-      checkFiles(fs, remoteRootLogDir, suffix);
+      checkFilesAndSeedApps(fs, remoteRootLogDir, suffix);
 
       // Prepare working directory
       if (fs.exists(workingDir)) {
@@ -147,6 +156,8 @@ public class HadoopArchiveLogs implements Tool {
       }
     }
 
+    filterAppsByAggregatedStatus();
+
     checkMaxEligible();
 
     if (eligibleApplications.isEmpty()) {
@@ -156,8 +167,8 @@ public class HadoopArchiveLogs implements Tool {
 
     StringBuilder sb =
         new StringBuilder("Will process the following applications:");
-    for (ApplicationReport report : eligibleApplications) {
-      sb.append("\n\t").append(report.getApplicationId());
+    for (AppInfo app : eligibleApplications) {
+      sb.append("\n\t").append(app.getAppId());
     }
     LOG.info(sb.toString());
 
@@ -189,11 +200,14 @@ public class HadoopArchiveLogs implements Tool {
         "The amount of memory (in megabytes) for each container (default: "
             + DEFAULT_MEMORY + ")");
     memoryOpt.setArgName("megabytes");
+    Option verboseOpt = new Option(VERBOSE_OPTION, false,
+        "Print more details.");
     opts.addOption(helpOpt);
     opts.addOption(maxEligibleOpt);
     opts.addOption(minNumLogFilesOpt);
     opts.addOption(maxTotalLogsSizeOpt);
     opts.addOption(memoryOpt);
+    opts.addOption(verboseOpt);
 
     try {
       CommandLineParser parser = new GnuParser();
@@ -225,6 +239,9 @@ public class HadoopArchiveLogs implements Tool {
       if (commandLine.hasOption(MEMORY_OPTION)) {
         memory = Long.parseLong(commandLine.getOptionValue(MEMORY_OPTION));
       }
+      if (commandLine.hasOption(VERBOSE_OPTION)) {
+        verbose = true;
+      }
     } catch (ParseException pe) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("yarn archive-logs", opts);
@@ -233,17 +250,39 @@ public class HadoopArchiveLogs implements Tool {
   }
 
   @VisibleForTesting
-  void findAggregatedApps() throws IOException, YarnException {
+  void filterAppsByAggregatedStatus() throws IOException, YarnException {
     YarnClient client = YarnClient.createYarnClient();
     try {
       client.init(getConf());
       client.start();
-      List<ApplicationReport> reports = client.getApplications();
-      for (ApplicationReport report : reports) {
-        LogAggregationStatus aggStatus = report.getLogAggregationStatus();
-        if (aggStatus.equals(LogAggregationStatus.SUCCEEDED) ||
-            aggStatus.equals(LogAggregationStatus.FAILED)) {
-          eligibleApplications.add(report);
+      for (Iterator<AppInfo> it = eligibleApplications.iterator();
+           it.hasNext();) {
+        AppInfo app = it.next();
+        try {
+          ApplicationReport report = client.getApplicationReport(
+              ConverterUtils.toApplicationId(app.getAppId()));
+          LogAggregationStatus aggStatus = report.getLogAggregationStatus();
+          if (aggStatus.equals(LogAggregationStatus.RUNNING) ||
+              aggStatus.equals(LogAggregationStatus.RUNNING_WITH_FAILURE) ||
+              aggStatus.equals(LogAggregationStatus.NOT_START) ||
+              aggStatus.equals(LogAggregationStatus.DISABLED) ||
+              aggStatus.equals(LogAggregationStatus.FAILED)) {
+            if (verbose) {
+              LOG.info("Skipping " + app.getAppId() +
+                  " due to aggregation status being " + aggStatus);
+            }
+            it.remove();
+          } else {
+            if (verbose) {
+              LOG.info(app.getAppId() + " has aggregation status " + aggStatus);
+            }
+            app.setFinishTime(report.getFinishTime());
+          }
+        } catch (ApplicationNotFoundException e) {
+          // Assume the aggregation has finished
+          if (verbose) {
+            LOG.info(app.getAppId() + " not in the ResourceManager");
+          }
         }
       }
     } finally {
@@ -254,33 +293,71 @@ public class HadoopArchiveLogs implements Tool {
   }
 
   @VisibleForTesting
-  void checkFiles(FileSystem fs, Path remoteRootLogDir, String suffix) {
-    for (Iterator<ApplicationReport> reportIt = eligibleApplications.iterator();
-         reportIt.hasNext(); ) {
-      ApplicationReport report = reportIt.next();
-      long totalFileSize = 0L;
+  void checkFilesAndSeedApps(FileSystem fs, Path remoteRootLogDir,
+       String suffix) throws IOException {
+    for (RemoteIterator<FileStatus> userIt =
+         fs.listStatusIterator(remoteRootLogDir); userIt.hasNext();) {
+      Path userLogPath = userIt.next().getPath();
       try {
-        FileStatus[] files = fs.listStatus(
-            LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir,
-                report.getApplicationId(), report.getUser(), suffix));
-        if (files.length < minNumLogFiles) {
-          reportIt.remove();
-        } else {
-          for (FileStatus file : files) {
-            if (file.getPath().getName().equals(report.getApplicationId()
-                + ".har")) {
-              reportIt.remove();
-              break;
+        for (RemoteIterator<FileStatus> appIt =
+             fs.listStatusIterator(new Path(userLogPath, suffix));
+             appIt.hasNext();) {
+          Path appLogPath = appIt.next().getPath();
+          try {
+            FileStatus[] files = fs.listStatus(appLogPath);
+            if (files.length >= minNumLogFiles) {
+              boolean eligible = true;
+              long totalFileSize = 0L;
+              for (FileStatus file : files) {
+                if (file.getPath().getName().equals(appLogPath.getName()
+                    + ".har")) {
+                  eligible = false;
+                  if (verbose) {
+                    LOG.info("Skipping " + appLogPath.getName() +
+                        " due to existing .har file");
+                  }
+                  break;
+                }
+                totalFileSize += file.getLen();
+                if (totalFileSize > maxTotalLogsSize) {
+                  eligible = false;
+                  if (verbose) {
+                    LOG.info("Skipping " + appLogPath.getName() + " due to " +
+                        "total file size being too large (" + totalFileSize +
+                        " > " + maxTotalLogsSize + ")");
+                  }
+                  break;
+                }
+              }
+              if (eligible) {
+                if (verbose) {
+                  LOG.info("Adding " + appLogPath.getName() + " for user " +
+                      userLogPath.getName());
+                }
+                eligibleApplications.add(
+                    new AppInfo(appLogPath.getName(), userLogPath.getName()));
+              }
+            } else {
+              if (verbose) {
+                LOG.info("Skipping " + appLogPath.getName() + " due to not " +
+                    "having enough log files (" + files.length + " < " +
+                    minNumLogFiles + ")");
+              }
             }
-            totalFileSize += file.getLen();
-          }
-          if (totalFileSize > maxTotalLogsSize) {
-            reportIt.remove();
+          } catch (IOException ioe) {
+            // Ignore any apps we can't read
+            if (verbose) {
+              LOG.info("Skipping logs under " + appLogPath + " due to " +
+                  ioe.getMessage());
+            }
           }
         }
       } catch (IOException ioe) {
-        // If the user doesn't have permission or it doesn't exist, then skip it
-        reportIt.remove();
+        // Ignore any apps we can't read
+        if (verbose) {
+          LOG.info("Skipping all logs under " + userLogPath + " due to " +
+              ioe.getMessage());
+        }
       }
     }
   }
@@ -289,15 +366,26 @@ public class HadoopArchiveLogs implements Tool {
   void checkMaxEligible() {
     // If we have too many eligible apps, remove the newest ones first
     if (maxEligible > 0 && eligibleApplications.size() > maxEligible) {
-      List<ApplicationReport> sortedApplications =
-          new ArrayList<ApplicationReport>(eligibleApplications);
-      Collections.sort(sortedApplications, new Comparator<ApplicationReport>() {
+      if (verbose) {
+        LOG.info("Too many applications (" + eligibleApplications.size() +
+            " > " + maxEligible + ")");
+      }
+      List<AppInfo> sortedApplications =
+          new ArrayList<AppInfo>(eligibleApplications);
+      Collections.sort(sortedApplications, new Comparator<AppInfo>() {
         @Override
-        public int compare(ApplicationReport o1, ApplicationReport o2) {
-          return Long.compare(o1.getFinishTime(), o2.getFinishTime());
+        public int compare(AppInfo o1, AppInfo o2) {
+          int lCompare = Long.compare(o1.getFinishTime(), o2.getFinishTime());
+          if (lCompare == 0) {
+            return o1.getAppId().compareTo(o2.getAppId());
+          }
+          return lCompare;
         }
       });
       for (int i = maxEligible; i < sortedApplications.size(); i++) {
+        if (verbose) {
+          LOG.info("Removing " + sortedApplications.get(i));
+        }
         eligibleApplications.remove(sortedApplications.get(i));
       }
     }
@@ -325,24 +413,26 @@ public class HadoopArchiveLogs implements Tool {
   @VisibleForTesting
   void generateScript(File localScript, Path workingDir,
         Path remoteRootLogDir, String suffix) throws IOException {
-    LOG.info("Generating script at: " + localScript.getAbsolutePath());
+    if (verbose) {
+      LOG.info("Generating script at: " + localScript.getAbsolutePath());
+    }
     String halrJarPath = HadoopArchiveLogsRunner.class.getProtectionDomain()
         .getCodeSource().getLocation().getPath();
     String harJarPath = HadoopArchives.class.getProtectionDomain()
         .getCodeSource().getLocation().getPath();
     String classpath = halrJarPath + File.pathSeparator + harJarPath;
-    FileWriter fw = null;
+    FileWriterWithEncoding fw = null;
     try {
-      fw = new FileWriter(localScript);
+      fw = new FileWriterWithEncoding(localScript, "UTF-8");
       fw.write("#!/bin/bash\nset -e\nset -x\n");
       int containerCount = 1;
-      for (ApplicationReport report : eligibleApplications) {
+      for (AppInfo app : eligibleApplications) {
         fw.write("if [ \"$YARN_SHELL_ID\" == \"");
         fw.write(Integer.toString(containerCount));
         fw.write("\" ]; then\n\tappId=\"");
-        fw.write(report.getApplicationId().toString());
+        fw.write(app.getAppId());
         fw.write("\"\n\tuser=\"");
-        fw.write(report.getUser());
+        fw.write(app.getUser());
         fw.write("\"\nel");
         containerCount++;
       }
@@ -382,6 +472,10 @@ public class HadoopArchiveLogs implements Tool {
         "--shell_script",
         localScript.getAbsolutePath()
     };
+    if (verbose) {
+      LOG.info("Running Distributed Shell with arguments: " +
+          Arrays.toString(dsArgs));
+    }
     final Client dsClient = new Client(new Configuration(conf));
     dsClient.init(dsArgs);
     return dsClient.run();
@@ -399,5 +493,60 @@ public class HadoopArchiveLogs implements Tool {
   @Override
   public Configuration getConf() {
     return this.conf;
+  }
+
+  @VisibleForTesting
+  static class AppInfo {
+    private String appId;
+    private String user;
+    private long finishTime;
+
+    AppInfo(String appId, String user) {
+      this.appId = appId;
+      this.user = user;
+      this.finishTime = 0L;
+    }
+
+    public String getAppId() {
+      return appId;
+    }
+
+    public String getUser() {
+      return user;
+    }
+
+    public long getFinishTime() {
+      return finishTime;
+    }
+
+    public void setFinishTime(long finishTime) {
+      this.finishTime = finishTime;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      AppInfo appInfo = (AppInfo) o;
+
+      if (appId != null
+          ? !appId.equals(appInfo.appId) : appInfo.appId != null) {
+        return false;
+      }
+      return !(user != null
+          ? !user.equals(appInfo.user) : appInfo.user != null);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = appId != null ? appId.hashCode() : 0;
+      result = 31 * result + (user != null ? user.hashCode() : 0);
+      return result;
+    }
   }
 }

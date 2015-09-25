@@ -580,6 +580,8 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6484. Yarn Client uses local address instead of RM address as
     token renewer in a secure cluster when RM HA is enabled. (Zhihai Xu)
 
+   MAPREDUCE-6480. archive-logs tool may miss applications (rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
