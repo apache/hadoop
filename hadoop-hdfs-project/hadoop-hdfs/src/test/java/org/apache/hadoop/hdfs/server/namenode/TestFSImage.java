@@ -206,8 +206,12 @@ public class TestFSImage {
       hdfs.createSymlink(file, link, false);
 
       long mtimeFile = hdfs.getFileStatus(file).getModificationTime();
+      System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+      System.out.println("mtimeFile = " + mtimeFile);
       long atimeFile = hdfs.getFileStatus(file).getAccessTime();
+      System.out.println("atimeFile = " + atimeFile);
       long mtimeDir = hdfs.getFileStatus(dir).getModificationTime();
+      System.out.println("mtimeDir = " + mtimeDir);
       long mtimeLink = hdfs.getFileLinkStatus(link).getModificationTime();
       long atimeLink = hdfs.getFileLinkStatus(link).getAccessTime();
 
@@ -216,8 +220,7 @@ public class TestFSImage {
       hdfs.saveNamespace();
       hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
       cluster.shutdown();
-      cluster = new MiniDFSCluster.Builder(conf).format(false)
-          .numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(conf).format(false).numDataNodes(1).build();
       cluster.waitActive();
       hdfs = cluster.getFileSystem();
       
