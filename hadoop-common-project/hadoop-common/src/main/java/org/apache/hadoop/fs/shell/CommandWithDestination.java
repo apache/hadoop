@@ -238,7 +238,13 @@ abstract class CommandWithDestination extends FsCommand {
         e.setTargetPath(dstPath.toString());
         throw e;
       }
-      if (dstPath.startsWith(srcPath+Path.SEPARATOR)) {
+      // When a path is normalized, all trailing slashes are removed
+      // except for the root
+      if(!srcPath.endsWith(Path.SEPARATOR)) {
+        srcPath += Path.SEPARATOR;
+      }
+
+      if(dstPath.startsWith(srcPath)) {
         PathIOException e = new PathIOException(src.toString(),
             "is a subdirectory of itself");
         e.setTargetPath(target.toString());
