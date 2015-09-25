@@ -25,9 +25,10 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 
@@ -40,6 +41,22 @@ public class TimelineReaderManager extends AbstractService {
   public TimelineReaderManager(TimelineReader timelineReader) {
     super(TimelineReaderManager.class.getName());
     this.reader = timelineReader;
+  }
+
+  /**
+   * Gets cluster ID from config yarn.resourcemanager.cluster-id
+   * if not supplied by client.
+   * @param clusterId
+   * @param conf
+   * @return clusterId
+   */
+  private static String getClusterID(String clusterId, Configuration conf) {
+    if (clusterId == null || clusterId.isEmpty()) {
+      return conf.get(
+          YarnConfiguration.RM_CLUSTER_ID,
+              YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
+    }
+    return clusterId;
   }
 
   /**
@@ -56,7 +73,8 @@ public class TimelineReaderManager extends AbstractService {
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String>  metricFilters, Set<String> eventFilters,
       EnumSet<Field> fieldsToRetrieve) throws IOException {
-    return reader.getEntities(userId, clusterId, flowId, flowRunId, appId,
+    String cluster = getClusterID(clusterId, getConfig());
+    return reader.getEntities(userId, cluster, flowId, flowRunId, appId,
         entityType, limit, createdTimeBegin, createdTimeEnd, modifiedTimeBegin,
         modifiedTimeEnd, relatesTo, isRelatedTo, infoFilters, configFilters,
         metricFilters, eventFilters, fieldsToRetrieve);
@@ -71,7 +89,8 @@ public class TimelineReaderManager extends AbstractService {
   public TimelineEntity getEntity(String userId, String clusterId,
       String flowId, Long flowRunId, String appId, String entityType,
       String entityId, EnumSet<Field> fields) throws IOException {
-    return reader.getEntity(userId, clusterId, flowId, flowRunId, appId,
+    String cluster = getClusterID(clusterId, getConfig());
+    return reader.getEntity(userId, cluster, flowId, flowRunId, appId,
         entityType, entityId, fields);
   }
 }
