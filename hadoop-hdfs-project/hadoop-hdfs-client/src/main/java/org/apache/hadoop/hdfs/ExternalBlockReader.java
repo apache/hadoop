@@ -45,6 +45,9 @@ public final class ExternalBlockReader implements BlockReader {
   @Override
   public int read(byte[] buf, int off, int len) throws IOException {
     int nread = accessor.read(pos, buf, off, len);
+    if (nread < 0) {
+      return nread;
+    }
     pos += nread;
     return nread;
   }
@@ -52,6 +55,9 @@ public final class ExternalBlockReader implements BlockReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     int nread = accessor.read(pos, buf);
+    if (nread < 0) {
+      return nread;
+    }
     pos += nread;
     return nread;
   }
