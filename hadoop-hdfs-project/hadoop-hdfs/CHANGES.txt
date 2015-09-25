@@ -968,6 +968,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9112. Improve error message for Haadmin when multiple name service IDs
     are configured. (Anu Engineer via jing9)
 
+    HDFS-9132. Pass genstamp to ReplicaAccessorBuilder. (Colin Patrick McCabe via
+    Lei (Eddy) Xu)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
