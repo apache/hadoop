@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This creates the schema for a hbase based backend for storing application
  * timeline information.
@@ -201,6 +203,7 @@ public class TimelineSchemaCreator {
     return commandLine;
   }
 
+  @VisibleForTesting
   public static void createAllTables(Configuration hbaseConf,
       boolean skipExisting) throws IOException {
 

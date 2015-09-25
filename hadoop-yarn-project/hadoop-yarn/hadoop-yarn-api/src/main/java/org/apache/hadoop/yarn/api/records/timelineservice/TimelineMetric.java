@@ -154,4 +154,14 @@ public class TimelineMetric {
     }
     return true;
   }
+
+  @Override
+  public String toString() {
+    String str = "{id:" + id + ", type:" + type;
+    if (!values.isEmpty()) {
+      str += ", values:" + values;
+    }
+    str += "}";
+    return str;
+  }
 }
