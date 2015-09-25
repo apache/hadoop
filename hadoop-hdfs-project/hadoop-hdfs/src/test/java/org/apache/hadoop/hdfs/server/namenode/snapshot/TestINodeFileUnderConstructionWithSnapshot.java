@@ -37,9 +37,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -302,10 +302,8 @@ public class TestINodeFileUnderConstructionWithSnapshot {
         fsn.writeUnlock();
       }
     } finally {
-      NameNodeAdapter.setLeasePeriod(
-          fsn,
-          HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD,
-          HdfsServerConstants.LEASE_HARDLIMIT_PERIOD);
+      NameNodeAdapter.setLeasePeriod(fsn, HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
+          HdfsConstants.LEASE_HARDLIMIT_PERIOD);
     }
   }
 }
