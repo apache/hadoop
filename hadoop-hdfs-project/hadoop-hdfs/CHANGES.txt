@@ -1409,6 +1409,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9076. Log full path instead of inodeId in DFSClient
     #closeAllFilesBeingWritten() (Surendra Singh Lilhore via vinayakumarb)
 
+    HDFS-9123. Copying from the root to a subdirectory should be forbidden.
+    (Wei-Chiu Chuang via Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
