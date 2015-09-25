@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -169,6 +171,11 @@ public class TimelineReaderWebServices {
     return str == null ? null : str.trim();
   }
 
+  private static String parseUser(UserGroupInformation callerUGI, String user) {
+    return (callerUGI != null && (user == null || user.isEmpty()) ?
+        callerUGI.getUserName().trim() : parseStr(user));
+  }
+
   private static UserGroupInformation getUser(HttpServletRequest req) {
     String remoteUser = req.getRemoteUser();
     UserGroupInformation callerUGI = null;
@@ -181,6 +188,17 @@ public class TimelineReaderWebServices {
   private TimelineReaderManager getTimelineReaderManager() {
     return (TimelineReaderManager)
         ctxt.getAttribute(TimelineReaderServer.TIMELINE_READER_MANAGER_ATTR);
+  }
+
+  private static void handleException(Exception e) throws BadRequestException,
+      WebApplicationException {
+    if (e instanceof IllegalArgumentException) {
+      throw new BadRequestException("Requested Invalid Field.");
+    } else {
+      LOG.error("Error while processing REST request", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
   }
 
   /**
@@ -196,25 +214,58 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a set of entities that match the given parameters.
+   * Return a set of entities that match the given parameters. Cluster ID is not
+   * provided by client so default cluster ID has to be taken.
    */
   @GET
-  @Path("/entities/{clusterId}/{appId}/{entityType}")
+  @Path("/entities/{appid}/{entitytype}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("clusterId") String clusterId,
-      @PathParam("appId") String appId,
-      @PathParam("entityType") String entityType,
-      @QueryParam("userId") String userId,
-      @QueryParam("flowId") String flowId,
-      @QueryParam("flowRunId") String flowRunId,
+      @PathParam("appid") String appId,
+      @PathParam("entitytype") String entityType,
+      @QueryParam("userid") String userId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
       @QueryParam("limit") String limit,
-      @QueryParam("createdTimeStart") String createdTimeStart,
-      @QueryParam("createdTimeEnd") String createdTimeEnd,
-      @QueryParam("modifiedTimeStart") String modifiedTimeStart,
-      @QueryParam("modifiedTimeEnd") String modifiedTimeEnd,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+       @QueryParam("fields") String fields) {
+    return getEntities(req, res, null, appId, entityType, userId, flowId,
+        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
+        metricfilters, eventfilters, fields);
+  }
+
+  /**
+   * Return a set of entities that match the given parameters.
+   */
+  @GET
+  @Path("/entities/{clusterid}/{appid}/{entitytype}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getEntities(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("appid") String appId,
+      @PathParam("entitytype") String entityType,
+      @QueryParam("userid") String userId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
       @QueryParam("relatesto") String relatesTo,
       @QueryParam("isrelatedto") String isRelatedTo,
       @QueryParam("infofilters") String infofilters,
@@ -225,11 +276,10 @@ public class TimelineReaderWebServices {
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     UserGroupInformation callerUGI = getUser(req);
+    Set<TimelineEntity> entities = null;
     try {
-      return timelineReaderManager.getEntities(
-          callerUGI != null && (userId == null || userId.isEmpty()) ?
-          callerUGI.getUserName().trim() : parseStr(userId),
-          parseStr(clusterId), parseStr(flowId),
+      entities = timelineReaderManager.getEntities(
+          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
           parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
           parseLongStr(limit), parseLongStr(createdTimeStart),
           parseLongStr(createdTimeEnd), parseLongStr(modifiedTimeStart),
@@ -245,31 +295,52 @@ public class TimelineReaderWebServices {
       throw new BadRequestException(
           "createdTime or modifiedTime start/end or limit or flowId is not" +
           " a numeric value.");
-    } catch (IllegalArgumentException e) {
-      throw new BadRequestException("Requested Invalid Field.");
     } catch (Exception e) {
-      LOG.error("Error getting entities", e);
-      throw new WebApplicationException(e,
-          Response.Status.INTERNAL_SERVER_ERROR);
+      handleException(e);
     }
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    return entities;
+  }
+
+  /**
+   * Return a single entity of the given entity type and Id. Cluster ID is not
+   * provided by client so default cluster ID has to be taken.
+   */
+  @GET
+  @Path("/entity/{appid}/{entitytype}/{entityid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getEntity(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("appid") String appId,
+      @PathParam("entitytype") String entityType,
+      @PathParam("entityid") String entityId,
+      @QueryParam("userid") String userId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("fields") String fields) {
+    return getEntity(req, res, null, appId, entityType, entityId, userId,
+        flowId, flowRunId, fields);
   }
 
   /**
    * Return a single entity of the given entity type and Id.
    */
   @GET
-  @Path("/entity/{clusterId}/{appId}/{entityType}/{entityId}/")
+  @Path("/entity/{clusterid}/{appid}/{entitytype}/{entityid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      @PathParam("clusterId") String clusterId,
-      @PathParam("appId") String appId,
-      @PathParam("entityType") String entityType,
-      @PathParam("entityId") String entityId,
-      @QueryParam("userId") String userId,
-      @QueryParam("flowId") String flowId,
-      @QueryParam("flowRunId") String flowRunId,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("appid") String appId,
+      @PathParam("entitytype") String entityType,
+      @PathParam("entityid") String entityId,
+      @QueryParam("userid") String userId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
       @QueryParam("fields") String fields) {
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
@@ -277,24 +348,118 @@ public class TimelineReaderWebServices {
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
-          callerUGI != null && (userId == null || userId.isEmpty()) ?
-          callerUGI.getUserName().trim() : parseStr(userId),
-          parseStr(clusterId), parseStr(flowId), parseLongStr(flowRunId),
-          parseStr(appId), parseStr(entityType), parseStr(entityId),
-          parseFieldsStr(fields, COMMA_DELIMITER));
+          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
+          parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
+          parseStr(entityId), parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (NumberFormatException e) {
-      throw new BadRequestException("flowRunId is not a numeric value.");
-    } catch (IllegalArgumentException e) {
-      throw new BadRequestException("Requested Invalid Field.");
+      throw new BadRequestException("flowrunid is not a numeric value.");
     } catch (Exception e) {
-      LOG.error("Error getting entity", e);
-      throw new WebApplicationException(e,
-          Response.Status.INTERNAL_SERVER_ERROR);
+      handleException(e);
     }
     if (entity == null) {
       throw new NotFoundException("Timeline entity {id: " + parseStr(entityId) +
           ", type: " + parseStr(entityType) + " } is not found");
     }
     return entity;
+  }
+
+  /**
+   * Return a single flow run for the given cluster, flow id and run id.
+   * Cluster ID is not provided by client so default cluster ID has to be taken.
+   */
+  @GET
+  @Path("/flowrun/{flowid}/{flowrunid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getFlowRun(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("flowid") String flowId,
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("fields") String fields) {
+    return getFlowRun(req, res, null, flowId, flowRunId, userId, fields);
+  }
+
+  /**
+   * Return a single flow run for the given cluster, flow id and run id.
+   */
+  @GET
+  @Path("/flowrun/{clusterid}/{flowid}/{flowrunid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getFlowRun(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("flowid") String flowId,
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("fields") String fields) {
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    UserGroupInformation callerUGI = getUser(req);
+    TimelineEntity entity = null;
+    try {
+      entity = timelineReaderManager.getEntity(
+          parseUser(callerUGI, userId), parseStr(clusterId),
+          parseStr(flowId), parseLongStr(flowRunId), null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(), null,
+          parseFieldsStr(fields, COMMA_DELIMITER));
+    } catch (NumberFormatException e) {
+      throw new BadRequestException("flowRunId is not a numeric value.");
+    } catch (Exception e) {
+      handleException(e);
+    }
+    if (entity == null) {
+      throw new NotFoundException("Flow run {flow id: " + parseStr(flowId) +
+          ", run id: " + parseLongStr(flowRunId) + " } is not found");
+    }
+    return entity;
+  }
+
+  /**
+   * Return a list of flows for a given cluster id. Cluster ID is not
+   * provided by client so default cluster ID has to be taken.
+   */
+  @GET
+  @Path("/flows/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlows(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @QueryParam("limit") String limit,
+      @QueryParam("fields") String fields) {
+    return getFlows(req, res, null, limit, fields);
+  }
+
+  /**
+   * Return a list of flows for a given cluster id.
+   */
+  @GET
+  @Path("/flows/{clusterid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlows(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @QueryParam("limit") String limit,
+      @QueryParam("fields") String fields) {
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<TimelineEntity> entities = null;
+    try {
+      entities = timelineReaderManager.getEntities(
+          null, parseStr(clusterId), null, null, null,
+          TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), parseLongStr(limit),
+          null, null, null, null, null, null, null, null, null, null,
+          parseFieldsStr(fields, COMMA_DELIMITER));
+    } catch (NumberFormatException e) {
+      throw new BadRequestException("limit is not a numeric value.");
+    } catch (Exception e) {
+      handleException(e);
+    }
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    return entities;
   }
 }
