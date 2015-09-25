@@ -187,8 +187,8 @@ public class TestTimelineReaderWebServices {
     Client client = createClient();
     try {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/entity/cluster1/app1/app/id_1?userId=user1&" +
-          "flowId=flow1&flowRunId=1");
+          "timeline/entity/cluster1/app1/app/id_1?userid=user1&" +
+          "flowid=flow1&flowrunid=1");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
@@ -259,6 +259,32 @@ public class TestTimelineReaderWebServices {
   }
 
   @Test
+  public void testQueryWithoutCluster() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/entity/app1/app/id_1");
+      ClientResponse resp = getResponse(client, uri);
+      TimelineEntity entity = resp.getEntity(TimelineEntity.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entity);
+      assertEquals("id_1", entity.getId());
+      assertEquals("app", entity.getType());
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/entities/app1/app");
+      resp = getResponse(client, uri);
+      Set<TimelineEntity> entities =
+          resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(4, entities.size());
+    } finally {
+      client.destroy();
+    }
+  }
+
+  @Test
   public void testGetEntities() throws Exception {
     Client client = createClient();
     try {
@@ -318,8 +344,8 @@ public class TestTimelineReaderWebServices {
     Client client = createClient();
     try {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/entities/cluster1/app1/app?createdTimeStart=1425016502030&"
-          + "createdTimeEnd=1425016502060");
+          "timeline/entities/cluster1/app1/app?createdtimestart=1425016502030&"
+          + "createdtimeend=1425016502060");
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -330,7 +356,7 @@ public class TestTimelineReaderWebServices {
           entities.contains(newEntity("app", "id_4")));
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?createdTimeEnd=1425016502010");
+          "entities/cluster1/app1/app?createdtimeend=1425016502010");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
@@ -340,7 +366,7 @@ public class TestTimelineReaderWebServices {
           entities.contains(newEntity("app", "id_4")));
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?createdTimeStart=1425016502010");
+          "entities/cluster1/app1/app?createdtimestart=1425016502010");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
@@ -358,8 +384,8 @@ public class TestTimelineReaderWebServices {
     Client client = createClient();
     try {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/entities/cluster1/app1/app?modifiedTimeStart=1425016502090"
-          + "&modifiedTimeEnd=1425016503020");
+          "timeline/entities/cluster1/app1/app?modifiedtimestart=1425016502090"
+          + "&modifiedtimeend=1425016503020");
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -372,7 +398,7 @@ public class TestTimelineReaderWebServices {
           entities.contains(newEntity("app", "id_4")));
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?modifiedTimeEnd=1425016502090");
+          "entities/cluster1/app1/app?modifiedtimeend=1425016502090");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
@@ -384,7 +410,7 @@ public class TestTimelineReaderWebServices {
           entities.contains(newEntity("app", "id_3")));
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entities/cluster1/app1/app?modifiedTimeStart=1425016503005");
+          "entities/cluster1/app1/app?modifiedtimestart=1425016503005");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
@@ -527,7 +553,7 @@ public class TestTimelineReaderWebServices {
           "timeline/entities/cluster1/app1/app?metricfilters=metric7&" +
           "isrelatedto=type1:tid1_1;tid1_2,type2:tid2_1%60&relatesto=" +
           "flow:flow1&eventfilters=event_2,event_4&infofilters=info2:3.5" +
-          "&createdTimeStart=1425016502030&createdTimeEnd=1425016502060");
+          "&createdtimestart=1425016502030&createdtimeend=1425016502060");
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
@@ -544,11 +570,11 @@ public class TestTimelineReaderWebServices {
     Client client = createClient();
     try {
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/entities/cluster1/app1/app?flowRunId=a23b");
+          "timeline/entities/cluster1/app1/app?flowrunid=a23b");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
-          "entity/cluster1/app1/app/id_1?flowRunId=2ab15");
+          "entity/cluster1/app1/app/id_1?flowrunid=2ab15");
       verifyHttpResponse(client, uri, Status.BAD_REQUEST);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/" +
