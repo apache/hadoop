@@ -1418,6 +1418,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9123. Copying from the root to a subdirectory should be forbidden.
     (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HDFS-9107. Prevent NN's unrecoverable death spiral after full GC (Daryn
+    Sharp via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
