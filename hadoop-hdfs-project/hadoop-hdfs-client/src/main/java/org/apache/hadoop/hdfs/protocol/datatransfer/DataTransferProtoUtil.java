@@ -137,6 +137,7 @@ public abstract class DataTransferProtoUtil {
       } else {
         throw new IOException(
           "Got error"
+          + ", status=" + response.getStatus().name()
           + ", status message " + response.getMessage()
           + ", " + logInfo
         );

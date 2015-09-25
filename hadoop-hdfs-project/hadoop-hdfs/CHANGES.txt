@@ -962,6 +962,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9134. Move LEASE_{SOFTLIMIT,HARDLIMIT}_PERIOD constants from
     HdfsServerConstants to HdfsConstants. (Mingliang Liu via wheat9)
 
+    HDFS-5795. RemoteBlockReader2#checkSuccess() shoud print error status.
+    (Xiao Chen via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
