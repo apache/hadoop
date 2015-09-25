@@ -81,6 +81,7 @@ public class TestExternalBlockReader {
     String fileName;
     long blockId;
     String blockPoolId;
+    long genstamp;
     boolean verifyChecksum;
     String clientName;
     boolean allowShortCircuit;
@@ -97,6 +98,12 @@ public class TestExternalBlockReader {
     public ReplicaAccessorBuilder setBlock(long blockId, String blockPoolId) {
       this.blockId = blockId;
       this.blockPoolId = blockPoolId;
+      return this;
+    }
+
+    @Override
+    public ReplicaAccessorBuilder setGenerationStamp(long genstamp) {
+      this.genstamp = genstamp;
       return this;
     }
 
@@ -154,12 +161,14 @@ public class TestExternalBlockReader {
     int numCloses = 0;
     String error = "";
     String prefix = "";
+    final long genstamp;
 
     SyntheticReplicaAccessor(SyntheticReplicaAccessorBuilder builder) {
       this.length = builder.visibleLength;
       this.contents = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, Ints.checkedCast(length));
       this.builder = builder;
+      this.genstamp = builder.genstamp;
       String uuid = this.builder.conf.
           get(SYNTHETIC_BLOCK_READER_TEST_UUID_KEY);
       LinkedList<SyntheticReplicaAccessor> accessorsList =
@@ -235,6 +244,10 @@ public class TestExternalBlockReader {
       return error;
     }
 
+    long getGenerationStamp() {
+      return genstamp;
+    }
+
     synchronized void addError(String text) {
       LOG.error("SyntheticReplicaAccessor error: " + text);
       error = error + prefix + text;
@@ -284,6 +297,8 @@ public class TestExternalBlockReader {
       Assert.assertEquals(dfs.getClient().clientName,
           accessor.builder.clientName);
       Assert.assertEquals("/a", accessor.builder.fileName);
+      Assert.assertEquals(block.getGenerationStamp(),
+          accessor.getGenerationStamp());
       Assert.assertTrue(accessor.builder.verifyChecksum);
       Assert.assertEquals(1024L, accessor.builder.visibleLength);
       Assert.assertEquals(1024L, accessor.totalRead);
