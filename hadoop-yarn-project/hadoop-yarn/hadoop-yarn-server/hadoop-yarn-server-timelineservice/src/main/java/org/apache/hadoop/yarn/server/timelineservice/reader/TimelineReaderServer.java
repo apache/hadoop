@@ -77,6 +77,7 @@ public class TimelineReaderServer extends CompositeService {
     TimelineReader readerStore = ReflectionUtils.newInstance(conf.getClass(
         YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
         FileSystemTimelineReaderImpl.class, TimelineReader.class), conf);
+    LOG.info("Using store " + readerStore.getClass().getName());
     readerStore.init(conf);
     return readerStore;
   }
