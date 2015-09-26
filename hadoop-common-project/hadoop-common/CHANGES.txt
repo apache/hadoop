@@ -1156,6 +1156,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12437. Allow SecurityUtil to lookup alternate hostnames.
     (Arpit Agarwal)
 
+    HADOOP-12442. Display help if the command option to 'hdfs dfs' is not valid
+    (nijel via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
