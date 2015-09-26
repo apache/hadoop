@@ -124,8 +124,8 @@ public class TestClientProtocolForPipelineRecovery {
   public void testPipelineRecoveryForLastBlock() throws IOException {
     DFSClientFaultInjector faultInjector
         = Mockito.mock(DFSClientFaultInjector.class);
-    DFSClientFaultInjector oldInjector = DFSClientFaultInjector.instance;
-    DFSClientFaultInjector.instance = faultInjector;
+    DFSClientFaultInjector oldInjector = DFSClientFaultInjector.get();
+    DFSClientFaultInjector.set(faultInjector);
     Configuration conf = new HdfsConfiguration();
 
     conf.setInt(HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 3);
@@ -153,7 +153,7 @@ public class TestClientProtocolForPipelineRecovery {
             + " corrupt replicas.");
       }
     } finally {
-      DFSClientFaultInjector.instance = oldInjector;
+      DFSClientFaultInjector.set(oldInjector);
       if (cluster != null) {
         cluster.shutdown();
       }
