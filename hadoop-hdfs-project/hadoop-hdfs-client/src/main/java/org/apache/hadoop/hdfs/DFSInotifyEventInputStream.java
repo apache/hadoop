@@ -44,8 +44,8 @@ import java.util.concurrent.TimeUnit;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class DFSInotifyEventInputStream {
-  public static Logger LOG = LoggerFactory.getLogger(DFSInotifyEventInputStream
-      .class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      DFSInotifyEventInputStream.class);
 
   /**
    * The trace sampler to use when making RPCs to the NameNode.

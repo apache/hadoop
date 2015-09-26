@@ -31,8 +31,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -54,13 +52,15 @@ import org.apache.htrace.TraceScope;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class BlockStorageLocationUtil {
   
-  static final Log LOG = LogFactory
-      .getLog(BlockStorageLocationUtil.class);
+  static final Logger LOG = LoggerFactory
+      .getLogger(BlockStorageLocationUtil.class);
   
   /**
    * Create a list of {@link VolumeBlockLocationCallable} corresponding to a set

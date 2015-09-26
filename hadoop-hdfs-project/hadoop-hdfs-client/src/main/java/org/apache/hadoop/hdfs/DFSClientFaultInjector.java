@@ -30,11 +30,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @VisibleForTesting
 @InterfaceAudience.Private
 public class DFSClientFaultInjector {
-  public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
+  private static DFSClientFaultInjector instance = new DFSClientFaultInjector();
   public static AtomicLong exceptionNum = new AtomicLong(0);
 
   public static DFSClientFaultInjector get() {
     return instance;
+  }
+  public static void set(DFSClientFaultInjector instance) {
+    DFSClientFaultInjector.instance = instance;
   }
 
   public boolean corruptPacket() {

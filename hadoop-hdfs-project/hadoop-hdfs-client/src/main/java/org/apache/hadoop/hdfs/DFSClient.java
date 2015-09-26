@@ -55,8 +55,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -157,6 +155,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -192,6 +191,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
  * perform basic file tasks.  It uses the ClientProtocol
@@ -206,7 +208,7 @@ import com.google.common.net.InetAddresses;
 @InterfaceAudience.Private
 public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     DataEncryptionKeyFactory {
-  public static final Log LOG = LogFactory.getLog(DFSClient.class);
+  public static final Logger LOG = LoggerFactory.getLogger(DFSClient.class);
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
 
   private final Configuration conf;
@@ -310,7 +312,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
-    this.smallBufferSize = DFSUtil.getSmallBufferSize(conf);
+    this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
 
     this.ugi = UserGroupInformation.getCurrentUser();
     
@@ -323,6 +325,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT);
     ProxyAndInfo<ClientProtocol> proxyInfo = null;
     AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
+
     if (numResponseToDrop > 0) {
       // This case is used for testing.
       LOG.warn(HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
@@ -732,7 +735,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     static {
       //Ensure that HDFS Configuration files are loaded before trying to use
       // the renewer.
-      HdfsConfiguration.init();
+      HdfsConfigurationLoader.init();
     }
     
     @Override
@@ -2068,7 +2071,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
       return PBHelperClient.convert(reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
-      IOUtils.cleanup(null, pair.in, pair.out);
+      IOUtilsClient.cleanup(null, pair.in, pair.out);
     }
   }
 
@@ -3085,7 +3088,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return peer;
     } finally {
       if (!success) {
-        IOUtils.cleanup(LOG, peer);
+        IOUtilsClient.cleanup(LOG, peer);
         IOUtils.closeSocket(sock);
       }
     }
@@ -3157,11 +3160,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Probe for encryption enabled on this filesystem.
-   * See {@link DFSUtil#isHDFSEncryptionEnabled(Configuration)}
+   * See {@link DFSUtilClient#isHDFSEncryptionEnabled(Configuration)}
    * @return true if encryption is enabled
    */
   public boolean isHDFSEncryptionEnabled() {
-    return DFSUtil.isHDFSEncryptionEnabled(this.conf);
+    return DFSUtilClient.isHDFSEncryptionEnabled(this.conf);
   }
 
   /**

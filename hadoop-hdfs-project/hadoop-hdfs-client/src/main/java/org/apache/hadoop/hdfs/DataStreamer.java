@@ -40,8 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
@@ -94,6 +92,9 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /*********************************************************************
  *
  * The DataStreamer class is responsible for sending data packets to the
@@ -117,7 +118,7 @@ import com.google.common.cache.RemovalNotification;
 
 @InterfaceAudience.Private
 class DataStreamer extends Daemon {
-  static final Log LOG = LogFactory.getLog(DataStreamer.class);
+  static final Logger LOG = LoggerFactory.getLogger(DataStreamer.class);
 
   /**
    * Create a socket for a write pipeline
@@ -1229,7 +1230,7 @@ class DataStreamer extends Daemon {
       unbufOut = saslStreams.out;
       unbufIn = saslStreams.in;
       out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-          DFSUtil.getSmallBufferSize(dfsClient.getConfiguration())));
+          DFSUtilClient.getSmallBufferSize(dfsClient.getConfiguration())));
       in = new DataInputStream(unbufIn);
 
       //send the TRANSFER_BLOCK request
@@ -1494,7 +1495,7 @@ class DataStreamer extends Daemon {
         unbufOut = saslStreams.out;
         unbufIn = saslStreams.in;
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-            DFSUtil.getSmallBufferSize(dfsClient.getConfiguration())));
+            DFSUtilClient.getSmallBufferSize(dfsClient.getConfiguration())));
         blockReplyStream = new DataInputStream(unbufIn);
 
         //

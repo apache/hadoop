@@ -34,7 +34,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -111,7 +111,7 @@ class BlockSender implements java.io.Closeable {
   private static final int IO_FILE_BUFFER_SIZE;
   static {
     HdfsConfiguration conf = new HdfsConfiguration();
-    IO_FILE_BUFFER_SIZE = DFSUtil.getIoFileBufferSize(conf);
+    IO_FILE_BUFFER_SIZE = DFSUtilClient.getIoFileBufferSize(conf);
   }
   private static final int TRANSFERTO_BUFFER_SIZE = Math.max(
       IO_FILE_BUFFER_SIZE, MIN_BUFFER_WITH_TRANSFERTO);
