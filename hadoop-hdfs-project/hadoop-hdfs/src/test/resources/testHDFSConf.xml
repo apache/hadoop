@@ -1444,7 +1444,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^1\.0 K\s+1\.0 K\s+hdfs:///dir0/data1k</expected-output>
+          <expected-output>^1\.0K\s+1\.0 K\s+hdfs:///dir0/data1k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -9034,7 +9034,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>( |\t)*0( |\t)*1( |\t)*1\.0 K file2</expected-output>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*1\.0K file2</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -9053,7 +9053,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>( |\t)*10( |\t)*9( |\t)*1 M( |\t)*1 M( |\t)*1( |\t)*0( |\t)*0 /dir1</expected-output>
+          <expected-output>( |\t)*10( |\t)*9( |\t)*1M( |\t)*1M( |\t)*1( |\t)*0( |\t)*0 /dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16136,7 +16136,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota = 1024 B = 1 KB but diskspace consumed = [0-9]+ B = [0-9.]+ [KMG]B*</expected-output>
+          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota = 1024B = 1KB but diskspace consumed = [0-9]+B = [0-9.]+[KMG]B*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16343,19 +16343,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Present Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Present Capacity: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>DFS Remaining: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>DFS Remaining: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>DFS Used: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>DFS Used: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16379,7 +16379,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Non DFS Used: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Non DFS Used: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16461,19 +16461,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Present Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Present Capacity: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>DFS Remaining: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>DFS Remaining: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>DFS Used: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>DFS Used: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16493,7 +16493,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Non DFS Used: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
+          <expected-output>Non DFS Used: [0-9]+ \([0-9\.]+[BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

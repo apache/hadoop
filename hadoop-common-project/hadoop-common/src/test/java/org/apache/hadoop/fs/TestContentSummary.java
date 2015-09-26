@@ -232,8 +232,8 @@ public class TestContentSummary {
     ContentSummary contentSummary = new ContentSummary.Builder().length(length).
         fileCount(fileCount).directoryCount(directoryCount).quota(quota).
         spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
-    String expected = "     212.0 M            1023               1 "
-        + "           -1 G       32.6 K      211.9 M              8.0 E ";
+    String expected = "      212.0M            1023               1 "
+        + "            -1G        32.6K       211.9M               8.0E ";
     assertEquals(expected, contentSummary.toString(true, true));
   }
 
@@ -250,7 +250,7 @@ public class TestContentSummary {
     ContentSummary contentSummary = new ContentSummary.Builder().length(length).
         fileCount(fileCount).directoryCount(directoryCount).quota(quota).
         spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
-    String expected = "      32.6 K      211.9 M              8.0 E ";
+    String expected = "       32.6K       211.9M               8.0E ";
     assertEquals(expected, contentSummary.toString(false, true));
   }
 }

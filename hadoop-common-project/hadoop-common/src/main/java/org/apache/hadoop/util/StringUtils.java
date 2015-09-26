@@ -764,7 +764,7 @@ public class StringUtils {
       }
       //take care a special case
       if (n == Long.MIN_VALUE) {
-        return "-8 " + EXA.symbol + unit;
+        return "-8" + EXA.symbol + unit;
       }
 
       final StringBuilder b = new StringBuilder();
@@ -776,7 +776,7 @@ public class StringUtils {
       if (n < KILO.value) {
         //no prefix
         b.append(n);
-        return (unit.isEmpty()? b: b.append(" ").append(unit)).toString();
+        return (unit.isEmpty()? b: b.append(unit)).toString();
       } else {
         //find traditional binary prefix
         int i = 0;
@@ -796,7 +796,7 @@ public class StringUtils {
           }
           b.append(s);
         }
-        return b.append(' ').append(prefix.symbol).append(unit).toString();
+        return b.append(prefix.symbol).append(unit).toString();
       }
     }
   }

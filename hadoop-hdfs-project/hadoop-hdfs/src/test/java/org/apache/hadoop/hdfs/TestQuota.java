@@ -51,12 +51,12 @@ import com.google.common.base.Charsets;
 
 /** A class for testing quota-related commands */
 public class TestQuota {
-  
-  private void runCommand(DFSAdmin admin, boolean expectError, String... args) 
+
+  private void runCommand(DFSAdmin admin, boolean expectError, String... args)
                          throws Exception {
     runCommand(admin, args, expectError);
   }
-  
+
   private void runCommand(DFSAdmin admin, String args[], boolean expectEror)
   throws Exception {
     int val = admin.run(args);
@@ -66,7 +66,7 @@ public class TestQuota {
       assertTrue(val>=0);
     }
   }
-  
+
   /**
    * Tests to make sure we're getting human readable Quota exception messages
    * Test for @link{ NSQuotaExceededException, DSQuotaExceededException}
@@ -78,19 +78,19 @@ public class TestQuota {
     try {
       throw new DSQuotaExceededException(bytes, bytes);
     } catch(DSQuotaExceededException e) {
-      
-      assertEquals("The DiskSpace quota is exceeded: quota = 1024 B = 1 KB"
-          + " but diskspace consumed = 1024 B = 1 KB", e.getMessage());
+
+      assertEquals("The DiskSpace quota is exceeded: quota = 1024B = 1KB"
+          + " but diskspace consumed = 1024B = 1KB", e.getMessage());
     }
   }
-  
-  /** Test quota related commands: 
-   *    setQuota, clrQuota, setSpaceQuota, clrSpaceQuota, and count 
+
+  /** Test quota related commands:
+   *    setQuota, clrQuota, setSpaceQuota, clrSpaceQuota, and count
    */
   @Test
   public void testQuotaCommands() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    // set a smaller block size so that we can test with smaller 
+    // set a smaller block size so that we can test with smaller
     // Space quotas
     final int DEFAULT_BLOCK_SIZE = 512;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
@@ -103,7 +103,7 @@ public class TestQuota {
                 fs instanceof DistributedFileSystem);
     final DistributedFileSystem dfs = (DistributedFileSystem)fs;
     DFSAdmin admin = new DFSAdmin(conf);
-    
+
     try {
       final int fileLen = 1024;
       final short replication = 5;
@@ -118,11 +118,11 @@ public class TestQuota {
       //try setting space quota with a 'binary prefix'
       runCommand(admin, false, "-setSpaceQuota", "2t", parent.toString());
       assertEquals(2L<<40, dfs.getContentSummary(parent).getSpaceQuota());
-      
-      // set diskspace quota to 10000 
-      runCommand(admin, false, "-setSpaceQuota", 
+
+      // set diskspace quota to 10000
+      runCommand(admin, false, "-setSpaceQuota",
                  Long.toString(spaceQuota), parent.toString());
-      
+
       // 2: create directory /test/data0
       final Path childDir0 = new Path(parent, "data0");
       assertTrue(dfs.mkdirs(childDir0));
@@ -130,14 +130,14 @@ public class TestQuota {
       // 3: create a file /test/datafile0
       final Path childFile0 = new Path(parent, "datafile0");
       DFSTestUtil.createFile(fs, childFile0, fileLen, replication, 0);
-      
+
       // 4: count -q /test
       ContentSummary c = dfs.getContentSummary(parent);
       assertEquals(c.getFileCount()+c.getDirectoryCount(), 3);
       assertEquals(c.getQuota(), 3);
       assertEquals(c.getSpaceConsumed(), fileLen*replication);
       assertEquals(c.getSpaceQuota(), spaceQuota);
-      
+
       // 5: count -q /test/data0
       c = dfs.getContentSummary(childDir0);
       assertEquals(c.getFileCount()+c.getDirectoryCount(), 1);
@@ -155,9 +155,9 @@ public class TestQuota {
         hasException = true;
       }
       assertTrue(hasException);
-      
+
       OutputStream fout;
-      
+
       // 7: create a file /test/datafile1
       final Path childFile1 = new Path(parent, "datafile1");
       hasException = false;
@@ -167,21 +167,21 @@ public class TestQuota {
         hasException = true;
       }
       assertTrue(hasException);
-      
+
       // 8: clear quota /test
       runCommand(admin, new String[]{"-clrQuota", parent.toString()}, false);
       c = dfs.getContentSummary(parent);
       assertEquals(c.getQuota(), -1);
       assertEquals(c.getSpaceQuota(), spaceQuota);
-      
+
       // 9: clear quota /test/data0
       runCommand(admin, new String[]{"-clrQuota", childDir0.toString()}, false);
       c = dfs.getContentSummary(childDir0);
       assertEquals(c.getQuota(), -1);
-      
+
       // 10: create a file /test/datafile1
       fout = dfs.create(childFile1, replication);
-      
+
       // 10.s: but writing fileLen bytes should result in an quota exception
       try {
         fout.write(new byte[fileLen]);
@@ -190,30 +190,30 @@ public class TestQuota {
       } catch (QuotaExceededException e) {
         IOUtils.closeStream(fout);
       }
-      
+
       //delete the file
       dfs.delete(childFile1, false);
-      
+
       // 9.s: clear diskspace quota
       runCommand(admin, false, "-clrSpaceQuota", parent.toString());
       c = dfs.getContentSummary(parent);
       assertEquals(c.getQuota(), -1);
-      assertEquals(c.getSpaceQuota(), -1);       
-      
+      assertEquals(c.getSpaceQuota(), -1);
+
       // now creating childFile1 should succeed
       DFSTestUtil.createFile(dfs, childFile1, fileLen, replication, 0);
-      
+
       // 11: set the quota of /test to be 1
-      // HADOOP-5872 - we can set quota even if it is immediately violated 
+      // HADOOP-5872 - we can set quota even if it is immediately violated
       args = new String[]{"-setQuota", "1", parent.toString()};
       runCommand(admin, args, false);
       runCommand(admin, false, "-setSpaceQuota",  // for space quota
                  Integer.toString(fileLen), args[2]);
-      
+
       // 12: set the quota of /test/data0 to be 1
       args = new String[]{"-setQuota", "1", childDir0.toString()};
       runCommand(admin, args, false);
-      
+
       // 13: not able create a directory under data0
       hasException = false;
       try {
@@ -225,7 +225,7 @@ public class TestQuota {
       c = dfs.getContentSummary(childDir0);
       assertEquals(c.getDirectoryCount()+c.getFileCount(), 1);
       assertEquals(c.getQuota(), 1);
-      
+
       // 14a: set quota on a non-existent directory
       Path nonExistentPath = new Path("/test1");
       assertFalse(dfs.exists(nonExistentPath));
@@ -233,71 +233,71 @@ public class TestQuota {
       runCommand(admin, args, true);
       runCommand(admin, true, "-setSpaceQuota", "1g", // for space quota
                  nonExistentPath.toString());
-      
+
       // 14b: set quota on a file
       assertTrue(dfs.isFile(childFile0));
       args[1] = childFile0.toString();
       runCommand(admin, args, true);
       // same for space quota
       runCommand(admin, true, "-setSpaceQuota", "1t", args[1]);
-      
+
       // 15a: clear quota on a file
       args[0] = "-clrQuota";
       runCommand(admin, args, true);
       runCommand(admin, true, "-clrSpaceQuota", args[1]);
-      
+
       // 15b: clear quota on a non-existent directory
       args[1] = nonExistentPath.toString();
       runCommand(admin, args, true);
       runCommand(admin, true, "-clrSpaceQuota", args[1]);
-      
+
       // 16a: set the quota of /test to be 0
       args = new String[]{"-setQuota", "0", parent.toString()};
       runCommand(admin, args, true);
       runCommand(admin, true, "-setSpaceQuota", "0", args[2]);
-      
+
       // 16b: set the quota of /test to be -1
       args[1] = "-1";
       runCommand(admin, args, true);
       runCommand(admin, true, "-setSpaceQuota", args[1], args[2]);
-      
+
       // 16c: set the quota of /test to be Long.MAX_VALUE+1
       args[1] = String.valueOf(Long.MAX_VALUE+1L);
       runCommand(admin, args, true);
       runCommand(admin, true, "-setSpaceQuota", args[1], args[2]);
-      
+
       // 16d: set the quota of /test to be a non integer
       args[1] = "33aa1.5";
       runCommand(admin, args, true);
       runCommand(admin, true, "-setSpaceQuota", args[1], args[2]);
-      
+
       // 16e: set space quota with a value larger than Long.MAX_VALUE
-      runCommand(admin, true, "-setSpaceQuota", 
+      runCommand(admin, true, "-setSpaceQuota",
                  (Long.MAX_VALUE/1024/1024 + 1024) + "m", args[2]);
-      
+
       // 17:  setQuota by a non-administrator
       final String username = "userxx";
-      UserGroupInformation ugi = 
-        UserGroupInformation.createUserForTesting(username, 
+      UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting(username,
                                                   new String[]{"groupyy"});
-      
+
       final String[] args2 = args.clone(); // need final ref for doAs block
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          assertEquals("Not running as new user", username, 
+          assertEquals("Not running as new user", username,
               UserGroupInformation.getCurrentUser().getShortUserName());
           DFSAdmin userAdmin = new DFSAdmin(conf);
-          
+
           args2[1] = "100";
           runCommand(userAdmin, args2, true);
           runCommand(userAdmin, true, "-setSpaceQuota", "1g", args2[2]);
-          
+
           // 18: clrQuota by a non-administrator
           String[] args3 = new String[] {"-clrQuota", parent.toString()};
           runCommand(userAdmin, args3, true);
-          runCommand(userAdmin, true, "-clrSpaceQuota",  args3[1]); 
-          
+          runCommand(userAdmin, true, "-clrSpaceQuota",  args3[1]);
+
           return null;
         }
       });
@@ -323,7 +323,7 @@ public class TestQuota {
       final Path childFile3 = new Path(childDir2, "datafile3");
       final long spaceQuota2 = DEFAULT_BLOCK_SIZE * replication;
       final long fileLen2 = DEFAULT_BLOCK_SIZE;
-      // set space quota to a real low value 
+      // set space quota to a real low value
       runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), childDir2.toString());
       // clear space quota
       runCommand(admin, false, "-clrSpaceQuota", childDir2.toString());
@@ -347,7 +347,7 @@ public class TestQuota {
 
       runCommand(admin, true, "-clrQuota", "/");
       runCommand(admin, false, "-clrSpaceQuota", "/");
-      // set space quota to a real low value 
+      // set space quota to a real low value
       runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), "/");
       runCommand(admin, false, "-clrSpaceQuota", "/");
       DFSTestUtil.createFile(fs, childFile4, fileLen2, replication, 0);
@@ -366,7 +366,7 @@ public class TestQuota {
       cluster.shutdown();
     }
   }
-  
+
   /** Test commands that change the size of the name space:
    *  mkdirs, rename, and delete */
   @Test
@@ -377,7 +377,7 @@ public class TestQuota {
     conf.setInt(DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_KEY, 2);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final DistributedFileSystem dfs = cluster.getFileSystem();
-    
+
     try {
       // 1: create directory /nqdir0/qdir1/qdir20/nqdir30
       assertTrue(dfs.mkdirs(new Path("/nqdir0/qdir1/qdir20/nqdir30")));
@@ -464,7 +464,7 @@ public class TestQuota {
       assertTrue(hasException);
       assertTrue(dfs.exists(tempPath));
       assertFalse(dfs.exists(new Path(quotaDir3, "nqdir30")));
-      
+
       // 10.a: Rename /nqdir0/qdir1/qdir20/nqdir30 to /nqdir0/qdir1/qdir21/nqdir32
       hasException = false;
       try {
@@ -532,17 +532,17 @@ public class TestQuota {
       cluster.shutdown();
     }
   }
-  
+
   /**
    * Test HDFS operations that change disk space consumed by a directory tree.
    * namely create, rename, delete, append, and setReplication.
-   * 
+   *
    * This is based on testNamespaceCommands() above.
    */
   @Test
   public void testSpaceCommands() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    // set a smaller block size so that we can test with smaller 
+    // set a smaller block size so that we can test with smaller
     // diskspace quotas
     conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     // Make it relinquish locks. When run serially, the result should
@@ -558,17 +558,17 @@ public class TestQuota {
       int fileLen = 1024;
       short replication = 3;
       int fileSpace = fileLen * replication;
-      
+
       // create directory /nqdir0/qdir1/qdir20/nqdir30
       assertTrue(dfs.mkdirs(new Path("/nqdir0/qdir1/qdir20/nqdir30")));
 
-      // set the quota of /nqdir0/qdir1 to 4 * fileSpace 
+      // set the quota of /nqdir0/qdir1 to 4 * fileSpace
       final Path quotaDir1 = new Path("/nqdir0/qdir1");
       dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 4 * fileSpace);
       ContentSummary c = dfs.getContentSummary(quotaDir1);
       assertEquals(c.getSpaceQuota(), 4 * fileSpace);
-      
-      // set the quota of /nqdir0/qdir1/qdir20 to 6 * fileSpace 
+
+      // set the quota of /nqdir0/qdir1/qdir20 to 6 * fileSpace
       final Path quotaDir20 = new Path("/nqdir0/qdir1/qdir20");
       dfs.setQuota(quotaDir20, HdfsConstants.QUOTA_DONT_SET, 6 * fileSpace);
       c = dfs.getContentSummary(quotaDir20);
@@ -585,17 +585,17 @@ public class TestQuota {
       // 5: Create directory /nqdir0/qdir1/qdir21/nqdir32
       Path tempPath = new Path(quotaDir21, "nqdir32");
       assertTrue(dfs.mkdirs(tempPath));
-      
+
       // create a file under nqdir32/fileDir
-      DFSTestUtil.createFile(dfs, new Path(tempPath, "fileDir/file1"), fileLen, 
+      DFSTestUtil.createFile(dfs, new Path(tempPath, "fileDir/file1"), fileLen,
                              replication, 0);
       c = dfs.getContentSummary(quotaDir21);
       assertEquals(c.getSpaceConsumed(), fileSpace);
-      
+
       // Create a larger file /nqdir0/qdir1/qdir21/nqdir33/
       boolean hasException = false;
       try {
-        DFSTestUtil.createFile(dfs, new Path(quotaDir21, "nqdir33/file2"), 
+        DFSTestUtil.createFile(dfs, new Path(quotaDir21, "nqdir33/file2"),
                                2*fileLen, replication, 0);
       } catch (DSQuotaExceededException e) {
         hasException = true;
@@ -610,12 +610,12 @@ public class TestQuota {
       // Verify space before the move:
       c = dfs.getContentSummary(quotaDir20);
       assertEquals(c.getSpaceConsumed(), 0);
-      
+
       // Move /nqdir0/qdir1/qdir21/nqdir32 /nqdir0/qdir1/qdir20/nqdir30
       Path dstPath = new Path(quotaDir20, "nqdir30");
       Path srcPath = new Path(quotaDir21, "nqdir32");
       assertTrue(dfs.rename(srcPath, dstPath));
-      
+
       // verify space after the move
       c = dfs.getContentSummary(quotaDir20);
       assertEquals(c.getSpaceConsumed(), fileSpace);
@@ -625,17 +625,17 @@ public class TestQuota {
       // verify space for source for the move
       c = dfs.getContentSummary(quotaDir21);
       assertEquals(c.getSpaceConsumed(), 0);
-      
+
       final Path file2 = new Path(dstPath, "fileDir/file2");
       int file2Len = 2 * fileLen;
       // create a larger file under /nqdir0/qdir1/qdir20/nqdir30
       DFSTestUtil.createFile(dfs, file2, file2Len, replication, 0);
-      
+
       c = dfs.getContentSummary(quotaDir20);
       assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
       c = dfs.getContentSummary(quotaDir21);
       assertEquals(c.getSpaceConsumed(), 0);
-      
+
       // Reverse: Move /nqdir0/qdir1/qdir20/nqdir30 to /nqdir0/qdir1/qdir21/
       hasException = false;
       try {
@@ -644,39 +644,39 @@ public class TestQuota {
         hasException = true;
       }
       assertTrue(hasException);
-      
+
       // make sure no intermediate directories left by failed rename
       assertFalse(dfs.exists(srcPath));
       // directory should exist
       assertTrue(dfs.exists(dstPath));
-            
+
       // verify space after the failed move
       c = dfs.getContentSummary(quotaDir20);
       assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
       c = dfs.getContentSummary(quotaDir21);
       assertEquals(c.getSpaceConsumed(), 0);
-      
+
       // Test Append :
-      
+
       // verify space quota
       c = dfs.getContentSummary(quotaDir1);
       assertEquals(c.getSpaceQuota(), 4 * fileSpace);
-      
+
       // verify space before append;
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 3 * fileSpace);
-      
+
       OutputStream out = dfs.append(file2);
       // appending 1 fileLen should succeed
       out.write(new byte[fileLen]);
       out.close();
-      
+
       file2Len += fileLen; // after append
-      
+
       // verify space after append;
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 4 * fileSpace);
-      
+
       // now increase the quota for quotaDir1
       dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 5 * fileSpace);
       // Now, appending more than 1 fileLen should result in an error
@@ -691,22 +691,22 @@ public class TestQuota {
         IOUtils.closeStream(out);
       }
       assertTrue(hasException);
-      
+
       file2Len += fileLen; // after partial append
-      
+
       // verify space after partial append
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace);
-      
+
       // Test set replication :
-      
+
       // first reduce the replication
       dfs.setReplication(file2, (short)(replication-1));
-      
+
       // verify that space is reduced by file2Len
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
-      
+
       // now try to increase the replication and and expect an error.
       hasException = false;
       try {
@@ -719,11 +719,11 @@ public class TestQuota {
       // verify space consumed remains unchanged.
       c = dfs.getContentSummary(dstPath);
       assertEquals(c.getSpaceConsumed(), 5 * fileSpace - file2Len);
-      
+
       // now increase the quota for quotaDir1 and quotaDir20
       dfs.setQuota(quotaDir1, HdfsConstants.QUOTA_DONT_SET, 10 * fileSpace);
       dfs.setQuota(quotaDir20, HdfsConstants.QUOTA_DONT_SET, 10 * fileSpace);
-      
+
       // then increasing replication should be ok.
       dfs.setReplication(file2, (short)(replication+1));
       // verify increase in space
@@ -790,7 +790,7 @@ public class TestQuota {
       final ContentSummary computed) {
     assertEquals(expected.toString(), computed.toString());
   }
- 
+
   /**
    * Test limit cases for setting space quotas.
    */
@@ -803,31 +803,31 @@ public class TestQuota {
       assertTrue("Not a HDFS: "+fs.getUri(),
                   fs instanceof DistributedFileSystem);
       final DistributedFileSystem dfs = (DistributedFileSystem)fs;
-    
+
       // create test directory
       final Path testFolder = new Path("/testFolder");
       assertTrue(dfs.mkdirs(testFolder));
-    
+
       // setting namespace quota to Long.MAX_VALUE - 1 should work
       dfs.setQuota(testFolder, Long.MAX_VALUE - 1, 10);
       ContentSummary c = dfs.getContentSummary(testFolder);
       assertTrue("Quota not set properly", c.getQuota() == Long.MAX_VALUE - 1);
-    
+
       // setting diskspace quota to Long.MAX_VALUE - 1 should work
       dfs.setQuota(testFolder, 10, Long.MAX_VALUE - 1);
       c = dfs.getContentSummary(testFolder);
       assertTrue("Quota not set properly", c.getSpaceQuota() == Long.MAX_VALUE - 1);
-    
+
       // setting namespace quota to Long.MAX_VALUE should not work + no error
       dfs.setQuota(testFolder, Long.MAX_VALUE, 10);
       c = dfs.getContentSummary(testFolder);
       assertTrue("Quota should not have changed", c.getQuota() == 10);
-    
+
       // setting diskspace quota to Long.MAX_VALUE should not work + no error
       dfs.setQuota(testFolder, 10, Long.MAX_VALUE);
       c = dfs.getContentSummary(testFolder);
       assertTrue("Quota should not have changed", c.getSpaceQuota() == 10);
-    
+
       // setting namespace quota to Long.MAX_VALUE + 1 should not work + error
       try {
         dfs.setQuota(testFolder, Long.MAX_VALUE + 1, 10);
@@ -835,7 +835,7 @@ public class TestQuota {
       } catch (IllegalArgumentException e) {
         // Expected
       }
-    
+
       // setting diskspace quota to Long.MAX_VALUE + 1 should not work + error
       try {
         dfs.setQuota(testFolder, 10, Long.MAX_VALUE + 1);
@@ -847,14 +847,14 @@ public class TestQuota {
       cluster.shutdown();
     }
   }
-  
+
   /**
    * Violate a space quota using files of size < 1 block. Test that block
    * allocation conservatively assumes that for quota checking the entire
    * space of the block is used.
    */
   @Test
-  public void testBlockAllocationAdjustsUsageConservatively() 
+  public void testBlockAllocationAdjustsUsageConservatively()
       throws Exception {
     Configuration conf = new HdfsConfiguration();
     final int BLOCK_SIZE = 6 * 1024;
@@ -879,7 +879,7 @@ public class TestQuota {
                                              // repl.
       final int FILE_SIZE = BLOCK_SIZE / 2;
       ContentSummary c;
-      
+
       // Create the directory and set the quota
       assertTrue(fs.mkdirs(dir));
       runCommand(admin, false, "-setSpaceQuota", Integer.toString(QUOTA_SIZE),
@@ -897,7 +897,7 @@ public class TestQuota {
       // used by two files (2 * 3 * 512/2) would fit within the quota (3 * 512)
       // when a block for a file is created the space used is adjusted
       // conservatively (3 * block size, ie assumes a full block is written)
-      // which will violate the quota (3 * block size) since we've already 
+      // which will violate the quota (3 * block size) since we've already
       // used half the quota for the first file.
       try {
         DFSTestUtil.createFile(fs, file2, FILE_SIZE, (short) 3, 1L);
@@ -912,7 +912,7 @@ public class TestQuota {
 
  /**
   * Like the previous test but create many files. This covers bugs where
-  * the quota adjustment is incorrect but it takes many files to accrue 
+  * the quota adjustment is incorrect but it takes many files to accrue
   * a big enough accounting error to violate the quota.
   */
   @Test
@@ -923,7 +923,7 @@ public class TestQuota {
     // Make it relinquish locks. When run serially, the result should
     // be identical.
     conf.setInt(DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_KEY, 2);
-    MiniDFSCluster cluster = 
+    MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -933,16 +933,16 @@ public class TestQuota {
     final String webhdfsuri = WebHdfsConstants.WEBHDFS_SCHEME + "://" + nnAddr;
     System.out.println("webhdfsuri=" + webhdfsuri);
     final FileSystem webhdfs = new Path(webhdfsuri).getFileSystem(conf);
-    
+
     try {
-      
+
       //Test for deafult NameSpace Quota
       long nsQuota = FSImageTestUtil.getNSQuota(cluster.getNameNode()
           .getNamesystem());
       assertTrue(
           "Default namespace quota expected as long max. But the value is :"
               + nsQuota, nsQuota == Long.MAX_VALUE);
-      
+
       Path dir = new Path("/test");
       boolean exceededQuota = false;
       ContentSummary c;
