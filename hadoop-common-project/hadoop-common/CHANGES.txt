@@ -1087,6 +1087,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12252. LocalDirAllocator should not throw NPE with empty string
     configuration. (Zhihai Xu)
 
+    HADOOP-11918. Listing an empty s3a root directory throws FileNotFound.
+    (Lei (Eddy) Xu via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
