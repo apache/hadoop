@@ -64,7 +64,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
@@ -117,7 +116,7 @@ public class DistributedFileSystem extends FileSystem {
   private boolean verifyChecksum = true;
   
   static{
-    HdfsConfiguration.init();
+    HdfsConfigurationLoader.init();
   }
 
   public DistributedFileSystem() {
@@ -173,7 +172,7 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public void setWorkingDirectory(Path dir) {
     String result = fixRelativePart(dir).toUri().getPath();
-    if (!DFSUtil.isValidName(result)) {
+    if (!DFSUtilClient.isValidName(result)) {
       throw new IllegalArgumentException("Invalid DFS directory name " + 
                                          result);
     }
@@ -197,7 +196,7 @@ public class DistributedFileSystem extends FileSystem {
   private String getPathName(Path file) {
     checkPath(file);
     String result = file.toUri().getPath();
-    if (!DFSUtil.isValidName(result)) {
+    if (!DFSUtilClient.isValidName(result)) {
       throw new IllegalArgumentException("Pathname " + result + " from " +
                                          file+" is not a valid DFS filename.");
     }
@@ -220,8 +219,7 @@ public class DistributedFileSystem extends FileSystem {
     final Path absF = fixRelativePart(p);
     return new FileSystemLinkResolver<BlockLocation[]>() {
       @Override
-      public BlockLocation[] doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public BlockLocation[] doCall(final Path p) throws IOException {
         return dfs.getBlockLocations(getPathName(p), start, len);
       }
       @Override
