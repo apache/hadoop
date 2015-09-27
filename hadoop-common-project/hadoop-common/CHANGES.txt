@@ -822,6 +822,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11878. FileContext#fixRelativePart should check for not null for a
     more informative exception. (Brahma Reddy Battula via kasha)
 
+    HADOOP-11984. Enable parallel JUnit tests in pre-commit.
+    (Chris Nauroth via vinayakumarb)
+
   BUG FIXES
 
     HADOOP-12374. Updated expunge command description.

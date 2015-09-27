@@ -37,7 +37,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -49,8 +48,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import javax.security.auth.x500.X500Principal;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 
@@ -233,8 +230,8 @@ public class KeyStoreTestUtil {
     String trustKS = null;
     String trustPassword = "trustP";
 
-    File sslClientConfFile = new File(sslConfDir + "/ssl-client.xml");
-    File sslServerConfFile = new File(sslConfDir + "/ssl-server.xml");
+    File sslClientConfFile = new File(sslConfDir, getClientSSLConfigFileName());
+    File sslServerConfFile = new File(sslConfDir, getServerSSLConfigFileName());
 
     Map<String, X509Certificate> certs = new HashMap<String, X509Certificate>();
 
@@ -312,8 +309,44 @@ public class KeyStoreTestUtil {
   }
 
   /**
+   * Returns the client SSL configuration file name.  Under parallel test
+   * execution, this file name is parameterized by a unique ID to ensure that
+   * concurrent tests don't collide on an SSL configuration file.
+   *
+   * @return client SSL configuration file name
+   */
+  public static String getClientSSLConfigFileName() {
+    return getSSLConfigFileName("ssl-client");
+  }
+
+  /**
+   * Returns the server SSL configuration file name.  Under parallel test
+   * execution, this file name is parameterized by a unique ID to ensure that
+   * concurrent tests don't collide on an SSL configuration file.
+   *
+   * @return client SSL configuration file name
+   */
+  public static String getServerSSLConfigFileName() {
+    return getSSLConfigFileName("ssl-server");
+  }
+
+  /**
+   * Returns an SSL configuration file name.  Under parallel test
+   * execution, this file name is parameterized by a unique ID to ensure that
+   * concurrent tests don't collide on an SSL configuration file.
+   *
+   * @param base the base of the file name
+   * @return SSL configuration file name for base
+   */
+  private static String getSSLConfigFileName(String base) {
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    String fileSuffix = testUniqueForkId != null ? "-" + testUniqueForkId : "";
+    return base + fileSuffix + ".xml";
+  }
+
+  /**
    * Creates SSL configuration.
-   * 
+   *
    * @param mode SSLFactory.Mode mode to configure
    * @param keystore String keystore file
    * @param password String store password, or null to avoid setting store
@@ -409,5 +442,20 @@ public class KeyStoreTestUtil {
       e.printStackTrace();
       throw e;
     }
+  }
+
+  /**
+   * Get the SSL configuration
+   * @return {@link Configuration} instance with ssl configs loaded
+   */
+  public static Configuration getSslConfig(){
+    Configuration sslConf = new Configuration(false);
+    String sslServerConfFile = KeyStoreTestUtil.getServerSSLConfigFileName();
+    String sslClientConfFile = KeyStoreTestUtil.getClientSSLConfigFileName();
+    sslConf.addResource(sslServerConfFile);
+    sslConf.addResource(sslClientConfFile);
+    sslConf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile);
+    sslConf.set(SSLFactory.SSL_CLIENT_CONF_KEY, sslClientConfFile);
+    return sslConf;
   }
 }
