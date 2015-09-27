@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 public class ServerSocketUtil {
 
   private static final Log LOG = LogFactory.getLog(ServerSocketUtil.class);
+  private static Random rand = new Random();
 
   /**
    * Port scan & allocate is how most other apps find ports
@@ -38,12 +39,14 @@ public class ServerSocketUtil {
    * @throws IOException
    */
   public static int getPort(int port, int retries) throws IOException {
-    Random rand = new Random();
     int tryPort = port;
     int tries = 0;
     while (true) {
-      if (tries > 0) {
+      if (tries > 0 || tryPort == 0) {
         tryPort = port + rand.nextInt(65535 - port);
+      }
+      if (tryPort == 0) {
+        continue;
       }
       LOG.info("Using port " + tryPort);
       try (ServerSocket s = new ServerSocket(tryPort)) {

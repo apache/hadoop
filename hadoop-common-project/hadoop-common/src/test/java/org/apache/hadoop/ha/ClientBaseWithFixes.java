@@ -23,10 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
 import java.net.Socket;
-import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,8 +31,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -166,10 +163,6 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
     private LinkedList<ZooKeeper> allClients;
     private boolean allClientsSetup = false;
-
-    private RandomAccessFile portNumLockFile;
-
-    private File portNumFile;
 
     protected TestableZooKeeper createClient(CountdownWatcher watcher, String hp)
         throws IOException, InterruptedException
@@ -413,29 +406,11 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
     private String initHostPort() {
         BASETEST.mkdirs();
-        int port;
-        for (;;) {
-            port = PortAssignment.unique();
-            FileLock lock = null;
-            portNumLockFile = null;
-            try {
-                try {
-                    portNumFile = new File(BASETEST, port + ".lock");
-                    portNumLockFile = new RandomAccessFile(portNumFile, "rw");
-                    try {
-                        lock = portNumLockFile.getChannel().tryLock();
-                    } catch (OverlappingFileLockException e) {
-                        continue;
-                    }
-                } finally {
-                    if (lock != null)
-                        break;
-                    if (portNumLockFile != null)
-                        portNumLockFile.close();
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        int port = 0;
+        try {
+           port = ServerSocketUtil.getPort(port, 100);
+        } catch (IOException e) {
+           throw new RuntimeException(e);
         }
         return "127.0.0.1:" + port;
     }
@@ -480,9 +455,6 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
         stopServer();
 
-        portNumLockFile.close();
-        portNumFile.delete();
-        
         if (tmpDir != null) {
             Assert.assertTrue("delete " + tmpDir.toString(), recursiveDelete(tmpDir));
         }
