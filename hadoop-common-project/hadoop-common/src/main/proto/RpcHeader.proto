@@ -61,8 +61,9 @@ enum RpcKindProto {
  * what span caused the new span we will create when this message is received.
  */
 message RPCTraceInfoProto {
-  optional int64 traceId = 1;
-  optional int64 parentId = 2;
+    optional int64 traceId = 1; // parentIdHigh
+    optional int64 parentId = 2; // parentIdLow
+
 }
 
 message RpcRequestHeaderProto { // the header for the RpcRequest

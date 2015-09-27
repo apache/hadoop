@@ -27,7 +27,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
-import org.apache.htrace.Span;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.TraceScope;
 
 /****************************************************************
  * DFSPacket is used by DataStreamer and DFSOutputStream.
@@ -38,7 +40,7 @@ import org.apache.htrace.Span;
 @InterfaceAudience.Private
 class DFSPacket {
   public static final long HEART_BEAT_SEQNO = -1L;
-  private static long[] EMPTY = new long[0];
+  private static SpanId[] EMPTY = new SpanId[0];
   private final long seqno; // sequence number of buffer in block
   private final long offsetInBlock; // offset in block
   private boolean syncBlock; // this packet forces the current block to disk
@@ -65,9 +67,9 @@ class DFSPacket {
   private int checksumPos;
   private final int dataStart;
   private int dataPos;
-  private long[] traceParents = EMPTY;
+  private SpanId[] traceParents = EMPTY;
   private int traceParentsUsed;
-  private Span span;
+  private TraceScope scope;
 
   /**
    * Create a new packet.
@@ -293,7 +295,10 @@ class DFSPacket {
     addTraceParent(span.getSpanId());
   }
 
-  public void addTraceParent(long id) {
+  public void addTraceParent(SpanId id) {
+    if (!id.isValid()) {
+      return;
+    }
     if (traceParentsUsed == traceParents.length) {
       int newLength = (traceParents.length == 0) ? 8 :
           traceParents.length * 2;
@@ -310,18 +315,18 @@ class DFSPacket {
    *
    * Protected by the DFSOutputStream dataQueue lock.
    */
-  public long[] getTraceParents() {
+  public SpanId[] getTraceParents() {
     // Remove duplicates from the array.
     int len = traceParentsUsed;
     Arrays.sort(traceParents, 0, len);
     int i = 0, j = 0;
-    long prevVal = 0; // 0 is not a valid span id
+    SpanId prevVal = SpanId.INVALID;
     while (true) {
       if (i == len) {
         break;
       }
-      long val = traceParents[i];
-      if (val != prevVal) {
+      SpanId val = traceParents[i];
+      if (!val.equals(prevVal)) {
         traceParents[j] = val;
         j++;
         prevVal = val;
@@ -335,11 +340,11 @@ class DFSPacket {
     return traceParents;
   }
 
-  public void setTraceSpan(Span span) {
-    this.span = span;
+  public void setTraceScope(TraceScope scope) {
+    this.scope = scope;
   }
 
-  public Span getTraceSpan() {
-    return span;
+  public TraceScope getTraceScope() {
+    return scope;
   }
 }

@@ -1998,4 +1998,19 @@ for ldap providers in the same way as above does.
       the limit is 0 or the -safely is not specified in -rm command.
     </description>
   </property>
+
+  <property>
+    <name>fs.client.htrace.sampler.classes</name>
+    <value></value>
+    <description>The class names of the HTrace Samplers to use for Hadoop
+      filesystem clients.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.htrace.span.receiver.classes</name>
+    <value></value>
+    <description>The class names of the Span Receivers to use for Hadoop.
+    </description>
+  </property>
 </configuration>

@@ -24,10 +24,9 @@ import junit.framework.AssertionFailedError;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tracing.SetSpanReceiver;
-import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.SamplerBuilder;
-import org.apache.htrace.impl.AlwaysSampler;
+import org.apache.htrace.core.AlwaysSampler;
+import org.apache.htrace.core.Tracer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,10 +52,10 @@ public class TestFsShell {
   @Test
   public void testTracing() throws Throwable {
     Configuration conf = new Configuration();
-    String prefix = FsShell.SEHLL_HTRACE_PREFIX;
-    conf.set(prefix + SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
+    String prefix = "fs.shell.htrace.";
+    conf.set(prefix + Tracer.SPAN_RECEIVER_CLASSES_KEY,
         SetSpanReceiver.class.getName());
-    conf.set(prefix + SamplerBuilder.SAMPLER_CONF_KEY,
+    conf.set(prefix + Tracer.SAMPLER_CLASSES_KEY,
         AlwaysSampler.class.getName());
     conf.setQuietMode(false);
     FsShell shell = new FsShell(conf);

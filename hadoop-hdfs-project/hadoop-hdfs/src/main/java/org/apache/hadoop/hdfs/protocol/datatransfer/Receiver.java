@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.protocol.datatransfer;
 
 import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil.fromProto;
-import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil.continueTraceSpan;
 import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
 
 import java.io.DataInputStream;
@@ -27,7 +26,10 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTraceInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
@@ -40,14 +42,21 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmR
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 /** Receiver */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class Receiver implements DataTransferProtocol {
+  private final Tracer tracer;
   protected DataInputStream in;
-  
+
+  protected Receiver(Tracer tracer) {
+    this.tracer = tracer;
+  }
+
   /** Initialize a receiver for DataTransferProtocol with a socket. */
   protected void initialize(final DataInputStream in) {
     this.in = in;
@@ -62,6 +71,26 @@ public abstract class Receiver implements DataTransferProtocol {
           ", Received: " +  version + " )");
     }
     return Op.read(in);
+  }
+
+  private TraceScope continueTraceSpan(DataTransferTraceInfoProto proto,
+                                       String description) {
+    TraceScope scope = null;
+    SpanId spanId = fromProto(proto);
+    if (spanId != null) {
+      scope = tracer.newScope(description, spanId);
+    }
+    return scope;
+  }
+
+  private TraceScope continueTraceSpan(ClientOperationHeaderProto header,
+                                             String description) {
+    return continueTraceSpan(header.getBaseHeader(), description);
+  }
+
+  private TraceScope continueTraceSpan(BaseHeaderProto header,
+                                             String description) {
+    return continueTraceSpan(header.getTraceInfo(), description);
   }
 
   /** Process op by the corresponding method. */

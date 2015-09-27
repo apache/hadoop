@@ -23,9 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 /**
  * EncryptionZoneIterator is a remote iterator that iterates over encryption
@@ -37,19 +36,18 @@ public class EncryptionZoneIterator
     extends BatchedRemoteIterator<Long, EncryptionZone> {
 
   private final ClientProtocol namenode;
-  private final Sampler<?> traceSampler;
+  private final Tracer tracer;
 
-  public EncryptionZoneIterator(ClientProtocol namenode,
-                                Sampler<?> traceSampler) {
+  public EncryptionZoneIterator(ClientProtocol namenode, Tracer tracer) {
     super(Long.valueOf(0));
     this.namenode = namenode;
-    this.traceSampler = traceSampler;
+    this.tracer = tracer;
   }
 
   @Override
   public BatchedEntries<EncryptionZone> makeRequest(Long prevId)
       throws IOException {
-    TraceScope scope = Trace.startSpan("listEncryptionZones", traceSampler);
+    TraceScope scope = tracer.newScope("listEncryptionZones");
     try {
       return namenode.listEncryptionZones(prevId);
     } finally {

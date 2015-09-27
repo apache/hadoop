@@ -398,6 +398,7 @@ public class TestFsck {
 
       // Copy the non-corrupt blocks of corruptFileName to lost+found.
       outStr = runFsck(conf, 1, false, "/", "-move");
+      FSImage.LOG.info("WATERMELON: outStr = " + outStr);
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
 
       // Make sure that we properly copied the block files from the DataNodes
