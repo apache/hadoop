@@ -88,6 +88,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -356,7 +357,7 @@ public class DataNode extends ReconfigurableBase
   SaslDataTransferServer saslServer;
   private ObjectName dataNodeInfoBeanName;
   private Thread checkDiskErrorThread = null;
-  protected final int checkDiskErrorInterval = 5*1000;
+  protected final int checkDiskErrorInterval;
   private boolean checkDiskErrorFlag = false;
   private Object checkDiskErrorMutex = new Object();
   private long lastDiskErrorCheck;
@@ -387,6 +388,8 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
+    this.checkDiskErrorInterval =
+        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
     initOOBTimeout();
   }
 
@@ -421,6 +424,9 @@ public class DataNode extends ReconfigurableBase
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
         ",hdfs-" +
         conf.get("hadoop.hdfs.configuration.version", "UNSPECIFIED");
+
+    this.checkDiskErrorInterval =
+        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
