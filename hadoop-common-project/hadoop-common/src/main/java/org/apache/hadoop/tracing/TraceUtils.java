@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
-import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.core.HTraceConfiguration;
 
 /**
  * This class provides utility functions for tracing.
@@ -32,6 +32,7 @@ import org.apache.htrace.HTraceConfiguration;
 @InterfaceAudience.Private
 public class TraceUtils {
   private static List<ConfigurationPair> EMPTY = Collections.emptyList();
+  static final String DEFAULT_HADOOP_PREFIX = "hadoop.htrace.";
 
   public static HTraceConfiguration wrapHadoopConf(final String prefix,
         final Configuration conf) {
@@ -47,16 +48,27 @@ public class TraceUtils {
     return new HTraceConfiguration() {
       @Override
       public String get(String key) {
-        return get(key, "");
+        String ret = getInternal(prefix + key);
+        if (ret != null) {
+          return ret;
+        }
+        return getInternal(DEFAULT_HADOOP_PREFIX  + key);
       }
 
       @Override
       public String get(String key, String defaultValue) {
-        String prefixedKey = prefix + key;
-        if (extraMap.containsKey(prefixedKey)) {
-          return extraMap.get(prefixedKey);
+        String ret = get(key);
+        if (ret != null) {
+          return ret;
         }
-        return conf.get(prefixedKey, defaultValue);
+        return defaultValue;
+      }
+
+      private String getInternal(String key) {
+        if (extraMap.containsKey(key)) {
+          return extraMap.get(key);
+        }
+        return conf.get(key);
       }
     };
   }

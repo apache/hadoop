@@ -64,12 +64,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
 
-  // HDFS HTrace configuration is controlled by dfs.htrace.spanreceiver.classes,
-  // etc.
-  public static final String  DFS_SERVER_HTRACE_PREFIX = "dfs.htrace.";
-  @Deprecated
-  public static final String  DFS_CLIENT_HTRACE_PREFIX =
-      HdfsClientConfigKeys.DFS_CLIENT_HTRACE_PREFIX;
+  public static final String DFS_CLIENT_HTRACE_SAMPLER_CLASSES =
+      "dfs.client.htrace.sampler.classes";
 
   // HA related configuration
   public static final String  DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY = "dfs.datanode.restart.replica.expiration";

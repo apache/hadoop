@@ -61,6 +61,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 import com.google.common.base.Preconditions;
+import org.apache.htrace.core.Tracer;
 
 /**
  * The FileContext class provides an interface to the application writer for
@@ -232,12 +233,14 @@ public class FileContext {
   private final Configuration conf;
   private final UserGroupInformation ugi;
   final boolean resolveSymlinks;
+  private final Tracer tracer;
 
   private FileContext(final AbstractFileSystem defFs,
     final FsPermission theUmask, final Configuration aConf) {
     defaultFS = defFs;
     umask = FsPermission.getUMask(aConf);
     conf = aConf;
+    tracer = FsTracer.get(aConf);
     try {
       ugi = UserGroupInformation.getCurrentUser();
     } catch (IOException e) {
@@ -2730,5 +2733,9 @@ public class FileContext {
   public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
       throws IOException {
     return defaultFS.getAllStoragePolicies();
+  }
+
+  Tracer getTracer() {
+    return tracer;
   }
 }
