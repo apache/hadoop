@@ -160,14 +160,18 @@ public class MockRM extends ResourceManager {
           " for the application " + appId);
     }
   }
-  
-  public void waitForState(ApplicationAttemptId attemptId, 
-                           RMAppAttemptState finalState)
+
+  public void waitForState(ApplicationAttemptId attemptId,
+      RMAppAttemptState finalState)
       throws Exception {
+    waitForState(attemptId, finalState, 40000);
+  }
+
+  public void waitForState(ApplicationAttemptId attemptId,
+      RMAppAttemptState finalState, int timeoutMsecs) throws Exception {
     RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
     Assert.assertNotNull("app shouldn't be null", app);
     RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
-    final int timeoutMsecs = 40000;
     final int minWaitMsecs = 1000;
     final int waitMsPerLoop = 10;
     int loop = 0;
