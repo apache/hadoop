@@ -295,6 +295,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6471. Document distcp incremental copy
+    (Neelesh Srinivas Salian via harsh)
+
     MAPREDUCE-5045. UtilTest#isCygwin method appears to be unused
     (Neelesh Srinivas Salian via harsh)
 
