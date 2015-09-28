@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.RetryStartFileException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
@@ -212,14 +213,17 @@ public class DFSOutputStream extends FSOutputSummer
   /** Construct a new output stream for creating a file. */
   protected DFSOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
       EnumSet<CreateFlag> flag, Progressable progress,
-      DataChecksum checksum, String[] favoredNodes) throws IOException {
+      DataChecksum checksum, String[] favoredNodes, boolean createStreamer)
+      throws IOException {
     this(dfsClient, src, progress, stat, checksum);
     this.shouldSyncBlock = flag.contains(CreateFlag.SYNC_BLOCK);
 
     computePacketChunkSize(dfsClient.getConf().getWritePacketSize(), bytesPerChecksum);
 
-    streamer = new DataStreamer(stat, null, dfsClient, src, progress, checksum,
-        cachingStrategy, byteArrayManager, favoredNodes);
+    if (createStreamer) {
+      streamer = new DataStreamer(stat, null, dfsClient, src, progress,
+          checksum, cachingStrategy, byteArrayManager, favoredNodes);
+    }
   }
 
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
@@ -276,7 +280,7 @@ public class DFSOutputStream extends FSOutputSummer
             flag, progress, checksum, favoredNodes);
       } else {
         out = new DFSOutputStream(dfsClient, src, stat,
-            flag, progress, checksum, favoredNodes);
+            flag, progress, checksum, favoredNodes, true);
       }
       out.start();
       return out;
@@ -476,7 +480,7 @@ public class DFSOutputStream extends FSOutputSummer
    *
    * @throws IOException
    */
-  protected void endBlock() throws IOException {
+  void endBlock() throws IOException {
     if (getStreamer().getBytesCurBlock() == blockSize) {
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
@@ -920,5 +924,53 @@ public class DFSOutputStream extends FSOutputSummer
   @Override
   public String toString() {
     return getClass().getSimpleName() + ":" + streamer;
+  }
+
+  static LocatedBlock addBlock(DatanodeInfo[] excludedNodes, DFSClient dfsClient,
+      String src, ExtendedBlock prevBlock, long fileId, String[] favoredNodes)
+      throws IOException {
+    final DfsClientConf conf = dfsClient.getConf();
+    int retries = conf.getNumBlockWriteLocateFollowingRetry();
+    long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
+    long localstart = Time.monotonicNow();
+    while (true) {
+      try {
+        return dfsClient.namenode.addBlock(src, dfsClient.clientName, prevBlock,
+            excludedNodes, fileId, favoredNodes);
+      } catch (RemoteException e) {
+        IOException ue = e.unwrapRemoteException(FileNotFoundException.class,
+            AccessControlException.class,
+            NSQuotaExceededException.class,
+            DSQuotaExceededException.class,
+            QuotaByStorageTypeExceededException.class,
+            UnresolvedPathException.class);
+        if (ue != e) {
+          throw ue; // no need to retry these exceptions
+        }
+        if (NotReplicatedYetException.class.getName().equals(e.getClassName())) {
+          if (retries == 0) {
+            throw e;
+          } else {
+            --retries;
+            LOG.info("Exception while adding a block", e);
+            long elapsed = Time.monotonicNow() - localstart;
+            if (elapsed > 5000) {
+              LOG.info("Waiting for replication for " + (elapsed / 1000)
+                  + " seconds");
+            }
+            try {
+              LOG.warn("NotReplicatedYetException sleeping " + src
+                  + " retries left " + retries);
+              Thread.sleep(sleeptime);
+              sleeptime *= 2;
+            } catch (InterruptedException ie) {
+              LOG.warn("Caught exception", ie);
+            }
+          }
+        } else {
+          throw e;
+        }
+      }
+    }
   }
 }

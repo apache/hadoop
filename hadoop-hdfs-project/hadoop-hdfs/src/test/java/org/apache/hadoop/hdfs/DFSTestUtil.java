@@ -1988,35 +1988,14 @@ public class DFSTestUtil {
    */
   public static ExtendedBlock flushInternal(DFSStripedOutputStream out)
       throws IOException {
-    out.flushInternal();
+    out.flushAllInternals();
     return out.getBlock();
   }
 
-  /**
-   * Verify that blocks in striped block group are on different nodes, and every
-   * internal blocks exists.
-   */
-  public static void verifyLocatedStripedBlocks(LocatedBlocks lbs,
-       int groupSize) {
-    for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-      assert lb instanceof LocatedStripedBlock;
-      HashSet<DatanodeInfo> locs = new HashSet<>();
-      for (DatanodeInfo datanodeInfo : lb.getLocations()) {
-        locs.add(datanodeInfo);
-      }
-      assertEquals(groupSize, lb.getLocations().length);
-      assertEquals(groupSize, locs.size());
-
-      // verify that every internal blocks exists
-      int[] blockIndices = ((LocatedStripedBlock) lb).getBlockIndices();
-      assertEquals(groupSize, blockIndices.length);
-      HashSet<Integer> found = new HashSet<>();
-      for (int index : blockIndices) {
-        assert index >=0;
-        found.add(index);
-      }
-      assertEquals(groupSize, found.size());
-    }
+  public static ExtendedBlock flushBuffer(DFSStripedOutputStream out)
+      throws IOException {
+    out.flush();
+    return out.getBlock();
   }
 
   public static void waitForMetric(final JMXGet jmx, final String metricName, final int expectedValue)

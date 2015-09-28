@@ -68,16 +68,28 @@ public class BlockUnderConstructionFeature {
   /** Set expected locations */
   public void setExpectedLocations(Block block, DatanodeStorageInfo[] targets,
       boolean isStriped) {
-    int numLocations = targets == null ? 0 : targets.length;
+    if (targets == null) {
+      return;
+    }
+    int numLocations = 0;
+    for (DatanodeStorageInfo target : targets) {
+      if (target != null) {
+        numLocations++;
+      }
+    }
+
     this.replicas = new ReplicaUnderConstruction[numLocations];
-    for(int i = 0; i < numLocations; i++) {
-      // when creating a new striped block we simply sequentially assign block
-      // index to each storage
-      Block replicaBlock = isStriped ?
-          new Block(block.getBlockId() + i, 0, block.getGenerationStamp()) :
-          block;
-      replicas[i] = new ReplicaUnderConstruction(replicaBlock, targets[i],
-          ReplicaState.RBW);
+    int offset = 0;
+    for(int i = 0; i < targets.length; i++) {
+      if (targets[i] != null) {
+        // when creating a new striped block we simply sequentially assign block
+        // index to each storage
+        Block replicaBlock = isStriped ?
+            new Block(block.getBlockId() + i, 0, block.getGenerationStamp()) :
+            block;
+        replicas[offset++] = new ReplicaUnderConstruction(replicaBlock,
+            targets[i], ReplicaState.RBW);
+      }
     }
   }
 

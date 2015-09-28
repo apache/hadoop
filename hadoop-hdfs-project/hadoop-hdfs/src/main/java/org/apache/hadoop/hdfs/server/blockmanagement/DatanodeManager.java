@@ -513,6 +513,10 @@ public class DatanodeManager {
     }
     final DatanodeStorageInfo[] storages = new DatanodeStorageInfo[datanodeID.length];
     for(int i = 0; i < datanodeID.length; i++) {
+      if (datanodeID[i].equals(DatanodeID.EMPTY_DATANODE_ID)) {
+        storages[i] = null;
+        continue;
+      }
       final DatanodeDescriptor dd = getDatanode(datanodeID[i]);
       storages[i] = dd.getStorageInfo(storageIDs[i]);
     }

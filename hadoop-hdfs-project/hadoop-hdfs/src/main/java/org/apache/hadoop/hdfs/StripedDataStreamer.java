@@ -19,18 +19,15 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream.Coordinator;
-import org.apache.hadoop.hdfs.DFSStripedOutputStream.MultipleBlockingQueue;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
@@ -46,66 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
  * other streamers.
  */
 public class StripedDataStreamer extends DataStreamer {
-  /**
-   * This class is designed for multiple threads to share a
-   * {@link MultipleBlockingQueue}. Initially, the queue is empty. The earliest
-   * thread calling poll populates entries to the queue and the other threads
-   * will wait for it. Once the entries are populated, all the threads can poll
-   * their entries.
-   *
-   * @param <T> the queue entry type.
-   */
-  static abstract class ConcurrentPoll<T> {
-    final MultipleBlockingQueue<T> queue;
-
-    ConcurrentPoll(MultipleBlockingQueue<T> queue) {
-      this.queue = queue;
-    }
-
-    T poll(final int i) throws IOException {
-      for(;;) {
-        synchronized(queue) {
-          final T polled = queue.poll(i);
-          if (polled != null) { // already populated; return polled item.
-            return polled;
-          }
-          if (isReady2Populate()) {
-            try {
-              populate();
-              return queue.poll(i);
-            } catch(IOException ioe) {
-              LOG.warn("Failed to populate, " + this, ioe);
-              throw ioe;
-            }
-          }
-        }
-
-        // sleep and then retry.
-        sleep(100, "poll");
-      }
-    }
-
-    boolean isReady2Populate() {
-      return queue.isEmpty();
-    }
-
-    abstract void populate() throws IOException;
-  }
-
-  private static void sleep(long ms, String op) throws InterruptedIOException {
-    try {
-      Thread.sleep(ms);
-    } catch(InterruptedException ie) {
-      throw DFSUtil.toInterruptedIOException(
-          "Sleep interrupted during " + op, ie);
-    }
-  }
-
   private final Coordinator coordinator;
   private final int index;
-  private volatile boolean failed;
-  private final ECSchema schema;
-  private final int cellSize;
 
   StripedDataStreamer(HdfsFileStatus stat,
                       DFSClient dfsClient, String src,
@@ -117,102 +56,59 @@ public class StripedDataStreamer extends DataStreamer {
         byteArrayManage, favoredNodes);
     this.index = index;
     this.coordinator = coordinator;
-    this.schema = stat.getErasureCodingPolicy().getSchema();
-    this.cellSize = stat.getErasureCodingPolicy().getCellSize();
   }
 
   int getIndex() {
     return index;
   }
 
-  void setFailed(boolean failed) {
-    this.failed = failed;
-  }
-
-  boolean isFailed() {
-    return failed;
-  }
-
-  private boolean isParityStreamer() {
-    return index >= schema.getNumDataUnits();
+  boolean isHealthy() {
+    return !streamerClosed() && !getErrorState().hasInternalError();
   }
 
   @Override
   protected void endBlock() {
-    if (!isParityStreamer()) {
-      coordinator.offerEndBlock(index, block);
-    }
+    coordinator.offerEndBlock(index, block);
     super.endBlock();
   }
 
-  @Override
-  int getNumBlockWriteRetry() {
-    return 0;
+  /**
+   * The upper level DFSStripedOutputStream will allocate the new block group.
+   * All the striped data streamer only needs to fetch from the queue, which
+   * should be already be ready.
+   */
+  private LocatedBlock getFollowingBlock() throws IOException {
+    if (!this.isHealthy()) {
+      // No internal block for this streamer, maybe no enough healthy DN.
+      // Throw the exception which has been set by the StripedOutputStream.
+      this.getLastException().check(false);
+    }
+    return coordinator.getFollowingBlocks().poll(index);
   }
 
   @Override
-  LocatedBlock locateFollowingBlock(final DatanodeInfo[] excludedNodes)
-      throws IOException {
-    return new ConcurrentPoll<LocatedBlock>(coordinator.getFollowingBlocks()) {
-      @Override
-      boolean isReady2Populate() {
-        return super.isReady2Populate()
-            && (block == null || coordinator.hasAllEndBlocks());
-      }
+  protected LocatedBlock nextBlockOutputStream() throws IOException {
+    boolean success;
+    LocatedBlock lb = getFollowingBlock();
+    block = lb.getBlock();
+    block.setNumBytes(0);
+    bytesSent = 0;
+    accessToken = lb.getBlockToken();
 
-      @Override
-      void populate() throws IOException {
-        getLastException().check(false);
+    DatanodeInfo[] nodes = lb.getLocations();
+    StorageType[] storageTypes = lb.getStorageTypes();
 
-        if (block != null) {
-          // set numByte for the previous block group
-          long bytes = 0;
-          for (int i = 0; i < schema.getNumDataUnits(); i++) {
-            final ExtendedBlock b = coordinator.takeEndBlock(i);
-            StripedBlockUtil.checkBlocks(index, block, i, b);
-            bytes += b.getNumBytes();
-          }
-          block.setNumBytes(bytes);
-          block.setBlockId(block.getBlockId() - index);
-        }
+    // Connect to the DataNode. If fail the internal error state will be set.
+    success = createBlockOutputStream(nodes, storageTypes, 0L, false);
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("locateFollowingBlock: index=" + index + ", block=" + block);
-        }
-
-        final LocatedBlock lb = StripedDataStreamer.super.locateFollowingBlock(
-            excludedNodes);
-        if (lb.getLocations().length < schema.getNumDataUnits()) {
-          throw new IOException(
-              "Failed to get datablocks number of nodes from namenode: blockGroupSize= "
-                  + (schema.getNumDataUnits() + schema.getNumParityUnits())
-                  + ", blocks.length= " + lb.getLocations().length);
-        }
-        final LocatedBlock[] blocks =
-            StripedBlockUtil.parseStripedBlockGroup((LocatedStripedBlock) lb,
-                cellSize, schema.getNumDataUnits(), schema.getNumParityUnits());
-
-        for (int i = 0; i < blocks.length; i++) {
-          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
-          if (si.isFailed()) {
-            continue; // skipping failed data streamer
-          }
-          if (blocks[i] == null) {
-            // Set exception and close streamer as there is no block locations
-            // found for the parity block.
-            LOG.warn("Failed to get block location for parity block, index="
-                + i);
-            si.getLastException().set(
-                new IOException("Failed to get following block, i=" + i));
-            si.setFailed(true);
-            si.endBlock();
-            si.close(true);
-          } else {
-            queue.offer(i, blocks[i]);
-          }
-        }
-      }
-    }.poll(index);
+    if (!success) {
+      block = null;
+      final DatanodeInfo badNode = nodes[getErrorState().getBadNodeIndex()];
+      LOG.info("Excluding datanode " + badNode);
+      excludedNodes.put(badNode, badNode);
+      throw new IOException("Unable to create new block.");
+    }
+    return lb;
   }
 
   @VisibleForTesting
@@ -221,119 +117,71 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   @Override
-  LocatedBlock updateBlockForPipeline() throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("updateBlockForPipeline(), " + this);
-    }
-    return new ConcurrentPoll<LocatedBlock>(coordinator.getNewBlocks()) {
-      @Override
-      void populate() throws IOException {
-        final ExtendedBlock bg = coordinator.getBlockGroup();
-        final LocatedBlock updated = callUpdateBlockForPipeline(bg);
-        final long newGS = updated.getBlock().getGenerationStamp();
-        final LocatedBlock[] updatedBlks = StripedBlockUtil
-            .parseStripedBlockGroup((LocatedStripedBlock) updated, cellSize,
-                schema.getNumDataUnits(), schema.getNumParityUnits());
-        for (int i = 0; i < schema.getNumDataUnits()
-            + schema.getNumParityUnits(); i++) {
-          StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
-          if (si.isFailed()) {
-            continue; // skipping failed data streamer
-          }
-          final ExtendedBlock bi = si.getBlock();
-          if (bi != null) {
-            final LocatedBlock lb = new LocatedBlock(newBlock(bi, newGS),
-                null, null, null, -1, updated.isCorrupt(), null);
-            lb.setBlockToken(updatedBlks[i].getBlockToken());
-            queue.offer(i, lb);
-          } else {
-            final MultipleBlockingQueue<LocatedBlock> followingBlocks
-                = coordinator.getFollowingBlocks();
-            synchronized(followingBlocks) {
-              final LocatedBlock lb = followingBlocks.peek(i);
-              if (lb != null) {
-                lb.getBlock().setGenerationStamp(newGS);
-                si.getErrorState().reset();
-                continue;
-              }
-            }
+  protected void setupPipelineInternal(DatanodeInfo[] nodes,
+      StorageType[] nodeStorageTypes) throws IOException {
+    boolean success = false;
+    while (!success && !streamerClosed() && dfsClient.clientRunning) {
+      if (!handleRestartingDatanode()) {
+        return;
+      }
+      if (!handleBadDatanode()) {
+        // for striped streamer if it is datanode error then close the stream
+        // and return. no need to replace datanode
+        return;
+      }
 
-            //streamer i just have polled the block, sleep and retry.
-            sleep(100, "updateBlockForPipeline, " + this);
-            i--;
-          }
+      // get a new generation stamp and an access token
+      final LocatedBlock lb = coordinator.getNewBlocks().take(index);
+      long newGS = lb.getBlock().getGenerationStamp();
+      setAccessToken(lb.getBlockToken());
+
+      // set up the pipeline again with the remaining nodes. when a striped
+      // data streamer comes here, it must be in external error state.
+      assert getErrorState().hasExternalError();
+      success = createBlockOutputStream(nodes, nodeStorageTypes, newGS, true);
+
+      failPacket4Testing();
+      getErrorState().checkRestartingNodeDeadline(nodes);
+
+      // notify coordinator the result of createBlockOutputStream
+      synchronized (coordinator) {
+        if (!streamerClosed()) {
+          coordinator.updateStreamer(this, success);
+          coordinator.notify();
+        } else {
+          success = false;
         }
       }
-    }.poll(index);
+
+      if (success) {
+        // wait for results of other streamers
+        success = coordinator.takeStreamerUpdateResult(index);
+        if (success) {
+          // if all succeeded, update its block using the new GS
+          block = newBlock(block, newGS);
+        } else {
+          // otherwise close the block stream and restart the recovery process
+          closeStream();
+        }
+      } else {
+        // if fail, close the stream. The internal error state and last
+        // exception have already been set in createBlockOutputStream
+        // TODO: wait for restarting DataNodes during RollingUpgrade
+        closeStream();
+        setStreamerAsClosed();
+      }
+    } // while
   }
 
-  @Override
-  ExtendedBlock updatePipeline(final long newGS) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("updatePipeline(newGS=" + newGS + "), " + this);
+  void setExternalError() {
+    getErrorState().setExternalError();
+    synchronized (dataQueue) {
+      dataQueue.notifyAll();
     }
-    return new ConcurrentPoll<ExtendedBlock>(coordinator.getUpdateBlocks()) {
-      @Override
-      void populate() throws IOException {
-        final MultipleBlockingQueue<LocatedBlock> followingBlocks
-            = coordinator.getFollowingBlocks();
-        final ExtendedBlock bg = coordinator.getBlockGroup();
-        final ExtendedBlock newBG = newBlock(bg, newGS);
-
-        final int n = schema.getNumDataUnits() + schema.getNumParityUnits();
-        final DatanodeInfo[] newNodes = new DatanodeInfo[n];
-        final String[] newStorageIDs = new String[n];
-        for (int i = 0; i < n; i++) {
-          final StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
-          DatanodeInfo[] nodes = si.getNodes();
-          String[] storageIDs = si.getStorageIDs();
-          if (nodes == null || storageIDs == null) {
-            synchronized(followingBlocks) {
-              final LocatedBlock lb = followingBlocks.peek(i);
-              if (lb != null) {
-                nodes = lb.getLocations();
-                storageIDs = lb.getStorageIDs();
-              }
-            }
-          }
-          if (nodes != null && storageIDs != null) {
-            newNodes[i] = nodes[0];
-            newStorageIDs[i] = storageIDs[0];
-          } else {
-            //streamer i just have polled the block, sleep and retry.
-            sleep(100, "updatePipeline, " + this);
-            i--;
-          }
-        }
-        final ExtendedBlock updated = callUpdatePipeline(bg, newBG, newNodes,
-            newStorageIDs);
-
-        for (int i = 0; i < n; i++) {
-          final StripedDataStreamer si = coordinator.getStripedDataStreamer(i);
-          final ExtendedBlock bi = si.getBlock();
-          if (bi != null) {
-            queue.offer(i, newBlock(bi, updated.getGenerationStamp()));
-          } else if (!si.isFailed()) {
-            synchronized(followingBlocks) {
-              final LocatedBlock lb = followingBlocks.peek(i);
-              if (lb != null) {
-                lb.getBlock().setGenerationStamp(newGS);
-                si.getErrorState().reset();
-                continue;
-              }
-            }
-
-            //streamer i just have polled the block, sleep and retry.
-            sleep(100, "updatePipeline, " + this);
-            i--;
-          }
-        }
-      }
-    }.poll(index);
   }
 
   @Override
   public String toString() {
-    return "#" + index + ": " + (failed? "failed, ": "") + super.toString();
+    return "#" + index + ": " + (!isHealthy() ? "failed, ": "") + super.toString();
   }
 }

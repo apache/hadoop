@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -42,7 +41,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class TestAddOverReplicatedStripedBlocks {
 
@@ -64,6 +62,7 @@ public class TestAddOverReplicatedStripedBlocks {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     // disable block recovery
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
     SimulatedFSDataset.setFactory(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
@@ -118,7 +117,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // verify that all internal blocks exists
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    DFSTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
   }
 
   @Test
@@ -162,7 +161,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // verify that all internal blocks exists
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    DFSTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
   }
 
   @Test
@@ -216,7 +215,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // verify that all internal blocks exists
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    DFSTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE);
   }
 
   @Test
@@ -248,6 +247,7 @@ public class TestAddOverReplicatedStripedBlocks {
 
     // update blocksMap
     cluster.triggerBlockReports();
+    Thread.sleep(2000);
     // add to invalidates
     cluster.triggerHeartbeats();
     // datanode delete block
@@ -259,7 +259,7 @@ public class TestAddOverReplicatedStripedBlocks {
     // we are left GROUP_SIZE - 1 blocks.
     lbs = cluster.getNameNodeRpc().getBlockLocations(
         filePath.toString(), 0, fileLen);
-    DFSTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
+    StripedFileTestUtil.verifyLocatedStripedBlocks(lbs, GROUP_SIZE - 1);
   }
 
 }

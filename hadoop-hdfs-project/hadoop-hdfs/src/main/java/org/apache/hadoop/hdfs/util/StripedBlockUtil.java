@@ -925,22 +925,21 @@ public class StripedBlockUtil {
 
   /**
    * Check if the information such as IDs and generation stamps in block-i
-   * match block-j, where block-i and block-j are in the same group.
+   * match the block group.
    */
-  public static void checkBlocks(int j, ExtendedBlock blockj,
+  public static void checkBlocks(ExtendedBlock blockGroup,
       int i, ExtendedBlock blocki) throws IOException {
-
-    if (!blocki.getBlockPoolId().equals(blockj.getBlockPoolId())) {
-      throw new IOException("Block pool IDs mismatched: block" + j + "="
-          + blockj + ", block" + i + "=" + blocki);
+    if (!blocki.getBlockPoolId().equals(blockGroup.getBlockPoolId())) {
+      throw new IOException("Block pool IDs mismatched: block" + i + "="
+          + blocki + ", expected block group=" + blockGroup);
     }
-    if (blocki.getBlockId() - i != blockj.getBlockId() - j) {
-      throw new IOException("Block IDs mismatched: block" + j + "="
-          + blockj + ", block" + i + "=" + blocki);
+    if (blocki.getBlockId() - i != blockGroup.getBlockId()) {
+      throw new IOException("Block IDs mismatched: block" + i + "="
+          + blocki + ", expected block group=" + blockGroup);
     }
-    if (blocki.getGenerationStamp() != blockj.getGenerationStamp()) {
-      throw new IOException("Generation stamps mismatched: block" + j + "="
-          + blockj + ", block" + i + "=" + blocki);
+    if (blocki.getGenerationStamp() != blockGroup.getGenerationStamp()) {
+      throw new IOException("Generation stamps mismatched: block" + i + "="
+          + blocki + ", expected block group=" + blockGroup);
     }
   }
 

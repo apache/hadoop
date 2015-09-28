@@ -450,3 +450,6 @@
 
     HDFS-8882. Erasure Coding: Use datablocks, parityblocks and cell size from
     ErasureCodingPolicy (Vinayakumar B via zhz)
+
+    HDFS-9040. Erasure coding: coordinate data streamers in
+    DFSStripedOutputStream. (jing9 and Walter Su)
