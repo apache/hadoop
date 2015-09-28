@@ -1332,7 +1332,6 @@ public abstract class NativeAzureFileSystemBaseTest {
     return (lastModified > (time - errorMargin) && lastModified < (time + errorMargin));
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testCreateNonRecursive() throws Exception {
     Path testFolder = new Path("/testFolder");

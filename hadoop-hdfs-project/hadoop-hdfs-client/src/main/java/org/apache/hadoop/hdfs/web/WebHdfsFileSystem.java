@@ -1179,7 +1179,6 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(final Path f,
       final FsPermission permission, final EnumSet<CreateFlag> flag,
       final int bufferSize, final short replication, final long blockSize,
