@@ -904,6 +904,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4204. ConcurrentModificationException in FairSchedulerQueueInfo. (adhoot)
 
+    YARN-4141. Runtime Application Priority change should not throw exception
+    for applications at finishing states (Sunil G via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
