@@ -190,7 +190,7 @@ public class TestExternalBlockReader {
             "than 0 at " + pos);
         return 0;
       }
-      int i = 0, nread = 0, ipos;
+      int i = off, nread = 0, ipos;
       for (ipos = (int)pos;
            (ipos < contents.length) && (nread < len);
            ipos++) {
@@ -280,7 +280,10 @@ public class TestExternalBlockReader {
       HdfsDataInputStream stream =
           (HdfsDataInputStream)dfs.open(new Path("/a"));
       byte buf[] = new byte[TEST_LENGTH];
-      IOUtils.readFully(stream, buf, 0, TEST_LENGTH);
+      stream.seek(1000);
+      IOUtils.readFully(stream, buf, 1000, TEST_LENGTH - 1000);
+      stream.seek(0);
+      IOUtils.readFully(stream, buf, 0, 1000);
       byte expected[] = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, TEST_LENGTH);
       ReadStatistics stats = stream.getReadStatistics();
@@ -293,7 +296,7 @@ public class TestExternalBlockReader {
       Assert.assertNotNull(block);
       LinkedList<SyntheticReplicaAccessor> accessorList = accessors.get(uuid);
       Assert.assertNotNull(accessorList);
-      Assert.assertEquals(2, accessorList.size());
+      Assert.assertEquals(3, accessorList.size());
       SyntheticReplicaAccessor accessor = accessorList.get(0);
       Assert.assertTrue(accessor.builder.allowShortCircuit);
       Assert.assertEquals(block.getBlockPoolId(),
@@ -307,7 +310,7 @@ public class TestExternalBlockReader {
           accessor.getGenerationStamp());
       Assert.assertTrue(accessor.builder.verifyChecksum);
       Assert.assertEquals(1024L, accessor.builder.visibleLength);
-      Assert.assertEquals(1024L, accessor.totalRead);
+      Assert.assertEquals(24L, accessor.totalRead);
       Assert.assertEquals("", accessor.getError());
       Assert.assertEquals(1, accessor.numCloses);
       byte[] tempBuf = new byte[5];
