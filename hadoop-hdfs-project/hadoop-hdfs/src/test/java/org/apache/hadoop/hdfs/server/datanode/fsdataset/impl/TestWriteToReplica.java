@@ -517,8 +517,8 @@ public class TestWriteToReplica {
       Assert.assertTrue(
           replicaInfo.getBlockId() == blocks[NON_EXISTENT].getBlockId());
     } catch (ReplicaAlreadyExistsException e) {
-      Assert.fail("createRbw() Should have removed the block with the older "
-          + "genstamp and replaced it with the newer one: " + blocks[NON_EXISTENT]);
+      Assert.fail("createTemporary should have allowed the block with newer "
+          + " generation stamp to be created " + blocks[NON_EXISTENT]);
     }
   }
   
