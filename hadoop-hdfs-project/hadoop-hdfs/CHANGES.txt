@@ -1488,6 +1488,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9043. Doc updation for commands in HDFS Federation
     (J.Andreina via vinayakumab)
 
+    HDFS-9106. Transfer failure during pipeline recovery causes permanent
+    write failures (kihwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
