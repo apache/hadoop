@@ -902,6 +902,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4044. Running applications information changes such as movequeue is not published to 
     TimeLine server. (Sunil G via rohithsharmaks)
 
+    YARN-4204. ConcurrentModificationException in FairSchedulerQueueInfo. (adhoot)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
