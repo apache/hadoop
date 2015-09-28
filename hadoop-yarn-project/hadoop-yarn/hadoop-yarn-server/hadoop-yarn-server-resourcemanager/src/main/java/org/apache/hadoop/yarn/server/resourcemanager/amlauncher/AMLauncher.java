@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.amlauncher;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.client.NMProxy;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -151,10 +151,10 @@ public class AMLauncher implements Runnable {
       final ContainerId containerId) {
 
     final NodeId node = masterContainer.getNodeId();
-    final InetSocketAddress containerManagerBindAddress =
+    final InetSocketAddress containerManagerConnectAddress =
         NetUtils.createSocketAddrForHost(node.getHost(), node.getPort());
 
-    final YarnRPC rpc = YarnRPC.create(conf); // TODO: Don't create again and again.
+    final YarnRPC rpc = getYarnRPC();
 
     UserGroupInformation currentUser =
         UserGroupInformation.createRemoteUser(containerId
@@ -168,18 +168,15 @@ public class AMLauncher implements Runnable {
         rmContext.getNMTokenSecretManager().createNMToken(
             containerId.getApplicationAttemptId(), node, user);
     currentUser.addToken(ConverterUtils.convertFromYarn(token,
-        containerManagerBindAddress));
+        containerManagerConnectAddress));
 
-    return currentUser
-        .doAs(new PrivilegedAction<ContainerManagementProtocol>() {
+    return NMProxy.createNMProxy(conf, ContainerManagementProtocol.class,
+        currentUser, rpc, containerManagerConnectAddress);
+  }
 
-          @Override
-          public ContainerManagementProtocol run() {
-            return (ContainerManagementProtocol) rpc.getProxy(
-                ContainerManagementProtocol.class,
-                containerManagerBindAddress, conf);
-          }
-        });
+  @VisibleForTesting
+  protected YarnRPC getYarnRPC() {
+    return YarnRPC.create(conf);  // TODO: Don't create again and again.
   }
 
   private ContainerLaunchContext createAMContainerLaunchContext(

@@ -999,6 +999,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3624. ApplicationHistoryServer should not reverse the order of the
     filters it gets. (Mit Desai via xgong)
 
+    YARN-4180. AMLauncher does not retry on failures when talking to NM.
+    (adhoot)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
