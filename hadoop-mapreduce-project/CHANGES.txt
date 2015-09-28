@@ -626,6 +626,10 @@ Release 2.7.2 - UNRELEASED
     MAPREDUCE-5982. Task attempts that fail from the ASSIGNED state can
     disappear (Chang Li via jlowe)
 
+    MAPREDUCE-6492. AsyncDispatcher exit with NPE on
+    TaskAttemptImpl#sendJHStartEventForAssignedFailTask (Bibin A Chundatt via
+    jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
