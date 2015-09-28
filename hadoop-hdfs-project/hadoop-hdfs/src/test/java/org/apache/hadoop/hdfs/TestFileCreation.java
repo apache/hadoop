@@ -860,7 +860,6 @@ public class TestFileCreation {
   // Attempts to create and close a file using FileSystem.createNonRecursive(),
   // catching and returning an exception if one occurs or null
   // if the operation is successful.
-  @SuppressWarnings("deprecation")
   static IOException createNonRecursive(FileSystem fs, Path name,
       int repl, EnumSet<CreateFlag> flag) throws IOException {
     try {

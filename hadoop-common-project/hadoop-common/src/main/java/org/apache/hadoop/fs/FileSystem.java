@@ -1089,9 +1089,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param progress
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
-   * @deprecated API only for 0.20-append
    */
-  @Deprecated
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
@@ -1114,9 +1112,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param progress
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
-   * @deprecated API only for 0.20-append
    */
-   @Deprecated
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
        boolean overwrite, int bufferSize, short replication, long blockSize,
        Progressable progress) throws IOException {
@@ -1139,9 +1135,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     * @param progress
     * @throws IOException
     * @see #setPermission(Path, FsPermission)
-    * @deprecated API only for 0.20-append
     */
-    @Deprecated
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
         EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
         Progressable progress) throws IOException {

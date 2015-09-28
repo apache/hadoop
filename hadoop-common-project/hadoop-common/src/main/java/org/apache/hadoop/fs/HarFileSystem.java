@@ -713,7 +713,6 @@ public class HarFileSystem extends FileSystem {
     throw new IOException("Har: create not allowed.");
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public FSDataOutputStream createNonRecursive(Path f, boolean overwrite,
       int bufferSize, short replication, long blockSize, Progressable progress)
