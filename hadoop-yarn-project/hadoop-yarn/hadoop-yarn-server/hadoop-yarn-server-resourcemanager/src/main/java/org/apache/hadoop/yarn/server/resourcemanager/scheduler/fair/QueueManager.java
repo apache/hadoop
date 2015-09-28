@@ -28,6 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -295,17 +296,18 @@ public class QueueManager {
    * Remove a queue and all its descendents.
    */
   private void removeQueue(FSQueue queue) {
-    if (queue instanceof FSLeafQueue) {
-      leafQueues.remove(queue);
-    } else {
-      List<FSQueue> childQueues = queue.getChildQueues();
-      while (!childQueues.isEmpty()) {
-        removeQueue(childQueues.get(0));
+    synchronized (queues) {
+      if (queue instanceof FSLeafQueue) {
+        leafQueues.remove(queue);
+      } else {
+        for (FSQueue childQueue:queue.getChildQueues()) {
+          removeQueue(childQueue);
+        }
       }
+      queues.remove(queue.getName());
+      FSParentQueue parent = queue.getParent();
+      parent.removeChildQueue(queue);
     }
-    queues.remove(queue.getName());
-    FSParentQueue parent = queue.getParent();
-    parent.removeChildQueue(queue);
   }
   
   /**
@@ -360,7 +362,9 @@ public class QueueManager {
    * Get a collection of all queues
    */
   public Collection<FSQueue> getQueues() {
-    return queues.values();
+    synchronized (queues) {
+      return ImmutableList.copyOf(queues.values());
+    }
   }
   
   private String ensureRootPrefix(String name) {
