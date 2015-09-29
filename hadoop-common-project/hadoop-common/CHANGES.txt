@@ -1098,6 +1098,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12440. TestRPC#testRPCServerShutdown did not produce the desired
     thread states before shutting down. (Xiao Chen via mingma)
 
+    HADOOP-12447. Clean up some htrace integration issues (cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
