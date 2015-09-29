@@ -18,20 +18,13 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.LightWeightResizableGSet;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -40,8 +33,12 @@ import com.google.common.annotations.VisibleForTesting;
  * It provides a general interface for meta information of a replica.
  */
 @InterfaceAudience.Private
-abstract public class ReplicaInfo extends Block implements Replica {
-  
+abstract public class ReplicaInfo extends Block
+    implements Replica, LightWeightResizableGSet.LinkedElement {
+
+  /** For implementing {@link LightWeightResizableGSet.LinkedElement} interface */
+  private LightWeightResizableGSet.LinkedElement next;
+
   /** volume where the replica belongs */
   private FsVolumeSpi volume;
   
@@ -228,5 +225,15 @@ abstract public class ReplicaInfo extends Block implements Replica {
   @Override
   public boolean isOnTransientStorage() {
     return volume.isTransientStorage();
+  }
+
+  @Override
+  public LightWeightResizableGSet.LinkedElement getNext() {
+    return next;
+  }
+
+  @Override
+  public void setNext(LightWeightResizableGSet.LinkedElement next) {
+    this.next = next;
   }
 }

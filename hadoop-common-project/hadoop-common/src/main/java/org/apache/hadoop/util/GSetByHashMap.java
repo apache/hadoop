@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -69,5 +70,10 @@ public class GSetByHashMap<K, E extends K> implements GSet<K, E> {
   @Override
   public void clear() {
     m.clear();
+  }
+
+  @Override
+  public Collection<E> values() {
+    return m.values();
   }
 }

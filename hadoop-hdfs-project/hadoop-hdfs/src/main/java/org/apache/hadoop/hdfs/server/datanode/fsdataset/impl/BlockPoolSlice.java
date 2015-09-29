@@ -749,7 +749,12 @@ class BlockPoolSlice {
       // Now it is safe to add the replica into volumeMap
       // In case of any exception during parsing this cache file, fall back
       // to scan all the files on disk.
-      for (ReplicaInfo info: tmpReplicaMap.replicas(bpid)) {
+      for (Iterator<ReplicaInfo> iter =
+          tmpReplicaMap.replicas(bpid).iterator(); iter.hasNext(); ) {
+        ReplicaInfo info = iter.next();
+        // We use a lightweight GSet to store replicaInfo, we need to remove
+        // it from one GSet before adding to another.
+        iter.remove();
         volumeMap.add(bpid, info);
       }
       LOG.info("Successfully read replica from cache file : " 
