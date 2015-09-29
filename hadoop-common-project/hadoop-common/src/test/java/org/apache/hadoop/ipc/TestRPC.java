@@ -1060,8 +1060,8 @@ public class TestRPC {
             }));
       }
       while (server.getCallQueueLen() != 1
-          && countThreads(CallQueueManager.class.getName()) != 1
-          && countThreads(TestProtocol.class.getName()) != 1) {
+          || countThreads(CallQueueManager.class.getName()) != 1
+          || countThreads(TestImpl.class.getName()) != 1) {
         Thread.sleep(100);
       }
     } finally {

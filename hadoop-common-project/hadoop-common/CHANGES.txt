@@ -1095,6 +1095,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11918. Listing an empty s3a root directory throws FileNotFound.
     (Lei (Eddy) Xu via cnauroth)
 
+    HADOOP-12440. TestRPC#testRPCServerShutdown did not produce the desired
+    thread states before shutting down. (Xiao Chen via mingma)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
