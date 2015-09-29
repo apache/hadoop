@@ -1447,6 +1447,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9147. Fix the setting of visibleLength in ExternalBlockReader. (Colin
     P. McCabe via Lei (Eddy) Xu)
 
+    HDFS-9092. Nfs silently drops overlapping write requests and causes data
+    copying to fail. (Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
