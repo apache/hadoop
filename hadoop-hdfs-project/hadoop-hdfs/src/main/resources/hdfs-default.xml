@@ -2428,14 +2428,6 @@
 </property>
 
 <property>
-  <name>dfs.client.htrace.sampler.classes</name>
-  <value></value>
-  <description>
-    The class names of the HTrace Samplers to use for the HDFS client.
-  </description>
-</property>
-
-<property>
   <name>dfs.ha.zkfc.nn.http.timeout.ms</name>
   <value>20000</value>
   <description>

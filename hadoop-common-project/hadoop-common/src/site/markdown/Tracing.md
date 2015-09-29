@@ -85,8 +85,8 @@ You need to run the command against all servers if you want to update the config
 You need to specify the class name of span receiver as argument of `-class` option.
 You can specify the configuration associated with span receiver by `-Ckey=value` options.
 
-      $ hadoop trace -add -class LocalFileSpanReceiver -Cdfs.htrace.local-file-span-receiver.path=/tmp/htrace.out -host 192.168.56.2:9000
-      Added trace span receiver 2 with configuration dfs.htrace.local-file-span-receiver.path = /tmp/htrace.out
+      $ hadoop trace -add -class org.apache.htrace.core.LocalFileSpanReceiver -Chadoop.htrace.local.file.span.receiver.path=/tmp/htrace.out -host 192.168.56.2:9000
+      Added trace span receiver 2 with configuration hadoop.htrace.local.file.span.receiver.path = /tmp/htrace.out
 
       $ hadoop trace -list -host 192.168.56.2:9000
       ID  CLASS
@@ -137,8 +137,7 @@ which start tracing span before invoking HDFS shell command.
         FsShell shell = new FsShell();
         conf.setQuietMode(false);
         shell.setConf(conf);
-        Tracer tracer = new Tracer.Builder().
-            name("TracingFsShell).
+        Tracer tracer = new Tracer.Builder("TracingFsShell").
             conf(TraceUtils.wrapHadoopConf("tracing.fs.shell.htrace.", conf)).
             build();
         int res = 0;
@@ -177,15 +176,15 @@ ProbabilitySampler.
 
 ```xml
       <property>
-        <name>dfs.client.htrace.spanreceiver.classes</name>
+        <name>hadoop.htrace.span.receiver.classes</name>
         <value>LocalFileSpanReceiver</value>
       </property>
       <property>
-        <name>dfs.client.htrace.sampler</name>
+        <name>fs.client.htrace.sampler.classes</name>
         <value>ProbabilitySampler</value>
       </property>
       <property>
-        <name>dfs.client.htrace.sampler.fraction</name>
-        <value>0.5</value>
+        <name>fs.client.htrace.sampler.fraction</name>
+        <value>0.01</value>
       </property>
 ```
