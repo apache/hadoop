@@ -153,8 +153,6 @@ public interface HdfsClientConfigKeys {
       "dfs.client.test.drop.namenode.response.number";
   int     DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT = 0;
   String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
-  // HDFS client HTrace configuration.
-  String  DFS_CLIENT_HTRACE_PREFIX = "dfs.client.htrace.";
   String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
   String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
 
