@@ -1459,6 +1459,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9141. Thread leak in Datanode#refreshVolumes. (Uma Maheswara Rao G
     via yliu)
 
+    HDFS-9174. Fix findbugs warnings in FSOutputSummer.tracer and
+    DirectoryScanner$ReportCompiler.currentThread. (Yi Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
