@@ -250,9 +250,9 @@ public class LocalDirAllocator {
     private int dirNumLastAccessed;
     private Random dirIndexRandomizer = new Random();
     private FileSystem localFS;
-    private DF[] dirDF;
+    private DF[] dirDF = new DF[0];
     private String contextCfgItemName;
-    private String[] localDirs;
+    private String[] localDirs = new String[0];
     private String savedLocalDirs = "";
 
     public AllocatorPerContext(String contextCfgItemName) {

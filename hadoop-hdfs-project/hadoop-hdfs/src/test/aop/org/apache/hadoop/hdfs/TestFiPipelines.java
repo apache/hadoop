@@ -24,7 +24,6 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.FiTestUtil;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -235,14 +234,14 @@ public class TestFiPipelines {
   }
 
   private static void initLoggers() {
-    ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) TestFiPipelines.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) FiTestUtil.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) BlockReceiverAspects.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DFSClientAspects.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(FSNamesystem.class), Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(TestFiPipelines.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FiTestUtil.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockReceiverAspects.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClientAspects.LOG, Level.ALL);
   }
 
 }

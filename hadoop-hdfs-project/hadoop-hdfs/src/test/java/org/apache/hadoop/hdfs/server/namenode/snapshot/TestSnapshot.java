@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.Random;
 
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -74,7 +73,7 @@ import org.junit.rules.ExpectedException;
  */
 public class TestSnapshot {
   {
-    ((Log4JLogger)INode.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
     SnapshotTestHelper.disableLogs();
   }
 

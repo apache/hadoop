@@ -200,6 +200,29 @@ Release 2.8.0 - UNRELEASED
     YARN-3212. RMNode State Transition Update with DECOMMISSIONING state.
     (Junping Du via wangda)
 
+    YARN-3866. AM-RM protocol changes to support container resizing. (Meng Ding
+    via jianhe)
+
+    YARN-1449. AM-NM protocol changes to support container resizing.
+    (Meng Ding & Wangda Tan via jianhe)
+
+    YARN-1645. ContainerManager implementation to support container resizing.
+    (Meng Ding & Wangda Tan via jianhe)
+
+    YARN-3867. ContainerImpl changes to support container resizing. (Meng Ding 
+    via jianhe)
+
+    YARN-1643. Make ContainersMonitor support changing monitoring size of an
+    allocated container. (Meng Ding and Wangda Tan)
+
+    YARN-1644. RM-NM protocol changes and NodeStatusUpdater implementation to
+    support container resizing. (Meng Ding via jianhe)
+
+    YARN-3868. Recovery support for container resizing. (Meng Ding via jianhe)
+
+    YARN-1651. CapacityScheduler side changes to support container resize.
+    (Wangda Tan via jianhe)
+ 
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -234,9 +257,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3424. Change logs for ContainerMonitorImpl's resourse monitoring
     from info to debug. (Anubhav Dhoot via ozawa)
-
-    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
-    (Varun Vasudev via xgong)
 
     YARN-2901. Add errors and warning metrics page to RM, NM web UI. 
     (Varun Vasudev via wangda)
@@ -460,6 +480,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12428. Fix inconsistency between log-level guards and statements.
     (Jagadesh Kiran N and Jackie Chang via ozawa)
 
+    YARN-4095. Avoid sharing AllocatorPerContext object in LocalDirAllocator
+    between ShuffleHandler and LocalDirsHandlerService. (Zhihai Xu via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
@@ -655,9 +678,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3716. Node-label-expression should be included by 
     ResourceRequestPBImpl.toString. (Xianyin Xin via wangda)
-
-    YARN-3740. Fixed the typo in the configuration name:
-    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
 
     YARN-3751. Fixed AppInfo to check if used resources are null. (Sunil G via
     zjshen)
@@ -874,6 +894,19 @@ Release 2.8.0 - UNRELEASED
     YARN-4188. Make MoveApplicationAcrossQueues abstract, newInstance static.
     (Giovanni Matteo Fumarola via cdouglas)
 
+    YARN-4171. Fix findbugs warnings in YARN-1197 branch. (Wangda Tan via jianhe)
+
+    YARN-4152. NodeManager crash with NPE when LogAggregationService#stopContainer called for 
+    absent container. (Bibin A Chundatt via rohithsharmaks)
+
+    YARN-4044. Running applications information changes such as movequeue is not published to 
+    TimeLine server. (Sunil G via rohithsharmaks)
+
+    YARN-4204. ConcurrentModificationException in FairSchedulerQueueInfo. (adhoot)
+
+    YARN-4141. Runtime Application Priority change should not throw exception
+    for applications at finishing states (Sunil G via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -960,6 +993,15 @@ Release 2.7.2 - UNRELEASED
     YARN-3433. Jersey tests failing with Port in Use -again.
     (Brahma Reddy Battula)
 
+    YARN-3975. WebAppProxyServlet should not redirect to RM page if AHS is
+    enabled (Mit Desai via jlowe)
+
+    YARN-3624. ApplicationHistoryServer should not reverse the order of the
+    filters it gets. (Mit Desai via xgong)
+
+    YARN-4180. AMLauncher does not retry on failures when talking to NM.
+    (adhoot)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
@@ -1012,9 +1054,6 @@ Release 2.7.1 - 2015-07-06
 
     YARN-3485. FairScheduler headroom calculation doesn't consider 
     maxResources for Fifo and FairShare policies. (kasha)
-
-    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
-    (Xuan Gong via zjshen)
 
     YARN-3301. Fixed the format issue of the new RM attempt web page.
     (Xuan Gong via jianhe)
@@ -1658,16 +1697,10 @@ Release 2.7.0 - 2015-04-20
     YARN-3295. Fix documentation nits found in markdown conversion.
     (Masatake Iwasaki via ozawa)
 
-    YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
-    web page. (Xuan Gong via zjshen)
-
     YARN-3338. Exclude jline dependency from YARN. (Zhijie Shen via xgong)
 
     YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
     running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
-
-    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
-    in ATS / RM web ui. (Naganarasimha G R via xgong)
 
     YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in 
     doc comments. (Akira AJISAKA, Andrew Purtell, and Allen Wittenauer via ozawa)
@@ -1709,7 +1742,7 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.1 - 2015-09-09
+Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
 
@@ -1735,6 +1768,9 @@ Release 2.6.1 - 2015-09-09
 
     YARN-3978. Configurably turn off the saving of container info in Generic AHS
     (Eric Payne via jeagles)
+
+    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
+    (Varun Vasudev via xgong)
 
   OPTIMIZATIONS
 
@@ -1913,6 +1949,18 @@ Release 2.6.1 - 2015-09-09
 
     YARN-4047. ClientRMService getApplications has high scheduler lock contention.
     (Jason Lowe via jianhe)
+
+    YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
+    web page. (Xuan Gong via zjshen)
+
+    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
+    in ATS / RM web ui. (Naganarasimha G R via xgong)
+
+    YARN-3740. Fixed the typo in the configuration name:
+    APPLICATION_HISTORY_PREFIX_MAX_APPS. (Xuan Gong via zjshen)
+
+    YARN-3544. Got back AM logs link on the RM web UI for a completed app.
+    (Xuan Gong via zjshen)
 
 Release 2.6.0 - 2014-11-18
 

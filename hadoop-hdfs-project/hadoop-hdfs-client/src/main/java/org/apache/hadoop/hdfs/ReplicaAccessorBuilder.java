@@ -36,6 +36,9 @@ public abstract class ReplicaAccessorBuilder {
   public abstract ReplicaAccessorBuilder
       setBlock(long blockId, String blockPoolId);
 
+  /** Set the genstamp of the block which is being opened. */
+  public abstract ReplicaAccessorBuilder setGenerationStamp(long genstamp);
+
   /**
    * Set whether checksums must be verified.  Checksums should be skipped if
    * the user has disabled checksum verification in the configuration.  Users

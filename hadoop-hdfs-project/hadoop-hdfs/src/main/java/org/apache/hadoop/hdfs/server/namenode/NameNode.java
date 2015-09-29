@@ -71,13 +71,15 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.tracing.TraceAdminProtocol;
+import org.apache.hadoop.tracing.TraceUtils;
+import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -318,6 +320,8 @@ public class NameNode implements NameNodeStatusMXBean {
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
 
+  private static final String NAMENODE_HTRACE_PREFIX = "namenode.htrace.";
+
   public static final Log MetricsLog =
       LogFactory.getLog("NameNodeMetricsLog");
 
@@ -345,7 +349,8 @@ public class NameNode implements NameNodeStatusMXBean {
 
   private JvmPauseMonitor pauseMonitor;
   private ObjectName nameNodeStatusBeanName;
-  SpanReceiverHost spanReceiverHost;
+  protected final Tracer tracer;
+  protected final TracerConfigurationManager tracerConfigurationManager;
   ScheduledThreadPoolExecutor metricsLoggerTimer;
 
   /**
@@ -620,9 +625,6 @@ public class NameNode implements NameNodeStatusMXBean {
       startHttpServer(conf);
     }
 
-    this.spanReceiverHost =
-      SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
-
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
@@ -810,8 +812,13 @@ public class NameNode implements NameNodeStatusMXBean {
     this(conf, NamenodeRole.NAMENODE);
   }
 
-  protected NameNode(Configuration conf, NamenodeRole role) 
-      throws IOException { 
+  protected NameNode(Configuration conf, NamenodeRole role)
+      throws IOException {
+    this.tracer = new Tracer.Builder("NameNode").
+        conf(TraceUtils.wrapHadoopConf(NAMENODE_HTRACE_PREFIX, conf)).
+        build();
+    this.tracerConfigurationManager =
+        new TracerConfigurationManager(NAMENODE_HTRACE_PREFIX, conf);
     this.conf = conf;
     this.role = role;
     setClientNamenodeAddress(conf);
@@ -894,10 +901,8 @@ public class NameNode implements NameNodeStatusMXBean {
         MBeans.unregister(nameNodeStatusBeanName);
         nameNodeStatusBeanName = null;
       }
-      if (this.spanReceiverHost != null) {
-        this.spanReceiverHost.closeReceivers();
-      }
     }
+    tracer.close();
   }
 
   synchronized boolean isStopRequested() {

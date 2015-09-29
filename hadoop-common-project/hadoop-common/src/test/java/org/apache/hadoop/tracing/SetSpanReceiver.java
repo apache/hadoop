@@ -19,9 +19,10 @@ package org.apache.hadoop.tracing;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.htrace.Span;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.SpanReceiver;
+import org.apache.htrace.core.HTraceConfiguration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,7 +40,7 @@ import org.junit.Assert;
  * push all the metrics to a static place, and would make testing
  * SpanReceiverHost harder.
  */
-public class SetSpanReceiver implements SpanReceiver {
+public class SetSpanReceiver extends SpanReceiver {
 
   public SetSpanReceiver(HTraceConfiguration conf) {
   }
@@ -68,8 +69,8 @@ public class SetSpanReceiver implements SpanReceiver {
   }
 
   public static class SetHolder {
-    public static ConcurrentHashMap<Long, Span> spans =
-        new ConcurrentHashMap<Long, Span>();
+    public static ConcurrentHashMap<SpanId, Span> spans =
+        new ConcurrentHashMap<SpanId, Span>();
 
     public static Map<String, List<Span>> getMap() {
       Map<String, List<Span>> map = new HashMap<String, List<Span>>();

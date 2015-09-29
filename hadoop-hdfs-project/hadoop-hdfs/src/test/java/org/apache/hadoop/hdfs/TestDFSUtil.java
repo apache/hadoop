@@ -903,16 +903,16 @@ public class TestDFSUtil {
     Configuration conf = new Configuration(false);
     conf.unset(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI);
     assertFalse("encryption enabled on no provider key",
-        DFSUtil.isHDFSEncryptionEnabled(conf));
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
     conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
     assertFalse("encryption enabled on empty provider key",
-        DFSUtil.isHDFSEncryptionEnabled(conf));
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
     conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "\n\t\n");
     assertFalse("encryption enabled on whitespace provider key",
-        DFSUtil.isHDFSEncryptionEnabled(conf));
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
     conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "http://hadoop.apache.org");
     assertTrue("encryption disabled on valid provider key",
-        DFSUtil.isHDFSEncryptionEnabled(conf));
+        DFSUtilClient.isHDFSEncryptionEnabled(conf));
 
   }
 }

@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * Allocate normal (new) containers, considers locality/label, etc. Using
  * delayed scheduling mechanism to get better locality allocation.
  */
-public class RegularContainerAllocator extends ContainerAllocator {
+public class RegularContainerAllocator extends AbstractContainerAllocator {
   private static final Log LOG = LogFactory.getLog(RegularContainerAllocator.class);
   
   private ResourceRequest lastResourceRequest = null;
@@ -55,6 +55,25 @@ public class RegularContainerAllocator extends ContainerAllocator {
       ResourceCalculator rc, RMContext rmContext) {
     super(application, rc, rmContext);
   }
+  
+  private boolean checkHeadroom(Resource clusterResource,
+      ResourceLimits currentResourceLimits, Resource required,
+      FiCaSchedulerNode node) {
+    // If headroom + currentReservation < required, we cannot allocate this
+    // require
+    Resource resourceCouldBeUnReserved = application.getCurrentReservation();
+    if (!application.getCSLeafQueue().getReservationContinueLooking()
+        || !node.getPartition().equals(RMNodeLabelsManager.NO_LABEL)) {
+      // If we don't allow reservation continuous looking, OR we're looking at
+      // non-default node partition, we won't allow to unreserve before
+      // allocation.
+      resourceCouldBeUnReserved = Resources.none();
+    }
+    return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
+        currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
+        required);
+  }
+
   
   private ContainerAllocation preCheckForNewContainer(Resource clusterResource,
       FiCaSchedulerNode node, SchedulingMode schedulingMode,
@@ -97,8 +116,9 @@ public class RegularContainerAllocator extends ContainerAllocator {
     // Is the node-label-expression of this offswitch resource request
     // matches the node's label?
     // If not match, jump to next priority.
-    if (!SchedulerUtils.checkResourceRequestMatchingNodePartition(anyRequest,
-        node.getPartition(), schedulingMode)) {
+    if (!SchedulerUtils.checkResourceRequestMatchingNodePartition(
+        anyRequest.getNodeLabelExpression(), node.getPartition(),
+        schedulingMode)) {
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
@@ -388,8 +408,8 @@ public class RegularContainerAllocator extends ContainerAllocator {
     }
 
     // check if the resource request can access the label
-    if (!SchedulerUtils.checkResourceRequestMatchingNodePartition(request,
-        node.getPartition(), schedulingMode)) {
+    if (!SchedulerUtils.checkResourceRequestMatchingNodePartition(
+        request.getNodeLabelExpression(), node.getPartition(), schedulingMode)) {
       // this is a reserved container, but we cannot allocate it now according
       // to label not match. This can be caused by node label changed
       // We should un-reserve this container.

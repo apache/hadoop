@@ -88,6 +88,31 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.dns.interface</name>
+  <description>
+    The name of the Network Interface from which the service should determine
+    its host name for Kerberos login. e.g. eth2. In a multi-homed environment,
+    the setting can be used to affect the _HOST subsitution in the service
+    Kerberos principal. If this configuration value is not set, the service
+    will use its default hostname as returned by
+    InetAddress.getLocalHost().getCanonicalHostName().
+
+    Most clusters will not require this setting.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.dns.nameserver</name>
+  <description>
+    The host name or IP address of the name server (DNS) which a service Node
+    should use to determine its own host name for Kerberos Login. Requires
+    hadoop.security.dns.interface.
+
+    Most clusters will not require this setting.
+  </description>
+</property>
+
 <!-- 
 === Multiple group mapping providers configuration sample === 
   This sample illustrates a typical use case for CompositeGroupsMapping where
@@ -1971,6 +1996,21 @@ for ldap providers in the same way as above does.
       requires confirmation if the number of files to be deleted is greater than
       this limit.  The default limit is 100 files. The warning is disabled if
       the limit is 0 or the -safely is not specified in -rm command.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.client.htrace.sampler.classes</name>
+    <value></value>
+    <description>The class names of the HTrace Samplers to use for Hadoop
+      filesystem clients.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.htrace.span.receiver.classes</name>
+    <value></value>
+    <description>The class names of the Span Receivers to use for Hadoop.
     </description>
   </property>
 </configuration>

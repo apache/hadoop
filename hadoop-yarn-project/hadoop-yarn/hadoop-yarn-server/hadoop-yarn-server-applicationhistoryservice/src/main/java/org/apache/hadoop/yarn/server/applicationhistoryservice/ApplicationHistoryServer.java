@@ -242,17 +242,20 @@ public class ApplicationHistoryServer extends CompositeService {
       if(conf.getBoolean(YarnConfiguration
           .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED, YarnConfiguration
               .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT)) {
-        initializers = CrossOriginFilterInitializer.class.getName() + ","
-            + initializers;
+        if (initializers.length() != 0) {
+          initializers += ",";
+        }
+        initializers += CrossOriginFilterInitializer.class.getName();
         modifiedInitializers = true;
       }
     }
 
     if (!initializers.contains(TimelineAuthenticationFilterInitializer.class
       .getName())) {
-      initializers =
-          TimelineAuthenticationFilterInitializer.class.getName() + ","
-              + initializers;
+      if (initializers.length() != 0) {
+        initializers += ",";
+      }
+      initializers += TimelineAuthenticationFilterInitializer.class.getName();
       modifiedInitializers = true;
     }
 

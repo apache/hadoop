@@ -40,7 +40,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestP
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
@@ -99,6 +102,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
+  private static final String CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX =
+      "/resourceChanged";
   private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
   private static final String CONTAINER_EXIT_CODE_KEY_SUFFIX = "/exitcode";
 
@@ -230,6 +235,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       } else if (suffix.equals(CONTAINER_EXIT_CODE_KEY_SUFFIX)) {
         rcs.status = RecoveredContainerStatus.COMPLETED;
         rcs.exitCode = Integer.parseInt(asString(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX)) {
+        rcs.capability = new ResourcePBImpl(
+            ResourceProto.parseFrom(entry.getValue()));
       } else {
         throw new IOException("Unexpected container state key: " + key);
       }
@@ -269,6 +277,20 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         + CONTAINER_LAUNCHED_KEY_SUFFIX;
     try {
       db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerResourceChanged(ContainerId containerId,
+      Resource capability) throws IOException {
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX;
+    try {
+      // New value will overwrite old values for the same key
+      db.put(bytes(key),
+          ((ResourcePBImpl) capability).getProto().toByteArray());
     } catch (DBException e) {
       throw new IOException(e);
     }

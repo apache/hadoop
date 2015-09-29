@@ -101,7 +101,6 @@ import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -114,6 +113,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -131,9 +131,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProvider.Metadata;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
@@ -2043,29 +2042,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Invoke KeyProvider APIs to generate an encrypted data encryption key for an
-   * encryption zone. Should not be called with any locks held.
-   *
-   * @param ezKeyName key name of an encryption zone
-   * @return New EDEK, or null if ezKeyName is null
-   * @throws IOException
-   */
-  private EncryptedKeyVersion generateEncryptedDataEncryptionKey(String
-      ezKeyName) throws IOException {
-    if (ezKeyName == null) {
-      return null;
-    }
-    EncryptedKeyVersion edek = null;
-    try {
-      edek = provider.generateEncryptedKey(ezKeyName);
-    } catch (GeneralSecurityException e) {
-      throw new IOException(e);
-    }
-    Preconditions.checkNotNull(edek);
-    return edek;
-  }
-
-  /**
    * Create a new file entry in the namespace.
    * 
    * For description of parameters and exceptions thrown see
@@ -2162,7 +2138,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       // Generate EDEK if necessary while not holding the lock
       if (ezInfo != null) {
-        ezInfo.edek = generateEncryptedDataEncryptionKey(ezInfo.ezKeyName);
+        ezInfo.edek = FSDirEncryptionZoneOp
+            .generateEncryptedDataEncryptionKey(dir, ezInfo.ezKeyName);
       }
       EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
     }
@@ -5132,7 +5109,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public int getVolumeFailuresTotal() {
     List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
     int volumeFailuresTotal = 0;
     for (DatanodeDescriptor node: live) {
       volumeFailuresTotal += node.getVolumeFailures();
@@ -5143,7 +5120,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // FSNamesystemMBean
   public long getEstimatedCapacityLostTotal() {
     List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, false);
     long estimatedCapacityLostTotal = 0;
     for (DatanodeDescriptor node: live) {
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
@@ -5961,7 +5938,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final Map<String, Map<String,Object>> info = 
       new HashMap<String, Map<String,Object>>();
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-    blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
+    blockManager.getDatanodeManager().fetchDatanodes(live, null, false);
     for (DatanodeDescriptor node : live) {
       ImmutableMap.Builder<String, Object> innerinfo =
           ImmutableMap.<String,Object>builder();
@@ -6009,7 +5986,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final Map<String, Map<String, Object>> info = 
       new HashMap<String, Map<String, Object>>();
     final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-    blockManager.getDatanodeManager().fetchDatanodes(null, dead, true);
+    blockManager.getDatanodeManager().fetchDatanodes(null, dead, false);
     for (DatanodeDescriptor node : dead) {
       Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
           .put("lastContact", getLastContact(node))
@@ -6180,11 +6157,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return JSON.toString(txnIdMap);
   }
   
-  @Override  // NameNodeMXBean
-  public String getNNStarted() {
-    return getStartTime().toString();
-  }
-
   @Override // NameNodeMXBean
   public long getNNStartedTimeInMillis() {
     return startTime;
@@ -7055,72 +7027,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
   void createEncryptionZone(final String src, final String keyName,
-                            boolean logRetryCache)
-    throws IOException, UnresolvedLinkException,
-      SafeModeException, AccessControlException {
+      boolean logRetryCache) throws IOException, UnresolvedLinkException,
+          SafeModeException, AccessControlException {
     try {
-      if (provider == null) {
-        throw new IOException(
-            "Can't create an encryption zone for " + src +
-            " since no key provider is available.");
+      Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
+          keyName, src);
+      checkSuperuserPrivilege();
+      FSPermissionChecker pc = getPermissionChecker();
+      checkOperation(OperationCategory.WRITE);
+      final HdfsFileStatus resultingStat;
+      writeLock();
+      try {
+        checkSuperuserPrivilege();
+        checkOperation(OperationCategory.WRITE);
+        checkNameNodeSafeMode("Cannot create encryption zone on " + src);
+        resultingStat = FSDirEncryptionZoneOp.createEncryptionZone(dir, src,
+            pc, metadata.getCipher(), keyName, logRetryCache);
+      } finally {
+        writeUnlock();
       }
-      if (keyName == null || keyName.isEmpty()) {
-        throw new IOException("Must specify a key name when creating an " +
-            "encryption zone");
-      }
-      KeyProvider.Metadata metadata = provider.getMetadata(keyName);
-      if (metadata == null) {
-        /*
-         * It would be nice if we threw something more specific than
-         * IOException when the key is not found, but the KeyProvider API
-         * doesn't provide for that. If that API is ever changed to throw
-         * something more specific (e.g. UnknownKeyException) then we can
-         * update this to match it, or better yet, just rethrow the
-         * KeyProvider's exception.
-         */
-        throw new IOException("Key " + keyName + " doesn't exist.");
-      }
-      // If the provider supports pool for EDEKs, this will fill in the pool
-      provider.warmUpEncryptedKeys(keyName);
-      createEncryptionZoneInt(src, metadata.getCipher(),
-          keyName, logRetryCache);
+
+      getEditLog().logSync();
+      logAuditEvent(true, "createEncryptionZone", src, null, resultingStat);
     } catch (AccessControlException e) {
       logAuditEvent(false, "createEncryptionZone", src);
       throw e;
     }
-  }
-
-  private void createEncryptionZoneInt(final String srcArg, String cipher,
-      String keyName, final boolean logRetryCache) throws IOException {
-    String src = srcArg;
-    HdfsFileStatus resultingStat = null;
-    checkSuperuserPrivilege();
-    final byte[][] pathComponents =
-      FSDirectory.getPathComponentsForReservedPath(src);
-    FSPermissionChecker pc = getPermissionChecker();
-    writeLock();
-    try {
-      checkSuperuserPrivilege();
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot create encryption zone on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-
-      final CipherSuite suite = CipherSuite.convert(cipher);
-      // For now this is hardcoded, as we only support one method.
-      final CryptoProtocolVersion version =
-          CryptoProtocolVersion.ENCRYPTION_ZONES;
-      final XAttr ezXAttr = dir.createEncryptionZone(src, suite,
-          version, keyName);
-      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(ezXAttr);
-      getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      final INodesInPath iip = dir.getINodesInPath4Write(src, false);
-      resultingStat = dir.getAuditFileInfo(iip);
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
-    logAuditEvent(true, "createEncryptionZone", srcArg, null, resultingStat);
   }
 
   /**
@@ -7133,25 +7065,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   EncryptionZone getEZForPath(final String srcArg)
     throws AccessControlException, UnresolvedLinkException, IOException {
-    String src = srcArg;
     HdfsFileStatus resultingStat = null;
-    final byte[][] pathComponents =
-        FSDirectory.getPathComponentsForReservedPath(src);
     boolean success = false;
     final FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.READ);
-      }
-      final EncryptionZone ret = dir.getEZForPath(iip);
-      resultingStat = dir.getAuditFileInfo(iip);
+      Entry<EncryptionZone, HdfsFileStatus> ezForPath = FSDirEncryptionZoneOp
+          .getEZForPath(dir, srcArg, pc);
       success = true;
-      return ret;
+      resultingStat = ezForPath.getValue();
+      return ezForPath.getKey();
     } finally {
       readUnlock();
       logAuditEvent(success, "getEZForPath", srcArg, null, resultingStat);
@@ -7168,7 +7093,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.READ);
       final BatchedListEntries<EncryptionZone> ret =
-          dir.listEncryptionZones(prevId);
+          FSDirEncryptionZoneOp.listEncryptionZones(dir, prevId);
       success = true;
       return ret;
     } finally {

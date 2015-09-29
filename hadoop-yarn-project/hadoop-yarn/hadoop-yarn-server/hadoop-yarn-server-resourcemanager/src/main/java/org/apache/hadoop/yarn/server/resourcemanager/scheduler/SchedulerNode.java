@@ -157,6 +157,37 @@ public abstract class SchedulerNode {
         + getUsedResource() + " used and " + getAvailableResource()
         + " available after allocation");
   }
+  
+  private synchronized void changeContainerResource(ContainerId containerId,
+      Resource deltaResource, boolean increase) {
+    if (increase) {
+      deductAvailableResource(deltaResource);
+    } else {
+      addAvailableResource(deltaResource);
+    }
+
+    LOG.info((increase ? "Increased" : "Decreased") + " container "
+        + containerId + " of capacity " + deltaResource + " on host "
+        + rmNode.getNodeAddress() + ", which has " + numContainers
+        + " containers, " + getUsedResource() + " used and "
+        + getAvailableResource() + " available after allocation");
+  }
+  
+  /**
+   * The Scheduler increased container
+   */
+  public synchronized void increaseContainer(ContainerId containerId,
+      Resource deltaResource) {
+    changeContainerResource(containerId, deltaResource, true);
+  }
+  
+  /**
+   * The Scheduler decreased container
+   */
+  public synchronized void decreaseContainer(ContainerId containerId,
+      Resource deltaResource) {
+    changeContainerResource(containerId, deltaResource, false);
+  }
 
   /**
    * Get available resources on the node.

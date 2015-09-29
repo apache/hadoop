@@ -82,6 +82,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
+import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -141,6 +142,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   private boolean showReplicaDetails = false;
   private long staleInterval;
+  private Tracer tracer;
+
   /**
    * True if we encountered an internal error during FSCK, such as not being
    * able to delete a corrupt file.
@@ -203,6 +206,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     this.staleInterval =
         conf.getLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
           DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+    this.tracer = new Tracer.Builder("NamenodeFsck").build();
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -898,6 +902,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             setCachingStrategy(CachingStrategy.newDropBehind()).
             setClientCacheContext(dfs.getClientContext()).
             setConfiguration(namenode.conf).
+            setTracer(tracer).
             setRemotePeerFactory(new RemotePeerFactory() {
               @Override
               public Peer newConnectedPeer(InetSocketAddress addr,

@@ -30,7 +30,6 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,6 +52,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -169,7 +169,7 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenWebHdfsApi() throws Exception {
-    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.ALL);
     final String uri = WebHdfsConstants.WEBHDFS_SCHEME + "://"
         + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     //get file system as JobTracker

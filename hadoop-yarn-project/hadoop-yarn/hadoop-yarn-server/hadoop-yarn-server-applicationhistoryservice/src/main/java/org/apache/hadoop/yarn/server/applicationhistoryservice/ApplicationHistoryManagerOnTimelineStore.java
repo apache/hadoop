@@ -356,6 +356,18 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             ApplicationMetricsConstants.CREATED_EVENT_TYPE)) {
           createdTime = event.getTimestamp();
         } else if (event.getEventType().equals(
+            ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
+          Map<String, Object> eventInfo = event.getEventInfo();
+          if (eventInfo == null) {
+            continue;
+          }
+          applicationPriority = Integer
+              .parseInt(eventInfo.get(
+                  ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO)
+                  .toString());
+          queue = eventInfo.get(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)
+              .toString();
+        } else if (event.getEventType().equals(
             ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
           progress=1.0F;
           finishedTime = event.getTimestamp();

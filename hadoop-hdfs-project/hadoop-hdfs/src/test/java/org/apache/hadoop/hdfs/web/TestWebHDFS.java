@@ -36,7 +36,6 @@ import java.util.Random;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -46,7 +45,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
@@ -236,7 +234,7 @@ public class TestWebHDFS {
   /** Test client retry with namenode restarting. */
   @Test(timeout=300000)
   public void testNamenodeRestart() throws Exception {
-    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.ALL);
     final Configuration conf = WebHdfsTestUtil.createConf();
     TestDFSClientRetries.namenodeRestartTest(conf, true);
   }

@@ -811,12 +811,14 @@ public final class ErasureCodingWorker {
          * read directly from DN and need to check the replica is FINALIZED
          * state, notice we should not use short-circuit local read which
          * requires config for domain-socket in UNIX or legacy config in Windows.
+         *
+         * TODO: add proper tracer
          */
         return RemoteBlockReader2.newBlockReader(
             "dummy", block, blockToken, offsetInBlock, 
             block.getNumBytes() - offsetInBlock, true,
             "", newConnectedPeer(block, dnAddr, blockToken, dnInfo), dnInfo,
-            null, cachingStrategy);
+            null, cachingStrategy, null);
       } catch (IOException e) {
         return null;
       }
@@ -972,7 +974,7 @@ public final class ErasureCodingWorker {
           unbufIn = saslStreams.in;
 
           out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-              DFSUtil.getSmallBufferSize(conf)));
+              DFSUtilClient.getSmallBufferSize(conf)));
           in = new DataInputStream(unbufIn);
 
           DatanodeInfo source = new DatanodeInfo(datanode.getDatanodeId());

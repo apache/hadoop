@@ -43,8 +43,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -99,8 +99,8 @@ public class TestLease {
       // call renewLease() manually.
       // make it look like the soft limit has been exceeded.
       LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
-      dfs.lastLeaseRenewal = Time.monotonicNow()
-      - HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD - 1000;
+      dfs.lastLeaseRenewal = Time.monotonicNow() -
+          HdfsConstants.LEASE_SOFTLIMIT_PERIOD - 1000;
       try {
         dfs.renewLease();
       } catch (IOException e) {}
@@ -116,7 +116,7 @@ public class TestLease {
 
       // make it look like the hard limit has been exceeded.
       dfs.lastLeaseRenewal = Time.monotonicNow()
-      - HdfsServerConstants.LEASE_HARDLIMIT_PERIOD - 1000;
+      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
       dfs.renewLease();
 
       // this should not work.

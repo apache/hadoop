@@ -68,7 +68,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1441,35 +1440,5 @@ public class DFSUtil {
     KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
         .createKeyProviderCryptoExtension(keyProvider);
     return cryptoProvider;
-  }
-
-  public static int getIoFileBufferSize(Configuration conf) {
-    return conf.getInt(
-      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
-      CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
-  }
-
-  public static int getSmallBufferSize(Configuration conf) {
-    return Math.min(getIoFileBufferSize(conf) / 2, 512);
-  }
-
-  /**
-   * Probe for HDFS Encryption being enabled; this uses the value of
-   * the option {@link DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI},
-   * returning true if that property contains a non-empty, non-whitespace
-   * string.
-   * @param conf configuration to probe
-   * @return true if encryption is considered enabled.
-   */
-  public static boolean isHDFSEncryptionEnabled(Configuration conf) {
-    return !conf.getTrimmed(
-        DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "").isEmpty();
-  }
-
-  public static InterruptedIOException toInterruptedIOException(String message,
-      InterruptedException e) {
-    final InterruptedIOException iioe = new InterruptedIOException(message);
-    iioe.initCause(e);
-    return iioe;
   }
 }

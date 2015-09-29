@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 
@@ -33,6 +35,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -40,6 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -242,5 +246,28 @@ public class TestHeartbeatHandling {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testHeartbeatStopWatch() throws Exception {
+   Namesystem ns = Mockito.mock(Namesystem.class);
+   BlockManager bm = Mockito.mock(BlockManager.class);
+   Configuration conf = new Configuration();
+   long recheck = 2000;
+   conf.setLong(
+       DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, recheck);
+   HeartbeatManager monitor = new HeartbeatManager(ns, bm, conf);
+   monitor.restartHeartbeatStopWatch();
+   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
+   // sleep shorter than recheck and verify shouldn't abort
+   Thread.sleep(100);
+   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
+   // sleep longer than recheck and verify should abort unless ignore delay
+   Thread.sleep(recheck);
+   assertTrue(monitor.shouldAbortHeartbeatCheck(0));
+   assertFalse(monitor.shouldAbortHeartbeatCheck(-recheck*3));
+   // ensure it resets properly
+   monitor.restartHeartbeatStopWatch();
+   assertFalse(monitor.shouldAbortHeartbeatCheck(0));
   }
 }

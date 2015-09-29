@@ -34,6 +34,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.Daemon;
@@ -69,8 +70,8 @@ public class LeaseManager {
 
   private final FSNamesystem fsnamesystem;
 
-  private long softLimit = HdfsServerConstants.LEASE_SOFTLIMIT_PERIOD;
-  private long hardLimit = HdfsServerConstants.LEASE_HARDLIMIT_PERIOD;
+  private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
+  private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
 
   //
   // Used for handling lock-leases

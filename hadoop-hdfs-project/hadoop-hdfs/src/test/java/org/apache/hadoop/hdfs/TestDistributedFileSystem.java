@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -84,7 +83,7 @@ public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
 
   static {
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
   }
 
   private boolean dualPortTesting = false;

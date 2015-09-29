@@ -310,18 +310,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
-    List<NMContainerStatus> containerReports = getNMContainerStatuses();
+    RegisterNodeManagerResponse regNMResponse;
     Set<NodeLabel> nodeLabels = nodeLabelsHandler.getNodeLabelsForRegistration();
-    RegisterNodeManagerRequest request =
-        RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
-            nodeManagerVersionId, containerReports, getRunningApplications(),
-            nodeLabels);
-    if (containerReports != null) {
-      LOG.info("Registering with RM using containers :" + containerReports);
+ 
+    // Synchronize NM-RM registration with
+    // ContainerManagerImpl#increaseContainersResource and
+    // ContainerManagerImpl#startContainers to avoid race condition
+    // during RM recovery
+    synchronized (this.context) {
+      List<NMContainerStatus> containerReports = getNMContainerStatuses();
+      RegisterNodeManagerRequest request =
+          RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
+              nodeManagerVersionId, containerReports, getRunningApplications(),
+              nodeLabels);
+      if (containerReports != null) {
+        LOG.info("Registering with RM using containers :" + containerReports);
+      }
+      regNMResponse =
+          resourceTracker.registerNodeManager(request);
+      // Make sure rmIdentifier is set before we release the lock
+      this.rmIdentifier = regNMResponse.getRMIdentifier();
     }
-    RegisterNodeManagerResponse regNMResponse =
-        resourceTracker.registerNodeManager(request);
-    this.rmIdentifier = regNMResponse.getRMIdentifier();
+
     // if the Resource Manager instructs NM to shutdown.
     if (NodeAction.SHUTDOWN.equals(regNMResponse.getNodeAction())) {
       String message =
@@ -418,10 +428,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     List<ContainerStatus> containersStatuses = getContainerStatuses();
     ResourceUtilization containersUtilization = getContainersUtilization();
     ResourceUtilization nodeUtilization = getNodeUtilization();
+    List<org.apache.hadoop.yarn.api.records.Container> increasedContainers
+        = getIncreasedContainers();
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
           createKeepAliveApplicationList(), nodeHealthStatus,
-          containersUtilization, nodeUtilization);
+          containersUtilization, nodeUtilization, increasedContainers);
 
     return nodeStatus;
   }
@@ -446,6 +458,21 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeResourceMonitorImpl nodeResourceMonitor =
         (NodeResourceMonitorImpl) this.context.getNodeResourceMonitor();
     return nodeResourceMonitor.getUtilization();
+  }
+
+  /* Get the containers whose resource has been increased since last
+   * NM-RM heartbeat.
+   */
+  private List<org.apache.hadoop.yarn.api.records.Container>
+      getIncreasedContainers() {
+    List<org.apache.hadoop.yarn.api.records.Container>
+        increasedContainers = new ArrayList<>(
+            this.context.getIncreasedContainers().values());
+    for (org.apache.hadoop.yarn.api.records.Container
+        container : increasedContainers) {
+      this.context.getIncreasedContainers().remove(container.getId());
+    }
+    return increasedContainers;
   }
 
   // Iterate through the NMContext and clone and get all the containers'
@@ -764,6 +791,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (systemCredentials != null && !systemCredentials.isEmpty()) {
               ((NMContext) context)
                 .setSystemCrendentialsForApps(parseCredentials(systemCredentials));
+            }
+
+            List<org.apache.hadoop.yarn.api.records.Container>
+                containersToDecrease = response.getContainersToDecrease();
+            if (!containersToDecrease.isEmpty()) {
+              dispatcher.getEventHandler().handle(
+                  new CMgrDecreaseContainersResourceEvent(containersToDecrease)
+              );
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM

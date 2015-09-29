@@ -76,7 +76,7 @@ public class TestCrcCorruption {
   @Before
   public void setUp() throws IOException {
     faultInjector = Mockito.mock(DFSClientFaultInjector.class);
-    DFSClientFaultInjector.instance = faultInjector;
+    DFSClientFaultInjector.set(faultInjector);
   }
 
   /** 

@@ -189,6 +189,39 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     super.testStartContainerFailureWithUnknownAuxService();
   }
 
+  @Override
+  public void testIncreaseContainerResourceWithInvalidRequests() throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testIncreaseContainerResourceWithInvalidRequests");
+    super.testIncreaseContainerResourceWithInvalidRequests();
+  }
+
+  @Override
+  public void testIncreaseContainerResourceWithInvalidResource() throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testIncreaseContainerResourceWithInvalidResource");
+    super.testIncreaseContainerResourceWithInvalidResource();
+  }
+
+  @Override
+  public void testChangeContainerResource() throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testChangeContainerResource");
+    super.testChangeContainerResource();
+  }
+
   private boolean shouldRunTest() {
     return System
         .getProperty(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH) != null;

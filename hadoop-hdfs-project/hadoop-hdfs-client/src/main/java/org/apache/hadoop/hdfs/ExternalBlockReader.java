@@ -46,6 +46,9 @@ public final class ExternalBlockReader implements BlockReader {
   @Override
   public int read(byte[] buf, int off, int len) throws IOException {
     int nread = accessor.read(pos, buf, off, len);
+    if (nread < 0) {
+      return nread;
+    }
     pos += nread;
     return nread;
   }
@@ -53,6 +56,9 @@ public final class ExternalBlockReader implements BlockReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     int nread = accessor.read(pos, buf);
+    if (nread < 0) {
+      return nread;
+    }
     pos += nread;
     return nread;
   }
@@ -63,7 +69,8 @@ public final class ExternalBlockReader implements BlockReader {
     if (n <= 0) {
       return 0;
     }
-    // You can't skip past the end of the replica.
+    // You can't skip past the last offset that we want to read with this
+    // block reader.
     long oldPos = pos;
     pos += n;
     if (pos > visibleLength) {
@@ -74,12 +81,11 @@ public final class ExternalBlockReader implements BlockReader {
 
   @Override
   public int available() throws IOException {
-    // We return the amount of bytes that we haven't read yet from the
-    // replica, based on our current position.  Some of the other block
-    // readers return a shorter length than that.  The only advantage to
-    // returning a shorter length is that the DFSInputStream will
-    // trash your block reader and create a new one if someone tries to
-    // seek() beyond the available() region.
+    // We return the amount of bytes between the current offset and the visible
+    // length.  Some of the other block readers return a shorter length than
+    // that.  The only advantage to returning a shorter length is that the
+    // DFSInputStream will trash your block reader and create a new one if
+    // someone tries to seek() beyond the available() region.
     long diff = visibleLength - pos;
     if (diff > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;

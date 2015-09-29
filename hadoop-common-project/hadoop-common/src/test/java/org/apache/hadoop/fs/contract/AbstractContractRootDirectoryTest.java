@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import org.apache.hadoop.fs.FileStatus;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -120,4 +121,17 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     assertIsDirectory(root);
   }
 
+  @Test
+  public void testListEmptyRootDirectory() throws IOException {
+    //extra sanity checks here to avoid support calls about complete loss of data
+    skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
+    FileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    FileStatus[] statuses = fs.listStatus(root);
+    for (FileStatus status : statuses) {
+      ContractTestUtils.assertDeleted(fs, status.getPath(), true);
+    }
+    assertEquals("listStatus on empty root-directory returned a non-empty list",
+        0, fs.listStatus(root).length);
+  }
 }

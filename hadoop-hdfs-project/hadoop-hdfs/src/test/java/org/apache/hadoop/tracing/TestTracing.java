@@ -17,50 +17,72 @@
  */
 package org.apache.hadoop.tracing;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.htrace.core.Sampler;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
 
 public class TestTracing {
-
-  private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
+
+  private Tracer prevTracer;
+
+  private final static Configuration TRACING_CONF;
+  private final static Configuration NO_TRACING_CONF;
+
+  static {
+    NO_TRACING_CONF = new Configuration();
+    NO_TRACING_CONF.setLong("dfs.blocksize", 100 * 1024);
+
+    TRACING_CONF = new Configuration(NO_TRACING_CONF);
+    TRACING_CONF.set(CommonConfigurationKeys.FS_CLIENT_HTRACE_PREFIX +
+        Tracer.SPAN_RECEIVER_CLASSES_KEY,
+        SetSpanReceiver.class.getName());
+    TRACING_CONF.set(CommonConfigurationKeys.FS_CLIENT_HTRACE_PREFIX +
+        Tracer.SAMPLER_CLASSES_KEY, "AlwaysSampler");
+  }
 
   @Test
   public void testTracing() throws Exception {
     // write and read without tracing started
     String fileName = "testTracingDisabled.dat";
     writeTestFile(fileName);
-    Assert.assertTrue(SetSpanReceiver.size() == 0);
+    Assert.assertEquals(0, SetSpanReceiver.size());
     readTestFile(fileName);
-    Assert.assertTrue(SetSpanReceiver.size() == 0);
+    Assert.assertEquals(0, SetSpanReceiver.size());
 
-    writeWithTracing();
-    readWithTracing();
+    writeTestFile("testReadTraceHooks.dat");
+
+    FsTracer.clear();
+    Tracer tracer = FsTracer.get(TRACING_CONF);
+    writeWithTracing(tracer);
+    readWithTracing(tracer);
   }
 
-  public void writeWithTracing() throws Exception {
+  private void writeWithTracing(Tracer tracer) throws Exception {
     long startTime = System.currentTimeMillis();
-    TraceScope ts = Trace.startSpan("testWriteTraceHooks", Sampler.ALWAYS);
+    TraceScope ts = tracer.newScope("testWriteTraceHooks");
     writeTestFile("testWriteTraceHooks.dat");
     long endTime = System.currentTimeMillis();
     ts.close();
@@ -107,7 +129,8 @@ public class TestTracing {
     };
     for (String desc : spansInTopTrace) {
       for (Span span : map.get(desc)) {
-        Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
+        Assert.assertEquals(ts.getSpan().getSpanId().getHigh(),
+                            span.getSpanId().getHigh());
       }
     }
 
@@ -120,12 +143,10 @@ public class TestTracing {
     SetSpanReceiver.clear();
   }
 
-  public void readWithTracing() throws Exception {
-    String fileName = "testReadTraceHooks.dat";
-    writeTestFile(fileName);
+  private void readWithTracing(Tracer tracer) throws Exception {
     long startTime = System.currentTimeMillis();
-    TraceScope ts = Trace.startSpan("testReadTraceHooks", Sampler.ALWAYS);
-    readTestFile(fileName);
+    TraceScope ts = tracer.newScope("testReadTraceHooks");
+    readTestFile("testReadTraceHooks.dat");
     ts.close();
     long endTime = System.currentTimeMillis();
 
@@ -150,7 +171,11 @@ public class TestTracing {
     // There should only be one trace id as it should all be homed in the
     // top trace.
     for (Span span : SetSpanReceiver.getSpans()) {
-      Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
+      System.out.println(span.toJson());
+    }
+    for (Span span : SetSpanReceiver.getSpans()) {
+      Assert.assertEquals(ts.getSpan().getSpanId().getHigh(),
+                          span.getSpanId().getHigh());
     }
     SetSpanReceiver.clear();
   }
@@ -185,18 +210,9 @@ public class TestTracing {
     }
   }
 
-  @BeforeClass
-  public static void setup() throws IOException {
-    conf = new Configuration();
-    conf.setLong("dfs.blocksize", 100 * 1024);
-    conf.set(DFSConfigKeys.DFS_CLIENT_HTRACE_PREFIX +
-        SpanReceiverHost.SPAN_RECEIVERS_CONF_SUFFIX,
-        SetSpanReceiver.class.getName());
-  }
-
   @Before
   public void startCluster() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(NO_TRACING_CONF)
         .numDataNodes(3)
         .build();
     cluster.waitActive();
@@ -207,6 +223,6 @@ public class TestTracing {
   @After
   public void shutDown() throws IOException {
     cluster.shutdown();
+    FsTracer.clear();
   }
-
 }

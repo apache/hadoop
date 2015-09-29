@@ -80,9 +80,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     store = createStore(SCALE);
     TimelineEntities entities = new TimelineEntities();
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 1), true, true, false));
+        ApplicationId.newInstance(0, SCALE + 1), true, true, false, false));
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 2), true, false, true));
+        ApplicationId.newInstance(0, SCALE + 2), true, false, true, false));
     store.put(entities);
   }
 
@@ -139,10 +139,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       if (i == 2) {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, true, false, false));
+            appId, true, false, false, true));
       } else {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, false, false, false));
+            appId, false, false, false, false));
       }
       store.put(entities);
       for (int j = 1; j <= scale; ++j) {
@@ -182,7 +182,15 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertEquals("test app", app.getName());
       Assert.assertEquals("test app type", app.getApplicationType());
       Assert.assertEquals("user1", app.getUser());
-      Assert.assertEquals("test queue", app.getQueue());
+      if (i == 2) {
+        // Change event is fired only in case of app with ID 2, hence verify
+        // with updated changes. And make sure last updated change is accepted.
+        Assert.assertEquals("changed queue1", app.getQueue());
+        Assert.assertEquals(Priority.newInstance(6), app.getPriority());
+      } else {
+        Assert.assertEquals("test queue", app.getQueue());
+        Assert.assertEquals(Priority.newInstance(0), app.getPriority());
+      }
       Assert.assertEquals(Integer.MAX_VALUE + 2L
           + app.getApplicationId().getId(), app.getStartTime());
       Assert.assertEquals(Integer.MAX_VALUE + 3L
@@ -458,7 +466,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   private static TimelineEntity createApplicationTimelineEntity(
       ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
-      boolean wrongAppId) {
+      boolean wrongAppId, boolean enableUpdateEvent) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     if (wrongAppId) {
@@ -515,7 +523,30 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     }
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
+    if (enableUpdateEvent) {
+      tEvent = new TimelineEvent();
+      createAppModifiedEvent(appId, tEvent, "changed queue", 5);
+      entity.addEvent(tEvent);
+      // Change priority alone
+      tEvent = new TimelineEvent();
+      createAppModifiedEvent(appId, tEvent, "changed queue", 6);
+      // Now change queue
+      tEvent = new TimelineEvent();
+      createAppModifiedEvent(appId, tEvent, "changed queue1", 6);
+      entity.addEvent(tEvent);
+    }
     return entity;
+  }
+
+  private static void createAppModifiedEvent(ApplicationId appId,
+      TimelineEvent tEvent, String queue, int priority) {
+    tEvent.setEventType(ApplicationMetricsConstants.UPDATED_EVENT_TYPE);
+    tEvent.setTimestamp(Integer.MAX_VALUE + 4L + appId.getId());
+    Map<String, Object> eventInfo = new HashMap<String, Object>();
+    eventInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, queue);
+    eventInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
+        priority);
+    tEvent.setEventInfo(eventInfo);
   }
 
   private static TimelineEntity createAppAttemptTimelineEntity(

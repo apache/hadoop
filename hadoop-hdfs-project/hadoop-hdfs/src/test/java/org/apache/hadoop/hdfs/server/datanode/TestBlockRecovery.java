@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -115,8 +114,8 @@ public class TestBlockRecovery {
       BLOCK_ID, BLOCK_LEN, GEN_STAMP);
   
   static {
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.ALL);
   }
 
   /**

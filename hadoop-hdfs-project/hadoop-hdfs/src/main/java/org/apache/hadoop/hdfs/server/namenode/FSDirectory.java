@@ -19,28 +19,22 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.CipherSuite;
-import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
-import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -71,14 +65,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
@@ -87,7 +79,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENAB
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 
@@ -347,6 +338,10 @@ public class FSDirectory implements Closeable {
 
   BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();
+  }
+
+  KeyProviderCryptoExtension getProvider() {
+    return getFSNamesystem().getProvider();
   }
 
   /** @return the root directory inode. */
@@ -1201,138 +1196,6 @@ public class FSDirectory implements Closeable {
       inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
     } finally {
       writeUnlock();
-    }
-  }
-
-  boolean isInAnEZ(INodesInPath iip)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
-    readLock();
-    try {
-      return ezManager.isInAnEZ(iip);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  String getKeyName(INodesInPath iip) {
-    readLock();
-    try {
-      return ezManager.getKeyName(iip);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  XAttr createEncryptionZone(String src, CipherSuite suite,
-      CryptoProtocolVersion version, String keyName)
-    throws IOException {
-    writeLock();
-    try {
-      return ezManager.createEncryptionZone(src, suite, version, keyName);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  EncryptionZone getEZForPath(INodesInPath iip) {
-    readLock();
-    try {
-      return ezManager.getEZINodeForPath(iip);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  BatchedListEntries<EncryptionZone> listEncryptionZones(long prevId)
-      throws IOException {
-    readLock();
-    try {
-      return ezManager.listEncryptionZones(prevId);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
-   * Set the FileEncryptionInfo for an INode.
-   */
-  void setFileEncryptionInfo(String src, FileEncryptionInfo info)
-      throws IOException {
-    // Make the PB for the xattr
-    final HdfsProtos.PerFileEncryptionInfoProto proto =
-        PBHelperClient.convertPerFileEncInfo(info);
-    final byte[] protoBytes = proto.toByteArray();
-    final XAttr fileEncryptionAttr =
-        XAttrHelper.buildXAttr(CRYPTO_XATTR_FILE_ENCRYPTION_INFO, protoBytes);
-    final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-    xAttrs.add(fileEncryptionAttr);
-
-    writeLock();
-    try {
-      FSDirXAttrOp.unprotectedSetXAttrs(this, src, xAttrs,
-                                        EnumSet.of(XAttrSetFlag.CREATE));
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
-   * This function combines the per-file encryption info (obtained
-   * from the inode's XAttrs), and the encryption info from its zone, and
-   * returns a consolidated FileEncryptionInfo instance. Null is returned
-   * for non-encrypted files.
-   *
-   * @param inode inode of the file
-   * @param snapshotId ID of the snapshot that
-   *                   we want to get encryption info from
-   * @param iip inodes in the path containing the file, passed in to
-   *            avoid obtaining the list of inodes again; if iip is
-   *            null then the list of inodes will be obtained again
-   * @return consolidated file encryption info; null for non-encrypted files
-   */
-  FileEncryptionInfo getFileEncryptionInfo(INode inode, int snapshotId,
-      INodesInPath iip) throws IOException {
-    if (!inode.isFile()) {
-      return null;
-    }
-    readLock();
-    try {
-      EncryptionZone encryptionZone = getEZForPath(iip);
-      if (encryptionZone == null) {
-        // not an encrypted file
-        return null;
-      } else if(encryptionZone.getPath() == null
-          || encryptionZone.getPath().isEmpty()) {
-        if (NameNode.LOG.isDebugEnabled()) {
-          NameNode.LOG.debug("Encryption zone " +
-              encryptionZone.getPath() + " does not have a valid path.");
-        }
-      }
-
-      final CryptoProtocolVersion version = encryptionZone.getVersion();
-      final CipherSuite suite = encryptionZone.getSuite();
-      final String keyName = encryptionZone.getKeyName();
-
-      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(inode,
-          snapshotId, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
-
-      if (fileXAttr == null) {
-        NameNode.LOG.warn("Could not find encryption XAttr for file " +
-            iip.getPath() + " in encryption zone " + encryptionZone.getPath());
-        return null;
-      }
-
-      try {
-        HdfsProtos.PerFileEncryptionInfoProto fileProto =
-            HdfsProtos.PerFileEncryptionInfoProto.parseFrom(
-                fileXAttr.getValue());
-        return PBHelperClient.convert(fileProto, suite, version, keyName);
-      } catch (InvalidProtocolBufferException e) {
-        throw new IOException("Could not parse file encryption info for " +
-            "inode " + inode, e);
-      }
-    } finally {
-      readUnlock();
     }
   }
 

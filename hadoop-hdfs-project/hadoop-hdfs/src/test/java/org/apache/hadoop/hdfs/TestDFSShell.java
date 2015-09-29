@@ -1384,6 +1384,19 @@ public class TestDFSShell {
                              e.getLocalizedMessage());
         }
         assertEquals(0, val);
+
+        // this should fail
+        args1[0] = "-cp";
+        args1[1] = "/";
+        args1[2] = "/test";
+        val = 0;
+        try {
+          val = shell.run(args1);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+              e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
       }
 
       // Verify -test -f negative case (missing file)

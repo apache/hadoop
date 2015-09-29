@@ -81,6 +81,7 @@ public class TestExternalBlockReader {
     String fileName;
     long blockId;
     String blockPoolId;
+    long genstamp;
     boolean verifyChecksum;
     String clientName;
     boolean allowShortCircuit;
@@ -97,6 +98,12 @@ public class TestExternalBlockReader {
     public ReplicaAccessorBuilder setBlock(long blockId, String blockPoolId) {
       this.blockId = blockId;
       this.blockPoolId = blockPoolId;
+      return this;
+    }
+
+    @Override
+    public ReplicaAccessorBuilder setGenerationStamp(long genstamp) {
+      this.genstamp = genstamp;
       return this;
     }
 
@@ -154,12 +161,14 @@ public class TestExternalBlockReader {
     int numCloses = 0;
     String error = "";
     String prefix = "";
+    final long genstamp;
 
     SyntheticReplicaAccessor(SyntheticReplicaAccessorBuilder builder) {
       this.length = builder.visibleLength;
       this.contents = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, Ints.checkedCast(length));
       this.builder = builder;
+      this.genstamp = builder.genstamp;
       String uuid = this.builder.conf.
           get(SYNTHETIC_BLOCK_READER_TEST_UUID_KEY);
       LinkedList<SyntheticReplicaAccessor> accessorsList =
@@ -181,14 +190,17 @@ public class TestExternalBlockReader {
             "than 0 at " + pos);
         return 0;
       }
-      int i = 0, nread = 0;
-      for (int ipos = (int)pos;
+      int i = off, nread = 0, ipos;
+      for (ipos = (int)pos;
            (ipos < contents.length) && (nread < len);
            ipos++) {
         buf[i++] = contents[ipos];
         nread++;
         totalRead++;
         LOG.info("ipos = " + ipos + ", contents.length = " + contents.length + ", nread = " + nread + ", len = " + len);
+      }
+      if ((nread == 0) && (ipos >= contents.length)) {
+        return -1;
       }
       return nread;
     }
@@ -202,8 +214,8 @@ public class TestExternalBlockReader {
             "than 0 at " + pos);
         return 0;
       }
-      int i = 0, nread = 0;
-      for (int ipos = (int)pos;
+      int i = 0, nread = 0, ipos;
+      for (ipos = (int)pos;
            ipos < contents.length; ipos++) {
         try {
           buf.put(contents[ipos]);
@@ -212,6 +224,9 @@ public class TestExternalBlockReader {
         }
         nread++;
         totalRead++;
+      }
+      if ((nread == 0) && (ipos >= contents.length)) {
+        return -1;
       }
       return nread;
     }
@@ -233,6 +248,10 @@ public class TestExternalBlockReader {
 
     synchronized String getError() {
       return error;
+    }
+
+    long getGenerationStamp() {
+      return genstamp;
     }
 
     synchronized void addError(String text) {
@@ -261,7 +280,10 @@ public class TestExternalBlockReader {
       HdfsDataInputStream stream =
           (HdfsDataInputStream)dfs.open(new Path("/a"));
       byte buf[] = new byte[TEST_LENGTH];
-      IOUtils.readFully(stream, buf, 0, TEST_LENGTH);
+      stream.seek(1000);
+      IOUtils.readFully(stream, buf, 1000, TEST_LENGTH - 1000);
+      stream.seek(0);
+      IOUtils.readFully(stream, buf, 0, 1000);
       byte expected[] = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, TEST_LENGTH);
       ReadStatistics stats = stream.getReadStatistics();
@@ -274,7 +296,7 @@ public class TestExternalBlockReader {
       Assert.assertNotNull(block);
       LinkedList<SyntheticReplicaAccessor> accessorList = accessors.get(uuid);
       Assert.assertNotNull(accessorList);
-      Assert.assertEquals(2, accessorList.size());
+      Assert.assertEquals(3, accessorList.size());
       SyntheticReplicaAccessor accessor = accessorList.get(0);
       Assert.assertTrue(accessor.builder.allowShortCircuit);
       Assert.assertEquals(block.getBlockPoolId(),
@@ -284,11 +306,18 @@ public class TestExternalBlockReader {
       Assert.assertEquals(dfs.getClient().clientName,
           accessor.builder.clientName);
       Assert.assertEquals("/a", accessor.builder.fileName);
+      Assert.assertEquals(block.getGenerationStamp(),
+          accessor.getGenerationStamp());
       Assert.assertTrue(accessor.builder.verifyChecksum);
       Assert.assertEquals(1024L, accessor.builder.visibleLength);
-      Assert.assertEquals(1024L, accessor.totalRead);
+      Assert.assertEquals(24L, accessor.totalRead);
       Assert.assertEquals("", accessor.getError());
       Assert.assertEquals(1, accessor.numCloses);
+      byte[] tempBuf = new byte[5];
+      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+            tempBuf, 0, 0));
+      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+            tempBuf, 0, tempBuf.length));
       accessors.remove(uuid);
     } finally {
       dfs.close();

@@ -55,7 +55,6 @@ public class TestHarFileSystem {
    * {@link HarFileSystem}. Either because there is a default implementation
    * already available or because it is not relevant.
    */
-  @SuppressWarnings("deprecation")
   private interface MustNotImplement {
     public BlockLocation[] getFileBlockLocations(Path p, long start, long len);
     public long getLength(Path f);

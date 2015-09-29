@@ -62,6 +62,9 @@ public interface Context {
 
   ConcurrentMap<ContainerId, Container> getContainers();
 
+  ConcurrentMap<ContainerId, org.apache.hadoop.yarn.api.records.Container>
+      getIncreasedContainers();
+
   NMContainerTokenSecretManager getContainerTokenSecretManager();
   
   NMTokenSecretManagerInNM getNMTokenSecretManager();

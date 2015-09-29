@@ -89,7 +89,7 @@ class FSDirConcatOp {
   private static void verifyTargetFile(FSDirectory fsd, final String target,
       final INodesInPath targetIIP) throws IOException {
     // check the target
-    if (fsd.getEZForPath(targetIIP) != null) {
+    if (FSDirEncryptionZoneOp.getEZForPath(fsd, targetIIP) != null) {
       throw new HadoopIllegalArgumentException(
           "concat can not be called for files in an encryption zone.");
     }

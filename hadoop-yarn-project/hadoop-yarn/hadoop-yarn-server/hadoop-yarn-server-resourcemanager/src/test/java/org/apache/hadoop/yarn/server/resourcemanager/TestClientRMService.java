@@ -1335,7 +1335,7 @@ public class TestClientRMService {
   @Test(timeout = 120000)
   public void testUpdateApplicationPriorityRequest() throws Exception {
     int maxPriority = 10;
-    int appPriorty = 5;
+    int appPriority = 5;
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
         maxPriority);
@@ -1344,43 +1344,47 @@ public class TestClientRMService {
     rm.start();
 
     // Start app1 with appPriority 5
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriorty));
+    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
 
     Assert.assertEquals("Incorrect priority has been set to application",
-        appPriorty, app1.getApplicationSubmissionContext().getPriority()
+        appPriority, app1.getApplicationSubmissionContext().getPriority()
             .getPriority());
 
-    appPriorty = 9;
+    appPriority = 9;
     ClientRMService rmService = rm.getClientRMService();
     UpdateApplicationPriorityRequest updateRequest =
         UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
-            Priority.newInstance(appPriorty));
+            Priority.newInstance(appPriority));
 
     rmService.updateApplicationPriority(updateRequest);
 
     Assert.assertEquals("Incorrect priority has been set to application",
-        appPriorty, app1.getApplicationSubmissionContext().getPriority()
+        appPriority, app1.getApplicationSubmissionContext().getPriority()
             .getPriority());
 
     rm.killApp(app1.getApplicationId());
     rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
 
+    appPriority = 8;
+    UpdateApplicationPriorityRequest updateRequestNew =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(appPriority));
     // Update priority request for application in KILLED state
-    try {
-      rmService.updateApplicationPriority(updateRequest);
-      Assert.fail("Can not update priority for an application in KILLED state");
-    } catch (YarnException e) {
-      String msg =
-          "Application in " + app1.getState()
-              + " state cannot be update priority.";
-      Assert.assertTrue("", msg.contains(e.getMessage()));
-    }
+    rmService.updateApplicationPriority(updateRequestNew);
+
+    // Hence new priority should not be updated
+    Assert.assertNotEquals("Priority should not be updated as app is in KILLED state",
+        appPriority, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
+    Assert.assertEquals("Priority should be same as old one before update",
+        9, app1.getApplicationSubmissionContext().getPriority()
+            .getPriority());
 
     // Update priority request for invalid application id.
     ApplicationId invalidAppId = ApplicationId.newInstance(123456789L, 3);
     updateRequest =
         UpdateApplicationPriorityRequest.newInstance(invalidAppId,
-            Priority.newInstance(appPriorty));
+            Priority.newInstance(appPriority));
     try {
       rmService.updateApplicationPriority(updateRequest);
       Assert

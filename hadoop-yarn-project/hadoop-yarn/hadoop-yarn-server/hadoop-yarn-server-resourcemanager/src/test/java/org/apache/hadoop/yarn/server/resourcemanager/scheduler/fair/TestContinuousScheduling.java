@@ -99,7 +99,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
     scheduler.allocate(
-        appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
+        appAttemptId, ask, new ArrayList<ContainerId>(), null, null, null, null);
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
     // Advance time and let continuous scheduling kick in

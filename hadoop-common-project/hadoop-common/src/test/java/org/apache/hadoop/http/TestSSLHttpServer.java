@@ -65,9 +65,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
 
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource("ssl-server.xml");
-    sslConf.addResource("ssl-client.xml");
+    Configuration sslConf = KeyStoreTestUtil.getSslConfig();
 
     clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
     clientSslFactory.init();

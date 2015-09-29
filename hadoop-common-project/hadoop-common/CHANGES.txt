@@ -348,10 +348,6 @@ Trunk (Unreleased)
     HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
     to RPC Server and Client classes. (Brandon Li via suresh)
 
-    HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
-    required context item is not configured
-    (Brahma Reddy Battula via harsh)
-
     HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
     (default behavior in some bash setups (esp. Ubuntu))
     (Chiristopher Berner and Andy Isaacson via harsh)
@@ -791,6 +787,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12428. Fix inconsistency between log-level guards and statements.
     (Jagadesh Kiran N and Jackie Chang via ozawa)
 
+    HADOOP-12446. Undeprecate createNonRecursive() (Ted Yu via kihwal)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -825,6 +823,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11878. FileContext#fixRelativePart should check for not null for a
     more informative exception. (Brahma Reddy Battula via kasha)
+
+    HADOOP-11984. Enable parallel JUnit tests in pre-commit.
+    (Chris Nauroth via vinayakumarb)
 
   BUG FIXES
 
@@ -1084,6 +1085,19 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12386. RetryPolicies.RETRY_FOREVER should be able to specify a 
     retry interval. (Sunil G via wangda)
 
+    HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
+    required context item is not configured
+    (Brahma Reddy Battula via harsh)
+
+    HADOOP-12252. LocalDirAllocator should not throw NPE with empty string
+    configuration. (Zhihai Xu)
+
+    HADOOP-11918. Listing an empty s3a root directory throws FileNotFound.
+    (Lei (Eddy) Xu via cnauroth)
+
+    HADOOP-12440. TestRPC#testRPCServerShutdown did not produce the desired
+    thread states before shutting down. (Xiao Chen via mingma)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
@@ -1143,6 +1157,15 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12417. TestWebDelegationToken failing with port in use.
     (Mingliang Liu via wheat9)
+
+    HADOOP-12438. Reset RawLocalFileSystem.useDeprecatedFileStatus in
+    TestLocalFileSystem. (Chris Nauroth via wheat9)
+
+    HADOOP-12437. Allow SecurityUtil to lookup alternate hostnames.
+    (Arpit Agarwal)
+
+    HADOOP-12442. Display help if the command option to 'hdfs dfs' is not valid
+    (nijel via vinayakumarb)
 
 Release 2.7.2 - UNRELEASED
 
@@ -1924,7 +1947,7 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.1 - 2015-09-09
+Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
 

@@ -113,10 +113,7 @@ public class TestAuthenticationSessionCookie {
     sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
 
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource("ssl-server.xml");
-    sslConf.addResource("ssl-client.xml");
-
+    Configuration sslConf = KeyStoreTestUtil.getSslConfig();
 
     server = new HttpServer2.Builder()
             .setName("test")

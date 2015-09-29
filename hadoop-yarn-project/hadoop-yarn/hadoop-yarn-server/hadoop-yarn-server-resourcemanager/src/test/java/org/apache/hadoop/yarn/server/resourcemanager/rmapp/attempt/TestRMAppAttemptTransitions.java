@@ -465,10 +465,9 @@ public class TestRMAppAttemptTransitions {
       expectedAllocateCount = 1;
     }
 
-    assertEquals(expectedState, 
-        applicationAttempt.getAppAttemptState());
-    verify(scheduler, times(expectedAllocateCount)).
-    allocate(any(ApplicationAttemptId.class), 
+    assertEquals(expectedState, applicationAttempt.getAppAttemptState());
+    verify(scheduler, times(expectedAllocateCount)).allocate(
+        any(ApplicationAttemptId.class), any(List.class), any(List.class),
         any(List.class), any(List.class), any(List.class), any(List.class));
 
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
@@ -488,11 +487,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
     // Check events
     verify(applicationMasterLauncher).handle(any(AMLauncherEvent.class));
-    verify(scheduler, times(2)).
-        allocate(
-            any(
-                ApplicationAttemptId.class), any(List.class), any(List.class), 
-                any(List.class), any(List.class));
+    verify(scheduler, times(2)).allocate(any(ApplicationAttemptId.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class));
     verify(nmTokenManager).clearNodeSetForAttempt(
       applicationAttempt.getAppAttemptId());
   }
@@ -641,13 +638,9 @@ public class TestRMAppAttemptTransitions {
     Allocation allocation = mock(Allocation.class);
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
-    when(
-        scheduler.allocate(
-            any(ApplicationAttemptId.class), 
-            any(List.class), 
-            any(List.class), 
-            any(List.class), 
-            any(List.class))).
+    when(scheduler.allocate(any(ApplicationAttemptId.class), any(List.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class))).
     thenReturn(allocation);
     RMContainer rmContainer = mock(RMContainerImpl.class);
     when(scheduler.getRMContainer(container.getId())).
@@ -956,7 +949,8 @@ public class TestRMAppAttemptTransitions {
     int exitCode = 123;
     ContainerStatus cs =
         BuilderUtils.newContainerStatus(amContainer.getId(),
-          ContainerState.COMPLETE, containerDiagMsg, exitCode);
+          ContainerState.COMPLETE, containerDiagMsg, exitCode,
+          amContainer.getResource());
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), cs, anyNodeId));
@@ -980,7 +974,8 @@ public class TestRMAppAttemptTransitions {
     String containerDiagMsg = "some error";
     int exitCode = 123;
     ContainerStatus cs = BuilderUtils.newContainerStatus(amContainer.getId(),
-        ContainerState.COMPLETE, containerDiagMsg, exitCode);
+        ContainerState.COMPLETE, containerDiagMsg, exitCode,
+            amContainer.getResource());
     ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
@@ -992,7 +987,8 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
-        amContainer.getId(), ContainerState.COMPLETE, "", 0), anyNodeId));
+        amContainer.getId(), ContainerState.COMPLETE, "", 0,
+            amContainer.getResource()), anyNodeId));
     applicationAttempt.handle(new RMAppAttemptEvent(
       applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
@@ -1030,7 +1026,8 @@ public class TestRMAppAttemptTransitions {
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
-        amContainer.getId(), ContainerState.COMPLETE, "", 0), anyNodeId));
+        amContainer.getId(), ContainerState.COMPLETE, "", 0,
+            amContainer.getResource()), anyNodeId));
     applicationAttempt.handle(new RMAppAttemptEvent(
       applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
@@ -1207,7 +1204,8 @@ public class TestRMAppAttemptTransitions {
             BuilderUtils.newContainerStatus(
                 BuilderUtils.newContainerId(
                     applicationAttempt.getAppAttemptId(), 42),
-                ContainerState.COMPLETE, "", 0), anyNodeId));
+                ContainerState.COMPLETE, "", 0,
+                    amContainer.getResource()), anyNodeId));
     testAppAttemptFinishingState(amContainer, finalStatus, trackingUrl,
         diagnostics);
   }
@@ -1227,7 +1225,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptContainerFinishedEvent(
             applicationAttempt.getAppAttemptId(),
             BuilderUtils.newContainerStatus(amContainer.getId(),
-                ContainerState.COMPLETE, "", 0), anyNodeId));
+                ContainerState.COMPLETE, "", 0,
+                    amContainer.getResource()), anyNodeId));
     testAppAttemptFinishedState(amContainer, finalStatus, trackingUrl,
         diagnostics, 0, false);
   }
@@ -1256,7 +1255,8 @@ public class TestRMAppAttemptTransitions {
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
-        amContainer.getId(), ContainerState.COMPLETE, "", 0), anyNodeId));
+        amContainer.getId(), ContainerState.COMPLETE, "", 0,
+            amContainer.getResource()), anyNodeId));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState());
     // send attempt_saved
@@ -1504,10 +1504,9 @@ public class TestRMAppAttemptTransitions {
   @Test
   public void testScheduleTransitionReplaceAMContainerRequestWithDefaults() {
     YarnScheduler mockScheduler = mock(YarnScheduler.class);
-    when(
-        mockScheduler.allocate(any(ApplicationAttemptId.class),
-            any(List.class), any(List.class), any(List.class), any(List.class)))
-        .thenAnswer(new Answer<Allocation>() {
+    when(mockScheduler.allocate(any(ApplicationAttemptId.class),
+        any(List.class), any(List.class), any(List.class), any(List.class),
+        any(List.class), any(List.class))).thenAnswer(new Answer<Allocation>() {
 
           @SuppressWarnings("rawtypes")
           @Override

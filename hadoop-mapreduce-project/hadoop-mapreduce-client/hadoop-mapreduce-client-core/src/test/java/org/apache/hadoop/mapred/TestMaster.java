@@ -64,6 +64,19 @@ public class TestMaster {
     masterHostname = Master.getMasterAddress(conf).getHostName();
     assertEquals(masterHostname, "foo1.com");
 
+    // change framework to yarn and enable HA
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+    conf.set(YarnConfiguration.RM_ADDRESS + ".rm1", "rm1.com:8192");
+    conf.set(YarnConfiguration.RM_ADDRESS + ".rm2", "rm2.com:8192");
+    masterHostname = Master.getMasterAddress(conf).getHostName();
+    // If RM_HA_ID is not configured, the first one in RM_HA_IDS will be used.
+    assertEquals(masterHostname, "rm1.com");
+    conf.set(YarnConfiguration.RM_HA_ID, "rm2");
+    masterHostname = Master.getMasterAddress(conf).getHostName();
+    // If RM_HA_ID is configured, use the given RM_HA_ID.
+    assertEquals(masterHostname, "rm2.com");
   }
 
   @Test 

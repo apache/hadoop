@@ -944,6 +944,53 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12428. Fix inconsistency between log-level guards and statements.
     (Jagadesh Kiran N and Jackie Chang via ozawa)
 
+    HDFS-9039. Separate client and server side methods of o.a.h.hdfs.
+    NameNodeProxies. (Mingliang Liu via wheat9)
+
+    HDFS-8733. Keep server related definition in hdfs.proto on server side.
+    (Mingliang Liu via wheat9)
+
+    HDFS-9130. Use GenericTestUtils#setLogLevel to the logging level.
+    (Mingliang Liu via wheat9)
+
+    HDFS-9131 Move config keys used by hdfs-client to HdfsClientConfigKeys.
+    (Mingliang Liu via wheat9)
+  
+    HDFS-7529. Consolidate encryption zone related implementation into a single
+    class. (Rakesh R via wheat9)
+
+    HDFS-9134. Move LEASE_{SOFTLIMIT,HARDLIMIT}_PERIOD constants from
+    HdfsServerConstants to HdfsConstants. (Mingliang Liu via wheat9)
+
+    HDFS-5795. RemoteBlockReader2#checkSuccess() shoud print error status.
+    (Xiao Chen via Yongjun Zhang)
+
+    HDFS-9112. Improve error message for Haadmin when multiple name service IDs
+    are configured. (Anu Engineer via jing9)
+
+    HDFS-9132. Pass genstamp to ReplicaAccessorBuilder. (Colin Patrick McCabe via
+    Lei (Eddy) Xu)
+
+    HDFS-9133. ExternalBlockReader and ReplicaAccessor need to return -1 on read
+    when at EOF. (Colin Patrick McCabe via Lei (Eddy) Xu)
+
+    HDFS-8873. Allow the directoryScanner to be rate-limited (Daniel Templeton
+    via Colin P. McCabe)
+
+    HDFS-8053. Move DFSIn/OutputStream and related classes to
+    hadoop-hdfs-client. (Mingliang Liu via wheat9)
+
+    HDFS-9087. Add some jitter to DataNode.checkDiskErrorThread (Elliott Clark
+    via Colin P. McCabe) 
+
+    HDFS-8740. Move DistributedFileSystem to hadoop-hdfs-client. (Mingliang Liu
+    via wheat9)
+
+    HDFS-9080. Update htrace version to 4.0.1 (cmccabe)
+
+    HDFS-9148. Incorrect assert message in TestWriteToReplica#testWriteToTemporary
+    (Tony Wu via lei)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
@@ -1378,6 +1425,31 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9063. Correctly handle snapshot path for getContentSummary. (jing9)
 
+    HDFS-8780. Fetching live/dead datanode list with arg true for remove-
+    DecommissionNode,returns list with decom node. (J.Andreina via vinayakumarb)
+
+    HDFS-9013. Deprecate NameNodeMXBean#getNNStarted in branch2 and remove from
+    trunk (Surendra Singh Lilhore via vinayakumarb)
+
+    HDFS-9128. TestWebHdfsFileContextMainOperations and
+    TestSWebHdfsFileContextMainOperations fail due to invalid HDFS path on
+    Windows. (Chris Nauroth via wheat9)
+
+    HDFS-9076. Log full path instead of inodeId in DFSClient
+    #closeAllFilesBeingWritten() (Surendra Singh Lilhore via vinayakumarb)
+
+    HDFS-9123. Copying from the root to a subdirectory should be forbidden.
+    (Wei-Chiu Chuang via Yongjun Zhang)
+
+    HDFS-9107. Prevent NN's unrecoverable death spiral after full GC (Daryn
+    Sharp via Colin P. McCabe)
+
+    HDFS-9147. Fix the setting of visibleLength in ExternalBlockReader. (Colin
+    P. McCabe via Lei (Eddy) Xu)
+
+    HDFS-9092. Nfs silently drops overlapping write requests and causes data
+    copying to fail. (Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1421,6 +1493,12 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-9042. Update document for the Storage policy name
     (J.Andreina via vinayakumarb)
+
+    HDFS-9043. Doc updation for commands in HDFS Federation
+    (J.Andreina via vinayakumab)
+
+    HDFS-9106. Transfer failure during pipeline recovery causes permanent
+    write failures (kihwal)
 
 Release 2.7.1 - 2015-07-06
 
@@ -2456,7 +2534,7 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.1 - 2015-09-09
+Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
 

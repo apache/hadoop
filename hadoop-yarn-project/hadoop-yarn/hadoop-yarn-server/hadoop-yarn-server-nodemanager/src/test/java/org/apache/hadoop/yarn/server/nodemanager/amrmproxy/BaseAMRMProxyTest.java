@@ -620,6 +620,11 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public ConcurrentMap<ContainerId, org.apache.hadoop.yarn.api.records.Container> getIncreasedContainers() {
+      return null;
+    }
+
+    @Override
     public NMContainerTokenSecretManager getContainerTokenSecretManager() {
       return null;
     }

@@ -57,7 +57,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.NameNodeProxiesClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
@@ -197,7 +197,7 @@ public class TestRetryCacheWithHA {
   private DFSClient genClientWithDummyHandler() throws IOException {
     URI nnUri = dfs.getUri();
     FailoverProxyProvider<ClientProtocol> failoverProxyProvider = 
-        NameNodeProxies.createFailoverProxyProvider(conf, 
+        NameNodeProxiesClient.createFailoverProxyProvider(conf,
             nnUri, ClientProtocol.class, true, null);
     InvocationHandler dummyHandler = new DummyRetryInvocationHandler(
         failoverProxyProvider, RetryPolicies

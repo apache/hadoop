@@ -88,6 +88,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -109,6 +110,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -187,12 +189,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.tracing.SpanReceiverInfo;
 import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
 import org.apache.hadoop.tracing.TraceAdminProtocol;
 import org.apache.hadoop.tracing.TraceAdminProtocolPB;
 import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
+import org.apache.hadoop.tracing.TraceUtils;
+import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -202,6 +205,7 @@ import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.htrace.core.Tracer;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -286,6 +290,8 @@ public class DataNode extends ReconfigurableBase
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
+  private static final String DATANODE_HTRACE_PREFIX = "datanode.htrace.";
+
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
    */
@@ -357,20 +363,25 @@ public class DataNode extends ReconfigurableBase
   SaslDataTransferServer saslServer;
   private ObjectName dataNodeInfoBeanName;
   private Thread checkDiskErrorThread = null;
-  protected final int checkDiskErrorInterval = 5*1000;
+  protected final int checkDiskErrorInterval;
   private boolean checkDiskErrorFlag = false;
   private Object checkDiskErrorMutex = new Object();
   private long lastDiskErrorCheck;
   private String supergroup;
   private boolean isPermissionEnabled;
   private String dnUserName = null;
-
-  private SpanReceiverHost spanReceiverHost;
-
   private ErasureCodingWorker ecWorker;
+  final Tracer tracer;
+  private final TracerConfigurationManager tracerConfigurationManager;
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
+
+  private static Tracer createTracer(Configuration conf) {
+    return new Tracer.Builder("DataNode").
+        conf(TraceUtils.wrapHadoopConf(DATANODE_HTRACE_PREFIX , conf)).
+        build();
+  }
 
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
@@ -383,6 +394,9 @@ public class DataNode extends ReconfigurableBase
   @InterfaceAudience.LimitedPrivate("HDFS")
   DataNode(final Configuration conf) {
     super(conf);
+    this.tracer = createTracer(conf);
+    this.tracerConfigurationManager =
+        new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
     this.fileDescriptorPassingDisabledReason = null;
     this.maxNumberOfBlocksToLog = 0;
     this.confVersion = null;
@@ -390,6 +404,8 @@ public class DataNode extends ReconfigurableBase
     this.connectToDnViaHostname = false;
     this.blockScanner = new BlockScanner(this, conf);
     this.pipelineSupportECN = false;
+    this.checkDiskErrorInterval =
+        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
     initOOBTimeout();
   }
 
@@ -401,6 +417,9 @@ public class DataNode extends ReconfigurableBase
            final List<StorageLocation> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
+    this.tracer = createTracer(conf);
+    this.tracerConfigurationManager =
+        new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
     this.blockScanner = new BlockScanner(this, conf);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
@@ -424,6 +443,9 @@ public class DataNode extends ReconfigurableBase
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
         ",hdfs-" +
         conf.get("hadoop.hdfs.configuration.version", "UNSPECIFIED");
+
+    this.checkDiskErrorInterval =
+        ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY,
@@ -765,11 +787,24 @@ public class DataNode extends ReconfigurableBase
       throws UnknownHostException {
     String name = config.get(DFS_DATANODE_HOST_NAME_KEY);
     if (name == null) {
-      name = DNS.getDefaultHost(
-          config.get(DFS_DATANODE_DNS_INTERFACE_KEY,
-                     DFS_DATANODE_DNS_INTERFACE_DEFAULT),
-          config.get(DFS_DATANODE_DNS_NAMESERVER_KEY,
-                     DFS_DATANODE_DNS_NAMESERVER_DEFAULT));
+      String dnsInterface = config.get(
+          CommonConfigurationKeys.HADOOP_SECURITY_DNS_INTERFACE_KEY);
+      String nameServer = config.get(
+          CommonConfigurationKeys.HADOOP_SECURITY_DNS_NAMESERVER_KEY);
+      boolean fallbackToHosts = false;
+
+      if (dnsInterface == null) {
+        // Try the legacy configuration keys.
+        dnsInterface = config.get(DFS_DATANODE_DNS_INTERFACE_KEY);
+        nameServer = config.get(DFS_DATANODE_DNS_NAMESERVER_KEY);
+      } else {
+        // If HADOOP_SECURITY_DNS_* is set then also attempt hosts file
+        // resolution if DNS fails. We will not use hosts file resolution
+        // by default to avoid breaking existing clusters.
+        fallbackToHosts = true;
+      }
+
+      name = DNS.getDefaultHost(dnsInterface, nameServer, fallbackToHosts);
     }
     return name;
   }
@@ -1120,9 +1155,6 @@ public class DataNode extends ReconfigurableBase
     this.conf = conf;
     this.dnConf = new DNConf(conf);
     checkSecureConfig(dnConf, conf, resources);
-
-    this.spanReceiverHost =
-      SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
 
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
@@ -1811,9 +1843,6 @@ public class DataNode extends ReconfigurableBase
       MBeans.unregister(dataNodeInfoBeanName);
       dataNodeInfoBeanName = null;
     }
-    if (this.spanReceiverHost != null) {
-      this.spanReceiverHost.closeReceivers();
-    }
     if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
     LOG.info("Shutdown complete.");
     synchronized(this) {
@@ -1822,6 +1851,7 @@ public class DataNode extends ReconfigurableBase
       // Notify the main thread.
       notifyAll();
     }
+    tracer.close();
   }
   
   
@@ -2165,7 +2195,7 @@ public class DataNode extends ReconfigurableBase
         unbufIn = saslStreams.in;
         
         out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-            DFSUtil.getSmallBufferSize(conf)));
+            DFSUtilClient.getSmallBufferSize(conf)));
         in = new DataInputStream(unbufIn);
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, true, DataNode.this, null, cachingStrategy);
@@ -2279,6 +2309,7 @@ public class DataNode extends ReconfigurableBase
     if (localDataXceiverServer != null) {
       localDataXceiverServer.start();
     }
+    ipcServer.setTracer(tracer);
     ipcServer.start();
     startPlugins(conf);
   }
@@ -2325,7 +2356,7 @@ public class DataNode extends ReconfigurableBase
     Collection<StorageLocation> dataLocations = getStorageLocations(conf);
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFS_DATANODE_KEYTAB_FILE_KEY,
-        DFS_DATANODE_KERBEROS_PRINCIPAL_KEY);
+        DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, getHostName(conf));
     return makeInstance(dataLocations, conf, resources);
   }
 
@@ -3277,19 +3308,19 @@ public class DataNode extends ReconfigurableBase
   @Override
   public SpanReceiverInfo[] listSpanReceivers() throws IOException {
     checkSuperuserPrivilege();
-    return spanReceiverHost.listSpanReceivers();
+    return tracerConfigurationManager.listSpanReceivers();
   }
 
   @Override
   public long addSpanReceiver(SpanReceiverInfo info) throws IOException {
     checkSuperuserPrivilege();
-    return spanReceiverHost.addSpanReceiver(info);
+    return tracerConfigurationManager.addSpanReceiver(info);
   }
 
   @Override
   public void removeSpanReceiver(long id) throws IOException {
     checkSuperuserPrivilege();
-    spanReceiverHost.removeSpanReceiver(id);
+    tracerConfigurationManager.removeSpanReceiver(id);
   }
   
   public ErasureCodingWorker getErasureCodingWorker(){

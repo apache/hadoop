@@ -292,9 +292,8 @@ public class TestPread {
         hedgedReadTimeoutMillis);
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 0);
     // Set up the InjectionHandler
-    DFSClientFaultInjector.instance = Mockito
-        .mock(DFSClientFaultInjector.class);
-    DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
     final int sleepMs = 100;
     Mockito.doAnswer(new Answer<Void>() {
       @Override
@@ -368,9 +367,8 @@ public class TestPread {
         initialHedgedReadTimeoutMillis);
 
     // Set up the InjectionHandler
-    DFSClientFaultInjector.instance = Mockito
-        .mock(DFSClientFaultInjector.class);
-    DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
     // make preads sleep for 50ms
     Mockito.doAnswer(new Answer<Void>() {
       @Override

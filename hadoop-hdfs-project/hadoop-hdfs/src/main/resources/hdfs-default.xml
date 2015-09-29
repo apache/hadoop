@@ -225,19 +225,28 @@
 </property>
 
  <property>
-  <name>dfs.datanode.dns.interface</name>
-  <value>default</value>
-  <description>The name of the Network Interface from which a data node should 
-  report its IP address.
-  </description>
+   <name>dfs.datanode.dns.interface</name>
+   <value>default</value>
+   <description>
+     The name of the Network Interface from which a data node should
+     report its IP address. e.g. eth2. This setting may be required for some
+     multi-homed nodes where the DataNodes are assigned multiple hostnames
+     and it is desirable for the DataNodes to use a non-default hostname.
+
+     Prefer using hadoop.security.dns.interface over
+     dfs.datanode.dns.interface.
+   </description>
  </property>
  
 <property>
   <name>dfs.datanode.dns.nameserver</name>
   <value>default</value>
-  <description>The host name or IP address of the name server (DNS)
-  which a DataNode should use to determine the host name used by the
-  NameNode for communication and display purposes.
+  <description>
+    The host name or IP address of the name server (DNS) which a DataNode
+    should use to determine its own host name.
+
+    Prefer using hadoop.security.dns.nameserver over
+    dfs.datanode.dns.nameserver.
   </description>
  </property>
  
@@ -623,6 +632,26 @@
   <value>1</value>
   <description>How many threads should the threadpool used to compile reports
   for volumes in parallel have.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.directoryscan.throttle.limit.ms.per.sec</name>
+  <value>0</value>
+  <description>The report compilation threads are limited to only running for
+  a given number of milliseconds per second, as configured by the
+  property. The limit is taken per thread, not in aggregate, e.g. setting
+  a limit of 100ms for 4 compiler threads will result in each thread being
+  limited to 100ms, not 25ms.
+
+  Note that the throttle does not interrupt the report compiler threads, so the
+  actual running time of the threads per second will typically be somewhat
+  higher than the throttle limit, usually by no more than 20%.
+
+  Setting this limit to 1000 disables compiler thread throttling. Only
+  values between 1 and 1000 are valid. Setting an invalid value will result
+  in the throttle being disbled and an error message being logged. 1000 is
+  the default setting.
   </description>
 </property>
 
@@ -2399,19 +2428,10 @@
 </property>
 
 <property>
-  <name>dfs.htrace.spanreceiver.classes</name>
+  <name>dfs.client.htrace.sampler.classes</name>
   <value></value>
   <description>
-    The class name of the HTrace SpanReceiver for the NameNode and DataNode.
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.htrace.spanreceiver.classes</name>
-  <value></value>
-  <description>
-    The class name of the HTrace SpanReceiver for the HDFS client. You do not
-    need to enable this if your client program has been modified to use HTrace.
+    The class names of the HTrace Samplers to use for the HDFS client.
   </description>
 </property>
 

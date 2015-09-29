@@ -61,6 +61,11 @@ public class TestWebHdfsFileContextMainOperations
     return defaultWorkingDirectory;
   }
 
+  @Override
+  protected FileContextTestHelper createFileContextHelper() {
+    return new FileContextTestHelper("/tmp/TestWebHdfsFileContextMainOperations");
+  }
+
   public URI getWebhdfsUrl() {
     return webhdfsUrl;
   }

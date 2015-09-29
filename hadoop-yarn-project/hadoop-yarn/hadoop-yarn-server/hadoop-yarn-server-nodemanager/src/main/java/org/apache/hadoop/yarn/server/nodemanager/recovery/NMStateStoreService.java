@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
@@ -74,6 +75,7 @@ public abstract class NMStateStoreService extends AbstractService {
     boolean killed = false;
     String diagnostics = "";
     StartContainerRequest startRequest;
+    Resource capability;
 
     public RecoveredContainerStatus getStatus() {
       return status;
@@ -93,6 +95,10 @@ public abstract class NMStateStoreService extends AbstractService {
 
     public StartContainerRequest getStartRequest() {
       return startRequest;
+    }
+
+    public Resource getCapability() {
+      return capability;
     }
   }
 
@@ -282,6 +288,15 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void storeContainerLaunched(ContainerId containerId)
       throws IOException;
+
+  /**
+   * Record that a container resource has been changed
+   * @param containerId the container ID
+   * @param capability the container resource capability
+   * @throws IOException
+   */
+  public abstract void storeContainerResourceChanged(ContainerId containerId,
+      Resource capability) throws IOException;
 
   /**
    * Record that a container has completed

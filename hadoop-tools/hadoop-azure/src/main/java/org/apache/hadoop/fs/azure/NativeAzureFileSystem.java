@@ -1204,7 +1204,6 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
@@ -1279,7 +1278,6 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
@@ -1298,7 +1296,6 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {

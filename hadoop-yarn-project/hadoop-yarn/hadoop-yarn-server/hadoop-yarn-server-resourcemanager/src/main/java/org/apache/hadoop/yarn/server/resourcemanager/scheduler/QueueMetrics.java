@@ -373,17 +373,20 @@ public class QueueMetrics implements MetricsSource {
   }
 
   private void _decrPendingResources(int containers, Resource res) {
+    // if #container = 0, means change container resource
     pendingContainers.decr(containers);
-    pendingMB.decr(res.getMemory() * containers);
-    pendingVCores.decr(res.getVirtualCores() * containers);
+    pendingMB.decr(res.getMemory() * Math.max(containers, 1));
+    pendingVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
   }
 
   public void allocateResources(String user, int containers, Resource res,
       boolean decrPending) {
+    // if #containers = 0, means change container resource
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
-    allocatedMB.incr(res.getMemory() * containers);
-    allocatedVCores.incr(res.getVirtualCores() * containers);
+
+    allocatedMB.incr(res.getMemory() * Math.max(containers, 1));
+    allocatedVCores.incr(res.getVirtualCores() * Math.max(containers, 1));
     if (decrPending) {
       _decrPendingResources(containers, res);
     }
@@ -397,10 +400,11 @@ public class QueueMetrics implements MetricsSource {
   }
 
   public void releaseResources(String user, int containers, Resource res) {
+    // if #container = 0, means change container resource.
     allocatedContainers.decr(containers);
     aggregateContainersReleased.incr(containers);
-    allocatedMB.decr(res.getMemory() * containers);
-    allocatedVCores.decr(res.getVirtualCores() * containers);
+    allocatedMB.decr(res.getMemory() * Math.max(containers, 1));
+    allocatedVCores.decr(res.getVirtualCores() * Math.max(containers, 1));
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.releaseResources(user, containers, res);

@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -68,8 +68,8 @@ import com.google.common.io.Files;
 public class TestFSEditLogLoader {
   
   static {
-    ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)FSEditLogLoader.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.ALL);
   }
   
   private static final File TEST_DIR = PathUtils.getTestDir(TestFSEditLogLoader.class);

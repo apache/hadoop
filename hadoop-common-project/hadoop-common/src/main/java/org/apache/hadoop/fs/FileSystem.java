@@ -67,9 +67,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.Tracer;
+import org.apache.htrace.core.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -129,6 +128,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   private Set<Path> deleteOnExit = new TreeSet<Path>();
   
   boolean resolveSymlinks;
+
+  private Tracer tracer;
+
+  protected final Tracer getTracer() {
+    return tracer;
+  }
+
   /**
    * This method adds a file system for testing so that we can find it later. It
    * is only for testing.
@@ -1083,9 +1089,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param progress
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
-   * @deprecated API only for 0.20-append
    */
-  @Deprecated
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
@@ -1108,9 +1112,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param progress
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
-   * @deprecated API only for 0.20-append
    */
-   @Deprecated
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
        boolean overwrite, int bufferSize, short replication, long blockSize,
        Progressable progress) throws IOException {
@@ -1133,9 +1135,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     * @param progress
     * @throws IOException
     * @see #setPermission(Path, FsPermission)
-    * @deprecated API only for 0.20-append
     */
-    @Deprecated
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
         EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
         Progressable progress) throws IOException {
@@ -2706,14 +2706,13 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
-    TraceScope scope = Trace.startSpan("FileSystem#createFileSystem");
-    Span span = scope.getSpan();
-    if (span != null) {
-      span.addKVAnnotation("scheme", uri.getScheme());
-    }
+    Tracer tracer = FsTracer.get(conf);
+    TraceScope scope = tracer.newScope("FileSystem#createFileSystem");
+    scope.addKVAnnotation("scheme", uri.getScheme());
     try {
       Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
       FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
+      fs.tracer = tracer;
       fs.initialize(uri, conf);
       return fs;
     } finally {

@@ -35,10 +35,8 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceInfo;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.SpanId;
+import org.apache.htrace.core.Tracer;
 
 /**
  * Static utilities for dealing with the protocol buffers used by the
@@ -89,39 +87,21 @@ public abstract class DataTransferProtoUtil {
     BaseHeaderProto.Builder builder =  BaseHeaderProto.newBuilder()
       .setBlock(PBHelperClient.convert(blk))
       .setToken(PBHelperClient.convert(blockToken));
-    if (Trace.isTracing()) {
-      Span s = Trace.currentSpan();
+    SpanId spanId = Tracer.getCurrentSpanId();
+    if (spanId.isValid()) {
       builder.setTraceInfo(DataTransferTraceInfoProto.newBuilder()
-          .setTraceId(s.getTraceId())
-          .setParentId(s.getSpanId()));
+          .setTraceId(spanId.getHigh())
+          .setParentId(spanId.getLow()));
     }
     return builder.build();
   }
 
-  public static TraceInfo fromProto(DataTransferTraceInfoProto proto) {
-    if (proto == null) return null;
-    if (!proto.hasTraceId()) return null;
-    return new TraceInfo(proto.getTraceId(), proto.getParentId());
-  }
-
-  public static TraceScope continueTraceSpan(ClientOperationHeaderProto header,
-      String description) {
-    return continueTraceSpan(header.getBaseHeader(), description);
-  }
-
-  public static TraceScope continueTraceSpan(BaseHeaderProto header,
-      String description) {
-    return continueTraceSpan(header.getTraceInfo(), description);
-  }
-
-  public static TraceScope continueTraceSpan(DataTransferTraceInfoProto proto,
-      String description) {
-    TraceScope scope = null;
-    TraceInfo info = fromProto(proto);
-    if (info != null) {
-      scope = Trace.startSpan(description, info);
+  public static SpanId fromProto(DataTransferTraceInfoProto proto) {
+    if ((proto != null) && proto.hasTraceId() &&
+          proto.hasParentId()) {
+      return new SpanId(proto.getTraceId(), proto.getParentId());
     }
-    return scope;
+    return null;
   }
 
   public static void checkBlockOpStatus(
@@ -137,6 +117,7 @@ public abstract class DataTransferProtoUtil {
       } else {
         throw new IOException(
           "Got error"
+          + ", status=" + response.getStatus().name()
           + ", status message " + response.getMessage()
           + ", " + logInfo
         );

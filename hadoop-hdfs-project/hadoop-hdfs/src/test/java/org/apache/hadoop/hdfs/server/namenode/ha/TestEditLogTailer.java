@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -51,8 +50,8 @@ public class TestEditLogTailer {
   static final long NN_LAG_TIMEOUT = 10 * 1000;
   
   static {
-    ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)EditLogTailer.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.ALL);
   }
   
   @Test
