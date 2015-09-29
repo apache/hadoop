@@ -1453,6 +1453,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9092. Nfs silently drops overlapping write requests and causes data
     copying to fail. (Yongjun Zhang)
 
+    HDFS-9141. Thread leak in Datanode#refreshVolumes. (Uma Maheswara Rao G
+    via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
