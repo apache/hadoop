@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
@@ -66,7 +67,7 @@ public class FileDataServlet extends DfsServlet {
 
     String dtParam = "";
     if (dt != null) {
-      dtParam = JspHelper.getDelegationTokenUrlParam(dt);
+      dtParam = DelegationUtilsClient.getDelegationTokenUrlParam(dt);
     }
 
     // Add namenode address to the url params
@@ -120,7 +121,7 @@ public class FileDataServlet extends DfsServlet {
           final String path = ServletUtil.getDecodedPath(request, "/data");
           final String encodedPath = ServletUtil.getRawPath(request, "/data");
           String delegationToken = request
-              .getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+              .getParameter(DelegationUtilsClient.DELEGATION_PARAMETER_NAME);
 
           HdfsFileStatus info = nn.getFileInfo(path);
           if (info != null && !info.isDir()) {

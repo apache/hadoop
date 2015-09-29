@@ -1079,12 +1079,7 @@ public class DFSUtil {
 
   /** Create a URI from the scheme and address */
   public static URI createUri(String scheme, InetSocketAddress address) {
-    try {
-      return new URI(scheme, null, address.getHostName(), address.getPort(),
-          null, null, null);
-    } catch (URISyntaxException ue) {
-      throw new IllegalArgumentException(ue);
-    }
+    return DFSUtilClient.createUri(scheme, address);
   }
   
   /**

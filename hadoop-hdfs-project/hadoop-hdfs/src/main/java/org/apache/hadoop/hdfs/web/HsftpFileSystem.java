@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.web;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 /**
@@ -63,6 +62,6 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   protected int getDefaultPort() {
     return getConf().getInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
-                            DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
+                            HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 }

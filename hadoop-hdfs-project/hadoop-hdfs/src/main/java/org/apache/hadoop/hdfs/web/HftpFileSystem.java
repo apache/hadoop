@@ -46,12 +46,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -62,6 +60,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ServletUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -92,6 +92,7 @@ public class HftpFileSystem extends FileSystem
 
   protected URI nnUri;
 
+  public static final Logger LOG = LoggerFactory.getLogger(HftpFileSystem.class);
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -122,7 +123,7 @@ public class HftpFileSystem extends FileSystem
   @Override
   protected int getDefaultPort() {
     return getConf().getInt(HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
+        HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
   }
 
   /**
@@ -140,7 +141,7 @@ public class HftpFileSystem extends FileSystem
   }
 
   protected URI getNamenodeUri(URI uri) {
-    return DFSUtil.createUri(getUnderlyingProtocol(), getNamenodeAddr(uri));
+    return DFSUtilClient.createUri(getUnderlyingProtocol(), getNamenodeAddr(uri));
   }
 
   /**
@@ -246,7 +247,7 @@ public class HftpFileSystem extends FileSystem
         public Token<?> run() throws IOException {
           Credentials c;
           try {
-            c = DelegationTokenFetcher.getDTfromRemote(connectionFactory,
+            c = DelegationUtilsClient.getDTfromRemote(connectionFactory,
                 nnUri, renewer, proxyUser);
           } catch (IOException e) {
             if (e.getCause() instanceof ConnectException) {
@@ -334,7 +335,7 @@ public class HftpFileSystem extends FileSystem
         tokenAspect.ensureTokenInitialized();
         if (delegationToken != null) {
           tokenString = delegationToken.encodeToUrlString();
-          return (query + JspHelper.getDelegationTokenUrlParam(tokenString));
+          return (query + DelegationUtilsClient.getDelegationTokenUrlParam(tokenString));
         }
       }
     }
@@ -694,8 +695,8 @@ public class HftpFileSystem extends FileSystem
         public Long run() throws Exception {
           InetSocketAddress serviceAddr = SecurityUtil
               .getTokenServiceAddr(token);
-          return DelegationTokenFetcher.renewDelegationToken(connectionFactory,
-              DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr),
+          return DelegationUtilsClient.renewDelegationToken(connectionFactory,
+              DFSUtilClient.createUri(getUnderlyingProtocol(), serviceAddr),
               (Token<DelegationTokenIdentifier>) token);
         }
       });
@@ -717,8 +718,8 @@ public class HftpFileSystem extends FileSystem
         public Void run() throws Exception {
           InetSocketAddress serviceAddr = SecurityUtil
               .getTokenServiceAddr(token);
-          DelegationTokenFetcher.cancelDelegationToken(connectionFactory,
-              DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr),
+          DelegationUtilsClient.cancelDelegationToken(connectionFactory,
+              DFSUtilClient.createUri(getUnderlyingProtocol(), serviceAddr),
               (Token<DelegationTokenIdentifier>) token);
           return null;
         }

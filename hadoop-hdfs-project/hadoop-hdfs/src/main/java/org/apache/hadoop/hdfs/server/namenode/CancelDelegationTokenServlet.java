@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -37,9 +38,6 @@ import org.apache.hadoop.security.token.Token;
 @SuppressWarnings("serial")
 public class CancelDelegationTokenServlet extends DfsServlet {
   private static final Log LOG = LogFactory.getLog(CancelDelegationTokenServlet.class);
-  public static final String PATH_SPEC = "/cancelDelegationToken";
-  public static final String TOKEN = "token";
-  
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
       throws ServletException, IOException {
@@ -57,7 +55,7 @@ public class CancelDelegationTokenServlet extends DfsServlet {
     }
     final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(
         context);
-    String tokenString = req.getParameter(TOKEN);
+    String tokenString = req.getParameter(DelegationUtilsClient.TOKEN);
     if (tokenString == null) {
       resp.sendError(HttpServletResponse.SC_MULTIPLE_CHOICES,
                      "Token to renew not specified");

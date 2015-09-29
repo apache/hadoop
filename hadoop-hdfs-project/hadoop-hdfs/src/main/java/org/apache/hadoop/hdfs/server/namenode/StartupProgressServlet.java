@@ -52,8 +52,6 @@ public class StartupProgressServlet extends DfsServlet {
   private static final String STEPS = "steps";
   private static final String TOTAL = "total";
 
-  public static final String PATH_SPEC = "/startupProgress";
-
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws IOException {

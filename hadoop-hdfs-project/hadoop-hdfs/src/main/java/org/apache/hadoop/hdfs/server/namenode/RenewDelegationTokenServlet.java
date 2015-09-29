@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -41,8 +42,6 @@ import com.google.common.base.Charsets;
 @SuppressWarnings("serial")
 public class RenewDelegationTokenServlet extends DfsServlet {
   private static final Log LOG = LogFactory.getLog(RenewDelegationTokenServlet.class);
-  public static final String PATH_SPEC = "/renewDelegationToken";
-  public static final String TOKEN = "token";
   
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
@@ -60,7 +59,7 @@ public class RenewDelegationTokenServlet extends DfsServlet {
       return;
     }
     final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-    String tokenString = req.getParameter(TOKEN);
+    String tokenString = req.getParameter(DelegationUtilsClient.TOKEN);
     if (tokenString == null) {
       resp.sendError(HttpServletResponse.SC_MULTIPLE_CHOICES,
                      "Token to renew not specified");

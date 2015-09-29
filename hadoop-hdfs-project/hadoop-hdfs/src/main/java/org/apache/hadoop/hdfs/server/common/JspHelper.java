@@ -38,15 +38,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
-import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.net.NetUtils;
@@ -59,23 +57,10 @@ import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
-
 @InterfaceAudience.Private
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
-  public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
-  static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
-                                              "=";
   private static final Log LOG = LogFactory.getLog(JspHelper.class);
 
   /** Private constructor for preventing creating JspHelper object. */
@@ -233,7 +218,7 @@ public class JspHelper {
    
     if (UserGroupInformation.isSecurityEnabled()) {
       remoteUser = request.getRemoteUser();
-      final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
+      final String tokenString = request.getParameter(DelegationUtilsClient.DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
         // Token-based connections need only verify the effective user, and
         // disallow proxying to different user.  Proxy authorization checks
@@ -350,22 +335,6 @@ public class JspHelper {
       }
     }
     return username;
-  }
-
-  /**
-   * Returns the url parameter for the given token string.
-   * @param tokenString
-   * @return url parameter
-   */
-  public static String getDelegationTokenUrlParam(String tokenString) {
-    if (tokenString == null ) {
-      return "";
-    }
-    if (UserGroupInformation.isSecurityEnabled()) {
-      return SET_DELEGATION + tokenString;
-    } else {
-      return "";
-    }
   }
 
   /**

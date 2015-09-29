@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
@@ -70,7 +71,7 @@ public class FileChecksumServlets {
       String dtParam = "";
       if (UserGroupInformation.isSecurityEnabled()) {
         String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
-        dtParam = JspHelper.getDelegationTokenUrlParam(tokenString);
+        dtParam = DelegationUtilsClient.getDelegationTokenUrlParam(tokenString);
       }
       String addr = nn.getNameNodeAddressHostPortString();
       String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);

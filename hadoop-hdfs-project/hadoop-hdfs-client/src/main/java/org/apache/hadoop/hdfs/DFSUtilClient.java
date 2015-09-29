@@ -652,4 +652,15 @@ public class DFSUtilClient {
     return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
         + namenode.getHostName() + portString);
   }
+
+  /** Create a URI from the scheme and address */
+  public static URI createUri(String scheme, InetSocketAddress address) {
+    try {
+      return new URI(scheme, null, address.getHostName(), address.getPort(),
+          null, null, null);
+    } catch (URISyntaxException ue) {
+      throw new IllegalArgumentException(ue);
+    }
+  }
+
 }

@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -239,15 +239,16 @@ public class NameNodeHttpServer {
 
   private static void setupServlets(HttpServer2 httpServer, Configuration conf) {
     httpServer.addInternalServlet("startupProgress",
-        StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
+        DelegationUtilsClient.STARTUP_PROGRESS_PATH_SPEC,
+        StartupProgressServlet.class);
     httpServer.addInternalServlet("getDelegationToken",
-        GetDelegationTokenServlet.PATH_SPEC, 
+        DelegationUtilsClient.GET_DELEGATION_TOKEN_PATH_SPEC,
         GetDelegationTokenServlet.class, true);
     httpServer.addInternalServlet("renewDelegationToken", 
-        RenewDelegationTokenServlet.PATH_SPEC, 
+        DelegationUtilsClient.RENEW_DELEGATION_TOKEN_PATH_SPEC,
         RenewDelegationTokenServlet.class, true);
     httpServer.addInternalServlet("cancelDelegationToken", 
-        CancelDelegationTokenServlet.PATH_SPEC, 
+        DelegationUtilsClient.CANCEL_DELEGATION_TOKEN_PATH_SPEC,
         CancelDelegationTokenServlet.class, true);
     httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
         true);

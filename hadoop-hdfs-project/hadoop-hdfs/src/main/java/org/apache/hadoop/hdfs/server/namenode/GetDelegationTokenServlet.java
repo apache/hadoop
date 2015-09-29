@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -38,8 +39,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 @SuppressWarnings("serial")
 public class GetDelegationTokenServlet extends DfsServlet {
   private static final Log LOG = LogFactory.getLog(GetDelegationTokenServlet.class);
-  public static final String PATH_SPEC = "/getDelegationToken";
-  public static final String RENEWER = "renewer";
   
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
@@ -58,7 +57,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
     }
     LOG.info("Sending token: {" + ugi.getUserName() + "," + req.getRemoteAddr() +"}");
     final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-    String renewer = req.getParameter(RENEWER);
+    String renewer = req.getParameter(DelegationUtilsClient.RENEWER);
     final String renewerFinal = (renewer == null) ? 
         req.getUserPrincipal().getName() : renewer;
     

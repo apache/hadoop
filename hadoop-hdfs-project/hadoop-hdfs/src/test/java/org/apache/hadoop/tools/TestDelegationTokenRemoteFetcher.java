@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
@@ -129,7 +130,7 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void testTokenRenewFail() throws AuthenticationException {
     try {
-      DelegationTokenFetcher.renewDelegationToken(connectionFactory, serviceUrl, testToken);
+      DelegationUtilsClient.renewDelegationToken(connectionFactory, serviceUrl, testToken);
       fail("Token fetcher shouldn't be able to renew tokens in absense of NN");
     } catch (IOException ex) {
     } 
@@ -141,7 +142,7 @@ public class TestDelegationTokenRemoteFetcher {
   @Test
   public void expectedTokenCancelFail() throws AuthenticationException {
     try {
-      DelegationTokenFetcher.cancelDelegationToken(connectionFactory, serviceUrl, testToken);
+      DelegationUtilsClient.cancelDelegationToken(connectionFactory, serviceUrl, testToken);
       fail("Token fetcher shouldn't be able to cancel tokens in absense of NN");
     } catch (IOException ex) {
     } 
@@ -155,7 +156,7 @@ public class TestDelegationTokenRemoteFetcher {
       throws AuthenticationException, URISyntaxException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     try {
-      DelegationTokenFetcher.renewDelegationToken(connectionFactory, new URI(
+      DelegationUtilsClient.renewDelegationToken(connectionFactory, new URI(
           serviceUrl.toString() + "/exception"), createToken(serviceUrl));
       fail("Token fetcher shouldn't be able to renew tokens using an invalid"
           + " NN URL");
@@ -172,7 +173,7 @@ public class TestDelegationTokenRemoteFetcher {
   public void testCancelTokenFromHttp() throws IOException,
       AuthenticationException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
-    DelegationTokenFetcher.cancelDelegationToken(connectionFactory, serviceUrl,
+    DelegationUtilsClient.cancelDelegationToken(connectionFactory, serviceUrl,
         testToken);
     if (assertionError != null)
       throw assertionError;
@@ -186,7 +187,7 @@ public class TestDelegationTokenRemoteFetcher {
       NumberFormatException, AuthenticationException {
     bootstrap = startHttpServer(httpPort, testToken, serviceUrl);
     assertTrue("testRenewTokenFromHttp error",
-        Long.parseLong(EXP_DATE) == DelegationTokenFetcher.renewDelegationToken(
+        Long.parseLong(EXP_DATE) == DelegationUtilsClient.renewDelegationToken(
             connectionFactory, serviceUrl, testToken));
     if (assertionError != null)
       throw assertionError;

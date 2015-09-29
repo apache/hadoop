@@ -16,3 +16,5 @@
 org.apache.hadoop.hdfs.DistributedFileSystem
 org.apache.hadoop.hdfs.web.WebHdfsFileSystem
 org.apache.hadoop.hdfs.web.SWebHdfsFileSystem
+org.apache.hadoop.hdfs.web.HftpFileSystem
+org.apache.hadoop.hdfs.web.HsftpFileSystem
