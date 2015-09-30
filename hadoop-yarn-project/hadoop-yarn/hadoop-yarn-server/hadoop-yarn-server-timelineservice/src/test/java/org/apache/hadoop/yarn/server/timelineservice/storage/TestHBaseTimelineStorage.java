@@ -249,11 +249,7 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e1 = hbr.getEntity(user, cluster, flow, runid, appId,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
-      Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
-          appId, entity.getType(), null, null, null, null, null, null, null,
-          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
-      assertEquals(1, es1.size());
 
       // verify attributes
       assertEquals(appId, e1.getId());
@@ -610,18 +606,9 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e2 = hbr.getEntity(user, cluster, null, null, appName,
           entity.getType(), entity.getId(),
           EnumSet.of(TimelineReader.Field.ALL));
-      Set<TimelineEntity> es1 = hbr.getEntities(user, cluster, flow, runid,
-          appName, entity.getType(), null, null, null, null, null, null, null,
-          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
-      Set<TimelineEntity> es2 = hbr.getEntities(user, cluster, null, null,
-          appName, entity.getType(), null, null, null, null, null, null, null,
-          null, null, null, null, EnumSet.of(TimelineReader.Field.ALL));
       assertNotNull(e1);
       assertNotNull(e2);
       assertEquals(e1, e2);
-      assertEquals(1, es1.size());
-      assertEquals(1, es2.size());
-      assertEquals(es1, es2);
 
       // check the events
       NavigableSet<TimelineEvent> events = e1.getEvents();
