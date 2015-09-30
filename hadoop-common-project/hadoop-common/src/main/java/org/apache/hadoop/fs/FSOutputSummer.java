@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,8 +42,6 @@ abstract public class FSOutputSummer extends OutputStream {
   private byte checksum[];
   // The number of valid bytes in the buffer.
   private int count;
-  // The HTrace tracer to use
-  private Tracer tracer;
   
   // We want this value to be a multiple of 3 because the native code checksums
   // 3 chunks simultaneously. The chosen value of 9 strikes a balance between

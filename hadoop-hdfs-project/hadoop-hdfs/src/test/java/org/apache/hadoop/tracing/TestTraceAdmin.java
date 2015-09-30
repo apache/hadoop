@@ -73,10 +73,10 @@ public class TestTraceAdmin {
       Assert.assertEquals("ret:0, [no span receivers found]" + NEWLINE,
           runTraceCommand(trace, "-list", "-host", getHostPortForNN(cluster)));
       Assert.assertEquals("ret:0, Added trace span receiver 1 with " +
-          "configuration dfs.htrace.local-file-span-receiver.path = " + tracePath + NEWLINE,
+          "configuration hadoop.htrace.local.file.span.receiver.path = " + tracePath + NEWLINE,
           runTraceCommand(trace, "-add", "-host", getHostPortForNN(cluster),
               "-class", "org.apache.htrace.core.LocalFileSpanReceiver",
-              "-Cdfs.htrace.local-file-span-receiver.path=" + tracePath));
+              "-Chadoop.htrace.local.file.span.receiver.path=" + tracePath));
       String list =
           runTraceCommand(trace, "-list", "-host", getHostPortForNN(cluster));
       Assert.assertTrue(list.startsWith("ret:0"));
@@ -87,10 +87,10 @@ public class TestTraceAdmin {
       Assert.assertEquals("ret:0, [no span receivers found]" + NEWLINE,
           runTraceCommand(trace, "-list", "-host", getHostPortForNN(cluster)));
       Assert.assertEquals("ret:0, Added trace span receiver 2 with " +
-          "configuration dfs.htrace.local-file-span-receiver.path = " + tracePath + NEWLINE,
+          "configuration hadoop.htrace.local.file.span.receiver.path = " + tracePath + NEWLINE,
           runTraceCommand(trace, "-add", "-host", getHostPortForNN(cluster),
               "-class", "LocalFileSpanReceiver",
-              "-Cdfs.htrace.local-file-span-receiver.path=" + tracePath));
+              "-Chadoop.htrace.local.file.span.receiver.path=" + tracePath));
       Assert.assertEquals("ret:0, Removed trace span receiver 2" + NEWLINE,
           runTraceCommand(trace, "-remove", "2", "-host",
               getHostPortForNN(cluster)));

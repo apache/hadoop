@@ -1098,6 +1098,11 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12440. TestRPC#testRPCServerShutdown did not produce the desired
     thread states before shutting down. (Xiao Chen via mingma)
 
+    HADOOP-12447. Clean up some htrace integration issues (cmccabe)
+
+    HADOOP-12448. TestTextCommand: use mkdirs rather than mkdir to create test
+    directory. (Contributed by Colin Patrick McCabe and Chris Nauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

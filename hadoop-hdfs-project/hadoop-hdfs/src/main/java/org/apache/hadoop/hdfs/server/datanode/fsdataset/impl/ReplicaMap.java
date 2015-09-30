@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.util.LightWeightResizableGSet;
 
 /**
  * Maintains the replica map. 
@@ -33,9 +34,9 @@ class ReplicaMap {
   private final Object mutex;
   
   // Map of block pool Id to another map of block Id to ReplicaInfo.
-  private final Map<String, Map<Long, ReplicaInfo>> map =
-    new HashMap<String, Map<Long, ReplicaInfo>>();
-  
+  private final Map<String, LightWeightResizableGSet<Block, ReplicaInfo>> map =
+    new HashMap<String, LightWeightResizableGSet<Block, ReplicaInfo>>();
+
   ReplicaMap(Object mutex) {
     if (mutex == null) {
       throw new HadoopIllegalArgumentException(
@@ -91,8 +92,8 @@ class ReplicaMap {
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
     synchronized(mutex) {
-      Map<Long, ReplicaInfo> m = map.get(bpid);
-      return m != null ? m.get(blockId) : null;
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+      return m != null ? m.get(new Block(blockId)) : null;
     }
   }
   
@@ -108,13 +109,13 @@ class ReplicaMap {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
     synchronized(mutex) {
-      Map<Long, ReplicaInfo> m = map.get(bpid);
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
-        m = new HashMap<Long, ReplicaInfo>();
+        m = new LightWeightResizableGSet<Block, ReplicaInfo>();
         map.put(bpid, m);
       }
-      return  m.put(replicaInfo.getBlockId(), replicaInfo);
+      return  m.put(replicaInfo);
     }
   }
 
@@ -137,14 +138,13 @@ class ReplicaMap {
     checkBlockPool(bpid);
     checkBlock(block);
     synchronized(mutex) {
-      Map<Long, ReplicaInfo> m = map.get(bpid);
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
-        Long key = Long.valueOf(block.getBlockId());
-        ReplicaInfo replicaInfo = m.get(key);
+        ReplicaInfo replicaInfo = m.get(block);
         if (replicaInfo != null &&
             block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
-          return m.remove(key);
-        } 
+          return m.remove(block);
+        }
       }
     }
     
@@ -160,9 +160,9 @@ class ReplicaMap {
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
     synchronized(mutex) {
-      Map<Long, ReplicaInfo> m = map.get(bpid);
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
-        return m.remove(blockId);
+        return m.remove(new Block(blockId));
       }
     }
     return null;
@@ -174,7 +174,7 @@ class ReplicaMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    Map<Long, ReplicaInfo> m = null;
+    LightWeightResizableGSet<Block, ReplicaInfo> m = null;
     synchronized(mutex) {
       m = map.get(bpid);
       return m != null ? m.size() : 0;
@@ -192,7 +192,7 @@ class ReplicaMap {
    * @return a collection of the replicas belonging to the block pool
    */
   Collection<ReplicaInfo> replicas(String bpid) {
-    Map<Long, ReplicaInfo> m = null;
+    LightWeightResizableGSet<Block, ReplicaInfo> m = null;
     m = map.get(bpid);
     return m != null ? m.values() : null;
   }
@@ -200,10 +200,10 @@ class ReplicaMap {
   void initBlockPool(String bpid) {
     checkBlockPool(bpid);
     synchronized(mutex) {
-      Map<Long, ReplicaInfo> m = map.get(bpid);
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
-        m = new HashMap<Long, ReplicaInfo>();
+        m = new LightWeightResizableGSet<Block, ReplicaInfo>();
         map.put(bpid, m);
       }
     }

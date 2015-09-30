@@ -785,12 +785,6 @@ public class DirectoryScanner implements Runnable {
     private final StopWatch perfTimer = new StopWatch();
 
     /**
-     * The associated thread.  Used for testing purposes only.
-     */
-    @VisibleForTesting
-    Thread currentThread;
-
-    /**
      * Create a report compiler for the given volume on the given datanode.
      *
      * @param datanode the target datanode
@@ -809,8 +803,6 @@ public class DirectoryScanner implements Runnable {
      */
     @Override
     public ScanInfoPerBlockPool call() throws IOException {
-      currentThread = Thread.currentThread();
-
       String[] bpList = volume.getBlockPoolList();
       ScanInfoPerBlockPool result = new ScanInfoPerBlockPool(bpList.length);
       for (String bpid : bpList) {
