@@ -484,9 +484,13 @@ public class ShortCircuitShm {
         POSIX.MMAP_PROT_READ | POSIX.MMAP_PROT_WRITE, true, mmappedLength);
     this.slots = new Slot[mmappedLength / BYTES_PER_SLOT];
     this.allocatedSlots = new BitSet(slots.length);
-    LOG.trace("creating {}(shmId={}, mmappedLength={}, baseAddress={}, "
-        + "slots.length={})", this.getClass().getSimpleName(), shmId,
-        mmappedLength, String.format("%x", baseAddress), slots.length);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("creating " + this.getClass().getSimpleName() +
+          "(shmId=" + shmId +
+          ", mmappedLength=" + mmappedLength +
+          ", baseAddress=" + String.format("%x", baseAddress) +
+          ", slots.length=" + slots.length + ")");
+    }
   }
 
   public final ShmId getShmId() {
@@ -611,7 +615,9 @@ public class ShortCircuitShm {
         "tried to unregister slot " + slotIdx + ", which was not registered.");
     allocatedSlots.set(slotIdx, false);
     slots[slotIdx] = null;
-    LOG.trace("{}: unregisterSlot {}", this, slotIdx);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(this + ": unregisterSlot " + slotIdx);
+    }
   }
   
   /**

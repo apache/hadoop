@@ -103,7 +103,9 @@ public class ShortCircuitCache implements Closeable {
         if (ShortCircuitCache.this.closed) return;
         long curMs = Time.monotonicNow();
 
-        LOG.debug("{}: cache cleaner running at {}", this, curMs);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(this + ": cache cleaner running at " + curMs);
+        }
 
         int numDemoted = demoteOldEvictableMmaped(curMs);
         int numPurged = 0;
@@ -125,9 +127,11 @@ public class ShortCircuitCache implements Closeable {
           numPurged++;
         }
 
-        LOG.debug("{}: finishing cache cleaner run started at {}. Demoted {} "
-            + "mmapped replicas; purged {} replicas.",
-            this, curMs, numDemoted, numPurged);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(this + ": finishing cache cleaner run started at " +
+            curMs + ".  Demoted " + numDemoted + " mmapped replicas; " +
+            "purged " + numPurged + " replicas.");
+        }
       } finally {
         ShortCircuitCache.this.lock.unlock();
       }
@@ -182,7 +186,9 @@ public class ShortCircuitCache implements Closeable {
 
     @Override
     public void run() {
-      LOG.trace("{}: about to release {}", ShortCircuitCache.this, slot);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(ShortCircuitCache.this + ": about to release " + slot);
+      }
       final DfsClientShm shm = (DfsClientShm)slot.getShm();
       final DomainSocket shmSock = shm.getPeer().getDomainSocket();
       final String path = shmSock.getPath();
@@ -199,7 +205,9 @@ public class ShortCircuitCache implements Closeable {
           String error = resp.hasError() ? resp.getError() : "(unknown)";
           throw new IOException(resp.getStatus().toString() + ": " + error);
         }
-        LOG.trace("{}: released {}", this, slot);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(ShortCircuitCache.this + ": released " + slot);
+        }
         success = true;
       } catch (IOException e) {
         LOG.error(ShortCircuitCache.this + ": failed to release " +
@@ -425,7 +433,9 @@ public class ShortCircuitCache implements Closeable {
           purgeReason = "purging replica because it is stale.";
         }
         if (purgeReason != null) {
-          LOG.debug("{}: {}", this, purgeReason);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(this + ": " + purgeReason);
+          }
           purge(replica);
         }
       }
@@ -667,8 +677,10 @@ public class ShortCircuitCache implements Closeable {
       ShortCircuitReplicaInfo info = null;
       do {
         if (closed) {
-          LOG.trace("{}: can't fethchOrCreate {} because the cache is closed.",
-              this, key);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": can't fetchOrCreate " + key +
+                " because the cache is closed.");
+          }
           return null;
         }
         Waitable<ShortCircuitReplicaInfo> waitable = replicaInfoMap.get(key);
@@ -676,7 +688,9 @@ public class ShortCircuitCache implements Closeable {
           try {
             info = fetch(key, waitable);
           } catch (RetriableException e) {
-            LOG.debug("{}: retrying {}", this, e.getMessage());
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(this + ": retrying " + e.getMessage());
+            }
             continue;
           }
         }
@@ -707,7 +721,9 @@ public class ShortCircuitCache implements Closeable {
     // ShortCircuitReplica.  So we simply wait for it to complete.
     ShortCircuitReplicaInfo info;
     try {
-      LOG.trace("{}: found waitable for {}", this, key);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(this + ": found waitable for " + key);
+      }
       info = waitable.await();
     } catch (InterruptedException e) {
       LOG.info(this + ": interrupted while waiting for " + key);
@@ -749,7 +765,9 @@ public class ShortCircuitCache implements Closeable {
     // Handle loading a new replica.
     ShortCircuitReplicaInfo info = null;
     try {
-      LOG.trace("{}: loading {}", this, key);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(this + ": loading " + key);
+      }
       info = creator.createShortCircuitReplicaInfo();
     } catch (RuntimeException e) {
       LOG.warn(this + ": failed to load " + key, e);
@@ -759,7 +777,9 @@ public class ShortCircuitCache implements Closeable {
     try {
       if (info.getReplica() != null) {
         // On success, make sure the cache cleaner thread is running.
-        LOG.trace("{}: successfully loaded {}", this, info.getReplica());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(this + ": successfully loaded " + info.getReplica());
+        }
         startCacheCleanerThreadIfNeeded();
         // Note: new ShortCircuitReplicas start with a refCount of 2,
         // indicating that both this cache and whoever requested the 
@@ -791,8 +811,10 @@ public class ShortCircuitCache implements Closeable {
           cleanerExecutor.scheduleAtFixedRate(cacheCleaner, rateMs, rateMs,
               TimeUnit.MILLISECONDS);
       cacheCleaner.setFuture(future);
-      LOG.debug("{}: starting cache cleaner thread which will run every {} ms",
-          this, rateMs);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(this + ": starting cache cleaner thread which will run " +
+          "every " + rateMs + " ms");
+      }
     }
   }
 
@@ -810,12 +832,17 @@ public class ShortCircuitCache implements Closeable {
           long lastAttemptTimeMs = (Long)replica.mmapData;
           long delta = Time.monotonicNow() - lastAttemptTimeMs;
           if (delta < mmapRetryTimeoutMs) {
-            LOG.trace("{}: can't create client mmap for {} because we failed to"
-                + " create one just {}ms ago.", this, replica, delta);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace(this + ": can't create client mmap for " +
+                  replica + " because we failed to " +
+                  "create one just " + delta + "ms ago.");
+            }
             return null;
           }
-          LOG.trace("{}: retrying client mmap for {}, {} ms after the previous "
-              + "failure.", this, replica, delta);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": retrying client mmap for " + replica +
+                ", " + delta + " ms after the previous failure.");
+          }
         } else if (replica.mmapData instanceof Condition) {
           Condition cond = (Condition)replica.mmapData;
           cond.awaitUninterruptibly();
@@ -938,10 +965,38 @@ public class ShortCircuitCache implements Closeable {
           }
         }
       }
-      LOG.debug("visiting {} with outstandingMmapCount={}, replicas={}, "
-          + "failedLoads={}, evictable={}, evictableMmapped={}",
-          visitor.getClass().getName(), outstandingMmapCount, replicas,
-          failedLoads, evictable, evictableMmapped);
+      if (LOG.isDebugEnabled()) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("visiting ").append(visitor.getClass().getName()).
+            append("with outstandingMmapCount=").append(outstandingMmapCount).
+            append(", replicas=");
+        String prefix = "";
+        for (Entry<ExtendedBlockId, ShortCircuitReplica> entry : replicas.entrySet()) {
+          builder.append(prefix).append(entry.getValue());
+          prefix = ",";
+        }
+        prefix = "";
+        builder.append(", failedLoads=");
+        for (Entry<ExtendedBlockId, InvalidToken> entry : failedLoads.entrySet()) {
+          builder.append(prefix).append(entry.getValue());
+          prefix = ",";
+        }
+        prefix = "";
+        builder.append(", evictable=");
+        for (Entry<Long, ShortCircuitReplica> entry : evictable.entrySet()) {
+          builder.append(prefix).append(entry.getKey()).
+              append(":").append(entry.getValue());
+          prefix = ",";
+        }
+        prefix = "";
+        builder.append(", evictableMmapped=");
+        for (Entry<Long, ShortCircuitReplica> entry : evictableMmapped.entrySet()) {
+          builder.append(prefix).append(entry.getKey()).
+              append(":").append(entry.getValue());
+          prefix = ",";
+        }
+        LOG.debug(builder.toString());
+      }
       visitor.visit(outstandingMmapCount, replicas, failedLoads,
             evictable, evictableMmapped);
     } finally {

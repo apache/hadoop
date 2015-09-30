@@ -315,7 +315,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     if (locatedBlocks == null || refresh) {
       newInfo = dfsClient.getLocatedBlocks(src, 0);
     }
-    DFSClient.LOG.debug("newInfo = {}", newInfo);
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("newInfo = " + newInfo);
+    }
     if (newInfo == null) {
       throw new IOException("Cannot open filename " + src);
     }
@@ -381,8 +383,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           replicaNotFoundCount--;
         }
         
-        DFSClient.LOG.debug("Failed to getReplicaVisibleLength from datanode {}"
-              + " for block {}", datanode, locatedblock.getBlock(), ioe);
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Failed to getReplicaVisibleLength from datanode "
+              + datanode + " for block " + locatedblock.getBlock(), ioe);
+        }
       } finally {
         if (cdp != null) {
           RPC.stopProxy(cdp);
@@ -1063,7 +1067,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     final String dnAddr =
         chosenNode.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname());
-    DFSClient.LOG.debug("Connecting to datanode {}", dnAddr);
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
+    }
     InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
     return new DNAddrPair(chosenNode, targetAddr, storageType);
   }
@@ -1303,8 +1309,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             future.get();
             return;
           }
-          DFSClient.LOG.debug("Waited {}ms to read from {}; spawning hedged "
-              + "read", conf.getHedgedReadThresholdMillis(), chosenNode.info);
+          if (DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug("Waited " + conf.getHedgedReadThresholdMillis()
+                + "ms to read from " + chosenNode.info
+                + "; spawning hedged read");
+          }
           // Ignore this node on next go around.
           ignored.add(chosenNode.info);
           dfsClient.getHedgedReadMetrics().incHedgedReadOps();
@@ -1331,8 +1340,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
               .submit(getFromDataNodeCallable);
           futures.add(oneMoreRequest);
         } catch (IOException ioe) {
-          DFSClient.LOG.debug("Failed getting node for hedged read: {}",
-              ioe.getMessage());
+          if (DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug("Failed getting node for hedged read: "
+                + ioe.getMessage());
+          }
         }
         // if not succeeded. Submit callables for each datanode in a loop, wait
         // for a fixed interval and get the result from the fastest one.
@@ -1588,8 +1599,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             throw new IOException(errMsg);
           }
         } catch (IOException e) {//make following read to retry
-          DFSClient.LOG.debug("Exception while seek to {} from {} of {} from "
-              + "{}", targetPos, getCurrentBlock(), src, currentNode, e);
+          if(DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug("Exception while seek to " + targetPos
+                + " from " + getCurrentBlock() + " of " + src + " from "
+                + currentNode, e);
+          }
         }
       }
     }
@@ -1805,16 +1819,20 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     } else {
       length63 = 1 + curEnd - curPos;
       if (length63 <= 0) {
-        DFSClient.LOG.debug("Unable to perform a zero-copy read from offset {}"
-                + " of {}; {} bytes left in block. blockPos={}; curPos={};"
-                + "curEnd={}",
-            curPos, src, length63, blockPos, curPos, curEnd);
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Unable to perform a zero-copy read from offset " +
+            curPos + " of " + src + "; " + length63 + " bytes left in block.  " +
+            "blockPos=" + blockPos + "; curPos=" + curPos +
+            "; curEnd=" + curEnd);
+        }
         return null;
       }
-      DFSClient.LOG.debug("Reducing read length from {} to {} to avoid going "
-              + "more than one byte past the end of the block.  blockPos={}; "
-              +" curPos={}; curEnd={}",
-          maxLength, length63, blockPos, curPos, curEnd);
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Reducing read length from " + maxLength +
+            " to " + length63 + " to avoid going more than one byte " +
+            "past the end of the block.  blockPos=" + blockPos +
+            "; curPos=" + curPos + "; curEnd=" + curEnd);
+      }
     }
     // Make sure that don't go beyond 31-bit offsets in the MappedByteBuffer.
     int length;
@@ -1828,20 +1846,28 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         // So we can't mmap the parts of the block higher than the 2 GB offset.
         // FIXME: we could work around this with multiple memory maps.
         // See HDFS-5101.
-        DFSClient.LOG.debug("Unable to perform a zero-copy read from offset {} "
-            + " of {}; 31-bit MappedByteBuffer limit exceeded.  blockPos={}, "
-            + "curEnd={}", curPos, src, blockPos, curEnd);
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Unable to perform a zero-copy read from offset " +
+            curPos + " of " + src + "; 31-bit MappedByteBuffer limit " +
+            "exceeded.  blockPos=" + blockPos + ", curEnd=" + curEnd);
+        }
         return null;
       }
       length = (int)length31;
-      DFSClient.LOG.debug("Reducing read length from {} to {} to avoid 31-bit "
-          + "limit.  blockPos={}; curPos={}; curEnd={}",
-          maxLength, length, blockPos, curPos, curEnd);
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Reducing read length from " + maxLength +
+            " to " + length + " to avoid 31-bit limit.  " +
+            "blockPos=" + blockPos + "; curPos=" + curPos +
+            "; curEnd=" + curEnd);
+      }
     }
     final ClientMmap clientMmap = blockReader.getClientMmap(opts);
     if (clientMmap == null) {
-      DFSClient.LOG.debug("unable to perform a zero-copy read from offset {} of"
-          + " {}; BlockReader#getClientMmap returned null.", curPos, src);
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("unable to perform a zero-copy read from offset " +
+          curPos + " of " + src + "; BlockReader#getClientMmap returned " +
+          "null.");
+      }
       return null;
     }
     boolean success = false;
@@ -1855,8 +1881,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       synchronized (infoLock) {
         readStatistics.addZeroCopyBytes(length);
       }
-      DFSClient.LOG.debug("readZeroCopy read {} bytes from offset {} via the "
-          + "zero-copy read path.  blockEnd = {}", length, curPos, blockEnd);
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("readZeroCopy read " + length + 
+            " bytes from offset " + curPos + " via the zero-copy read " +
+            "path.  blockEnd = " + blockEnd);
+      }
       success = true;
     } finally {
       if (!success) {

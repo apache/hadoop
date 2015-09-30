@@ -132,14 +132,18 @@ class DataStreamer extends Daemon {
       final int length, final DFSClient client) throws IOException {
     final DfsClientConf conf = client.getConf();
     final String dnAddr = first.getXferAddr(conf.isConnectToDnViaHostname());
-    LOG.debug("Connecting to datanode {}", dnAddr);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to datanode " + dnAddr);
+    }
     final InetSocketAddress isa = NetUtils.createSocketAddr(dnAddr);
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(), conf.getSocketTimeout());
     sock.setSoTimeout(timeout);
     sock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
-    LOG.debug("Send buf size {}", sock.getSendBufferSize());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Send buf size " + sock.getSendBufferSize());
+    }
     return sock;
   }
 
@@ -480,7 +484,9 @@ class DataStreamer extends Daemon {
   }
 
   private void endBlock() {
-    LOG.debug("Closing old block {}", block);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Closing old block " + block);
+    }
     this.setName("DataStreamer for file " + src);
     closeResponder();
     closeStream();
@@ -561,11 +567,15 @@ class DataStreamer extends Daemon {
 
         // get new block from namenode.
         if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
-          LOG.debug("Allocating new block");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Allocating new block");
+          }
           setPipeline(nextBlockOutputStream());
           initDataStreaming();
         } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
-          LOG.debug("Append to block {}", block);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Append to block " + block);
+          }
           setupPipelineForAppendOrRecovery();
           if (streamerClosed) {
             continue;
@@ -617,7 +627,10 @@ class DataStreamer extends Daemon {
           }
         }
 
-        LOG.debug("DataStreamer block {} sending packet {}", block, one);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DataStreamer block " + block +
+              " sending packet " + one);
+        }
 
         // write out data to remote datanode
         TraceScope writeScope = dfsClient.getTracer().
@@ -728,7 +741,9 @@ class DataStreamer extends Daemon {
     TraceScope scope = dfsClient.getTracer().
         newScope("waitForAckedSeqno");
     try {
-      LOG.debug("Waiting for ack for: {}", seqno);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Waiting for ack for: " + seqno);
+      }
       long begin = Time.monotonicNow();
       try {
         synchronized (dataQueue) {
@@ -940,8 +955,8 @@ class DataStreamer extends Daemon {
             LOG.warn("Slow ReadProcessor read fields took " + duration
                 + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms); ack: "
                 + ack + ", targets: " + Arrays.asList(targets));
-          } else {
-            LOG.debug("DFSClient {}", ack);
+          } else if (LOG.isDebugEnabled()) {
+            LOG.debug("DFSClient " + ack);
           }
 
           long seqno = ack.getSeqno();
@@ -1161,7 +1176,9 @@ class DataStreamer extends Daemon {
   }
 
   private void addDatanode2ExistingPipeline() throws IOException {
-    DataTransferProtocol.LOG.debug("lastAckedSeqno = {}", lastAckedSeqno);
+    if (DataTransferProtocol.LOG.isDebugEnabled()) {
+      DataTransferProtocol.LOG.debug("lastAckedSeqno = " + lastAckedSeqno);
+    }
       /*
        * Is data transfer necessary?  We have the following cases.
        *
@@ -1628,8 +1645,10 @@ class DataStreamer extends Daemon {
           new HashSet<String>(Arrays.asList(favoredNodes));
       for (int i = 0; i < nodes.length; i++) {
         pinnings[i] = favoredSet.remove(nodes[i].getXferAddrWithHostname());
-        LOG.debug("{} was chosen by name node (favored={}).",
-            nodes[i].getXferAddrWithHostname(), pinnings[i]);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(nodes[i].getXferAddrWithHostname() +
+              " was chosen by name node (favored=" + pinnings[i] + ").");
+        }
       }
       if (shouldLog && !favoredSet.isEmpty()) {
         // There is one or more favored nodes that were not allocated.
@@ -1768,7 +1787,9 @@ class DataStreamer extends Daemon {
       packet.addTraceParent(Tracer.getCurrentSpanId());
       dataQueue.addLast(packet);
       lastQueuedSeqno = packet.getSeqno();
-      LOG.debug("Queued packet {}", packet.getSeqno());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Queued packet " + packet.getSeqno());
+      }
       dataQueue.notifyAll();
     }
   }

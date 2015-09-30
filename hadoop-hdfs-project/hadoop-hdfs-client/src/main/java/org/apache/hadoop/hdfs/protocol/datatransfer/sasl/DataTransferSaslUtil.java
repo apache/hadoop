@@ -332,9 +332,11 @@ public final class DataTransferSaslUtil {
   public static IOStreamPair createStreamPair(Configuration conf,
       CipherOption cipherOption, OutputStream out, InputStream in, 
       boolean isServer) throws IOException {
-    LOG.debug("Creating IOStreamPair of CryptoInputStream and "
-        + "CryptoOutputStream.");
-    CryptoCodec codec = CryptoCodec.getInstance(conf,
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating IOStreamPair of CryptoInputStream and " +
+          "CryptoOutputStream.");
+    }
+    CryptoCodec codec = CryptoCodec.getInstance(conf, 
         cipherOption.getCipherSuite());
     byte[] inKey = cipherOption.getInKey();
     byte[] inIv = cipherOption.getInIv();
