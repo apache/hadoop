@@ -221,11 +221,9 @@ class BlockReaderLocalLegacy implements BlockReader {
       File blkfile = new File(pathinfo.getBlockPath());
       dataIn = new FileInputStream(blkfile);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("New BlockReaderLocalLegacy for file " + blkfile + " of size "
-            + blkfile.length() + " startOffset " + startOffset + " length "
-            + length + " short circuit checksum " + !skipChecksumCheck);
-      }
+      LOG.debug("New BlockReaderLocalLegacy for file {} of size {} startOffset "
+              + "{} length {} short circuit checksum {}",
+          blkfile, blkfile.length(), startOffset, length, !skipChecksumCheck);
 
       if (!skipChecksumCheck) {
         // get the metadata file
@@ -292,9 +290,7 @@ class BlockReaderLocalLegacy implements BlockReader {
       // channel for the DataNode to notify the client that the path has been
       // invalidated.  Therefore, our only option is to skip caching.
       if (pathinfo != null && !storageType.isTransient()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Cached location of block " + blk + " as " + pathinfo);
-        }
+        LOG.debug("Cached location of block {} as {}", blk, pathinfo);
         localDatanodeInfo.setBlockLocalPathInfo(blk, pathinfo);
       }
     } catch (IOException e) {
@@ -603,9 +599,7 @@ class BlockReaderLocalLegacy implements BlockReader {
 
   @Override
   public synchronized int read(byte[] buf, int off, int len) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("read off " + off + " len " + len);
-    }
+    LOG.trace("read off {} len {}", off, len);
     if (!verifyChecksum) {
       return dataIn.read(buf, off, len);
     }
@@ -624,9 +618,7 @@ class BlockReaderLocalLegacy implements BlockReader {
 
   @Override
   public synchronized long skip(long n) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("skip " + n);
-    }
+    LOG.debug("skip {}", n);
     if (n <= 0) {
       return 0;
     }

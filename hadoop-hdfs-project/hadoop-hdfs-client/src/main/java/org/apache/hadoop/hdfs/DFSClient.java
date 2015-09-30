@@ -419,9 +419,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     final int idx = r.nextInt(localInterfaceAddrs.length);
     final SocketAddress addr = localInterfaceAddrs[idx];
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Using local interface " + addr);
-    }
+    LOG.debug("Using local interface {}", addr);
     return addr;
   }
 
@@ -1216,9 +1214,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                              InetSocketAddress[] favoredNodes) throws IOException {
     checkOpen();
     final FsPermission masked = applyUMask(permission);
-    if(LOG.isDebugEnabled()) {
-      LOG.debug(src + ": masked=" + masked);
-    }
+    LOG.debug("{}: masked={}", src, masked);
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
         buffersize, dfsClientConf.createChecksum(checksumOpt),
@@ -1815,10 +1811,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
               smallBufferSize));
           in = new DataInputStream(pair.in);
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("write to " + datanodes[j] + ": "
-                + Op.BLOCK_CHECKSUM + ", block=" + block);
-          }
+          LOG.debug("write to {}: {}, block={}",
+              datanodes[j], Op.BLOCK_CHECKSUM, block);
           // get block MD5
           new Sender(out).blockChecksum(block, lb.getBlockToken());
 
@@ -1882,12 +1876,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           }
         } catch (InvalidBlockTokenException ibte) {
           if (i > lastRetriedIndex) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
-                  + "for file " + src + " for block " + block
-                  + " from datanode " + datanodes[j]
-                  + ". Will retry the block once.");
-            }
+            LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
+                  + "for file {} for block {} from datanode {}. Will retry the "
+                  + "block once.",
+                src, block, datanodes[j]);
             lastRetriedIndex = i;
             done = true; // actually it's not done; but we'll retry
             i--; // repeat at i-th block
@@ -1941,9 +1933,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       sock = socketFactory.createSocket();
       String dnAddr = dn.getXferAddr(getConf().isConnectToDnViaHostname());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Connecting to datanode " + dnAddr);
-      }
+      LOG.debug("Connecting to datanode {}", dnAddr);
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
       sock.setSoTimeout(timeout);
   
@@ -2563,9 +2553,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       absPermission = applyUMask(null);
     } 
 
-    if(LOG.isDebugEnabled()) {
-      LOG.debug(src + ": masked=" + absPermission);
-    }
+    LOG.debug("{}: masked={}", src, absPermission);
     TraceScope scope = tracer.newScope("mkdir");
     try {
       return namenode.mkdirs(src, absPermission, createParent);
@@ -3061,9 +3049,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
     });
     HEDGED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Using hedged reads; pool threads=" + num);
-    }
+    LOG.debug("Using hedged reads; pool threads={}", num);
   }
 
   ThreadPoolExecutor getHedgedReadsThreadPool() {
