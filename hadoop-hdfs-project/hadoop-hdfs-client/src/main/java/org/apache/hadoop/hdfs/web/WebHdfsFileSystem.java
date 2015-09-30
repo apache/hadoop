@@ -240,16 +240,12 @@ public class WebHdfsFileSystem extends FileSystem
       // refetch tokens.  even if ugi has credentials, don't attempt
       // to get another token to match hdfs/rpc behavior
       if (token != null) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Using UGI token: {}", token);
-        }
+        LOG.debug("Using UGI token: {}", token);
         canRefreshDelegationToken = false;
       } else {
         token = getDelegationToken(null);
         if (token != null) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("Fetched new token: {}", token);
-          }
+          LOG.debug("Fetched new token: {}", token);
         } else { // security is disabled
           canRefreshDelegationToken = false;
         }
@@ -264,9 +260,7 @@ public class WebHdfsFileSystem extends FileSystem
     boolean replaced = false;
     if (canRefreshDelegationToken) {
       Token<?> token = getDelegationToken(null);
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Replaced expired token: {}", token);
-      }
+      LOG.debug("Replaced expired token: {}", token);
       setDelegationToken(token);
       replaced = (token != null);
     }
@@ -451,9 +445,7 @@ public class WebHdfsFileSystem extends FileSystem
     InetSocketAddress nnAddr = getCurrentNNAddr();
     final URL url = new URL(getTransportScheme(), nnAddr.getHostName(),
           nnAddr.getPort(), path + '?' + query);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("url={}", url);
-    }
+    LOG.trace("url={}", url);
     return url;
   }
 
@@ -488,9 +480,7 @@ public class WebHdfsFileSystem extends FileSystem
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
     final URL url = getNamenodeURL(path, query);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("url={}", url);
-    }
+    LOG.trace("url={}", url);
     return url;
   }
 
@@ -778,9 +768,7 @@ public class WebHdfsFileSystem extends FileSystem
       } catch (Exception e) { // catch json parser errors
         final IOException ioe =
             new IOException("Response decoding failure: "+e.toString(), e);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Response decoding failure: {}", e.toString(), e);
-        }
+        LOG.debug("Response decoding failure.", e);
         throw ioe;
       } finally {
         conn.disconnect();
@@ -1251,9 +1239,7 @@ public class WebHdfsFileSystem extends FileSystem
         cancelDelegationToken(delegationToken);
       }
     } catch (IOException ioe) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token cancel failed: ", ioe);
-      }
+      LOG.debug("Token cancel failed: ", ioe);
     } finally {
       super.close();
     }
