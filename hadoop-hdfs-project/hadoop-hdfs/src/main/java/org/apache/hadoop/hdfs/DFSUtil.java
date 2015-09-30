@@ -732,20 +732,29 @@ public class DFSUtil {
         }
       }
     }
-    
-    // Add the default URI if it is an HDFS URI.
-    URI defaultUri = FileSystem.getDefaultUri(conf);
-    // checks if defaultUri is ip:port format
-    // and convert it to hostname:port format
-    if (defaultUri != null && (defaultUri.getPort() != -1)) {
-      defaultUri = createUri(defaultUri.getScheme(),
-          NetUtils.createSocketAddr(defaultUri.getHost(), 
-              defaultUri.getPort()));
-    }
-    if (defaultUri != null &&
-        HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
-        !nonPreferredUris.contains(defaultUri)) {
-      ret.add(defaultUri);
+
+    // Add the default URI if it is an HDFS URI and we haven't come up with a
+    // valid non-nameservice NN address yet.  Consider the servicerpc-address
+    // and rpc-address to be the "unnamed" nameservice.  defaultFS is our
+    // fallback when rpc-address isn't given.  We therefore only want to add
+    // the defaultFS when neither the servicerpc-address (which is preferred)
+    // nor the rpc-address (which overrides defaultFS) is given.
+    if (!uriFound) {
+      URI defaultUri = FileSystem.getDefaultUri(conf);
+
+      // checks if defaultUri is ip:port format
+      // and convert it to hostname:port format
+      if (defaultUri != null && (defaultUri.getPort() != -1)) {
+        defaultUri = createUri(defaultUri.getScheme(),
+            NetUtils.createSocketAddr(defaultUri.getHost(),
+                defaultUri.getPort()));
+      }
+
+      if (defaultUri != null &&
+          HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
+          !nonPreferredUris.contains(defaultUri)) {
+        ret.add(defaultUri);
+      }
     }
     
     return ret;

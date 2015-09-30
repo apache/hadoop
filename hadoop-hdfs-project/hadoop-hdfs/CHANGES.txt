@@ -1468,6 +1468,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9174. Fix findbugs warnings in FSOutputSummer.tracer and
     DirectoryScanner$ReportCompiler.currentThread. (Yi Liu via wheat9)
 
+    HDFS-9001. DFSUtil.getNsServiceRpcUris() can return too many entries in a
+    non-HA, non-federated cluster. (Daniel Templeton via atm)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
