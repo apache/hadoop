@@ -1005,6 +1005,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4180. AMLauncher does not retry on failures when talking to NM.
     (adhoot)
 
+    YARN-3727. For better error recovery, check if the directory exists before
+    using it for localization. (Zhihai Xu via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

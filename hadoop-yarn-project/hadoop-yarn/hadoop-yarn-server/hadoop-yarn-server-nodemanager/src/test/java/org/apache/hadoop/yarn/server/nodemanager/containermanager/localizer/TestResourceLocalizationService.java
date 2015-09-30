@@ -624,29 +624,31 @@ public class TestResourceLocalizationService {
       // Simulate start of localization for all resources
       privTracker1.getPathForLocalization(privReq1,
           dirsHandler.getLocalPathForWrite(
-              ContainerLocalizer.USERCACHE + user1));
+              ContainerLocalizer.USERCACHE + user1), null);
       privTracker1.getPathForLocalization(privReq2,
           dirsHandler.getLocalPathForWrite(
-              ContainerLocalizer.USERCACHE + user1));
+              ContainerLocalizer.USERCACHE + user1), null);
       LocalizedResource privLr1 = privTracker1.getLocalizedResource(privReq1);
       LocalizedResource privLr2 = privTracker1.getLocalizedResource(privReq2);
       appTracker1.getPathForLocalization(appReq1,
           dirsHandler.getLocalPathForWrite(
-              ContainerLocalizer.APPCACHE + appId1));
+              ContainerLocalizer.APPCACHE + appId1), null);
       LocalizedResource appLr1 = appTracker1.getLocalizedResource(appReq1);
       appTracker2.getPathForLocalization(appReq2,
           dirsHandler.getLocalPathForWrite(
-              ContainerLocalizer.APPCACHE + appId2));
+              ContainerLocalizer.APPCACHE + appId2), null);
       LocalizedResource appLr2 = appTracker2.getLocalizedResource(appReq2);
       appTracker2.getPathForLocalization(appReq3,
           dirsHandler.getLocalPathForWrite(
-              ContainerLocalizer.APPCACHE + appId2));
+              ContainerLocalizer.APPCACHE + appId2), null);
       LocalizedResource appLr3 = appTracker2.getLocalizedResource(appReq3);
       pubTracker.getPathForLocalization(pubReq1,
-          dirsHandler.getLocalPathForWrite(ContainerLocalizer.FILECACHE));
+          dirsHandler.getLocalPathForWrite(ContainerLocalizer.FILECACHE),
+          null);
       LocalizedResource pubLr1 = pubTracker.getLocalizedResource(pubReq1);
       pubTracker.getPathForLocalization(pubReq2,
-          dirsHandler.getLocalPathForWrite(ContainerLocalizer.FILECACHE));
+          dirsHandler.getLocalPathForWrite(ContainerLocalizer.FILECACHE),
+          null);
       LocalizedResource pubLr2 = pubTracker.getLocalizedResource(pubReq2);
 
       // Simulate completion of localization for most resources with
