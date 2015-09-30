@@ -147,11 +147,9 @@ public class PacketReceiver implements Closeable {
       throw new IOException("Invalid header length " + headerLen);
     }
     
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("readNextPacket: dataPlusChecksumLen = " + dataPlusChecksumLen +
-          " headerLen = " + headerLen);
-    }
-    
+    LOG.trace("readNextPacket: dataPlusChecksumLen={}, headerLen={}",
+        dataPlusChecksumLen, headerLen);
+
     // Sanity check the buffer size so we don't allocate too much memory
     // and OOME.
     int totalLen = payloadLen + headerLen;

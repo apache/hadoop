@@ -462,19 +462,13 @@ public class DFSUtilClient {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Address " + targetAddr +
-            (cached ? " is local" : " is not local"));
-      }
+      LOG.trace("Address {} is {} local", targetAddr, (cached ? "" : "not"));
       return cached;
     }
 
     boolean local = NetUtils.isLocalAddress(addr);
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Address " + targetAddr +
-          (local ? " is local" : " is not local"));
-    }
+    LOG.trace("Address {} is {} local", targetAddr, (local ? "" : "not"));
     localAddrMap.put(addr.getHostAddress(), local);
     return local;
   }
