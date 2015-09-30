@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -176,7 +177,7 @@ class GenericEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected Iterable<Result> getResults(Configuration hbaseConf,
+  protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
     // Scan through part of the table to find the entities belong to one app
     // and one type

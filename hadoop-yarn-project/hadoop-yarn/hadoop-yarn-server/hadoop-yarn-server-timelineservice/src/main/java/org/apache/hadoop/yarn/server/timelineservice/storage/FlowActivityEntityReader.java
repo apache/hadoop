@@ -27,6 +27,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
@@ -88,18 +89,22 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    Iterable<Result> results = getResults(hbaseConf, conn);
-    for (Result result : results) {
-      TimelineEntity entity = parseEntity(result);
-      if (entity == null) {
-        continue;
+    ResultScanner results = getResults(hbaseConf, conn);
+    try {
+      for (Result result : results) {
+        TimelineEntity entity = parseEntity(result);
+        if (entity == null) {
+          continue;
+        }
+        entities.add(entity);
+        if (entities.size() == limit) {
+          break;
+        }
       }
-      entities.add(entity);
-      if (entities.size() == limit) {
-        break;
-      }
+      return entities;
+    } finally {
+      results.close();
     }
-    return entities;
   }
 
   @Override
@@ -123,7 +128,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected Iterable<Result> getResults(Configuration hbaseConf,
+  protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
     Scan scan = new Scan();
     scan.setRowPrefixFilter(FlowActivityRowKey.getRowKeyPrefix(clusterId));
