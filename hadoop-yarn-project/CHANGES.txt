@@ -112,6 +112,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4075. [reader REST API] implement support for querying for flows
     and flow runs (Varun Saxena via vrushali)
 
+    YARN-4203. Add request/response logging & timing for each REST endpoint
+    call (Varun Saxena via vrushali)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via
