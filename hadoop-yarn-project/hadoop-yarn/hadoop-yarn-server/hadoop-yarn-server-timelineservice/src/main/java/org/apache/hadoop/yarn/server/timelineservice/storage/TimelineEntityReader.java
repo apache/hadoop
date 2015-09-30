@@ -25,9 +25,12 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -40,6 +43,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
  * entities that are being requested.
  */
 abstract class TimelineEntityReader {
+  private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
   protected final boolean singleEntityRead;
 
   protected String userId;
@@ -131,6 +135,11 @@ abstract class TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     Result result = getResult(hbaseConf, conn);
+    if (result == null || result.isEmpty()) {
+      // Could not find a matching row.
+      LOG.info("Cannot find matching entity of type " + entityType);
+      return null;
+    }
     return parseEntity(result);
   }
 
@@ -145,18 +154,22 @@ abstract class TimelineEntityReader {
     augmentParams(hbaseConf, conn);
 
     NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    Iterable<Result> results = getResults(hbaseConf, conn);
-    for (Result result : results) {
-      TimelineEntity entity = parseEntity(result);
-      if (entity == null) {
-        continue;
+    ResultScanner results = getResults(hbaseConf, conn);
+    try {
+      for (Result result : results) {
+        TimelineEntity entity = parseEntity(result);
+        if (entity == null) {
+          continue;
+        }
+        entities.add(entity);
+        if (entities.size() > limit) {
+          entities.pollLast();
+        }
       }
-      entities.add(entity);
-      if (entities.size() > limit) {
-        entities.pollLast();
-      }
+      return entities;
+    } finally {
+      results.close();
     }
-    return entities;
   }
 
   /**
@@ -184,9 +197,9 @@ abstract class TimelineEntityReader {
       throws IOException;
 
   /**
-   * Fetches an iterator for {@link Result} instances for a multi-entity read.
+   * Fetches a {@link ResultScanner} for a multi-entity read.
    */
-  protected abstract Iterable<Result> getResults(Configuration hbaseConf,
+  protected abstract ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException;
 
   /**
