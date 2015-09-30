@@ -250,7 +250,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       PacketHeader header = new PacketHeader();
       header.readFields(in);
 
-      LOG.debug("DFSClient readChunk got header {}", header);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("DFSClient readChunk got header " + header);
+      }
 
       // Sanity check the lengths
       if (!header.sanityCheck(lastSeqNo)) {

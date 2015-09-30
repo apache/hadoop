@@ -73,8 +73,10 @@ public class Sender implements DataTransferProtocol {
 
   private static void send(final DataOutputStream out, final Op opcode,
       final Message proto) throws IOException {
-    LOG.trace("Sending DataTransferOp {}: {}",
-        proto.getClass().getSimpleName(), proto);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Sending DataTransferOp " + proto.getClass().getSimpleName()
+          + ": " + proto);
+    }
     op(out, opcode);
     proto.writeDelimitedTo(out);
     out.flush();

@@ -129,13 +129,18 @@ public class DfsClientShmManager implements Closeable {
       ShmId shmId = shm.getShmId();
       Slot slot = shm.allocAndRegisterSlot(blockId);
       if (shm.isFull()) {
-        LOG.trace("{}: pulled the last slot {} out of {}",
-            this, slot.getSlotIdx(), shm);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(this + ": pulled the last slot " + slot.getSlotIdx() +
+              " out of " + shm);
+        }
         DfsClientShm removedShm = notFull.remove(shmId);
         Preconditions.checkState(removedShm == shm);
         full.put(shmId, shm);
       } else {
-        LOG.trace("{}: pulled slot {} out of {}", this, slot.getSlotIdx(), shm);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(this + ": pulled slot " + slot.getSlotIdx() +
+              " out of " + shm);
+        }
       }
       return slot;
     }
@@ -182,7 +187,9 @@ public class DfsClientShmManager implements Closeable {
           DfsClientShm shm = 
               new DfsClientShm(PBHelperClient.convert(resp.getId()),
                   fis[0], this, peer);
-          LOG.trace("{}: createNewShm: created {}", this, shm);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": createNewShm: created " + shm);
+          }
           return shm;
         } finally {
           try {
@@ -227,11 +234,15 @@ public class DfsClientShmManager implements Closeable {
         String clientName, ExtendedBlockId blockId) throws IOException {
       while (true) {
         if (closed) {
-          LOG.trace("{}: the DfsClientShmManager has been closed.", this);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": the DfsClientShmManager has been closed.");
+          }
           return null;
         }
         if (disabled) {
-          LOG.trace("{}: shared memory segment access is disabled.", this);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": shared memory segment access is disabled.");
+          }
           return null;
         }
         // Try to use an existing slot.
@@ -242,7 +253,9 @@ public class DfsClientShmManager implements Closeable {
         // There are no free slots.  If someone is loading more slots, wait
         // for that to finish.
         if (loading) {
-          LOG.trace("{}: waiting for loading to finish...", this);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": waiting for loading to finish...");
+          }
           finishedLoading.awaitUninterruptibly();
         } else {
           // Otherwise, load the slot ourselves.
@@ -269,9 +282,11 @@ public class DfsClientShmManager implements Closeable {
             // fired and marked the shm as disconnected.  In this case, we
             // obviously don't want to add the SharedMemorySegment to our list
             // of valid not-full segments.
-            LOG.debug("{}: the UNIX domain socket associated with this "
-                + "short-circuit memory closed before we could make use of "
-                + "the shm.", this);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(this + ": the UNIX domain socket associated with " +
+                  "this short-circuit memory closed before we could make " +
+                  "use of the shm.");
+            }
           } else {
             notFull.put(shm.getShmId(), shm);
           }
@@ -294,7 +309,9 @@ public class DfsClientShmManager implements Closeable {
         Preconditions.checkState(!full.containsKey(shm.getShmId()));
         Preconditions.checkState(!notFull.containsKey(shm.getShmId()));
         if (shm.isEmpty()) {
-          LOG.trace("{}: freeing empty stale {}", this, shm);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": freeing empty stale " + shm);
+          }
           shm.free();
         }
       } else {
@@ -319,8 +336,10 @@ public class DfsClientShmManager implements Closeable {
           // lowest ID, but it could still occur.  In most workloads,
           // fragmentation should not be a major concern, since it doesn't impact
           // peak file descriptor usage or the speed of allocation.
-          LOG.trace("{}: shutting down UNIX domain socket for empty {}",
-              this, shm);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": shutting down UNIX domain socket for " +
+                "empty " + shm);
+          }
           shutdown(shm);
         } else {
           notFull.put(shmId, shm);
