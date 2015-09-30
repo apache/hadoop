@@ -44,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -68,6 +69,7 @@ public class TimelineReaderWebServices {
 
   private static final String COMMA_DELIMITER = ",";
   private static final String COLON_DELIMITER = ":";
+  private static final String QUERY_STRING_SEP = "?";
 
   private void init(HttpServletResponse response) {
     response.setContentType(null);
@@ -185,14 +187,24 @@ public class TimelineReaderWebServices {
     return callerUGI;
   }
 
+  private static String getUserName(UserGroupInformation callerUGI) {
+    return ((callerUGI != null) ? callerUGI.getUserName().trim() : "");
+  }
+
   private TimelineReaderManager getTimelineReaderManager() {
     return (TimelineReaderManager)
         ctxt.getAttribute(TimelineReaderServer.TIMELINE_READER_MANAGER_ATTR);
   }
 
-  private static void handleException(Exception e) throws BadRequestException,
+  private static void handleException(Exception e, String url, long startTime,
+      String invalidNumMsg) throws BadRequestException,
       WebApplicationException {
-    if (e instanceof IllegalArgumentException) {
+    long endTime = Time.monotonicNow();
+    LOG.info("Processed URL " + url + " but encountered exception (Took " +
+        (endTime - startTime) + " ms.)");
+    if (e instanceof NumberFormatException) {
+      throw new BadRequestException(invalidNumMsg + " is not a numeric value.");
+    } else if (e instanceof IllegalArgumentException) {
       throw new BadRequestException("Requested Invalid Field.");
     } else {
       LOG.error("Error while processing REST request", e);
@@ -273,9 +285,14 @@ public class TimelineReaderWebServices {
       @QueryParam("metricfilters") String metricfilters,
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (null == req.getQueryString() ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
-    UserGroupInformation callerUGI = getUser(req);
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
@@ -291,16 +308,16 @@ public class TimelineReaderWebServices {
           parseValuesStr(metricfilters, COMMA_DELIMITER),
           parseValuesStr(eventfilters, COMMA_DELIMITER),
           parseFieldsStr(fields, COMMA_DELIMITER));
-    } catch (NumberFormatException e) {
-      throw new BadRequestException(
-          "createdTime or modifiedTime start/end or limit or flowId is not" +
-          " a numeric value.");
     } catch (Exception e) {
-      handleException(e);
+      handleException(e, url, startTime,
+          "createdTime or modifiedTime start/end or limit or flowId");
     }
+    long endTime = Time.monotonicNow();
     if (entities == null) {
       entities = Collections.emptySet();
     }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
     return entities;
   }
 
@@ -342,24 +359,32 @@ public class TimelineReaderWebServices {
       @QueryParam("flowid") String flowId,
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (null == req.getQueryString() ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
-    UserGroupInformation callerUGI = getUser(req);
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
           parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
           parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
           parseStr(entityId), parseFieldsStr(fields, COMMA_DELIMITER));
-    } catch (NumberFormatException e) {
-      throw new BadRequestException("flowrunid is not a numeric value.");
     } catch (Exception e) {
-      handleException(e);
+      handleException(e, url, startTime, "flowrunid");
     }
+    long endTime = Time.monotonicNow();
     if (entity == null) {
+      LOG.info("Processed URL " + url + " but entity not found" + " (Took " +
+          (endTime - startTime) + " ms.)");
       throw new NotFoundException("Timeline entity {id: " + parseStr(entityId) +
           ", type: " + parseStr(entityType) + " } is not found");
     }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
     return entity;
   }
 
@@ -394,9 +419,14 @@ public class TimelineReaderWebServices {
       @PathParam("flowrunid") String flowRunId,
       @QueryParam("userid") String userId,
       @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (null == req.getQueryString() ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
-    UserGroupInformation callerUGI = getUser(req);
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
@@ -404,15 +434,18 @@ public class TimelineReaderWebServices {
           parseStr(flowId), parseLongStr(flowRunId), null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null,
           parseFieldsStr(fields, COMMA_DELIMITER));
-    } catch (NumberFormatException e) {
-      throw new BadRequestException("flowRunId is not a numeric value.");
     } catch (Exception e) {
-      handleException(e);
+      handleException(e, url, startTime, "flowrunid");
     }
+    long endTime = Time.monotonicNow();
     if (entity == null) {
+      LOG.info("Processed URL " + url + " but flowrun not found (Took " +
+          (endTime - startTime) + " ms.)");
       throw new NotFoundException("Flow run {flow id: " + parseStr(flowId) +
           ", run id: " + parseLongStr(flowRunId) + " } is not found");
     }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
     return entity;
   }
 
@@ -443,6 +476,12 @@ public class TimelineReaderWebServices {
       @PathParam("clusterid") String clusterId,
       @QueryParam("limit") String limit,
       @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (null == req.getQueryString() ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
     init(res);
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<TimelineEntity> entities = null;
@@ -452,14 +491,15 @@ public class TimelineReaderWebServices {
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), parseLongStr(limit),
           null, null, null, null, null, null, null, null, null, null,
           parseFieldsStr(fields, COMMA_DELIMITER));
-    } catch (NumberFormatException e) {
-      throw new BadRequestException("limit is not a numeric value.");
     } catch (Exception e) {
-      handleException(e);
+      handleException(e, url, startTime, "limit");
     }
+    long endTime = Time.monotonicNow();
     if (entities == null) {
       entities = Collections.emptySet();
     }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
     return entities;
   }
 }
