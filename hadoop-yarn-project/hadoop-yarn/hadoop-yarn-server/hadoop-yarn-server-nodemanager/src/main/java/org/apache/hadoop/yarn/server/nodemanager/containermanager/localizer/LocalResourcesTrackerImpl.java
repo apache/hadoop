@@ -440,10 +440,12 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
    * @param {@link LocalResourceRequest} Resource localization request to
    *        localize the resource.
    * @param {@link Path} local directory path
+   * @param {@link DeletionService} Deletion Service to delete existing
+   *        path for localization.
    */
   @Override
-  public Path
-      getPathForLocalization(LocalResourceRequest req, Path localDirPath) {
+  public Path getPathForLocalization(LocalResourceRequest req,
+      Path localDirPath, DeletionService delService) {
     Path rPath = localDirPath;
     if (useLocalCacheDirectoryManager && localDirPath != null) {
 
@@ -463,8 +465,22 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       inProgressLocalResourcesMap.put(req, rPath);
     }
 
-    rPath = new Path(rPath,
-        Long.toString(uniqueNumberGenerator.incrementAndGet()));
+    while (true) {
+      Path uniquePath = new Path(rPath,
+          Long.toString(uniqueNumberGenerator.incrementAndGet()));
+      File file = new File(uniquePath.toUri().getRawPath());
+      if (!file.exists()) {
+        rPath = uniquePath;
+        break;
+      }
+      // If the directory already exists, delete it and move to next one.
+      LOG.warn("Directory " + uniquePath + " already exists, " +
+          "try next one.");
+      if (delService != null) {
+        delService.delete(getUser(), uniquePath);
+      }
+    }
+
     Path localPath = new Path(rPath, req.getPath().getName());
     LocalizedResource rsrc = localrsrc.get(req);
     rsrc.setLocalPath(localPath);
