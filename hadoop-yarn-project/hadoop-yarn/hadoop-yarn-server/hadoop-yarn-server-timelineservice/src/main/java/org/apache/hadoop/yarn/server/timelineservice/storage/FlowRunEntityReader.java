@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -96,7 +97,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected Iterable<Result> getResults(Configuration hbaseConf,
+  protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
     throw new UnsupportedOperationException(
         "multiple entity query is not supported");
@@ -110,14 +111,14 @@ class FlowRunEntityReader extends TimelineEntityReader {
     flowRun.setRunId(flowRunId);
 
     // read the start time
-    Long startTime = (Long)FlowRunColumn.MIN_START_TIME.readResult(result);
+    Number startTime = (Number)FlowRunColumn.MIN_START_TIME.readResult(result);
     if (startTime != null) {
-      flowRun.setStartTime(startTime);
+      flowRun.setStartTime(startTime.longValue());
     }
     // read the end time if available
-    Long endTime = (Long)FlowRunColumn.MAX_END_TIME.readResult(result);
+    Number endTime = (Number)FlowRunColumn.MAX_END_TIME.readResult(result);
     if (endTime != null) {
-      flowRun.setMaxEndTime(endTime);
+      flowRun.setMaxEndTime(endTime.longValue());
     }
 
     // read the flow version

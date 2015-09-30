@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -85,24 +86,10 @@ class ApplicationEntityReader extends GenericEntityReader {
   }
 
   @Override
-  protected Iterable<Result> getResults(Configuration hbaseConf,
+  protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
-    // If getEntities() is called for an application, there can be at most
-    // one entity. If the entity passes the filter, it is returned. Otherwise,
-    // an empty set is returned.
-    byte[] rowKey = ApplicationRowKey.getRowKey(clusterId, userId, flowId,
-        flowRunId, appId);
-    Get get = new Get(rowKey);
-    get.setMaxVersions(Integer.MAX_VALUE);
-    Result result = table.getResult(hbaseConf, conn, get);
-    TimelineEntity entity = parseEntity(result);
-    Set<Result> set;
-    if (entity != null) {
-      set = Collections.singleton(result);
-    } else {
-      set = Collections.emptySet();
-    }
-    return set;
+    throw new UnsupportedOperationException(
+        "we don't support multiple apps query");
   }
 
   @Override
