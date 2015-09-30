@@ -75,7 +75,7 @@ public abstract class CredentialBasedAccessTokenProvider
     this.timer = new AccessTokenTimer(timer);
   }
   
-  abstract String getCredential();
+  public abstract String getCredential();
 
   @Override
   public void setConf(Configuration conf) {
