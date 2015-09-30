@@ -42,7 +42,7 @@ public abstract class AccessTokenProvider implements Configurable {
    * 
    * @return Access token to be added to connection header.
    */
-  abstract String getAccessToken() throws IOException;
+  public abstract String getAccessToken() throws IOException;
 
   /**
    * Return the conf.
