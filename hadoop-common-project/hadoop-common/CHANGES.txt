@@ -1106,6 +1106,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10296. Incorrect null check in SwiftRestClient#buildException().
     (Rahul Palamuttam and Kanaka Kumar Avvaru via aajisaka)
 
+    HADOOP-8437. getLocalPathForWrite should throw IOException for invalid
+    paths. (Brahma Reddy Battula via zxu)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

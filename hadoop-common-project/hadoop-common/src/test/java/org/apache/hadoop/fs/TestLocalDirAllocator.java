@@ -458,4 +458,21 @@ public class TestLocalDirAllocator {
     }
   }
 
+  /**
+   * Test to check the LocalDirAllocation for the invalid path HADOOP-8437
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testGetLocalPathForWriteForInvalidPaths() throws Exception {
+    conf.set(CONTEXT, " ");
+    try {
+      dirAllocator.getLocalPathForWrite("/test", conf);
+      fail("not throwing the exception");
+    } catch (IOException e) {
+      assertEquals("Incorrect exception message",
+          "No space available in any of the local directories.", e.getMessage());
+    }
+  }
+
 }

@@ -304,8 +304,10 @@ public class LocalDirAllocator {
         dirDF = dfList.toArray(new DF[dirs.size()]);
         savedLocalDirs = newLocalDirs;
         
-        // randomize the first disk picked in the round-robin selection 
-        dirNumLastAccessed = dirIndexRandomizer.nextInt(dirs.size());
+        if (dirs.size() > 0) {
+          // randomize the first disk picked in the round-robin selection
+          dirNumLastAccessed = dirIndexRandomizer.nextInt(dirs.size());
+        }
       }
     }
 
