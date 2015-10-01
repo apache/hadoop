@@ -19,6 +19,9 @@ Release 2.6.2 - UNRELEASED
     MAPREDUCE-6334. Fetcher#copyMapOutput is leaking usedMemory upon
     IOException during InMemoryMapOutput shuffle handler (Eric Payne via jlowe)
 
+    MAPREDUCE-6497. Fix wrong value of JOB_FINISHED event in
+    JobHistoryEventHandler. (Shinichi Yamashita via aajisaka)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
