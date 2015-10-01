@@ -172,8 +172,6 @@ public final class SwiftRestClient {
    */
   private URI objectLocationURI;
 
-  private final URI filesystemURI;
-
   /**
    * The name of the service provider
    */
@@ -235,13 +233,6 @@ public final class SwiftRestClient {
    */
   private synchronized URI getEndpointURI() {
     return endpointURI;
-  }
-
-  /**
-   * object location endpoint
-   */
-  private synchronized URI getObjectLocationURI() {
-    return objectLocationURI;
   }
 
   /**
@@ -328,13 +319,6 @@ public final class SwiftRestClient {
     @Override
     protected final GetMethod doCreateMethod(String uri) {
       return new GetMethod(uri);
-    }
-  }
-
-  private static abstract class PostMethodProcessor<R> extends HttpMethodProcessor<PostMethod, R> {
-    @Override
-    protected final PostMethod doCreateMethod(String uri) {
-      return new PostMethod(uri);
     }
   }
 
@@ -449,7 +433,6 @@ public final class SwiftRestClient {
   private SwiftRestClient(URI filesystemURI,
                           Configuration conf)
       throws SwiftConfigurationException {
-    this.filesystemURI = filesystemURI;
     Properties props = RestClientBindings.bind(filesystemURI, conf);
     String stringAuthUri = getOption(props, SWIFT_AUTH_PROPERTY);
     username = getOption(props, SWIFT_USERNAME_PROPERTY);
@@ -1129,7 +1112,6 @@ public final class SwiftRestClient {
       final List<Catalog> serviceCatalog = access.getServiceCatalog();
       //locate the specific service catalog that defines Swift; variations
       //in the name of this add complexity to the search
-      boolean catalogMatch = false;
       StringBuilder catList = new StringBuilder();
       StringBuilder regionList = new StringBuilder();
 
@@ -1470,7 +1452,7 @@ public final class SwiftRestClient {
         //and the result
         Header availableContentRange = method.getResponseHeader(
           HEADER_CONTENT_RANGE);
-        if (requestContentLen!=null) {
+        if (availableContentRange != null) {
           errorText.append(" available ").append(availableContentRange.getValue());
         }
         fault = new EOFException(errorText.toString());
