@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -307,6 +309,44 @@ public class TestHadoopArchiveLogs {
     statuses[5] = LogAggregationStatus.FAILED;
     statuses[6] = LogAggregationStatus.TIME_OUT;
     Assert.assertArrayEquals(statuses, LogAggregationStatus.values());
+  }
+
+  @Test(timeout = 5000)
+  public void testPrepareWorkingDir() throws Exception {
+    Configuration conf = new Configuration();
+    HadoopArchiveLogs hal = new HadoopArchiveLogs(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path workingDir = new Path("target", "testPrepareWorkingDir");
+    fs.delete(workingDir, true);
+    Assert.assertFalse(fs.exists(workingDir));
+    // -force is false and the dir doesn't exist so it will create one
+    hal.force = false;
+    boolean dirPrepared = hal.prepareWorkingDir(fs, workingDir);
+    Assert.assertTrue(dirPrepared);
+    Assert.assertTrue(fs.exists(workingDir));
+    Assert.assertEquals(
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.NONE),
+        fs.getFileStatus(workingDir).getPermission());
+    // Throw a file in the dir
+    Path dummyFile = new Path(workingDir, "dummy.txt");
+    fs.createNewFile(dummyFile);
+    Assert.assertTrue(fs.exists(dummyFile));
+    // -force is false and the dir exists, so nothing will happen and the dummy
+    // still exists
+    dirPrepared = hal.prepareWorkingDir(fs, workingDir);
+    Assert.assertFalse(dirPrepared);
+    Assert.assertTrue(fs.exists(workingDir));
+    Assert.assertTrue(fs.exists(dummyFile));
+    // -force is true and the dir exists, so it will recreate it and the dummy
+    // won't exist anymore
+    hal.force = true;
+    dirPrepared = hal.prepareWorkingDir(fs, workingDir);
+    Assert.assertTrue(dirPrepared);
+    Assert.assertTrue(fs.exists(workingDir));
+    Assert.assertEquals(
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.NONE),
+        fs.getFileStatus(workingDir).getPermission());
+    Assert.assertFalse(fs.exists(dummyFile));
   }
 
   private static void createFile(FileSystem fs, Path p, long sizeMultiple)
