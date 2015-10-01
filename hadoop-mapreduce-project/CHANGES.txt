@@ -585,6 +585,9 @@ Release 2.8.0 - UNRELEASED
 
    MAPREDUCE-6480. archive-logs tool may miss applications (rkanter)
 
+   MAPREDUCE-6494. Permission issue when running archive-logs tool as
+   different users (rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
