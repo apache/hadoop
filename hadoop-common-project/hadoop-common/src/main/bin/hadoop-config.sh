@@ -250,7 +250,10 @@ TOOL_PATH="${TOOL_PATH:-$HADOOP_PREFIX/share/hadoop/tools/lib/*}"
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
-HADOOP_HOME=$HADOOP_PREFIX
+
+if [ "$HADOOP_HOME" = "" ]; then
+  HADOOP_HOME=$HADOOP_PREFIX
+fi
 if [ "$cygwin" = true ]; then
   HADOOP_HOME=$(cygpath -w "$HADOOP_HOME" 2>/dev/null)
 fi

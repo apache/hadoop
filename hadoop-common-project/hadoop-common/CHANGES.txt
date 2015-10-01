@@ -707,6 +707,8 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-12213. Interrupted exception can occur when Client#stop is called.
     (Kuhu Shukla via ozawa)
+    
+    HADOOP-12451. Setting HADOOP_HOME explicitly should be allowed. (kasha)
 
 Release 2.7.1 - 2015-07-06 
 
