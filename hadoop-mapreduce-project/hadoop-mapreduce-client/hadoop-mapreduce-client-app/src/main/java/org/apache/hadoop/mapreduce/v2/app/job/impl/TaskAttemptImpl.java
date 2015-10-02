@@ -1349,7 +1349,7 @@ public abstract class TaskAttemptImpl implements
     return attemptState;
   }
 
-  private static TaskAttemptState getExternalState(
+  protected static TaskAttemptState getExternalState(
       TaskAttemptStateInternal smState) {
     switch (smState) {
     case ASSIGNED:
@@ -1379,6 +1379,11 @@ public abstract class TaskAttemptImpl implements
           + "stateMachineTaskAttemptState to externalTaskAttemptState: "
           + smState);
     }
+  }
+
+  // check whether the attempt is assigned if container is not null
+  boolean isContainerAssigned() {
+    return container != null;
   }
 
   //always called in write lock
