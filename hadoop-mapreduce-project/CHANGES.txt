@@ -588,6 +588,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6494. Permission issue when running archive-logs tool as
    different users (rkanter)
 
+   MAPREDUCE-6485. Create a new task attempt with failed map task priority
+   if in-progress attempts are unassigned. (Xianyin Xin via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
