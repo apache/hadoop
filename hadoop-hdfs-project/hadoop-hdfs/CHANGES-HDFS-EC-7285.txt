@@ -453,3 +453,5 @@
 
     HDFS-9040. Erasure coding: coordinate data streamers in
     DFSStripedOutputStream. (jing9 and Walter Su)
+
+    HDFS-9185. Fix null tracer in ErasureCodingWorker. (Rakesh R via jing9)

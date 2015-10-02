@@ -369,7 +369,7 @@ public class DataNode extends ReconfigurableBase
   private boolean isPermissionEnabled;
   private String dnUserName = null;
   private ErasureCodingWorker ecWorker;
-  final Tracer tracer;
+  private final Tracer tracer;
   private final TracerConfigurationManager tracerConfigurationManager;
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
@@ -3394,5 +3394,9 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   ScheduledThreadPoolExecutor getMetricsLoggerTimer() {
     return metricsLoggerTimer;
+  }
+
+  public Tracer getTracer() {
+    return tracer;
   }
 }

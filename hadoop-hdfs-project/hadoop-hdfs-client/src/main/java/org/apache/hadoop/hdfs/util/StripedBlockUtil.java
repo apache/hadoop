@@ -222,11 +222,14 @@ public class StripedBlockUtil {
       }
     } catch (ExecutionException e) {
       if (DFSClient.LOG.isDebugEnabled()) {
-        DFSClient.LOG.debug("ExecutionException " + e);
+        DFSClient.LOG.debug("Exception during striped read task", e);
       }
       return new StripingChunkReadResult(futures.remove(future),
           StripingChunkReadResult.FAILED);
     } catch (CancellationException e) {
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Exception during striped read task", e);
+      }
       return new StripingChunkReadResult(futures.remove(future),
           StripingChunkReadResult.CANCELLED);
     }
