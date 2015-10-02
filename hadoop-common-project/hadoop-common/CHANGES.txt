@@ -713,6 +713,9 @@ Release 2.7.2 - UNRELEASED
     
     HADOOP-12451. Setting HADOOP_HOME explicitly should be allowed. (kasha)
 
+    HADOOP-12230. hadoop-project declares duplicate, conflicting curator
+    dependencies. (Rakesh R via aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
