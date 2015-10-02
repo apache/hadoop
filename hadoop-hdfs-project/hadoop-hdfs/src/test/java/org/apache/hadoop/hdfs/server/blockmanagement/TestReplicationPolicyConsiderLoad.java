@@ -20,85 +20,45 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
-import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.test.PathUtils;
-import org.apache.hadoop.util.VersionInfo;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public class TestReplicationPolicyConsiderLoad {
+@RunWith(Parameterized.class)
+public class TestReplicationPolicyConsiderLoad
+    extends BaseReplicationPolicyTest {
 
-  private static NameNode namenode;
-  private static DatanodeManager dnManager;
-  private static List<DatanodeRegistration> dnrList;
-  private static DatanodeDescriptor[] dataNodes;
-  private static DatanodeStorageInfo[] storages;
+  public TestReplicationPolicyConsiderLoad(String blockPlacementPolicy) {
+    this.blockPlacementPolicy = blockPlacementPolicy;
+  }
 
-  @BeforeClass
-  public static void setupCluster() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+  @Parameterized.Parameters
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+        { BlockPlacementPolicyDefault.class.getName() } });
+  }
+
+  @Override
+  DatanodeDescriptor[] getDatanodeDescriptors(Configuration conf) {
     final String[] racks = {
         "/rack1",
         "/rack1",
-        "/rack1",
         "/rack2",
         "/rack2",
-        "/rack2"};
+        "/rack3",
+        "/rack3"};
     storages = DFSTestUtil.createDatanodeStorageInfos(racks);
-    dataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    File baseDir = PathUtils.getTestDir(TestReplicationPolicy.class);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        new File(baseDir, "name").getPath());
-    conf.setBoolean(
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
-    conf.setBoolean(
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
-    conf.setBoolean(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
-    DFSTestUtil.formatNameNode(conf);
-    namenode = new NameNode(conf);
-    int blockSize = 1024;
-
-    dnrList = new ArrayList<DatanodeRegistration>();
-    dnManager = namenode.getNamesystem().getBlockManager().getDatanodeManager();
-
-    // Register DNs
-    for (int i=0; i < 6; i++) {
-      DatanodeRegistration dnr = new DatanodeRegistration(dataNodes[i],
-          new StorageInfo(NodeType.DATA_NODE), new ExportedBlockKeys(),
-          VersionInfo.getVersion());
-      dnrList.add(dnr);
-      dnManager.registerDatanode(dnr);
-      dataNodes[i].getStorageInfos()[0].setUtilizationForTesting(
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*blockSize, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*blockSize, 0L);
-      dataNodes[i].updateHeartbeat(
-          BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[i]),
-          0L, 0L, 0, 0, null);
-    }
+    return DFSTestUtil.toDatanodeDescriptor(storages);
   }
 
   private final double EPSILON = 0.0001;
@@ -110,46 +70,39 @@ public class TestReplicationPolicyConsiderLoad {
   public void testChooseTargetWithDecomNodes() throws IOException {
     namenode.getNamesystem().writeLock();
     try {
-      String blockPoolId = namenode.getNamesystem().getBlockPoolId();
-      dnManager.handleHeartbeat(dnrList.get(3),
+      dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[3],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[3]),
-          blockPoolId, dataNodes[3].getCacheCapacity(),
-          dataNodes[3].getCacheRemaining(),
-          2, 0, 0, null);
-      dnManager.handleHeartbeat(dnrList.get(4),
+          dataNodes[3].getCacheCapacity(),
+          dataNodes[3].getCacheUsed(),
+          2, 0, null);
+      dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[4],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[4]),
-          blockPoolId, dataNodes[4].getCacheCapacity(),
-          dataNodes[4].getCacheRemaining(),
-          4, 0, 0, null);
-      dnManager.handleHeartbeat(dnrList.get(5),
+          dataNodes[4].getCacheCapacity(),
+          dataNodes[4].getCacheUsed(),
+          4, 0, null);
+      dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[5],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[5]),
-          blockPoolId, dataNodes[5].getCacheCapacity(),
-          dataNodes[5].getCacheRemaining(),
-          4, 0, 0, null);
+          dataNodes[5].getCacheCapacity(),
+          dataNodes[5].getCacheUsed(),
+          4, 0, null);
+
       // value in the above heartbeats
       final int load = 2 + 4 + 4;
       
-      FSNamesystem fsn = namenode.getNamesystem();
       assertEquals((double)load/6, dnManager.getFSClusterStats()
         .getInServiceXceiverAverage(), EPSILON);
       
       // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
       // returns false
       for (int i = 0; i < 3; i++) {
-        DatanodeDescriptor d = dnManager.getDatanode(dnrList.get(i));
+        DatanodeDescriptor d = dataNodes[i];
         dnManager.getDecomManager().startDecommission(d);
         d.setDecommissioned();
       }
       assertEquals((double)load/3, dnManager.getFSClusterStats()
         .getInServiceXceiverAverage(), EPSILON);
 
-      // update references of writer DN to update the de-commissioned state
-      List<DatanodeDescriptor> liveNodes = new ArrayList<DatanodeDescriptor>();
-      dnManager.fetchDatanodes(liveNodes, null, false);
-      DatanodeDescriptor writerDn = null;
-      if (liveNodes.contains(dataNodes[0])) {
-        writerDn = liveNodes.get(liveNodes.indexOf(dataNodes[0]));
-      }
+      DatanodeDescriptor writerDn = dataNodes[0];
 
       // Call chooseTarget()
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
@@ -171,10 +124,4 @@ public class TestReplicationPolicyConsiderLoad {
     }
     NameNode.LOG.info("Done working on it");
   }
-
-  @AfterClass
-  public static void teardownCluster() {
-    if (namenode != null) namenode.stop();
-  }
-
 }
