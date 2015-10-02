@@ -350,6 +350,9 @@ Trunk (Unreleased)
 
     HDFS-8800. hdfs --daemon stop namenode corrupts logs (John Smith via aw)
 
+    HDFS-9191. Typo in Hdfs.java. NoSuchElementException is misspelled.
+    (Catherine Palmer via jghoman)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
