@@ -55,6 +55,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private MonitoringThread monitoringThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
+  private long containerMetricsUnregisterDelayMs;
 
   @VisibleForTesting
   final Map<ContainerId, ProcessTreeInfo> trackingContainers =
@@ -126,6 +127,9 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.containerMetricsPeriodMs =
         conf.getLong(YarnConfiguration.NM_CONTAINER_METRICS_PERIOD_MS,
             YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS);
+    this.containerMetricsUnregisterDelayMs = conf.getLong(
+        YarnConfiguration.NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS);
 
     long configuredPMemForContainers =
         NodeManagerHardwareUtils.getContainerMemoryMB(conf) * 1024 * 1024L;
@@ -425,7 +429,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
                 if (containerMetricsEnabled) {
                   ContainerMetrics usageMetrics = ContainerMetrics
-                      .forContainer(containerId, containerMetricsPeriodMs);
+                      .forContainer(containerId, containerMetricsPeriodMs,
+                      containerMetricsUnregisterDelayMs);
                   usageMetrics.recordProcessId(pId);
                 }
               }
@@ -476,10 +481,12 @@ public class ContainersMonitorImpl extends AbstractService implements
             // Add usage to container metrics
             if (containerMetricsEnabled) {
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordMemoryUsage(
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordMemoryUsage(
                   (int) (currentPmemUsage >> 20));
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordCpuUsage
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordCpuUsage
                   ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
 
@@ -609,7 +616,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     ContainerId containerId = monitoringEvent.getContainerId();
     ContainerMetrics usageMetrics = ContainerMetrics
-        .forContainer(containerId, containerMetricsPeriodMs);
+        .forContainer(containerId, containerMetricsPeriodMs,
+        containerMetricsUnregisterDelayMs);
 
     int vmemLimitMBs;
     int pmemLimitMBs;

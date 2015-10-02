@@ -1008,6 +1008,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3727. For better error recovery, check if the directory exists before
     using it for localization. (Zhihai Xu via jlowe)
 
+    YARN-3619. ContainerMetrics unregisters during getMetrics and leads to
+    ConcurrentModificationException (Zhihai Xu via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
