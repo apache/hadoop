@@ -22,11 +22,15 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -44,7 +48,8 @@ public class TestContainerMetrics {
 
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
     ContainerId containerId = mock(ContainerId.class);
-    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId, 100);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
 
     metrics.recordMemoryUsage(1024);
     metrics.getMetrics(collector, true);
@@ -82,7 +87,8 @@ public class TestContainerMetrics {
 
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
     ContainerId containerId = mock(ContainerId.class);
-    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId, 100);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
 
     int anyPmemLimit = 1024;
     int anyVmemLimit = 2048;
@@ -106,5 +112,40 @@ public class TestContainerMetrics {
     MetricsRecords.assertMetric(record, ContainerMetrics.VCORE_LIMIT_METRIC_NAME, anyVcores);
 
     collector.clear();
+  }
+
+  @Test
+  public void testContainerMetricsFinished() throws InterruptedException {
+    MetricsSystemImpl system = new MetricsSystemImpl();
+    system.init("test");
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    ApplicationId appId = ApplicationId.newInstance(1234, 3);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 4);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerMetrics metrics1 = ContainerMetrics.forContainer(system,
+        containerId1, 1, 0);
+    ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2);
+    ContainerMetrics metrics2 = ContainerMetrics.forContainer(system,
+        containerId2, 1, 0);
+    ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
+    ContainerMetrics metrics3 = ContainerMetrics.forContainer(system,
+        containerId3, 1, 0);
+    metrics1.finished();
+    metrics2.finished();
+    system.sampleMetrics();
+    system.sampleMetrics();
+    Thread.sleep(100);
+    system.stop();
+    // verify metrics1 is unregistered
+    assertTrue(metrics1 != ContainerMetrics.forContainer(
+        system, containerId1, 1, 0));
+    // verify metrics2 is unregistered
+    assertTrue(metrics2 != ContainerMetrics.forContainer(
+        system, containerId2, 1, 0));
+    // verify metrics3 is still registered
+    assertTrue(metrics3 == ContainerMetrics.forContainer(
+        system, containerId3, 1, 0));
+    system.shutdown();
   }
 }

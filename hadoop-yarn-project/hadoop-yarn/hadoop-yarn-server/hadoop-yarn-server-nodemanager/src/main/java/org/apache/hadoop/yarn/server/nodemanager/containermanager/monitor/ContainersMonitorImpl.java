@@ -54,6 +54,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private MonitoringThread monitoringThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
+  private long containerMetricsUnregisterDelayMs;
 
   final List<ContainerId> containersToBeRemoved;
   final Map<ContainerId, ProcessTreeInfo> containersToBeAdded;
@@ -116,6 +117,9 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.containerMetricsPeriodMs =
         conf.getLong(YarnConfiguration.NM_CONTAINER_METRICS_PERIOD_MS,
             YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS);
+    this.containerMetricsUnregisterDelayMs = conf.getLong(
+        YarnConfiguration.NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS);
 
     long configuredPMemForContainers = conf.getLong(
         YarnConfiguration.NM_PMEM_MB,
@@ -379,7 +383,8 @@ public class ContainersMonitorImpl extends AbstractService implements
           for (ContainerId containerId : containersToBeRemoved) {
             if (containerMetricsEnabled) {
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).finished();
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).finished();
             }
             trackingContainers.remove(containerId);
             LOG.info("Stopping resource-monitoring for " + containerId);
@@ -417,7 +422,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
                 if (containerMetricsEnabled) {
                   ContainerMetrics usageMetrics = ContainerMetrics
-                      .forContainer(containerId, containerMetricsPeriodMs);
+                      .forContainer(containerId, containerMetricsPeriodMs,
+                      containerMetricsUnregisterDelayMs);
                   int cpuVcores = ptInfo.getCpuVcores();
                   final int vmemLimit = (int) (ptInfo.getVmemLimit() >> 20);
                   final int pmemLimit = (int) (ptInfo.getPmemLimit() >> 20);
@@ -464,10 +470,12 @@ public class ContainersMonitorImpl extends AbstractService implements
             // Add usage to container metrics
             if (containerMetricsEnabled) {
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordMemoryUsage(
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordMemoryUsage(
                   (int) (currentPmemUsage >> 20));
               ContainerMetrics.forContainer(
-                  containerId, containerMetricsPeriodMs).recordCpuUsage
+                  containerId, containerMetricsPeriodMs,
+                  containerMetricsUnregisterDelayMs).recordCpuUsage
                   ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
 
