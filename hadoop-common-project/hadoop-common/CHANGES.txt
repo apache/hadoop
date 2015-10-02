@@ -12,6 +12,9 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-12230. hadoop-project declares duplicate, conflicting curator
+    dependencies. (Rakesh R via aajisaka)
+
 Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
