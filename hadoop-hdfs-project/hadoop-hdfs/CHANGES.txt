@@ -1481,6 +1481,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9001. DFSUtil.getNsServiceRpcUris() can return too many entries in a
     non-HA, non-federated cluster. (Daniel Templeton via atm)
 
+    HDFS-9100. HDFS Balancer does not respect dfs.client.use.datanode.hostname.
+    (Casey Brotherton via Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

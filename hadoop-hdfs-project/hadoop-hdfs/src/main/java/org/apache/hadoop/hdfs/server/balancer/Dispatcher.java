@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -121,6 +122,8 @@ public class Dispatcher {
   private final long getBlocksMinBlockSize;
 
   private final int ioFileBufferSize;
+
+  private final boolean connectToDnViaHostname;
 
   static class Allocator {
     private final int max;
@@ -322,8 +325,9 @@ public class Dispatcher {
       DataInputStream in = null;
       try {
         sock.connect(
-            NetUtils.createSocketAddr(target.getDatanodeInfo().getXferAddr()),
-            HdfsConstants.READ_TIMEOUT);
+            NetUtils.createSocketAddr(target.getDatanodeInfo().
+                getXferAddr(Dispatcher.this.connectToDnViaHostname)),
+                HdfsConstants.READ_TIMEOUT);
 
         sock.setKeepAlive(true);
 
@@ -942,6 +946,9 @@ public class Dispatcher {
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnc.fallbackToSimpleAuth);
     this.ioFileBufferSize = DFSUtilClient.getIoFileBufferSize(conf);
+    this.connectToDnViaHostname = conf.getBoolean(
+        HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME,
+        HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
   }
 
   public DistributedFileSystem getDistributedFileSystem() {
