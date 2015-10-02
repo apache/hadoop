@@ -536,11 +536,13 @@ public class VolumeScanner extends Thread {
           return 0;
         }
       }
-      long saveDelta = monotonicMs - curBlockIter.getLastSavedMs();
-      if (saveDelta >= conf.cursorSaveMs) {
-        LOG.debug("{}: saving block iterator {} after {} ms.",
-            this, curBlockIter, saveDelta);
-        saveBlockIterator(curBlockIter);
+      if (curBlockIter != null) {
+        long saveDelta = monotonicMs - curBlockIter.getLastSavedMs();
+        if (saveDelta >= conf.cursorSaveMs) {
+          LOG.debug("{}: saving block iterator {} after {} ms.",
+              this, curBlockIter, saveDelta);
+          saveBlockIterator(curBlockIter);
+        }
       }
       bytesScanned = scanBlock(block, conf.targetBytesPerSec);
       if (bytesScanned >= 0) {
