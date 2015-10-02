@@ -1573,6 +1573,14 @@
 
   <property>
     <description>
+    The delay time ms to unregister container metrics after completion.
+    </description>
+    <name>yarn.nodemanager.container-metrics.unregister-delay-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
     Class used to calculate current container resource utilization.
     </description>
     <name>yarn.nodemanager.container-monitor.process-tree.class</name>
