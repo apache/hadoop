@@ -53,6 +53,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -436,5 +438,33 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   @Idempotent
   public UpdateApplicationPriorityResponse updateApplicationPriority(
       UpdateApplicationPriorityRequest request) throws YarnException,
+      IOException;
+
+  /**
+   * <p>The interface used by clients to request the
+   * <code>ResourceManager</code> to signal a container. For example,
+   * the client can send command OUTPUT_THREAD_DUMP to dump threads of the
+   * container.</p>
+   *
+   * <p>The client, via {@link SignalContainerRequest} provides the
+   * id of the container and the signal command. </p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
+   * application before signaling the container.
+   * The user needs to have <code>MODIFY_APP</code> permission.</p>
+   *
+   * <p>Currently, the <code>ResourceManager</code> returns an empty response
+   * on success and throws an exception on rejecting the request.</p>
+   *
+   * @param request request to signal a container
+   * @return <code>ResourceManager</code> returns an empty response
+   *         on success and throws an exception on rejecting the request
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public SignalContainerResponse signalContainer(
+      SignalContainerRequest request) throws YarnException,
       IOException;
 }

@@ -16,11 +16,23 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-public enum ContainerManagerEventType {
-  FINISH_APPS,
-  FINISH_CONTAINERS,
-  DECREASE_CONTAINERS_RESOURCE,
-  SIGNAL_CONTAINERS
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+
+// This event can be triggered by one of the following flows
+// WebUI -> Container
+// CLI -> RM -> NM
+public class SignalContainersLauncherEvent extends ContainersLauncherEvent{
+
+  private final SignalContainerCommand command;
+  public SignalContainersLauncherEvent(Container container,
+      SignalContainerCommand command) {
+    super(container, ContainersLauncherEventType.SIGNAL_CONTAINER);
+    this.command = command;
+  }
+  public SignalContainerCommand getCommand() {
+    return command;
+  }
 }

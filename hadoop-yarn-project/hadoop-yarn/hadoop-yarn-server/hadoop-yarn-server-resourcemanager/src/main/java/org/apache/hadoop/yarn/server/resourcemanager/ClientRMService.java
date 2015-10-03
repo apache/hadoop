@@ -93,10 +93,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -139,6 +141,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeSignalContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -1390,6 +1393,68 @@ public class ClientRMService extends AbstractService implements
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_PRIORITY, "ClientRMService", applicationId);
     return response;
+  }
+
+  /**
+   * Signal a container.
+   * After the request passes some sanity check, it will be delivered
+   * to RMNodeImpl so that the next NM heartbeat will pick up the signal request
+   */
+  @Override
+  public SignalContainerResponse signalContainer(
+      SignalContainerRequest request) throws YarnException, IOException {
+    ContainerId containerId = request.getContainerId();
+
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+
+    ApplicationId applicationId = containerId.getApplicationAttemptId().
+        getApplicationId();
+    RMApp application = this.rmContext.getRMApps().get(applicationId);
+    if (application == null) {
+      RMAuditLogger.logFailure(callerUGI.getUserName(),
+          AuditConstants.SIGNAL_CONTAINER, "UNKNOWN", "ClientRMService",
+          "Trying to signal an absent container", applicationId, containerId);
+      throw RPCUtil
+          .getRemoteException("Trying to signal an absent container "
+              + containerId);
+    }
+
+    if (!checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.MODIFY_APP, application)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.SIGNAL_CONTAINER, "User doesn't have permissions to "
+              + ApplicationAccessType.MODIFY_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot perform operation "
+          + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
+    }
+
+    RMContainer container = scheduler.getRMContainer(containerId);
+    if (container != null) {
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMNodeSignalContainerEvent(container.getContainer().getNodeId(),
+              request));
+      RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
+          AuditConstants.SIGNAL_CONTAINER, "ClientRMService", applicationId,
+          containerId);
+    } else {
+      RMAuditLogger.logFailure(callerUGI.getUserName(),
+          AuditConstants.SIGNAL_CONTAINER, "UNKNOWN", "ClientRMService",
+          "Trying to signal an absent container", applicationId, containerId);
+      throw RPCUtil
+          .getRemoteException("Trying to signal an absent container "
+              + containerId);
+    }
+
+    return recordFactory
+        .newRecordInstance(SignalContainerResponse.class);
   }
 
 }

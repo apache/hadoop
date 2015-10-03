@@ -222,6 +222,42 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     super.testChangeContainerResource();
   }
 
+  @Override
+  public void testOutputThreadDumpSignal() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testOutputThreadDumpSignal");
+    super.testOutputThreadDumpSignal();
+  }
+
+  @Override
+  public void testGracefulShutdownSignal() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testGracefulShutdownSignal");
+    super.testGracefulShutdownSignal();
+  }
+
+  @Override
+  public void testForcefulShutdownSignal() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testForcefulShutdownSignal");
+    super.testForcefulShutdownSignal();
+  }
+
   private boolean shouldRunTest() {
     return System
         .getProperty(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH) != null;

@@ -73,6 +73,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.After;
 import org.junit.Before;
 
+import static org.mockito.Mockito.spy;
+
 public abstract class BaseContainerManagerTest {
 
   protected static RecordFactory recordFactory = RecordFactoryProvider
@@ -148,7 +150,7 @@ public abstract class BaseContainerManagerTest {
   protected ContainerExecutor createContainerExecutor() {
     DefaultContainerExecutor exec = new DefaultContainerExecutor();
     exec.setConf(conf);
-    return exec;
+    return spy(exec);
   }
 
   @Before

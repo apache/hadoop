@@ -112,6 +112,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
@@ -451,6 +453,12 @@ public class TestClientRedirect {
     public UpdateApplicationPriorityResponse updateApplicationPriority(
         UpdateApplicationPriorityRequest request) throws YarnException,
         IOException {
+      return null;
+    }
+
+    @Override
+    public SignalContainerResponse signalContainer(
+        SignalContainerRequest request) throws IOException {
       return null;
     }
   }

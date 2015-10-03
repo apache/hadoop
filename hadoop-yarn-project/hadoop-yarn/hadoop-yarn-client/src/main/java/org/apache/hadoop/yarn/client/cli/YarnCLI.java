@@ -35,6 +35,7 @@ public abstract class YarnCLI extends Configured implements Tool {
   public static final String KILL_CMD = "kill";
   public static final String MOVE_TO_QUEUE_CMD = "movetoqueue";
   public static final String HELP_CMD = "help";
+  public static final String SIGNAL_CMD = "signal";
   protected PrintStream sysout;
   protected PrintStream syserr;
   protected YarnClient client;

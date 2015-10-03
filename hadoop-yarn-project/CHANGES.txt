@@ -222,6 +222,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-1651. CapacityScheduler side changes to support container resize.
     (Wangda Tan via jianhe)
+
+    YARN-1897. CLI and core support for signal container functionality.
+    (Ming Ma via xgong)
  
   IMPROVEMENTS
 
