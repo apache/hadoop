@@ -186,7 +186,7 @@
         var r = null;
         if (v < 70) {
           r = 'progress-bar-success';
-        } else if (u.usedPercentage < 85) {
+        } else if (v < 85) {
           r = 'progress-bar-warning';
         } else {
           r = "progress-bar-danger";
