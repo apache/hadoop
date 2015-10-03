@@ -1834,7 +1834,7 @@
 
   <property>
     <description>
-    Default maximum number of retires for timeline servive client
+    Default maximum number of retries for timeline service client
     and value -1 means no limit.
     </description>
     <name>yarn.timeline-service.client.max-retries</name>

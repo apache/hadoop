@@ -153,9 +153,9 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_AMLAUNCHER_THREAD_COUNT = 50;
 
   /** Retry times to connect with NM.*/
-  public static final String RM_NODEMANAGER_CONNECT_RETIRES =
+  public static final String RM_NODEMANAGER_CONNECT_RETRIES =
       RM_PREFIX + "nodemanager-connect-retries";
-  public static final int DEFAULT_RM_NODEMANAGER_CONNECT_RETIRES = 10;
+  public static final int DEFAULT_RM_NODEMANAGER_CONNECT_RETRIES = 10;
 
   /** The Kerberos principal for the resource manager.*/
   public static final String RM_PRINCIPAL =

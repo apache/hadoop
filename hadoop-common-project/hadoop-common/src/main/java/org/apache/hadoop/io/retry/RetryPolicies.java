@@ -371,7 +371,7 @@ public class RetryPolicies {
     /**
      * Parse the given string as a MultipleLinearRandomRetry object.
      * The format of the string is "t_1, n_1, t_2, n_2, ...",
-     * where t_i and n_i are the i-th pair of sleep time and number of retires.
+     * where t_i and n_i are the i-th pair of sleep time and number of retries.
      * Note that the white spaces in the string are ignored.
      *
      * @return the parsed object, or null if the parsing fails.

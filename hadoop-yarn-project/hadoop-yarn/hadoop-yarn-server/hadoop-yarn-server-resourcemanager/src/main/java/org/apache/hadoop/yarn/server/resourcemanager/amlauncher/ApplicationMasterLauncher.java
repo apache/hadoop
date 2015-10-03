@@ -68,8 +68,8 @@ public class ApplicationMasterLauncher extends AbstractService implements
     Configuration newConf = new YarnConfiguration(conf);
     newConf.setInt(CommonConfigurationKeysPublic.
             IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-        conf.getInt(YarnConfiguration.RM_NODEMANAGER_CONNECT_RETIRES,
-            YarnConfiguration.DEFAULT_RM_NODEMANAGER_CONNECT_RETIRES));
+        conf.getInt(YarnConfiguration.RM_NODEMANAGER_CONNECT_RETRIES,
+            YarnConfiguration.DEFAULT_RM_NODEMANAGER_CONNECT_RETRIES));
     setConfig(newConf);
     super.serviceInit(newConf);
   }

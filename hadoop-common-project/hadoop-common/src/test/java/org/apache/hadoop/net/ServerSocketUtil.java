@@ -34,7 +34,7 @@ public class ServerSocketUtil {
    * Port scan & allocate is how most other apps find ports
    * 
    * @param port given port
-   * @param retries number of retires
+   * @param retries number of retries
    * @return
    * @throws IOException
    */

@@ -546,6 +546,10 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-12458. Retries is typoed to spell Retires in parts of
+    hadoop-yarn and hadoop-common
+    (Neelesh Srinivas Salian via harsh)
+
     HADOOP-12271. Hadoop Jar Error Should Be More Explanatory
     (Josh Elser via harsh)
 
