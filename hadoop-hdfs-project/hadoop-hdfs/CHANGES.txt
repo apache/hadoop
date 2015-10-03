@@ -1483,6 +1483,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9191. Typo in Hdfs.java. NoSuchElementException is misspelled.
     (Catherine Palmer via jghoman)
 
+    HDFS-9193. Fix incorrect references the usages of the DN in dfshealth.js.
+    (Chang Li via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
