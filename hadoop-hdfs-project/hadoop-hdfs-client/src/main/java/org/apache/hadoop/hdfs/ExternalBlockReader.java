@@ -80,7 +80,7 @@ public final class ExternalBlockReader implements BlockReader {
   }
 
   @Override
-  public int available() throws IOException {
+  public int available() {
     // We return the amount of bytes between the current offset and the visible
     // length.  Some of the other block readers return a shorter length than
     // that.  The only advantage to returning a shorter length is that the

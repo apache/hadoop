@@ -33,7 +33,6 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.AlignedStripe;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunk;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
@@ -586,7 +585,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     abstract void prepareDecodeInputs();
 
     /** prepare the parity chunk and block reader if necessary */
-    abstract boolean prepareParityChunk(int index) throws IOException;
+    abstract boolean prepareParityChunk(int index);
 
     abstract void decode();
 
@@ -878,7 +877,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
 
     @Override
-    boolean prepareParityChunk(int index) throws IOException {
+    boolean prepareParityChunk(int index) {
       Preconditions.checkState(index >= dataBlkNum
           && alignedStripe.chunks[index] == null);
       if (blockReaders[index] != null && blockReaders[index].shouldSkip) {

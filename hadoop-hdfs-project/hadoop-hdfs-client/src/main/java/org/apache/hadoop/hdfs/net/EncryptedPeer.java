@@ -38,12 +38,12 @@ public class EncryptedPeer implements Peer {
    * An encrypted InputStream.
    */
   private final InputStream in;
-  
+
   /**
    * An encrypted OutputStream.
    */
   private final OutputStream out;
-  
+
   /**
    * An encrypted ReadableByteChannel.
    */
@@ -53,7 +53,7 @@ public class EncryptedPeer implements Peer {
     this.enclosedPeer = enclosedPeer;
     this.in = ios.in;
     this.out = ios.out;
-    this.channel = ios.in instanceof ReadableByteChannel ? 
+    this.channel = ios.in instanceof ReadableByteChannel ?
         (ReadableByteChannel)ios.in : null;
   }
 

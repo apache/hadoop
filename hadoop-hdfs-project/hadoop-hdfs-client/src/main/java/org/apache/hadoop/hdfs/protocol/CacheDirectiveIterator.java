@@ -92,9 +92,8 @@ public class CacheDirectiveIterator
   @Override
   public BatchedEntries<CacheDirectiveEntry> makeRequest(Long prevKey)
       throws IOException {
-    BatchedEntries<CacheDirectiveEntry> entries = null;
-    TraceScope scope = tracer.newScope("listCacheDirectives");
-    try {
+    BatchedEntries<CacheDirectiveEntry> entries;
+    try (TraceScope ignored = tracer.newScope("listCacheDirectives")) {
       entries = namenode.listCacheDirectives(prevKey, filter);
     } catch (IOException e) {
       if (e.getMessage().contains("Filtering by ID is unsupported")) {
@@ -105,9 +104,9 @@ public class CacheDirectiveIterator
         // This is somewhat brittle, since it depends on directives being
         // returned in order of ascending ID.
         entries = namenode.listCacheDirectives(id - 1, filter);
-        for (int i=0; i<entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++) {
           CacheDirectiveEntry entry = entries.get(i);
-          if (entry.getInfo().getId().equals((Long)id)) {
+          if (entry.getInfo().getId().equals(id)) {
             return new SingleEntry(entry);
           }
         }
@@ -115,8 +114,6 @@ public class CacheDirectiveIterator
             "Did not find requested id " + id);
       }
       throw e;
-    } finally {
-      scope.close();
     }
     Preconditions.checkNotNull(entries);
     return entries;

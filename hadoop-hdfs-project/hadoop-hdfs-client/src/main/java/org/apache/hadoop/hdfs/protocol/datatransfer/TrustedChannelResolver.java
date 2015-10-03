@@ -29,7 +29,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * The default implementation is to return false indicating that
  * the channel is not trusted.
  * This class can be overridden to provide custom logic to determine
- * whether a channel is trusted or not. 
+ * whether a channel is trusted or not.
  * The custom class can be specified via configuration.
  *
  */
@@ -39,14 +39,13 @@ public class TrustedChannelResolver implements Configurable {
   /**
    * Returns an instance of TrustedChannelResolver.
    * Looks up the configuration to see if there is custom class specified.
-   * @param conf
    * @return TrustedChannelResolver
    */
   public static TrustedChannelResolver getInstance(Configuration conf) {
     Class<? extends TrustedChannelResolver> clazz =
-      conf.getClass(
-          HdfsClientConfigKeys.DFS_TRUSTEDCHANNEL_RESOLVER_CLASS,
-          TrustedChannelResolver.class, TrustedChannelResolver.class);
+        conf.getClass(
+            HdfsClientConfigKeys.DFS_TRUSTEDCHANNEL_RESOLVER_CLASS,
+            TrustedChannelResolver.class, TrustedChannelResolver.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }
 

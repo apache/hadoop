@@ -56,25 +56,25 @@ public abstract class CredentialBasedAccessTokenProvider
     extends AccessTokenProvider {
   public static final String OAUTH_CREDENTIAL_KEY
       = "dfs.webhdfs.oauth2.credential";
-  
+
   private AccessTokenTimer timer;
-  
+
   private String clientId;
-  
+
   private String refreshURL;
-  
+
   private String accessToken;
-  
+
   private boolean initialCredentialObtained = false;
 
   CredentialBasedAccessTokenProvider() {
     this.timer = new AccessTokenTimer();
   }
-  
+
   CredentialBasedAccessTokenProvider(Timer timer) {
     this.timer = new AccessTokenTimer(timer);
   }
-  
+
   public abstract String getCredential();
 
   @Override
@@ -90,10 +90,10 @@ public abstract class CredentialBasedAccessTokenProvider
       refresh();
       initialCredentialObtained = true;
     }
-    
+
     return accessToken;
   }
-  
+
   void refresh() throws IOException {
     try {
       OkHttpClient client = new OkHttpClient();
@@ -122,7 +122,7 @@ public abstract class CredentialBasedAccessTokenProvider
       ObjectMapper mapper = new ObjectMapper();
       Map<?, ?> response = mapper.reader(Map.class)
           .readValue(responseBody.body().string());
-      
+
       String newExpiresIn = response.get(EXPIRES_IN).toString();
       timer.setExpiresIn(newExpiresIn);
 

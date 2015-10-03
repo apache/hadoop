@@ -297,13 +297,11 @@ public class NameNodeProxiesClient {
    * @param failoverProxyProvider Failover proxy provider
    * @return an object containing both the proxy and the associated
    *         delegation token service it corresponds to
-   * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public static <T> ProxyAndInfo<T> createHAProxy(
       Configuration conf, URI nameNodeUri, Class<T> xface,
-      AbstractNNFailoverProxyProvider<T> failoverProxyProvider)
-      throws IOException {
+      AbstractNNFailoverProxyProvider<T> failoverProxyProvider) {
     Preconditions.checkNotNull(failoverProxyProvider);
     // HA case
     DfsClientConf config = new DfsClientConf(conf);

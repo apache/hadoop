@@ -55,7 +55,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @deprecated this is an old implementation that is being left around
- * in case any issues spring up with the new {@link RemoteBlockReader2} implementation.
+ * in case any issues spring up with the new {@link RemoteBlockReader2}
+ * implementation.
  * It will be removed in the next release.
  */
 @InterfaceAudience.Private
@@ -79,7 +80,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   private final long blockId;
 
   /** offset in block of of first chunk - may be less than startOffset
-      if startOffset is not chunk-aligned */
+   if startOffset is not chunk-aligned */
   private final long firstChunkOffset;
 
   private final int bytesPerChecksum;
@@ -91,7 +92,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * at the beginning so that the read can begin on a chunk boundary.
    */
   private final long bytesNeededToFinish;
-  
+
   /**
    * True if we are reading from a local DataNode.
    */
@@ -99,17 +100,17 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
   private boolean eos = false;
   private boolean sentStatusCode = false;
-  
+
   ByteBuffer checksumBytes = null;
   /** Amount of unread data in the current received packet */
   int dataLeft = 0;
-  
+
   private final PeerCache peerCache;
 
   private final Tracer tracer;
-  
+
   /* FSInputChecker interface */
-  
+
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
    * This violates one rule when there is a checksum error:
@@ -118,9 +119,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * the checksum.
    */
   @Override
-  public synchronized int read(byte[] buf, int off, int len) 
-                               throws IOException {
-    
+  public synchronized int read(byte[] buf, int off, int len)
+      throws IOException {
+
     // This has to be set here, *before* the skip, since we can
     // hit EOS during the skip, in the case that our entire read
     // is smaller than the checksum chunk.
@@ -135,7 +136,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
         throw new IOException("Could not skip required number of bytes");
       }
     }
-    
+
     int nRead = super.read(buf, off, len);
 
     // if eos was set in the previous read, send a status code to the DN
@@ -152,7 +153,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   @Override
   public synchronized long skip(long n) throws IOException {
     /* How can we make sure we don't throw a ChecksumException, at least
-     * in majority of the cases?. This one throws. */  
+     * in majority of the cases?. This one throws. */
     long nSkipped = 0;
     while (nSkipped < n) {
       int toSkip = (int)Math.min(n-nSkipped, Integer.MAX_VALUE);
@@ -168,18 +169,18 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   @Override
   public int read() throws IOException {
     throw new IOException("read() is not expected to be invoked. " +
-                          "Use read(buf, off, len) instead.");
+        "Use read(buf, off, len) instead.");
   }
-  
+
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    /* Checksum errors are handled outside the BlockReader. 
-     * DFSInputStream does not always call 'seekToNewSource'. In the 
+    /* Checksum errors are handled outside the BlockReader.
+     * DFSInputStream does not always call 'seekToNewSource'. In the
      * case of pread(), it just tries a different replica without seeking.
-     */ 
+     */
     return false;
   }
-  
+
   @Override
   public void seek(long pos) throws IOException {
     throw new IOException("Seek() is not supported in BlockInputChecker");
@@ -188,17 +189,17 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   @Override
   protected long getChunkPosition(long pos) {
     throw new RuntimeException("getChunkPosition() is not supported, " +
-                               "since seek is not required");
+        "since seek is not required");
   }
-  
+
   /**
-   * Makes sure that checksumBytes has enough capacity 
-   * and limit is set to the number of checksum bytes needed 
+   * Makes sure that checksumBytes has enough capacity
+   * and limit is set to the number of checksum bytes needed
    * to be read.
    */
   private void adjustChecksumBytes(int dataLen) {
-    int requiredSize = 
-      ((dataLen + bytesPerChecksum - 1)/bytesPerChecksum)*checksumSize;
+    int requiredSize =
+        ((dataLen + bytesPerChecksum - 1)/bytesPerChecksum)*checksumSize;
     if (checksumBytes == null || requiredSize > checksumBytes.capacity()) {
       checksumBytes =  ByteBuffer.wrap(new byte[requiredSize]);
     } else {
@@ -206,42 +207,39 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     }
     checksumBytes.limit(requiredSize);
   }
-  
+
   @Override
-  protected synchronized int readChunk(long pos, byte[] buf, int offset, 
-                                       int len, byte[] checksumBuf) 
-                                       throws IOException {
-    TraceScope scope = tracer.
-        newScope("RemoteBlockReader#readChunk(" + blockId + ")");
-    try {
+  protected synchronized int readChunk(long pos, byte[] buf, int offset,
+      int len, byte[] checksumBuf)
+      throws IOException {
+    try (TraceScope ignored = tracer.newScope(
+        "RemoteBlockReader#readChunk(" + blockId + ")")) {
       return readChunkImpl(pos, buf, offset, len, checksumBuf);
-    } finally {
-      scope.close();
     }
   }
 
   private synchronized int readChunkImpl(long pos, byte[] buf, int offset,
-                                     int len, byte[] checksumBuf)
-                                     throws IOException {
+      int len, byte[] checksumBuf)
+      throws IOException {
     // Read one chunk.
     if (eos) {
       // Already hit EOF
       return -1;
     }
-    
+
     // Read one DATA_CHUNK.
     long chunkOffset = lastChunkOffset;
     if ( lastChunkLen > 0 ) {
       chunkOffset += lastChunkLen;
     }
-    
+
     // pos is relative to the start of the first chunk of the read.
     // chunkOffset is relative to the start of the block.
     // This makes sure that the read passed from FSInputChecker is the
     // for the same chunk we expect to be reading from the DN.
     if ( (pos + firstChunkOffset) != chunkOffset ) {
-      throw new IOException("Mismatch in pos : " + pos + " + " + 
-                            firstChunkOffset + " != " + chunkOffset);
+      throw new IOException("Mismatch in pos : " + pos + " + " +
+          firstChunkOffset + " != " + chunkOffset);
     }
 
     // Read next packet if the previous packet has been read completely.
@@ -254,8 +252,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
       // Sanity check the lengths
       if (!header.sanityCheck(lastSeqNo)) {
-           throw new IOException("BlockReader: error in packet header " +
-                                 header);
+        throw new IOException("BlockReader: error in packet header " +
+            header);
       }
 
       lastSeqNo = header.getSeqno();
@@ -263,7 +261,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       adjustChecksumBytes(header.getDataLen());
       if (header.getDataLen() > 0) {
         IOUtils.readFully(in, checksumBytes.array(), 0,
-                          checksumBytes.limit());
+            checksumBytes.limit());
       }
     }
 
@@ -284,14 +282,14 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       // How many chunks we can fit in databuffer
       //  - note this is a floor since we always read full chunks
       int chunksCanFit = Math.min(len / bytesPerChecksum,
-                                  checksumBuf.length / checksumSize);
+          checksumBuf.length / checksumSize);
 
       // How many chunks should we read
       checksumsToRead = Math.min(chunksLeft, chunksCanFit);
       // How many bytes should we actually read
       bytesToRead = Math.min(
-        checksumsToRead * bytesPerChecksum, // full chunks
-        dataLeft); // in case we have a partial
+          checksumsToRead * bytesPerChecksum, // full chunks
+          dataLeft); // in case we have a partial
     } else {
       // no checksum
       bytesToRead = Math.min(dataLeft, len);
@@ -328,7 +326,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       if (!hdr.isLastPacketInBlock() ||
           hdr.getDataLen() != 0) {
         throw new IOException("Expected empty end-of-read packet! Header: " +
-                              hdr);
+            hdr);
       }
 
       eos = true;
@@ -340,22 +338,22 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
     return bytesToRead;
   }
-  
+
   private RemoteBlockReader(String file, String bpid, long blockId,
       DataInputStream in, DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
       DatanodeID datanodeID, PeerCache peerCache, Tracer tracer) {
     // Path is used only for printing block and file information in debug
     super(new Path("/" + Block.BLOCK_FILE_PREFIX + blockId +
-                    ":" + bpid + ":of:"+ file)/*too non path-like?*/,
-          1, verifyChecksum,
-          checksum.getChecksumSize() > 0? checksum : null, 
-          checksum.getBytesPerChecksum(),
-          checksum.getChecksumSize());
+            ":" + bpid + ":of:"+ file)/*too non path-like?*/,
+        1, verifyChecksum,
+        checksum.getChecksumSize() > 0? checksum : null,
+        checksum.getBytesPerChecksum(),
+        checksum.getChecksumSize());
 
     this.isLocal = DFSUtilClient.isLocalAddress(NetUtils.
         createSocketAddr(datanodeID.getXferAddr()));
-    
+
     this.peer = peer;
     this.datanodeID = datanodeID;
     this.in = in;
@@ -394,46 +392,46 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * @return New BlockReader instance, or null on error.
    */
   public static RemoteBlockReader newBlockReader(String file,
-                                     ExtendedBlock block, 
-                                     Token<BlockTokenIdentifier> blockToken,
-                                     long startOffset, long len,
-                                     int bufferSize, boolean verifyChecksum,
-                                     String clientName, Peer peer,
-                                     DatanodeID datanodeID,
-                                     PeerCache peerCache,
-                                     CachingStrategy cachingStrategy,
-                                     Tracer tracer)
-                                       throws IOException {
+      ExtendedBlock block,
+      Token<BlockTokenIdentifier> blockToken,
+      long startOffset, long len,
+      int bufferSize, boolean verifyChecksum,
+      String clientName, Peer peer,
+      DatanodeID datanodeID,
+      PeerCache peerCache,
+      CachingStrategy cachingStrategy,
+      Tracer tracer)
+      throws IOException {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream()));
     new Sender(out).readBlock(block, blockToken, clientName, startOffset, len,
         verifyChecksum, cachingStrategy);
-    
+
     //
     // Get bytes in block, set streams
     //
 
     DataInputStream in = new DataInputStream(
         new BufferedInputStream(peer.getInputStream(), bufferSize));
-    
+
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         PBHelperClient.vintPrefixed(in));
     RemoteBlockReader2.checkSuccess(status, peer, block, file);
     ReadOpChecksumInfoProto checksumInfo =
-      status.getReadOpChecksumInfo();
+        status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
         checksumInfo.getChecksum());
     //Warning when we get CHECKSUM_NULL?
-    
+
     // Read the first chunk offset.
     long firstChunkOffset = checksumInfo.getChunkOffset();
-    
+
     if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
         firstChunkOffset <= (startOffset - checksum.getBytesPerChecksum())) {
       throw new IOException("BlockReader: error in first chunk offset (" +
-                            firstChunkOffset + ") startOffset is " + 
-                            startOffset + " for file " + file);
+          firstChunkOffset + ") startOffset is " +
+          startOffset + " for file " + file);
     }
 
     return new RemoteBlockReader(file, block.getBlockPoolId(), block.getBlockId(),
@@ -453,7 +451,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
     // in will be closed when its Socket is closed.
   }
-  
+
   @Override
   public void readFully(byte[] buf, int readOffset, int amtToRead)
       throws IOException {
@@ -479,7 +477,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     } catch (IOException e) {
       // It's ok not to be able to send this. But something is probably wrong.
       LOG.info("Could not send read status (" + statusCode + ") to datanode " +
-               peer.getRemoteAddressString() + ": " + e.getMessage());
+          peer.getRemoteAddressString() + ": " + e.getMessage());
     }
   }
 
@@ -487,9 +485,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public int read(ByteBuffer buf) throws IOException {
     throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
   }
-  
+
   @Override
-  public int available() throws IOException {
+  public int available() {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
     return RemoteBlockReader2.TCP_WINDOW_SIZE;
@@ -499,7 +497,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public boolean isLocal() {
     return isLocal;
   }
-  
+
   @Override
   public boolean isShortCircuit() {
     return false;

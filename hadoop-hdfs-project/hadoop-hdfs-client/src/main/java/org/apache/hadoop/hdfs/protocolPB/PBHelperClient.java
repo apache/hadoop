@@ -115,8 +115,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeMo
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
@@ -214,34 +212,34 @@ public class PBHelperClient {
   public static ExtendedBlockProto convert(final ExtendedBlock b) {
     if (b == null) return null;
     return ExtendedBlockProto.newBuilder().
-      setPoolId(b.getBlockPoolId()).
-      setBlockId(b.getBlockId()).
-      setNumBytes(b.getNumBytes()).
-      setGenerationStamp(b.getGenerationStamp()).
-      build();
+        setPoolId(b.getBlockPoolId()).
+        setBlockId(b.getBlockId()).
+        setNumBytes(b.getNumBytes()).
+        setGenerationStamp(b.getGenerationStamp()).
+        build();
   }
 
   public static TokenProto convert(Token<?> tok) {
     return TokenProto.newBuilder().
-      setIdentifier(ByteString.copyFrom(tok.getIdentifier())).
-      setPassword(ByteString.copyFrom(tok.getPassword())).
-      setKind(tok.getKind().toString()).
-      setService(tok.getService().toString()).build();
+        setIdentifier(ByteString.copyFrom(tok.getIdentifier())).
+        setPassword(ByteString.copyFrom(tok.getPassword())).
+        setKind(tok.getKind().toString()).
+        setService(tok.getService().toString()).build();
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
     return ShortCircuitShmIdProto.newBuilder().
-      setHi(shmId.getHi()).
-      setLo(shmId.getLo()).
-      build();
+        setHi(shmId.getHi()).
+        setLo(shmId.getLo()).
+        build();
 
   }
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
     return ShortCircuitShmSlotProto.newBuilder().
-      setShmId(convert(slotId.getShmId())).
-      setSlotIdx(slotId.getSlotIdx()).
-      build();
+        setShmId(convert(slotId.getShmId())).
+        setSlotIdx(slotId.getSlotIdx()).
+        build();
   }
 
   public static DatanodeIDProto convert(DatanodeID dn) {
@@ -249,23 +247,24 @@ public class PBHelperClient {
     // which is the same as the DatanodeUuid. Since StorageID is a required
     // field we pass the empty string if the DatanodeUuid is not yet known.
     return DatanodeIDProto.newBuilder()
-      .setIpAddr(dn.getIpAddr())
-      .setHostName(dn.getHostName())
-      .setXferPort(dn.getXferPort())
-      .setDatanodeUuid(dn.getDatanodeUuid() != null ? dn.getDatanodeUuid() : "")
-      .setInfoPort(dn.getInfoPort())
-      .setInfoSecurePort(dn.getInfoSecurePort())
-      .setIpcPort(dn.getIpcPort()).build();
+        .setIpAddr(dn.getIpAddr())
+        .setHostName(dn.getHostName())
+        .setXferPort(dn.getXferPort())
+        .setDatanodeUuid(dn.getDatanodeUuid() != null ?
+            dn.getDatanodeUuid() : "")
+        .setInfoPort(dn.getInfoPort())
+        .setInfoSecurePort(dn.getInfoSecurePort())
+        .setIpcPort(dn.getIpcPort()).build();
   }
 
   public static DatanodeInfoProto.AdminState convert(
-    final DatanodeInfo.AdminStates inAs) {
+      final DatanodeInfo.AdminStates inAs) {
     switch (inAs) {
-      case NORMAL: return  DatanodeInfoProto.AdminState.NORMAL;
-      case DECOMMISSION_INPROGRESS:
-        return DatanodeInfoProto.AdminState.DECOMMISSION_INPROGRESS;
-      case DECOMMISSIONED: return DatanodeInfoProto.AdminState.DECOMMISSIONED;
-      default: return DatanodeInfoProto.AdminState.NORMAL;
+    case NORMAL: return  DatanodeInfoProto.AdminState.NORMAL;
+    case DECOMMISSION_INPROGRESS:
+      return DatanodeInfoProto.AdminState.DECOMMISSION_INPROGRESS;
+    case DECOMMISSIONED: return DatanodeInfoProto.AdminState.DECOMMISSIONED;
+    default: return DatanodeInfoProto.AdminState.NORMAL;
     }
   }
 
@@ -278,23 +277,23 @@ public class PBHelperClient {
       builder.setUpgradeDomain(info.getUpgradeDomain());
     }
     builder
-      .setId(convert((DatanodeID) info))
-      .setCapacity(info.getCapacity())
-      .setDfsUsed(info.getDfsUsed())
-      .setRemaining(info.getRemaining())
-      .setBlockPoolUsed(info.getBlockPoolUsed())
-      .setCacheCapacity(info.getCacheCapacity())
-      .setCacheUsed(info.getCacheUsed())
-      .setLastUpdate(info.getLastUpdate())
-      .setLastUpdateMonotonic(info.getLastUpdateMonotonic())
-      .setXceiverCount(info.getXceiverCount())
-      .setAdminState(convert(info.getAdminState()))
-      .build();
+        .setId(convert((DatanodeID) info))
+        .setCapacity(info.getCapacity())
+        .setDfsUsed(info.getDfsUsed())
+        .setRemaining(info.getRemaining())
+        .setBlockPoolUsed(info.getBlockPoolUsed())
+        .setCacheCapacity(info.getCacheCapacity())
+        .setCacheUsed(info.getCacheUsed())
+        .setLastUpdate(info.getLastUpdate())
+        .setLastUpdateMonotonic(info.getLastUpdateMonotonic())
+        .setXceiverCount(info.getXceiverCount())
+        .setAdminState(convert(info.getAdminState()))
+        .build();
     return builder.build();
   }
 
   public static List<? extends HdfsProtos.DatanodeInfoProto> convert(
-    DatanodeInfo[] dnInfos) {
+      DatanodeInfo[] dnInfos) {
     return convert(dnInfos, 0);
   }
 
@@ -303,11 +302,11 @@ public class PBHelperClient {
    * {@code startIdx}.
    */
   public static List<? extends HdfsProtos.DatanodeInfoProto> convert(
-    DatanodeInfo[] dnInfos, int startIdx) {
+      DatanodeInfo[] dnInfos, int startIdx) {
     if (dnInfos == null)
       return null;
     ArrayList<HdfsProtos.DatanodeInfoProto> protos = Lists
-      .newArrayListWithCapacity(dnInfos.length);
+        .newArrayListWithCapacity(dnInfos.length);
     for (int i = startIdx; i < dnInfos.length; i++) {
       protos.add(convert(dnInfos[i]));
     }
@@ -344,48 +343,48 @@ public class PBHelperClient {
 
   public static StorageTypeProto convertStorageType(StorageType type) {
     switch(type) {
-      case DISK:
-        return StorageTypeProto.DISK;
-      case SSD:
-        return StorageTypeProto.SSD;
-      case ARCHIVE:
-        return StorageTypeProto.ARCHIVE;
-      case RAM_DISK:
-        return StorageTypeProto.RAM_DISK;
-      default:
-        throw new IllegalStateException(
+    case DISK:
+      return StorageTypeProto.DISK;
+    case SSD:
+      return StorageTypeProto.SSD;
+    case ARCHIVE:
+      return StorageTypeProto.ARCHIVE;
+    case RAM_DISK:
+      return StorageTypeProto.RAM_DISK;
+    default:
+      throw new IllegalStateException(
           "BUG: StorageType not found, type=" + type);
     }
   }
 
   public static StorageType convertStorageType(StorageTypeProto type) {
     switch(type) {
-      case DISK:
-        return StorageType.DISK;
-      case SSD:
-        return StorageType.SSD;
-      case ARCHIVE:
-        return StorageType.ARCHIVE;
-      case RAM_DISK:
-        return StorageType.RAM_DISK;
-      default:
-        throw new IllegalStateException(
+    case DISK:
+      return StorageType.DISK;
+    case SSD:
+      return StorageType.SSD;
+    case ARCHIVE:
+      return StorageType.ARCHIVE;
+    case RAM_DISK:
+      return StorageType.RAM_DISK;
+    default:
+      throw new IllegalStateException(
           "BUG: StorageTypeProto not found, type=" + type);
     }
   }
 
   public static List<StorageTypeProto> convertStorageTypes(
-    StorageType[] types) {
+      StorageType[] types) {
     return convertStorageTypes(types, 0);
   }
 
   public static List<StorageTypeProto> convertStorageTypes(
-    StorageType[] types, int startIdx) {
+      StorageType[] types, int startIdx) {
     if (types == null) {
       return null;
     }
     final List<StorageTypeProto> protos = new ArrayList<>(
-      types.length);
+        types.length);
     for (int i = startIdx; i < types.length; ++i) {
       protos.add(convertStorageType(types[i]));
     }
@@ -393,7 +392,7 @@ public class PBHelperClient {
   }
 
   public static InputStream vintPrefixed(final InputStream input)
-    throws IOException {
+      throws IOException {
     final int firstByte = input.read();
     if (firstByte == -1) {
       throw new EOFException("Premature EOF: no length prefix available");
@@ -445,8 +444,8 @@ public class PBHelperClient {
 
   public static HdfsProtos.CipherOptionProto convert(CipherOption option) {
     if (option != null) {
-      HdfsProtos.CipherOptionProto.Builder builder = HdfsProtos.CipherOptionProto.
-          newBuilder();
+      HdfsProtos.CipherOptionProto.Builder builder =
+          HdfsProtos.CipherOptionProto.newBuilder();
       if (option.getCipherSuite() != null) {
         builder.setSuite(convert(option.getCipherSuite()));
       }
@@ -521,7 +520,8 @@ public class PBHelperClient {
       storageIDs = null;
     } else {
       Preconditions.checkState(storageIDsCount == locs.size());
-      storageIDs = proto.getStorageIDsList().toArray(new String[storageIDsCount]);
+      storageIDs = proto.getStorageIDsList()
+          .toArray(new String[storageIDsCount]);
     }
 
     int[] indices = null;
@@ -534,7 +534,7 @@ public class PBHelperClient {
     }
 
     // Set values from the isCached list, re-using references from loc
-    List<DatanodeInfo> cachedLocs = new ArrayList<DatanodeInfo>(locs.size());
+    List<DatanodeInfo> cachedLocs = new ArrayList<>(locs.size());
     List<Boolean> isCachedList = proto.getIsCachedList();
     for (int i=0; i<isCachedList.size(); i++) {
       if (isCachedList.get(i)) {
@@ -548,8 +548,8 @@ public class PBHelperClient {
           storageIDs, storageTypes, proto.getOffset(), proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
     } else {
-      lb = new LocatedStripedBlock(PBHelperClient.convert(proto.getB()), targets,
-          storageIDs, storageTypes, indices, proto.getOffset(),
+      lb = new LocatedStripedBlock(PBHelperClient.convert(proto.getB()),
+          targets, storageIDs, storageTypes, indices, proto.getOffset(),
           proto.getCorrupt(),
           cachedLocs.toArray(new DatanodeInfo[cachedLocs.size()]));
       List<TokenProto> tokenProtos = proto.getBlockTokensList();
@@ -580,7 +580,7 @@ public class PBHelperClient {
       List<StorageTypeProto> storageTypesList, int expectedSize) {
     final StorageType[] storageTypes = new StorageType[expectedSize];
     if (storageTypesList.size() != expectedSize) {
-     // missing storage types
+      // missing storage types
       Preconditions.checkState(storageTypesList.isEmpty());
       Arrays.fill(storageTypes, StorageType.DEFAULT);
     } else {
@@ -600,9 +600,9 @@ public class PBHelperClient {
 
   // DatanodeId
   public static DatanodeID convert(DatanodeIDProto dn) {
-    return new DatanodeID(dn.getIpAddr(), dn.getHostName(), dn.getDatanodeUuid(),
-        dn.getXferPort(), dn.getInfoPort(), dn.hasInfoSecurePort() ? dn
-        .getInfoSecurePort() : 0, dn.getIpcPort());
+    return new DatanodeID(dn.getIpAddr(), dn.getHostName(),
+        dn.getDatanodeUuid(), dn.getXferPort(), dn.getInfoPort(),
+        dn.hasInfoSecurePort() ? dn.getInfoSecurePort() : 0, dn.getIpcPort());
   }
 
   public static AdminStates convert(AdminState adminState) {
@@ -642,8 +642,8 @@ public class PBHelperClient {
     return policies;
   }
 
-  public static EventBatchList convert(GetEditsFromTxidResponseProto resp) throws
-    IOException {
+  public static EventBatchList convert(GetEditsFromTxidResponseProto resp)
+      throws IOException {
     final InotifyProtos.EventsListProto list = resp.getEventsList();
     final long firstTxid = list.getFirstTxid();
     final long lastTxid = list.getLastTxid();
@@ -662,82 +662,82 @@ public class PBHelperClient {
       List<Event> events = Lists.newArrayList();
       for (InotifyProtos.EventProto p : bp.getEventsList()) {
         switch (p.getType()) {
-          case EVENT_CLOSE:
-            InotifyProtos.CloseEventProto close =
-                InotifyProtos.CloseEventProto.parseFrom(p.getContents());
-            events.add(new Event.CloseEvent(close.getPath(),
-                close.getFileSize(), close.getTimestamp()));
-            break;
-          case EVENT_CREATE:
-            InotifyProtos.CreateEventProto create =
-                InotifyProtos.CreateEventProto.parseFrom(p.getContents());
-            events.add(new Event.CreateEvent.Builder()
-                .iNodeType(createTypeConvert(create.getType()))
-                .path(create.getPath())
-                .ctime(create.getCtime())
-                .ownerName(create.getOwnerName())
-                .groupName(create.getGroupName())
-                .perms(convert(create.getPerms()))
-                .replication(create.getReplication())
-                .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
-                    create.getSymlinkTarget())
-                .defaultBlockSize(create.getDefaultBlockSize())
-                .overwrite(create.getOverwrite()).build());
-            break;
-          case EVENT_METADATA:
-            InotifyProtos.MetadataUpdateEventProto meta =
-                InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
-            events.add(new Event.MetadataUpdateEvent.Builder()
-                .path(meta.getPath())
-                .metadataType(metadataUpdateTypeConvert(meta.getType()))
-                .mtime(meta.getMtime())
-                .atime(meta.getAtime())
-                .replication(meta.getReplication())
-                .ownerName(
-                    meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
-                .groupName(
-                    meta.getGroupName().isEmpty() ? null : meta.getGroupName())
-                .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
-                .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
-                    meta.getAclsList()))
-                .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
-                    meta.getXAttrsList()))
-                .xAttrsRemoved(meta.getXAttrsRemoved())
-                .build());
-            break;
-          case EVENT_RENAME:
-            InotifyProtos.RenameEventProto rename =
-                InotifyProtos.RenameEventProto.parseFrom(p.getContents());
-            events.add(new Event.RenameEvent.Builder()
-                  .srcPath(rename.getSrcPath())
-                  .dstPath(rename.getDestPath())
-                  .timestamp(rename.getTimestamp())
-                  .build());
-            break;
-          case EVENT_APPEND:
-            InotifyProtos.AppendEventProto append =
-                InotifyProtos.AppendEventProto.parseFrom(p.getContents());
-            events.add(new Event.AppendEvent.Builder().path(append.getPath())
-                .newBlock(append.hasNewBlock() && append.getNewBlock())
-                .build());
-            break;
-          case EVENT_UNLINK:
-            InotifyProtos.UnlinkEventProto unlink =
-                InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
-            events.add(new Event.UnlinkEvent.Builder()
-                  .path(unlink.getPath())
-                  .timestamp(unlink.getTimestamp())
-                  .build());
-            break;
-          case EVENT_TRUNCATE:
-            InotifyProtos.TruncateEventProto truncate =
-                InotifyProtos.TruncateEventProto.parseFrom(p.getContents());
-            events.add(new Event.TruncateEvent(truncate.getPath(),
-                truncate.getFileSize(), truncate.getTimestamp()));
-            break;
-          default:
-            throw new RuntimeException("Unexpected inotify event type: " +
-                p.getType());
+        case EVENT_CLOSE:
+          InotifyProtos.CloseEventProto close =
+              InotifyProtos.CloseEventProto.parseFrom(p.getContents());
+          events.add(new Event.CloseEvent(close.getPath(),
+              close.getFileSize(), close.getTimestamp()));
+          break;
+        case EVENT_CREATE:
+          InotifyProtos.CreateEventProto create =
+              InotifyProtos.CreateEventProto.parseFrom(p.getContents());
+          events.add(new Event.CreateEvent.Builder()
+              .iNodeType(createTypeConvert(create.getType()))
+              .path(create.getPath())
+              .ctime(create.getCtime())
+              .ownerName(create.getOwnerName())
+              .groupName(create.getGroupName())
+              .perms(convert(create.getPerms()))
+              .replication(create.getReplication())
+              .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
+                  create.getSymlinkTarget())
+              .defaultBlockSize(create.getDefaultBlockSize())
+              .overwrite(create.getOverwrite()).build());
+          break;
+        case EVENT_METADATA:
+          InotifyProtos.MetadataUpdateEventProto meta =
+              InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
+          events.add(new Event.MetadataUpdateEvent.Builder()
+              .path(meta.getPath())
+              .metadataType(metadataUpdateTypeConvert(meta.getType()))
+              .mtime(meta.getMtime())
+              .atime(meta.getAtime())
+              .replication(meta.getReplication())
+              .ownerName(
+                  meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
+              .groupName(
+                  meta.getGroupName().isEmpty() ? null : meta.getGroupName())
+              .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
+              .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
+                  meta.getAclsList()))
+              .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
+                  meta.getXAttrsList()))
+              .xAttrsRemoved(meta.getXAttrsRemoved())
+              .build());
+          break;
+        case EVENT_RENAME:
+          InotifyProtos.RenameEventProto rename =
+              InotifyProtos.RenameEventProto.parseFrom(p.getContents());
+          events.add(new Event.RenameEvent.Builder()
+              .srcPath(rename.getSrcPath())
+              .dstPath(rename.getDestPath())
+              .timestamp(rename.getTimestamp())
+              .build());
+          break;
+        case EVENT_APPEND:
+          InotifyProtos.AppendEventProto append =
+              InotifyProtos.AppendEventProto.parseFrom(p.getContents());
+          events.add(new Event.AppendEvent.Builder().path(append.getPath())
+              .newBlock(append.hasNewBlock() && append.getNewBlock())
+              .build());
+          break;
+        case EVENT_UNLINK:
+          InotifyProtos.UnlinkEventProto unlink =
+              InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
+          events.add(new Event.UnlinkEvent.Builder()
+              .path(unlink.getPath())
+              .timestamp(unlink.getTimestamp())
+              .build());
+          break;
+        case EVENT_TRUNCATE:
+          InotifyProtos.TruncateEventProto truncate =
+              InotifyProtos.TruncateEventProto.parseFrom(p.getContents());
+          events.add(new Event.TruncateEvent(truncate.getPath(),
+              truncate.getFileSize(), truncate.getTimestamp()));
+          break;
+        default:
+          throw new RuntimeException("Unexpected inotify event type: " +
+              p.getType());
         }
       }
       batches.add(new EventBatch(txid, events.toArray(new Event[0])));
@@ -936,7 +936,7 @@ public class PBHelperClient {
   }
 
   static InotifyProtos.INodeType createTypeConvert(Event.CreateEvent.INodeType
-                                                       type) {
+      type) {
     switch (type) {
     case DIRECTORY:
       return InotifyProtos.INodeType.I_TYPE_DIRECTORY;
@@ -954,8 +954,8 @@ public class PBHelperClient {
     if (lb == null) return null;
     final int len = lb.size();
     List<LocatedBlock> result = new ArrayList<>(len);
-    for (int i = 0; i < len; ++i) {
-      result.add(convertLocatedBlockProto(lb.get(i)));
+    for (LocatedBlockProto aLb : lb) {
+      result.add(convertLocatedBlockProto(aLb));
     }
     return result;
   }
@@ -1148,7 +1148,7 @@ public class PBHelperClient {
     String poolName = Preconditions.checkNotNull(proto.getPoolName());
     CachePoolInfo info = new CachePoolInfo(poolName);
     if (proto.hasOwnerName()) {
-        info.setOwnerName(proto.getOwnerName());
+      info.setOwnerName(proto.getOwnerName());
     }
     if (proto.hasGroupName()) {
       info.setGroupName(proto.getGroupName());
@@ -1196,8 +1196,7 @@ public class PBHelperClient {
     return builder.build();
   }
 
-  public static CacheDirectiveInfoProto convert
-      (CacheDirectiveInfo info) {
+  public static CacheDirectiveInfoProto convert(CacheDirectiveInfo info) {
     CacheDirectiveInfoProto.Builder builder =
         CacheDirectiveInfoProto.newBuilder();
     if (info.getId() != null) {
@@ -1242,10 +1241,8 @@ public class PBHelperClient {
     return builder.build();
   }
 
-  public static CacheDirectiveInfo convert
-      (CacheDirectiveInfoProto proto) {
-    CacheDirectiveInfo.Builder builder =
-        new CacheDirectiveInfo.Builder();
+  public static CacheDirectiveInfo convert(CacheDirectiveInfoProto proto) {
+    CacheDirectiveInfo.Builder builder = new CacheDirectiveInfo.Builder();
     if (proto.hasId()) {
       builder.setId(proto.getId());
     }
@@ -1281,7 +1278,8 @@ public class PBHelperClient {
     return value;
   }
 
-  public static SnapshotDiffReport convert(SnapshotDiffReportProto reportProto) {
+  public static SnapshotDiffReport convert(
+      SnapshotDiffReportProto reportProto) {
     if (reportProto == null) {
       return null;
     }
@@ -1400,7 +1398,7 @@ public class PBHelperClient {
         fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
             : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-    fs.hasEcPolicy() ? convertErasureCodingPolicy(fs.getEcPolicy()) : null);
+        fs.hasEcPolicy() ? convertErasureCodingPolicy(fs.getEcPolicy()) : null);
   }
 
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {
@@ -1501,8 +1499,7 @@ public class PBHelperClient {
     }
   }
 
-  public static SafeModeActionProto convert(
-      SafeModeAction a) {
+  public static SafeModeActionProto convert(SafeModeAction a) {
     switch (a) {
     case SAFEMODE_LEAVE:
       return SafeModeActionProto.SAFEMODE_LEAVE;
@@ -1528,16 +1525,18 @@ public class PBHelperClient {
     result[ClientProtocol.GET_STATS_CAPACITY_IDX] = res.getCapacity();
     result[ClientProtocol.GET_STATS_USED_IDX] = res.getUsed();
     result[ClientProtocol.GET_STATS_REMAINING_IDX] = res.getRemaining();
-    result[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = res.getUnderReplicated();
-    result[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = res.getCorruptBlocks();
-    result[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = res.getMissingBlocks();
+    result[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] =
+        res.getUnderReplicated();
+    result[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] =
+        res.getCorruptBlocks();
+    result[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] =
+        res.getMissingBlocks();
     result[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
         res.getMissingReplOneBlocks();
     return result;
   }
 
-  public static DatanodeReportTypeProto
-    convert(DatanodeReportType t) {
+  public static DatanodeReportTypeProto convert(DatanodeReportType t) {
     switch (t) {
     case ALL: return DatanodeReportTypeProto.ALL;
     case LIVE: return DatanodeReportTypeProto.LIVE;
@@ -1695,8 +1694,8 @@ public class PBHelperClient {
       DatanodeStorageReport[] reports) {
     final List<DatanodeStorageReportProto> protos
         = new ArrayList<>(reports.length);
-    for(int i = 0; i < reports.length; i++) {
-      protos.add(convertDatanodeStorageReport(reports[i]));
+    for (DatanodeStorageReport report : reports) {
+      protos.add(convertDatanodeStorageReport(report));
     }
     return protos;
   }
@@ -1721,7 +1720,8 @@ public class PBHelperClient {
       builder.setFileEncryptionInfo(convert(lb.getFileEncryptionInfo()));
     }
     if (lb.getErasureCodingPolicy() != null) {
-      builder.setEcPolicy(convertErasureCodingPolicy(lb.getErasureCodingPolicy()));
+      builder.setEcPolicy(convertErasureCodingPolicy(
+          lb.getErasureCodingPolicy()));
     }
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
@@ -1745,20 +1745,20 @@ public class PBHelperClient {
   public static FsServerDefaultsProto convert(FsServerDefaults fs) {
     if (fs == null) return null;
     return FsServerDefaultsProto.newBuilder().
-      setBlockSize(fs.getBlockSize()).
-      setBytesPerChecksum(fs.getBytesPerChecksum()).
-      setWritePacketSize(fs.getWritePacketSize())
-      .setReplication(fs.getReplication())
-      .setFileBufferSize(fs.getFileBufferSize())
-      .setEncryptDataTransfer(fs.getEncryptDataTransfer())
-      .setTrashInterval(fs.getTrashInterval())
-      .setChecksumType(convert(fs.getChecksumType()))
-      .build();
+        setBlockSize(fs.getBlockSize()).
+        setBytesPerChecksum(fs.getBytesPerChecksum()).
+        setWritePacketSize(fs.getWritePacketSize())
+        .setReplication(fs.getReplication())
+        .setFileBufferSize(fs.getFileBufferSize())
+        .setEncryptDataTransfer(fs.getEncryptDataTransfer())
+        .setTrashInterval(fs.getTrashInterval())
+        .setChecksumType(convert(fs.getChecksumType()))
+        .build();
   }
 
   public static EnumSetWritable<CreateFlag> convertCreateFlag(int flag) {
     EnumSet<CreateFlag> result =
-       EnumSet.noneOf(CreateFlag.class);
+        EnumSet.noneOf(CreateFlag.class);
     if ((flag & CreateFlagProto.APPEND_VALUE) == CreateFlagProto.APPEND_VALUE) {
       result.add(CreateFlag.APPEND);
     }
@@ -1777,7 +1777,7 @@ public class PBHelperClient {
         == CreateFlagProto.NEW_BLOCK_VALUE) {
       result.add(CreateFlag.NEW_BLOCK);
     }
-    return new EnumSetWritable<CreateFlag>(result, CreateFlag.class);
+    return new EnumSetWritable<>(result, CreateFlag.class);
   }
 
   public static EnumSet<CacheFlag> convertCacheFlags(int flags) {
@@ -1799,20 +1799,20 @@ public class PBHelperClient {
     }
 
     HdfsFileStatusProto.Builder builder =
-     HdfsFileStatusProto.newBuilder().
-      setLength(fs.getLen()).
-      setFileType(fType).
-      setBlockReplication(fs.getReplication()).
-      setBlocksize(fs.getBlockSize()).
-      setModificationTime(fs.getModificationTime()).
-      setAccessTime(fs.getAccessTime()).
-      setPermission(convert(fs.getPermission())).
-      setOwner(fs.getOwner()).
-      setGroup(fs.getGroup()).
-      setFileId(fs.getFileId()).
-      setChildrenNum(fs.getChildrenNum()).
-      setPath(ByteString.copyFrom(fs.getLocalNameInBytes())).
-      setStoragePolicy(fs.getStoragePolicy());
+        HdfsFileStatusProto.newBuilder().
+            setLength(fs.getLen()).
+            setFileType(fType).
+            setBlockReplication(fs.getReplication()).
+            setBlocksize(fs.getBlockSize()).
+            setModificationTime(fs.getModificationTime()).
+            setAccessTime(fs.getAccessTime()).
+            setPermission(convert(fs.getPermission())).
+            setOwner(fs.getOwner()).
+            setGroup(fs.getGroup()).
+            setFileId(fs.getFileId()).
+            setChildrenNum(fs.getChildrenNum()).
+            setPath(ByteString.copyFrom(fs.getLocalNameInBytes())).
+            setStoragePolicy(fs.getStoragePolicy());
     if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
     }
@@ -1827,7 +1827,8 @@ public class PBHelperClient {
       }
     }
     if(fs.getErasureCodingPolicy() != null) {
-      builder.setEcPolicy(convertErasureCodingPolicy(fs.getErasureCodingPolicy()));
+      builder.setEcPolicy(convertErasureCodingPolicy(
+          fs.getErasureCodingPolicy()));
     }
     return builder.build();
   }
@@ -1845,9 +1846,11 @@ public class PBHelperClient {
     HdfsFileStatusProto fs = convert(status.getDirStatus());
     SnapshottableDirectoryStatusProto.Builder builder =
         SnapshottableDirectoryStatusProto
-        .newBuilder().setSnapshotNumber(snapshotNumber)
-        .setSnapshotQuota(snapshotQuota).setParentFullpath(parentFullPathBytes)
-        .setDirStatus(fs);
+            .newBuilder()
+            .setSnapshotNumber(snapshotNumber)
+            .setSnapshotQuota(snapshotQuota)
+            .setParentFullpath(parentFullPathBytes)
+            .setDirStatus(fs);
     return builder.build();
   }
 
@@ -1882,14 +1885,15 @@ public class PBHelperClient {
       result.setRemaining(fsStats[ClientProtocol.GET_STATS_REMAINING_IDX]);
     if (fsStats.length >= ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX + 1)
       result.setUnderReplicated(
-              fsStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
+          fsStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
     if (fsStats.length >= ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX + 1)
       result.setCorruptBlocks(
           fsStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX]);
     if (fsStats.length >= ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX + 1)
       result.setMissingBlocks(
           fsStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX]);
-    if (fsStats.length >= ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX + 1)
+    if (fsStats.length >=
+        ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX + 1)
       result.setMissingReplOneBlocks(
           fsStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX]);
     return result.build();
@@ -1967,7 +1971,7 @@ public class PBHelperClient {
   public static ContentSummaryProto convert(ContentSummary cs) {
     if (cs == null) return null;
     ContentSummaryProto.Builder builder = ContentSummaryProto.newBuilder();
-        builder.setLength(cs.getLength()).
+    builder.setLength(cs.getLength()).
         setFileCount(cs.getFileCount()).
         setDirectoryCount(cs.getDirectoryCount()).
         setQuota(cs.getQuota()).
@@ -2017,11 +2021,11 @@ public class PBHelperClient {
     return builder.build();
   }
 
-  public static List<StorageReportProto> convertStorageReports(StorageReport[] storages) {
-    final List<StorageReportProto> protos = new ArrayList<StorageReportProto>(
-        storages.length);
-    for(int i = 0; i < storages.length; i++) {
-      protos.add(convert(storages[i]));
+  public static List<StorageReportProto> convertStorageReports(
+      StorageReport[] storages) {
+    final List<StorageReportProto> protos = new ArrayList<>(storages.length);
+    for (StorageReport storage : storages) {
+      protos.add(convert(storage));
     }
     return protos;
   }
@@ -2044,17 +2048,16 @@ public class PBHelperClient {
     if (entry == null) {
       return null;
     }
-    ByteString sourcePath = ByteString
-        .copyFrom(entry.getSourcePath() == null ? DFSUtilClient.EMPTY_BYTES : entry
-            .getSourcePath());
+    ByteString sourcePath = ByteString.copyFrom(entry.getSourcePath() == null ?
+        DFSUtilClient.EMPTY_BYTES : entry.getSourcePath());
     String modification = entry.getType().getLabel();
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
         .newBuilder().setFullpath(sourcePath)
         .setModificationLabel(modification);
     if (entry.getType() == DiffType.RENAME) {
-      ByteString targetPath = ByteString
-          .copyFrom(entry.getTargetPath() == null ? DFSUtilClient.EMPTY_BYTES : entry
-              .getTargetPath());
+      ByteString targetPath =
+          ByteString.copyFrom(entry.getTargetPath() == null ?
+              DFSUtilClient.EMPTY_BYTES : entry.getTargetPath());
       builder.setTargetPath(targetPath);
     }
     return builder.build();
@@ -2072,12 +2075,11 @@ public class PBHelperClient {
         entryProtos.add(entryProto);
     }
 
-    SnapshotDiffReportProto reportProto = SnapshotDiffReportProto.newBuilder()
+    return SnapshotDiffReportProto.newBuilder()
         .setSnapshotRoot(report.getSnapshotRoot())
         .setFromSnapshot(report.getFromSnapshot())
         .setToSnapshot(report.getLaterSnapshotName())
         .addAllDiffReportEntries(entryProtos).build();
-    return reportProto;
   }
 
   public static CacheDirectiveStatsProto convert(CacheDirectiveStats stats) {
@@ -2100,7 +2102,7 @@ public class PBHelperClient {
   }
 
   public static boolean[] convertBooleanList(
-    List<Boolean> targetPinningsList) {
+      List<Boolean> targetPinningsList) {
     final boolean[] targetPinnings = new boolean[targetPinningsList.size()];
     for (int i = 0; i < targetPinningsList.size(); i++) {
       targetPinnings[i] = targetPinningsList.get(i);
@@ -2126,7 +2128,8 @@ public class PBHelperClient {
   }
 
   public static DatanodeLocalInfoProto convert(DatanodeLocalInfo info) {
-    DatanodeLocalInfoProto.Builder builder = DatanodeLocalInfoProto.newBuilder();
+    DatanodeLocalInfoProto.Builder builder =
+        DatanodeLocalInfoProto.newBuilder();
     builder.setSoftwareVersion(info.getSoftwareVersion());
     builder.setConfigVersion(info.getConfigVersion());
     builder.setUptime(info.getUptime());
@@ -2182,9 +2185,9 @@ public class PBHelperClient {
   }
 
   public static ListXAttrsResponseProto convertListXAttrsResponse(
-    List<XAttr> names) {
+      List<XAttr> names) {
     ListXAttrsResponseProto.Builder builder =
-      ListXAttrsResponseProto.newBuilder();
+        ListXAttrsResponseProto.newBuilder();
     if (names != null) {
       builder.addAllXAttrs(convertXAttrProto(names));
     }
@@ -2206,114 +2209,115 @@ public class PBHelperClient {
         slotId.getSlotIdx());
   }
 
-  public static GetEditsFromTxidResponseProto convertEditsResponse(EventBatchList el) {
+  public static GetEditsFromTxidResponseProto convertEditsResponse(
+      EventBatchList el) {
     InotifyProtos.EventsListProto.Builder builder =
         InotifyProtos.EventsListProto.newBuilder();
     for (EventBatch b : el.getBatches()) {
       List<InotifyProtos.EventProto> events = Lists.newArrayList();
       for (Event e : b.getEvents()) {
         switch (e.getEventType()) {
-          case CLOSE:
-            Event.CloseEvent ce = (Event.CloseEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_CLOSE)
-                .setContents(
-                    InotifyProtos.CloseEventProto.newBuilder()
-                        .setPath(ce.getPath())
-                        .setFileSize(ce.getFileSize())
-                        .setTimestamp(ce.getTimestamp()).build().toByteString()
-                ).build());
-            break;
-          case CREATE:
-            Event.CreateEvent ce2 = (Event.CreateEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_CREATE)
-                .setContents(
-                    InotifyProtos.CreateEventProto.newBuilder()
-                        .setType(createTypeConvert(ce2.getiNodeType()))
-                        .setPath(ce2.getPath())
-                        .setCtime(ce2.getCtime())
-                        .setOwnerName(ce2.getOwnerName())
-                        .setGroupName(ce2.getGroupName())
-                        .setPerms(convert(ce2.getPerms()))
-                        .setReplication(ce2.getReplication())
-                        .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
-                            "" : ce2.getSymlinkTarget())
-                        .setDefaultBlockSize(ce2.getDefaultBlockSize())
-                        .setOverwrite(ce2.getOverwrite()).build().toByteString()
-                ).build());
-            break;
-          case METADATA:
-            Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
-            InotifyProtos.MetadataUpdateEventProto.Builder metaB =
-                InotifyProtos.MetadataUpdateEventProto.newBuilder()
-                    .setPath(me.getPath())
-                    .setType(metadataUpdateTypeConvert(me.getMetadataType()))
-                    .setMtime(me.getMtime())
-                    .setAtime(me.getAtime())
-                    .setReplication(me.getReplication())
-                    .setOwnerName(me.getOwnerName() == null ? "" :
-                        me.getOwnerName())
-                    .setGroupName(me.getGroupName() == null ? "" :
-                        me.getGroupName())
-                    .addAllAcls(me.getAcls() == null ?
-                        Lists.<AclEntryProto>newArrayList() :
-                        convertAclEntryProto(me.getAcls()))
-                    .addAllXAttrs(me.getxAttrs() == null ?
-                        Lists.<XAttrProto>newArrayList() :
-                        convertXAttrProto(me.getxAttrs()))
-                    .setXAttrsRemoved(me.isxAttrsRemoved());
-            if (me.getPerms() != null) {
-              metaB.setPerms(convert(me.getPerms()));
-            }
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_METADATA)
-                .setContents(metaB.build().toByteString())
-                .build());
-            break;
-          case RENAME:
-            Event.RenameEvent re = (Event.RenameEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_RENAME)
-                .setContents(
-                    InotifyProtos.RenameEventProto.newBuilder()
-                        .setSrcPath(re.getSrcPath())
-                        .setDestPath(re.getDstPath())
-                        .setTimestamp(re.getTimestamp()).build().toByteString()
-                ).build());
-            break;
-          case APPEND:
-            Event.AppendEvent re2 = (Event.AppendEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_APPEND)
-                .setContents(InotifyProtos.AppendEventProto.newBuilder()
-                    .setPath(re2.getPath())
-                    .setNewBlock(re2.toNewBlock()).build().toByteString())
-                .build());
-            break;
-          case UNLINK:
-            Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_UNLINK)
-                .setContents(
-                    InotifyProtos.UnlinkEventProto.newBuilder()
-                        .setPath(ue.getPath())
-                        .setTimestamp(ue.getTimestamp()).build().toByteString()
-                ).build());
-            break;
-          case TRUNCATE:
-            Event.TruncateEvent te = (Event.TruncateEvent) e;
-            events.add(InotifyProtos.EventProto.newBuilder()
-                .setType(InotifyProtos.EventType.EVENT_TRUNCATE)
-                .setContents(
-                    InotifyProtos.TruncateEventProto.newBuilder()
-                        .setPath(te.getPath())
-                        .setFileSize(te.getFileSize())
-                        .setTimestamp(te.getTimestamp()).build().toByteString()
-                ).build());
-            break;
-          default:
-            throw new RuntimeException("Unexpected inotify event: " + e);
+        case CLOSE:
+          Event.CloseEvent ce = (Event.CloseEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_CLOSE)
+              .setContents(
+                  InotifyProtos.CloseEventProto.newBuilder()
+                      .setPath(ce.getPath())
+                      .setFileSize(ce.getFileSize())
+                      .setTimestamp(ce.getTimestamp()).build().toByteString()
+              ).build());
+          break;
+        case CREATE:
+          Event.CreateEvent ce2 = (Event.CreateEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_CREATE)
+              .setContents(
+                  InotifyProtos.CreateEventProto.newBuilder()
+                      .setType(createTypeConvert(ce2.getiNodeType()))
+                      .setPath(ce2.getPath())
+                      .setCtime(ce2.getCtime())
+                      .setOwnerName(ce2.getOwnerName())
+                      .setGroupName(ce2.getGroupName())
+                      .setPerms(convert(ce2.getPerms()))
+                      .setReplication(ce2.getReplication())
+                      .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
+                          "" : ce2.getSymlinkTarget())
+                      .setDefaultBlockSize(ce2.getDefaultBlockSize())
+                      .setOverwrite(ce2.getOverwrite()).build().toByteString()
+              ).build());
+          break;
+        case METADATA:
+          Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
+          InotifyProtos.MetadataUpdateEventProto.Builder metaB =
+              InotifyProtos.MetadataUpdateEventProto.newBuilder()
+                  .setPath(me.getPath())
+                  .setType(metadataUpdateTypeConvert(me.getMetadataType()))
+                  .setMtime(me.getMtime())
+                  .setAtime(me.getAtime())
+                  .setReplication(me.getReplication())
+                  .setOwnerName(me.getOwnerName() == null ? "" :
+                      me.getOwnerName())
+                  .setGroupName(me.getGroupName() == null ? "" :
+                      me.getGroupName())
+                  .addAllAcls(me.getAcls() == null ?
+                      Lists.<AclEntryProto>newArrayList() :
+                      convertAclEntryProto(me.getAcls()))
+                  .addAllXAttrs(me.getxAttrs() == null ?
+                      Lists.<XAttrProto>newArrayList() :
+                      convertXAttrProto(me.getxAttrs()))
+                  .setXAttrsRemoved(me.isxAttrsRemoved());
+          if (me.getPerms() != null) {
+            metaB.setPerms(convert(me.getPerms()));
+          }
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_METADATA)
+              .setContents(metaB.build().toByteString())
+              .build());
+          break;
+        case RENAME:
+          Event.RenameEvent re = (Event.RenameEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_RENAME)
+              .setContents(
+                  InotifyProtos.RenameEventProto.newBuilder()
+                      .setSrcPath(re.getSrcPath())
+                      .setDestPath(re.getDstPath())
+                      .setTimestamp(re.getTimestamp()).build().toByteString()
+              ).build());
+          break;
+        case APPEND:
+          Event.AppendEvent re2 = (Event.AppendEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_APPEND)
+              .setContents(InotifyProtos.AppendEventProto.newBuilder()
+                  .setPath(re2.getPath())
+                  .setNewBlock(re2.toNewBlock()).build().toByteString())
+              .build());
+          break;
+        case UNLINK:
+          Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_UNLINK)
+              .setContents(
+                  InotifyProtos.UnlinkEventProto.newBuilder()
+                      .setPath(ue.getPath())
+                      .setTimestamp(ue.getTimestamp()).build().toByteString()
+              ).build());
+          break;
+        case TRUNCATE:
+          Event.TruncateEvent te = (Event.TruncateEvent) e;
+          events.add(InotifyProtos.EventProto.newBuilder()
+              .setType(InotifyProtos.EventType.EVENT_TRUNCATE)
+              .setContents(
+                  InotifyProtos.TruncateEventProto.newBuilder()
+                      .setPath(te.getPath())
+                      .setFileSize(te.getFileSize())
+                      .setTimestamp(te.getTimestamp()).build().toByteString()
+              ).build());
+          break;
+        default:
+          throw new RuntimeException("Unexpected inotify event: " + e);
         }
       }
       builder.addBatch(InotifyProtos.EventBatchProto.newBuilder().
@@ -2394,7 +2398,8 @@ public class PBHelperClient {
   }
 
   public static ECSchema convertECSchema(HdfsProtos.ECSchemaProto schema) {
-    List<HdfsProtos.ECSchemaOptionEntryProto> optionsList = schema.getOptionsList();
+    List<HdfsProtos.ECSchemaOptionEntryProto> optionsList =
+        schema.getOptionsList();
     Map<String, String> options = new HashMap<>(optionsList.size());
     for (HdfsProtos.ECSchemaOptionEntryProto option : optionsList) {
       options.put(option.getKey(), option.getValue());
@@ -2404,11 +2409,13 @@ public class PBHelperClient {
   }
 
   public static HdfsProtos.ECSchemaProto convertECSchema(ECSchema schema) {
-    HdfsProtos.ECSchemaProto.Builder builder = HdfsProtos.ECSchemaProto.newBuilder()
+    HdfsProtos.ECSchemaProto.Builder builder =
+        HdfsProtos.ECSchemaProto.newBuilder()
         .setCodecName(schema.getCodecName())
         .setDataUnits(schema.getNumDataUnits())
         .setParityUnits(schema.getNumParityUnits());
-    Set<Map.Entry<String, String>> entrySet = schema.getExtraOptions().entrySet();
+    Set<Map.Entry<String, String>> entrySet =
+        schema.getExtraOptions().entrySet();
     for (Map.Entry<String, String> entry : entrySet) {
       builder.addOptions(HdfsProtos.ECSchemaOptionEntryProto.newBuilder()
           .setKey(entry.getKey()).setValue(entry.getValue()).build());

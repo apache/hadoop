@@ -892,11 +892,9 @@ public class DFSStripedOutputStream extends DFSOutputStream {
       }
 
       closeThreads(false);
-      TraceScope scope = dfsClient.getTracer().newScope("completeFile");
-      try {
+      try (TraceScope ignored =
+               dfsClient.getTracer().newScope("completeFile")) {
         completeFile(currentBlockGroup);
-      } finally {
-        scope.close();
       }
       dfsClient.endFileLease(fileId);
     } catch (ClosedChannelException ignored) {

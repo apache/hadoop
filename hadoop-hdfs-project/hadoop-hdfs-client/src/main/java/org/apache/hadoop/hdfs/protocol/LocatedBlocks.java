@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 @InterfaceStability.Evolving
 public class LocatedBlocks {
   private final long fileLength;
-  private final List<LocatedBlock> blocks; // array of blocks with prioritized locations
+  // array of blocks with prioritized locations
+  private final List<LocatedBlock> blocks;
   private final boolean underConstruction;
   private final LocatedBlock lastLocatedBlock;
   private final boolean isLastBlockComplete;
@@ -134,22 +135,22 @@ public class LocatedBlocks {
     key.setStartOffset(offset);
     key.getBlock().setNumBytes(1);
     Comparator<LocatedBlock> comp =
-      new Comparator<LocatedBlock>() {
-        // Returns 0 iff a is inside b or b is inside a
-        @Override
-        public int compare(LocatedBlock a, LocatedBlock b) {
-          long aBeg = a.getStartOffset();
-          long bBeg = b.getStartOffset();
-          long aEnd = aBeg + a.getBlockSize();
-          long bEnd = bBeg + b.getBlockSize();
-          if(aBeg <= bBeg && bEnd <= aEnd
-              || bBeg <= aBeg && aEnd <= bEnd)
-            return 0; // one of the blocks is inside the other
-          if(aBeg < bBeg)
-            return -1; // a's left bound is to the left of the b's
-          return 1;
-        }
-      };
+        new Comparator<LocatedBlock>() {
+          // Returns 0 iff a is inside b or b is inside a
+          @Override
+          public int compare(LocatedBlock a, LocatedBlock b) {
+            long aBeg = a.getStartOffset();
+            long bBeg = b.getStartOffset();
+            long aEnd = aBeg + a.getBlockSize();
+            long bEnd = bBeg + b.getBlockSize();
+            if(aBeg <= bBeg && bEnd <= aEnd
+                || bBeg <= aBeg && aEnd <= bEnd)
+              return 0; // one of the blocks is inside the other
+            if(aBeg < bBeg)
+              return -1; // a's left bound is to the left of the b's
+            return 1;
+          }
+        };
     return Collections.binarySearch(blocks, key, comp);
   }
 
@@ -187,14 +188,10 @@ public class LocatedBlocks {
 
   @Override
   public String toString() {
-    final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-    b.append("{")
-     .append("\n  fileLength=").append(fileLength)
-     .append("\n  underConstruction=").append(underConstruction)
-     .append("\n  blocks=").append(blocks)
-     .append("\n  lastLocatedBlock=").append(lastLocatedBlock)
-     .append("\n  isLastBlockComplete=").append(isLastBlockComplete)
-     .append("}");
-    return b.toString();
+    return getClass().getSimpleName() + "{" + "\n  fileLength=" + fileLength
+        + "\n  underConstruction=" + underConstruction
+        + "\n  blocks=" + blocks
+        + "\n  lastLocatedBlock=" + lastLocatedBlock
+        + "\n  isLastBlockComplete=" + isLastBlockComplete + "}";
   }
 }

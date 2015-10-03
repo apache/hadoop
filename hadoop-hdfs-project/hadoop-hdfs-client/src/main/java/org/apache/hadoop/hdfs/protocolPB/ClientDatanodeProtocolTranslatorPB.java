@@ -85,11 +85,11 @@ public class ClientDatanodeProtocolTranslatorPB implements
     ProtocolTranslator, Closeable {
   public static final Logger LOG = LoggerFactory
       .getLogger(ClientDatanodeProtocolTranslatorPB.class);
-  
+
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final ClientDatanodeProtocolPB rpcProxy;
-  private final static RefreshNamenodesRequestProto VOID_REFRESH_NAMENODES = 
+  private final static RefreshNamenodesRequestProto VOID_REFRESH_NAMENODES =
       RefreshNamenodesRequestProto.newBuilder().build();
   private final static GetDatanodeInfoRequestProto VOID_GET_DATANODE_INFO =
       GetDatanodeInfoRequestProto.newBuilder().build();
@@ -107,16 +107,16 @@ public class ClientDatanodeProtocolTranslatorPB implements
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
       Configuration conf, int socketTimeout, boolean connectToDnViaHostname,
       LocatedBlock locatedBlock) throws IOException {
-    rpcProxy = createClientDatanodeProtocolProxy( datanodeid, conf, 
-                  socketTimeout, connectToDnViaHostname, locatedBlock);
+    rpcProxy = createClientDatanodeProtocolProxy( datanodeid, conf,
+        socketTimeout, connectToDnViaHostname, locatedBlock);
   }
-  
+
   public ClientDatanodeProtocolTranslatorPB(InetSocketAddress addr,
       UserGroupInformation ticket, Configuration conf, SocketFactory factory)
       throws IOException {
     rpcProxy = createClientDatanodeProtocolProxy(addr, ticket, conf, factory, 0);
   }
-  
+
   /**
    * Constructor.
    * @param datanodeid Datanode to connect to.
@@ -138,7 +138,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
 
   static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      boolean connectToDnViaHostname, LocatedBlock locatedBlock) throws IOException {
+      boolean connectToDnViaHostname, LocatedBlock locatedBlock)
+      throws IOException {
     final String dnAddr = datanodeid.getIpcAddr(connectToDnViaHostname);
     InetSocketAddress addr = NetUtils.createSocketAddr(dnAddr);
     LOG.debug("Connecting to datanode {} addr={}", dnAddr, addr);
@@ -160,7 +161,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
     return createClientDatanodeProtocolProxy(addr, ticket, confWithNoIpcIdle,
         NetUtils.getDefaultSocketFactory(conf), socketTimeout);
   }
-  
+
   static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int socketTimeout) throws IOException {
@@ -178,8 +179,9 @@ public class ClientDatanodeProtocolTranslatorPB implements
 
   @Override
   public long getReplicaVisibleLength(ExtendedBlock b) throws IOException {
-    GetReplicaVisibleLengthRequestProto req = GetReplicaVisibleLengthRequestProto
-        .newBuilder().setBlock(PBHelperClient.convert(b)).build();
+    GetReplicaVisibleLengthRequestProto req =
+        GetReplicaVisibleLengthRequestProto.newBuilder()
+            .setBlock(PBHelperClient.convert(b)).build();
     try {
       return rpcProxy.getReplicaVisibleLength(NULL_CONTROLLER, req).getLength();
     } catch (ServiceException e) {
@@ -212,8 +214,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
       Token<BlockTokenIdentifier> token) throws IOException {
     GetBlockLocalPathInfoRequestProto req =
         GetBlockLocalPathInfoRequestProto.newBuilder()
-        .setBlock(PBHelperClient.convert(block))
-        .setToken(PBHelperClient.convert(token)).build();
+            .setBlock(PBHelperClient.convert(block))
+            .setToken(PBHelperClient.convert(token)).build();
     GetBlockLocalPathInfoResponseProto resp;
     try {
       resp = rpcProxy.getBlockLocalPathInfo(NULL_CONTROLLER, req);
@@ -251,7 +253,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
   public DatanodeLocalInfo getDatanodeInfo() throws IOException {
     GetDatanodeInfoResponseProto response;
     try {
-      response = rpcProxy.getDatanodeInfo(NULL_CONTROLLER, VOID_GET_DATANODE_INFO);
+      response = rpcProxy.getDatanodeInfo(NULL_CONTROLLER,
+          VOID_GET_DATANODE_INFO);
       return PBHelperClient.convert(response.getLocalInfo());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -268,7 +271,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ReconfigurationTaskStatus getReconfigurationStatus() throws IOException {
+  public ReconfigurationTaskStatus getReconfigurationStatus()
+      throws IOException {
     GetReconfigurationStatusResponseProto response;
     Map<PropertyChange, Optional<String>> statusMap = null;
     long startTime;
@@ -318,8 +322,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
     try {
       rpcProxy.triggerBlockReport(NULL_CONTROLLER,
           TriggerBlockReportRequestProto.newBuilder().
-            setIncremental(options.isIncremental()).
-            build());
+              setIncremental(options.isIncremental()).
+              build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

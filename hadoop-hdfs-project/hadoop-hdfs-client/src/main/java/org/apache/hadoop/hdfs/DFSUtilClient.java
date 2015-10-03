@@ -304,8 +304,8 @@ public class DFSUtilClient {
    * @param keys Set of keys to look for in the order of preference
    * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
    */
-  static Map<String, Map<String, InetSocketAddress>>
-    getAddresses(Configuration conf, String defaultAddress, String... keys) {
+  static Map<String, Map<String, InetSocketAddress>> getAddresses(
+      Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
   }
@@ -318,8 +318,7 @@ public class DFSUtilClient {
    *
    * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
    */
-  static Map<String, Map<String, InetSocketAddress>>
-    getAddressesForNsIds(
+  static Map<String, Map<String, InetSocketAddress>> getAddressesForNsIds(
       Configuration conf, Collection<String> nsIds, String defaultAddress,
       String... keys) {
     // Look for configurations of the form <key>[.<nameserviceId>][.<namenodeId>]
@@ -327,7 +326,7 @@ public class DFSUtilClient {
     Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
     for (String nsId : emptyAsSingletonNull(nsIds)) {
       Map<String, InetSocketAddress> isas =
-        getAddressesForNameserviceId(conf, nsId, defaultAddress, keys);
+          getAddressesForNameserviceId(conf, nsId, defaultAddress, keys);
       if (!isas.isEmpty()) {
         ret.put(nsId, isas);
       }
@@ -534,7 +533,7 @@ public class DFSUtilClient {
 
   public static Peer peerFromSocket(Socket socket)
       throws IOException {
-    Peer peer = null;
+    Peer peer;
     boolean success = false;
     try {
       // TCP_NODELAY is crucial here because of bad interactions between
@@ -561,7 +560,7 @@ public class DFSUtilClient {
       return peer;
     } finally {
       if (!success) {
-        if (peer != null) peer.close();
+        // peer is always null so no need to call peer.close().
         socket.close();
       }
     }

@@ -235,14 +235,10 @@ public class DatanodeID implements Comparable<DatanodeID> {
 
   @Override
   public boolean equals(Object to) {
-    if (this == to) {
-      return true;
-    }
-    if (!(to instanceof DatanodeID)) {
-      return false;
-    }
-    return (getXferAddr().equals(((DatanodeID)to).getXferAddr()) &&
-        datanodeUuid.equals(((DatanodeID)to).getDatanodeUuid()));
+    return this == to ||
+        (to instanceof DatanodeID &&
+            getXferAddr().equals(((DatanodeID) to).getXferAddr()) &&
+            datanodeUuid.equals(((DatanodeID) to).getDatanodeUuid()));
   }
 
   @Override

@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.FSInputStream;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HttpHeaders;
 
+import javax.annotation.Nonnull;
+
 /**
  * To support HTTP byte streams, a new connection to an HTTP server needs to be
  * created each time. This class hides the complexity of those multiple
@@ -101,24 +103,24 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   }
 
   protected abstract URL getResolvedUrl(final HttpURLConnection connection
-      ) throws IOException;
+  ) throws IOException;
 
   @VisibleForTesting
   protected InputStream getInputStream() throws IOException {
     switch (status) {
-      case NORMAL:
-        break;
-      case SEEK:
-        if (in != null) {
-          in.close();
-        }
-        InputStreamAndFileLength fin = openInputStream(startPos);
-        in = fin.in;
-        fileLength = fin.length;
-        status = StreamStatus.NORMAL;
-        break;
-      case CLOSED:
-        throw new IOException("Stream closed");
+    case NORMAL:
+      break;
+    case SEEK:
+      if (in != null) {
+        in.close();
+      }
+      InputStreamAndFileLength fin = openInputStream(startPos);
+      in = fin.in;
+      fileLength = fin.length;
+      status = StreamStatus.NORMAL;
+      break;
+    case CLOSED:
+      throw new IOException("Stream closed");
     }
     return in;
   }
@@ -199,7 +201,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   }
 
   @Override
-  public int read(byte b[], int off, int len) throws IOException {
+  public int read(@Nonnull byte b[], int off, int len) throws IOException {
     return update(getInputStream().read(b, off, len));
   }
 

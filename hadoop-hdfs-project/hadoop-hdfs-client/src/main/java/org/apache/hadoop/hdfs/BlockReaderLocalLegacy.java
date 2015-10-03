@@ -56,10 +56,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * BlockReaderLocalLegacy enables local short circuited reads. If the DFS client is on
- * the same machine as the datanode, then the client can read files directly
- * from the local file system rather than going through the datanode for better
- * performance. <br>
+ * BlockReaderLocalLegacy enables local short circuited reads. If the DFS client
+ * is on the same machine as the datanode, then the client can read files
+ * directly from the local file system rather than going through the datanode
+ * for better performance. <br>
  *
  * This is the legacy implementation based on HDFS-2246, which requires
  * permissions on the datanode to be set so that clients can directly access the
@@ -90,7 +90,8 @@ class BlockReaderLocalLegacy implements BlockReader {
     LocalDatanodeInfo() {
       final int cacheSize = 10000;
       final float hashTableLoadFactor = 0.75f;
-      int hashTableCapacity = (int) Math.ceil(cacheSize / hashTableLoadFactor) + 1;
+      int hashTableCapacity = (int) Math.ceil(cacheSize / hashTableLoadFactor)
+          + 1;
       cache = Collections
           .synchronizedMap(new LinkedHashMap<ExtendedBlock, BlockLocalPathInfo>(
               hashTableCapacity, hashTableLoadFactor, true) {
@@ -123,7 +124,7 @@ class BlockReaderLocalLegacy implements BlockReader {
       }
       return proxy;
     }
-    
+
     private synchronized void resetDatanodeProxy() {
       if (null != proxy) {
         RPC.stopProxy(proxy);
@@ -135,7 +136,8 @@ class BlockReaderLocalLegacy implements BlockReader {
       return cache.get(b);
     }
 
-    private void setBlockLocalPathInfo(ExtendedBlock b, BlockLocalPathInfo info) {
+    private void setBlockLocalPathInfo(ExtendedBlock b,
+        BlockLocalPathInfo info) {
       cache.put(b, info);
     }
 
@@ -143,10 +145,11 @@ class BlockReaderLocalLegacy implements BlockReader {
       cache.remove(b);
     }
   }
-  
+
   // Multiple datanodes could be running on the local machine. Store proxies in
   // a map keyed by the ipc port of the datanode.
-  private static final Map<Integer, LocalDatanodeInfo> localDatanodeInfoMap = new HashMap<Integer, LocalDatanodeInfo>();
+  private static final Map<Integer, LocalDatanodeInfo> localDatanodeInfoMap =
+      new HashMap<>();
 
   private final FileInputStream dataIn; // reader for the data file
   private final FileInputStream checksumIn;   // reader for the checksum file
@@ -158,7 +161,7 @@ class BlockReaderLocalLegacy implements BlockReader {
    * checksum read at construction to position the read cursor correctly.
    */
   private int offsetFromChunkBoundary;
-  
+
   private byte[] skipBuf = null;
 
   /**
@@ -188,7 +191,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   static BlockReaderLocalLegacy newBlockReader(DfsClientConf conf,
       UserGroupInformation userGroupInformation,
       Configuration configuration, String file, ExtendedBlock blk,
-      Token<BlockTokenIdentifier> token, DatanodeInfo node, 
+      Token<BlockTokenIdentifier> token, DatanodeInfo node,
       long startOffset, long length, StorageType storageType,
       Tracer tracer) throws IOException {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
@@ -234,12 +237,12 @@ class BlockReaderLocalLegacy implements BlockReader {
             new DataInputStream(checksumIn), blk);
         long firstChunkOffset = startOffset
             - (startOffset % checksum.getBytesPerChecksum());
-        localBlockReader = new BlockReaderLocalLegacy(scConf, file, blk, token,
-            startOffset, length, pathinfo, checksum, true, dataIn,
-            firstChunkOffset, checksumIn, tracer);
+        localBlockReader = new BlockReaderLocalLegacy(scConf, file, blk,
+            startOffset, checksum, true, dataIn, firstChunkOffset, checksumIn,
+            tracer);
       } else {
-        localBlockReader = new BlockReaderLocalLegacy(scConf, file, blk, token,
-            startOffset, length, pathinfo, dataIn, tracer);
+        localBlockReader = new BlockReaderLocalLegacy(scConf, file, blk,
+            startOffset, dataIn, tracer);
       }
     } catch (IOException e) {
       // remove from cache
@@ -260,7 +263,7 @@ class BlockReaderLocalLegacy implements BlockReader {
     }
     return localBlockReader;
   }
-  
+
   private static synchronized LocalDatanodeInfo getLocalDatanodeInfo(int port) {
     LocalDatanodeInfo ldInfo = localDatanodeInfoMap.get(port);
     if (ldInfo == null) {
@@ -269,19 +272,20 @@ class BlockReaderLocalLegacy implements BlockReader {
     }
     return ldInfo;
   }
-  
+
   private static BlockLocalPathInfo getBlockPathInfo(UserGroupInformation ugi,
       ExtendedBlock blk, DatanodeInfo node, Configuration conf, int timeout,
       Token<BlockTokenIdentifier> token, boolean connectToDnViaHostname,
       StorageType storageType) throws IOException {
-    LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node.getIpcPort());
-    BlockLocalPathInfo pathinfo = null;
+    LocalDatanodeInfo localDatanodeInfo =
+        getLocalDatanodeInfo(node.getIpcPort());
+    BlockLocalPathInfo pathinfo;
     ClientDatanodeProtocol proxy = localDatanodeInfo.getDatanodeProxy(ugi, node,
         conf, timeout, connectToDnViaHostname);
     try {
       // make RPC to local datanode to find local pathnames of blocks
       pathinfo = proxy.getBlockLocalPathInfo(blk, token);
-      // We cannot cache the path information for a replica on transient storage.
+      // We can't cache the path information for a replica on transient storage.
       // If the replica gets evicted, then it moves to a different path.  Then,
       // our next attempt to read from the cached path would fail to find the
       // file.  Additionally, the failure would cause us to disable legacy
@@ -299,7 +303,7 @@ class BlockReaderLocalLegacy implements BlockReader {
     }
     return pathinfo;
   }
-  
+
   private static int getSlowReadBufferNumChunks(int bufferSizeBytes,
       int bytesPerChecksum) {
     if (bufferSizeBytes < bytesPerChecksum) {
@@ -315,17 +319,15 @@ class BlockReaderLocalLegacy implements BlockReader {
   }
 
   private BlockReaderLocalLegacy(ShortCircuitConf conf, String hdfsfile,
-      ExtendedBlock block, Token<BlockTokenIdentifier> token, long startOffset,
-      long length, BlockLocalPathInfo pathinfo, FileInputStream dataIn,
+      ExtendedBlock block, long startOffset, FileInputStream dataIn,
       Tracer tracer) throws IOException {
-    this(conf, hdfsfile, block, token, startOffset, length, pathinfo,
+    this(conf, hdfsfile, block, startOffset,
         DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 4), false,
         dataIn, startOffset, null, tracer);
   }
 
   private BlockReaderLocalLegacy(ShortCircuitConf conf, String hdfsfile,
-      ExtendedBlock block, Token<BlockTokenIdentifier> token, long startOffset,
-      long length, BlockLocalPathInfo pathinfo, DataChecksum checksum,
+      ExtendedBlock block, long startOffset, DataChecksum checksum,
       boolean verifyChecksum, FileInputStream dataIn, long firstChunkOffset,
       FileInputStream checksumIn, Tracer tracer) throws IOException {
     this.filename = hdfsfile;
@@ -343,17 +345,20 @@ class BlockReaderLocalLegacy implements BlockReader {
 
     final int chunksPerChecksumRead = getSlowReadBufferNumChunks(
         conf.getShortCircuitBufferSize(), bytesPerChecksum);
-    slowReadBuff = bufferPool.getBuffer(bytesPerChecksum * chunksPerChecksumRead);
+    slowReadBuff = bufferPool.getBuffer(
+        bytesPerChecksum * chunksPerChecksumRead);
     checksumBuff = bufferPool.getBuffer(checksumSize * chunksPerChecksumRead);
     // Initially the buffers have nothing to read.
     slowReadBuff.flip();
     checksumBuff.flip();
     boolean success = false;
     try {
-      // Skip both input streams to beginning of the chunk containing startOffset
+      // Skip both input streams to beginning of the chunk containing
+      // startOffset
       IOUtils.skipFully(dataIn, firstChunkOffset);
       if (checksumIn != null) {
-        long checkSumOffset = (firstChunkOffset / bytesPerChecksum) * checksumSize;
+        long checkSumOffset = (firstChunkOffset / bytesPerChecksum) *
+            checksumSize;
         IOUtils.skipFully(checksumIn, checkSumOffset);
       }
       success = true;
@@ -371,9 +376,8 @@ class BlockReaderLocalLegacy implements BlockReader {
    */
   private int fillBuffer(FileInputStream stream, ByteBuffer buf)
       throws IOException {
-    TraceScope scope = tracer.
-        newScope("BlockReaderLocalLegacy#fillBuffer(" + blockId + ")");
-    try {
+    try (TraceScope ignored = tracer.
+        newScope("BlockReaderLocalLegacy#fillBuffer(" + blockId + ")")) {
       int bytesRead = stream.getChannel().read(buf);
       if (bytesRead < 0) {
         //EOF
@@ -388,11 +392,9 @@ class BlockReaderLocalLegacy implements BlockReader {
         bytesRead += n;
       }
       return bytesRead;
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Utility method used by read(ByteBuffer) to partially copy a ByteBuffer into
    * another.
@@ -426,7 +428,8 @@ class BlockReaderLocalLegacy implements BlockReader {
       if (slowReadBuff.hasRemaining()) {
         // There are remaining bytes from a small read available. This usually
         // means this read is unaligned, which falls back to the slow path.
-        int fromSlowReadBuff = Math.min(buf.remaining(), slowReadBuff.remaining());
+        int fromSlowReadBuff = Math.min(buf.remaining(),
+            slowReadBuff.remaining());
         writeSlice(slowReadBuff, buf, fromSlowReadBuff);
         nRead += fromSlowReadBuff;
       }
@@ -458,8 +461,10 @@ class BlockReaderLocalLegacy implements BlockReader {
 
       // offsetFromChunkBoundary > 0 => unaligned read, use slow path to read
       // until chunk boundary
-      if ((buf.remaining() > 0 && buf.remaining() < bytesPerChecksum) || offsetFromChunkBoundary > 0) {
-        int toRead = Math.min(buf.remaining(), bytesPerChecksum - offsetFromChunkBoundary);
+      if ((buf.remaining() > 0 && buf.remaining() < bytesPerChecksum) ||
+          offsetFromChunkBoundary > 0) {
+        int toRead = Math.min(buf.remaining(),
+            bytesPerChecksum - offsetFromChunkBoundary);
         int readResult = fillSlowReadBuffer(toRead);
         if (readResult == -1) {
           return nRead;
@@ -470,7 +475,8 @@ class BlockReaderLocalLegacy implements BlockReader {
         }
       }
     } else {
-      // Non-checksummed reads are much easier; we can just fill the buffer directly.
+      // Non-checksummed reads are much easier; we can just fill the buffer
+      // directly.
       nRead = doByteBufferRead(buf);
       if (nRead > 0) {
         buf.position(buf.position() + nRead);
@@ -512,7 +518,7 @@ class BlockReaderLocalLegacy implements BlockReader {
     if (verifyChecksum) {
       assert buf.remaining() % bytesPerChecksum == 0;
     }
-    int dataRead = -1;
+    int dataRead;
 
     int oldpos = buf.position();
     // Read as much as we can into the buffer.
@@ -528,9 +534,10 @@ class BlockReaderLocalLegacy implements BlockReader {
       toChecksum.limit(oldpos + dataRead);
 
       checksumBuff.clear();
-      // Equivalent to (int)Math.ceil(toChecksum.remaining() * 1.0 / bytesPerChecksum );
+      // Equivalent to
+      // (int)Math.ceil(toChecksum.remaining() * 1.0 / bytesPerChecksum );
       int numChunks =
-        (toChecksum.remaining() + bytesPerChecksum - 1) / bytesPerChecksum;
+          (toChecksum.remaining() + bytesPerChecksum - 1) / bytesPerChecksum;
       checksumBuff.limit(checksumSize * numChunks);
 
       fillBuffer(checksumIn, checksumBuff);
@@ -571,7 +578,7 @@ class BlockReaderLocalLegacy implements BlockReader {
    * @return the number of bytes available to read, or -1 if EOF.
    */
   private synchronized int fillSlowReadBuffer(int len) throws IOException {
-    int nRead = -1;
+    int nRead;
     if (slowReadBuff.hasRemaining()) {
       // Already got data, good to go.
       nRead = Math.min(len, slowReadBuff.remaining());
@@ -579,7 +586,8 @@ class BlockReaderLocalLegacy implements BlockReader {
       // Round a complete read of len bytes (plus any implicit offset) to the
       // next chunk boundary, since we try and read in multiples of a chunk
       int nextChunk = len + offsetFromChunkBoundary +
-          (bytesPerChecksum - ((len + offsetFromChunkBoundary) % bytesPerChecksum));
+          (bytesPerChecksum -
+              ((len + offsetFromChunkBoundary) % bytesPerChecksum));
       int limit = Math.min(nextChunk, slowReadBuff.capacity());
       assert limit % bytesPerChecksum == 0;
 
@@ -598,7 +606,8 @@ class BlockReaderLocalLegacy implements BlockReader {
   }
 
   @Override
-  public synchronized int read(byte[] buf, int off, int len) throws IOException {
+  public synchronized int read(byte[] buf, int off, int len)
+      throws IOException {
     LOG.trace("read off {} len {}", off, len);
     if (!verifyChecksum) {
       return dataIn.read(buf, off, len);
@@ -625,19 +634,19 @@ class BlockReaderLocalLegacy implements BlockReader {
     if (!verifyChecksum) {
       return dataIn.skip(n);
     }
-  
+
     // caller made sure newPosition is not beyond EOF.
     int remaining = slowReadBuff.remaining();
     int position = slowReadBuff.position();
     int newPosition = position + (int)n;
-  
+
     // if the new offset is already read into dataBuff, just reposition
     if (n <= remaining) {
       assert offsetFromChunkBoundary == 0;
       slowReadBuff.position(newPosition);
       return n;
     }
-  
+
     // for small gap, read through to keep the data/checksum in sync
     if (n - remaining <= bytesPerChecksum) {
       slowReadBuff.position(position + remaining);
@@ -647,11 +656,11 @@ class BlockReaderLocalLegacy implements BlockReader {
       int ret = read(skipBuf, 0, (int)(n - remaining));
       return (remaining + ret);
     }
-  
+
     // optimize for big gap: discard the current buffer, skip to
     // the beginning of the appropriate checksum chunk and then
     // read to the middle of that chunk to be in sync with checksums.
-  
+
     // We can't use this.offsetFromChunkBoundary because we need to know how
     // many bytes of the offset were really read. Calling read(..) with a
     // positive this.offsetFromChunkBoundary causes that many bytes to get
@@ -661,7 +670,7 @@ class BlockReaderLocalLegacy implements BlockReader {
 
     slowReadBuff.position(slowReadBuff.limit());
     checksumBuff.position(checksumBuff.limit());
-  
+
     IOUtils.skipFully(dataIn, toskip);
     long checkSumOffset = (toskip / bytesPerChecksum) * checksumSize;
     IOUtils.skipFully(checksumIn, checkSumOffset);
@@ -708,7 +717,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   }
 
   @Override
-  public int available() throws IOException {
+  public int available() {
     // We never do network I/O in BlockReaderLocalLegacy.
     return Integer.MAX_VALUE;
   }
@@ -717,7 +726,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   public boolean isLocal() {
     return true;
   }
-  
+
   @Override
   public boolean isShortCircuit() {
     return true;

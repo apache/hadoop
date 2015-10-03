@@ -38,11 +38,11 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HdfsDataInputStream extends FSDataInputStream {
-  public HdfsDataInputStream(DFSInputStream in) throws IOException {
+  public HdfsDataInputStream(DFSInputStream in) {
     super(in);
   }
 
-  public HdfsDataInputStream(CryptoInputStream in) throws IOException {
+  public HdfsDataInputStream(CryptoInputStream in) {
     super(in);
     Preconditions.checkArgument(in.getWrappedStream() instanceof DFSInputStream,
         "CryptoInputStream should wrap a DFSInputStream");
@@ -63,7 +63,7 @@ public class HdfsDataInputStream extends FSDataInputStream {
    * @return the underlying output stream
    */
   public InputStream getWrappedStream() {
-      return in;
+    return in;
   }
 
   /**
@@ -90,10 +90,10 @@ public class HdfsDataInputStream extends FSDataInputStream {
   /**
    * Get the visible length of the file. It will include the length of the last
    * block even if that is in UnderConstruction state.
-   * 
+   *
    * @return The visible length of the file.
    */
-  public long getVisibleLength() throws IOException {
+  public long getVisibleLength() {
     return getDFSInputStream().getFileLength();
   }
 

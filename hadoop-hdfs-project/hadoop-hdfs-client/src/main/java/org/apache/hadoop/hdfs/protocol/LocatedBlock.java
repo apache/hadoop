@@ -65,13 +65,13 @@ public class LocatedBlock {
   }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs,
-                      String[] storageIDs, StorageType[] storageTypes) {
+      String[] storageIDs, StorageType[] storageTypes) {
     this(b, locs, storageIDs, storageTypes, -1, false, EMPTY_LOCS);
   }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, String[] storageIDs,
-                      StorageType[] storageTypes, long startOffset,
-                      boolean corrupt, DatanodeInfo[] cachedLocs) {
+      StorageType[] storageTypes, long startOffset,
+      boolean corrupt, DatanodeInfo[] cachedLocs) {
     this.b = b;
     this.offset = startOffset;
     this.corrupt = corrupt;

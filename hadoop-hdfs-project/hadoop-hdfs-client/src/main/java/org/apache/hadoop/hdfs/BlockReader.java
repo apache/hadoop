@@ -33,7 +33,7 @@ import org.apache.hadoop.util.DataChecksum;
  */
 @InterfaceAudience.Private
 public interface BlockReader extends ByteBufferReadable, Closeable {
-  
+
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
@@ -57,7 +57,7 @@ public interface BlockReader extends ByteBufferReadable, Closeable {
    * network I/O.
    * This may return more than what is actually present in the block.
    */
-  int available() throws IOException;
+  int available();
 
   /**
    * Close the block reader.
@@ -87,7 +87,7 @@ public interface BlockReader extends ByteBufferReadable, Closeable {
    * @return              true only if this is a local read.
    */
   boolean isLocal();
-  
+
   /**
    * @return              true only if this is a short-circuit read.
    *                      All short-circuit reads are also local.

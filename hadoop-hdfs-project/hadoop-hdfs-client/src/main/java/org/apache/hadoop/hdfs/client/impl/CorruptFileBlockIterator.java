@@ -84,13 +84,13 @@ public class CorruptFileBlockIterator implements RemoteIterator<Path> {
     }
   }
 
-  
+
   @Override
   public boolean hasNext() {
     return nextPath != null;
   }
 
-  
+
   @Override
   public Path next() throws IOException {
     if (!hasNext()) {

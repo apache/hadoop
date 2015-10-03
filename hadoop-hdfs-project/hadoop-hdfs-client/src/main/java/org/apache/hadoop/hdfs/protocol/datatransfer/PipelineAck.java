@@ -94,7 +94,7 @@ public class PipelineAck {
   /** default constructor **/
   public PipelineAck() {
   }
-  
+
   /**
    * Constructor assuming no next DN in pipeline
    * @param seqno sequence number
@@ -125,7 +125,7 @@ public class PipelineAck {
       .setDownstreamAckTimeNanos(downstreamAckTimeNanos)
       .build();
   }
-  
+
   /**
    * Get the sequence number
    * @return the sequence number
@@ -133,7 +133,7 @@ public class PipelineAck {
   public long getSeqno() {
     return proto.getSeqno();
   }
-  
+
   /**
    * Get the number of replies
    * @return the number of replies
@@ -141,7 +141,7 @@ public class PipelineAck {
   public short getNumOfReplies() {
     return (short)proto.getReplyCount();
   }
-  
+
   /**
    * get the header flag of ith reply
    */
@@ -179,7 +179,7 @@ public class PipelineAck {
   }
 
   /**
-   * Returns the OOB status if this ack contains one. 
+   * Returns the OOB status if this ack contains one.
    * @return null if it is not an OOB ack.
    */
   public Status getOOBStatus() {
@@ -216,7 +216,7 @@ public class PipelineAck {
   public void write(OutputStream out) throws IOException {
     proto.writeDelimitedTo(out);
   }
-  
+
   @Override //Object
   public String toString() {
     return TextFormat.shortDebugString(proto);

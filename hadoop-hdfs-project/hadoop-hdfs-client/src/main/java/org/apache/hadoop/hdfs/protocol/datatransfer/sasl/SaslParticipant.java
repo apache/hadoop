@@ -129,20 +129,20 @@ class SaslParticipant {
       return (String) saslServer.getNegotiatedProperty(Sasl.QOP);
     }
   }
-  
+
   /**
    * After successful SASL negotiation, returns whether it's QOP privacy
-   * 
+   *
    * @return boolean whether it's QOP privacy
    */
   public boolean isNegotiatedQopPrivacy() {
     String qop = getNegotiatedQop();
     return qop != null && "auth-conf".equalsIgnoreCase(qop);
   }
-  
+
   /**
    * Wraps a byte array.
-   * 
+   *
    * @param bytes The array containing the bytes to wrap.
    * @param off The starting position at the array
    * @param len The number of bytes to wrap
@@ -156,10 +156,10 @@ class SaslParticipant {
       return saslServer.wrap(bytes, off, len);
     }
   }
-  
+
   /**
    * Unwraps a byte array.
-   * 
+   *
    * @param bytes The array containing the bytes to unwrap.
    * @param off The starting position at the array
    * @param len The number of bytes to unwrap

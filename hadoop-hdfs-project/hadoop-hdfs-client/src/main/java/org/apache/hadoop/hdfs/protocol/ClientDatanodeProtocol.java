@@ -41,34 +41,34 @@ import org.apache.hadoop.security.token.TokenInfo;
 public interface ClientDatanodeProtocol {
   /**
    * Until version 9, this class ClientDatanodeProtocol served as both
-   * the client interface to the DN AND the RPC protocol used to 
+   * the client interface to the DN AND the RPC protocol used to
    * communicate with the NN.
-   * 
-   * This class is used by both the DFSClient and the 
+   *
+   * This class is used by both the DFSClient and the
    * DN server side to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing DN's interface then you need to 
+   *
+   * If you are adding/changing DN's interface then you need to
    * change both this class and ALSO related protocol buffer
    * wire protocol definition in ClientDatanodeProtocol.proto.
-   * 
-   * For more details on protocol buffer wire protocol, please see 
+   *
+   * For more details on protocol buffer wire protocol, please see
    * .../org/apache/hadoop/hdfs/protocolPB/overview.html
-   * 
+   *
    * The log of historical changes can be retrieved from the svn).
    * 9: Added deleteBlockPool method
-   * 
+   *
    * 9 is the last version id when this class was used for protocols
-   *  serialization. DO not update this version any further. 
+   *  serialization. DO not update this version any further.
    */
-  public static final long versionID = 9L;
+  long versionID = 9L;
 
   /** Return the visible length of a replica. */
   long getReplicaVisibleLength(ExtendedBlock b) throws IOException;
-  
+
   /**
    * Refresh the list of federated namenodes from updated configuration
    * Adds new namenodes and stops the deleted namenodes.
-   * 
+   *
    * @throws IOException on error
    **/
   void refreshNamenodes() throws IOException;
@@ -76,19 +76,19 @@ public interface ClientDatanodeProtocol {
   /**
    * Delete the block pool directory. If force is false it is deleted only if
    * it is empty, otherwise it is deleted along with its contents.
-   * 
+   *
    * @param bpid Blockpool id to be deleted.
-   * @param force If false blockpool directory is deleted only if it is empty 
-   *          i.e. if it doesn't contain any block files, otherwise it is 
+   * @param force If false blockpool directory is deleted only if it is empty
+   *          i.e. if it doesn't contain any block files, otherwise it is
    *          deleted along with its contents.
    * @throws IOException
    */
   void deleteBlockPool(String bpid, boolean force) throws IOException;
-  
+
   /**
    * Retrieves the path names of the block file and metadata file stored on the
    * local file system.
-   * 
+   *
    * In order for this method to work, one of the following should be satisfied:
    * <ul>
    * <li>
@@ -98,7 +98,7 @@ public interface ClientDatanodeProtocol {
    * When security is enabled, kerberos authentication must be used to connect
    * to the datanode.</li>
    * </ul>
-   * 
+   *
    * @param block
    *          the specified block on the local datanode
    * @param token
@@ -109,7 +109,7 @@ public interface ClientDatanodeProtocol {
    */
   BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block,
       Token<BlockTokenIdentifier> token) throws IOException;
-  
+
   /**
    * Shuts down a datanode.
    *
@@ -117,9 +117,9 @@ public interface ClientDatanodeProtocol {
    *          down. The work includes advising clients to wait and saving
    *          certain states for quick restart. This should only be used when
    *          the stored data will remain the same during upgrade/restart.
-   * @throws IOException 
+   * @throws IOException
    */
-  void shutdownDatanode(boolean forUpgrade) throws IOException;  
+  void shutdownDatanode(boolean forUpgrade) throws IOException;
 
   /**
    * Obtains datanode info

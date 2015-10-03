@@ -72,7 +72,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-/** 
+/**
  * Utility class to create BlockReader implementations.
  */
 @InterfaceAudience.Private
@@ -127,7 +127,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   /**
    * The name of this client.
    */
-  private String clientName; 
+  private String clientName;
 
   /**
    * The DataNode we're talking to.
@@ -170,7 +170,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private RemotePeerFactory remotePeerFactory;
 
   /**
-   * UserGroupInformation  to use for legacy block reader local objects, if needed.
+   * UserGroupInformation to use for legacy block reader local objects,
+   * if needed.
    */
   private UserGroupInformation userGroupInformation;
 
@@ -313,7 +314,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    * There are a few caches that are important here.
    *
    * The ShortCircuitCache stores file descriptor objects which have been passed
-   * from the DataNode. 
+   * from the DataNode.
    *
    * The DomainSocketFactory stores information about UNIX domain socket paths
    * that we not been able to use in the past, so that we don't waste time
@@ -426,9 +427,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       return null;
     }
     if (clientContext.getDisableLegacyBlockReaderLocal()) {
-        PerformanceAdvisory.LOG.debug("{}: can't construct " +
-            "BlockReaderLocalLegacy because " +
-            "disableLegacyBlockReaderLocal is set.", this);
+      PerformanceAdvisory.LOG.debug("{}: can't construct " +
+          "BlockReaderLocalLegacy because " +
+          "disableLegacyBlockReaderLocal is set.", this);
       return null;
     }
     IOException ioe;
@@ -470,7 +471,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       return null;
     }
     ShortCircuitCache cache = clientContext.getShortCircuitCache();
-    ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
+    ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(),
+        block.getBlockPoolId());
     ShortCircuitReplicaInfo info = cache.fetchOrCreate(key, this);
     InvalidToken exc = info.getInvalidTokenException();
     if (exc != null) {
@@ -501,14 +503,15 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    *
    * @return    Null if we could not communicate with the datanode,
    *            a new ShortCircuitReplicaInfo object otherwise.
-   *            ShortCircuitReplicaInfo objects may contain either an InvalidToken
-   *            exception, or a ShortCircuitReplica object ready to use.
+   *            ShortCircuitReplicaInfo objects may contain either an
+   *            InvalidToken exception, or a ShortCircuitReplica object ready to
+   *            use.
    */
   @Override
   public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
     if (createShortCircuitReplicaInfoCallback != null) {
       ShortCircuitReplicaInfo info =
-        createShortCircuitReplicaInfoCallback.createShortCircuitReplicaInfo();
+          createShortCircuitReplicaInfoCallback.createShortCircuitReplicaInfo();
       if (info != null) return info;
     }
     LOG.trace("{}: trying to create ShortCircuitReplicaInfo.", this);
@@ -548,7 +551,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           // Handle an I/O error we got when using a newly created socket.
           // We temporarily disable the domain socket path for a few minutes in
           // this case, to prevent wasting more time on it.
-          LOG.warn(this + ": I/O error requesting file descriptors.  " + 
+          LOG.warn(this + ": I/O error requesting file descriptors.  " +
               "Disabling domain socket " + peer.getDomainSocket(), e);
           IOUtilsClient.cleanup(LOG, peer);
           clientContext.getDomainSocketFactory()
@@ -564,11 +567,11 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    * Request file descriptors from a DomainPeer.
    *
    * @param peer   The peer to use for communication.
-   * @param slot   If non-null, the shared memory slot to associate with the 
+   * @param slot   If non-null, the shared memory slot to associate with the
    *               new ShortCircuitReplica.
-   * 
+   *
    * @return  A ShortCircuitReplica object if we could communicate with the
-   *          datanode; null, otherwise. 
+   *          datanode; null, otherwise.
    * @throws  IOException If we encountered an I/O exception while communicating
    *          with the datanode.
    */
@@ -682,7 +685,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         }
         if (curPeer.fromCache) {
           // Handle an I/O error we got when using a cached peer.  These are
-          // considered less serious, because the underlying socket may be stale.
+          // considered less serious because the underlying socket may be stale.
           LOG.debug("Closed potentially stale domain peer {}", peer, ioe);
         } else {
           // Handle an I/O error we got when using a newly created domain peer.
@@ -756,7 +759,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   public static class BlockReaderPeer {
     final Peer peer;
     final boolean fromCache;
-    
+
     BlockReaderPeer(Peer peer, boolean fromCache) {
       this.peer = peer;
       this.fromCache = fromCache;
@@ -800,7 +803,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     }
     try {
       Peer peer = remotePeerFactory.newConnectedPeer(inetSocketAddress, token,
-        datanode);
+          datanode);
       LOG.trace("nextTcpPeer: created newConnectedPeer {}", peer);
       return new BlockReaderPeer(peer, false);
     } catch (IOException e) {

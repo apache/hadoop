@@ -54,38 +54,40 @@ public class URLConnectionFactory {
   /**
    * Timeout for socket connects and reads
    */
-  public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
+  public final static int DEFAULT_SOCKET_TIMEOUT = 60 * 1000; // 1 minute
   private final ConnectionConfigurator connConfigurator;
 
-  private static final ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR = new ConnectionConfigurator() {
-    @Override
-    public HttpURLConnection configure(HttpURLConnection conn)
-        throws IOException {
-      URLConnectionFactory.setTimeouts(conn, DEFAULT_SOCKET_TIMEOUT);
-      return conn;
-    }
-  };
+  private static final ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
+      = new ConnectionConfigurator() {
+        @Override
+        public HttpURLConnection configure(HttpURLConnection conn)
+            throws IOException {
+          URLConnectionFactory.setTimeouts(conn, DEFAULT_SOCKET_TIMEOUT);
+          return conn;
+        }
+      };
 
   /**
    * The URLConnectionFactory that sets the default timeout and it only trusts
    * Java's SSL certificates.
    */
-  public static final URLConnectionFactory DEFAULT_SYSTEM_CONNECTION_FACTORY = new URLConnectionFactory(
-      DEFAULT_TIMEOUT_CONN_CONFIGURATOR);
+  public static final URLConnectionFactory DEFAULT_SYSTEM_CONNECTION_FACTORY =
+      new URLConnectionFactory(DEFAULT_TIMEOUT_CONN_CONFIGURATOR);
 
   /**
    * Construct a new URLConnectionFactory based on the configuration. It will
    * try to load SSL certificates when it is specified.
    */
-  public static URLConnectionFactory newDefaultURLConnectionFactory(Configuration conf) {
+  public static URLConnectionFactory newDefaultURLConnectionFactory(
+      Configuration conf) {
     ConnectionConfigurator conn = getSSLConnectionConfiguration(conf);
 
     return new URLConnectionFactory(conn);
   }
 
-  private static ConnectionConfigurator
-      getSSLConnectionConfiguration(Configuration conf) {
-    ConnectionConfigurator conn = null;
+  private static ConnectionConfigurator getSSLConnectionConfiguration(
+      Configuration conf) {
+    ConnectionConfigurator conn;
     try {
       conn = newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
     } catch (Exception e) {
@@ -103,9 +105,9 @@ public class URLConnectionFactory {
    * Construct a new URLConnectionFactory that supports OAut-based connections.
    * It will also try to load the SSL configuration when they are specified.
    */
-  public static URLConnectionFactory
-      newOAuth2URLConnectionFactory(Configuration conf) throws IOException {
-    ConnectionConfigurator conn = null;
+  public static URLConnectionFactory newOAuth2URLConnectionFactory(
+      Configuration conf) throws IOException {
+    ConnectionConfigurator conn;
     try {
       ConnectionConfigurator sslConnConfigurator
           = newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
@@ -125,8 +127,9 @@ public class URLConnectionFactory {
   /**
    * Create a new ConnectionConfigurator for SSL connections
    */
-  private static ConnectionConfigurator newSslConnConfigurator(final int timeout,
-      Configuration conf) throws IOException, GeneralSecurityException {
+  private static ConnectionConfigurator newSslConnConfigurator(
+      final int timeout, Configuration conf)
+      throws IOException, GeneralSecurityException {
     final SSLFactory factory;
     final SSLSocketFactory sf;
     final HostnameVerifier hv;

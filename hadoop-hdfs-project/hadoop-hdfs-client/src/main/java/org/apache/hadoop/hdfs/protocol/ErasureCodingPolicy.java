@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
-import java.util.Map;
-
 /**
  * A policy about how to write/read/code an erasure coding file.
  */
@@ -66,11 +64,9 @@ public final class ErasureCodingPolicy {
     }
     ErasureCodingPolicy that = (ErasureCodingPolicy) o;
 
-    if (that.getName().equals(name) && that.getCellSize() == cellSize
-        && that.getSchema().equals(schema)) {
-      return true;
-    }
-    return false;
+    return that.getName().equals(name) &&
+        that.getCellSize() == cellSize &&
+        that.getSchema().equals(schema);
   }
 
   @Override
@@ -83,11 +79,8 @@ public final class ErasureCodingPolicy {
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("ErasureCodingPolicy=[");
-    sb.append("Name=" + name + ", ");
-    sb.append("Schema=[" + schema.toString() + "], ");
-    sb.append("CellSize=" + cellSize + " ");
-    sb.append("]");
-    return sb.toString();
+    return "ErasureCodingPolicy=[" + "Name=" + name + ", "
+        + "Schema=[" + schema.toString() + "], "
+        + "CellSize=" + cellSize + " " + "]";
   }
 }

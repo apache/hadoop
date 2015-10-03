@@ -39,6 +39,7 @@ public class LocatedStripedBlock extends LocatedBlock {
   private int[] blockIndices;
   private Token<BlockTokenIdentifier>[] blockTokens;
 
+  @SuppressWarnings({"unchecked"})
   public LocatedStripedBlock(ExtendedBlock b, DatanodeInfo[] locs,
       String[] storageIDs, StorageType[] storageTypes, int[] indices,
       long startOffset, boolean corrupt, DatanodeInfo[] cachedLocs) {

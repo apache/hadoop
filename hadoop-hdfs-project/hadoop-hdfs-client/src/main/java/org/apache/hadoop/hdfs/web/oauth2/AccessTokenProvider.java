@@ -39,7 +39,7 @@ public abstract class AccessTokenProvider implements Configurable {
    * Will be called for each connection, so implementations should be
    * performant. Implementations are responsible for any refreshing of
    * the token.
-   * 
+   *
    * @return Access token to be added to connection header.
    */
   public abstract String getAccessToken() throws IOException;

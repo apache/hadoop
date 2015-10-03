@@ -23,7 +23,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 public class CachingStrategy {
   private final Boolean dropBehind; // null = use server defaults
   private final Long readahead; // null = use server defaults
-  
+
   public static CachingStrategy newDefaultStrategy() {
     return new CachingStrategy(null, null);
   }
@@ -64,7 +64,7 @@ public class CachingStrategy {
   public Boolean getDropBehind() {
     return dropBehind;
   }
-  
+
   public Long getReadahead() {
     return readahead;
   }

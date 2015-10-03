@@ -43,19 +43,19 @@ public class ReplaceDatanodeOnFailure {
 
     private final Condition condition;
 
-    private Policy(Condition condition) {
+    Policy(Condition condition) {
       this.condition = condition;
     }
-    
+
     Condition getCondition() {
       return condition;
     }
   }
 
   /** Datanode replacement condition */
-  private static interface Condition {
+  private interface Condition {
     /** Return true unconditionally. */
-    static final Condition TRUE = new Condition() {
+    Condition TRUE = new Condition() {
       @Override
       public boolean satisfy(short replication, DatanodeInfo[] existings,
           int nExistings, boolean isAppend, boolean isHflushed) {
@@ -64,7 +64,7 @@ public class ReplaceDatanodeOnFailure {
     };
 
     /** Return false unconditionally. */
-    static final Condition FALSE = new Condition() {
+    Condition FALSE = new Condition() {
       @Override
       public boolean satisfy(short replication, DatanodeInfo[] existings,
           int nExistings, boolean isAppend, boolean isHflushed) {
@@ -80,31 +80,24 @@ public class ReplaceDatanodeOnFailure {
      *   (1) floor(r/2) >= n; or
      *   (2) r > n and the block is hflushed/appended.
      */
-    static final Condition DEFAULT = new Condition() {
+    Condition DEFAULT = new Condition() {
       @Override
       public boolean satisfy(final short replication,
           final DatanodeInfo[] existings, final int n, final boolean isAppend,
           final boolean isHflushed) {
-        if (replication < 3) {
-          return false;
-        } else {
-          if (n <= (replication/2)) {
-            return true;
-          } else {
-            return isAppend || isHflushed;
-          }
-        }
+        return replication >= 3 &&
+            (n <= (replication / 2) || isAppend || isHflushed);
       }
     };
 
     /** Is the condition satisfied? */
-    public boolean satisfy(short replication, DatanodeInfo[] existings,
-        int nExistings, boolean isAppend, boolean isHflushed);
+    boolean satisfy(short replication, DatanodeInfo[] existings, int nExistings,
+                    boolean isAppend, boolean isHflushed);
   }
 
   private final Policy policy;
   private final boolean bestEffort;
-  
+
   public ReplaceDatanodeOnFailure(Policy policy, boolean bestEffort) {
     this.policy = policy;
     this.bestEffort = bestEffort;
@@ -124,7 +117,7 @@ public class ReplaceDatanodeOnFailure {
    * Best effort means that the client will try to replace the failed datanode
    * (provided that the policy is satisfied), however, it will continue the
    * write operation in case that the datanode replacement also fails.
-   * 
+   *
    * @return Suppose the datanode replacement fails.
    *     false: An exception should be thrown so that the write will fail.
    *     true : The write should be resumed with the remaining datandoes.
@@ -137,16 +130,13 @@ public class ReplaceDatanodeOnFailure {
   public boolean satisfy(
       final short replication, final DatanodeInfo[] existings,
       final boolean isAppend, final boolean isHflushed) {
-    final int n = existings == null? 0: existings.length;
-    if (n == 0 || n >= replication) {
-      //don't need to add datanode for any policy.
-      return false;
-    } else {
-      return policy.getCondition().satisfy(
-          replication, existings, n, isAppend, isHflushed);
-    }
+    final int n = existings == null ? 0 : existings.length;
+    //don't need to add datanode for any policy.
+    return !(n == 0 || n >= replication) &&
+        policy.getCondition().satisfy(replication, existings, n, isAppend,
+            isHflushed);
   }
-  
+
   @Override
   public String toString() {
     return policy.toString();
@@ -158,7 +148,7 @@ public class ReplaceDatanodeOnFailure {
     final boolean bestEffort = conf.getBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_KEY,
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_DEFAULT);
-    
+
     return new ReplaceDatanodeOnFailure(policy, bestEffort);
   }
 

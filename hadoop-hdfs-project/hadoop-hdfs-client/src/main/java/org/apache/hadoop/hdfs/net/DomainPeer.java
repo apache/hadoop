@@ -26,7 +26,7 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Represents a peer that we communicate with by using blocking I/O 
+ * Represents a peer that we communicate with by using blocking I/O
  * on a UNIX domain socket.
  */
 @InterfaceAudience.Private

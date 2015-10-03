@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  * <li>The client performing short circuit reads must be configured at the
  * datanode.</li>
- * <li>The client gets the file descriptors for the metadata file and the data 
+ * <li>The client gets the file descriptors for the metadata file and the data
  * file for the block using
  * {@link org.apache.hadoop.hdfs.server.datanode.DataXceiver#requestShortCircuitFds}.
  * </li>
@@ -155,7 +155,7 @@ class BlockReaderLocal implements BlockReader {
    * The Checksum FileChannel.
    */
   private final FileChannel checksumIn;
-  
+
   /**
    * Checksum type and size.
    */
@@ -170,12 +170,12 @@ class BlockReaderLocal implements BlockReader {
    * Name of the block, for logging purposes.
    */
   private final String filename;
-  
+
   /**
    * Block ID and Block Pool ID.
    */
   private final ExtendedBlock block;
-  
+
   /**
    * Cache of Checksum#bytesPerChecksum.
    */
@@ -204,11 +204,11 @@ class BlockReaderLocal implements BlockReader {
    * size of a single chunk, even if {@link #zeroReadaheadRequested} is true.
    * The reason is because we need to do a certain amount of buffering in order
    * to do checksumming.
-   * 
+   *
    * This determines how many bytes we'll use out of dataBuf and checksumBuf.
    * Why do we allocate buffers, and then (potentially) only use part of them?
    * The rationale is that allocating a lot of buffers of different sizes would
-   * make it very difficult for the DirectBufferPool to re-use buffers. 
+   * make it very difficult for the DirectBufferPool to re-use buffers.
    */
   private final int maxReadaheadLength;
 
@@ -335,9 +335,8 @@ class BlockReaderLocal implements BlockReader {
    */
   private synchronized int fillBuffer(ByteBuffer buf, boolean canSkipChecksum)
       throws IOException {
-    TraceScope scope = tracer.newScope(
-        "BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")");
-    try {
+    try (TraceScope ignored = tracer.newScope(
+        "BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")")) {
       int total = 0;
       long startDataPos = dataPos;
       int startBufPos = buf.position();
@@ -358,7 +357,8 @@ class BlockReaderLocal implements BlockReader {
           buf.limit(buf.position());
           buf.position(startBufPos);
           createChecksumBufIfNeeded();
-          int checksumsNeeded = (total + bytesPerChecksum - 1) / bytesPerChecksum;
+          int checksumsNeeded = (total + bytesPerChecksum - 1) /
+              bytesPerChecksum;
           checksumBuf.clear();
           checksumBuf.limit(checksumsNeeded * checksumSize);
           long checksumPos = BlockMetadataHeader.getHeaderSize()
@@ -367,8 +367,8 @@ class BlockReaderLocal implements BlockReader {
             int nRead = checksumIn.read(checksumBuf, checksumPos);
             if (nRead < 0) {
               throw new IOException("Got unexpected checksum file EOF at " +
-                  checksumPos + ", block file position " + startDataPos + " for " +
-                  "block " + block + " of file " + filename);
+                  checksumPos + ", block file position " + startDataPos +
+                  " for block " + block + " of file " + filename);
             }
             checksumPos += nRead;
           }
@@ -380,24 +380,16 @@ class BlockReaderLocal implements BlockReader {
         }
       }
       return total;
-    } finally {
-      scope.close();
     }
   }
 
   private boolean createNoChecksumContext() {
-    if (verifyChecksum) {
-      if (storageType != null && storageType.isTransient()) {
-        // Checksums are not stored for replicas on transient storage.  We do not
-        // anchor, because we do not intend for client activity to block eviction
-        // from transient storage on the DataNode side.
-        return true;
-      } else {
-        return replica.addNoChecksumAnchor();
-      }
-    } else {
-      return true;
-    }
+    return !verifyChecksum ||
+        // Checksums are not stored for replicas on transient storage.  We do
+        // not anchor, because we do not intend for client activity to block
+        // eviction from transient storage on the DataNode side.
+        (storageType != null && storageType.isTransient()) ||
+        replica.addNoChecksumAnchor();
   }
 
   private void releaseNoChecksumContext() {
@@ -453,14 +445,14 @@ class BlockReaderLocal implements BlockReader {
   /**
    * Fill the data buffer.  If necessary, validate the data against the
    * checksums.
-   * 
+   *
    * We always want the offsets of the data contained in dataBuf to be
    * aligned to the chunk boundary.  If we are validating checksums, we
    * accomplish this by seeking backwards in the file until we're on a
    * chunk boundary.  (This is necessary because we can't checksum a
    * partial chunk.)  If we are not validating checksums, we simply only
    * fill the latter part of dataBuf.
-   * 
+   *
    * @param canSkipChecksum  true if we can skip checksumming.
    * @return                 true if we hit EOF.
    * @throws IOException
@@ -473,11 +465,11 @@ class BlockReaderLocal implements BlockReader {
     dataBuf.limit(maxReadaheadLength);
     if (canSkipChecksum) {
       dataBuf.position(slop);
-      fillBuffer(dataBuf, canSkipChecksum);
+      fillBuffer(dataBuf, true);
     } else {
       dataPos -= slop;
       dataBuf.position(0);
-      fillBuffer(dataBuf, canSkipChecksum);
+      fillBuffer(dataBuf, false);
     }
     dataBuf.limit(dataBuf.position());
     dataBuf.position(Math.min(dataBuf.position(), slop));
@@ -501,7 +493,7 @@ class BlockReaderLocal implements BlockReader {
    * efficiency's sake. As described above, all non-checksum-chunk-aligned
    * reads will be served from the slower read path.
    *
-   * @param buf              The buffer to read into. 
+   * @param buf              The buffer to read into.
    * @param canSkipChecksum  True if we can skip checksums.
    */
   private synchronized int readWithBounceBuffer(ByteBuffer buf,
@@ -621,7 +613,7 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public int available() throws IOException {
+  public int available() {
     // We never do network I/O in BlockReaderLocal.
     return Integer.MAX_VALUE;
   }
@@ -660,8 +652,8 @@ class BlockReaderLocal implements BlockReader {
 
   /**
    * Get or create a memory map for this replica.
-   * 
-   * There are two kinds of ClientMmap objects we could fetch here: one that 
+   *
+   * There are two kinds of ClientMmap objects we could fetch here: one that
    * will always read pre-checksummed data, and one that may read data that
    * hasn't been checksummed.
    *
@@ -671,13 +663,13 @@ class BlockReaderLocal implements BlockReader {
    * If we fetch the latter, we don't bother with anchoring.
    *
    * @param opts     The options to use, such as SKIP_CHECKSUMS.
-   * 
+   *
    * @return         null on failure; the ClientMmap otherwise.
    */
   @Override
   public ClientMmap getClientMmap(EnumSet<ReadOption> opts) {
     boolean anchor = verifyChecksum &&
-        (opts.contains(ReadOption.SKIP_CHECKSUMS) == false);
+        !opts.contains(ReadOption.SKIP_CHECKSUMS);
     if (anchor) {
       if (!createNoChecksumContext()) {
         LOG.trace("can't get an mmap for {} of {} since SKIP_CHECKSUMS was not "
@@ -696,7 +688,7 @@ class BlockReaderLocal implements BlockReader {
     }
     return clientMmap;
   }
-  
+
   @VisibleForTesting
   boolean getVerifyChecksum() {
     return this.verifyChecksum;
@@ -706,7 +698,7 @@ class BlockReaderLocal implements BlockReader {
   int getMaxReadaheadLength() {
     return this.maxReadaheadLength;
   }
-  
+
   /**
    * Make the replica anchorable.  Normally this can only be done by the
    * DataNode.  This method is only for testing.

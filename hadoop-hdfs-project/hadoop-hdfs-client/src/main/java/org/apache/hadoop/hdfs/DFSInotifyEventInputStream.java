@@ -69,8 +69,8 @@ public class DFSInotifyEventInputStream {
     this(namenode, tracer, namenode.getCurrentEditLogTxid());
   }
 
-  DFSInotifyEventInputStream(ClientProtocol namenode,
-        Tracer tracer, long lastReadTxid) throws IOException {
+  DFSInotifyEventInputStream(ClientProtocol namenode, Tracer tracer,
+      long lastReadTxid) {
     this.namenode = namenode;
     this.it = Iterators.emptyIterator();
     this.lastReadTxid = lastReadTxid;
@@ -94,8 +94,7 @@ public class DFSInotifyEventInputStream {
    * The next available batch of events will be returned.
    */
   public EventBatch poll() throws IOException, MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyPoll");
-    try {
+    try (TraceScope ignored = tracer.newScope("inotifyPoll")) {
       // need to keep retrying until the NN sends us the latest committed txid
       if (lastReadTxid == -1) {
         LOG.debug("poll(): lastReadTxid is -1, reading current txid from NN");
@@ -119,7 +118,7 @@ public class DFSInotifyEventInputStream {
           }
         } else {
           LOG.debug("poll(): read no edits from the NN when requesting edits " +
-            "after txid {}", lastReadTxid);
+              "after txid {}", lastReadTxid);
           return null;
         }
       }
@@ -130,8 +129,6 @@ public class DFSInotifyEventInputStream {
       } else {
         return null;
       }
-    } finally {
-      scope.close();
     }
   }
 
@@ -175,9 +172,8 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch poll(long time, TimeUnit tu) throws IOException,
       InterruptedException, MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyPollWithTimeout");
-    EventBatch next = null;
-    try {
+    EventBatch next;
+    try (TraceScope ignored = tracer.newScope("inotifyPollWithTimeout")) {
       long initialTime = Time.monotonicNow();
       long totalWait = TimeUnit.MILLISECONDS.convert(time, tu);
       long nextWait = INITIAL_WAIT_MS;
@@ -195,8 +191,6 @@ public class DFSInotifyEventInputStream {
             nextWait);
         Thread.sleep(nextWait);
       }
-    } finally {
-      scope.close();
     }
     return next;
   }
@@ -212,9 +206,8 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch take() throws IOException, InterruptedException,
       MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyTake");
-    EventBatch next = null;
-    try {
+    EventBatch next;
+    try (TraceScope ignored = tracer.newScope("inotifyTake")) {
       int nextWaitMin = INITIAL_WAIT_MS;
       while ((next = poll()) == null) {
         // sleep for a random period between nextWaitMin and nextWaitMin * 2
@@ -225,8 +218,6 @@ public class DFSInotifyEventInputStream {
         // the maximum sleep is 2 minutes
         nextWaitMin = Math.min(60000, nextWaitMin * 2);
       }
-    } finally {
-      scope.close();
     }
 
     return next;

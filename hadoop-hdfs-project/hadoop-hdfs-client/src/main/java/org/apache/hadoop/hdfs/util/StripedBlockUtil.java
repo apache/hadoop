@@ -171,7 +171,7 @@ public class StripedBlockUtil {
   private static int lastCellSize(int size, int cellSize, int numDataBlocks,
       int i) {
     if (i < numDataBlocks) {
-      // parity block size (i.e. i >= numDataBlocks) is the same as 
+      // parity block size (i.e. i >= numDataBlocks) is the same as
       // the first data block size (i.e. i = 0).
       size -= i*cellSize;
       if (size < 0) {

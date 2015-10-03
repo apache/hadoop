@@ -21,7 +21,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 public final class ShortCircuitReplicaInfo {
   private final ShortCircuitReplica replica;
-  private final InvalidToken exc; 
+  private final InvalidToken exc;
 
   public ShortCircuitReplicaInfo() {
     this.replica = null;
@@ -43,9 +43,9 @@ public final class ShortCircuitReplicaInfo {
   }
 
   public InvalidToken getInvalidTokenException() {
-    return exc; 
+    return exc;
   }
-  
+
   public String toString() {
     StringBuilder builder = new StringBuilder();
     String prefix = "";
@@ -56,7 +56,6 @@ public final class ShortCircuitReplicaInfo {
     }
     if (exc != null) {
       builder.append(prefix).append(exc);
-      prefix = ", ";
     }
     builder.append("}");
     return builder.toString();

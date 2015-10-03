@@ -41,33 +41,34 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
     super(out, stats, startPosition);
   }
 
-  public HdfsDataOutputStream(DFSOutputStream out, FileSystem.Statistics stats
-      ) throws IOException {
+  public HdfsDataOutputStream(DFSOutputStream out, FileSystem.Statistics stats)
+      throws IOException {
     this(out, stats, 0L);
   }
 
-  public HdfsDataOutputStream(CryptoOutputStream out, FileSystem.Statistics stats,
-      long startPosition) throws IOException {
+  public HdfsDataOutputStream(CryptoOutputStream out,
+      FileSystem.Statistics stats, long startPosition) throws IOException {
     super(out, stats, startPosition);
-    Preconditions.checkArgument(out.getWrappedStream() instanceof DFSOutputStream,
+    Preconditions.checkArgument(
+        out.getWrappedStream() instanceof DFSOutputStream,
         "CryptoOutputStream should wrap a DFSOutputStream");
   }
 
-  public HdfsDataOutputStream(CryptoOutputStream out, FileSystem.Statistics stats)
-      throws IOException {
+  public HdfsDataOutputStream(CryptoOutputStream out,
+      FileSystem.Statistics stats) throws IOException {
     this(out, stats, 0L);
   }
 
   /**
    * Get the actual number of replicas of the current block.
-   * 
+   *
    * This can be different from the designated replication factor of the file
    * because the namenode does not maintain replication for the blocks which are
    * currently being written to. Depending on the configuration, the client may
    * continue to write to a block even if a few datanodes in the write pipeline
    * have failed, or the client may add a new datanodes once a datanode has
    * failed.
-   * 
+   *
    * @return the number of valid replicas of the current block
    */
   public synchronized int getCurrentBlockReplication() throws IOException {
@@ -77,10 +78,10 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
     }
     return ((DFSOutputStream) wrappedStream).getCurrentBlockReplication();
   }
-  
+
   /**
    * Sync buffered data to DataNodes (flush to disk devices).
-   * 
+   *
    * @param syncFlags
    *          Indicate the detailed semantic and actions of the hsync.
    * @throws IOException
@@ -89,13 +90,13 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
   public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
     OutputStream wrappedStream = getWrappedStream();
     if (wrappedStream instanceof CryptoOutputStream) {
-      ((CryptoOutputStream) wrappedStream).flush();
+      wrappedStream.flush();
       wrappedStream = ((CryptoOutputStream) wrappedStream).getWrappedStream();
     }
     ((DFSOutputStream) wrappedStream).hsync(syncFlags);
   }
-  
-  public static enum SyncFlag {
+
+  public enum SyncFlag {
 
     /**
      * When doing sync to DataNodes, also update the metadata (block length) in
@@ -107,6 +108,6 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
      * Sync the data to DataNode, close the current block, and allocate a new
      * block
      */
-    END_BLOCK;
+    END_BLOCK
   }
 }

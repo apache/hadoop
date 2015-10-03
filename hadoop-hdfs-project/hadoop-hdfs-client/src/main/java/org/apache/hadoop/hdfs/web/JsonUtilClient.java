@@ -60,7 +60,8 @@ class JsonUtilClient {
 
   /** Convert a Json map to a RemoteException. */
   static RemoteException toRemoteException(final Map<?, ?> json) {
-    final Map<?, ?> m = (Map<?, ?>)json.get(RemoteException.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)json.get(
+        RemoteException.class.getSimpleName());
     final String message = (String)m.get("message");
     final String javaClassName = (String)m.get("javaClassName");
     return new RemoteException(javaClassName, message);
@@ -100,7 +101,8 @@ class JsonUtilClient {
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
-  static HdfsFileStatus toFileStatus(final Map<?, ?> json, boolean includesType) {
+  static HdfsFileStatus toFileStatus(final Map<?, ?> json,
+      boolean includesType) {
     if (json == null) {
       return null;
     }
@@ -108,7 +110,8 @@ class JsonUtilClient {
     final Map<?, ?> m = includesType ?
         (Map<?, ?>)json.get(FileStatus.class.getSimpleName()) : json;
     final String localName = (String) m.get("pathSuffix");
-    final WebHdfsConstants.PathType type = WebHdfsConstants.PathType.valueOf((String) m.get("type"));
+    final WebHdfsConstants.PathType type =
+        WebHdfsConstants.PathType.valueOf((String) m.get("type"));
     final byte[] symlink = type != WebHdfsConstants.PathType.SYMLINK? null
         : DFSUtilClient.string2Bytes((String) m.get("symlink"));
 
@@ -116,20 +119,21 @@ class JsonUtilClient {
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
     final FsPermission permission = toFsPermission((String) m.get("permission"),
-                                                   (Boolean) m.get("aclBit"),
-                                                   (Boolean) m.get("encBit"));
+        (Boolean) m.get("aclBit"),
+        (Boolean) m.get("encBit"));
     final long aTime = ((Number) m.get("accessTime")).longValue();
     final long mTime = ((Number) m.get("modificationTime")).longValue();
     final long blockSize = ((Number) m.get("blockSize")).longValue();
     final short replication = ((Number) m.get("replication")).shortValue();
     final long fileId = m.containsKey("fileId") ?
-        ((Number) m.get("fileId")).longValue() : HdfsConstants.GRANDFATHER_INODE_ID;
+        ((Number) m.get("fileId")).longValue() :
+        HdfsConstants.GRANDFATHER_INODE_ID;
     final int childrenNum = getInt(m, "childrenNum", -1);
     final byte storagePolicy = m.containsKey("storagePolicy") ?
         (byte) ((Number) m.get("storagePolicy")).longValue() :
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-    return new HdfsFileStatus(len, type == WebHdfsConstants.PathType.DIRECTORY, replication,
-        blockSize, mTime, aTime, permission, owner, group,
+    return new HdfsFileStatus(len, type == WebHdfsConstants.PathType.DIRECTORY,
+        replication, blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtilClient.string2Bytes(localName),
         fileId, childrenNum, null,
         storagePolicy, null);
@@ -185,7 +189,7 @@ class JsonUtilClient {
 
   /** Convert a Json map to an DatanodeInfo object. */
   static DatanodeInfo toDatanodeInfo(final Map<?, ?> m)
-    throws IOException {
+      throws IOException {
     if (m == null) {
       return null;
     }
@@ -304,7 +308,8 @@ class JsonUtilClient {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(ContentSummary.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)json.get(
+        ContentSummary.class.getSimpleName());
     final long length = ((Number) m.get("length")).longValue();
     final long fileCount = ((Number) m.get("fileCount")).longValue();
     final long directoryCount = ((Number) m.get("directoryCount")).longValue();
@@ -312,9 +317,13 @@ class JsonUtilClient {
     final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
 
-    return new ContentSummary.Builder().length(length).fileCount(fileCount).
-        directoryCount(directoryCount).quota(quota).spaceConsumed(spaceConsumed).
-        spaceQuota(spaceQuota).build();
+    return new ContentSummary.Builder()
+        .length(length)
+        .fileCount(fileCount)
+        .directoryCount(directoryCount)
+        .quota(quota)
+        .spaceConsumed(spaceConsumed)
+        .spaceQuota(spaceQuota).build();
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */
@@ -329,21 +338,22 @@ class JsonUtilClient {
     final int length = ((Number) m.get("length")).intValue();
     final byte[] bytes = StringUtils.hexStringToByte((String) m.get("bytes"));
 
-    final DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
+    final DataInputStream in = new DataInputStream(
+        new ByteArrayInputStream(bytes));
     final DataChecksum.Type crcType =
         MD5MD5CRC32FileChecksum.getCrcTypeFromAlgorithmName(algorithm);
     final MD5MD5CRC32FileChecksum checksum;
 
     // Recreate what DFSClient would have returned.
     switch(crcType) {
-      case CRC32:
-        checksum = new MD5MD5CRC32GzipFileChecksum();
-        break;
-      case CRC32C:
-        checksum = new MD5MD5CRC32CastagnoliFileChecksum();
-        break;
-      default:
-        throw new IOException("Unknown algorithm: " + algorithm);
+    case CRC32:
+      checksum = new MD5MD5CRC32GzipFileChecksum();
+      break;
+    case CRC32C:
+      checksum = new MD5MD5CRC32CastagnoliFileChecksum();
+      break;
+    default:
+      throw new IOException("Unknown algorithm: " + algorithm);
     }
     checksum.readFields(in);
 
@@ -390,14 +400,12 @@ class JsonUtilClient {
     return aclStatusBuilder.build();
   }
 
-  static String getPath(final Map<?, ?> json)
-      throws IOException {
+  static String getPath(final Map<?, ?> json) {
     if (json == null) {
       return null;
     }
 
-    String path = (String) json.get("Path");
-    return path;
+    return (String) json.get("Path");
   }
 
   static byte[] getXAttr(final Map<?, ?> json, final String name)
@@ -446,7 +454,7 @@ class JsonUtilClient {
     ObjectReader reader = new ObjectMapper().reader(List.class);
     final List<Object> xattrs = reader.readValue(namesInJson);
     final List<String> names =
-      Lists.newArrayListWithCapacity(json.keySet().size());
+        Lists.newArrayListWithCapacity(json.keySet().size());
 
     for (Object xattr : xattrs) {
       names.add((String) xattr);
@@ -495,7 +503,8 @@ class JsonUtilClient {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(LocatedBlocks.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)json.get(
+        LocatedBlocks.class.getSimpleName());
     final long fileLength = ((Number) m.get("fileLength")).longValue();
     final boolean isUnderConstruction = (Boolean)m.get("isUnderConstruction");
     final List<LocatedBlock> locatedBlocks = toLocatedBlockList(

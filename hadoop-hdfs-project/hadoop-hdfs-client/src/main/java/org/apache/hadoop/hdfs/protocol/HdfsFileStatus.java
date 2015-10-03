@@ -33,7 +33,8 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 @InterfaceStability.Evolving
 public class HdfsFileStatus {
 
-  private final byte[] path;  // local name of the inode that's encoded in java UTF8
+  // local name of the inode that's encoded in java UTF8
+  private final byte[] path;
   private final byte[] symlink; // symlink target encoded in java UTF8 or null
   private final long length;
   private final boolean isdir;
@@ -49,7 +50,7 @@ public class HdfsFileStatus {
   private final FileEncryptionInfo feInfo;
 
   private final ErasureCodingPolicy ecPolicy;
-  
+
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
   private final byte storagePolicy;

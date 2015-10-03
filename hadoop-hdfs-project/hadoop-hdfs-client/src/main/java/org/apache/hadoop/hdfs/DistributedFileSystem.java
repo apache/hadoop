@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSLinkResolver;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,7 +50,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -87,7 +85,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -113,7 +110,7 @@ public class DistributedFileSystem extends FileSystem {
 
   DFSClient dfs;
   private boolean verifyChecksum = true;
-  
+
   static{
     HdfsConfigurationLoader.init();
   }
@@ -172,8 +169,8 @@ public class DistributedFileSystem extends FileSystem {
   public void setWorkingDirectory(Path dir) {
     String result = fixRelativePart(dir).toUri().getPath();
     if (!DFSUtilClient.isValidName(result)) {
-      throw new IllegalArgumentException("Invalid DFS directory name " + 
-                                         result);
+      throw new IllegalArgumentException("Invalid DFS directory name " +
+          result);
     }
     workingDir = fixRelativePart(dir);
   }
@@ -187,7 +184,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Checks that the passed URI belongs to this filesystem and returns
    * just the path component. Expects a URI with an absolute path.
-   * 
+   *
    * @param file URI with absolute path
    * @return path component of {file}
    * @throws IllegalArgumentException if URI does not belong to this DFS
@@ -197,11 +194,11 @@ public class DistributedFileSystem extends FileSystem {
     String result = file.toUri().getPath();
     if (!DFSUtilClient.isValidName(result)) {
       throw new IllegalArgumentException("Pathname " + result + " from " +
-                                         file+" is not a valid DFS filename.");
+          file+" is not a valid DFS filename.");
     }
     return result;
   }
-  
+
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
       long len) throws IOException {
@@ -210,9 +207,9 @@ public class DistributedFileSystem extends FileSystem {
     }
     return getFileBlockLocations(file.getPath(), start, len);
   }
-  
+
   @Override
-  public BlockLocation[] getFileBlockLocations(Path p, 
+  public BlockLocation[] getFileBlockLocations(Path p,
       final long start, final long len) throws IOException {
     statistics.incrementReadOps(1);
     final Path absF = fixRelativePart(p);
@@ -234,7 +231,7 @@ public class DistributedFileSystem extends FileSystem {
     this.verifyChecksum = verifyChecksum;
   }
 
-  /** 
+  /**
    * Start the lease recovery of a file
    *
    * @param f a file
@@ -245,8 +242,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException{
         return dfs.recoverLease(getPathName(p));
       }
       @Override
@@ -269,10 +265,9 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FSDataInputStream>() {
       @Override
-      public FSDataInputStream doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public FSDataInputStream doCall(final Path p) throws IOException {
         final DFSInputStream dfsis =
-          dfs.open(getPathName(p), bufferSize, verifyChecksum);
+            dfs.open(getPathName(p), bufferSize, verifyChecksum);
         return dfs.createWrappedInputStream(dfsis);
       }
       @Override
@@ -291,7 +286,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Append to an existing file (optional operation).
-   * 
+   *
    * @param f the existing file to be appended.
    * @param flag Flags for the Append operation. CreateFlag.APPEND is mandatory
    *          to be present.
@@ -321,7 +316,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Append to an existing file (optional operation).
-   * 
+   *
    * @param f the existing file to be appended.
    * @param flag Flags for the Append operation. CreateFlag.APPEND is mandatory
    *          to be present.
@@ -362,9 +357,9 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Same as  
-   * {@link #create(Path, FsPermission, boolean, int, short, long, 
-   * Progressable)} with the addition of favoredNodes that is a hint to 
+   * Same as
+   * {@link #create(Path, FsPermission, boolean, int, short, long,
+   * Progressable)} with the addition of favoredNodes that is a hint to
    * where the namenode should place the file blocks.
    * The favored nodes hint is not persisted in HDFS. Hence it may be honored
    * at the creation time only. And with favored nodes, blocks will be pinned
@@ -376,13 +371,12 @@ public class DistributedFileSystem extends FileSystem {
       final FsPermission permission, final boolean overwrite,
       final int bufferSize, final short replication, final long blockSize,
       final Progressable progress, final InetSocketAddress[] favoredNodes)
-          throws IOException {
+      throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<HdfsDataOutputStream>() {
       @Override
-      public HdfsDataOutputStream doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public HdfsDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
                 : EnumSet.of(CreateFlag.CREATE),
@@ -404,21 +398,21 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public FSDataOutputStream create(final Path f, final FsPermission permission,
-    final EnumSet<CreateFlag> cflags, final int bufferSize,
-    final short replication, final long blockSize, final Progressable progress,
-    final ChecksumOpt checksumOpt) throws IOException {
+      final EnumSet<CreateFlag> cflags, final int bufferSize,
+      final short replication, final long blockSize,
+      final Progressable progress, final ChecksumOpt checksumOpt)
+      throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FSDataOutputStream>() {
       @Override
-      public FSDataOutputStream doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public FSDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
-                cflags, replication, blockSize, progress, bufferSize,
-                checksumOpt);
+            cflags, replication, blockSize, progress, bufferSize,
+            checksumOpt);
         return dfs.createWrappedOutputStream(dfsos, statistics);
       }
       @Override
@@ -432,14 +426,14 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   protected HdfsDataOutputStream primitiveCreate(Path f,
-    FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
-    short replication, long blockSize, Progressable progress,
-    ChecksumOpt checksumOpt) throws IOException {
+      FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
+      short replication, long blockSize, Progressable progress,
+      ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     final DFSOutputStream dfsos = dfs.primitiveCreate(
-      getPathName(fixRelativePart(f)),
-      absolutePermission, flag, true, replication, blockSize,
-      progress, bufferSize, checksumOpt);
+        getPathName(fixRelativePart(f)),
+        absolutePermission, flag, true, replication, blockSize,
+        progress, bufferSize, checksumOpt);
     return dfs.createWrappedOutputStream(dfsos, statistics);
   }
 
@@ -458,10 +452,9 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FSDataOutputStream>() {
       @Override
-      public FSDataOutputStream doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public FSDataOutputStream doCall(final Path p) throws IOException {
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
-          flag, false, replication, blockSize, progress, bufferSize, null);
+            flag, false, replication, blockSize, progress, bufferSize, null);
         return dfs.createWrappedOutputStream(dfsos, statistics);
       }
 
@@ -475,15 +468,13 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean setReplication(Path src, 
-                                final short replication
-                               ) throws IOException {
+  public boolean setReplication(Path src, final short replication)
+      throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(src);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException {
         return dfs.setReplication(getPathName(p), replication);
       }
       @Override
@@ -507,8 +498,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setStoragePolicy(getPathName(p), policyName);
         return null;
       }
@@ -534,7 +524,7 @@ public class DistributedFileSystem extends FileSystem {
 
       @Override
       public BlockStoragePolicySpi next(final FileSystem fs, final Path p)
-          throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.getStoragePolicy(p);
       }
     }.resolve(this, absF);
@@ -548,7 +538,6 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Deprecated. Prefer {@link FileSystem#getAllStoragePolicies()}
-   * @return
    * @throws IOException
    */
   @Deprecated
@@ -560,7 +549,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Move blocks from srcs to trg and delete srcs afterwards.
    * The file block sizes must be the same.
-   * 
+   *
    * @param trg existing file to append to
    * @param psrcs list of files (same block size, same replication)
    * @throws IOException
@@ -607,7 +596,7 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
-  
+
   @SuppressWarnings("deprecation")
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
@@ -625,8 +614,7 @@ public class DistributedFileSystem extends FileSystem {
       // Keep trying to resolve the destination
       return new FileSystemLinkResolver<Boolean>() {
         @Override
-        public Boolean doCall(final Path p)
-            throws IOException, UnresolvedLinkException {
+        public Boolean doCall(final Path p) throws IOException {
           return dfs.rename(getPathName(source), getPathName(p));
         }
         @Override
@@ -639,7 +627,7 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
-  /** 
+  /**
    * This rename operation is guaranteed to be atomic.
    */
   @SuppressWarnings("deprecation")
@@ -658,8 +646,7 @@ public class DistributedFileSystem extends FileSystem {
       // Keep trying to resolve the destination
       new FileSystemLinkResolver<Void>() {
         @Override
-        public Void doCall(final Path p)
-            throws IOException, UnresolvedLinkException {
+        public Void doCall(final Path p) throws IOException {
           dfs.rename(getPathName(source), getPathName(p), options);
           return null;
         }
@@ -679,8 +666,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException {
         return dfs.truncate(getPathName(p), newLength);
       }
       @Override
@@ -697,8 +683,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException {
         return dfs.delete(getPathName(p), recursive);
       }
       @Override
@@ -708,15 +693,14 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
     statistics.incrementReadOps(1);
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<ContentSummary>() {
       @Override
-      public ContentSummary doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public ContentSummary doCall(final Path p) throws IOException {
         return dfs.getContentSummary(getPathName(p));
       }
       @Override
@@ -728,15 +712,15 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** Set a directory's quotas
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long, long, StorageType)
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String,
+   * long, long, StorageType)
    */
   public void setQuota(Path src, final long namespaceQuota,
       final long storagespaceQuota) throws IOException {
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setQuota(getPathName(p), namespaceQuota, storagespaceQuota);
         return null;
       }
@@ -758,22 +742,21 @@ public class DistributedFileSystem extends FileSystem {
    * @param quota value of the specific storage type quota to be modified.
    * Maybe {@link HdfsConstants#QUOTA_RESET} to clear quota by storage type.
    */
-  public void setQuotaByStorageType(
-    Path src, final StorageType type, final long quota)
-    throws IOException {
+  public void setQuotaByStorageType(Path src, final StorageType type,
+      final long quota)
+      throws IOException {
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-        throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setQuotaByStorageType(getPathName(p), type, quota);
         return null;
       }
       @Override
       public Void next(final FileSystem fs, final Path p)
-        throws IOException {
-        // setQuotaByStorageType is not defined in FileSystem, so we only can resolve
-        // within this DFS
+          throws IOException {
+        // setQuotaByStorageType is not defined in FileSystem, so we only can
+        // resolve within this DFS
         return doCall(p);
       }
     }.resolve(this, absF);
@@ -789,7 +772,7 @@ public class DistributedFileSystem extends FileSystem {
     if (thisListing == null) { // the directory does not exist
       throw new FileNotFoundException("File " + p + " does not exist.");
     }
-    
+
     HdfsFileStatus[] partialListing = thisListing.getPartialListing();
     if (!thisListing.hasMore()) { // got all entries of the directory
       FileStatus[] stats = new FileStatus[partialListing.length];
@@ -803,30 +786,30 @@ public class DistributedFileSystem extends FileSystem {
     // The directory size is too big that it needs to fetch more
     // estimate the total number of entries in the directory
     int totalNumEntries =
-      partialListing.length + thisListing.getRemainingEntries();
+        partialListing.length + thisListing.getRemainingEntries();
     ArrayList<FileStatus> listing =
-      new ArrayList<FileStatus>(totalNumEntries);
+        new ArrayList<>(totalNumEntries);
     // add the first batch of entries to the array list
     for (HdfsFileStatus fileStatus : partialListing) {
       listing.add(fileStatus.makeQualified(getUri(), p));
     }
     statistics.incrementLargeReadOps(1);
- 
+
     // now fetch more entries
     do {
       thisListing = dfs.listPaths(src, thisListing.getLastName());
- 
+
       if (thisListing == null) { // the directory is deleted
         throw new FileNotFoundException("File " + p + " does not exist.");
       }
- 
+
       partialListing = thisListing.getPartialListing();
       for (HdfsFileStatus fileStatus : partialListing) {
         listing.add(fileStatus.makeQualified(getUri(), p));
       }
       statistics.incrementLargeReadOps(1);
     } while (thisListing.hasMore());
- 
+
     return listing.toArray(new FileStatus[listing.size()]);
   }
 
@@ -843,8 +826,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(p);
     return new FileSystemLinkResolver<FileStatus[]>() {
       @Override
-      public FileStatus[] doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public FileStatus[] doCall(final Path p) throws IOException {
         return listStatusInternal(p);
       }
       @Override
@@ -858,18 +840,18 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path p,
       final PathFilter filter)
-  throws IOException {
+      throws IOException {
     Path absF = fixRelativePart(p);
     return new FileSystemLinkResolver<RemoteIterator<LocatedFileStatus>>() {
       @Override
       public RemoteIterator<LocatedFileStatus> doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
-        return new DirListingIterator<LocatedFileStatus>(p, filter, true);
+          throws IOException {
+        return new DirListingIterator<>(p, filter, true);
       }
 
       @Override
-      public RemoteIterator<LocatedFileStatus> next(final FileSystem fs, final Path p)
-          throws IOException {
+      public RemoteIterator<LocatedFileStatus> next(final FileSystem fs,
+          final Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           return ((DistributedFileSystem)fs).listLocatedStatus(p, filter);
         }
@@ -892,19 +874,19 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(final Path p)
-  throws IOException {
+      throws IOException {
     Path absF = fixRelativePart(p);
     return new FileSystemLinkResolver<RemoteIterator<FileStatus>>() {
       @Override
       public RemoteIterator<FileStatus> doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
-        return new DirListingIterator<FileStatus>(p, false);
+          throws IOException {
+        return new DirListingIterator<>(p, false);
       }
 
       @Override
       public RemoteIterator<FileStatus> next(final FileSystem fs, final Path p)
           throws IOException {
-          return ((DistributedFileSystem)fs).listStatusIterator(p);
+        return ((DistributedFileSystem)fs).listStatusIterator(p);
       }
     }.resolve(this, absF);
 
@@ -913,14 +895,14 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * This class defines an iterator that returns
    * the file status of each file/subdirectory of a directory
-   * 
+   *
    * if needLocation, status contains block location if it is a file
    * throws a RuntimeException with the error as its cause.
-   * 
+   *
    * @param <T> the type of the file status
    */
   private class  DirListingIterator<T extends FileStatus>
-  implements RemoteIterator<T> {
+      implements RemoteIterator<T> {
     private DirectoryListing thisListing;
     private int i;
     private Path p;
@@ -962,21 +944,21 @@ public class DistributedFileSystem extends FileSystem {
         } else {
           next = (T)fileStat.makeQualified(getUri(), p);
         }
-          // apply filter if not null
+        // apply filter if not null
         if (filter == null || filter.accept(next.getPath())) {
           curStat = next;
         }
       }
       return curStat != null;
     }
-      
+
     /** Check if there is a next item before applying the given filter */
     private boolean hasNextNoFilter() throws IOException {
       if (thisListing == null) {
         return false;
       }
       if (i >= thisListing.getPartialListing().length
-          && thisListing.hasMore()) { 
+          && thisListing.hasMore()) {
         // current listing is exhausted & fetch a new listing
         thisListing = dfs.listPaths(src, thisListing.getLastName(),
             needLocation);
@@ -995,11 +977,11 @@ public class DistributedFileSystem extends FileSystem {
         T tmp = curStat;
         curStat = null;
         return tmp;
-      } 
+      }
       throw new java.util.NoSuchElementException("No more entry in " + p);
     }
   }
-  
+
   /**
    * Create a directory, only when the parent directories exist.
    *
@@ -1007,7 +989,7 @@ public class DistributedFileSystem extends FileSystem {
    * the permission is applied.
    *
    * @param f           The path to create
-   * @param permission  The permission.  See FsPermission#applyUMask for 
+   * @param permission  The permission.  See FsPermission#applyUMask for
    *                    details about how this is used to calculate the
    *                    effective permission.
    */
@@ -1022,7 +1004,7 @@ public class DistributedFileSystem extends FileSystem {
    * the permission is applied.
    *
    * @param f           The path to create
-   * @param permission  The permission.  See FsPermission#applyUMask for 
+   * @param permission  The permission.  See FsPermission#applyUMask for
    *                    details about how this is used to calculate the
    *                    effective permission.
    */
@@ -1037,8 +1019,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException {
         return dfs.mkdirs(getPathName(p), permission, createParent);
       }
 
@@ -1059,12 +1040,12 @@ public class DistributedFileSystem extends FileSystem {
   @SuppressWarnings("deprecation")
   @Override
   protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
-    throws IOException {
+      throws IOException {
     statistics.incrementWriteOps(1);
     return dfs.primitiveMkdir(getPathName(f), absolutePermission);
   }
 
- 
+
   @Override
   public void close() throws IOException {
     try {
@@ -1084,8 +1065,8 @@ public class DistributedFileSystem extends FileSystem {
   @VisibleForTesting
   public DFSClient getClient() {
     return dfs;
-  }        
-  
+  }
+
   @Override
   public FsStatus getStatus(Path p) throws IOException {
     statistics.incrementReadOps(1);
@@ -1095,7 +1076,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Returns count of blocks with no good replicas left. Normally should be
    * zero.
-   * 
+   *
    * @throws IOException
    */
   public long getMissingBlocksCount() throws IOException {
@@ -1114,7 +1095,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Returns count of blocks with one of more replica missing.
-   * 
+   *
    * @throws IOException
    */
   public long getUnderReplicatedBlocksCount() throws IOException {
@@ -1123,7 +1104,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Returns count of blocks with at least one replica marked corrupt.
-   * 
+   *
    * @throws IOException
    */
   public long getCorruptBlocksCount() throws IOException {
@@ -1132,7 +1113,7 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
-    throws IOException {
+      throws IOException {
     return new CorruptFileBlockIterator(dfs, path);
   }
 
@@ -1142,25 +1123,25 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** @return datanode statistics for the given type. */
-  public DatanodeInfo[] getDataNodeStats(final DatanodeReportType type
-      ) throws IOException {
+  public DatanodeInfo[] getDataNodeStats(final DatanodeReportType type)
+      throws IOException {
     return dfs.datanodeReport(type);
   }
 
   /**
    * Enter, leave or get safe mode.
-   *  
+   *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
    *    HdfsConstants.SafeModeAction,boolean)
    */
-  public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
-  throws IOException {
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action)
+      throws IOException {
     return setSafeMode(action, false);
   }
 
   /**
    * Enter, leave or get safe mode.
-   * 
+   *
    * @param action
    *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
    *          SafeModeAction.GET
@@ -1200,24 +1181,23 @@ public class DistributedFileSystem extends FileSystem {
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#rollEdits()
    * @return the transaction ID of the newly created segment
    */
-  public long rollEdits() throws AccessControlException, IOException {
+  public long rollEdits() throws IOException {
     return dfs.rollEdits();
   }
 
   /**
    * enable/disable/check restoreFaileStorage
-   * 
+   *
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
-  public boolean restoreFailedStorage(String arg)
-      throws AccessControlException, IOException {
+  public boolean restoreFailedStorage(String arg) throws IOException {
     return dfs.restoreFailedStorage(arg);
   }
-  
+
 
   /**
-   * Refreshes the list of hosts and excluded hosts from the configured 
-   * files.  
+   * Refreshes the list of hosts and excluded hosts from the configured
+   * files.
    */
   public void refreshNodes() throws IOException {
     dfs.refreshNodes();
@@ -1240,7 +1220,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /*
-   * Requests the namenode to dump data strcutures into specified 
+   * Requests the namenode to dump data strcutures into specified
    * file.
    */
   public void metaSave(String pathname) throws IOException {
@@ -1262,8 +1242,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FileStatus>() {
       @Override
-      public FileStatus doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public FileStatus doCall(final Path p) throws IOException {
         HdfsFileStatus fi = dfs.getFileInfo(getPathName(p));
         if (fi != null) {
           return fi.makeQualified(getUri(), p);
@@ -1282,10 +1261,7 @@ public class DistributedFileSystem extends FileSystem {
   @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(final Path target, final Path link,
-      final boolean createParent) throws AccessControlException,
-      FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, UnsupportedFileSystemException, 
-      IOException {
+      final boolean createParent) throws IOException {
     if (!FileSystem.areSymlinksEnabled()) {
       throw new UnsupportedOperationException("Symlinks not supported");
     }
@@ -1293,14 +1269,12 @@ public class DistributedFileSystem extends FileSystem {
     final Path absF = fixRelativePart(link);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.createSymlink(target.toString(), getPathName(p), createParent);
         return null;
       }
       @Override
-      public Void next(final FileSystem fs, final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void next(final FileSystem fs, final Path p) throws IOException {
         fs.createSymlink(target, p, createParent);
         return null;
       }
@@ -1313,15 +1287,12 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public FileStatus getFileLinkStatus(final Path f)
-      throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, IOException {
+  public FileStatus getFileLinkStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
     final Path absF = fixRelativePart(f);
     FileStatus status = new FileSystemLinkResolver<FileStatus>() {
       @Override
-      public FileStatus doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public FileStatus doCall(final Path p) throws IOException {
         HdfsFileStatus fi = dfs.getFileLinkInfo(getPathName(p));
         if (fi != null) {
           return fi.makeQualified(getUri(), p);
@@ -1331,7 +1302,7 @@ public class DistributedFileSystem extends FileSystem {
       }
       @Override
       public FileStatus next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.getFileLinkStatus(p);
       }
     }.resolve(this, absF);
@@ -1345,14 +1316,12 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public Path getLinkTarget(final Path f) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException, IOException {
+  public Path getLinkTarget(final Path f) throws IOException {
     statistics.incrementReadOps(1);
     final Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<Path>() {
       @Override
-      public Path doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public Path doCall(final Path p) throws IOException {
         HdfsFileStatus fi = dfs.getFileLinkInfo(getPathName(p));
         if (fi != null) {
           return fi.makeQualified(getUri(), p).getSymlink();
@@ -1361,8 +1330,7 @@ public class DistributedFileSystem extends FileSystem {
         }
       }
       @Override
-      public Path next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+      public Path next(final FileSystem fs, final Path p) throws IOException {
         return fs.getLinkTarget(p);
       }
     }.resolve(this, absF);
@@ -1384,8 +1352,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FileChecksum>() {
       @Override
-      public FileChecksum doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public FileChecksum doCall(final Path p) throws IOException {
         return dfs.getFileChecksum(getPathName(p), Long.MAX_VALUE);
       }
 
@@ -1404,8 +1371,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(f);
     return new FileSystemLinkResolver<FileChecksum>() {
       @Override
-      public FileChecksum doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public FileChecksum doCall(final Path p) throws IOException {
         return dfs.getFileChecksum(getPathName(p), length);
       }
 
@@ -1413,11 +1379,11 @@ public class DistributedFileSystem extends FileSystem {
       public FileChecksum next(final FileSystem fs, final Path p)
           throws IOException {
         if (fs instanceof DistributedFileSystem) {
-          return ((DistributedFileSystem) fs).getFileChecksum(p, length);
+          return fs.getFileChecksum(p, length);
         } else {
           throw new UnsupportedFileSystemException(
               "getFileChecksum(Path, long) is not supported by "
-                  + fs.getClass().getSimpleName()); 
+                  + fs.getClass().getSimpleName());
         }
       }
     }.resolve(this, absF);
@@ -1425,13 +1391,12 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public void setPermission(Path p, final FsPermission permission
-      ) throws IOException {
+  ) throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(p);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setPermission(getPathName(p), permission);
         return null;
       }
@@ -1446,8 +1411,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public void setOwner(Path p, final String username, final String groupname
-      ) throws IOException {
+  public void setOwner(Path p, final String username, final String groupname)
+      throws IOException {
     if (username == null && groupname == null) {
       throw new IOException("username == null && groupname == null");
     }
@@ -1455,8 +1420,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(p);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setOwner(getPathName(p), username, groupname);
         return null;
       }
@@ -1471,14 +1435,13 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public void setTimes(Path p, final long mtime, final long atime
-      ) throws IOException {
+  public void setTimes(Path p, final long mtime, final long atime)
+      throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(p);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setTimes(getPathName(p), mtime, atime);
         return null;
       }
@@ -1491,7 +1454,7 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
 
   @Override
   protected int getDefaultPort() {
@@ -1501,9 +1464,7 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
-    Token<DelegationTokenIdentifier> result =
-      dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
-    return result;
+    return dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
   }
 
   /**
@@ -1528,7 +1489,7 @@ public class DistributedFileSystem extends FileSystem {
   public String getCanonicalServiceName() {
     return dfs.getCanonicalServiceName();
   }
-  
+
   @Override
   protected URI canonicalizeUri(URI uri) {
     if (HAUtilClient.isLogicalUri(getConf(), uri)) {
@@ -1543,7 +1504,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Utility function that returns if the NameNode is in safemode or not. In HA
    * mode, this API will return only ActiveNN's safemode status.
-   * 
+   *
    * @return true if NameNode is in safemode, false otherwise.
    * @throws IOException
    *           when there is an issue communicating with the NameNode
@@ -1557,8 +1518,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.allowSnapshot(getPathName(p));
         return null;
       }
@@ -1578,14 +1538,13 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   /** @see HdfsAdmin#disallowSnapshot(Path) */
   public void disallowSnapshot(final Path path) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.disallowSnapshot(getPathName(p));
         return null;
       }
@@ -1605,15 +1564,14 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
-  public Path createSnapshot(final Path path, final String snapshotName) 
+  public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<Path>() {
       @Override
-      public Path doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Path doCall(final Path p) throws IOException {
         return new Path(dfs.createSnapshot(getPathName(p), snapshotName));
       }
 
@@ -1631,15 +1589,14 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public void renameSnapshot(final Path path, final String snapshotOldName,
       final String snapshotNewName) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.renameSnapshot(getPathName(p), snapshotOldName, snapshotNewName);
         return null;
       }
@@ -1659,7 +1616,7 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
-  
+
   /**
    * @return All the snapshottable directories
    * @throws IOException
@@ -1668,15 +1625,14 @@ public class DistributedFileSystem extends FileSystem {
       throws IOException {
     return dfs.getSnapshottableDirListing();
   }
-  
+
   @Override
   public void deleteSnapshot(final Path snapshotDir, final String snapshotName)
       throws IOException {
     Path absF = fixRelativePart(snapshotDir);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.deleteSnapshot(getPathName(p), snapshotName);
         return null;
       }
@@ -1700,7 +1656,7 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
-   * 
+   *
    * @see DFSClient#getSnapshotDiffReport(String, String, String)
    */
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
@@ -1708,8 +1664,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(snapshotDir);
     return new FileSystemLinkResolver<SnapshotDiffReport>() {
       @Override
-      public SnapshotDiffReport doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public SnapshotDiffReport doCall(final Path p) throws IOException {
         return dfs.getSnapshotDiffReport(getPathName(p), fromSnapshot,
             toSnapshot);
       }
@@ -1729,21 +1684,20 @@ public class DistributedFileSystem extends FileSystem {
       }
     }.resolve(this, absF);
   }
- 
+
   /**
    * Get the close status of a file
    * @param src The path to the file
    *
    * @return return true if file is closed
    * @throws FileNotFoundException if the file does not exist.
-   * @throws IOException If an I/O error occurred     
+   * @throws IOException If an I/O error occurred
    */
   public boolean isFileClosed(final Path src) throws IOException {
     Path absF = fixRelativePart(src);
     return new FileSystemLinkResolver<Boolean>() {
       @Override
-      public Boolean doCall(final Path p)
-          throws IOException, UnresolvedLinkException {
+      public Boolean doCall(final Path p) throws IOException {
         return dfs.isFileClosed(getPathName(p));
       }
 
@@ -1771,7 +1725,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Add a new CacheDirective.
-   * 
+   *
    * @param info Information about a directive to add.
    * @param flags {@link CacheFlag}s to use for this operation.
    * @return the ID of the directive that was created.
@@ -1798,7 +1752,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Modify a CacheDirective.
-   * 
+   *
    * @param info Information about the directive to modify. You must set the ID
    *          to indicate which CacheDirective you want to modify.
    * @param flags {@link CacheFlag}s to use for this operation.
@@ -1816,7 +1770,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Remove a CacheDirectiveInfo.
-   * 
+   *
    * @param id identifier of the CacheDirectiveInfo to remove
    * @throws IOException if the directive could not be removed
    */
@@ -1824,10 +1778,10 @@ public class DistributedFileSystem extends FileSystem {
       throws IOException {
     dfs.removeCacheDirective(id);
   }
-  
+
   /**
    * List cache directives.  Incrementally fetches results from the server.
-   * 
+   *
    * @param filter Filter parameters to use when listing the directives, null to
    *               list all directives visible to us.
    * @return A RemoteIterator which returns CacheDirectiveInfo objects.
@@ -1870,7 +1824,7 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param info
    *          The request to add a cache pool.
-   * @throws IOException 
+   * @throws IOException
    *          If the request could not be completed.
    */
   public void addCachePool(CachePoolInfo info) throws IOException {
@@ -1883,20 +1837,20 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param info
    *          The request to modify a cache pool.
-   * @throws IOException 
+   * @throws IOException
    *          If the request could not be completed.
    */
   public void modifyCachePool(CachePoolInfo info) throws IOException {
     CachePoolInfo.validate(info);
     dfs.modifyCachePool(info);
   }
-    
+
   /**
    * Remove a cache pool.
    *
    * @param poolName
    *          Name of the cache pool to remove.
-   * @throws IOException 
+   * @throws IOException
    *          if the cache pool did not exist, or could not be removed.
    */
   public void removeCachePool(String poolName) throws IOException {
@@ -1973,8 +1927,7 @@ public class DistributedFileSystem extends FileSystem {
         return null;
       }
       @Override
-      public Void next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+      public Void next(final FileSystem fs, final Path p) throws IOException {
         fs.removeDefaultAcl(p);
         return null;
       }
@@ -1994,8 +1947,7 @@ public class DistributedFileSystem extends FileSystem {
         return null;
       }
       @Override
-      public Void next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+      public Void next(final FileSystem fs, final Path p) throws IOException {
         fs.removeAcl(p);
         return null;
       }
@@ -2006,7 +1958,8 @@ public class DistributedFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
-  public void setAcl(Path path, final List<AclEntry> aclSpec) throws IOException {
+  public void setAcl(Path path, final List<AclEntry> aclSpec)
+      throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
@@ -2036,20 +1989,19 @@ public class DistributedFileSystem extends FileSystem {
       }
       @Override
       public AclStatus next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.getAclStatus(p);
       }
     }.resolve(this, absF);
   }
-  
+
   /* HDFS only */
   public void createEncryptionZone(final Path path, final String keyName)
-    throws IOException {
+      throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.createEncryptionZone(getPathName(p), keyName);
         return null;
       }
@@ -2072,13 +2024,12 @@ public class DistributedFileSystem extends FileSystem {
 
   /* HDFS only */
   public EncryptionZone getEZForPath(final Path path)
-          throws IOException {
+      throws IOException {
     Preconditions.checkNotNull(path);
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<EncryptionZone>() {
       @Override
-      public EncryptionZone doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public EncryptionZone doCall(final Path p) throws IOException {
         return dfs.getEZForPath(getPathName(p));
       }
 
@@ -2105,7 +2056,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public void setXAttr(Path path, final String name, final byte[] value, 
+  public void setXAttr(Path path, final String name, final byte[] value,
       final EnumSet<XAttrSetFlag> flag) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
@@ -2120,10 +2071,10 @@ public class DistributedFileSystem extends FileSystem {
       public Void next(final FileSystem fs, final Path p) throws IOException {
         fs.setXAttr(p, name, value, flag);
         return null;
-      }      
+      }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public byte[] getXAttr(Path path, final String name) throws IOException {
     final Path absF = fixRelativePart(path);
@@ -2133,13 +2084,12 @@ public class DistributedFileSystem extends FileSystem {
         return dfs.getXAttr(getPathName(p), name);
       }
       @Override
-      public byte[] next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+      public byte[] next(final FileSystem fs, final Path p) throws IOException {
         return fs.getXAttr(p, name);
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public Map<String, byte[]> getXAttrs(Path path) throws IOException {
     final Path absF = fixRelativePart(path);
@@ -2150,14 +2100,14 @@ public class DistributedFileSystem extends FileSystem {
       }
       @Override
       public Map<String, byte[]> next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.getXAttrs(p);
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
-  public Map<String, byte[]> getXAttrs(Path path, final List<String> names) 
+  public Map<String, byte[]> getXAttrs(Path path, final List<String> names)
       throws IOException {
     final Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<Map<String, byte[]>>() {
@@ -2167,15 +2117,15 @@ public class DistributedFileSystem extends FileSystem {
       }
       @Override
       public Map<String, byte[]> next(final FileSystem fs, final Path p)
-        throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.getXAttrs(p, names);
       }
     }.resolve(this, absF);
   }
-  
+
   @Override
   public List<String> listXAttrs(Path path)
-          throws IOException {
+      throws IOException {
     final Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<List<String>>() {
       @Override
@@ -2184,7 +2134,7 @@ public class DistributedFileSystem extends FileSystem {
       }
       @Override
       public List<String> next(final FileSystem fs, final Path p)
-              throws IOException, UnresolvedLinkException {
+          throws IOException {
         return fs.listXAttrs(p);
       }
     }.resolve(this, absF);
@@ -2262,16 +2212,16 @@ public class DistributedFileSystem extends FileSystem {
    * Set the source path to the specified erasure coding policy.
    *
    * @param path     The directory to set the policy
-   * @param ecPolicy The erasure coding policy. If not specified default will be used.
+   * @param ecPolicy The erasure coding policy. If not specified default will
+   *                 be used.
    * @throws IOException
    */
-  public void setErasureCodingPolicy(final Path path, final ErasureCodingPolicy ecPolicy)
-      throws IOException {
+  public void setErasureCodingPolicy(final Path path,
+      final ErasureCodingPolicy ecPolicy) throws IOException {
     Path absF = fixRelativePart(path);
     new FileSystemLinkResolver<Void>() {
       @Override
-      public Void doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public Void doCall(final Path p) throws IOException {
         dfs.setErasureCodingPolicy(getPathName(p), ecPolicy);
         return null;
       }
@@ -2303,8 +2253,7 @@ public class DistributedFileSystem extends FileSystem {
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<ErasureCodingPolicy>() {
       @Override
-      public ErasureCodingPolicy doCall(final Path p) throws IOException,
-          UnresolvedLinkException {
+      public ErasureCodingPolicy doCall(final Path p) throws IOException {
         return dfs.getErasureCodingPolicy(getPathName(p));
       }
 

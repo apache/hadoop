@@ -43,7 +43,7 @@ public class AccessTokenTimer {
   }
 
   /**
-   * 
+   *
    * @param timer Timer instance for unit testing
    */
   public AccessTokenTimer(Timer timer) {
@@ -51,7 +51,7 @@ public class AccessTokenTimer {
     this.nextRefreshMSSinceEpoch = 0;
   }
 
-  /** 
+  /**
    * Set when the access token will expire as reported by the oauth server,
    * ie in seconds from now.
    * @param expiresIn Access time expiration as reported by OAuth server
@@ -63,7 +63,7 @@ public class AccessTokenTimer {
   /**
    * Set when the access token will expire in milliseconds from epoch,
    * as required by the WebHDFS configuration.  This is a bit hacky and lame.
-   * 
+   *
    * @param expiresInMSSinceEpoch Access time expiration in ms since epoch.
    */
   public void setExpiresInMSSinceEpoch(String expiresInMSSinceEpoch){
@@ -72,13 +72,13 @@ public class AccessTokenTimer {
 
   /**
    * Get next time we should refresh the token.
-   * 
+   *
    * @return Next time since epoch we'll need to refresh the token.
    */
   public long getNextRefreshMSSinceEpoch() {
     return nextRefreshMSSinceEpoch;
   }
-  
+
   /**
    * Return true if the current token has expired or will expire within the
    * EXPIRE_BUFFER_MS (to give ample wiggle room for the call to be made to
@@ -89,7 +89,7 @@ public class AccessTokenTimer {
     long currTime = timer.now();
     return currTime > lowerLimit;
   }
-  
+
   /**
    * The expires_in param from OAuth is in seconds-from-now.  Convert to
    * milliseconds-from-epoch
@@ -99,5 +99,5 @@ public class AccessTokenTimer {
     long expiresMs = expiresSecs * 1000;
     return timer.now() + expiresMs;
   }
-  
+
 }

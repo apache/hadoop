@@ -34,7 +34,7 @@ public interface RemotePeerFactory {
    * @param datanodeId    ID of destination DataNode
    * @return              A new Peer connected to the address.
    *
-   * @throws IOException  If there was an error connecting or creating 
+   * @throws IOException  If there was an error connecting or creating
    *                      the remote socket, encrypted stream, etc.
    */
   Peer newConnectedPeer(InetSocketAddress addr,

@@ -34,29 +34,29 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
   public static final String DEFAULT = NULL;
 
   /** Http operation types */
-  public static enum Type {
-    GET, PUT, POST, DELETE;
+  public enum Type {
+    GET, PUT, POST, DELETE
   }
 
   /** Http operation interface. */
-  public static interface Op {
+  public interface Op {
     /** @return the Http operation type. */
-    public Type getType();
+    Type getType();
 
     /** @return true if the operation cannot use a token */
-    public boolean getRequireAuth();
+    boolean getRequireAuth();
 
     /** @return true if the operation will do output. */
-    public boolean getDoOutput();
+    boolean getDoOutput();
 
     /** @return true if the operation will be redirected. */
-    public boolean getRedirect();
+    boolean getRedirect();
 
     /** @return true the expected http response code. */
-    public int getExpectedHttpResponseCode();
+    int getExpectedHttpResponseCode();
 
     /** @return a URI query string. */
-    public String toQueryString();
+    String toQueryString();
   }
 
   /** Expects HTTP response 307 "Temporary Redirect". */

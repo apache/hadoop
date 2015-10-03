@@ -47,16 +47,16 @@ public abstract class Param<T, D extends Param.Domain<T>> {
     try {
       for(Param<?, ?> p : parameters) {
         if (p.getValue() != null) {
-          b.append(separator).append(
-              URLEncoder.encode(p.getName(), "UTF-8")
-              + "="
-              + URLEncoder.encode(p.getValueString(), "UTF-8"));
+          b.append(separator)
+              .append(URLEncoder.encode(p.getName(), "UTF-8"))
+              .append("=")
+              .append(URLEncoder.encode(p.getValueString(), "UTF-8"));
         }
       }
-  } catch (UnsupportedEncodingException e) {
-    // Sane systems know about UTF-8, so this should never happen.
-    throw new RuntimeException(e);
-  }
+    } catch (UnsupportedEncodingException e) {
+      // Sane systems know about UTF-8, so this should never happen.
+      throw new RuntimeException(e);
+    }
     return b.toString();
   }
 

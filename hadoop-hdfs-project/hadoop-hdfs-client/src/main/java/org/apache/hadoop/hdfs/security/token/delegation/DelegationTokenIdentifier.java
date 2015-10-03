@@ -34,7 +34,8 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 @InterfaceAudience.Private
 public class DelegationTokenIdentifier
     extends AbstractDelegationTokenIdentifier {
-  public static final Text HDFS_DELEGATION_KIND = new Text("HDFS_DELEGATION_TOKEN");
+  public static final Text HDFS_DELEGATION_KIND =
+      new Text("HDFS_DELEGATION_TOKEN");
 
   /**
    * Create an empty delegation token identifier for reading into.
@@ -88,13 +89,14 @@ public class DelegationTokenIdentifier
     }
   }
 
-  public static class SWebHdfsDelegationTokenIdentifier extends WebHdfsDelegationTokenIdentifier {
-	public SWebHdfsDelegationTokenIdentifier() {
-	  super();
-	}
-	@Override
-	public Text getKind() {
-	  return WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
-	}
+  public static class SWebHdfsDelegationTokenIdentifier
+      extends WebHdfsDelegationTokenIdentifier {
+    public SWebHdfsDelegationTokenIdentifier() {
+      super();
+    }
+    @Override
+    public Text getKind() {
+      return WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
+    }
   }
 }

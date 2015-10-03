@@ -22,7 +22,7 @@ import java.net.HttpURLConnection;
 /** Http DELETE operation parameter. */
 public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
   /** Delete operations. */
-  public static enum Op implements HttpOpParam.Op {
+  public enum Op implements HttpOpParam.Op {
     DELETE(HttpURLConnection.HTTP_OK),
     DELETESNAPSHOT(HttpURLConnection.HTTP_OK),
 
@@ -65,7 +65,7 @@ public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
     }
   }
 
-  private static final Domain<Op> DOMAIN = new Domain<Op>(NAME, Op.class);
+  private static final Domain<Op> DOMAIN = new Domain<>(NAME, Op.class);
 
   /**
    * Constructor.

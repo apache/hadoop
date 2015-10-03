@@ -30,7 +30,7 @@ public class CreateFlagParam extends EnumSetParam<CreateFlag> {
 
   public static final String DEFAULT = "";
 
-  private static final Domain<CreateFlag> DOMAIN = new Domain<CreateFlag>(
+  private static final Domain<CreateFlag> DOMAIN = new Domain<>(
       NAME, CreateFlag.class);
 
   public CreateFlagParam(final EnumSet<CreateFlag> createFlags) {

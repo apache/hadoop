@@ -46,7 +46,7 @@ public class CacheDirectiveInfo {
 
     /**
      * Builds a new CacheDirectiveInfo populated with the set properties.
-     * 
+     *
      * @return New CacheDirectiveInfo.
      */
     public CacheDirectiveInfo build() {
@@ -73,7 +73,7 @@ public class CacheDirectiveInfo {
 
     /**
      * Sets the id used in this request.
-     * 
+     *
      * @param id The id used in this request.
      * @return This builder, for call chaining.
      */
@@ -84,7 +84,7 @@ public class CacheDirectiveInfo {
 
     /**
      * Sets the path used in this request.
-     * 
+     *
      * @param path The path used in this request.
      * @return This builder, for call chaining.
      */
@@ -95,7 +95,7 @@ public class CacheDirectiveInfo {
 
     /**
      * Sets the replication used in this request.
-     * 
+     *
      * @param replication The replication used in this request.
      * @return This builder, for call chaining.
      */
@@ -106,7 +106,7 @@ public class CacheDirectiveInfo {
 
     /**
      * Sets the pool used in this request.
-     * 
+     *
      * @param pool The pool used in this request.
      * @return This builder, for call chaining.
      */
@@ -119,7 +119,7 @@ public class CacheDirectiveInfo {
      * Sets when the CacheDirective should expire. A
      * {@link CacheDirectiveInfo.Expiration} can specify either an absolute or
      * relative expiration time.
-     * 
+     *
      * @param expiration when this CacheDirective should expire
      * @return This builder, for call chaining
      */
@@ -156,7 +156,7 @@ public class CacheDirectiveInfo {
      * <p>
      * Use {@link Expiration#NEVER} to indicate an Expiration that never
      * expires.
-     * 
+     *
      * @param ms how long until the CacheDirective expires, in milliseconds
      * @return A relative Expiration
      */
@@ -169,7 +169,7 @@ public class CacheDirectiveInfo {
      * <p>
      * Use {@link Expiration#NEVER} to indicate an Expiration that never
      * expires.
-     * 
+     *
      * @param date when the CacheDirective expires
      * @return An absolute Expiration
      */
@@ -182,7 +182,7 @@ public class CacheDirectiveInfo {
      * <p>
      * Use {@link Expiration#NEVER} to indicate an Expiration that never
      * expires.
-     * 
+     *
      * @param ms when the CacheDirective expires, in milliseconds since the Unix
      *          epoch.
      * @return An absolute Expiration
@@ -350,9 +350,8 @@ public class CacheDirectiveInfo {
     }
     if (expiration != null) {
       builder.append(prefix).append("expiration: ").append(expiration);
-      prefix = ", ";
     }
     builder.append("}");
     return builder.toString();
   }
-};
+}

@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** 
-  * This exception is thrown when a read encounters a block that has no locations
-  * associated with it.
+/**
+  * This exception is thrown when a read encounters a block that has no
+  * locations associated with it.
   */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -41,7 +41,8 @@ public class BlockMissingException extends IOException {
    * @param filename name of corrupted file
    * @param description a description of the corruption details
    */
-  public BlockMissingException(String filename, String description, long offset) {
+  public BlockMissingException(String filename, String description,
+      long offset) {
     super(description);
     this.filename = filename;
     this.offset = offset;
