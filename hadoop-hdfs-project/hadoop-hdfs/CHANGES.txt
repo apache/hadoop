@@ -350,9 +350,6 @@ Trunk (Unreleased)
 
     HDFS-8800. hdfs --daemon stop namenode corrupts logs (John Smith via aw)
 
-    HDFS-9191. Typo in Hdfs.java. NoSuchElementException is misspelled.
-    (Catherine Palmer via jghoman)
-
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
@@ -1479,6 +1476,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9100. HDFS Balancer does not respect dfs.client.use.datanode.hostname.
     (Casey Brotherton via Yongjun Zhang)
+
+    HDFS-9191. Typo in Hdfs.java. NoSuchElementException is misspelled.
+    (Catherine Palmer via jghoman)
 
 Release 2.7.2 - UNRELEASED
 
