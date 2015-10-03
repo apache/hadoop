@@ -29,7 +29,7 @@ public class StorageReport {
   private final long blockPoolUsed;
 
   public static final StorageReport[] EMPTY_ARRAY = {};
-  
+
   public StorageReport(DatanodeStorage storage, boolean failed,
       long capacity, long dfsUsed, long remaining, long bpUsed) {
     this.storage = storage;

@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Time;
 
@@ -87,7 +86,7 @@ public class ShortCircuitReplica {
    * If non-null, the shared memory slot associated with this replica.
    */
   private final Slot slot;
-  
+
   /**
    * Current mmap state.
    *
@@ -171,14 +170,14 @@ public class ShortCircuitReplica {
       }
     }
   }
-  
+
   /**
    * Try to add a no-checksum anchor to our shared memory slot.
    *
    * It is only possible to add this anchor when the block is mlocked on the Datanode.
    * The DataNode will not munlock the block until the number of no-checksum anchors
    * for the block reaches zero.
-   * 
+   *
    * This method does not require any synchronization.
    *
    * @return     True if we successfully added a no-checksum anchor.
@@ -233,7 +232,7 @@ public class ShortCircuitReplica {
    */
   void close() {
     String suffix = "";
-    
+
     Preconditions.checkState(refCount == 0,
         "tried to close replica with refCount %d: %s", refCount, this);
     refCount = -1;
@@ -278,7 +277,7 @@ public class ShortCircuitReplica {
   MappedByteBuffer loadMmapInternal() {
     try {
       FileChannel channel = dataStream.getChannel();
-      MappedByteBuffer mmap = channel.map(MapMode.READ_ONLY, 0, 
+      MappedByteBuffer mmap = channel.map(MapMode.READ_ONLY, 0,
           Math.min(Integer.MAX_VALUE, channel.size()));
       LOG.trace("{}: created mmap of size {}", this, channel.size());
       return mmap;
@@ -325,13 +324,10 @@ public class ShortCircuitReplica {
    */
   @Override
   public String toString() {
-    return new StringBuilder().append("ShortCircuitReplica{").
-        append("key=").append(key).
-        append(", metaHeader.version=").append(metaHeader.getVersion()).
-        append(", metaHeader.checksum=").append(metaHeader.getChecksum()).
-        append(", ident=").append("0x").
-          append(Integer.toHexString(System.identityHashCode(this))).
-        append(", creationTimeMs=").append(creationTimeMs).
-        append("}").toString();
+    return "ShortCircuitReplica{" + "key=" + key
+        + ", metaHeader.version=" + metaHeader.getVersion()
+        + ", metaHeader.checksum=" + metaHeader.getChecksum()
+        + ", ident=" + "0x" + Integer.toHexString(System.identityHashCode(this))
+        + ", creationTimeMs=" + creationTimeMs + "}";
   }
 }

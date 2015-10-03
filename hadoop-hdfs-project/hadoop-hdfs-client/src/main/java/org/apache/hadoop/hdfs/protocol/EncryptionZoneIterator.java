@@ -39,7 +39,7 @@ public class EncryptionZoneIterator
   private final Tracer tracer;
 
   public EncryptionZoneIterator(ClientProtocol namenode, Tracer tracer) {
-    super(Long.valueOf(0));
+    super((long) 0);
     this.namenode = namenode;
     this.tracer = tracer;
   }
@@ -47,11 +47,8 @@ public class EncryptionZoneIterator
   @Override
   public BatchedEntries<EncryptionZone> makeRequest(Long prevId)
       throws IOException {
-    TraceScope scope = tracer.newScope("listEncryptionZones");
-    try {
+    try (TraceScope ignored = tracer.newScope("listEncryptionZones")) {
       return namenode.listEncryptionZones(prevId);
-    } finally {
-      scope.close();
     }
   }
 

@@ -34,7 +34,7 @@ public enum CacheFlag {
   FORCE((short) 0x01);
   private final short mode;
 
-  private CacheFlag(short mode) {
+  CacheFlag(short mode) {
     this.mode = mode;
   }
 

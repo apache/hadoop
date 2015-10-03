@@ -42,8 +42,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * Used by {@link org.apache.hadoop.hdfs.DFSClient} for renewing file-being-written leases
- * on the namenode.
+ * Used by {@link org.apache.hadoop.hdfs.DFSClient} for renewing
+ * file-being-written leases on the namenode.
  * When a file is opened for write (create or append),
  * namenode stores a file lease for recording the identity of the writer.
  * The writer (i.e. the DFSClient) is required to renew the lease periodically.
@@ -57,7 +57,8 @@ import org.slf4j.LoggerFactory;
  * <li>
  * It maintains a map from (namenode, user) pairs to lease renewers.
  * The same {@link LeaseRenewer} instance is used for renewing lease
- * for all the {@link org.apache.hadoop.hdfs.DFSClient} to the same namenode and the same user.
+ * for all the {@link org.apache.hadoop.hdfs.DFSClient} to the same namenode and
+ * the same user.
  * </li>
  * <li>
  * Each renewer maintains a list of {@link org.apache.hadoop.hdfs.DFSClient}.
@@ -80,7 +81,7 @@ public class LeaseRenewer {
 
   /** Get a {@link LeaseRenewer} instance */
   public static LeaseRenewer getInstance(final String authority,
-      final UserGroupInformation ugi, final DFSClient dfsc) throws IOException {
+      final UserGroupInformation ugi, final DFSClient dfsc) {
     final LeaseRenewer r = Factory.INSTANCE.get(authority, ugi);
     r.addClient(dfsc);
     return r;
@@ -136,7 +137,7 @@ public class LeaseRenewer {
     }
 
     /** A map for per user per namenode renewers. */
-    private final Map<Key, LeaseRenewer> renewers = new HashMap<Key, LeaseRenewer>();
+    private final Map<Key, LeaseRenewer> renewers = new HashMap<>();
 
     /** Get a renewer. */
     private synchronized LeaseRenewer get(final String authority,
@@ -189,7 +190,7 @@ public class LeaseRenewer {
   private final Factory.Key factorykey;
 
   /** A list of clients corresponding to this renewer. */
-  private final List<DFSClient> dfsclients = new ArrayList<DFSClient>();
+  private final List<DFSClient> dfsclients = new ArrayList<>();
 
   /**
    * A stringified stack trace of the call stack when the Lease Renewer
@@ -404,7 +405,7 @@ public class LeaseRenewer {
   private void renew() throws IOException {
     final List<DFSClient> copies;
     synchronized(this) {
-      copies = new ArrayList<DFSClient>(dfsclients);
+      copies = new ArrayList<>(dfsclients);
     }
     //sort the client names for finding out repeated names.
     Collections.sort(copies, new Comparator<DFSClient>() {
@@ -414,8 +415,7 @@ public class LeaseRenewer {
       }
     });
     String previousName = "";
-    for(int i = 0; i < copies.size(); i++) {
-      final DFSClient c = copies.get(i);
+    for (final DFSClient c : copies) {
       //skip if current client name is the same as the previous name.
       if (!c.getClientName().equals(previousName)) {
         if (!c.renewLease()) {
@@ -470,7 +470,7 @@ public class LeaseRenewer {
               LOG.debug("Lease renewer daemon for " + clientsString()
                   + " with renew id " + id + " is not current");
             } else {
-               LOG.debug("Lease renewer daemon for " + clientsString()
+              LOG.debug("Lease renewer daemon for " + clientsString()
                   + " with renew id " + id + " expired");
             }
           }

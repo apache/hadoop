@@ -35,19 +35,19 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ClientContext contains context information for a client.
- * 
+ *
  * This allows us to share caches such as the socket cache across
  * DFSClient instances.
  */
 @InterfaceAudience.Private
 public class ClientContext {
-  private static final Logger LOG = LoggerFactory.getLogger(ClientContext.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ClientContext.class);
 
   /**
    * Global map of context names to caches contexts.
    */
-  private final static HashMap<String, ClientContext> CACHES =
-      new HashMap<String, ClientContext>();
+  private final static HashMap<String, ClientContext> CACHES = new HashMap<>();
 
   /**
    * Name of context.
@@ -93,7 +93,7 @@ public class ClientContext {
   private volatile boolean disableLegacyBlockReaderLocal = false;
 
   /** Creating byte[] for {@link DFSOutputStream}. */
-  private final ByteArrayManager byteArrayManager;  
+  private final ByteArrayManager byteArrayManager;
 
   /**
    * Whether or not we complained about a DFSClient fetching a CacheContext that
@@ -152,7 +152,7 @@ public class ClientContext {
       if (!printedConfWarning) {
         printedConfWarning = true;
         LOG.warn("Existing client context '" + name + "' does not match " +
-            "requested configuration.  Existing: " + existing + 
+            "requested configuration.  Existing: " + existing +
             ", Requested: " + requested);
       }
     }

@@ -35,7 +35,7 @@ public class CacheDirectiveStats {
 
     /**
      * Builds a new CacheDirectiveStats populated with the set properties.
-     * 
+     *
      * @return New CacheDirectiveStats.
      */
     public CacheDirectiveStats build() {
@@ -51,7 +51,7 @@ public class CacheDirectiveStats {
 
     /**
      * Sets the bytes needed by this directive.
-     * 
+     *
      * @param bytesNeeded The bytes needed.
      * @return This builder, for call chaining.
      */
@@ -62,7 +62,7 @@ public class CacheDirectiveStats {
 
     /**
      * Sets the bytes cached by this directive.
-     * 
+     *
      * @param bytesCached The bytes cached.
      * @return This builder, for call chaining.
      */
@@ -83,7 +83,7 @@ public class CacheDirectiveStats {
 
     /**
      * Sets the files cached by this directive.
-     * 
+     *
      * @param filesCached The number of files cached.
      * @return This builder, for call chaining.
      */
@@ -94,7 +94,7 @@ public class CacheDirectiveStats {
 
     /**
      * Sets whether this directive has expired.
-     * 
+     *
      * @param hasExpired if this directive has expired
      * @return This builder, for call chaining.
      */
@@ -156,14 +156,10 @@ public class CacheDirectiveStats {
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("{");
-    builder.append("bytesNeeded: ").append(bytesNeeded);
-    builder.append(", ").append("bytesCached: ").append(bytesCached);
-    builder.append(", ").append("filesNeeded: ").append(filesNeeded);
-    builder.append(", ").append("filesCached: ").append(filesCached);
-    builder.append(", ").append("hasExpired: ").append(hasExpired);
-    builder.append("}");
-    return builder.toString();
+    return "{" + "bytesNeeded: " + bytesNeeded + ", "
+        + "bytesCached: " + bytesCached + ", "
+        + "filesNeeded: " + filesNeeded + ", "
+        + "filesCached: " + filesCached + ", "
+        + "hasExpired: " + hasExpired + "}";
   }
-};
+}

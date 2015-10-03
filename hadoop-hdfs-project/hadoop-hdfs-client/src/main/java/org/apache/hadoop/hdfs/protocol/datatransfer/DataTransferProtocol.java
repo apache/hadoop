@@ -39,21 +39,21 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface DataTransferProtocol {
-  public static final Logger LOG = LoggerFactory.getLogger(DataTransferProtocol.class);
-  
+  Logger LOG = LoggerFactory.getLogger(DataTransferProtocol.class);
+
   /** Version for data transfers between clients and datanodes
    * This should change when serialization of DatanodeInfo, not just
-   * when protocol changes. It is not very obvious. 
+   * when protocol changes. It is not very obvious.
    */
   /*
    * Version 28:
    *    Declare methods in DataTransferProtocol interface.
    */
-  public static final int DATA_TRANSFER_VERSION = 28;
+  int DATA_TRANSFER_VERSION = 28;
 
-  /** 
+  /**
    * Read a block.
-   * 
+   *
    * @param blk the block being read.
    * @param blockToken security token for accessing the block.
    * @param clientName client's name.
@@ -63,7 +63,7 @@ public interface DataTransferProtocol {
    *        checksums
    * @param cachingStrategy  The caching strategy to use.
    */
-  public void readBlock(final ExtendedBlock blk,
+  void readBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final long blockOffset,
@@ -77,7 +77,7 @@ public interface DataTransferProtocol {
    * The other downstream datanodes are specified by the targets parameter.
    * Note that the receiver {@link DatanodeInfo} is not required in the
    * parameter list since the receiver datanode knows its info.  However, the
-   * {@link StorageType} for storing the replica in the receiver datanode is a 
+   * {@link StorageType} for storing the replica in the receiver datanode is a
    * parameter since the receiver datanode may support multiple storage types.
    *
    * @param blk the block being written.
@@ -96,12 +96,12 @@ public interface DataTransferProtocol {
    * @param pinning whether to pin the block, so Balancer won't move it.
    * @param targetPinnings whether to pin the block on target datanode
    */
-  public void writeBlock(final ExtendedBlock blk,
-      final StorageType storageType, 
+  void writeBlock(final ExtendedBlock blk,
+      final StorageType storageType,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets,
-      final StorageType[] targetStorageTypes, 
+      final StorageType[] targetStorageTypes,
       final DatanodeInfo source,
       final BlockConstructionStage stage,
       final int pipelineSize,
@@ -118,13 +118,13 @@ public interface DataTransferProtocol {
    * The block stage must be
    * either {@link BlockConstructionStage#TRANSFER_RBW}
    * or {@link BlockConstructionStage#TRANSFER_FINALIZED}.
-   * 
+   *
    * @param blk the block being transferred.
    * @param blockToken security token for accessing the block.
    * @param clientName client's name.
    * @param targets target datanodes.
    */
-  public void transferBlock(final ExtendedBlock blk,
+  void transferBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets,
@@ -135,14 +135,14 @@ public interface DataTransferProtocol {
    *
    * @param blk             The block to get file descriptors for.
    * @param blockToken      Security token for accessing the block.
-   * @param slotId          The shared memory slot id to use, or null 
+   * @param slotId          The shared memory slot id to use, or null
    *                          to use no slot id.
-   * @param maxVersion      Maximum version of the block data the client 
+   * @param maxVersion      Maximum version of the block data the client
    *                          can understand.
    * @param supportsReceiptVerification  True if the client supports
    *                          receipt verification.
    */
-  public void requestShortCircuitFds(final ExtendedBlock blk,
+  void requestShortCircuitFds(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       SlotId slotId, int maxVersion, boolean supportsReceiptVerification)
         throws IOException;
@@ -152,51 +152,51 @@ public interface DataTransferProtocol {
    *
    * @param slotId          SlotID used by the earlier file descriptors.
    */
-  public void releaseShortCircuitFds(final SlotId slotId) throws IOException;
+  void releaseShortCircuitFds(final SlotId slotId) throws IOException;
 
   /**
    * Request a short circuit shared memory area from a DataNode.
-   * 
+   *
    * @param clientName       The name of the client.
    */
-  public void requestShortCircuitShm(String clientName) throws IOException;
-  
+  void requestShortCircuitShm(String clientName) throws IOException;
+
   /**
    * Receive a block from a source datanode
    * and then notifies the namenode
    * to remove the copy from the original datanode.
    * Note that the source datanode and the original datanode can be different.
    * It is used for balancing purpose.
-   * 
+   *
    * @param blk the block being replaced.
    * @param storageType the {@link StorageType} for storing the block.
    * @param blockToken security token for accessing the block.
    * @param delHint the hint for deleting the block in the original datanode.
    * @param source the source datanode for receiving the block.
    */
-  public void replaceBlock(final ExtendedBlock blk,
-      final StorageType storageType, 
+  void replaceBlock(final ExtendedBlock blk,
+      final StorageType storageType,
       final Token<BlockTokenIdentifier> blockToken,
       final String delHint,
       final DatanodeInfo source) throws IOException;
 
   /**
-   * Copy a block. 
+   * Copy a block.
    * It is used for balancing purpose.
-   * 
+   *
    * @param blk the block being copied.
    * @param blockToken security token for accessing the block.
    */
-  public void copyBlock(final ExtendedBlock blk,
+  void copyBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken) throws IOException;
 
   /**
    * Get block checksum (MD5 of CRC32).
-   * 
+   *
    * @param blk a block.
    * @param blockToken security token for accessing the block.
    * @throws IOException
    */
-  public void blockChecksum(final ExtendedBlock blk,
+  void blockChecksum(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken) throws IOException;
 }

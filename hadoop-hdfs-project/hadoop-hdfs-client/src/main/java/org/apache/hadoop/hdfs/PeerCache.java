@@ -32,7 +32,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -46,16 +45,16 @@ import org.slf4j.LoggerFactory;
 @VisibleForTesting
 public class PeerCache {
   private static final Logger LOG = LoggerFactory.getLogger(PeerCache.class);
-  
+
   private static class Key {
     final DatanodeID dnID;
     final boolean isDomain;
-    
+
     Key(DatanodeID dnID, boolean isDomain) {
       this.dnID = dnID;
       this.isDomain = isDomain;
     }
-    
+
     @Override
     public boolean equals(Object o) {
       if (!(o instanceof Key)) {
@@ -70,7 +69,7 @@ public class PeerCache {
       return dnID.hashCode() ^ (isDomain ? 1 : 0);
     }
   }
-  
+
   private static class Value {
     private final Peer peer;
     private final long time;
@@ -92,10 +91,10 @@ public class PeerCache {
   private Daemon daemon;
   /** A map for per user per datanode. */
   private final LinkedListMultimap<Key, Value> multimap =
-    LinkedListMultimap.create();
+      LinkedListMultimap.create();
   private final int capacity;
   private final long expiryPeriod;
-  
+
   public PeerCache(int c, long e) {
     this.capacity = c;
     this.expiryPeriod = e;
@@ -107,17 +106,17 @@ public class PeerCache {
          expiryPeriod + " when cache is enabled.");
     }
   }
- 
+
   private boolean isDaemonStarted() {
-    return (daemon == null)? false: true;
+    return daemon != null;
   }
 
   private synchronized void startExpiryDaemon() {
     // start daemon only if not already started
-    if (isDaemonStarted() == true) {
+    if (isDaemonStarted()) {
       return;
     }
-    
+
     daemon = new Daemon(new Runnable() {
       @Override
       public void run() {
@@ -144,7 +143,7 @@ public class PeerCache {
    * @param isDomain     Whether to retrieve a DomainPeer or not.
    *
    * @return             An open Peer connected to the DN, or null if none
-   *                     was found. 
+   *                     was found.
    */
   public Peer get(DatanodeID dnId, boolean isDomain) {
 
@@ -215,12 +214,11 @@ public class PeerCache {
   private synchronized void evictExpired(long expiryPeriod) {
     while (multimap.size() != 0) {
       Iterator<Entry<Key, Value>> iter =
-        multimap.entries().iterator();
+          multimap.entries().iterator();
       Entry<Key, Value> entry = iter.next();
       // if oldest socket expired, remove it
-      if (entry == null || 
-        Time.monotonicNow() - entry.getValue().getTime() <
-        expiryPeriod) {
+      if (entry == null ||
+          Time.monotonicNow() - entry.getValue().getTime() < expiryPeriod) {
         break;
       }
       IOUtilsClient.cleanup(LOG, entry.getValue().getPeer());
@@ -235,8 +233,7 @@ public class PeerCache {
     // We can get the oldest element immediately, because of an interesting
     // property of LinkedListMultimap: its iterator traverses entries in the
     // order that they were added.
-    Iterator<Entry<Key, Value>> iter =
-      multimap.entries().iterator();
+    Iterator<Entry<Key, Value>> iter = multimap.entries().iterator();
     if (!iter.hasNext()) {
       throw new IllegalStateException("Cannot evict from empty cache! " +
         "capacity: " + capacity);
@@ -247,8 +244,8 @@ public class PeerCache {
   }
 
   /**
-   * Periodically check in the cache and expire the entries
-   * older than expiryPeriod minutes
+   * Periodically check in the cache and expire the entries older than
+   * expiryPeriod minutes.
    */
   private void run() throws InterruptedException {
     for(long lastExpiryTime = Time.monotonicNow();
@@ -274,7 +271,7 @@ public class PeerCache {
     }
     multimap.clear();
   }
-  
+
   @VisibleForTesting
   void close() {
     clear();

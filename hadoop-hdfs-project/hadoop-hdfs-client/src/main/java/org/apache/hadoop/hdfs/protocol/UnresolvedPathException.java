@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Path;
 
-/** 
+/**
  * Thrown when a symbolic link is encountered in a path.
  */
 @InterfaceAudience.Private
@@ -43,7 +41,7 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
   public UnresolvedPathException(String msg) {
     super(msg);
   }
-  
+
   public UnresolvedPathException(String path, String preceding,
       String remainder, String linkTarget) {
     this.path = path;
@@ -55,7 +53,7 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
   /**
    * Return a path with the link resolved with the target.
    */
-  public Path getResolvedPath() throws IOException {
+  public Path getResolvedPath() {
     // If the path is absolute we cam throw out the preceding part and
     // just append the remainder to the target, otherwise append each
     // piece to resolve the link in path.
@@ -76,12 +74,6 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
     if (msg != null) {
       return msg;
     }
-    String myMsg = "Unresolved path " + path;
-    try {
-      return getResolvedPath().toString();
-    } catch (IOException e) {
-      // Ignore
-    }
-    return myMsg;
+    return getResolvedPath().toString();
   }
 }

@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs.web.resources;
 
 /** Long parameter. */
 abstract class LongParam extends Param<Long, LongParam.Domain> {
-  LongParam(final Domain domain, final Long value, final Long min, final Long max) {
+  LongParam(final Domain domain, final Long value, final Long min,
+            final Long max) {
     super(domain, value);
     checkRange(min, max);
   }

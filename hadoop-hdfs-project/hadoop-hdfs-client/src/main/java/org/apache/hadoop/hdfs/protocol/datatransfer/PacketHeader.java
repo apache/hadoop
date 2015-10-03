@@ -36,14 +36,14 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * Header data for each packet that goes through the read/write pipelines.
  * Includes all of the information about the packet, excluding checksums and
  * actual data.
- * 
+ *
  * This data includes:
  *  - the offset in bytes into the HDFS block of the data in this packet
  *  - the sequence number of this packet in the pipeline
  *  - whether or not this is the last packet in the pipeline
  *  - the length of the data in this packet
  *  - whether or not this packet should be synced by the DNs.
- *  
+ *
  * When serialized, this header is written out as a protocol buffer, preceded
  * by a 4-byte integer representing the full packet length, and a 2-byte short
  * representing the header length.
@@ -51,8 +51,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class PacketHeader {
-  private static final int MAX_PROTO_SIZE = 
-    PacketHeaderProto.newBuilder()
+  private static final int MAX_PROTO_SIZE = PacketHeaderProto.newBuilder()
       .setOffsetInBlock(0)
       .setSeqno(0)
       .setLastPacketInBlock(false)
@@ -76,21 +75,21 @@ public class PacketHeader {
     Preconditions.checkArgument(packetLen >= Ints.BYTES,
         "packet len %s should always be at least 4 bytes",
         packetLen);
-    
+
     PacketHeaderProto.Builder builder = PacketHeaderProto.newBuilder()
-      .setOffsetInBlock(offsetInBlock)
-      .setSeqno(seqno)
-      .setLastPacketInBlock(lastPacketInBlock)
-      .setDataLen(dataLen);
-      
+        .setOffsetInBlock(offsetInBlock)
+        .setSeqno(seqno)
+        .setLastPacketInBlock(lastPacketInBlock)
+        .setDataLen(dataLen);
+
     if (syncBlock) {
       // Only set syncBlock if it is specified.
       // This is wire-incompatible with Hadoop 2.0.0-alpha due to HDFS-3721
       // because it changes the length of the packet header, and BlockReceiver
       // in that version did not support variable-length headers.
-      builder.setSyncBlock(syncBlock);
+      builder.setSyncBlock(true);
     }
-      
+
     proto = builder.build();
   }
 
@@ -121,16 +120,16 @@ public class PacketHeader {
   @Override
   public String toString() {
     return "PacketHeader with packetLen=" + packetLen +
-      " header data: " + 
+      " header data: " +
       proto.toString();
   }
-  
+
   public void setFieldsFromData(
       int packetLen, byte[] headerData) throws InvalidProtocolBufferException {
     this.packetLen = packetLen;
     proto = PacketHeaderProto.parseFrom(headerData);
   }
-  
+
   public void readFields(ByteBuffer buf) throws IOException {
     packetLen = buf.getInt();
     short protoLen = buf.getShort();
@@ -138,7 +137,7 @@ public class PacketHeader {
     buf.get(data);
     proto = PacketHeaderProto.parseFrom(data);
   }
-  
+
   public void readFields(DataInputStream in) throws IOException {
     this.packetLen = in.readInt();
     short protoLen = in.readShort();
@@ -170,7 +169,7 @@ public class PacketHeader {
       throw new RuntimeException(e);
     }
   }
-  
+
   public void write(DataOutputStream out) throws IOException {
     assert proto.getSerializedSize() <= MAX_PROTO_SIZE
     : "Expected " + (MAX_PROTO_SIZE) + " got: " + proto.getSerializedSize();
@@ -178,7 +177,7 @@ public class PacketHeader {
     out.writeShort(proto.getSerializedSize());
     proto.writeTo(out);
   }
-  
+
   public byte[] getBytes() {
     ByteBuffer buf = ByteBuffer.allocate(getSerializedSize());
     putInBuffer(buf);
@@ -187,8 +186,8 @@ public class PacketHeader {
 
   /**
    * Perform a sanity check on the packet, returning true if it is sane.
-   * @param lastSeqNo the previous sequence number received - we expect the current
-   * sequence number to be larger by 1.
+   * @param lastSeqNo the previous sequence number received - we expect the
+   *                  current sequence number to be larger by 1.
    */
   public boolean sanityCheck(long lastSeqNo) {
     // We should only have a non-positive data length for the last packet
@@ -196,8 +195,7 @@ public class PacketHeader {
     // The last packet should not contain data
     if (proto.getLastPacketInBlock() && proto.getDataLen() != 0) return false;
     // Seqnos should always increase by 1 with each packet received
-    if (proto.getSeqno() != lastSeqNo + 1) return false;
-    return true;
+    return proto.getSeqno() == lastSeqNo + 1;
   }
 
   @Override

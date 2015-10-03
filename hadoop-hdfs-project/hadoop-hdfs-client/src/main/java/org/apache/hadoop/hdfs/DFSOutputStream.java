@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -90,7 +89,7 @@ public class DFSOutputStream extends FSOutputSummer
     implements Syncable, CanSetDropBehind {
   static final Logger LOG = LoggerFactory.getLogger(DFSOutputStream.class);
   /**
-   * Number of times to retry creating a file when there are transient 
+   * Number of times to retry creating a file when there are transient
    * errors (typically related to encryption zones and KeyProvider operations).
    */
   @VisibleForTesting
@@ -121,8 +120,9 @@ public class DFSOutputStream extends FSOutputSummer
   private FileEncryptionInfo fileEncryptionInfo;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
-  protected DFSPacket createPacket(int packetSize, int chunksPerPkt, long offsetInBlock,
-      long seqno, boolean lastPacketInBlock) throws InterruptedIOException {
+  protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
+      long offsetInBlock, long seqno, boolean lastPacketInBlock)
+      throws InterruptedIOException {
     final byte[] buf;
     final int bufferSize = PacketHeader.PKT_MAX_HEADER_LEN + packetSize;
 
@@ -159,9 +159,7 @@ public class DFSOutputStream extends FSOutputSummer
       return null;
     }
     DatanodeInfo[] value = new DatanodeInfo[currentNodes.length];
-    for (int i = 0; i < currentNodes.length; i++) {
-      value[i] = currentNodes[i];
-    }
+    System.arraycopy(currentNodes, 0, value, 0, currentNodes.length);
     return value;
   }
 
@@ -178,9 +176,9 @@ public class DFSOutputStream extends FSOutputSummer
     }
     return checksum;
   }
- 
-  private DFSOutputStream(DFSClient dfsClient, String src, Progressable progress,
-      HdfsFileStatus stat, DataChecksum checksum) throws IOException {
+
+  private DFSOutputStream(DFSClient dfsClient, String src,
+      Progressable progress, HdfsFileStatus stat, DataChecksum checksum) {
     super(getChecksum4Compute(checksum, stat));
     this.dfsClient = dfsClient;
     this.src = src;
@@ -188,7 +186,7 @@ public class DFSOutputStream extends FSOutputSummer
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
-    this.cachingStrategy = new AtomicReference<CachingStrategy>(
+    this.cachingStrategy = new AtomicReference<>(
         dfsClient.getDefaultWriteCachingStrategy());
     if (progress != null) {
       DFSClient.LOG.debug("Set non-null progress callback on DFSOutputStream "
@@ -202,8 +200,9 @@ public class DFSOutputStream extends FSOutputSummer
     }
     if (blockSize % bytesPerChecksum != 0) {
       throw new HadoopIllegalArgumentException("Invalid values: "
-          + HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY + " (=" + bytesPerChecksum
-          + ") must divide block size (=" + blockSize + ").");
+          + HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY
+          + " (=" + bytesPerChecksum + ") must divide block size (=" +
+          blockSize + ").");
     }
     this.byteArrayManager = dfsClient.getClientContext().getByteArrayManager();
   }
@@ -215,7 +214,8 @@ public class DFSOutputStream extends FSOutputSummer
     this(dfsClient, src, progress, stat, checksum);
     this.shouldSyncBlock = flag.contains(CreateFlag.SYNC_BLOCK);
 
-    computePacketChunkSize(dfsClient.getConf().getWritePacketSize(), bytesPerChecksum);
+    computePacketChunkSize(dfsClient.getConf().getWritePacketSize(),
+        bytesPerChecksum);
 
     streamer = new DataStreamer(stat, null, dfsClient, src, progress, checksum,
         cachingStrategy, byteArrayManager, favoredNodes);
@@ -223,11 +223,10 @@ public class DFSOutputStream extends FSOutputSummer
 
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize, Progressable progress, int buffersize,
+      short replication, long blockSize, Progressable progress,
       DataChecksum checksum, String[] favoredNodes) throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("newStreamForCreate", src);
-    try {
+    try (TraceScope ignored =
+             dfsClient.newPathTraceScope("newStreamForCreate", src)) {
       HdfsFileStatus stat = null;
 
       // Retry the create if we get a RetryStartFileException up to a maximum
@@ -238,7 +237,7 @@ public class DFSOutputStream extends FSOutputSummer
         shouldRetry = false;
         try {
           stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
-              new EnumSetWritable<CreateFlag>(flag), createParent, replication,
+              new EnumSetWritable<>(flag), createParent, replication,
               blockSize, SUPPORTED_CRYPTO_VERSIONS);
           break;
         } catch (RemoteException re) {
@@ -273,8 +272,6 @@ public class DFSOutputStream extends FSOutputSummer
           flag, progress, checksum, favoredNodes);
       out.start();
       return out;
-    } finally {
-      scope.close();
     }
   }
 
@@ -294,17 +291,17 @@ public class DFSOutputStream extends FSOutputSummer
     // The last partial block of the file has to be filled.
     if (!toNewBlock && lastBlock != null) {
       // indicate that we are appending to an existing block
-      streamer = new DataStreamer(lastBlock, stat, dfsClient, src, progress, checksum,
-          cachingStrategy, byteArrayManager);
+      streamer = new DataStreamer(lastBlock, stat, dfsClient, src, progress,
+          checksum, cachingStrategy, byteArrayManager);
       getStreamer().setBytesCurBlock(lastBlock.getBlockSize());
       adjustPacketChunkSize(stat);
       getStreamer().setPipelineInConstruction(lastBlock);
     } else {
       computePacketChunkSize(dfsClient.getConf().getWritePacketSize(),
           bytesPerChecksum);
-      streamer = new DataStreamer(stat, lastBlock != null ? lastBlock.getBlock() : null,
-          dfsClient, src, progress, checksum, cachingStrategy, byteArrayManager,
-          favoredNodes);
+      streamer = new DataStreamer(stat,
+          lastBlock != null ? lastBlock.getBlock() : null, dfsClient, src,
+          progress, checksum, cachingStrategy, byteArrayManager, favoredNodes);
     }
   }
 
@@ -345,18 +342,15 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
-      EnumSet<CreateFlag> flags, int bufferSize, Progressable progress,
-      LocatedBlock lastBlock, HdfsFileStatus stat, DataChecksum checksum,
-      String[] favoredNodes) throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("newStreamForAppend", src);
-    try {
+      EnumSet<CreateFlag> flags, Progressable progress, LocatedBlock lastBlock,
+      HdfsFileStatus stat, DataChecksum checksum, String[] favoredNodes)
+      throws IOException {
+    try (TraceScope ignored =
+             dfsClient.newPathTraceScope("newStreamForAppend", src)) {
       final DFSOutputStream out = new DFSOutputStream(dfsClient, src, flags,
           progress, lastBlock, stat, checksum, favoredNodes);
       out.start();
       return out;
-    } finally {
-      scope.close();
     }
   }
 
@@ -479,36 +473,28 @@ public class DFSOutputStream extends FSOutputSummer
    * of the DNs but not necessarily in the DN's OS buffers.
    *
    * It is a synchronous operation. When it returns,
-   * it guarantees that flushed data become visible to new readers. 
-   * It is not guaranteed that data has been flushed to 
-   * persistent store on the datanode. 
+   * it guarantees that flushed data become visible to new readers.
+   * It is not guaranteed that data has been flushed to
+   * persistent store on the datanode.
    * Block allocations are persisted on namenode.
    */
   @Override
   public void hflush() throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("hflush", src);
-    try {
+    try (TraceScope ignored = dfsClient.newPathTraceScope("hflush", src)) {
       flushOrSync(false, EnumSet.noneOf(SyncFlag.class));
-    } finally {
-      scope.close();
     }
   }
 
   @Override
   public void hsync() throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("hsync", src);
-    try {
+    try (TraceScope ignored = dfsClient.newPathTraceScope("hsync", src)) {
       flushOrSync(true, EnumSet.noneOf(SyncFlag.class));
-    } finally {
-      scope.close();
     }
   }
   
   /**
-   * The expected semantics is all data have flushed out to all replicas 
-   * and all replicas have done posix fsync equivalent - ie the OS has 
+   * The expected semantics is all data have flushed out to all replicas
+   * and all replicas have done posix fsync equivalent - ie the OS has
    * flushed it to the disk device (but the disk may have it in its cache).
    * 
    * Note that only the current block is flushed to the disk device.
@@ -520,12 +506,8 @@ public class DFSOutputStream extends FSOutputSummer
    *          whether or not to update the block length in NameNode.
    */
   public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("hsync", src);
-    try {
+    try (TraceScope ignored = dfsClient.newPathTraceScope("hsync", src)) {
       flushOrSync(true, syncFlags);
-    } finally {
-      scope.close();
     }
   }
 
@@ -630,13 +612,14 @@ public class DFSOutputStream extends FSOutputSummer
           dfsClient.namenode.fsync(src, fileId, dfsClient.clientName,
               lastBlockLength);
         } catch (IOException ioe) {
-          DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
-          // If we got an error here, it might be because some other thread called
-          // close before our hflush completed. In that case, we should throw an
-          // exception that the stream is closed.
+          DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src,
+              ioe);
+          // If we got an error here, it might be because some other thread
+          // called close before our hflush completed. In that case, we should
+          // throw an exception that the stream is closed.
           checkClosed();
-          // If we aren't closed but failed to sync, we should expose that to the
-          // caller.
+          // If we aren't closed but failed to sync, we should expose that to
+          // the caller.
           throw ioe;
         }
       }
@@ -647,9 +630,9 @@ public class DFSOutputStream extends FSOutputSummer
         }
       }
     } catch (InterruptedIOException interrupt) {
-      // This kind of error doesn't mean that the stream itself is broken - just the
-      // flushing thread got interrupted. So, we shouldn't close down the writer,
-      // but instead just propagate the error
+      // This kind of error doesn't mean that the stream itself is broken - just
+      // the flushing thread got interrupted. So, we shouldn't close down the
+      // writer, but instead just propagate the error
       throw interrupt;
     } catch (IOException e) {
       DFSClient.LOG.warn("Error while syncing", e);
@@ -691,8 +674,8 @@ public class DFSOutputStream extends FSOutputSummer
   }
   
   /**
-   * Waits till all existing data is flushed and confirmations 
-   * received from datanodes. 
+   * Waits till all existing data is flushed and confirmations
+   * received from datanodes.
    */
   protected void flushInternal() throws IOException {
     long toWaitFor;
@@ -715,7 +698,7 @@ public class DFSOutputStream extends FSOutputSummer
   }
   
   /**
-   * Aborts this output stream and releases any system 
+   * Aborts this output stream and releases any system
    * resources associated with this stream.
    */
   synchronized void abort() throws IOException {
@@ -723,7 +706,7 @@ public class DFSOutputStream extends FSOutputSummer
       return;
     }
     getStreamer().getLastException().set(new IOException("Lease timeout of "
-        + (dfsClient.getConf().getHdfsTimeout()/1000) + " seconds expired."));
+        + (dfsClient.getConf().getHdfsTimeout() / 1000) + " seconds expired."));
     closeThreads(true);
     dfsClient.endFileLease(fileId);
   }
@@ -753,17 +736,14 @@ public class DFSOutputStream extends FSOutputSummer
   }
   
   /**
-   * Closes this output stream and releases any system 
+   * Closes this output stream and releases any system
    * resources associated with this stream.
    */
   @Override
   public synchronized void close() throws IOException {
-    TraceScope scope =
-        dfsClient.newPathTraceScope("DFSOutputStream#close", src);
-    try {
+    try (TraceScope ignored =
+             dfsClient.newPathTraceScope("DFSOutputStream#close", src)) {
       closeImpl();
-    } finally {
-      scope.close();
     }
   }
 
@@ -788,20 +768,18 @@ public class DFSOutputStream extends FSOutputSummer
       // get last block before destroying the streamer
       ExtendedBlock lastBlock = getStreamer().getBlock();
       closeThreads(false);
-      TraceScope scope = dfsClient.getTracer().newScope("completeFile");
-      try {
+      try (TraceScope ignored =
+               dfsClient.getTracer().newScope("completeFile")) {
         completeFile(lastBlock);
-      } finally {
-        scope.close();
       }
       dfsClient.endFileLease(fileId);
-    } catch (ClosedChannelException e) {
+    } catch (ClosedChannelException ignored) {
     } finally {
       setClosed();
     }
   }
 
-  // should be called holding (this) lock since setTestFilename() may 
+  // should be called holding (this) lock since setTestFilename() may
   // be called during unit tests
   protected void completeFile(ExtendedBlock last) throws IOException {
     long localstart = Time.monotonicNow();
@@ -817,12 +795,11 @@ public class DFSOutputStream extends FSOutputSummer
         if (!dfsClient.clientRunning
             || (hdfsTimeout > 0
                 && localstart + hdfsTimeout < Time.monotonicNow())) {
-            String msg = "Unable to close file because dfsclient " +
-                          " was unable to contact the HDFS servers." +
-                          " clientRunning " + dfsClient.clientRunning +
-                          " hdfsTimeout " + hdfsTimeout;
-            DFSClient.LOG.info(msg);
-            throw new IOException(msg);
+          String msg = "Unable to close file because dfsclient " +
+              " was unable to contact the HDFS servers. clientRunning " +
+              dfsClient.clientRunning + " hdfsTimeout " + hdfsTimeout;
+          DFSClient.LOG.info(msg);
+          throw new IOException(msg);
         }
         try {
           if (retries == 0) {

@@ -43,11 +43,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.primitives.Ints;
 
+import javax.annotation.Nonnull;
+
 /**
  * A shared memory segment used to implement short-circuit reads.
  */
 public class ShortCircuitShm {
-  private static final Logger LOG = LoggerFactory.getLogger(ShortCircuitShm.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ShortCircuitShm.class);
 
   protected static final int BYTES_PER_SLOT = 64;
 
@@ -92,7 +95,7 @@ public class ShortCircuitShm {
 
     /**
      * Generate a random ShmId.
-     * 
+     *
      * We generate ShmIds randomly to prevent a malicious client from
      * successfully guessing one and using that to interfere with another
      * client.
@@ -105,11 +108,11 @@ public class ShortCircuitShm {
       this.hi = hi;
       this.lo = lo;
     }
-    
+
     public long getHi() {
       return hi;
     }
-    
+
     public long getLo() {
       return lo;
     }
@@ -140,13 +143,13 @@ public class ShortCircuitShm {
     }
 
     @Override
-    public int compareTo(ShmId other) {
+    public int compareTo(@Nonnull ShmId other) {
       return ComparisonChain.start().
           compare(hi, other.hi).
           compare(lo, other.lo).
           result();
     }
-  };
+  }
 
   /**
    * Uniquely identifies a slot.
@@ -154,7 +157,7 @@ public class ShortCircuitShm {
   public static class SlotId {
     private final ShmId shmId;
     private final int slotIdx;
-    
+
     public SlotId(ShmId shmId, int slotIdx) {
       this.shmId = shmId;
       this.slotIdx = slotIdx;
@@ -222,7 +225,7 @@ public class ShortCircuitShm {
           "doesn't support removal");
     }
   }
-  
+
   /**
    * A slot containing information about a replica.
    *
@@ -239,11 +242,11 @@ public class ShortCircuitShm {
    */
   public class Slot {
     /**
-     * Flag indicating that the slot is valid.  
-     * 
+     * Flag indicating that the slot is valid.
+     *
      * The DFSClient sets this flag when it allocates a new slot within one of
      * its shared memory regions.
-     * 
+     *
      * The DataNode clears this flag when the replica associated with this slot
      * is no longer valid.  The client itself also clears this flag when it
      * believes that the DataNode is no longer using this slot to communicate.
@@ -340,7 +343,7 @@ public class ShortCircuitShm {
       } while (!unsafe.compareAndSwapLong(null, this.slotAddress,
                   prev, prev & (~flag)));
     }
-    
+
     public boolean isValid() {
       return isSet(VALID_FLAG);
     }
@@ -367,11 +370,8 @@ public class ShortCircuitShm {
 
     public boolean isAnchored() {
       long prev = unsafe.getLongVolatile(null, this.slotAddress);
-      if ((prev & VALID_FLAG) == 0) {
-        // Slot is no longer valid.
-        return false;
-      }
-      return ((prev & 0x7fffffff) != 0);
+      // Slot is no longer valid.
+      return (prev & VALID_FLAG) != 0 && ((prev & 0x7fffffff) != 0);
     }
 
     /**
@@ -452,11 +452,11 @@ public class ShortCircuitShm {
 
   /**
    * Create the ShortCircuitShm.
-   * 
+   *
    * @param shmId       The ID to use.
-   * @param stream      The stream that we're going to use to create this 
+   * @param stream      The stream that we're going to use to create this
    *                    shared memory segment.
-   *                    
+   *
    *                    Although this is a FileInputStream, we are going to
    *                    assume that the underlying file descriptor is writable
    *                    as well as readable. It would be more appropriate to use
@@ -480,7 +480,7 @@ public class ShortCircuitShm {
     }
     this.shmId = shmId;
     this.mmappedLength = getUsableLength(stream);
-    this.baseAddress = POSIX.mmap(stream.getFD(), 
+    this.baseAddress = POSIX.mmap(stream.getFD(),
         POSIX.MMAP_PROT_READ | POSIX.MMAP_PROT_WRITE, true, mmappedLength);
     this.slots = new Slot[mmappedLength / BYTES_PER_SLOT];
     this.allocatedSlots = new BitSet(slots.length);
@@ -492,7 +492,7 @@ public class ShortCircuitShm {
   public final ShmId getShmId() {
     return shmId;
   }
-  
+
   /**
    * Determine if this shared memory object is empty.
    *
@@ -517,7 +517,7 @@ public class ShortCircuitShm {
    * @param slotIdx   Index of the slot.
    * @return          The base address of the slot.
    */
-  private final long calculateSlotAddress(int slotIdx) {
+  private long calculateSlotAddress(int slotIdx) {
     long offset = slotIdx;
     offset *= BYTES_PER_SLOT;
     return this.baseAddress + offset;
@@ -562,7 +562,7 @@ public class ShortCircuitShm {
    * Register a slot.
    *
    * This function looks at a slot which has already been initialized (by
-   * another process), and registers it with us.  Then, it returns the 
+   * another process), and registers it with us.  Then, it returns the
    * relevant Slot object.
    *
    * @return    The slot.
@@ -601,7 +601,7 @@ public class ShortCircuitShm {
 
   /**
    * Unregisters a slot.
-   * 
+   *
    * This doesn't alter the contents of the slot.  It just means
    *
    * @param slotIdx  Index of the slot to unregister.
@@ -613,11 +613,11 @@ public class ShortCircuitShm {
     slots[slotIdx] = null;
     LOG.trace("{}: unregisterSlot {}", this, slotIdx);
   }
-  
+
   /**
    * Iterate over all allocated slots.
-   * 
-   * Note that this method isn't safe if 
+   *
+   * Note that this method isn't safe if
    *
    * @return        The slot iterator.
    */
@@ -633,7 +633,7 @@ public class ShortCircuitShm {
     }
     LOG.trace(this + ": freed");
   }
-  
+
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + "(" + shmId + ")";

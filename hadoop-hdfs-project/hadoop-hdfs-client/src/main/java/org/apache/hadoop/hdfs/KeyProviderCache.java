@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.Callable;
@@ -37,10 +36,13 @@ import com.google.common.cache.RemovalNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
+
 @InterfaceAudience.Private
 public class KeyProviderCache {
 
-  public static final Logger LOG = LoggerFactory.getLogger(KeyProviderCache.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      KeyProviderCache.class);
 
   private final Cache<URI, KeyProvider> cache;
 
@@ -50,14 +52,14 @@ public class KeyProviderCache {
         .removalListener(new RemovalListener<URI, KeyProvider>() {
           @Override
           public void onRemoval(
-              RemovalNotification<URI, KeyProvider> notification) {
+              @Nonnull RemovalNotification<URI, KeyProvider> notification) {
             try {
+              assert notification.getValue() != null;
               notification.getValue().close();
             } catch (Throwable e) {
               LOG.error(
                   "Error closing KeyProvider with uri ["
                       + notification.getKey() + "]", e);
-              ;
             }
           }
         })
@@ -83,8 +85,8 @@ public class KeyProviderCache {
   }
 
   private URI createKeyProviderURI(Configuration conf) {
-    final String providerUriStr =
-        conf.getTrimmed(HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
+    final String providerUriStr = conf.getTrimmed(
+        HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
     // No provider set in conf
     if (providerUriStr.isEmpty()) {
       LOG.error("Could not find uri with key ["
@@ -104,9 +106,9 @@ public class KeyProviderCache {
   }
 
   @VisibleForTesting
-  public void setKeyProvider(Configuration conf, KeyProvider keyProvider)
-      throws IOException {
+  public void setKeyProvider(Configuration conf, KeyProvider keyProvider) {
     URI uri = createKeyProviderURI(conf);
+    assert uri != null;
     cache.put(uri, keyProvider);
   }
 }

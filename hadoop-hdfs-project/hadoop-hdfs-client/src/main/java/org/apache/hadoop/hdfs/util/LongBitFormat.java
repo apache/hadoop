@@ -38,7 +38,8 @@ public class LongBitFormat implements Serializable {
   /** Bit mask */
   private final long MASK;
 
-  public LongBitFormat(String name, LongBitFormat previous, int length, long min) {
+  public LongBitFormat(String name, LongBitFormat previous, int length,
+                       long min) {
     NAME = name;
     OFFSET = previous == null? 0: previous.OFFSET + previous.LENGTH;
     LENGTH = length;
@@ -64,7 +65,7 @@ public class LongBitFormat implements Serializable {
     }
     return (record & ~MASK) | (value << OFFSET);
   }
-  
+
   public long getMin() {
     return MIN;
   }

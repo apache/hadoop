@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
  */
 @InterfaceAudience.Private
 public interface BlockReader extends ByteBufferReadable {
-  
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
@@ -55,7 +54,7 @@ public interface BlockReader extends ByteBufferReadable {
    * network I/O.
    * This may return more than what is actually present in the block.
    */
-  int available() throws IOException;
+  int available();
 
   /**
    * Close the block reader.
@@ -84,7 +83,7 @@ public interface BlockReader extends ByteBufferReadable {
    * @return              true only if this is a local read.
    */
   boolean isLocal();
-  
+
   /**
    * @return              true only if this is a short-circuit read.
    *                      All short-circuit reads are also local.

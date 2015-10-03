@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
@@ -80,7 +79,6 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.SpanId;
 import org.apache.htrace.core.TraceScope;
@@ -94,6 +92,8 @@ import com.google.common.cache.RemovalNotification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
 
 /*********************************************************************
  *
@@ -136,7 +136,8 @@ class DataStreamer extends Daemon {
     final InetSocketAddress isa = NetUtils.createSocketAddr(dnAddr);
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
-    NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(), conf.getSocketTimeout());
+    NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(),
+        conf.getSocketTimeout());
     sock.setSoTimeout(timeout);
     sock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
     LOG.debug("Send buf size {}", sock.getSendBufferSize());
@@ -427,7 +428,6 @@ class DataStreamer extends Daemon {
    * Construct a data streamer for appending to the last partial block
    * @param lastBlock last block of the file to be appended
    * @param stat status of the file to be appended
-   * @throws IOException if error occurs
    */
   DataStreamer(LocatedBlock lastBlock, HdfsFileStatus stat, DFSClient dfsClient,
                String src, Progressable progress, DataChecksum checksum,
@@ -517,7 +517,7 @@ class DataStreamer extends Daemon {
         // process datanode IO errors if any
         boolean doSleep = processDatanodeError();
 
-        final int halfSocketTimeout = dfsClient.getConf().getSocketTimeout()/2; 
+        final int halfSocketTimeout = dfsClient.getConf().getSocketTimeout()/2;
         synchronized (dataQueue) {
           // wait for a packet to be sent.
           long now = Time.monotonicNow();
@@ -620,9 +620,8 @@ class DataStreamer extends Daemon {
         LOG.debug("DataStreamer block {} sending packet {}", block, one);
 
         // write out data to remote datanode
-        TraceScope writeScope = dfsClient.getTracer().
-            newScope("DataStreamer#writeTo", spanId);
-        try {
+        try (TraceScope ignored = dfsClient.getTracer().
+            newScope("DataStreamer#writeTo", spanId)) {
           one.writeTo(blockStream);
           blockStream.flush();
         } catch (IOException e) {
@@ -634,8 +633,6 @@ class DataStreamer extends Daemon {
           // will be taken out then.
           errorState.markFirstNodeIfNotMarked();
           throw e;
-        } finally {
-          writeScope.close();
         }
         lastPacket = Time.monotonicNow();
 
@@ -725,9 +722,8 @@ class DataStreamer extends Daemon {
    * @throws IOException
    */
   void waitForAckedSeqno(long seqno) throws IOException {
-    TraceScope scope = dfsClient.getTracer().
-        newScope("waitForAckedSeqno");
-    try {
+    try (TraceScope ignored = dfsClient.getTracer().
+        newScope("waitForAckedSeqno")) {
       LOG.debug("Waiting for ack for: {}", seqno);
       long begin = Time.monotonicNow();
       try {
@@ -747,15 +743,13 @@ class DataStreamer extends Daemon {
           }
         }
         checkClosed();
-      } catch (ClosedChannelException e) {
+      } catch (ClosedChannelException cce) {
       }
       long duration = Time.monotonicNow() - begin;
       if (duration > dfsclientSlowLogThresholdMs) {
         LOG.warn("Slow waitForAckedSeqno took " + duration
             + "ms (threshold=" + dfsclientSlowLogThresholdMs + "ms)");
       }
-    } finally {
-      scope.close();
     }
   }
 
@@ -802,7 +796,7 @@ class DataStreamer extends Daemon {
         }
         checkClosed();
         queuePacket(packet);
-      } catch (ClosedChannelException e) {
+      } catch (ClosedChannelException ignored) {
       }
     }
   }
@@ -901,10 +895,7 @@ class DataStreamer extends Daemon {
       assert false;
     }
 
-    if (addr != null && NetUtils.isLocalAddress(addr)) {
-      return true;
-    }
-    return false;
+    return addr != null && NetUtils.isLocalAddress(addr);
   }
 
   //
@@ -1137,17 +1128,15 @@ class DataStreamer extends Daemon {
   ) throws IOException {
     if (nodes.length != original.length + 1) {
       throw new IOException(
-          new StringBuilder()
-              .append("Failed to replace a bad datanode on the existing pipeline ")
-              .append("due to no more good datanodes being available to try. ")
-              .append("(Nodes: current=").append(Arrays.asList(nodes))
-              .append(", original=").append(Arrays.asList(original)).append("). ")
-              .append("The current failed datanode replacement policy is ")
-              .append(dfsClient.dtpReplaceDatanodeOnFailure).append(", and ")
-              .append("a client may configure this via '")
-              .append(BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY)
-              .append("' in its configuration.")
-              .toString());
+          "Failed to replace a bad datanode on the existing pipeline "
+              + "due to no more good datanodes being available to try. "
+              + "(Nodes: current=" + Arrays.asList(nodes)
+              + ", original=" + Arrays.asList(original) + "). "
+              + "The current failed datanode replacement policy is "
+              + dfsClient.dtpReplaceDatanodeOnFailure
+              + ", and a client may configure this via '"
+              + BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY
+              + "' in its configuration.");
     }
     for(int i = 0; i < nodes.length; i++) {
       int j = 0;
@@ -1196,7 +1185,7 @@ class DataStreamer extends Daemon {
     final StorageType[] originalTypes = storageTypes;
     final String[] originalIDs = storageIDs;
     IOException caughtException = null;
-    ArrayList<DatanodeInfo> exclude = new ArrayList<DatanodeInfo>(failed);
+    ArrayList<DatanodeInfo> exclude = new ArrayList<>(failed);
     while (tried < 3) {
       LocatedBlock lb;
       //get a new datanode
@@ -1235,7 +1224,8 @@ class DataStreamer extends Daemon {
 
   private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
                         final StorageType[] targetStorageTypes,
-                        final Token<BlockTokenIdentifier> blockToken) throws IOException {
+                        final Token<BlockTokenIdentifier> blockToken)
+      throws IOException {
     //transfer replica to the new datanode
     Socket sock = null;
     DataOutputStream out = null;
@@ -1246,7 +1236,8 @@ class DataStreamer extends Daemon {
 
       // transfer timeout multiplier based on the transfer size
       // One per 200 packets = 12.8MB. Minimum is 2.
-      int multi = 2 + (int)(bytesSent/dfsClient.getConf().getWritePacketSize())/200;
+      int multi = 2 + (int)(bytesSent /dfsClient.getConf().getWritePacketSize())
+          / 200;
       final long readTimeout = dfsClient.getDatanodeReadTimeout(multi);
 
       OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
@@ -1413,13 +1404,14 @@ class DataStreamer extends Daemon {
         // good reports should follow bad ones, if client committed
         // with those nodes.
         Thread.sleep(2000);
-      } catch (InterruptedException ie) {}
+      } catch (InterruptedException ignored) {
+      }
     }
   }
 
-  LocatedBlock updateBlockForPipeline() throws IOException {
-    return dfsClient.namenode.updateBlockForPipeline(
-        block, dfsClient.clientName);
+  private LocatedBlock updateBlockForPipeline() throws IOException {
+    return dfsClient.namenode.updateBlockForPipeline(block,
+        dfsClient.clientName);
   }
 
   /** update pipeline at the namenode */
@@ -1437,12 +1429,12 @@ class DataStreamer extends Daemon {
    * Must get block ID and the IDs of the destinations from the namenode.
    * Returns the list of target datanodes.
    */
-  private LocatedBlock nextBlockOutputStream() throws IOException {
-    LocatedBlock lb = null;
-    DatanodeInfo[] nodes = null;
-    StorageType[] storageTypes = null;
+  protected LocatedBlock nextBlockOutputStream() throws IOException {
+    LocatedBlock lb;
+    DatanodeInfo[] nodes;
+    StorageType[] storageTypes;
     int count = dfsClient.getConf().getNumBlockWriteRetry();
-    boolean success = false;
+    boolean success;
     ExtendedBlock oldBlock = block;
     do {
       errorState.reset();
@@ -1493,7 +1485,6 @@ class DataStreamer extends Daemon {
       LOG.info("nodes are empty for write pipeline of " + block);
       return false;
     }
-    Status pipelineStatus = SUCCESS;
     String firstBadLink = "";
     boolean checkRestart = false;
     if (LOG.isDebugEnabled()) {
@@ -1528,25 +1519,26 @@ class DataStreamer extends Daemon {
         // Xmit header info to datanode
         //
 
-        BlockConstructionStage bcs = recoveryFlag? stage.getRecoveryStage(): stage;
+        BlockConstructionStage bcs = recoveryFlag ?
+            stage.getRecoveryStage() : stage;
 
         // We cannot change the block length in 'block' as it counts the number
         // of bytes ack'ed.
         ExtendedBlock blockCopy = new ExtendedBlock(block);
         blockCopy.setNumBytes(stat.getBlockSize());
 
-        boolean[] targetPinnings = getPinnings(nodes, true);
+        boolean[] targetPinnings = getPinnings(nodes);
         // send the request
         new Sender(out).writeBlock(blockCopy, nodeStorageTypes[0], accessToken,
             dfsClient.clientName, nodes, nodeStorageTypes, null, bcs,
             nodes.length, block.getNumBytes(), bytesSent, newGS,
             checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
-            (targetPinnings == null ? false : targetPinnings[0]), targetPinnings);
+            (targetPinnings != null && targetPinnings[0]), targetPinnings);
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
             PBHelperClient.vintPrefixed(blockReplyStream));
-        pipelineStatus = resp.getStatus();
+        Status pipelineStatus = resp.getStatus();
         firstBadLink = resp.getFirstBadLink();
 
         // Got an restart OOB ack.
@@ -1559,7 +1551,7 @@ class DataStreamer extends Daemon {
           checkRestart = true;
           throw new IOException("A datanode is restarting.");
         }
-		
+
         String logInfo = "ack with firstBadLink as " + firstBadLink;
         DataTransferProtoUtil.checkBlockOpStatus(resp, logInfo);
 
@@ -1571,7 +1563,8 @@ class DataStreamer extends Daemon {
         if (!errorState.isRestartingNode()) {
           LOG.info("Exception in createBlockOutputStream", ie);
         }
-        if (ie instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
+        if (ie instanceof InvalidEncryptionKeyException &&
+            refetchEncryptionKey > 0) {
           LOG.info("Will fetch a new encryption key and retry, "
               + "encryption key was invalid when connecting to "
               + nodes[0] + " : " + ie);
@@ -1593,14 +1586,15 @@ class DataStreamer extends Daemon {
             }
           }
         } else {
-          assert checkRestart == false;
+          assert !checkRestart;
           errorState.setBadNodeIndex(0);
         }
 
         final int i = errorState.getBadNodeIndex();
         // Check whether there is a restart worth waiting for.
         if (checkRestart && shouldWaitForRestart(i)) {
-          errorState.initRestartingNode(i, "Datanode " + i + " is restarting: " + nodes[i]);
+          errorState.initRestartingNode(i, "Datanode " + i + " is restarting: "
+              + nodes[i]);
         }
         errorState.setError(true);
         lastException.set(ie);
@@ -1610,7 +1604,6 @@ class DataStreamer extends Daemon {
           IOUtils.closeSocket(s);
           s = null;
           IOUtils.closeStream(out);
-          out = null;
           IOUtils.closeStream(blockReplyStream);
           blockReplyStream = null;
         }
@@ -1619,19 +1612,18 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private boolean[] getPinnings(DatanodeInfo[] nodes, boolean shouldLog) {
+  private boolean[] getPinnings(DatanodeInfo[] nodes) {
     if (favoredNodes == null) {
       return null;
     } else {
       boolean[] pinnings = new boolean[nodes.length];
-      HashSet<String> favoredSet =
-          new HashSet<String>(Arrays.asList(favoredNodes));
+      HashSet<String> favoredSet = new HashSet<>(Arrays.asList(favoredNodes));
       for (int i = 0; i < nodes.length; i++) {
         pinnings[i] = favoredSet.remove(nodes[i].getXferAddrWithHostname());
         LOG.debug("{} was chosen by name node (favored={}).",
             nodes[i].getXferAddrWithHostname(), pinnings[i]);
       }
-      if (shouldLog && !favoredSet.isEmpty()) {
+      if (!favoredSet.isEmpty()) {
         // There is one or more favored nodes that were not allocated.
         LOG.warn("These favored nodes were specified but not chosen: "
             + favoredSet + " Specified favored nodes: "
@@ -1777,7 +1769,7 @@ class DataStreamer extends Daemon {
    * For heartbeat packets, create buffer directly by new byte[]
    * since heartbeats should not be blocked.
    */
-  private DFSPacket createHeartbeatPacket() throws InterruptedIOException {
+  private DFSPacket createHeartbeatPacket() {
     final byte[] buf = new byte[PacketHeader.PKT_MAX_HEADER_LEN];
     return new DFSPacket(buf, 0, 0, DFSPacket.HEART_BEAT_SEQNO, 0, false);
   }
@@ -1789,7 +1781,8 @@ class DataStreamer extends Daemon {
         .removalListener(new RemovalListener<DatanodeInfo, DatanodeInfo>() {
           @Override
           public void onRemoval(
-              RemovalNotification<DatanodeInfo, DatanodeInfo> notification) {
+              @Nonnull RemovalNotification<DatanodeInfo, DatanodeInfo>
+                  notification) {
             LOG.info("Removing node " + notification.getKey()
                 + " from the excluded nodes list");
           }

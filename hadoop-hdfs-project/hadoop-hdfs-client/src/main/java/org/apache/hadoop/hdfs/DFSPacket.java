@@ -139,7 +139,6 @@ class DFSPacket {
   /**
    * Write the full packet, including the header, to the given output stream.
    *
-   * @param stm
    * @throws IOException
    */
   synchronized void writeTo(DataOutputStream stm) throws IOException {
@@ -173,15 +172,18 @@ class DFSPacket {
 
     // corrupt the data for testing.
     if (DFSClientFaultInjector.get().corruptPacket()) {
-      buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^=
+          0xff;
     }
 
     // Write the now contiguous full packet to the output stream.
-    stm.write(buf, headerStart, header.getSerializedSize() + checksumLen + dataLen);
+    stm.write(buf, headerStart,
+        header.getSerializedSize() + checksumLen + dataLen);
 
     // undo corruption.
     if (DFSClientFaultInjector.get().uncorruptPacket()) {
-      buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^=
+          0xff;
     }
   }
 
@@ -193,8 +195,6 @@ class DFSPacket {
 
   /**
    * Release the buffer in this packet to ByteArrayManager.
-   *
-   * @param bam
    */
   synchronized void releaseBuffer(ByteArrayManager bam) {
     bam.release(buf);

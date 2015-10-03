@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -69,7 +69,7 @@ import com.google.protobuf.ByteString;
 public final class DataTransferSaslUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-    DataTransferSaslUtil.class);
+      DataTransferSaslUtil.class);
 
   /**
    * Delimiter for the three-part SASL username string.
@@ -97,20 +97,20 @@ public final class DataTransferSaslUtil {
       throw new IOException("Failed to complete SASL handshake");
     }
     Set<String> requestedQop = ImmutableSet.copyOf(Arrays.asList(
-      saslProps.get(Sasl.QOP).split(",")));
+        saslProps.get(Sasl.QOP).split(",")));
     String negotiatedQop = sasl.getNegotiatedQop();
     LOG.debug("Verifying QOP, requested QOP = {}, negotiated QOP = {}",
-      requestedQop, negotiatedQop);
+        requestedQop, negotiatedQop);
     if (!requestedQop.contains(negotiatedQop)) {
       throw new IOException(String.format("SASL handshake completed, but " +
-        "channel does not have acceptable quality of protection, " +
-        "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
+          "channel does not have acceptable quality of protection, " +
+          "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
     }
   }
-  
+
   /**
    * Check whether requested SASL Qop contains privacy.
-   * 
+   *
    * @param saslProps properties of SASL negotiation
    * @return boolean true if privacy exists
    */
@@ -145,7 +145,7 @@ public final class DataTransferSaslUtil {
    */
   public static char[] encryptionKeyToPassword(byte[] encryptionKey) {
     return new String(Base64.encodeBase64(encryptionKey, false), Charsets.UTF_8)
-      .toCharArray();
+        .toCharArray();
   }
 
   /**
@@ -153,7 +153,6 @@ public final class DataTransferSaslUtil {
    * [host][/ip-address]:port.  The host may be missing.  The IP address (and
    * preceding '/') may be missing.  The port preceded by ':' is always present.
    *
-   * @param peer
    * @return InetAddress from peer
    */
   public static InetAddress getPeerAddress(Peer peer) {
@@ -181,23 +180,26 @@ public final class DataTransferSaslUtil {
     String qops = conf.get(DFS_DATA_TRANSFER_PROTECTION_KEY);
     if (qops == null || qops.isEmpty()) {
       LOG.debug("DataTransferProtocol not using SaslPropertiesResolver, no " +
-        "QOP found in configuration for {}", DFS_DATA_TRANSFER_PROTECTION_KEY);
+          "QOP found in configuration for {}",
+          DFS_DATA_TRANSFER_PROTECTION_KEY);
       return null;
     }
     Configuration saslPropsResolverConf = new Configuration(conf);
     saslPropsResolverConf.set(HADOOP_RPC_PROTECTION, qops);
     Class<? extends SaslPropertiesResolver> resolverClass = conf.getClass(
-      HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
-      SaslPropertiesResolver.class, SaslPropertiesResolver.class);
-    resolverClass = conf.getClass(DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY,
-      resolverClass, SaslPropertiesResolver.class);
+        HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
+        SaslPropertiesResolver.class, SaslPropertiesResolver.class);
+    resolverClass =
+        conf.getClass(DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY,
+        resolverClass, SaslPropertiesResolver.class);
     saslPropsResolverConf.setClass(HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,
-      resolverClass, SaslPropertiesResolver.class);
+        resolverClass, SaslPropertiesResolver.class);
     SaslPropertiesResolver resolver = SaslPropertiesResolver.getInstance(
-      saslPropsResolverConf);
+        saslPropsResolverConf);
     LOG.debug("DataTransferProtocol using SaslPropertiesResolver, configured " +
-      "QOP {} = {}, configured class {} = {}", DFS_DATA_TRANSFER_PROTECTION_KEY, qops, 
-      DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY, resolverClass);
+            "QOP {} = {}, configured class {} = {}",
+        DFS_DATA_TRANSFER_PROTECTION_KEY, qops,
+        DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY, resolverClass);
     return resolver;
   }
 
@@ -219,10 +221,10 @@ public final class DataTransferSaslUtil {
       return proto.getPayload().toByteArray();
     }
   }
-  
+
   /**
-   * Reads a SASL negotiation message and negotiation cipher options. 
-   * 
+   * Reads a SASL negotiation message and negotiation cipher options.
+   *
    * @param in stream to read
    * @param cipherOptions list to store negotiation cipher options
    * @return byte[] SASL negotiation message
@@ -246,10 +248,10 @@ public final class DataTransferSaslUtil {
       return proto.getPayload().toByteArray();
     }
   }
-  
+
   /**
    * Negotiate a cipher option which server supports.
-   * 
+   *
    * @param conf the configuration
    * @param options the cipher options which client supports
    * @return CipherOption negotiated cipher option
@@ -279,6 +281,7 @@ public final class DataTransferSaslUtil {
           byte[] inIv = new byte[suite.getAlgorithmBlockSize()];
           byte[] outKey = new byte[keyLen];
           byte[] outIv = new byte[suite.getAlgorithmBlockSize()];
+          assert codec != null;
           codec.generateSecureRandom(inKey);
           codec.generateSecureRandom(inIv);
           codec.generateSecureRandom(outKey);
@@ -289,21 +292,21 @@ public final class DataTransferSaslUtil {
     }
     return null;
   }
-  
+
   /**
    * Send SASL message and negotiated cipher option to client.
-   * 
+   *
    * @param out stream to receive message
    * @param payload to send
    * @param option negotiated cipher option
    * @throws IOException for any error
    */
   public static void sendSaslMessageAndNegotiatedCipherOption(
-      OutputStream out, byte[] payload, CipherOption option) 
-          throws IOException {
+      OutputStream out, byte[] payload, CipherOption option)
+      throws IOException {
     DataTransferEncryptorMessageProto.Builder builder =
         DataTransferEncryptorMessageProto.newBuilder();
-    
+
     builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
     if (payload != null) {
       builder.setPayload(ByteString.copyFrom(payload));
@@ -311,16 +314,16 @@ public final class DataTransferSaslUtil {
     if (option != null) {
       builder.addCipherOption(PBHelperClient.convert(option));
     }
-    
+
     DataTransferEncryptorMessageProto proto = builder.build();
     proto.writeDelimitedTo(out);
     out.flush();
   }
-  
+
   /**
    * Create IOStreamPair of {@link org.apache.hadoop.crypto.CryptoInputStream}
    * and {@link org.apache.hadoop.crypto.CryptoOutputStream}
-   * 
+   *
    * @param conf the configuration
    * @param cipherOption negotiated cipher option
    * @param out underlying output stream
@@ -330,7 +333,7 @@ public final class DataTransferSaslUtil {
    * @throws IOException for any error
    */
   public static IOStreamPair createStreamPair(Configuration conf,
-      CipherOption cipherOption, OutputStream out, InputStream in, 
+      CipherOption cipherOption, OutputStream out, InputStream in,
       boolean isServer) throws IOException {
     LOG.debug("Creating IOStreamPair of CryptoInputStream and "
         + "CryptoOutputStream.");
@@ -340,9 +343,9 @@ public final class DataTransferSaslUtil {
     byte[] inIv = cipherOption.getInIv();
     byte[] outKey = cipherOption.getOutKey();
     byte[] outIv = cipherOption.getOutIv();
-    InputStream cIn = new CryptoInputStream(in, codec, 
+    InputStream cIn = new CryptoInputStream(in, codec,
         isServer ? inKey : outKey, isServer ? inIv : outIv);
-    OutputStream cOut = new CryptoOutputStream(out, codec, 
+    OutputStream cOut = new CryptoOutputStream(out, codec,
         isServer ? outKey : inKey, isServer ? outIv : inIv);
     return new IOStreamPair(cIn, cOut);
   }
@@ -370,10 +373,10 @@ public final class DataTransferSaslUtil {
       throws IOException {
     sendSaslMessage(out, DataTransferEncryptorStatus.SUCCESS, payload, null);
   }
-  
+
   /**
    * Send a SASL negotiation message and negotiation cipher options to server.
-   * 
+   *
    * @param out stream to receive message
    * @param payload to send
    * @param options cipher options to negotiate
@@ -381,10 +384,10 @@ public final class DataTransferSaslUtil {
    */
   public static void sendSaslMessageAndNegotiationCipherOptions(
       OutputStream out, byte[] payload, List<CipherOption> options)
-          throws IOException {
+      throws IOException {
     DataTransferEncryptorMessageProto.Builder builder =
         DataTransferEncryptorMessageProto.newBuilder();
-    
+
     builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
     if (payload != null) {
       builder.setPayload(ByteString.copyFrom(payload));
@@ -392,23 +395,23 @@ public final class DataTransferSaslUtil {
     if (options != null) {
       builder.addAllCipherOption(PBHelperClient.convertCipherOptions(options));
     }
-    
+
     DataTransferEncryptorMessageProto proto = builder.build();
     proto.writeDelimitedTo(out);
     out.flush();
   }
-  
+
   /**
    * Read SASL message and negotiated cipher option from server.
-   * 
+   *
    * @param in stream to read
-   * @return SaslResponseWithNegotiatedCipherOption SASL message and 
+   * @return SaslResponseWithNegotiatedCipherOption SASL message and
    * negotiated cipher option
    * @throws IOException for any error
    */
   public static SaslResponseWithNegotiatedCipherOption
       readSaslMessageAndNegotiatedCipherOption(InputStream in)
-          throws IOException {
+      throws IOException {
     DataTransferEncryptorMessageProto proto =
         DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
     if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
@@ -426,17 +429,17 @@ public final class DataTransferSaslUtil {
       return new SaslResponseWithNegotiatedCipherOption(response, option);
     }
   }
-  
+
   /**
    * Encrypt the key and iv of the negotiated cipher option.
-   * 
+   *
    * @param option negotiated cipher option
    * @param sasl SASL participant representing server
-   * @return CipherOption negotiated cipher option which contains the 
+   * @return CipherOption negotiated cipher option which contains the
    * encrypted key and iv
    * @throws IOException for any error
    */
-  public static CipherOption wrap(CipherOption option, SaslParticipant sasl) 
+  public static CipherOption wrap(CipherOption option, SaslParticipant sasl)
       throws IOException {
     if (option != null) {
       byte[] inKey = option.getInKey();
@@ -450,16 +453,16 @@ public final class DataTransferSaslUtil {
       return new CipherOption(option.getCipherSuite(), inKey, option.getInIv(),
           outKey, option.getOutIv());
     }
-    
+
     return null;
   }
-  
+
   /**
    * Decrypt the key and iv of the negotiated cipher option.
-   * 
+   *
    * @param option negotiated cipher option
    * @param sasl SASL participant representing client
-   * @return CipherOption negotiated cipher option which contains the 
+   * @return CipherOption negotiated cipher option which contains the
    * decrypted key and iv
    * @throws IOException for any error
    */
@@ -477,7 +480,7 @@ public final class DataTransferSaslUtil {
       return new CipherOption(option.getCipherSuite(), inKey, option.getInIv(),
           outKey, option.getOutIv());
     }
-    
+
     return null;
   }
 
@@ -492,10 +495,10 @@ public final class DataTransferSaslUtil {
    */
   public static void sendSaslMessage(OutputStream out,
       DataTransferEncryptorStatus status, byte[] payload, String message)
-          throws IOException {
+      throws IOException {
     DataTransferEncryptorMessageProto.Builder builder =
         DataTransferEncryptorMessageProto.newBuilder();
-    
+
     builder.setStatus(status);
     if (payload != null) {
       builder.setPayload(ByteString.copyFrom(payload));
@@ -503,7 +506,7 @@ public final class DataTransferSaslUtil {
     if (message != null) {
       builder.setMessage(message);
     }
-    
+
     DataTransferEncryptorMessageProto proto = builder.build();
     proto.writeDelimitedTo(out);
     out.flush();

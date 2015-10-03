@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Used for injecting faults in DFSClient and DFSOutputStream tests.
- * Calls into this are a no-op in production code. 
+ * Calls into this are a no-op in production code.
  */
 @VisibleForTesting
 @InterfaceAudience.Private

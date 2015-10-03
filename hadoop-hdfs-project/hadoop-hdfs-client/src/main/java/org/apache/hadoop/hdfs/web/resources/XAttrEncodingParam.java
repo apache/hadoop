@@ -26,7 +26,7 @@ public class XAttrEncodingParam extends EnumParam<XAttrCodec> {
   public static final String DEFAULT = "";
 
   private static final Domain<XAttrCodec> DOMAIN =
-      new Domain<XAttrCodec>(NAME, XAttrCodec.class);
+      new Domain<>(NAME, XAttrCodec.class);
 
   public XAttrEncodingParam(final XAttrCodec encoding) {
     super(DOMAIN, encoding);

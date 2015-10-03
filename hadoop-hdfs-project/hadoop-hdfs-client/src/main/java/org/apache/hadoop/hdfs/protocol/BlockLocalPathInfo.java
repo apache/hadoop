@@ -33,7 +33,7 @@ public class BlockLocalPathInfo {
 
   /**
    * Constructs BlockLocalPathInfo.
-   * @param b The block corresponding to this lock path info. 
+   * @param b The block corresponding to this lock path info.
    * @param file Block data file.
    * @param metafile Metadata file for the block.
    */
@@ -48,12 +48,12 @@ public class BlockLocalPathInfo {
    * @return Block data file.
    */
   public String getBlockPath() {return localBlockPath;}
-  
+
   /**
    * @return the Block
    */
   public ExtendedBlock getBlock() { return block;}
-  
+
   /**
    * Get the Block metadata file.
    * @return Block metadata file.

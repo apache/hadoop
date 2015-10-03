@@ -40,7 +40,7 @@ final class Utils {
 
     return value;
   }
-  
+
   public static String postBody(String ... kv)
       throws UnsupportedEncodingException {
     if(kv.length % 2 != 0) {
@@ -48,7 +48,7 @@ final class Utils {
     }
     StringBuilder sb = new StringBuilder();
     int i = 0;
-    
+
     while(i < kv.length) {
       if(i > 0) {
         sb.append("&");
@@ -57,7 +57,7 @@ final class Utils {
       sb.append("=");
       sb.append(URLEncoder.encode(kv[i++], "UTF-8"));
     }
-    
+
     return sb.toString();
   }
 }

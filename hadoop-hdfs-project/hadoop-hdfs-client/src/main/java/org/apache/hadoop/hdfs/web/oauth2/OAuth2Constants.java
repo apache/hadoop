@@ -32,8 +32,8 @@ public final class OAuth2Constants {
 
   public static final MediaType URLENCODED
       = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
-  
-  /* Constants for OAuth protocol */ 
+
+  /* Constants for OAuth protocol */
   public static final String ACCESS_TOKEN = "access_token";
   public static final String BEARER = "bearer";
   public static final String CLIENT_CREDENTIALS = "client_credentials";

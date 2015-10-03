@@ -22,7 +22,7 @@ import java.net.HttpURLConnection;
 /** Http GET operation parameter. */
 public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
   /** Get operations. */
-  public static enum Op implements HttpOpParam.Op {
+  public enum Op implements HttpOpParam.Op {
     OPEN(true, HttpURLConnection.HTTP_OK),
 
     GETFILESTATUS(false, HttpURLConnection.HTTP_OK),
@@ -52,7 +52,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     }
 
     Op(final boolean redirect, final int expectedHttpResponseCode,
-       final boolean requireAuth) {
+        final boolean requireAuth) {
       this.redirect = redirect;
       this.expectedHttpResponseCode = expectedHttpResponseCode;
       this.requireAuth = requireAuth;
@@ -89,7 +89,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     }
   }
 
-  private static final Domain<Op> DOMAIN = new Domain<Op>(NAME, Op.class);
+  private static final Domain<Op> DOMAIN = new Domain<>(NAME, Op.class);
 
   /**
    * Constructor.

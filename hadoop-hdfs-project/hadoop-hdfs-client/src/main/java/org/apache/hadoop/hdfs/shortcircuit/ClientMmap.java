@@ -31,12 +31,12 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ClientMmap implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(ClientMmap.class);
-  
+
   /**
    * A reference to the block replica which this mmap relates to.
    */
   private ShortCircuitReplica replica;
-  
+
   /**
    * The java ByteBuffer object.
    */

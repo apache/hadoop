@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nonnull;
+
 /**
  * An InputStream implementations which reads from some other InputStream
  * but expects an exact number of bytes. Any attempts to read past the
@@ -42,10 +44,10 @@ public class ExactSizeInputStream extends FilterInputStream {
   /**
    * Construct an input stream that will read no more than
    * 'numBytes' bytes.
-   * 
+   *
    * If an EOF occurs on the underlying stream before numBytes
    * bytes have been read, an EOFException will be thrown.
-   * 
+   *
    * @param in the inputstream to wrap
    * @param numBytes the number of bytes to read
    */
@@ -80,7 +82,7 @@ public class ExactSizeInputStream extends FilterInputStream {
   }
 
   @Override
-  public int read(final byte[] b, final int off, int len)
+  public int read(@Nonnull final byte[] b, final int off, int len)
                   throws IOException {
     if (remaining <= 0) {
       return -1;
@@ -111,7 +113,7 @@ public class ExactSizeInputStream extends FilterInputStream {
     }
     return result;
   }
-  
+
   @Override
   public boolean markSupported() {
     return false;
@@ -121,5 +123,5 @@ public class ExactSizeInputStream extends FilterInputStream {
   public void mark(int readlimit) {
     throw new UnsupportedOperationException();
   }
-  
+
 }

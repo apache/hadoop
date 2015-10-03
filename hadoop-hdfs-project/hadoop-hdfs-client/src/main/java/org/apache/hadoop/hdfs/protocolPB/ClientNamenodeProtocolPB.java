@@ -37,10 +37,10 @@ import org.apache.hadoop.security.token.TokenInfo;
     protocolVersion = 1)
 /**
  * Protocol that a clients use to communicate with the NameNode.
- * 
+ *
  * Note: This extends the protocolbuffer service based interface to
  * add annotations required for security.
  */
-public interface ClientNamenodeProtocolPB extends 
-  ClientNamenodeProtocol.BlockingInterface {
+public interface ClientNamenodeProtocolPB extends
+    ClientNamenodeProtocol.BlockingInterface {
 }

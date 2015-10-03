@@ -79,7 +79,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Retry;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.ShortCircuit;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write;
 
-import java.lang.Class;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -254,9 +253,8 @@ public class DfsClientConf {
 
   @SuppressWarnings("unchecked")
   private List<Class<? extends ReplicaAccessorBuilder>>
-      loadReplicaAccessorBuilderClasses(Configuration conf)
-  {
-    String classNames[] = conf.getTrimmedStrings(
+      loadReplicaAccessorBuilderClasses(Configuration conf) {
+    String[] classNames = conf.getTrimmedStrings(
         HdfsClientConfigKeys.REPLICA_ACCESSOR_BUILDER_CLASSES_KEY);
     if (classNames.length == 0) {
       return Collections.emptyList();
@@ -267,8 +265,8 @@ public class DfsClientConf {
     for (String className: classNames) {
       try {
         Class<? extends ReplicaAccessorBuilder> cls =
-          (Class<? extends ReplicaAccessorBuilder>)
-            classLoader.loadClass(className);
+            (Class<? extends ReplicaAccessorBuilder>)
+                classLoader.loadClass(className);
         classes.add(cls);
       } catch (Throwable t) {
         LOG.warn("Unable to load " + className, t);

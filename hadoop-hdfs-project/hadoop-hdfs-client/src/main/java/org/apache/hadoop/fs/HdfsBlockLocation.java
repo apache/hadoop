@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -33,14 +31,13 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 public class HdfsBlockLocation extends BlockLocation {
 
   private final LocatedBlock block;
-  
-  public HdfsBlockLocation(BlockLocation loc, LocatedBlock block) 
-      throws IOException {
+
+  public HdfsBlockLocation(BlockLocation loc, LocatedBlock block) {
     // Initialize with data from passed in BlockLocation
     super(loc);
     this.block = block;
   }
-  
+
   public LocatedBlock getLocatedBlock() {
     return block;
   }

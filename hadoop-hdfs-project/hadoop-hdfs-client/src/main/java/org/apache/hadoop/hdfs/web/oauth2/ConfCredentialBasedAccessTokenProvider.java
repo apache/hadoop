@@ -27,7 +27,7 @@ import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
 
 /**
  * Obtain an access token via a a credential (provided through the
- * Configuration) using the 
+ * Configuration) using the
  * <a href="https://tools.ietf.org/html/rfc6749#section-4.4">
  *   Client Credentials Grant workflow</a>.
  */
@@ -56,7 +56,7 @@ public class ConfCredentialBasedAccessTokenProvider
       throw new IllegalArgumentException("Credential has not been " +
           "provided in configuration");
     }
-    
+
     return credential;
   }
 }

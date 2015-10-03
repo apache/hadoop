@@ -42,4 +42,4 @@ public class CacheDirectiveEntry {
   public CacheDirectiveStats getStats() {
     return stats;
   }
-};
+}

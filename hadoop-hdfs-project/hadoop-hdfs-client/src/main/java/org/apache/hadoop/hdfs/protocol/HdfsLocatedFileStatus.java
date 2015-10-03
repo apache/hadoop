@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
-/** 
+/**
  * Interface that represents the over the wire information
  * including block locations for a file.
  */
@@ -38,7 +38,7 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
 
   /**
    * Constructor
-   * 
+   *
    * @param length size
    * @param isdir if this is directory
    * @param block_replication the file's replication factor
@@ -49,7 +49,7 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
    * @param owner owner
    * @param group group
    * @param symlink symbolic link
-   * @param path local path name in java UTF8 format 
+   * @param path local path name in java UTF8 format
    * @param fileId the file id
    * @param locations block locations
    * @param feInfo file encryption info

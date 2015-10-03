@@ -82,11 +82,10 @@ public class DomainSocketFactory {
     public PathState getPathState() {
       return state;
     }
-    
+
     @Override
     public String toString() {
-      return new StringBuilder().append("PathInfo{path=").append(path).
-          append(", state=").append(state).append("}").toString();
+      return "PathInfo{path=" + path + ", state=" + state + "}";
     }
   }
 

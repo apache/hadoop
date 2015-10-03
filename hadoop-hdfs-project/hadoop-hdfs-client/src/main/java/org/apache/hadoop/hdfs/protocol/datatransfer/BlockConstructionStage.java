@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public enum BlockConstructionStage {
   /** The enumerates are always listed as regular stage followed by the
-   * recovery stage. 
+   * recovery stage.
    * Changing this order will make getRecoveryStage not working.
    */
   // pipeline set up for block append
@@ -46,9 +46,9 @@ public enum BlockConstructionStage {
   TRANSFER_RBW,
   // transfer Finalized for adding datanodes
   TRANSFER_FINALIZED;
-  
+
   final static private byte RECOVERY_BIT = (byte)1;
-  
+
   /**
    * get the recovery stage of this stage
    */
@@ -59,4 +59,4 @@ public enum BlockConstructionStage {
       return values()[ordinal()|RECOVERY_BIT];
     }
   }
-}    
+}

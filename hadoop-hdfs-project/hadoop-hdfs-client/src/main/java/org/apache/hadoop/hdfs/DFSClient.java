@@ -23,6 +23,9 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACH
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -89,7 +92,6 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -191,12 +193,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /********************************************************
- * DFSClient can connect to a Hadoop Filesystem and 
+ * DFSClient can connect to a Hadoop Filesystem and
  * perform basic file tasks.  It uses the ClientProtocol
- * to communicate with a NameNode daemon, and connects 
+ * to communicate with a NameNode daemon, and connects
  * directly to DataNodes to read/write block data.
  *
- * Hadoop DFS users should obtain an instance of 
+ * Hadoop DFS users should obtain an instance of
  * DistributedFileSystem, which uses DFSClient to handle
  * filesystem tasks.
  *
@@ -205,7 +207,8 @@ import org.slf4j.LoggerFactory;
 public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     DataEncryptionKeyFactory {
   public static final Logger LOG = LoggerFactory.getLogger(DFSClient.class);
-  public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
+  // 1 hour
+  public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L;
 
   private final Configuration conf;
   private final Tracer tracer;
@@ -250,8 +253,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * that are currently being written by this client.
    * Note that a file can only be written by a single client.
    */
-  private final Map<Long, DFSOutputStream> filesBeingWritten
-      = new HashMap<Long, DFSOutputStream>();
+  private final Map<Long, DFSOutputStream> filesBeingWritten = new HashMap<>();
 
   /**
    * Same as this(NameNode.getNNAddress(conf), conf);
@@ -262,8 +264,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSClient(Configuration conf) throws IOException {
     this(DFSUtilClient.getNNAddress(conf), conf);
   }
-  
-  public DFSClient(InetSocketAddress address, Configuration conf) throws IOException {
+
+  public DFSClient(InetSocketAddress address, Configuration conf)
+      throws IOException {
     this(DFSUtilClient.getNNUri(address), conf);
   }
 
@@ -271,22 +274,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Same as this(nameNodeUri, conf, null);
    * @see #DFSClient(URI, Configuration, FileSystem.Statistics)
    */
-  public DFSClient(URI nameNodeUri, Configuration conf
-      ) throws IOException {
+  public DFSClient(URI nameNodeUri, Configuration conf) throws IOException {
     this(nameNodeUri, conf, null);
   }
 
   /**
    * Same as this(nameNodeUri, null, conf, stats);
-   * @see #DFSClient(URI, ClientProtocol, Configuration, FileSystem.Statistics) 
+   * @see #DFSClient(URI, ClientProtocol, Configuration, FileSystem.Statistics)
    */
   public DFSClient(URI nameNodeUri, Configuration conf,
-                   FileSystem.Statistics stats)
-    throws IOException {
+      FileSystem.Statistics stats) throws IOException {
     this(nameNodeUri, null, conf, stats);
   }
-  
-  /** 
+
+  /**
    * Create a new DFSClient connected to the given nameNodeUri or rpcNamenode.
    * If HA is enabled and a positive value is set for
    * {@link HdfsClientConfigKeys#DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY}
@@ -296,8 +297,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   @VisibleForTesting
   public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
-      Configuration conf, FileSystem.Statistics stats)
-    throws IOException {
+      Configuration conf, FileSystem.Statistics stats) throws IOException {
     // Copy only the required DFSClient configuration
     this.tracer = FsTracer.get(conf);
     this.dfsClientConf = new DfsClientConf(conf);
@@ -308,27 +308,27 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
 
     this.ugi = UserGroupInformation.getCurrentUser();
-    
+
     this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
-    this.clientName = "DFSClient_" + dfsClientConf.getTaskId() + "_" + 
+    this.clientName = "DFSClient_" + dfsClientConf.getTaskId() + "_" +
         ThreadLocalRandom.current().nextInt()  + "_" +
         Thread.currentThread().getId();
     int numResponseToDrop = conf.getInt(
-        HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
-        HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT);
+        DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY,
+        DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT);
     ProxyAndInfo<ClientProtocol> proxyInfo = null;
     AtomicBoolean nnFallbackToSimpleAuth = new AtomicBoolean(false);
 
     if (numResponseToDrop > 0) {
       // This case is used for testing.
-      LOG.warn(HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
+      LOG.warn(DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY
           + " is set to " + numResponseToDrop
           + ", this hacked client will proactively drop responses");
       proxyInfo = NameNodeProxiesClient.createProxyWithLossyRetryHandler(conf,
           nameNodeUri, ClientProtocol.class, numResponseToDrop,
           nnFallbackToSimpleAuth);
     }
-    
+
     if (proxyInfo != null) {
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
@@ -347,20 +347,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
 
     String localInterfaces[] =
-      conf.getTrimmedStrings(HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES);
+        conf.getTrimmedStrings(DFS_CLIENT_LOCAL_INTERFACES);
     localInterfaceAddrs = getLocalInterfaceAddrs(localInterfaces);
     if (LOG.isDebugEnabled() && 0 != localInterfaces.length) {
       LOG.debug("Using local interfaces [" +
-      Joiner.on(',').join(localInterfaces)+ "] with addresses [" +
-      Joiner.on(',').join(localInterfaceAddrs) + "]");
+          Joiner.on(',').join(localInterfaces)+ "] with addresses [" +
+          Joiner.on(',').join(localInterfaceAddrs) + "]");
     }
-    
-    Boolean readDropBehind = (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_READS) == null) ?
-        null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_READS, false);
+
+    Boolean readDropBehind =
+        (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_READS) == null) ?
+            null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_READS, false);
     Long readahead = (conf.get(DFS_CLIENT_CACHE_READAHEAD) == null) ?
         null : conf.getLong(DFS_CLIENT_CACHE_READAHEAD, 0);
-    Boolean writeDropBehind = (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES) == null) ?
-        null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES, false);
+    Boolean writeDropBehind =
+        (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES) == null) ?
+            null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES, false);
     this.defaultReadCachingStrategy =
         new CachingStrategy(readDropBehind, readahead);
     this.defaultWriteCachingStrategy =
@@ -373,10 +375,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.initThreadsNumForHedgedReads(dfsClientConf.getHedgedReadThreadpoolSize());
     }
     this.saslClient = new SaslDataTransferClient(
-      conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
-      TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+        conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+        TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
   }
-  
+
   /**
    * Return the socket addresses to use with each configured
    * local interface. Local interfaces may be specified by IP
@@ -387,14 +389,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * interface name matches an interface with sub-interfaces
    * only the IP of the interface is used. Sub-interfaces can
    * be used by specifying them explicitly (by IP or name).
-   * 
+   *
    * @return SocketAddresses for the configured local interfaces,
    *    or an empty array if none are configured
    * @throws UnknownHostException if a given interface name is invalid
    */
   private static SocketAddress[] getLocalInterfaceAddrs(
       String interfaceNames[]) throws UnknownHostException {
-    List<SocketAddress> localAddrs = new ArrayList<SocketAddress>();
+    List<SocketAddress> localAddrs = new ArrayList<>();
     for (String interfaceName : interfaceNames) {
       if (InetAddresses.isInetAddress(interfaceName)) {
         localAddrs.add(new InetSocketAddress(interfaceName, 0));
@@ -442,7 +444,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final int t = dfsClientConf.getSocketTimeout();
     return t > 0? HdfsConstants.READ_TIMEOUT_EXTENSION*numNodes + t: 0;
   }
-  
+
   @VisibleForTesting
   public String getClientName() {
     return clientName;
@@ -450,8 +452,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   void checkOpen() throws IOException {
     if (!clientRunning) {
-      IOException result = new IOException("Filesystem closed");
-      throw result;
+      throw new IOException("Filesystem closed");
     }
   }
 
@@ -459,8 +460,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public LeaseRenewer getLeaseRenewer() throws IOException {
-      return LeaseRenewer.getInstance(authority, ugi, this);
+  public LeaseRenewer getLeaseRenewer() {
+    return LeaseRenewer.getInstance(authority, ugi, this);
   }
 
   /** Get a lease and start automatic renewal */
@@ -473,13 +474,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   void endFileLease(final long inodeId) throws IOException {
     getLeaseRenewer().closeFile(inodeId, this);
   }
-    
+
 
   /** Put a file. Only called from LeaseRenewer, where proper locking is
-   *  enforced to consistently update its local dfsclients array and 
+   *  enforced to consistently update its local dfsclients array and
    *  client's filesBeingWritten map.
    */
-  public void putFileBeingWritten(final long inodeId, final DFSOutputStream out) {
+  public void putFileBeingWritten(final long inodeId,
+      final DFSOutputStream out) {
     synchronized(filesBeingWritten) {
       filesBeingWritten.put(inodeId, out);
       // update the last lease renewal time only when there was no
@@ -507,7 +509,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return filesBeingWritten.isEmpty();
     }
   }
-  
+
   /** @return true if the client is running */
   public boolean isClientRunning() {
     return clientRunning;
@@ -538,7 +540,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         updateLastLeaseRenewal();
         return true;
       } catch (IOException e) {
-        // Abort if the lease has already expired. 
+        // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
         if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
@@ -554,7 +556,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     return false;
   }
-  
+
   /**
    * Close connections the Namenode.
    */
@@ -619,14 +621,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getPreferredBlockSize(String)
    */
   public long getBlockSize(String f) throws IOException {
-    TraceScope scope = newPathTraceScope("getBlockSize", f);
-    try {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getBlockSize", f)) {
       return namenode.getPreferredBlockSize(f);
     } catch (IOException ie) {
       LOG.warn("Problem getting block size", ie);
       throw ie;
-    } finally {
-      scope.close();
     }
   }
 
@@ -644,27 +644,26 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     assert serverDefaults != null;
     return serverDefaults;
   }
-  
+
   /**
    * Get a canonical token service name for this client's tokens.  Null should
    * be returned if the client is not using tokens.
    * @return the token service for the client
    */
-  @InterfaceAudience.LimitedPrivate( { "HDFS" }) 
+  @InterfaceAudience.LimitedPrivate( { "HDFS" })
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
   }
-  
+
   /**
    * @see ClientProtocol#getDelegationToken(Text)
    */
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     assert dtService != null;
-    TraceScope scope = tracer.newScope("getDelegationToken");
-    try {
+    try (TraceScope ignored = tracer.newScope("getDelegationToken")) {
       Token<DelegationTokenIdentifier> token =
-        namenode.getDelegationToken(renewer);
+          namenode.getDelegationToken(renewer);
       if (token != null) {
         token.setService(this.dtService);
         LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
@@ -672,8 +671,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         LOG.info("Cannot get delegation token from " + renewer);
       }
       return token;
-    } finally {
-      scope.close();
     }
   }
 
@@ -681,54 +678,52 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Renew a delegation token
    * @param token the token to renew
    * @return the new expiration time
-   * @throws InvalidToken
    * @throws IOException
    * @deprecated Use Token.renew instead.
    */
   @Deprecated
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws InvalidToken, IOException {
+      throws IOException {
     LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
     try {
       return token.renew(conf);
-    } catch (InterruptedException ie) {                                       
+    } catch (InterruptedException ie) {
       throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
-                                     AccessControlException.class);
+          AccessControlException.class);
     }
   }
-  
+
   /**
    * Cancel a delegation token
    * @param token the token to cancel
-   * @throws InvalidToken
    * @throws IOException
    * @deprecated Use Token.cancel instead.
    */
   @Deprecated
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws InvalidToken, IOException {
+      throws IOException {
     LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
     try {
       token.cancel(conf);
-     } catch (InterruptedException ie) {                                       
+    } catch (InterruptedException ie) {
       throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
-                                     AccessControlException.class);
+          AccessControlException.class);
     }
   }
-  
+
   @InterfaceAudience.Private
   public static class Renewer extends TokenRenewer {
-    
+
     static {
       //Ensure that HDFS Configuration files are loaded before trying to use
       // the renewer.
       HdfsConfigurationLoader.init();
     }
-    
+
     @Override
     public boolean handleKind(Text kind) {
       return DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind);
@@ -737,24 +732,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     @SuppressWarnings("unchecked")
     @Override
     public long renew(Token<?> token, Configuration conf) throws IOException {
-      Token<DelegationTokenIdentifier> delToken = 
-        (Token<DelegationTokenIdentifier>) token;
+      Token<DelegationTokenIdentifier> delToken =
+          (Token<DelegationTokenIdentifier>) token;
       ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         return nn.renewDelegationToken(delToken);
       } catch (RemoteException re) {
-        throw re.unwrapRemoteException(InvalidToken.class, 
-                                       AccessControlException.class);
+        throw re.unwrapRemoteException(InvalidToken.class,
+            AccessControlException.class);
       }
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void cancel(Token<?> token, Configuration conf) throws IOException {
-      Token<DelegationTokenIdentifier> delToken = 
+      Token<DelegationTokenIdentifier> delToken =
           (Token<DelegationTokenIdentifier>) token;
-      LOG.info("Cancelling " + 
-               DelegationTokenIdentifier.stringifyToken(delToken));
+      LOG.info("Cancelling " +
+          DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         nn.cancelDelegationToken(delToken);
@@ -763,7 +758,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             AccessControlException.class);
       }
     }
-    
+
     private static ClientProtocol getNNProxy(
         Token<DelegationTokenIdentifier> token, Configuration conf)
         throws IOException {
@@ -779,14 +774,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             uri + "' to a NameNode. Local configuration does not have " +
             "a failover proxy provider configured.");
       }
-      
+
       ProxyAndInfo<ClientProtocol> info =
-        NameNodeProxiesClient.createProxyWithClientProtocol(conf, uri, null);
+          NameNodeProxiesClient.createProxyWithClientProtocol(conf, uri, null);
       assert info.getDelegationTokenService().equals(token.getService()) :
-        "Returned service '" + info.getDelegationTokenService().toString() +
-        "' doesn't match expected service '" +
-        token.getService().toString() + "'";
-        
+          "Returned service '" + info.getDelegationTokenService().toString() +
+              "' doesn't match expected service '" +
+              token.getService().toString() + "'";
+
       return info.getProxy();
     }
 
@@ -794,7 +789,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     public boolean isManaged(Token<?> token) throws IOException {
       return true;
     }
-    
+
   }
 
   /**
@@ -804,7 +799,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     namenode.reportBadBlocks(blocks);
   }
-  
+
   public LocatedBlocks getLocatedBlocks(String src, long start)
       throws IOException {
     return getLocatedBlocks(src, start, dfsClientConf.getPrefetchSize());
@@ -817,11 +812,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @VisibleForTesting
   public LocatedBlocks getLocatedBlocks(String src, long start, long length)
       throws IOException {
-    TraceScope scope = newPathTraceScope("getBlockLocations", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getBlockLocations", src)) {
       return callGetBlockLocations(namenode, src, start, length);
-    } finally {
-      scope.close();
     }
   }
 
@@ -829,14 +821,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
-      String src, long start, long length) 
+      String src, long start, long length)
       throws IOException {
     try {
       return namenode.getBlockLocations(src, start, length);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
 
@@ -849,46 +841,42 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   boolean recoverLease(String src) throws IOException {
     checkOpen();
 
-    TraceScope scope = newPathTraceScope("recoverLease", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("recoverLease", src)) {
       return namenode.recoverLease(src, clientName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(FileNotFoundException.class,
-                                     AccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   /**
    * Get block location info about file
-   * 
-   * getBlockLocations() returns a list of hostnames that store 
+   *
+   * getBlockLocations() returns a list of hostnames that store
    * data for a specific file region.  It returns a set of hostnames
    * for every block within the indicated region.
    *
    * This function is very useful when writing code that considers
    * data-placement when performing operations.  For example, the
    * MapReduce system tries to schedule tasks on the same machines
-   * as the data-block the task processes. 
+   * as the data-block the task processes.
    */
-  public BlockLocation[] getBlockLocations(String src, long start, 
-        long length) throws IOException, UnresolvedLinkException {
-    TraceScope scope = newPathTraceScope("getBlockLocations", src);
-    try {
+  public BlockLocation[] getBlockLocations(String src, long start,
+      long length) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getBlockLocations", src)) {
       LocatedBlocks blocks = getLocatedBlocks(src, start, length);
-      BlockLocation[] locations =  DFSUtilClient.locatedBlocks2Locations(blocks);
-      HdfsBlockLocation[] hdfsLocations = new HdfsBlockLocation[locations.length];
+      BlockLocation[] locations = DFSUtilClient.locatedBlocks2Locations(blocks);
+      HdfsBlockLocation[] hdfsLocations =
+          new HdfsBlockLocation[locations.length];
       for (int i = 0; i < locations.length; i++) {
         hdfsLocations[i] = new HdfsBlockLocation(locations[i], blocks.get(i));
       }
       return hdfsLocations;
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Get block location information about a list of {@link HdfsBlockLocation}.
    * Used by {@link DistributedFileSystem#getFileBlockStorageLocations(List)} to
@@ -974,8 +962,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   private KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
       feInfo) throws IOException {
-    TraceScope scope = tracer.newScope("decryptEDEK");
-    try {
+    try (TraceScope ignored = tracer.newScope("decryptEDEK")) {
       KeyProvider provider = getKeyProvider();
       if (provider == null) {
         throw new IOException("No KeyProvider is configured, cannot access" +
@@ -991,8 +978,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       } catch (GeneralSecurityException e) {
         throw new IOException(e);
       }
-    } finally {
-      scope.close();
     }
   }
 
@@ -1004,8 +989,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return CryptoProtocolVersion from the feInfo
    * @throws IOException if the protocol version is unsupported.
    */
-  private static CryptoProtocolVersion getCryptoProtocolVersion
-      (FileEncryptionInfo feInfo) throws IOException {
+  private static CryptoProtocolVersion getCryptoProtocolVersion(
+      FileEncryptionInfo feInfo) throws IOException {
     final CryptoProtocolVersion version = feInfo.getCryptoProtocolVersion();
     if (!CryptoProtocolVersion.supports(version)) {
       throw new IOException("Client does not support specified " +
@@ -1036,11 +1021,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (codec == null) {
       throw new UnknownCipherSuiteException(
           "No configuration found for the cipher suite "
-          + suite.getConfigSuffix() + " prefixed with "
-          + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
-          + ". Please see the example configuration "
-          + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
-          + "at core-default.xml for details.");
+              + suite.getConfigSuffix() + " prefixed with "
+              + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+              + ". Please see the example configuration "
+              + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
+              + "at core-default.xml for details.");
     }
     return codec;
   }
@@ -1100,9 +1085,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  public DFSInputStream open(String src) 
-      throws IOException, UnresolvedLinkException {
-    return open(src, dfsClientConf.getIoBufferSize(), true, null);
+  public DFSInputStream open(String src) throws IOException {
+    return open(src, dfsClientConf.getIoBufferSize(), true);
   }
 
   /**
@@ -1114,11 +1098,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   @Deprecated
   public DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
-                             FileSystem.Statistics stats)
-      throws IOException, UnresolvedLinkException {
+      FileSystem.Statistics stats) throws IOException {
     return open(src, buffersize, verifyChecksum);
   }
-  
+
 
   /**
    * Create an input stream that obtains a nodelist from the
@@ -1127,14 +1110,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * work.
    */
   public DFSInputStream open(String src, int buffersize, boolean verifyChecksum)
-      throws IOException, UnresolvedLinkException {
+      throws IOException {
     checkOpen();
     //    Get block info from namenode
-    TraceScope scope = newPathTraceScope("newDFSInputStream", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("newDFSInputStream", src)) {
       return new DFSInputStream(this, src, verifyChecksum, null);
-    } finally {
-      scope.close();
     }
   }
 
@@ -1145,37 +1125,34 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public ClientProtocol getNamenode() {
     return namenode;
   }
-  
+
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
    * default <code>replication</code> and <code>blockSize<code> and null <code>
    * progress</code>.
    */
-  public OutputStream create(String src, boolean overwrite) 
+  public OutputStream create(String src, boolean overwrite)
       throws IOException {
     return create(src, overwrite, dfsClientConf.getDefaultReplication(),
         dfsClientConf.getDefaultBlockSize(), null);
   }
-    
+
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
    * default <code>replication</code> and <code>blockSize<code>.
    */
-  public OutputStream create(String src, 
-                             boolean overwrite,
-                             Progressable progress) throws IOException {
+  public OutputStream create(String src,
+      boolean overwrite, Progressable progress) throws IOException {
     return create(src, overwrite, dfsClientConf.getDefaultReplication(),
         dfsClientConf.getDefaultBlockSize(), progress);
   }
-    
+
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
    * null <code>progress</code>.
    */
-  public OutputStream create(String src, 
-                             boolean overwrite, 
-                             short replication,
-                             long blockSize) throws IOException {
+  public OutputStream create(String src, boolean overwrite, short replication,
+      long blockSize) throws IOException {
     return create(src, overwrite, replication, blockSize, null);
   }
 
@@ -1190,25 +1167,21 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Call {@link #create(String, FsPermission, EnumSet, short, long, 
+   * Call {@link #create(String, FsPermission, EnumSet, short, long,
    * Progressable, int, ChecksumOpt)} with default <code>permission</code>
    * {@link FsPermission#getFileDefault()}.
-   * 
+   *
    * @param src File name
    * @param overwrite overwrite an existing file if true
    * @param replication replication factor for the file
    * @param blockSize maximum block size
    * @param progress interface for reporting client progress
    * @param buffersize underlying buffersize
-   * 
+   *
    * @return output stream
    */
-  public OutputStream create(String src,
-                             boolean overwrite,
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize)
+  public OutputStream create(String src, boolean overwrite, short replication,
+      long blockSize, Progressable progress, int buffersize)
       throws IOException {
     return create(src, FsPermission.getFileDefault(),
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
@@ -1217,54 +1190,45 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Call {@link #create(String, FsPermission, EnumSet, boolean, short, 
+   * Call {@link #create(String, FsPermission, EnumSet, boolean, short,
    * long, Progressable, int, ChecksumOpt)} with <code>createParent</code>
    *  set to true.
    */
-  public DFSOutputStream create(String src, 
-                             FsPermission permission,
-                             EnumSet<CreateFlag> flag, 
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize,
-                             ChecksumOpt checksumOpt)
+  public DFSOutputStream create(String src, FsPermission permission,
+      EnumSet<CreateFlag> flag, short replication, long blockSize,
+      Progressable progress, int buffersize, ChecksumOpt checksumOpt)
       throws IOException {
     return create(src, permission, flag, true,
         replication, blockSize, progress, buffersize, checksumOpt, null);
   }
 
   /**
-   * Create a new dfs file with the specified block replication 
+   * Create a new dfs file with the specified block replication
    * with write-progress reporting and return an output stream for writing
-   * into the file.  
-   * 
+   * into the file.
+   *
    * @param src File name
    * @param permission The permission of the directory being created.
-   *          If null, use default permission {@link FsPermission#getFileDefault()}
+   *          If null, use default permission
+   *          {@link FsPermission#getFileDefault()}
    * @param flag indicates create a new file or create/overwrite an
    *          existing file or append to an existing file
    * @param createParent create missing parent directory if true
    * @param replication block replication
    * @param blockSize maximum block size
    * @param progress interface for reporting client progress
-   * @param buffersize underlying buffer size 
+   * @param buffersize underlying buffer size
    * @param checksumOpt checksum options
-   * 
+   *
    * @return output stream
    *
    * @see ClientProtocol#create for detailed description of exceptions thrown
    */
-  public DFSOutputStream create(String src, 
-                             FsPermission permission,
-                             EnumSet<CreateFlag> flag, 
-                             boolean createParent,
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize,
-                             ChecksumOpt checksumOpt) throws IOException {
-    return create(src, permission, flag, createParent, replication, blockSize, 
+  public DFSOutputStream create(String src, FsPermission permission,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      ChecksumOpt checksumOpt) throws IOException {
+    return create(src, permission, flag, createParent, replication, blockSize,
         progress, buffersize, checksumOpt, null);
   }
 
@@ -1284,22 +1248,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * replication, to move the blocks from favored nodes. A value of null means
    * no favored nodes for this create
    */
-  public DFSOutputStream create(String src, 
-                             FsPermission permission,
-                             EnumSet<CreateFlag> flag, 
-                             boolean createParent,
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize,
-                             ChecksumOpt checksumOpt,
-                             InetSocketAddress[] favoredNodes) throws IOException {
+  public DFSOutputStream create(String src, FsPermission permission,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      ChecksumOpt checksumOpt, InetSocketAddress[] favoredNodes)
+      throws IOException {
     checkOpen();
     final FsPermission masked = applyUMask(permission);
     LOG.debug("{}: masked={}", src, masked);
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum(checksumOpt),
+        dfsClientConf.createChecksum(checksumOpt),
         getFavoredNodesStr(favoredNodes));
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1310,133 +1269,119 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (favoredNodes != null) {
       favoredNodeStrs = new String[favoredNodes.length];
       for (int i = 0; i < favoredNodes.length; i++) {
-        favoredNodeStrs[i] = 
-            favoredNodes[i].getHostName() + ":" 
-                         + favoredNodes[i].getPort();
+        favoredNodeStrs[i] =
+            favoredNodes[i].getHostName() + ":" + favoredNodes[i].getPort();
       }
     }
     return favoredNodeStrs;
   }
-  
+
   /**
    * Append to an existing file if {@link CreateFlag#APPEND} is present
    */
   private DFSOutputStream primitiveAppend(String src, EnumSet<CreateFlag> flag,
-      int buffersize, Progressable progress) throws IOException {
+      Progressable progress) throws IOException {
     if (flag.contains(CreateFlag.APPEND)) {
       HdfsFileStatus stat = getFileInfo(src);
       if (stat == null) { // No file to append to
         // New file needs to be created if create option is present
         if (!flag.contains(CreateFlag.CREATE)) {
-          throw new FileNotFoundException("failed to append to non-existent file "
-              + src + " on client " + clientName);
+          throw new FileNotFoundException(
+              "failed to append to non-existent file " + src + " on client "
+                  + clientName);
         }
         return null;
       }
-      return callAppend(src, buffersize, flag, progress, null);
+      return callAppend(src, flag, progress, null);
     }
     return null;
   }
-  
+
   /**
    * Same as {{@link #create(String, FsPermission, EnumSet, short, long,
    *  Progressable, int, ChecksumOpt)} except that the permission
    *  is absolute (ie has already been masked with umask.
    */
-  public DFSOutputStream primitiveCreate(String src, 
-                             FsPermission absPermission,
-                             EnumSet<CreateFlag> flag,
-                             boolean createParent,
-                             short replication,
-                             long blockSize,
-                             Progressable progress,
-                             int buffersize,
-                             ChecksumOpt checksumOpt)
-      throws IOException, UnresolvedLinkException {
+  public DFSOutputStream primitiveCreate(String src, FsPermission absPermission,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
     CreateFlag.validate(flag);
-    DFSOutputStream result = primitiveAppend(src, flag, buffersize, progress);
+    DFSOutputStream result = primitiveAppend(src, flag, progress);
     if (result == null) {
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
-          flag, createParent, replication, blockSize, progress, buffersize,
-          checksum, null);
+          flag, createParent, replication, blockSize, progress, checksum, null);
     }
     beginFileLease(result.getFileId(), result);
     return result;
   }
-  
+
   /**
    * Creates a symbolic link.
-   * 
-   * @see ClientProtocol#createSymlink(String, String,FsPermission, boolean) 
+   *
+   * @see ClientProtocol#createSymlink(String, String,FsPermission, boolean)
    */
   public void createSymlink(String target, String link, boolean createParent)
       throws IOException {
-    TraceScope scope = newPathTraceScope("createSymlink", target);
-    try {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("createSymlink", target)) {
       final FsPermission dirPerm = applyUMask(null);
       namenode.createSymlink(target, link, dirPerm, createParent);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileAlreadyExistsException.class, 
-                                     FileNotFoundException.class,
-                                     ParentNotDirectoryException.class,
-                                     NSQuotaExceededException.class, 
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileAlreadyExistsException.class,
+          FileNotFoundException.class,
+          ParentNotDirectoryException.class,
+          NSQuotaExceededException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
   /**
    * Resolve the *first* symlink, if any, in the path.
-   * 
+   *
    * @see ClientProtocol#getLinkTarget(String)
    */
-  public String getLinkTarget(String path) throws IOException { 
+  public String getLinkTarget(String path) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getLinkTarget", path);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getLinkTarget", path)) {
       return namenode.getLinkTarget(path);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class);
     }
   }
 
   /** Method to get stream returned by append call */
-  private DFSOutputStream callAppend(String src, int buffersize,
-      EnumSet<CreateFlag> flag, Progressable progress, String[] favoredNodes)
-      throws IOException {
+  private DFSOutputStream callAppend(String src, EnumSet<CreateFlag> flag,
+      Progressable progress, String[] favoredNodes) throws IOException {
     CreateFlag.validateForAppend(flag);
     try {
       LastBlockWithStatus blkWithStatus = namenode.append(src, clientName,
           new EnumSetWritable<>(flag, CreateFlag.class));
-      return DFSOutputStream.newStreamForAppend(this, src, flag, buffersize,
-          progress, blkWithStatus.getLastBlock(),
-          blkWithStatus.getFileStatus(), dfsClientConf.createChecksum(null),
-          favoredNodes);
+      return DFSOutputStream.newStreamForAppend(this, src, flag, progress,
+          blkWithStatus.getLastBlock(), blkWithStatus.getFileStatus(),
+          dfsClientConf.createChecksum(null), favoredNodes);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnsupportedOperationException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+          FileNotFoundException.class,
+          SafeModeException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnsupportedOperationException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
-  
+
   /**
-   * Append to an existing HDFS file.  
-   * 
+   * Append to an existing HDFS file.
+   *
    * @param src file name
    * @param buffersize buffer size
    * @param flag indicates whether to append data to a new block instead of
@@ -1444,7 +1389,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param progress for reporting write-progress; null is acceptable.
    * @param statistics file system statistics; null is acceptable.
    * @return an output stream for writing into the file
-   * 
+   *
    * @see ClientProtocol#append(String, String, EnumSetWritable)
    */
   public HdfsDataOutputStream append(final String src, final int buffersize,
@@ -1456,7 +1401,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Append to an existing HDFS file.
-   * 
+   *
    * @param src file name
    * @param buffersize buffer size
    * @param flag indicates whether to append data to a new block instead of the
@@ -1480,7 +1425,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       EnumSet<CreateFlag> flag, String[] favoredNodes, Progressable progress)
       throws IOException {
     checkOpen();
-    final DFSOutputStream result = callAppend(src, buffersize, flag, progress,
+    final DFSOutputStream result = callAppend(src, flag, progress,
         favoredNodes);
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1490,24 +1435,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Set replication for an existing file.
    * @param src file name
    * @param replication replication to set the file to
-   * 
+   *
    * @see ClientProtocol#setReplication(String, short)
    */
   public boolean setReplication(String src, short replication)
       throws IOException {
-    TraceScope scope = newPathTraceScope("setReplication", src);
-    try {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("setReplication", src)) {
       return namenode.setReplication(src, replication);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -1518,18 +1461,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
-    TraceScope scope = newPathTraceScope("setStoragePolicy", src);
-    try {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("setStoragePolicy", src)) {
       namenode.setStoragePolicy(src, policyName);
     } catch (RemoteException e) {
       throw e.unwrapRemoteException(AccessControlException.class,
-                                    FileNotFoundException.class,
-                                    SafeModeException.class,
-                                    NSQuotaExceededException.class,
-                                    UnresolvedPathException.class,
-                                    SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          NSQuotaExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -1539,16 +1480,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getStoragePolicy", path);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getStoragePolicy", path)) {
       return namenode.getStoragePolicy(path);
     } catch (RemoteException e) {
       throw e.unwrapRemoteException(AccessControlException.class,
-                                    FileNotFoundException.class,
-                                    SafeModeException.class,
-                                    UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class);
     }
   }
 
@@ -1556,11 +1494,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return All the existing storage policies
    */
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    TraceScope scope = tracer.newScope("getStoragePolicies");
-    try {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getStoragePolicies")) {
       return namenode.getStoragePolicies();
-    } finally {
-      scope.close();
     }
   }
 
@@ -1572,18 +1508,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Deprecated
   public boolean rename(String src, String dst) throws IOException {
     checkOpen();
-    TraceScope scope = newSrcDstTraceScope("rename", src, dst);
-    try {
+    try (TraceScope ignored = newSrcDstTraceScope("rename", src, dst)) {
       return namenode.rename(src, dst);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          NSQuotaExceededException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -1593,15 +1526,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void concat(String trg, String [] srcs) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("concat");
-    try {
+    try (TraceScope ignored = tracer.newScope("concat")) {
       namenode.concat(trg, srcs);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
   /**
@@ -1611,22 +1541,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void rename(String src, String dst, Options.Rename... options)
       throws IOException {
     checkOpen();
-    TraceScope scope = newSrcDstTraceScope("rename2", src, dst);
-    try {
+    try (TraceScope ignored = newSrcDstTraceScope("rename2", src, dst)) {
       namenode.rename2(src, dst, options);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     FileAlreadyExistsException.class,
-                                     FileNotFoundException.class,
-                                     ParentNotDirectoryException.class,
-                                     SafeModeException.class,
-                                     NSQuotaExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          FileAlreadyExistsException.class,
+          FileNotFoundException.class,
+          ParentNotDirectoryException.class,
+          SafeModeException.class,
+          NSQuotaExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -1640,20 +1567,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw new HadoopIllegalArgumentException(
           "Cannot truncate to a negative file size: " + newLength + ".");
     }
-    TraceScope scope = newPathTraceScope("truncate", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("truncate", src)) {
       return namenode.truncate(src, newLength, clientName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           UnresolvedPathException.class);
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Delete file or directory.
-   * See {@link ClientProtocol#delete(String, boolean)}. 
+   * See {@link ClientProtocol#delete(String, boolean)}.
    */
   @Deprecated
   public boolean delete(String src) throws IOException {
@@ -1663,27 +1587,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * delete file or directory.
-   * delete contents of the directory if non empty and recursive 
+   * delete contents of the directory if non empty and recursive
    * set to true
    *
    * @see ClientProtocol#delete(String, boolean)
    */
   public boolean delete(String src, boolean recursive) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("delete", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("delete", src)) {
       return namenode.delete(src, recursive);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
-  
+
   /** Implemented using getFileInfo(src)
    */
   public boolean exists(String src) throws IOException {
@@ -1696,10 +1617,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * No block locations need to be fetched
    */
   public DirectoryListing listPaths(String src,  byte[] startAfter)
-    throws IOException {
+      throws IOException {
     return listPaths(src, startAfter, false);
   }
-  
+
   /**
    * Get a partial listing of the indicated directory
    *
@@ -1712,15 +1633,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DirectoryListing listPaths(String src,  byte[] startAfter,
       boolean needLocation) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("listPaths", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("listPaths", src)) {
       return namenode.getListing(src, startAfter, needLocation);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
 
@@ -1729,62 +1647,53 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param src The string representation of the path to the file
    * @return object containing information regarding the file
    *         or null if file not found
-   *         
+   *
    * @see ClientProtocol#getFileInfo(String) for description of exceptions
    */
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getFileInfo", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getFileInfo", src)) {
       return namenode.getFileInfo(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
-  
+
   /**
    * Close status of a file
    * @return true if file is already closed
    */
   public boolean isFileClosed(String src) throws IOException{
     checkOpen();
-    TraceScope scope = newPathTraceScope("isFileClosed", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("isFileClosed", src)) {
       return namenode.isFileClosed(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
-  
+
   /**
    * Get the file info for a specific file or directory. If src
    * refers to a symlink then the FileStatus of the link is returned.
    * @param src path to a file or directory.
-   * 
-   * For description of exceptions thrown 
+   *
+   * For description of exceptions thrown
    * @see ClientProtocol#getFileLinkInfo(String)
    */
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getFileLinkInfo", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getFileLinkInfo", src)) {
       return namenode.getFileLinkInfo(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          UnresolvedPathException.class);
     }
-   }
-  
+  }
+
   @InterfaceAudience.Private
   public void clearDataEncryptionKey() {
     LOG.debug("Clearing encryption key");
@@ -1792,7 +1701,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       encryptionKey = null;
     }
   }
-  
+
   /**
    * @return true if data sent between this client and DNs should be encrypted,
    *         false otherwise.
@@ -1800,9 +1709,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   boolean shouldEncryptData() throws IOException {
     FsServerDefaults d = getServerDefaults();
-    return d == null ? false : d.getEncryptDataTransfer();
+    return d != null && d.getEncryptDataTransfer();
   }
-  
+
   @Override
   public DataEncryptionKey newDataEncryptionKey() throws IOException {
     if (shouldEncryptData()) {
@@ -1824,7 +1733,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * range always starts from the beginning of the file.
    * @param src The file path
    * @param length the length of the range, i.e., the range is [0, length]
-   * @return The checksum 
+   * @return The checksum
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
   public MD5MD5CRC32FileChecksum getFileChecksum(String src, long length)
@@ -1874,14 +1783,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
       remaining -= block.getNumBytes();
       final DatanodeInfo[] datanodes = lb.getLocations();
-      
+
       //try each datanode location of the block
-      final int timeout = 3000*datanodes.length + dfsClientConf.getSocketTimeout();
+      final int timeout = 3000 * datanodes.length +
+          dfsClientConf.getSocketTimeout();
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
         DataOutputStream out = null;
         DataInputStream in = null;
-        
+
         try {
           //connect to a datanode
           IOStreamPair pair = connectToDN(datanodes[j], timeout, lb);
@@ -1895,13 +1805,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           new Sender(out).blockChecksum(block, lb.getBlockToken());
 
           final BlockOpResponseProto reply =
-            BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
+              BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
 
-          String logInfo = "for block " + block + " from datanode " + datanodes[j];
+          String logInfo = "for block " + block + " from datanode " +
+              datanodes[j];
           DataTransferProtoUtil.checkBlockOpStatus(reply, logInfo);
 
           OpBlockChecksumResponseProto checksumData =
-            reply.getChecksumResponse();
+              reply.getChecksumResponse();
 
           //read byte-per-checksum
           final int bpc = checksumData.getBytesPerCrc();
@@ -1912,7 +1823,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             throw new IOException("Byte-per-checksum not matched: bpc=" + bpc
                 + " but bytesPerCRC=" + bytesPerCRC);
           }
-          
+
           //read crc-per-block
           final long cpb = checksumData.getCrcPerBlock();
           if (locatedblocks.size() > 1 && i == 0) {
@@ -1923,7 +1834,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           final MD5Hash md5 = new MD5Hash(
               checksumData.getMd5().toByteArray());
           md5.write(md5out);
-          
+
           // read crc-type
           final DataChecksum.Type ct;
           if (checksumData.hasCrcType()) {
@@ -1931,7 +1842,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                 .getCrcType());
           } else {
             LOG.debug("Retrieving checksum from an earlier-version DataNode: " +
-                      "inferring checksum by reading first byte");
+                "inferring checksum by reading first byte");
             ct = inferChecksumTypeByReading(lb, datanodes[j]);
           }
 
@@ -1955,8 +1866,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         } catch (InvalidBlockTokenException ibte) {
           if (i > lastRetriedIndex) {
             LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
-                  + "for file {} for block {} from datanode {}. Will retry the "
-                  + "block once.",
+                    + "for file {} for block {} from datanode {}. Will retry "
+                    + "the block once.",
                 src, block, datanodes[j]);
             lastRetriedIndex = i;
             done = true; // actually it's not done; but we'll retry
@@ -1978,25 +1889,25 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
 
     //compute file MD5
-    final MD5Hash fileMD5 = MD5Hash.digest(md5out.getData()); 
+    final MD5Hash fileMD5 = MD5Hash.digest(md5out.getData());
     switch (crcType) {
-      case CRC32:
-        return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
-            crcPerBlock, fileMD5);
-      case CRC32C:
-        return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
-            crcPerBlock, fileMD5);
-      default:
-        // If there is no block allocated for the file,
-        // return one with the magic entry that matches what previous
-        // hdfs versions return.
-        if (locatedblocks.size() == 0) {
-          return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
-        }
+    case CRC32:
+      return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
+          crcPerBlock, fileMD5);
+    case CRC32C:
+      return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
+          crcPerBlock, fileMD5);
+    default:
+      // If there is no block allocated for the file,
+      // return one with the magic entry that matches what previous
+      // hdfs versions return.
+      if (locatedblocks.size() == 0) {
+        return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+      }
 
-        // we should never get here since the validity was checked
-        // when getCrcType() was called above.
-        return null;
+      // we should never get here since the validity was checked
+      // when getCrcType() was called above.
+      return null;
     }
   }
 
@@ -2014,11 +1925,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       LOG.debug("Connecting to datanode {}", dnAddr);
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
       sock.setSoTimeout(timeout);
-  
+
       OutputStream unbufOut = NetUtils.getOutputStream(sock);
       InputStream unbufIn = NetUtils.getInputStream(sock);
       IOStreamPair ret = saslClient.newSocketSend(sock, unbufOut, unbufIn, this,
-        lb.getBlockToken(), dn);
+          lb.getBlockToken(), dn);
       success = true;
       return ret;
     } finally {
@@ -2027,7 +1938,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
     }
   }
-  
+
   /**
    * Infer the checksum type for a replica by sending an OP_READ_BLOCK
    * for the first byte of that replica. This is used for compatibility
@@ -2044,18 +1955,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     IOStreamPair pair = connectToDN(dn, dfsClientConf.getSocketTimeout(), lb);
 
     try {
-      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(pair.out,
-          smallBufferSize));
+      DataOutputStream out = new DataOutputStream(
+          new BufferedOutputStream(pair.out, smallBufferSize));
       DataInputStream in = new DataInputStream(pair.in);
-  
+
       new Sender(out).readBlock(lb.getBlock(), lb.getBlockToken(), clientName,
           0, 1, true, CachingStrategy.newDefaultStrategy());
       final BlockOpResponseProto reply =
           BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(in));
-      String logInfo = "trying to read " + lb.getBlock() + " from datanode " + dn;
+      String logInfo = "trying to read " + lb.getBlock() + " from datanode " +
+          dn;
       DataTransferProtoUtil.checkBlockOpStatus(reply, logInfo);
 
-      return PBHelperClient.convert(reply.getReadOpChecksumInfo().getChecksum().getType());
+      return PBHelperClient.convert(
+          reply.getReadOpChecksumInfo().getChecksum().getType());
     } finally {
       IOUtilsClient.cleanup(null, pair.in, pair.out);
     }
@@ -2065,23 +1978,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Set permissions to a file or directory.
    * @param src path name.
    * @param permission permission to set to
-   * 
+   *
    * @see ClientProtocol#setPermission(String, FsPermission)
    */
   public void setPermission(String src, FsPermission permission)
       throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("setPermission", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setPermission", src)) {
       namenode.setPermission(src, permission);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -2090,33 +2000,27 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param src path name.
    * @param username user id.
    * @param groupname user group.
-   * 
+   *
    * @see ClientProtocol#setOwner(String, String, String)
    */
   public void setOwner(String src, String username, String groupname)
       throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("setOwner", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setOwner", src)) {
       namenode.setOwner(src, username, groupname);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);                                   
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
   private long[] callGetStats() throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getStats");
-    try {
+    try (TraceScope ignored = tracer.newScope("getStats")) {
       return namenode.getStats();
-    } finally {
-      scope.close();
     }
   }
 
@@ -2129,14 +2033,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Returns count of blocks with no good replicas left. Normally should be 
+   * Returns count of blocks with no good replicas left. Normally should be
    * zero.
    * @throws IOException
-   */ 
+   */
   public long getMissingBlocksCount() throws IOException {
     return callGetStats()[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX];
   }
-  
+
   /**
    * Returns count of blocks with replication factor 1 and have
    * lost the only replica.
@@ -2150,70 +2054,60 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Returns count of blocks with one of more replica missing.
    * @throws IOException
-   */ 
+   */
   public long getUnderReplicatedBlocksCount() throws IOException {
     return callGetStats()[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX];
   }
-  
+
   /**
-   * Returns count of blocks with at least one replica marked corrupt. 
+   * Returns count of blocks with at least one replica marked corrupt.
    * @throws IOException
-   */ 
+   */
   public long getCorruptBlocksCount() throws IOException {
     return callGetStats()[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX];
   }
-  
+
   /**
    * @return a list in which each entry describes a corrupt file/block
    * @throws IOException
    */
-  public CorruptFileBlocks listCorruptFileBlocks(String path,
-                                                 String cookie)
-        throws IOException {
+  public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
+      throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("listCorruptFileBlocks", path);
-    try {
+    try (TraceScope ignored
+             = newPathTraceScope("listCorruptFileBlocks", path)) {
       return namenode.listCorruptFileBlocks(path, cookie);
-    } finally {
-      scope.close();
     }
   }
 
   public DatanodeInfo[] datanodeReport(DatanodeReportType type)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("datanodeReport");
-    try {
+    try (TraceScope ignored = tracer.newScope("datanodeReport")) {
       return namenode.getDatanodeReport(type);
-    } finally {
-      scope.close();
     }
   }
-    
+
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
     checkOpen();
-    TraceScope scope =
-        tracer.newScope("datanodeStorageReport");
-    try {
+    try (TraceScope ignored = tracer.newScope("datanodeStorageReport")) {
       return namenode.getDatanodeStorageReport(type);
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Enter, leave or get safe mode.
-   * 
+   *
    * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,boolean)
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     return setSafeMode(action, false);
   }
-  
+
   /**
    * Enter, leave or get safe mode.
-   * 
+   *
    * @param action
    *          One of SafeModeAction.GET, SafeModeAction.ENTER and
    *          SafeModeActiob.LEAVE
@@ -2222,19 +2116,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *          check first namenode's status.
    * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction, boolean)
    */
-  public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException{
-    TraceScope scope =
-        tracer.newScope("setSafeMode");
-    try {
+  public boolean setSafeMode(SafeModeAction action, boolean isChecked)
+      throws IOException{
+    try (TraceScope ignored = tracer.newScope("setSafeMode")) {
       return namenode.setSafeMode(action, isChecked);
-    } finally {
-      scope.close();
     }
   }
- 
+
   /**
    * Create one snapshot.
-   * 
+   *
    * @param snapshotRoot The directory where the snapshot is to be taken
    * @param snapshotName Name of the snapshot
    * @return the snapshot path.
@@ -2243,20 +2134,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("createSnapshot");
-    try {
+    try (TraceScope ignored = tracer.newScope("createSnapshot")) {
       return namenode.createSnapshot(snapshotRoot, snapshotName);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Delete a snapshot of a snapshottable directory.
-   * 
-   * @param snapshotRoot The snapshottable directory that the 
+   *
+   * @param snapshotRoot The snapshottable directory that the
    *                    to-be-deleted snapshot belongs to
    * @param snapshotName The name of the to-be-deleted snapshot
    * @throws IOException
@@ -2265,16 +2153,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("deleteSnapshot");
-    try {
+    try (TraceScope ignored = tracer.newScope("deleteSnapshot")) {
       namenode.deleteSnapshot(snapshotRoot, snapshotName);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Rename a snapshot.
    * @param snapshotDir The directory path where the snapshot was taken
@@ -2286,16 +2171,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void renameSnapshot(String snapshotDir, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("renameSnapshot");
-    try {
+    try (TraceScope ignored = tracer.newScope("renameSnapshot")) {
       namenode.renameSnapshot(snapshotDir, snapshotOldName, snapshotNewName);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Get all the current snapshottable directories.
    * @return All the current snapshottable directories
@@ -2305,50 +2187,41 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getSnapshottableDirListing");
-    try {
+    try (TraceScope ignored = tracer.newScope("getSnapshottableDirListing")) {
       return namenode.getSnapshottableDirListing();
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Allow snapshot on a directory.
-   * 
+   *
    * @see ClientProtocol#allowSnapshot(String snapshotRoot)
    */
   public void allowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("allowSnapshot");
-    try {
+    try (TraceScope ignored = tracer.newScope("allowSnapshot")) {
       namenode.allowSnapshot(snapshotRoot);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Disallow snapshot on a directory.
-   * 
+   *
    * @see ClientProtocol#disallowSnapshot(String snapshotRoot)
    */
   public void disallowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("disallowSnapshot");
-    try {
+    try (TraceScope ignored = tracer.newScope("disallowSnapshot")) {
       namenode.disallowSnapshot(snapshotRoot);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
@@ -2357,56 +2230,44 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
       String fromSnapshot, String toSnapshot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getSnapshotDiffReport");
-    try {
+    try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
       return namenode.getSnapshotDiffReport(snapshotDir,
           fromSnapshot, toSnapshot);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
   public long addCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("addCacheDirective");
-    try {
+    try (TraceScope ignored = tracer.newScope("addCacheDirective")) {
       return namenode.addCacheDirective(info, flags);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   public void modifyCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("modifyCacheDirective");
-    try {
+    try (TraceScope ignored = tracer.newScope("modifyCacheDirective")) {
       namenode.modifyCacheDirective(info, flags);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
   public void removeCacheDirective(long id)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeCacheDirective");
-    try {
+    try (TraceScope ignored = tracer.newScope("removeCacheDirective")) {
       namenode.removeCacheDirective(id);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
-  
+
   public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
       CacheDirectiveInfo filter) throws IOException {
     return new CacheDirectiveIterator(namenode, filter, tracer);
@@ -2414,37 +2275,28 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   public void addCachePool(CachePoolInfo info) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("addCachePool");
-    try {
+    try (TraceScope ignored = tracer.newScope("addCachePool")) {
       namenode.addCachePool(info);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
   public void modifyCachePool(CachePoolInfo info) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("modifyCachePool");
-    try {
+    try (TraceScope ignored = tracer.newScope("modifyCachePool")) {
       namenode.modifyCachePool(info);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
   public void removeCachePool(String poolName) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeCachePool");
-    try {
+    try (TraceScope ignored = tracer.newScope("removeCachePool")) {
       namenode.removeCachePool(poolName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
-    } finally {
-      scope.close();
     }
   }
 
@@ -2454,34 +2306,29 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Save namespace image.
-   * 
-   * @see ClientProtocol#saveNamespace()
+   *
    */
-  void saveNamespace() throws AccessControlException, IOException {
-    TraceScope scope = tracer.newScope("saveNamespace");
-    try {
+  void saveNamespace() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("saveNamespace")) {
       namenode.saveNamespace();
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Rolls the edit log on the active NameNode.
-   * @return the txid of the new log segment 
+   * @return the txid of the new log segment
    *
    * @see ClientProtocol#rollEdits()
    */
-  long rollEdits() throws AccessControlException, IOException {
-    TraceScope scope = tracer.newScope("rollEdits");
-    try {
+  long rollEdits() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("rollEdits")) {
       return namenode.rollEdits();
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
-    } finally {
-      scope.close();
     }
   }
 
@@ -2489,87 +2336,75 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   ExtendedBlock getPreviousBlock(long fileId) {
     return filesBeingWritten.get(fileId).getBlock();
   }
-  
+
   /**
    * enable/disable restore failed storage.
-   * 
+   *
    * @see ClientProtocol#restoreFailedStorage(String arg)
    */
-  boolean restoreFailedStorage(String arg)
-      throws AccessControlException, IOException{
-    TraceScope scope = tracer.newScope("restoreFailedStorage");
-    try {
+  boolean restoreFailedStorage(String arg) throws IOException{
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("restoreFailedStorage")) {
       return namenode.restoreFailedStorage(arg);
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Refresh the hosts and exclude files.  (Rereads them.)
-   * See {@link ClientProtocol#refreshNodes()} 
+   * See {@link ClientProtocol#refreshNodes()}
    * for more details.
-   * 
+   *
    * @see ClientProtocol#refreshNodes()
    */
   public void refreshNodes() throws IOException {
-    TraceScope scope = tracer.newScope("refreshNodes");
-    try {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("refreshNodes")) {
       namenode.refreshNodes();
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Dumps DFS data structures into specified file.
-   * 
+   *
    * @see ClientProtocol#metaSave(String)
    */
   public void metaSave(String pathname) throws IOException {
-    TraceScope scope = tracer.newScope("metaSave");
-    try {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("metaSave")) {
       namenode.metaSave(pathname);
-    } finally {
-      scope.close();
     }
   }
 
   /**
    * Requests the namenode to tell all datanodes to use a new, non-persistent
    * bandwidth value for dfs.balance.bandwidthPerSec.
-   * See {@link ClientProtocol#setBalancerBandwidth(long)} 
+   * See {@link ClientProtocol#setBalancerBandwidth(long)}
    * for more details.
-   * 
+   *
    * @see ClientProtocol#setBalancerBandwidth(long)
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    TraceScope scope = tracer.newScope("setBalancerBandwidth");
-    try {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("setBalancerBandwidth")) {
       namenode.setBalancerBandwidth(bandwidth);
-    } finally {
-      scope.close();
     }
   }
-    
+
   /**
    * @see ClientProtocol#finalizeUpgrade()
    */
   public void finalizeUpgrade() throws IOException {
-    TraceScope scope = tracer.newScope("finalizeUpgrade");
-    try {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("finalizeUpgrade")) {
       namenode.finalizeUpgrade();
-    } finally {
-      scope.close();
     }
   }
 
-  RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action) throws IOException {
-    TraceScope scope = tracer.newScope("rollingUpgrade");
-    try {
+  RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
+      throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("rollingUpgrade")) {
       return namenode.rollingUpgrade(action);
-    } finally {
-      scope.close();
     }
   }
 
@@ -2588,9 +2423,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
    * @param createParent create missing parent directory if true
-   * 
+   *
    * @return True if the operation success.
-   * 
+   *
    * @see ClientProtocol#mkdirs(String, FsPermission, boolean)
    */
   public boolean mkdirs(String src, FsPermission permission,
@@ -2604,7 +2439,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * that the permissions has already been masked against umask.
    */
   public boolean primitiveMkdir(String src, FsPermission absPermission)
-    throws IOException {
+      throws IOException {
     return primitiveMkdir(src, absPermission, true);
   }
 
@@ -2612,51 +2447,45 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Same {{@link #mkdirs(String, FsPermission, boolean)} except
    * that the permissions has already been masked against umask.
    */
-  public boolean primitiveMkdir(String src, FsPermission absPermission, 
-    boolean createParent)
-    throws IOException {
+  public boolean primitiveMkdir(String src, FsPermission absPermission,
+      boolean createParent) throws IOException {
     checkOpen();
     if (absPermission == null) {
       absPermission = applyUMask(null);
-    } 
+    }
 
     LOG.debug("{}: masked={}", src, absPermission);
-    TraceScope scope = tracer.newScope("mkdir");
-    try {
+    try (TraceScope ignored = tracer.newScope("mkdir")) {
       return namenode.mkdirs(src, absPermission, createParent);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     InvalidPathException.class,
-                                     FileAlreadyExistsException.class,
-                                     FileNotFoundException.class,
-                                     ParentNotDirectoryException.class,
-                                     SafeModeException.class,
-                                     NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          InvalidPathException.class,
+          FileAlreadyExistsException.class,
+          FileNotFoundException.class,
+          ParentNotDirectoryException.class,
+          SafeModeException.class,
+          NSQuotaExceededException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
-  
+
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
    * @param src The string representation of the path
-   * 
+   *
    * @see ClientProtocol#getContentSummary(String)
    */
   ContentSummary getContentSummary(String src) throws IOException {
-    TraceScope scope = newPathTraceScope("getContentSummary", src);
-    try {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getContentSummary", src)) {
       return namenode.getContentSummary(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
 
@@ -2667,29 +2496,28 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   void setQuota(String src, long namespaceQuota, long storagespaceQuota)
       throws IOException {
     // sanity check
-    if ((namespaceQuota <= 0 && namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-         namespaceQuota != HdfsConstants.QUOTA_RESET) ||
-        (storagespaceQuota <= 0 && storagespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-         storagespaceQuota != HdfsConstants.QUOTA_RESET)) {
+    if ((namespaceQuota <= 0 &&
+          namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+          namespaceQuota != HdfsConstants.QUOTA_RESET) ||
+        (storagespaceQuota <= 0 &&
+            storagespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+            storagespaceQuota != HdfsConstants.QUOTA_RESET)) {
       throw new IllegalArgumentException("Invalid values for quota : " +
-                                         namespaceQuota + " and " +
-                                         storagespaceQuota);
-                                         
+          namespaceQuota + " and " +
+          storagespaceQuota);
+
     }
-    TraceScope scope = newPathTraceScope("setQuota", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setQuota", src)) {
       // Pass null as storage type for traditional namespace/storagespace quota.
       namenode.setQuota(src, namespaceQuota, storagespaceQuota, null);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class,
-                                     QuotaByStorageTypeExceededException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          DSQuotaExceededException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -2702,45 +2530,39 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if (quota <= 0 && quota != HdfsConstants.QUOTA_DONT_SET &&
         quota != HdfsConstants.QUOTA_RESET) {
       throw new IllegalArgumentException("Invalid values for quota :" +
-        quota);
+          quota);
     }
     if (type == null) {
       throw new IllegalArgumentException("Invalid storage type(null)");
     }
     if (!type.supportTypeQuota()) {
-      throw new IllegalArgumentException("Don't support Quota for storage type : "
-        + type.toString());
+      throw new IllegalArgumentException(
+          "Don't support Quota for storage type : " + type.toString());
     }
-    TraceScope scope = newPathTraceScope("setQuotaByStorageType", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setQuotaByStorageType", src)) {
       namenode.setQuota(src, HdfsConstants.QUOTA_DONT_SET, quota, type);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-        FileNotFoundException.class,
-        QuotaByStorageTypeExceededException.class,
-        UnresolvedPathException.class,
-        SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          QuotaByStorageTypeExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
   /**
    * set the modification and access time of a file
-   * 
+   *
    * @see ClientProtocol#setTimes(String, long, long)
    */
   public void setTimes(String src, long mtime, long atime) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("setTimes", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setTimes", src)) {
       namenode.setTimes(src, mtime, atime);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class);
     }
   }
 
@@ -2760,7 +2582,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     LocatedBlock [] lblocks = { new LocatedBlock(blk, dnArr) };
     reportChecksumFailure(file, lblocks);
   }
-    
+
   // just reports checksum failure and ignores any exception during the report.
   void reportChecksumFailure(String file, LocatedBlock lblocks[]) {
     try {
@@ -2774,7 +2596,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Override
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
-        + ", ugi=" + ugi + "]"; 
+        + ", ugi=" + ugi + "]";
   }
 
   public CachingStrategy getDefaultReadCachingStrategy() {
@@ -2792,136 +2614,111 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void modifyAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("modifyAclEntries", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("modifyAclEntries", src)) {
       namenode.modifyAclEntries(src, aclSpec);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeAclEntries");
-    try {
+    try (TraceScope ignored = tracer.newScope("removeAclEntries")) {
       namenode.removeAclEntries(src, aclSpec);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void removeDefaultAcl(String src) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeDefaultAcl");
-    try {
+    try (TraceScope ignored = tracer.newScope("removeDefaultAcl")) {
       namenode.removeDefaultAcl(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void removeAcl(String src) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeAcl");
-    try {
+    try (TraceScope ignored = tracer.newScope("removeAcl")) {
       namenode.removeAcl(src);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("setAcl");
-    try {
+    try (TraceScope ignored = tracer.newScope("setAcl")) {
       namenode.setAcl(src, aclSpec);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public AclStatus getAclStatus(String src) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getAclStatus", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getAclStatus", src)) {
       return namenode.getAclStatus(src);
-    } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     AclException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
-    }
-  }
-  
-  public void createEncryptionZone(String src, String keyName)
-    throws IOException {
-    checkOpen();
-    TraceScope scope = newPathTraceScope("createEncryptionZone", src);
-    try {
-      namenode.createEncryptionZone(src, keyName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     SafeModeException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          AclException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
 
-  public EncryptionZone getEZForPath(String src)
-          throws IOException {
+  public void createEncryptionZone(String src, String keyName)
+      throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getEZForPath", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("createEncryptionZone", src)) {
+      namenode.createEncryptionZone(src, keyName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
+  public EncryptionZone getEZForPath(String src) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getEZForPath", src)) {
       return namenode.getEZForPath(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          UnresolvedPathException.class);
     }
   }
 
@@ -2934,112 +2731,90 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void setXAttr(String src, String name, byte[] value, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("setXAttr", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("setXAttr", src)) {
       namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value), flag);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
-  
+
   public byte[] getXAttr(String src, String name) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getXAttr", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getXAttr", src)) {
       final List<XAttr> xAttrs = XAttrHelper.buildXAttrAsList(name);
       final List<XAttr> result = namenode.getXAttrs(src, xAttrs);
       return XAttrHelper.getFirstXAttrValue(result);
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
-  
+
   public Map<String, byte[]> getXAttrs(String src) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getXAttrs", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getXAttrs", src)) {
       return XAttrHelper.buildXAttrMap(namenode.getXAttrs(src, null));
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
-  
-  public Map<String, byte[]> getXAttrs(String src, List<String> names) 
+
+  public Map<String, byte[]> getXAttrs(String src, List<String> names)
       throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("getXAttrs", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("getXAttrs", src)) {
       return XAttrHelper.buildXAttrMap(namenode.getXAttrs(
           src, XAttrHelper.buildXAttrs(names)));
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
-  
-  public List<String> listXAttrs(String src)
-          throws IOException {
+
+  public List<String> listXAttrs(String src) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("listXAttrs", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("listXAttrs", src)) {
       final Map<String, byte[]> xattrs =
-        XAttrHelper.buildXAttrMap(namenode.listXAttrs(src));
+          XAttrHelper.buildXAttrMap(namenode.listXAttrs(src));
       return Lists.newArrayList(xattrs.keySet());
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void removeXAttr(String src, String name) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("removeXAttr", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("removeXAttr", src)) {
       namenode.removeXAttr(src, XAttrHelper.buildXAttr(name));
-    } catch(RemoteException re) {
+    } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class,
-                                     NSQuotaExceededException.class,
-                                     SafeModeException.class,
-                                     SnapshotAccessControlException.class,
-                                     UnresolvedPathException.class);
-    } finally {
-      scope.close();
+          FileNotFoundException.class,
+          NSQuotaExceededException.class,
+          SafeModeException.class,
+          SnapshotAccessControlException.class,
+          UnresolvedPathException.class);
     }
   }
 
   public void checkAccess(String src, FsAction mode) throws IOException {
     checkOpen();
-    TraceScope scope = newPathTraceScope("checkAccess", src);
-    try {
+    try (TraceScope ignored = newPathTraceScope("checkAccess", src)) {
       namenode.checkAccess(src, mode);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           FileNotFoundException.class,
           UnresolvedPathException.class);
-    } finally {
-      scope.close();
     }
   }
 
@@ -3050,7 +2825,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSInotifyEventInputStream getInotifyEventStream(long lastReadTxid)
       throws IOException {
     return new DFSInotifyEventInputStream(namenode, tracer,
-          lastReadTxid);
+        lastReadTxid);
   }
 
   @Override // RemotePeerFactory
@@ -3060,10 +2835,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     Peer peer = null;
     boolean success = false;
     Socket sock = null;
-    final int socketTimeout = dfsClientConf.getSocketTimeout(); 
+    final int socketTimeout = dfsClientConf.getSocketTimeout();
     try {
       sock = socketFactory.createSocket();
-      NetUtils.connect(sock, addr, getRandomLocalInterfaceAddr(), socketTimeout);
+      NetUtils.connect(sock, addr, getRandomLocalInterfaceAddr(),
+          socketTimeout);
       peer = DFSUtilClient.peerFromSocketAndKey(saslClient, sock, this,
           blockToken, datanodeId);
       peer.setReadTimeout(socketTimeout);
@@ -3089,27 +2865,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     HEDGED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
         TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
         new Daemon.DaemonFactory() {
-          private final AtomicInteger threadIndex =
-            new AtomicInteger(0); 
+          private final AtomicInteger threadIndex = new AtomicInteger(0);
           @Override
           public Thread newThread(Runnable r) {
             Thread t = super.newThread(r);
-            t.setName("hedgedRead-" +
-              threadIndex.getAndIncrement());
+            t.setName("hedgedRead-" + threadIndex.getAndIncrement());
             return t;
           }
         },
         new ThreadPoolExecutor.CallerRunsPolicy() {
-
-      @Override
-      public void rejectedExecution(Runnable runnable,
-          ThreadPoolExecutor e) {
-        LOG.info("Execution rejected, Executing in current thread");
-        HEDGED_READ_METRIC.incHedgedReadOpsInCurThread();
-        // will run in the current thread
-        super.rejectedExecution(runnable, e);
-      }
-    });
+          @Override
+          public void rejectedExecution(Runnable runnable,
+              ThreadPoolExecutor e) {
+            LOG.info("Execution rejected, Executing in current thread");
+            HEDGED_READ_METRIC.incHedgedReadOpsInCurThread();
+            // will run in the current thread
+            super.rejectedExecution(runnable, e);
+          }
+        });
     HEDGED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
     LOG.debug("Using hedged reads; pool threads={}", num);
   }
@@ -3120,7 +2893,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   boolean isHedgedReadsEnabled() {
     return (HEDGED_READ_THREAD_POOL != null) &&
-      HEDGED_READ_THREAD_POOL.getMaximumPoolSize() > 0;
+        HEDGED_READ_THREAD_POOL.getMaximumPoolSize() > 0;
   }
 
   DFSHedgedReadMetrics getHedgedReadMetrics() {
@@ -3133,11 +2906,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   @VisibleForTesting
   public void setKeyProvider(KeyProvider provider) {
-    try {
-      clientContext.getKeyProviderCache().setKeyProvider(conf, provider);
-    } catch (IOException e) {
-     LOG.error("Could not set KeyProvider !!", e);
-    }
+    clientContext.getKeyProviderCache().setKeyProvider(conf, provider);
   }
 
   /**

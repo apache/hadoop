@@ -25,8 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This exception is thrown when the name node is in safe mode.
- * Client cannot modified namespace until the safe mode is off. 
- * 
+ * Client cannot modified namespace until the safe mode is off.
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

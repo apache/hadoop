@@ -65,7 +65,9 @@ public abstract class DataTransferProtoUtil {
   }
 
   public static DataChecksum fromProto(ChecksumProto proto) {
-    if (proto == null) return null;
+    if (proto == null) {
+      return null;
+    }
 
     int bytesPerChecksum = proto.getBytesPerChecksum();
     DataChecksum.Type type = PBHelperClient.convert(proto.getType());
@@ -74,19 +76,17 @@ public abstract class DataTransferProtoUtil {
 
   static ClientOperationHeaderProto buildClientHeader(ExtendedBlock blk,
       String client, Token<BlockTokenIdentifier> blockToken) {
-    ClientOperationHeaderProto header =
-      ClientOperationHeaderProto.newBuilder()
-        .setBaseHeader(buildBaseHeader(blk, blockToken))
-        .setClientName(client)
-        .build();
-    return header;
+    return ClientOperationHeaderProto.newBuilder()
+      .setBaseHeader(buildBaseHeader(blk, blockToken))
+      .setClientName(client)
+      .build();
   }
 
   static BaseHeaderProto buildBaseHeader(ExtendedBlock blk,
       Token<BlockTokenIdentifier> blockToken) {
     BaseHeaderProto.Builder builder =  BaseHeaderProto.newBuilder()
-      .setBlock(PBHelperClient.convert(blk))
-      .setToken(PBHelperClient.convert(blockToken));
+        .setBlock(PBHelperClient.convert(blk))
+        .setToken(PBHelperClient.convert(blockToken));
     SpanId spanId = Tracer.getCurrentSpanId();
     if (spanId.isValid()) {
       builder.setTraceInfo(DataTransferTraceInfoProto.newBuilder()

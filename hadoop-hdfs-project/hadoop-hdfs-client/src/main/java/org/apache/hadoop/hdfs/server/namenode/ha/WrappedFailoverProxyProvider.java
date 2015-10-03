@@ -30,14 +30,14 @@ import org.apache.hadoop.io.retry.FailoverProxyProvider;
 public class WrappedFailoverProxyProvider<T> extends
     AbstractNNFailoverProxyProvider<T> {
   private final FailoverProxyProvider<T> proxyProvider;
-  
+
   /**
    * Wrap the given instance of an old FailoverProxyProvider.
    */
   public WrappedFailoverProxyProvider(FailoverProxyProvider<T> provider) {
     proxyProvider = provider;
   }
-    
+
   @Override
   public Class<T> getInterface() {
     return proxyProvider.getInterface();
