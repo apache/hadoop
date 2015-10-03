@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequ
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -75,22 +77,30 @@ import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrDecreaseContainersResourceEvent;
+import org.apache.hadoop.yarn.server.nodemanager.CMgrSignalContainersEvent;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -262,7 +272,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(null, reader.readLine());
   }
 
-  @Test
+  //@Test
   public void testContainerLaunchAndStop() throws IOException,
       InterruptedException, YarnException {
     containerManager.start();
@@ -1172,5 +1182,104 @@ public class TestContainerManager extends BaseContainerManagerTest {
     return BuilderUtils.newContainerToken(nodeId, containerTokenSecretManager
         .retrievePassword(containerTokenIdentifier),
             containerTokenIdentifier);
+  }
+
+  @Test
+  public void testOutputThreadDumpSignal() throws IOException,
+      InterruptedException, YarnException {
+    testContainerLaunchAndSignal(SignalContainerCommand.OUTPUT_THREAD_DUMP);
+  }
+
+  @Test
+  public void testGracefulShutdownSignal() throws IOException,
+      InterruptedException, YarnException {
+    testContainerLaunchAndSignal(SignalContainerCommand.GRACEFUL_SHUTDOWN);
+  }
+
+  @Test
+  public void testForcefulShutdownSignal() throws IOException,
+      InterruptedException, YarnException {
+    testContainerLaunchAndSignal(SignalContainerCommand.FORCEFUL_SHUTDOWN);
+  }
+
+  // Verify signal container request can be delivered from
+  // NodeStatusUpdaterImpl to ContainerExecutor.
+  private void testContainerLaunchAndSignal(SignalContainerCommand command)
+      throws IOException, InterruptedException, YarnException {
+
+    Signal signal = ContainerLaunch.translateCommandToSignal(command);
+    containerManager.start();
+
+    File scriptFile = new File(tmpDir, "scriptFile.sh");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    File processStartFile =
+        new File(tmpDir, "start_file.txt").getAbsoluteFile();
+    fileWriter.write("\numask 0"); // So that start file is readable by the test
+    fileWriter.write("\necho Hello World! > " + processStartFile);
+    fileWriter.write("\necho $$ >> " + processStartFile);
+    fileWriter.write("\nexec sleep 1000s");
+    fileWriter.close();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+
+    URL resource_alpha =
+        ConverterUtils.getYarnUrlFromPath(localFS
+            .makeQualified(new Path(scriptFile.getAbsolutePath())));
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(resource_alpha);
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(scriptFile.lastModified());
+    String destinationFile = "dest_file";
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
+    List<String> commands = new ArrayList<String>();
+    commands.add("/bin/bash");
+    commands.add(scriptFile.getAbsolutePath());
+    containerLaunchContext.setCommands(commands);
+    StartContainerRequest scRequest =
+        StartContainerRequest.newInstance(
+            containerLaunchContext,
+            createContainerToken(cId, DUMMY_RM_IDENTIFIER, context.getNodeId(),
+            user, context.getContainerTokenSecretManager()));
+    List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
+    list.add(scRequest);
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    int timeoutSecs = 0;
+    while (!processStartFile.exists() && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for process start-file to be created");
+    }
+    Assert.assertTrue("ProcessStartFile doesn't exist!",
+        processStartFile.exists());
+
+    // Simulate NodeStatusUpdaterImpl sending CMgrSignalContainersEvent
+    SignalContainerRequest signalReq =
+        SignalContainerRequest.newInstance(cId, command);
+    List<SignalContainerRequest> reqs = new ArrayList<SignalContainerRequest>();
+    reqs.add(signalReq);
+    containerManager.handle(new CMgrSignalContainersEvent(reqs));
+
+    final ArgumentCaptor<ContainerSignalContext> signalContextCaptor =
+        ArgumentCaptor.forClass(ContainerSignalContext.class);
+    if (signal.equals(Signal.NULL)) {
+      verify(exec, never()).signalContainer(signalContextCaptor.capture());
+    } else {
+      verify(exec, timeout(10000).atLeastOnce()).signalContainer(signalContextCaptor.capture());
+      ContainerSignalContext signalContext = signalContextCaptor.getAllValues().get(0);
+      Assert.assertEquals(cId, signalContext.getContainer().getContainerId());
+      Assert.assertEquals(signal, signalContext.getSignal());
+    }
   }
 }

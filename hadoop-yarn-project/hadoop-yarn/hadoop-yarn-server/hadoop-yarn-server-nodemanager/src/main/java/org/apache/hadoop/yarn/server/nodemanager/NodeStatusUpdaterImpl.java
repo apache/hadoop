@@ -45,6 +45,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -799,6 +800,16 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrDecreaseContainersResourceEvent(containersToDecrease)
               );
+            }
+
+            // SignalContainer request originally comes from end users via
+            // ClientRMProtocol's SignalContainer. Forward the request to
+            // ContainerManager which will dispatch the event to ContainerLauncher.
+            List<SignalContainerRequest> containersToSignal = response
+                .getContainersToSignalList();
+            if (containersToSignal.size() != 0) {
+              dispatcher.getEventHandler().handle(
+                  new CMgrSignalContainersEvent(containersToSignal));
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM

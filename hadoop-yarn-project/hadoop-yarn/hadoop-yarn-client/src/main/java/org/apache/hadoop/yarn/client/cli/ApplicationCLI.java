@@ -42,8 +42,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -148,6 +150,12 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
       opts.getOption(STATUS_CMD).setArgName("Container ID");
       opts.getOption(LIST_CMD).setArgName("Application Attempt ID");
+      opts.addOption(SIGNAL_CMD, true,
+          "Signal the container. The available signal commands are " +
+          java.util.Arrays.asList(SignalContainerCommand.values()) +
+          " Default command is OUTPUT_THREAD_DUMP.");
+      opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
+      opts.getOption(SIGNAL_CMD).setArgs(3);
     }
 
     int exitCode = -1;
@@ -254,11 +262,38 @@ public class ApplicationCLI extends YarnCLI {
       }
       updateApplicationPriority(cliParser.getOptionValue(APP_ID),
           cliParser.getOptionValue(UPDATE_PRIORITY));
+    } else if (cliParser.hasOption(SIGNAL_CMD)) {
+      if (args.length < 3 || args.length > 4) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      final String[] signalArgs = cliParser.getOptionValues(SIGNAL_CMD);
+      final String containerId = signalArgs[0];
+      SignalContainerCommand command =
+          SignalContainerCommand.OUTPUT_THREAD_DUMP;
+      if (signalArgs.length == 2) {
+        command = SignalContainerCommand.valueOf(signalArgs[1]);
+      }
+      signalContainer(containerId, command);
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);
     }
     return 0;
+  }
+
+  /**
+   * Signals the containerId
+   *
+   * @param containerIdStr the container id
+   * @param command the signal command
+   * @throws YarnException
+   */
+  private void signalContainer(String containerIdStr,
+      SignalContainerCommand command) throws YarnException, IOException {
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+    sysout.println("Signalling container " + containerIdStr);
+    client.signalContainer(containerId, command);
   }
 
   /**

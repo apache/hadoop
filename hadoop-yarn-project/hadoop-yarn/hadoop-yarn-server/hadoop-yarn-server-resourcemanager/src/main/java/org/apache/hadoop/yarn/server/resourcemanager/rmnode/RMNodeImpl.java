@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -122,6 +123,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
       new ContainerIdComparator());
 
+  /* set of containers that need to be signaled */
+  private final List<SignalContainerRequest> containersToSignal =
+      new ArrayList<SignalContainerRequest>();
+
   /*
    * set of containers to notify NM to remove them from its context. Currently,
    * this includes containers that were notified to AM about their completion
@@ -194,6 +199,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.RUNNING, NodeState.RUNNING,
           RMNodeEventType.DECREASE_CONTAINER,
           new DecreaseContainersTransition())
+      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
+          RMNodeEventType.SIGNAL_CONTAINER, new SignalContainerTransition())
       .addTransition(NodeState.RUNNING, NodeState.SHUTDOWN,
           RMNodeEventType.SHUTDOWN,
           new DeactivateNodeTransition(NodeState.SHUTDOWN))
@@ -288,6 +295,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
           RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
           new AddContainersToBeRemovedFromNMTransition())
+      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
+          RMNodeEventType.SIGNAL_CONTAINER, new SignalContainerTransition())
       .addTransition(NodeState.UNHEALTHY, NodeState.SHUTDOWN,
           RMNodeEventType.SHUTDOWN,
           new DeactivateNodeTransition(NodeState.SHUTDOWN))
@@ -491,8 +500,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       response.addAllApplicationsToCleanup(this.finishedApplications);
       response.addContainersToBeRemovedFromNM(
           new ArrayList<ContainerId>(this.containersToBeRemovedFromNM));
+      response.addAllContainersToSignal(this.containersToSignal);
       this.containersToClean.clear();
       this.finishedApplications.clear();
+      this.containersToSignal.clear();
       this.containersToBeRemovedFromNM.clear();
     } finally {
       this.writeLock.unlock();
@@ -1087,6 +1098,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       return NodeState.UNHEALTHY;
+    }
+  }
+
+  public static class SignalContainerTransition implements
+      SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      rmNode.containersToSignal.add(((
+          RMNodeSignalContainerEvent) event).getSignalRequest());
     }
   }
 

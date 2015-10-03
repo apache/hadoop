@@ -16,40 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+package org.apache.hadoop.yarn.api.protocolrecords;
 
-public enum RMNodeEventType {
-  
-  STARTED,
-  
-  // Source: AdminService
-  DECOMMISSION,
-  GRACEFUL_DECOMMISSION,
-  RECOMMISSION,
-  
-  // Source: AdminService, ResourceTrackerService
-  RESOURCE_UPDATE,
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 
-  // ResourceTrackerService
-  STATUS_UPDATE,
-  REBOOTING,
-  RECONNECTED,
-  SHUTDOWN,
-
-  // Source: Application
-  CLEANUP_APP,
-
-  // Source: Container
-  CONTAINER_ALLOCATED,
-  CLEANUP_CONTAINER,
-  DECREASE_CONTAINER,
-
-  // Source: ClientRMService
-  SIGNAL_CONTAINER,
-
-  // Source: RMAppAttempt
-  FINISHED_CONTAINERS_PULLED_BY_AM,
-
-  // Source: NMLivelinessMonitor
-  EXPIRE
+/**
+ * <p>The response sent by the <code>ResourceManager</code> to the client
+ * signalling a container.</p>
+ *
+ * <p>Currently it's empty.</p>
+ *
+ * @see ApplicationClientProtocol#signalContainer(SignalContainerRequest)
+ */
+@Public
+@Evolving
+public abstract class SignalContainerResponse {
 }

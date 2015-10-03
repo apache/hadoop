@@ -225,6 +225,14 @@ message UpdateApplicationPriorityRequestProto {
 message UpdateApplicationPriorityResponseProto {
 }
 
+message SignalContainerRequestProto {
+    required ContainerIdProto container_id = 1;
+    required SignalContainerCommandProto command = 2;
+}
+
+message SignalContainerResponseProto {
+}
+
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////

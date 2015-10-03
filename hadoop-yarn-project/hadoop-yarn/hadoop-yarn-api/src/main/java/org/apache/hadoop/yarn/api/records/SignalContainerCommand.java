@@ -16,11 +16,30 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.yarn.api.records;
 
-public enum ContainerManagerEventType {
-  FINISH_APPS,
-  FINISH_CONTAINERS,
-  DECREASE_CONTAINERS_RESOURCE,
-  SIGNAL_CONTAINERS
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+
+/**
+ * Enumeration of various signal container commands.
+ */
+@Public
+@Evolving
+public enum SignalContainerCommand {
+  /**
+   * Used to capture thread dump.
+   * On Linux, it is equivalent to SIGQUIT.
+   */
+  OUTPUT_THREAD_DUMP,
+
+  /** Gracefully shutdown a container.
+   * On Linux, it is equivalent to SIGTERM.
+   */
+  GRACEFUL_SHUTDOWN,
+
+  /** Forcefully shutdown a container.
+   * On Linux, it is equivalent to SIGKILL.
+   */
+  FORCEFUL_SHUTDOWN,
 }

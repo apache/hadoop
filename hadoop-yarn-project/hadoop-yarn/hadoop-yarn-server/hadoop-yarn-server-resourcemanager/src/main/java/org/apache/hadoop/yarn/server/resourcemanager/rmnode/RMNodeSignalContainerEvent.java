@@ -18,38 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-public enum RMNodeEventType {
-  
-  STARTED,
-  
-  // Source: AdminService
-  DECOMMISSION,
-  GRACEFUL_DECOMMISSION,
-  RECOMMISSION,
-  
-  // Source: AdminService, ResourceTrackerService
-  RESOURCE_UPDATE,
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 
-  // ResourceTrackerService
-  STATUS_UPDATE,
-  REBOOTING,
-  RECONNECTED,
-  SHUTDOWN,
+public class RMNodeSignalContainerEvent extends RMNodeEvent {
 
-  // Source: Application
-  CLEANUP_APP,
+  private SignalContainerRequest signalRequest;
 
-  // Source: Container
-  CONTAINER_ALLOCATED,
-  CLEANUP_CONTAINER,
-  DECREASE_CONTAINER,
+  public RMNodeSignalContainerEvent(NodeId nodeId,
+      SignalContainerRequest signalRequest) {
+    super(nodeId, RMNodeEventType.SIGNAL_CONTAINER);
+    this.signalRequest = signalRequest;
+  }
 
-  // Source: ClientRMService
-  SIGNAL_CONTAINER,
+  public SignalContainerRequest getSignalRequest() {
+    return this.signalRequest;
+  }
 
-  // Source: RMAppAttempt
-  FINISHED_CONTAINERS_PULLED_BY_AM,
-
-  // Source: NMLivelinessMonitor
-  EXPIRE
 }

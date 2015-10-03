@@ -18,9 +18,20 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-public enum ContainerManagerEventType {
-  FINISH_APPS,
-  FINISH_CONTAINERS,
-  DECREASE_CONTAINERS_RESOURCE,
-  SIGNAL_CONTAINERS
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+
+public class CMgrSignalContainersEvent extends ContainerManagerEvent {
+
+  private List<SignalContainerRequest> containerToSignal;
+
+  public CMgrSignalContainersEvent(List<SignalContainerRequest> containerToSignal) {
+    super(ContainerManagerEventType.SIGNAL_CONTAINERS);
+    this.containerToSignal = containerToSignal;
+  }
+
+  public List<SignalContainerRequest> getContainersToSignal() {
+    return this.containerToSignal;
+  }
 }

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -56,6 +57,8 @@ public interface NodeHeartbeatResponse {
   
   void addAllApplicationsToCleanup(List<ApplicationId> applications);
 
+  List<SignalContainerRequest> getContainersToSignalList();
+  void addAllContainersToSignal(List<SignalContainerRequest> containers);
   long getNextHeartBeatInterval();
   void setNextHeartBeatInterval(long nextHeartBeatInterval);
   

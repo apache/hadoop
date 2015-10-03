@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -459,6 +460,100 @@ public class ContainerLaunch implements Callable<Integer> {
         lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
       }
     }
+  }
+
+  /**
+   * Send a signal to the container.
+   *
+   *
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void signalContainer(SignalContainerCommand command)
+      throws IOException {
+    ContainerId containerId =
+        container.getContainerTokenIdentifier().getContainerID();
+    String containerIdStr = ConverterUtils.toString(containerId);
+    String user = container.getUser();
+    Signal signal = translateCommandToSignal(command);
+    if (signal.equals(Signal.NULL)) {
+      LOG.info("ignore signal command " + command);
+      return;
+    }
+
+    LOG.info("Sending signal " + command + " to container " + containerIdStr);
+
+    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    if (!alreadyLaunched) {
+      LOG.info("Container " + containerIdStr + " not launched."
+          + " Not sending the signal");
+      return;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Getting pid for container " + containerIdStr
+          + " to send signal to from pid file "
+          + (pidFilePath != null ? pidFilePath.toString() : "null"));
+    }
+
+    try {
+      // get process id from pid file if available
+      // else if shell is still active, get it from the shell
+      String processId = null;
+      if (pidFilePath != null) {
+        processId = getContainerPid(pidFilePath);
+      }
+
+      if (processId != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sending signal to pid " + processId
+              + " as user " + user
+              + " for container " + containerIdStr);
+        }
+
+        boolean result = exec.signalContainer(
+            new ContainerSignalContext.Builder()
+                .setContainer(container)
+                .setUser(user)
+                .setPid(processId)
+                .setSignal(signal)
+                .build());
+
+        String diagnostics = "Sent signal " + command
+            + " (" + signal + ") to pid " + processId
+            + " as user " + user
+            + " for container " + containerIdStr
+            + ", result=" + (result ? "success" : "failed");
+        LOG.info(diagnostics);
+
+        dispatcher.getEventHandler().handle(
+            new ContainerDiagnosticsUpdateEvent(containerId, diagnostics));
+      }
+    } catch (Exception e) {
+      String message =
+          "Exception when sending signal to container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.warn(message);
+    }
+  }
+
+  @VisibleForTesting
+  public static Signal translateCommandToSignal(
+      SignalContainerCommand command) {
+    Signal signal = Signal.NULL;
+    switch (command) {
+      case OUTPUT_THREAD_DUMP:
+        // TODO for windows support.
+        signal = Shell.WINDOWS ? Signal.NULL: Signal.QUIT;
+        break;
+      case GRACEFUL_SHUTDOWN:
+        signal = Signal.TERM;
+        break;
+      case FORCEFUL_SHUTDOWN:
+        signal = Signal.KILL;
+        break;
+    }
+    return signal;
   }
 
   /**

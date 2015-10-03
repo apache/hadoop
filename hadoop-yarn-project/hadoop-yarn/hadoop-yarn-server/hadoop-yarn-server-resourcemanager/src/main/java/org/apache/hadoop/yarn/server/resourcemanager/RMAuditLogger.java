@@ -58,6 +58,7 @@ public class RMAuditLogger {
         "Update Application Priority Request";
     public static final String CHANGE_CONTAINER_RESOURCE =
         "AM Changed Container Resource";
+    public static final String SIGNAL_CONTAINER = "Signal Container Request";
 
     // Some commonly used descriptions
     public static final String UNAUTHORIZED_USER = "Unauthorized user";
