@@ -1486,6 +1486,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9193. Fix incorrect references the usages of the DN in dfshealth.js.
     (Chang Li via wheat9)
 
+    HADOOP-11098. [JDK8] Max Non Heap Memory default changed between JDK7
+    and 8 (ozawa).
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

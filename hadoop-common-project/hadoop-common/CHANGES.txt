@@ -1113,6 +1113,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-8437. getLocalPathForWrite should throw IOException for invalid
     paths. (Brahma Reddy Battula via zxu)
 
+    HADOOP-11098. [JDK8] Max Non Heap Memory default changed between JDK7
+    and 8. (ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

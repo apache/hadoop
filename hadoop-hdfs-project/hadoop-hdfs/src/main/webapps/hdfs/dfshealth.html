@@ -150,11 +150,11 @@
   {/fs}
 </p>
 {#mem.HeapMemoryUsage}
-<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {max|fmt_bytes}. </p>
+<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {@eq key=max value="-1" type="number"}&ltunbonded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.HeapMemoryUsage}
 
 {#mem.NonHeapMemoryUsage}
-<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {max|fmt_bytes}. </p>
+<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbonded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.NonHeapMemoryUsage}
 
 {#nn}

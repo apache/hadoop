@@ -60,6 +60,7 @@ public class JvmMetrics implements MetricsSource {
   }
 
   static final float M = 1024*1024;
+  static public final float MEMORY_MAX_UNLIMITED_MB = -1;
 
   final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
   final List<GarbageCollectorMXBean> gcBeans =
@@ -106,11 +107,21 @@ public class JvmMetrics implements MetricsSource {
     Runtime runtime = Runtime.getRuntime();
     rb.addGauge(MemNonHeapUsedM, memNonHeap.getUsed() / M)
       .addGauge(MemNonHeapCommittedM, memNonHeap.getCommitted() / M)
-      .addGauge(MemNonHeapMaxM, memNonHeap.getMax() / M)
+      .addGauge(MemNonHeapMaxM, calculateMaxMemoryUsage(memNonHeap))
       .addGauge(MemHeapUsedM, memHeap.getUsed() / M)
       .addGauge(MemHeapCommittedM, memHeap.getCommitted() / M)
-      .addGauge(MemHeapMaxM, memHeap.getMax() / M)
+      .addGauge(MemHeapMaxM, calculateMaxMemoryUsage(memHeap))
       .addGauge(MemMaxM, runtime.maxMemory() / M);
+  }
+
+  private float calculateMaxMemoryUsage(MemoryUsage memHeap) {
+    long max =  memHeap.getMax() ;
+
+     if (max == -1) {
+       return MEMORY_MAX_UNLIMITED_MB;
+     }
+
+    return max / M;
   }
 
   private void getGcUsage(MetricsRecordBuilder rb) {
