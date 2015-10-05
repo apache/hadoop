@@ -592,12 +592,23 @@ public class Mover {
             IOUtils.cleanup(LOG, nnc);
             iter.remove();
           } else if (r != ExitStatus.IN_PROGRESS) {
+            if (r == ExitStatus.NO_MOVE_PROGRESS) {
+              System.err.println("Failed to move some blocks after "
+                  + m.retryMaxAttempts + " retries. Exiting...");
+            } else if (r == ExitStatus.NO_MOVE_BLOCK) {
+              System.err.println("Some blocks can't be moved. Exiting...");
+            } else {
+              System.err.println("Mover failed. Exiting with status " + r
+                  + "... ");
+            }
             // must be an error statue, return
             return r.getExitCode();
           }
         }
         Thread.sleep(sleeptime);
       }
+      System.out.println("Mover Successful: all blocks satisfy"
+          + " the specified storage policy. Exiting...");
       return ExitStatus.SUCCESS.getExitCode();
     } finally {
       for (NameNodeConnector nnc : connectors) {

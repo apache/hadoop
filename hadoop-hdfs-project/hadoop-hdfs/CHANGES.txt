@@ -1489,6 +1489,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11098. [JDK8] Max Non Heap Memory default changed between JDK7
     and 8 (ozawa).
 
+    HDFS-9151. Mover should print the exit status/reason on console like
+    balancer tool. (Surendra singh lilhore via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
