@@ -1492,6 +1492,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9151. Mover should print the exit status/reason on console like
     balancer tool. (Surendra singh lilhore via vinayakumarb)
 
+    HDFS-9154. [OEV-Doc] : Document does not mention about "-f" and "-r" options
+    (nijel via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
