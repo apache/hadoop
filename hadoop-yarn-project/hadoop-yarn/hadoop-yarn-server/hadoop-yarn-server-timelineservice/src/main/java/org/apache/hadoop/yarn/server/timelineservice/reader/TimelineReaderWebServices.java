@@ -286,7 +286,7 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
-        (null == req.getQueryString() ? "" :
+        (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
     UserGroupInformation callerUGI = getUser(req);
     LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
@@ -310,7 +310,7 @@ public class TimelineReaderWebServices {
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime,
-          "createdTime or modifiedTime start/end or limit or flowId");
+          "createdTime or modifiedTime start/end or limit or flowrunid");
     }
     long endTime = Time.monotonicNow();
     if (entities == null) {
@@ -360,7 +360,7 @@ public class TimelineReaderWebServices {
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
-        (null == req.getQueryString() ? "" :
+        (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
     UserGroupInformation callerUGI = getUser(req);
     LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
@@ -420,7 +420,7 @@ public class TimelineReaderWebServices {
       @QueryParam("userid") String userId,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
-        (null == req.getQueryString() ? "" :
+        (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
     UserGroupInformation callerUGI = getUser(req);
     LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
@@ -477,7 +477,7 @@ public class TimelineReaderWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
-        (null == req.getQueryString() ? "" :
+        (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
     UserGroupInformation callerUGI = getUser(req);
     LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
@@ -501,5 +501,201 @@ public class TimelineReaderWebServices {
     LOG.info("Processed URL " + url +
         " (Took " + (endTime - startTime) + " ms.)");
     return entities;
+  }
+
+  /**
+   * Return a single app for given app id. Cluster ID is not provided by
+   * client so default cluster ID has to be taken.
+   */
+  @GET
+  @Path("/app/{appid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getApp(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("appid") String appId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("fields") String fields) {
+    return getApp(req, res, null, appId, flowId, flowRunId, userId, fields);
+  }
+
+  /**
+   * Return a single app for given cluster id and app id.
+   */
+  @GET
+  @Path("/app/{clusterid}/{appid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public TimelineEntity getApp(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("appid") String appId,
+      @QueryParam("flowid") String flowId,
+      @QueryParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    TimelineEntity entity = null;
+    try {
+      entity = timelineReaderManager.getEntity(
+          parseUser(callerUGI, userId), parseStr(clusterId),
+          parseStr(flowId), parseLongStr(flowRunId), parseStr(appId),
+          TimelineEntityType.YARN_APPLICATION.toString(), null,
+          parseFieldsStr(fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "flowrunid");
+    }
+    long endTime = Time.monotonicNow();
+    if (entity == null) {
+      LOG.info("Processed URL " + url + " but app not found" + " (Took " +
+          (endTime - startTime) + " ms.)");
+      throw new NotFoundException("App " + appId + " not found");
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entity;
+  }
+
+  /**
+   * Return a list of apps for given flow id and flow run id. Cluster ID is not
+   * provided by client so default cluster ID has to be taken. If number of
+   * matching apps are more than the limit, most recent apps till the limit is
+   * reached, will be returned.
+   */
+  @GET
+  @Path("/flowrunapps/{flowid}/{flowrunid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRunApps(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("flowid") String flowId,
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    return getEntities(req, res, null, null,
+        TimelineEntityType.YARN_APPLICATION.toString(), userId, flowId,
+        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
+        metricfilters, eventfilters, fields);
+  }
+
+  /**
+   * Return a list of apps for a given cluster id, flow id and flow run id. If
+   * number of matching apps are more than the limit, most recent apps till the
+   * limit is reached, will be returned.
+   */
+  @GET
+  @Path("/flowrunapps/{clusterid}/{flowid}/{flowrunid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRunApps(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("flowid") String flowId,
+      @PathParam("flowrunid") String flowRunId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    return getEntities(req, res, clusterId, null,
+        TimelineEntityType.YARN_APPLICATION.toString(), userId, flowId,
+        flowRunId, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
+        metricfilters, eventfilters, fields);
+  }
+
+  /**
+   * Return a list of apps for given flow id. Cluster ID is not provided by
+   * client so default cluster ID has to be taken. If number of matching apps
+   * are more than the limit, most recent apps till the limit is reached, will
+   * be returned.
+   */
+  @GET
+  @Path("/flowapps/{flowid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowApps(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("flowid") String flowId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    return getEntities(req, res, null, null,
+        TimelineEntityType.YARN_APPLICATION.toString(), userId, flowId,
+        null, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
+        metricfilters, eventfilters, fields);
+  }
+
+  /**
+   * Return a list of apps for a given cluster id and flow id. If number of
+   * matching apps are more than the limit, most recent apps till the limit is
+   * reached, will be returned.
+   */
+  @GET
+  @Path("/flowapps/{clusterid}/{flowid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowApps(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("flowid") String flowId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("modifiedtimestart") String modifiedTimeStart,
+      @QueryParam("modifiedtimeend") String modifiedTimeEnd,
+      @QueryParam("relatesto") String relatesTo,
+      @QueryParam("isrelatedto") String isRelatedTo,
+      @QueryParam("infofilters") String infofilters,
+      @QueryParam("conffilters") String conffilters,
+      @QueryParam("metricfilters") String metricfilters,
+      @QueryParam("eventfilters") String eventfilters,
+      @QueryParam("fields") String fields) {
+    return getEntities(req, res, clusterId, null,
+        TimelineEntityType.YARN_APPLICATION.toString(), userId, flowId,
+        null, limit, createdTimeStart, createdTimeEnd, modifiedTimeStart,
+        modifiedTimeEnd, relatesTo, isRelatedTo, infofilters, conffilters,
+        metricfilters, eventfilters, fields);
   }
 }
