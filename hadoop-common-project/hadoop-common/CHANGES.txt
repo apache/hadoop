@@ -793,6 +793,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12446. Undeprecate createNonRecursive() (Ted Yu via kihwal)
 
+    HADOOP-12452. Fix tracing documention reflecting the update to htrace-4
+    (Masatake Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

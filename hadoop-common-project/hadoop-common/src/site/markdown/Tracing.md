@@ -22,6 +22,7 @@ Enabling Dapper-like Tracing in Hadoop
         * [Dynamic update of tracing configuration](#Dynamic_update_of_tracing_configuration)
         * [Starting tracing spans by HTrace API](#Starting_tracing_spans_by_HTrace_API)
         * [Sample code for tracing](#Sample_code_for_tracing)
+        * [Starting tracing spans by FileSystem Shell](#Starting_tracing_spans_by_FileSystem_Shell)
         * [Starting tracing spans by configuration for HDFS client](#Starting_tracing_spans_by_configuration_for_HDFS_client)
 
 
@@ -122,42 +123,56 @@ The `TracingFsShell.java` shown below is the wrapper of FsShell
 which start tracing span before invoking HDFS shell command.
 
 ```java
+    import org.apache.hadoop.fs.FileSystem;
+    import org.apache.hadoop.fs.Path;
     import org.apache.hadoop.conf.Configuration;
-    import org.apache.hadoop.fs.FsShell;
-    import org.apache.hadoop.hdfs.DFSConfigKeys;
-    import org.apache.hadoop.hdfs.HdfsConfiguration;
+    import org.apache.hadoop.conf.Configured;
     import org.apache.hadoop.tracing.TraceUtils;
+    import org.apache.hadoop.util.Tool;
     import org.apache.hadoop.util.ToolRunner;
-    import org.apache.htrace.core.Trace;
+    import org.apache.htrace.core.Tracer;
     import org.apache.htrace.core.TraceScope;
-
-    public class TracingFsShell {
-      public static void main(String argv[]) throws Exception {
-        Configuration conf = new HdfsConfiguration();
-        FsShell shell = new FsShell();
-        conf.setQuietMode(false);
-        shell.setConf(conf);
-        Tracer tracer = new Tracer.Builder("TracingFsShell").
-            conf(TraceUtils.wrapHadoopConf("tracing.fs.shell.htrace.", conf)).
+    
+    public class Sample extends Configured implements Tool {
+      @Override
+      public int run(String argv[]) throws Exception {
+        FileSystem fs = FileSystem.get(getConf());
+        Tracer tracer = new Tracer.Builder("Sample").
+            conf(TraceUtils.wrapHadoopConf("sample.htrace.", getConf())).
             build();
         int res = 0;
-        TraceScope scope = tracer.newScope("FsShell");
-        try {
-          res = ToolRunner.run(shell, argv);
-        } finally {
-          scope.close();
-          shell.close();
+        try (TraceScope scope = tracer.newScope("sample")) {
+          Thread.sleep(1000);
+          fs.listStatus(new Path("/"));
         }
         tracer.close();
-        System.exit(res);
+        return res;
+      }
+      
+      public static void main(String argv[]) throws Exception {
+        ToolRunner.run(new Sample(), argv);
       }
     }
 ```
 
 You can compile and execute this code as shown below.
 
-    $ javac -cp `hadoop classpath` TracingFsShell.java
-    $ java -cp .:`hadoop classpath` TracingFsShell -ls /
+    $ javac -cp `hadoop classpath` Sample.java
+    $ java -cp .:`hadoop classpath` Sample \
+        -Dsample.htrace.span.receiver.classes=LocalFileSpanReceiver \
+        -Dsample.htrace.sampler.classes=AlwaysSampler
+
+### Starting tracing spans by FileSystem Shell
+
+The FileSystem Shell can enable tracing by configuration properties.
+
+Configure the span receivers and samplers in `core-site.xml` or command line
+by properties `fs.client.htrace.sampler.classes` and
+`fs.client.htrace.spanreceiver.classes`.
+
+    $ hdfs dfs -Dfs.shell.htrace.span.receiver.classes=LocalFileSpanReceiver \
+               -Dfs.shell.htrace.sampler.classes=AlwaysSampler \
+               -ls /
 
 ### Starting tracing spans by configuration for HDFS client
 
