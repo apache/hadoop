@@ -210,20 +210,26 @@ abstract public class Shell {
 
   /** Return a command for determining if process with specified pid is alive. */
   public static String[] getCheckProcessIsAliveCommand(String pid) {
-    return Shell.WINDOWS ?
-      new String[] { Shell.WINUTILS, "task", "isAlive", pid } :
-      isSetsidAvailable ?
-        new String[] { "kill", "-0", "--", "-" + pid } :
-        new String[] { "kill", "-0", pid };
+    return getSignalKillCommand(0, pid);
   }
 
   /** Return a command to send a signal to a given pid */
   public static String[] getSignalKillCommand(int code, String pid) {
-    return Shell.WINDOWS ?
-      new String[] { Shell.WINUTILS, "task", "kill", pid } :
-      isSetsidAvailable ?
-        new String[] { "kill", "-" + code, "--", "-" + pid } :
-        new String[] { "kill", "-" + code, pid };
+    // Code == 0 means check alive
+    if (Shell.WINDOWS) {
+      if (0 == code) {
+        return new String[] { Shell.WINUTILS, "task", "isAlive", pid };
+      } else {
+        return new String[] { Shell.WINUTILS, "task", "kill", pid };
+      }
+    }
+
+    if (isSetsidAvailable) {
+      // Use the shell-builtin as it support "--" in all Hadoop supported OSes
+      return new String[] { "bash", "-c", "kill -" + code + " -- -" + pid };
+    } else {
+      return new String[] { "bash", "-c", "kill -" + code + " " + pid };
+    }
   }
 
   public static final String ENV_NAME_REGEX = "[A-Za-z_][A-Za-z0-9_]*";
@@ -384,6 +390,26 @@ abstract public class Shell {
     }
 
     return winUtilsPath;
+  }
+
+  public static final boolean isBashSupported = checkIsBashSupported();
+  private static boolean checkIsBashSupported() {
+    if (Shell.WINDOWS) {
+      return false;
+    }
+
+    ShellCommandExecutor shexec;
+    boolean supported = true;
+    try {
+      String[] args = {"bash", "-c", "echo 1000"};
+      shexec = new ShellCommandExecutor(args);
+      shexec.execute();
+    } catch (IOException ioe) {
+      LOG.warn("Bash is not supported by the OS", ioe);
+      supported = false;
+    }
+
+    return supported;
   }
 
   public static final boolean isSetsidAvailable = isSetsidSupported();

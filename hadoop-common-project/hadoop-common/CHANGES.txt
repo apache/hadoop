@@ -1185,6 +1185,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12442. Display help if the command option to 'hdfs dfs' is not valid
     (nijel via vinayakumarb)
 
+    HADOOP-12441. Fixed shell-kill command behaviour to work correctly on some
+    Linux distributions after HADOOP-12317. (Wangda Tan via vinodkv)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

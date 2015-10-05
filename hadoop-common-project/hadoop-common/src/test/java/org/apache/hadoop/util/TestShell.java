@@ -163,9 +163,9 @@ public class TestShell extends TestCase {
       expectedCommand =
           new String[]{ Shell.WINUTILS, "task", "isAlive", anyPid };
     } else if (Shell.isSetsidAvailable) {
-      expectedCommand = new String[]{ "kill", "-0", "--", "-" + anyPid };
+      expectedCommand = new String[] { "bash", "-c", "kill -0 -- -" + anyPid };
     } else {
-      expectedCommand = new String[]{"kill", "-0", anyPid};
+      expectedCommand = new String[]{ "bash", "-c", "kill -0 " + anyPid };
     }
     Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
@@ -177,15 +177,14 @@ public class TestShell extends TestCase {
         anyPid);
 
     String[] expectedCommand;
+
     if (Shell.WINDOWS) {
       expectedCommand =
-          new String[]{ Shell.WINUTILS, "task", "kill", anyPid };
+          new String[]{ Shell.WINUTILS, "task", "isAlive", anyPid };
     } else if (Shell.isSetsidAvailable) {
-      expectedCommand =
-          new String[]{ "kill", "-" + anySignal, "--", "-" + anyPid };
+      expectedCommand = new String[] { "bash", "-c", "kill -9 -- -" + anyPid };
     } else {
-      expectedCommand =
-          new String[]{ "kill", "-" + anySignal, anyPid };
+      expectedCommand = new String[]{ "bash", "-c", "kill -9 " + anyPid };
     }
     Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
