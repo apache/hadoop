@@ -139,6 +139,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
 
   private NMNodeLabelsHandler nodeLabelsHandler;
+  private final NodeLabelsProvider nodeLabelsProvider;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -150,9 +151,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       NodeLabelsProvider nodeLabelsProvider) {
     super(NodeStatusUpdaterImpl.class.getName());
     this.healthChecker = healthChecker;
-    nodeLabelsHandler = createNMNodeLabelsHandler(nodeLabelsProvider);
     this.context = context;
     this.dispatcher = dispatcher;
+    this.nodeLabelsProvider = nodeLabelsProvider;
     this.metrics = metrics;
     this.recentlyStoppedContainers = new LinkedHashMap<ContainerId, Long>();
     this.pendingCompletedContainers =
@@ -184,7 +185,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.minimumResourceManagerVersion = conf.get(
         YarnConfiguration.NM_RESOURCEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION);
-    
+
+    nodeLabelsHandler = createNMNodeLabelsHandler(nodeLabelsProvider);
     // Default duration to track stopped containers on nodemanager is 10Min.
     // This should not be assigned very large value as it will remember all the
     // containers stopped during that time.
@@ -871,7 +873,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     if (nodeLabelsProvider == null) {
       return new NMCentralizedNodeLabelsHandler();
     } else {
-      return new NMDistributedNodeLabelsHandler(nodeLabelsProvider);
+      return new NMDistributedNodeLabelsHandler(nodeLabelsProvider,
+          this.getConfig());
     }
   }
 
@@ -936,16 +939,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private static class NMDistributedNodeLabelsHandler
       implements NMNodeLabelsHandler {
     private NMDistributedNodeLabelsHandler(
-        NodeLabelsProvider nodeLabelsProvider) {
+        NodeLabelsProvider nodeLabelsProvider, Configuration conf) {
       this.nodeLabelsProvider = nodeLabelsProvider;
+      this.resyncInterval =
+          conf.getLong(YarnConfiguration.NM_NODE_LABELS_RESYNC_INTERVAL,
+              YarnConfiguration.DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL);
     }
 
     private final NodeLabelsProvider nodeLabelsProvider;
     private Set<NodeLabel> previousNodeLabels;
-    private boolean updatedLabelsSentToRM;
-    private long lastNodeLabelSendFailMills = 0L;
-    // TODO : Need to check which conf to use.Currently setting as 1 min
-    private static final long FAILEDLABELRESENDINTERVAL = 60000;
+    private boolean areLabelsSentToRM;
+    private long lastNodeLabelSendMills = 0L;
+    private final long resyncInterval;
 
     @Override
     public Set<NodeLabel> getNodeLabelsForRegistration() {
@@ -987,22 +992,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       // take some action only on modification of labels
       boolean areNodeLabelsUpdated =
           nodeLabelsForHeartbeat.size() != previousNodeLabels.size()
-              || !previousNodeLabels.containsAll(nodeLabelsForHeartbeat)
-              || checkResendLabelOnFailure();
+              || !previousNodeLabels.containsAll(nodeLabelsForHeartbeat);
 
-      updatedLabelsSentToRM = false;
-      if (areNodeLabelsUpdated) {
+      areLabelsSentToRM = false;
+      // When nodelabels elapsed or resync time is elapsed will send again in
+      // heartbeat.
+      if (areNodeLabelsUpdated || isResyncIntervalElapsed()) {
         previousNodeLabels = nodeLabelsForHeartbeat;
         try {
-          LOG.info("Modified labels from provider: "
-              + StringUtils.join(",", previousNodeLabels));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Labels from provider: "
+                + StringUtils.join(",", previousNodeLabels));
+          }
           validateNodeLabels(nodeLabelsForHeartbeat);
-          updatedLabelsSentToRM = true;
+          areLabelsSentToRM = true;
         } catch (IOException e) {
           // set previous node labels to invalid set, so that invalid
           // labels are not verified for every HB, and send empty set
           // to RM to have same nodeLabels which was earlier set.
           nodeLabelsForHeartbeat = null;
+        } finally {
+          // Set last send time in heartbeat
+          lastNodeLabelSendMills = System.currentTimeMillis();
         }
       } else {
         // if nodelabels have not changed then no need to send
@@ -1033,16 +1044,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
 
     /*
-     * In case of failure when RM doesnt accept labels need to resend Labels to
-     * RM. This method checks whether we need to resend
+     * This method checks resync interval is elapsed or not.
      */
-    public boolean checkResendLabelOnFailure() {
-      if (lastNodeLabelSendFailMills > 0L) {
-        long lastFailTimePassed =
-            System.currentTimeMillis() - lastNodeLabelSendFailMills;
-        if (lastFailTimePassed > FAILEDLABELRESENDINTERVAL) {
-          return true;
-        }
+    public boolean isResyncIntervalElapsed() {
+      long elapsedTimeSinceLastSync =
+          System.currentTimeMillis() - lastNodeLabelSendMills;
+      if (elapsedTimeSinceLastSync > resyncInterval) {
+        return true;
       }
       return false;
     }
@@ -1050,15 +1058,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     @Override
     public void verifyRMHeartbeatResponseForNodeLabels(
         NodeHeartbeatResponse response) {
-      if (updatedLabelsSentToRM) {
-        if (response.getAreNodeLabelsAcceptedByRM()) {
-          lastNodeLabelSendFailMills = 0L;
-          LOG.info("Node Labels {" + StringUtils.join(",", previousNodeLabels)
+      if (areLabelsSentToRM) {
+        if (response.getAreNodeLabelsAcceptedByRM() && LOG.isDebugEnabled()) {
+          LOG.debug("Node Labels {" + StringUtils.join(",", previousNodeLabels)
               + "} were Accepted by RM ");
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
-          lastNodeLabelSendFailMills = System.currentTimeMillis();
           LOG.error(
               "NM node labels {" + StringUtils.join(",", previousNodeLabels)
                   + "} were not accepted by RM and message from RM : "

@@ -250,6 +250,7 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     };
 
     YarnConfiguration conf = createNMConfigForDistributeNodeLabels();
+    conf.setLong(YarnConfiguration.NM_NODE_LABELS_RESYNC_INTERVAL, 2000);
     nm.init(conf);
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
@@ -288,7 +289,29 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     assertTrue("If provider sends null then empty labels should be sent",
         resourceTracker.labels.isEmpty());
     resourceTracker.resetNMHeartbeatReceiveFlag();
-
+    // Since the resync interval is set to 2 sec in every alternate heartbeat
+    // the labels will be send along with heartbeat.In loop we sleep for 1 sec
+    // so that every sec 1 heartbeat is send.
+    int nullLabels = 0;
+    int nonNullLabels = 0;
+    dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P1"));
+    for (int i = 0; i < 5; i++) {
+      nm.getNodeStatusUpdater().sendOutofBandHeartBeat();
+      resourceTracker.waitTillHeartbeat();
+      if (null == resourceTracker.labels) {
+        nullLabels++;
+      } else {
+        Assert.assertEquals("In heartbeat PI labels should be send",
+            toNodeLabelSet("P1"), resourceTracker.labels);
+        nonNullLabels++;
+      }
+      resourceTracker.resetNMHeartbeatReceiveFlag();
+      Thread.sleep(1000);
+    }
+    Assert.assertTrue("More than one heartbeat with empty labels expected",
+        nullLabels > 1);
+    Assert.assertTrue("More than one heartbeat with labels expected",
+        nonNullLabels > 1);
     nm.stop();
   }
 

@@ -2139,6 +2139,15 @@
 
   <property>
     <description>
+   Interval at which node labels syncs with RM from NM.Will send loaded labels
+   every x intervals configured along with heartbeat from NM to RM.
+    </description>
+    <name>yarn.nodemanager.node-labels.resync-interval-ms</name>
+    <value>120000</value>
+  </property>
+
+  <property>
+    <description>
     When node labels "yarn.nodemanager.node-labels.provider"
     is of type "config" then ConfigurationNodeLabelsProvider fetches the
     labels this parameter.
