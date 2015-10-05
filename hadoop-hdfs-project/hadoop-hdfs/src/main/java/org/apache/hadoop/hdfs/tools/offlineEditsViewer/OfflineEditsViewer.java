@@ -69,7 +69,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
       "                       edits file)\n" +
       "-h,--help              Display usage information and exit\n" +
       "-f,--fix-txids         Renumber the transaction IDs in the input,\n" +
-      "                       so that there are no gaps or invalid " +
+      "                       so that there are no gaps or invalid\n" +
       "                       transaction IDs.\n" +
       "-r,--recover           When reading binary edit logs, use recovery \n" +
       "                       mode.  This will give you the chance to skip \n" +
