@@ -56,7 +56,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve);
+        eventFilters, fieldsToRetrieve, false);
   }
 
   public FlowRunEntityReader(String userId, String clusterId,
