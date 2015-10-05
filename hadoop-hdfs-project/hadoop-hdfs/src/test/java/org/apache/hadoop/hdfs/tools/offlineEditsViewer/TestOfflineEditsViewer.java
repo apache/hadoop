@@ -100,10 +100,17 @@ public class TestOfflineEditsViewer {
     LOG.info("Generated edits=" + edits);
     String editsParsedXml = folder.newFile("editsParsed.xml").getAbsolutePath();
     String editsReparsed = folder.newFile("editsParsed").getAbsolutePath();
+    // capital case extension
+    String editsParsedXML_caseInSensitive =
+        folder.newFile("editsRecoveredParsed.XML").getAbsolutePath();
 
     // parse to XML then back to binary
     assertEquals(0, runOev(edits, editsParsedXml, "xml", false));
+    assertEquals(0, runOev(edits, editsParsedXML_caseInSensitive, "xml", false));
     assertEquals(0, runOev(editsParsedXml, editsReparsed, "binary", false));
+    assertEquals(0,
+        runOev(editsParsedXML_caseInSensitive, editsReparsed, "binary", false));
+
 
     // judgment time
     assertTrue("Edits " + edits + " should have all op codes",
@@ -114,6 +121,7 @@ public class TestOfflineEditsViewer {
         "Generated edits and reparsed (bin to XML to bin) should be same",
         filesEqualIgnoreTrailingZeros(edits, editsReparsed));
   }
+
 
   @Test
   public void testRecoveryMode() throws IOException {
