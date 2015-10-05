@@ -25,17 +25,18 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.UnmodifiableIterator;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -83,16 +84,14 @@ class HostFileManager {
   @VisibleForTesting
   static InetSocketAddress parseEntry(String type, String fn, String line) {
     try {
-      URI uri = new URI("dummy", line, null, null, null);
-      int port = uri.getPort() == -1 ? 0 : uri.getPort();
-      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), port);
+      InetSocketAddress addr = NetUtils.createSocketAddr(line, 0);
       if (addr.isUnresolved()) {
         LOG.warn(String.format("Failed to resolve address `%s` in `%s`. " +
                 "Ignoring in the %s list.", line, fn, type));
         return null;
       }
       return addr;
-    } catch (URISyntaxException e) {
+    } catch (IllegalArgumentException e) {
       LOG.warn(String.format("Failed to parse `%s` in `%s`. " + "Ignoring in " +
               "the %s list.", line, fn, type));
     }
@@ -227,7 +226,7 @@ class HostFileManager {
         @Override
         public String apply(@Nullable InetSocketAddress addr) {
           assert addr != null;
-          return addr.getAddress().getHostAddress() + ":" + addr.getPort();
+          return NetUtils.getSocketAddressString(addr);
         }
       }));
       return sb.append(")").toString();

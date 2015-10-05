@@ -617,7 +617,7 @@ public class TestNetUtils {
   @Test
   public void testNormalizeHostName() {	
     List<String> hosts = Arrays.asList(new String[] {"127.0.0.1",
-        "localhost", "1.kanyezone.appspot.com", "UnknownHost123"});
+        "localhost", "1.kanyezone.appspot.com", "UnknownHost123.invalid"});
     List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
     // when ipaddress is normalized, same address is expected in return
     assertEquals(normalizedHosts.get(0), hosts.get(0));
@@ -639,6 +639,8 @@ public class TestNetUtils {
     assertNull(NetUtils.getHostNameOfIP("127.0.0.1:"));   // no port
     assertNull(NetUtils.getHostNameOfIP("127.0.0.1:-1")); // bogus port
     assertNull(NetUtils.getHostNameOfIP("127.0.0.1:A"));  // bogus port
+    assertNotNull(NetUtils.getHostNameOfIP("[::1]"));
+    assertNotNull(NetUtils.getHostNameOfIP("[::1]:1"));
     assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1"));
     assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1:1"));
   }

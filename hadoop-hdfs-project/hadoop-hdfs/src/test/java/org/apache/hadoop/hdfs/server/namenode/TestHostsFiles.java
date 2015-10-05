@@ -112,8 +112,7 @@ public class TestHostsFiles {
       BlockLocation locs[] = fs.getFileBlockLocations(
           fs.getFileStatus(filePath), 0, Long.MAX_VALUE);
       String name = locs[0].getNames()[0];
-      String names = name + "\n" + "localhost:42\n";
-      LOG.info("adding '" + names + "' to exclude file " + excludeFile.toUri().getPath());
+      LOG.info("adding '" + name + "' to exclude file " + excludeFile.toUri().getPath());
       DFSTestUtil.writeFile(localFileSys, excludeFile, name);
       ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
       DFSTestUtil.waitForDecommission(fs, name);
@@ -150,7 +149,8 @@ public class TestHostsFiles {
     assertTrue(localFileSys.mkdirs(dir));
     StringBuilder includeHosts = new StringBuilder();
     includeHosts.append("localhost:52").append("\n").append("127.0.0.1:7777")
-        .append("\n");
+        .append("\n").append("[::1]:42").append("\n")
+        .append("[0:0:0:0:0:0:0:1]:24").append("\n");
     DFSTestUtil.writeFile(localFileSys, excludeFile, "");
     DFSTestUtil.writeFile(localFileSys, includeFile, includeHosts.toString());
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
@@ -160,7 +160,7 @@ public class TestHostsFiles {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final FSNamesystem ns = cluster.getNameNode().getNamesystem();
-      assertTrue(ns.getNumDeadDataNodes() == 2);
+      assertTrue(ns.getNumDeadDataNodes() == 4);
       assertTrue(ns.getNumLiveDataNodes() == 0);
 
       // Testing using MBeans
@@ -168,7 +168,7 @@ public class TestHostsFiles {
       ObjectName mxbeanName = new ObjectName(
           "Hadoop:service=NameNode,name=FSNamesystemState");
       String nodes = mbs.getAttribute(mxbeanName, "NumDeadDataNodes") + "";
-      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 2);
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 4);
       assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumLiveDataNodes") == 0);
     } finally {
       if (cluster != null) {
