@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +27,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -37,6 +38,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineReaderUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Timeline entity reader for application entities that are stored in the
@@ -57,7 +60,7 @@ class ApplicationEntityReader extends GenericEntityReader {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve);
+        eventFilters, fieldsToRetrieve, true);
   }
 
   public ApplicationEntityReader(String userId, String clusterId,
@@ -86,10 +89,63 @@ class ApplicationEntityReader extends GenericEntityReader {
   }
 
   @Override
+  protected void validateParams() {
+    Preconditions.checkNotNull(userId, "userId shouldn't be null");
+    Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
+    Preconditions.checkNotNull(entityType, "entityType shouldn't be null");
+    if (singleEntityRead) {
+      Preconditions.checkNotNull(appId, "appId shouldn't be null");
+    } else {
+      Preconditions.checkNotNull(flowId, "flowId shouldn't be null");
+    }
+  }
+
+  @Override
+  protected void augmentParams(Configuration hbaseConf, Connection conn)
+      throws IOException {
+    if (singleEntityRead) {
+      if (flowId == null || flowRunId == null) {
+        FlowContext context =
+            lookupFlowContext(clusterId, appId, hbaseConf, conn);
+        flowId = context.flowId;
+        flowRunId = context.flowRunId;
+      }
+    }
+    if (fieldsToRetrieve == null) {
+      fieldsToRetrieve = EnumSet.noneOf(Field.class);
+    }
+    if (!singleEntityRead) {
+      if (limit == null || limit < 0) {
+        limit = TimelineReader.DEFAULT_LIMIT;
+      }
+      if (createdTimeBegin == null) {
+        createdTimeBegin = DEFAULT_BEGIN_TIME;
+      }
+      if (createdTimeEnd == null) {
+        createdTimeEnd = DEFAULT_END_TIME;
+      }
+      if (modifiedTimeBegin == null) {
+        modifiedTimeBegin = DEFAULT_BEGIN_TIME;
+      }
+      if (modifiedTimeEnd == null) {
+        modifiedTimeEnd = DEFAULT_END_TIME;
+      }
+    }
+  }
+
+  @Override
   protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
-    throw new UnsupportedOperationException(
-        "we don't support multiple apps query");
+    Scan scan = new Scan();
+    if (flowRunId != null) {
+      scan.setRowPrefixFilter(ApplicationRowKey.
+          getRowKeyPrefix(clusterId, userId, flowId, flowRunId));
+    } else {
+      scan.setRowPrefixFilter(ApplicationRowKey.
+          getRowKeyPrefix(clusterId, userId, flowId));
+    }
+    scan.setFilter(new PageFilter(limit));
+    return table.getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override
