@@ -43,6 +43,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -595,6 +596,17 @@ public class NodeManager extends CompositeService
 
   private void initAndStartNodeManager(Configuration conf, boolean hasToReboot) {
     try {
+      // Failed to start if we're a Unix based system but we don't have bash.
+      // Bash is necessary to launch containers under Unix-based systems.
+      if (!Shell.WINDOWS) {
+        if (!Shell.isBashSupported) {
+          String message =
+              "Failing NodeManager start since we're on a "
+                  + "Unix-based system but bash doesn't seem to be available.";
+          LOG.fatal(message);
+          throw new YarnRuntimeException(message);
+        }
+      }
 
       // Remove the old hook if we are rebooting.
       if (hasToReboot && null != nodeManagerShutdownHook) {
