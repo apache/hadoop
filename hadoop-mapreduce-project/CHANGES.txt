@@ -597,6 +597,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6503. archive-logs tool should use HADOOP_PREFIX instead
    of HADOOP_HOME (rkanter)
 
+   MAPREDUCE-6302. Preempt reducers after a configurable timeout irrespective 
+   of headroom. (kasha)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
