@@ -118,6 +118,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4210. HBase reader throws NPE if Get returns no rows (Varun Saxena
     via vrushali)
 
+    YARN-3864. Implement support for querying single app and all apps for a
+    flow run (Varun Saxena via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via

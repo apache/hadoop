@@ -20,9 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -60,7 +58,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve);
+        eventFilters, fieldsToRetrieve, true);
   }
 
   public FlowActivityEntityReader(String userId, String clusterId,
@@ -76,35 +74,6 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   @Override
   protected BaseTable<?> getTable() {
     return FLOW_ACTIVITY_TABLE;
-  }
-
-  /**
-   * Since this is strictly sorted by the row key, it is sufficient to collect
-   * the first results as specified by the limit.
-   */
-  @Override
-  public Set<TimelineEntity> readEntities(Configuration hbaseConf,
-      Connection conn) throws IOException {
-    validateParams();
-    augmentParams(hbaseConf, conn);
-
-    NavigableSet<TimelineEntity> entities = new TreeSet<>();
-    ResultScanner results = getResults(hbaseConf, conn);
-    try {
-      for (Result result : results) {
-        TimelineEntity entity = parseEntity(result);
-        if (entity == null) {
-          continue;
-        }
-        entities.add(entity);
-        if (entities.size() == limit) {
-          break;
-        }
-      }
-      return entities;
-    } finally {
-      results.close();
-    }
   }
 
   @Override
