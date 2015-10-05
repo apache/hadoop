@@ -486,6 +486,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4095. Avoid sharing AllocatorPerContext object in LocalDirAllocator
     between ShuffleHandler and LocalDirsHandlerService. (Zhihai Xu via jlowe)
 
+    YARN-4176. Resync NM nodelabels with RM periodically for distributed nodelabels. 
+    (Bibin A Chundatt via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
