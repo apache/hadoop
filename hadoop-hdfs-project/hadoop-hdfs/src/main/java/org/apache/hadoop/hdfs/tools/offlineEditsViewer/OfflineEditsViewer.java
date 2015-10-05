@@ -136,7 +136,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
         visitor = OfflineEditsVisitorFactory.getEditsVisitor(
             outputFileName, processor, flags.getPrintToScreen());
       }
-      boolean xmlInput = inputFileName.endsWith(".xml");
+      boolean xmlInput = inputFileName.toLowerCase().endsWith(".xml");
       OfflineEditsLoader loader = OfflineEditsLoaderFactory.
           createLoader(visitor, inputFileName, xmlInput, flags);
       loader.loadEdits();
