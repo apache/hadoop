@@ -91,7 +91,7 @@ class TimelineEntityReaderFactory {
           appId, entityType, limit, createdTimeBegin, createdTimeEnd,
           modifiedTimeBegin, modifiedTimeEnd, relatesTo, isRelatedTo,
           infoFilters, configFilters, metricFilters, eventFilters,
-          fieldsToRetrieve);
+          fieldsToRetrieve, false);
     }
   }
 }

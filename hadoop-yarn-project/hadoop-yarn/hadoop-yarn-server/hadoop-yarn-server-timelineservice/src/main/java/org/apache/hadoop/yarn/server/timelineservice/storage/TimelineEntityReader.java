@@ -74,6 +74,14 @@ abstract class TimelineEntityReader {
   protected BaseTable<?> table;
 
   /**
+   * Specifies whether keys for this table are sorted in a manner where entities
+   * can be retrieved by created time. If true, it will be sufficient to collect
+   * the first results as specified by the limit. Otherwise all matched entities
+   * will be fetched and then limit applied.
+   */
+  private boolean sortedKeys = false;
+
+  /**
    * Instantiates a reader for multiple-entity reads.
    */
   protected TimelineEntityReader(String userId, String clusterId,
@@ -83,8 +91,9 @@ abstract class TimelineEntityReader {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
-      EnumSet<Field> fieldsToRetrieve) {
+      EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
     this.singleEntityRead = false;
+    this.sortedKeys = sortedKeys;
     this.userId = userId;
     this.clusterId = clusterId;
     this.flowId = flowId;
@@ -162,8 +171,14 @@ abstract class TimelineEntityReader {
           continue;
         }
         entities.add(entity);
-        if (entities.size() > limit) {
-          entities.pollLast();
+        if (!sortedKeys) {
+          if (entities.size() > limit) {
+            entities.pollLast();
+          }
+        } else {
+          if (entities.size() == limit) {
+            break;
+          }
         }
       }
       return entities;

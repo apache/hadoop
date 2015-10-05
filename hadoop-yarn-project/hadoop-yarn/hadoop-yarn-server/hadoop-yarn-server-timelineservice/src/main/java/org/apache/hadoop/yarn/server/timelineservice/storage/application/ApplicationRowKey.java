@@ -61,6 +61,40 @@ public class ApplicationRowKey {
   }
 
   /**
+   * Constructs a row key prefix for the application table as follows:
+   * {@code clusterId!userName!flowId!}
+   *
+   * @param clusterId
+   * @param userId
+   * @param flowId
+   * @return byte array with the row key prefix
+   */
+  public static byte[] getRowKeyPrefix(String clusterId, String userId,
+      String flowId) {
+    byte[] first = Bytes.toBytes(
+        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowId));
+    return Separator.QUALIFIERS.join(first, new byte[0]);
+  }
+
+  /**
+   * Constructs a row key prefix for the application table as follows:
+   * {@code clusterId!userName!flowId!flowRunId!}
+   *
+   * @param clusterId
+   * @param userId
+   * @param flowId
+   * @param flowRunId
+   * @return byte array with the row key prefix
+   */
+  public static byte[] getRowKeyPrefix(String clusterId, String userId,
+      String flowId, Long flowRunId) {
+    byte[] first = Bytes.toBytes(
+        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowId));
+    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
+    return Separator.QUALIFIERS.join(first, second, new byte[0]);
+  }
+
+  /**
    * Constructs a row key for the application table as follows:
    * {@code clusterId!userName!flowId!flowRunId!AppId}
    *

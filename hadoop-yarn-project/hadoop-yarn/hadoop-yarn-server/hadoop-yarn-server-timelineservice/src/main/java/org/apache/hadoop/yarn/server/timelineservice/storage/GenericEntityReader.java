@@ -61,8 +61,8 @@ class GenericEntityReader extends TimelineEntityReader {
   private static final EntityTable ENTITY_TABLE = new EntityTable();
   private static final Log LOG = LogFactory.getLog(GenericEntityReader.class);
 
-  private static final long DEFAULT_BEGIN_TIME = 0L;
-  private static final long DEFAULT_END_TIME = Long.MAX_VALUE;
+  protected static final long DEFAULT_BEGIN_TIME = 0L;
+  protected static final long DEFAULT_END_TIME = Long.MAX_VALUE;
 
   /**
    * Used to look up the flow context.
@@ -76,11 +76,11 @@ class GenericEntityReader extends TimelineEntityReader {
       Map<String, Set<String>> relatesTo, Map<String, Set<String>> isRelatedTo,
       Map<String, Object> infoFilters, Map<String, String> configFilters,
       Set<String> metricFilters, Set<String> eventFilters,
-      EnumSet<Field> fieldsToRetrieve) {
+      EnumSet<Field> fieldsToRetrieve, boolean sortedKeys) {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve);
+        eventFilters, fieldsToRetrieve, sortedKeys);
   }
 
   public GenericEntityReader(String userId, String clusterId,
@@ -97,7 +97,7 @@ class GenericEntityReader extends TimelineEntityReader {
     return ENTITY_TABLE;
   }
 
-  private FlowContext lookupFlowContext(String clusterId, String appId,
+  protected FlowContext lookupFlowContext(String clusterId, String appId,
       Configuration hbaseConf, Connection conn) throws IOException {
     byte[] rowKey = AppToFlowRowKey.getRowKey(clusterId, appId);
     Get get = new Get(rowKey);
@@ -113,9 +113,9 @@ class GenericEntityReader extends TimelineEntityReader {
     }
   }
 
-  private static class FlowContext {
-    private final String flowId;
-    private final Long flowRunId;
+  protected static class FlowContext {
+    protected final String flowId;
+    protected final Long flowRunId;
     public FlowContext(String flowId, Long flowRunId) {
       this.flowId = flowId;
       this.flowRunId = flowRunId;
