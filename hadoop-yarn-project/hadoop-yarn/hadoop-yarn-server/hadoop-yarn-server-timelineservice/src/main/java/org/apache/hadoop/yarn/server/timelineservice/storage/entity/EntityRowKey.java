@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 /**
  * Represents a rowkey for the entity table.
@@ -90,9 +90,9 @@ public class EntityRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
-    byte[] third = Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId));
-    return Separator.QUALIFIERS.join(first, second, third);
+    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
+    byte[] third = TimelineStorageUtils.encodeAppId(appId);
+    return Separator.QUALIFIERS.join(first, second, third, new byte[0]);
   }
 
   /**
@@ -114,10 +114,11 @@ public class EntityRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
-    byte[] third =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, entityType, ""));
-    return Separator.QUALIFIERS.join(first, second, third);
+    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
+    byte[] third = TimelineStorageUtils.encodeAppId(appId);
+    byte[] fourth =
+        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(entityType, ""));
+    return Separator.QUALIFIERS.join(first, second, third, fourth);
   }
 
   /**
@@ -141,11 +142,11 @@ public class EntityRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
-    byte[] third =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(appId, entityType,
-            entityId));
-    return Separator.QUALIFIERS.join(first, second, third);
+    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
+    byte[] third = TimelineStorageUtils.encodeAppId(appId);
+    byte[] fourth =
+        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(entityType, entityId));
+    return Separator.QUALIFIERS.join(first, second, third, fourth);
   }
 
   /**
@@ -166,9 +167,8 @@ public class EntityRowKey {
     String flowId =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
     long flowRunId =
-        TimelineWriterUtils.invert(Bytes.toLong(rowKeyComponents[3]));
-    String appId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[4]));
+        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
+    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[4]);
     String entityType =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[5]));
     String entityId =

@@ -168,6 +168,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4058. Miscellaneous issues in NodeManager project (Naganarasimha G R
     via sjlee)
 
+    YARN-4178. [storage implementation] app id as string in row keys can cause
+    incorrect ordering (Varun Saxena via sjlee)
+
 Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
