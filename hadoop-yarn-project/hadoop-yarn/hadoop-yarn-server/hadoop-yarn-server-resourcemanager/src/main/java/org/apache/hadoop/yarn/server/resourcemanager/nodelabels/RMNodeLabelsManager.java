@@ -163,19 +163,55 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     try {
       writeLock.lock();
 
-      // get nodesCollection before edition
-      Map<String, Host> before = cloneNodeMap(replaceLabelsToNode.keySet());
+      Map<NodeId, Set<String>> effectiveModifiedLabelMappings =
+          getModifiedNodeLabelsMappings(replaceLabelsToNode);
 
-      super.replaceLabelsOnNode(replaceLabelsToNode);
+      if(effectiveModifiedLabelMappings.isEmpty()) {
+        LOG.info("No Modified Node label Mapping to replace");
+        return;
+      }
+
+      // get nodesCollection before edition
+      Map<String, Host> before =
+          cloneNodeMap(effectiveModifiedLabelMappings.keySet());
+
+      super.replaceLabelsOnNode(effectiveModifiedLabelMappings);
 
       // get nodesCollection after edition
-      Map<String, Host> after = cloneNodeMap(replaceLabelsToNode.keySet());
+      Map<String, Host> after =
+          cloneNodeMap(effectiveModifiedLabelMappings.keySet());
 
       // update running nodes resources
       updateResourceMappings(before, after);
     } finally {
       writeLock.unlock();
     }
+  }
+
+  private Map<NodeId, Set<String>> getModifiedNodeLabelsMappings(
+      Map<NodeId, Set<String>> replaceLabelsToNode) {
+    Map<NodeId, Set<String>> effectiveModifiedLabels = new HashMap<>();
+    for (Entry<NodeId, Set<String>> nodeLabelMappingEntry : replaceLabelsToNode
+        .entrySet()) {
+      NodeId nodeId = nodeLabelMappingEntry.getKey();
+      Set<String> modifiedNodeLabels = nodeLabelMappingEntry.getValue();
+      Set<String> labelsBeforeModification = null;
+      Host host = nodeCollections.get(nodeId.getHost());
+      if (host == null) {
+        effectiveModifiedLabels.put(nodeId, modifiedNodeLabels);
+        continue;
+      } else if (nodeId.getPort() == WILDCARD_PORT) {
+        labelsBeforeModification = host.labels;
+      } else if (host.nms.get(nodeId) != null) {
+        labelsBeforeModification = host.nms.get(nodeId).labels;
+      }
+      if (labelsBeforeModification == null
+          || labelsBeforeModification.size() != modifiedNodeLabels.size()
+          || !labelsBeforeModification.containsAll(modifiedNodeLabels)) {
+        effectiveModifiedLabels.put(nodeId, modifiedNodeLabels);
+      }
+    }
+    return effectiveModifiedLabels;
   }
 
   /*
