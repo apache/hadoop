@@ -798,6 +798,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12452. Fix tracing documention reflecting the update to htrace-4
     (Masatake Iwasaki via Colin P. McCabe)
 
+    HADOOP-12350. WASB Logging: Improve WASB Logging around deletes, reads and
+    writes (Dushyanth via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
