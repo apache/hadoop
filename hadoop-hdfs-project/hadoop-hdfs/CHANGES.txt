@@ -1498,6 +1498,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9154. [OEV-Doc] : Document does not mention about "-f" and "-r" options
     (nijel via vinayakumarb)
 
+    HDFS-7899. Improve EOF error message (Jagadesh Kiran N via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

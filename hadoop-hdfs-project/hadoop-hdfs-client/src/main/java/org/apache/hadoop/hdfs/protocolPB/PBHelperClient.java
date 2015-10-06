@@ -395,7 +395,8 @@ public class PBHelperClient {
       throws IOException {
     final int firstByte = input.read();
     if (firstByte == -1) {
-      throw new EOFException("Premature EOF: no length prefix available");
+      throw new EOFException(
+          "Unexpected EOF while trying to read response from server");
     }
 
     int size = CodedInputStream.readRawVarint32(firstByte, input);
