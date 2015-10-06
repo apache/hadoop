@@ -44,8 +44,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlow
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineReaderUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
@@ -220,7 +219,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.IS_RELATED_TO) || checkIsRelatedTo) {
       readRelationship(entity, result, EntityColumnPrefix.IS_RELATED_TO, true);
-      if (checkIsRelatedTo && !TimelineReaderUtils.matchRelations(
+      if (checkIsRelatedTo && !TimelineStorageUtils.matchRelations(
           entity.getIsRelatedToEntities(), isRelatedTo)) {
         return null;
       }
@@ -235,7 +234,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.RELATES_TO) || checkRelatesTo) {
       readRelationship(entity, result, EntityColumnPrefix.RELATES_TO, false);
-      if (checkRelatesTo && !TimelineReaderUtils.matchRelations(
+      if (checkRelatesTo && !TimelineStorageUtils.matchRelations(
           entity.getRelatesToEntities(), relatesTo)) {
         return null;
       }
@@ -251,7 +250,7 @@ class GenericEntityReader extends TimelineEntityReader {
         fieldsToRetrieve.contains(Field.INFO) || checkInfo) {
       readKeyValuePairs(entity, result, EntityColumnPrefix.INFO, false);
       if (checkInfo &&
-          !TimelineReaderUtils.matchFilters(entity.getInfo(), infoFilters)) {
+          !TimelineStorageUtils.matchFilters(entity.getInfo(), infoFilters)) {
         return null;
       }
       if (!fieldsToRetrieve.contains(Field.ALL) &&
@@ -265,7 +264,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.CONFIGS) || checkConfigs) {
       readKeyValuePairs(entity, result, EntityColumnPrefix.CONFIG, true);
-      if (checkConfigs && !TimelineReaderUtils.matchFilters(
+      if (checkConfigs && !TimelineStorageUtils.matchFilters(
           entity.getConfigs(), configFilters)) {
         return null;
       }
@@ -280,7 +279,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.EVENTS) || checkEvents) {
       readEvents(entity, result, false);
-      if (checkEvents && !TimelineReaderUtils.matchEventFilters(
+      if (checkEvents && !TimelineStorageUtils.matchEventFilters(
           entity.getEvents(), eventFilters)) {
         return null;
       }
@@ -295,7 +294,7 @@ class GenericEntityReader extends TimelineEntityReader {
     if (fieldsToRetrieve.contains(Field.ALL) ||
         fieldsToRetrieve.contains(Field.METRICS) || checkMetrics) {
       readMetrics(entity, result, EntityColumnPrefix.METRIC);
-      if (checkMetrics && !TimelineReaderUtils.matchMetricFilters(
+      if (checkMetrics && !TimelineStorageUtils.matchMetricFilters(
           entity.getMetrics(), metricFilters)) {
         return null;
       }
@@ -365,7 +364,7 @@ class GenericEntityReader extends TimelineEntityReader {
       // the column name is of the form "eventId=timestamp=infoKey"
       if (karr.length == 3) {
         String id = Bytes.toString(karr[0]);
-        long ts = TimelineWriterUtils.invert(Bytes.toLong(karr[1]));
+        long ts = TimelineStorageUtils.invertLong(Bytes.toLong(karr[1]));
         String key = Separator.VALUES.joinEncoded(id, Long.toString(ts));
         TimelineEvent event = eventsMap.get(key);
         if (event == null) {

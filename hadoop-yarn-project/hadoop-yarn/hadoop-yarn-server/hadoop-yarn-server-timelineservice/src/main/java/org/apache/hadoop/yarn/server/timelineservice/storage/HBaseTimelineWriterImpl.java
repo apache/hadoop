@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlow
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
@@ -125,7 +125,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
       // if the entity is the application, the destination is the application
       // table
-      boolean isApplication = TimelineWriterUtils.isApplicationEntity(te);
+      boolean isApplication = TimelineStorageUtils.isApplicationEntity(te);
       byte[] rowKey = isApplication ?
           ApplicationRowKey.getRowKey(clusterId, userId, flowName, flowRunId,
               appId) :
@@ -139,7 +139,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       storeRelations(rowKey, te, isApplication);
 
       if (isApplication) {
-        if (TimelineWriterUtils.isApplicationCreated(te)) {
+        if (TimelineStorageUtils.isApplicationCreated(te)) {
           onApplicationCreated(clusterId, userId, flowName, flowVersion,
               flowRunId, appId, te);
         }
@@ -149,7 +149,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         // if application has finished, store it's finish time and write final
         // values
         // of all metrics
-        if (TimelineWriterUtils.isApplicationFinished(te)) {
+        if (TimelineStorageUtils.isApplicationFinished(te)) {
           onApplicationFinished(clusterId, userId, flowName, flowVersion,
               flowRunId, appId, te);
         }
@@ -234,7 +234,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     Attribute attributeAppId = AggregationCompactionDimension.APPLICATION_ID
         .getAttribute(appId);
     FlowRunColumn.MAX_END_TIME.store(rowKey, flowRunTable, null,
-        TimelineWriterUtils.getApplicationFinishedTime(te), attributeAppId);
+        TimelineStorageUtils.getApplicationFinishedTime(te), attributeAppId);
 
     // store the final value of metrics since application has finished
     Set<TimelineMetric> metrics = te.getMetrics();
@@ -406,9 +406,9 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
             }
             byte[] columnQualifierFirst =
                 Bytes.toBytes(Separator.VALUES.encode(eventId));
-            byte[] columnQualifierWithTsBytes =
-                Separator.VALUES.join(columnQualifierFirst,
-                    Bytes.toBytes(TimelineWriterUtils.invert(eventTimestamp)));
+            byte[] columnQualifierWithTsBytes = Separator.VALUES.
+                join(columnQualifierFirst, Bytes.toBytes(
+                    TimelineStorageUtils.invertLong(eventTimestamp)));
             Map<String, Object> eventInfo = event.getInfo();
             if ((eventInfo == null) || (eventInfo.size() == 0)) {
               // add separator since event key is empty
@@ -418,11 +418,11 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
               if (isApplication) {
                 ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
                     compoundColumnQualifierBytes, null,
-                      TimelineWriterUtils.EMPTY_BYTES);
+                      TimelineStorageUtils.EMPTY_BYTES);
               } else {
                 EntityColumnPrefix.EVENT.store(rowKey, entityTable,
                     compoundColumnQualifierBytes, null,
-                    TimelineWriterUtils.EMPTY_BYTES);
+                      TimelineStorageUtils.EMPTY_BYTES);
               }
             } else {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {

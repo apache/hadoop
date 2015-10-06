@@ -304,7 +304,7 @@ public enum Separator {
    * @return source split by this separator.
    */
   public byte[][] split(byte[] source, int limit) {
-    return TimelineWriterUtils.split(source, this.bytes, limit);
+    return TimelineStorageUtils.split(source, this.bytes, limit);
   }
 
   /**
@@ -315,6 +315,6 @@ public enum Separator {
    * @return source split by this separator.
    */
   public byte[][] split(byte[] source) {
-    return TimelineWriterUtils.split(source, this.bytes);
+    return TimelineStorageUtils.split(source, this.bytes);
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 /**
  * Represents a rowkey for the app_flow table.
@@ -49,7 +50,9 @@ public class AppToFlowRowKey {
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String appId) {
-    return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, appId));
+    byte[] first = Bytes.toBytes(clusterId);
+    byte[] second = TimelineStorageUtils.encodeAppId(appId);
+    return Separator.QUALIFIERS.join(first, second);
   }
 
   /**
@@ -64,7 +67,7 @@ public class AppToFlowRowKey {
     }
 
     String clusterId = Bytes.toString(rowKeyComponents[0]);
-    String appId = Bytes.toString(rowKeyComponents[1]);
+    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[1]);
     return new AppToFlowRowKey(clusterId, appId);
   }
 }
