@@ -45,8 +45,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,7 +61,8 @@ import org.apache.hadoop.fs.azure.metrics.ResponseReceivedMetricUpdater;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.mortbay.util.ajax.JSON;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.OperationContext;
@@ -104,8 +103,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   static final String DEFAULT_STORAGE_EMULATOR_ACCOUNT_NAME = "storageemulator";
   static final String STORAGE_EMULATOR_ACCOUNT_NAME_PROPERTY_NAME = "fs.azure.storage.emulator.account.name";
 
-  public static final Log LOG = LogFactory
-      .getLog(AzureNativeFileSystemStore.class);
+  public static final Logger LOG = LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
 
   private StorageInterface storageInteractionLayer;
   private CloudBlobDirectoryWrapper rootDirectory;
@@ -441,7 +439,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
     // Extract the directories that should contain page blobs
     pageBlobDirs = getDirectorySet(KEY_PAGE_BLOB_DIRECTORIES);
-    LOG.debug("Page blob directories:  " + setToString(pageBlobDirs));
+    LOG.debug("Page blob directories:  {}", setToString(pageBlobDirs));
 
     // Extract directories that should have atomic rename applied.
     atomicRenameDirs = getDirectorySet(KEY_ATOMIC_RENAME_DIRECTORIES);
@@ -455,7 +453,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     } catch (URISyntaxException e) {
       LOG.warn("Unable to initialize HBase root as an atomic rename directory.");
     }
-    LOG.debug("Atomic rename directories:  " + setToString(atomicRenameDirs));
+    LOG.debug("Atomic rename directories: {} ", setToString(atomicRenameDirs));
   }
 
   /**
@@ -686,16 +684,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     OperationContext.setLoggingEnabledByDefault(sessionConfiguration.
         getBoolean(KEY_ENABLE_STORAGE_CLIENT_LOGGING, false));
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String
-          .format(
-              "AzureNativeFileSystemStore init. Settings=%d,%b,%d,{%d,%d,%d,%d},{%b,%f,%f}",
-              concurrentWrites, tolerateOobAppends,
-              ((storageConnectionTimeout > 0) ? storageConnectionTimeout
-                  : STORAGE_CONNECTION_TIMEOUT_DEFAULT), minBackoff,
-              deltaBackoff, maxBackoff, maxRetries, selfThrottlingEnabled,
-              selfThrottlingReadFactor, selfThrottlingWriteFactor));
-    }
+    LOG.debug(
+        "AzureNativeFileSystemStore init. Settings={},{},{},{{},{},{},{}},{{},{},{}}",
+        concurrentWrites, tolerateOobAppends,
+        ((storageConnectionTimeout > 0) ? storageConnectionTimeout
+          : STORAGE_CONNECTION_TIMEOUT_DEFAULT), minBackoff,
+        deltaBackoff, maxBackoff, maxRetries, selfThrottlingEnabled,
+        selfThrottlingReadFactor, selfThrottlingWriteFactor);
   }
 
   /**
@@ -1075,8 +1070,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           }
         }
       } catch (URISyntaxException e) {
-        LOG.info(String.format(
-                   "URI syntax error creating URI for %s", dir));
+        LOG.info("URI syntax error creating URI for {}", dir);
       }
     }
     return false;
@@ -1843,9 +1837,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       throw new AssertionError(errMsg);
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Retrieving metadata for " + key);
-    }
+    LOG.debug("Retrieving metadata for {}", key);
 
     try {
       if (checkContainer(ContainerAccessType.PureRead) == ContainerState.DoesntExist) {
@@ -1869,10 +1861,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // exists.
       if (null != blob && blob.exists(getInstrumentedContext())) {
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Found " + key
-              + " as an explicit blob. Checking if it's a file or folder.");
-        }
+        LOG.debug("Found {} as an explicit blob. Checking if it's a file or folder.", key);
 
         // The blob exists, so capture the metadata from the blob
         // properties.
@@ -1880,15 +1869,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         BlobProperties properties = blob.getProperties();
 
         if (retrieveFolderAttribute(blob)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(key + " is a folder blob.");
-          }
+          LOG.debug("{} is a folder blob.", key);
           return new FileMetadata(key, properties.getLastModified().getTime(),
               getPermissionStatus(blob), BlobMaterialization.Explicit);
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(key + " is a normal blob.");
-          }
+
+          LOG.debug("{} is a normal blob.", key);
 
           return new FileMetadata(
               key, // Always return denormalized key with metadata.
@@ -1914,8 +1900,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       for (ListBlobItem blobItem : objects) {
         if (blobItem instanceof CloudBlockBlobWrapper
             || blobItem instanceof CloudPageBlobWrapper) {
-          LOG.debug("Found blob as a directory-using this file under it to infer its properties "
-              + blobItem.getUri());
+          LOG.debug("Found blob as a directory-using this file under it to infer its properties {}",
+              blobItem.getUri());
 
           blob = (CloudBlobWrapper) blobItem;
           // The key specifies a directory. Create a FileMetadata object which
@@ -2326,6 +2312,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       blob.delete(operationContext, lease);
     } catch (StorageException e) {
+      LOG.error("Encountered Storage Exception for delete on Blob: {}, Exception Details: {} Error Code: {}",
+          blob.getUri(), e.getMessage(), e.getErrorCode());
       // On exception, check that if:
       // 1. It's a BlobNotFound exception AND
       // 2. It got there after one-or-more retries THEN
@@ -2334,9 +2322,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           e.getErrorCode().equals("BlobNotFound") &&
           operationContext.getRequestResults().size() > 1 &&
           operationContext.getRequestResults().get(0).getException() != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Swallowing delete exception on retry: " + e.getMessage());
-        }
+        LOG.debug("Swallowing delete exception on retry: {}", e.getMessage());
         return;
       } else {
         throw e;
@@ -2381,9 +2367,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   public void rename(String srcKey, String dstKey, boolean acquireLease,
       SelfRenewingLease existingLease) throws IOException {
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Moving " + srcKey + " to " + dstKey);
-    }
+    LOG.debug("Moving {} to {}", srcKey, dstKey);
 
     if (acquireLease && existingLease != null) {
       throw new IOException("Cannot acquire new lease if one already exists.");
@@ -2559,7 +2543,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    */
   @Override
   public SelfRenewingLease acquireLease(String key) throws AzureException {
-    LOG.debug("acquiring lease on " + key);
+    LOG.debug("acquiring lease on {}", key);
     try {
       checkContainer(ContainerAccessType.ReadThenWrite);
       CloudBlobWrapper blob = getBlobReference(key);
