@@ -591,6 +591,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6485. Create a new task attempt with failed map task priority
    if in-progress attempts are unassigned. (Xianyin Xin via rohithsharmaks)
 
+   MAPREDUCE-6503. archive-logs tool should use HADOOP_PREFIX instead
+   of HADOOP_HOME (rkanter)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

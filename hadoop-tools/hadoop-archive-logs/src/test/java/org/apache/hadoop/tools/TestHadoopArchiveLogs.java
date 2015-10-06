@@ -286,7 +286,7 @@ public class TestHadoopArchiveLogs {
     Assert.assertEquals("fi", lines[12]);
     Assert.assertEquals("export HADOOP_CLIENT_OPTS=\"-Xmx1024m\"", lines[13]);
     Assert.assertTrue(lines[14].startsWith("export HADOOP_CLASSPATH="));
-    Assert.assertEquals("\"$HADOOP_HOME\"/bin/hadoop org.apache.hadoop.tools." +
+    Assert.assertEquals("\"$HADOOP_PREFIX\"/bin/hadoop org.apache.hadoop.tools." +
         "HadoopArchiveLogsRunner -appId \"$appId\" -user \"$user\" -workingDir "
         + workingDir.toString() + " -remoteRootLogDir " +
         remoteRootLogDir.toString() + " -suffix " + suffix, lines[15]);
