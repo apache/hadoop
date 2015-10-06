@@ -105,7 +105,7 @@ public class StripedDataStreamer extends DataStreamer {
       final DatanodeInfo badNode = nodes[getErrorState().getBadNodeIndex()];
       LOG.info("Excluding datanode " + badNode);
       excludedNodes.put(badNode, badNode);
-      throw new IOException("Unable to create new block.");
+      throw new IOException("Unable to create new block." + this);
     }
     return lb;
   }

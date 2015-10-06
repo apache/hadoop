@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +50,9 @@ public class TestWriteReadStripedFile {
   private static Configuration conf = new HdfsConfiguration();
 
   static {
+    GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
     ((Log4JLogger)LogFactory.getLog(BlockPlacementPolicy.class))
         .getLogger().setLevel(Level.ALL);
   }

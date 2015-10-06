@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -58,6 +59,7 @@ public class StripedFileTestUtil {
   public static final short NUM_DATA_BLOCKS = (short) 6;
   public static final short NUM_PARITY_BLOCKS = (short) 3;
   public static final int BLOCK_STRIPED_CELL_SIZE = 64 * 1024;
+  public static final int BLOCK_STRIPE_SIZE = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS;
 
   static final int stripesPerBlock = 4;
   static final int blockSize = BLOCK_STRIPED_CELL_SIZE * stripesPerBlock;
@@ -113,7 +115,9 @@ public class StripedFileTestUtil {
           offset += target;
         }
         for (int i = 0; i < fileLength - startOffset; i++) {
-          assertEquals("Byte at " + (startOffset + i) + " is different, " + "the startOffset is " + startOffset, expected[startOffset + i], result[i]);
+          assertEquals("Byte at " + (startOffset + i) + " is different, "
+              + "the startOffset is " + startOffset, expected[startOffset + i],
+              result[i]);
         }
       }
     }
@@ -251,11 +255,17 @@ public class StripedFileTestUtil {
     return (short) (getRealDataBlockNum(numBytes) + NUM_PARITY_BLOCKS);
   }
 
+  public static void waitBlockGroupsReported(DistributedFileSystem fs,
+      String src) throws Exception {
+    waitBlockGroupsReported(fs, src, 0);
+  }
+
   /**
-   * Wait for all the internalBlocks of the blockGroups of the given file to be reported.
+   * Wait for all the internalBlocks of the blockGroups of the given file to be
+   * reported.
    */
-  public static void waitBlockGroupsReported(DistributedFileSystem fs, String src)
-      throws IOException, InterruptedException, TimeoutException {
+  public static void waitBlockGroupsReported(DistributedFileSystem fs,
+      String src, int numDeadDNs) throws Exception {
     boolean success;
     final int ATTEMPTS = 40;
     int count = 0;
@@ -265,11 +275,12 @@ public class StripedFileTestUtil {
       count++;
       LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0);
       for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-        short expected = getRealTotalBlockNum((int) lb.getBlockSize());
+        short expected = (short) (getRealTotalBlockNum((int) lb.getBlockSize())
+            - numDeadDNs);
         int reported = lb.getLocations().length;
-        if (reported != expected){
+        if (reported < expected){
           success = false;
-          System.out.println("blockGroup " + lb.getBlock() + " of file " + src
+          LOG.info("blockGroup " + lb.getBlock() + " of file " + src
               + " has reported internalBlocks " + reported
               + " (desired " + expected + "); locations "
               + Joiner.on(' ').join(lb.getLocations()));
@@ -278,7 +289,7 @@ public class StripedFileTestUtil {
         }
       }
       if (success) {
-        System.out.println("All blockGroups of file " + src
+        LOG.info("All blockGroups of file " + src
             + " verified to have all internalBlocks.");
       }
     } while (!success && count < ATTEMPTS);
@@ -348,10 +359,9 @@ public class StripedFileTestUtil {
   }
 
   static void checkData(DistributedFileSystem dfs, Path srcPath, int length,
-      int[] killedDnIndex, long oldGS) throws IOException {
+      List<DatanodeInfo> killedList, List<Long> oldGSList) throws IOException {
 
     StripedFileTestUtil.verifyLength(dfs, srcPath, length);
-    Arrays.sort(killedDnIndex);
     List<List<LocatedBlock>> blockGroupList = new ArrayList<>();
     LocatedBlocks lbs = dfs.getClient().getLocatedBlocks(srcPath.toString(), 0L,
         Long.MAX_VALUE);
@@ -361,10 +371,12 @@ public class StripedFileTestUtil {
     }
     assertEquals(expectedNumGroup, lbs.getLocatedBlocks().size());
 
+    int index = 0;
     for (LocatedBlock firstBlock : lbs.getLocatedBlocks()) {
       Assert.assertTrue(firstBlock instanceof LocatedStripedBlock);
 
       final long gs = firstBlock.getBlock().getGenerationStamp();
+      final long oldGS = oldGSList != null ? oldGSList.get(index++) : -1L;
       final String s = "gs=" + gs + ", oldGS=" + oldGS;
       LOG.info(s);
       Assert.assertTrue(s, gs >= oldGS);
@@ -389,6 +401,7 @@ public class StripedFileTestUtil {
       byte[][] dataBlockBytes = new byte[NUM_DATA_BLOCKS][];
       byte[][] parityBlockBytes = new byte[NUM_PARITY_BLOCKS][];
 
+      Set<Integer> checkSet = new HashSet<>();
       // for each block, use BlockReader to read data
       for (int i = 0; i < blockList.size(); i++) {
         final int j = i >= NUM_DATA_BLOCKS? 0: i;
@@ -417,19 +430,22 @@ public class StripedFileTestUtil {
           continue;
         }
 
-        if (Arrays.binarySearch(killedDnIndex, i) < 0) {
+        DatanodeInfo dn = blockList.get(i).getLocations()[0];
+        if (!killedList.contains(dn)) {
           final BlockReader blockReader = BlockReaderTestUtil.getBlockReader(
               dfs, lb, 0, block.getNumBytes());
           blockReader.readAll(blockBytes, 0, (int) block.getNumBytes());
           blockReader.close();
+          checkSet.add(i);
         }
       }
+      LOG.info("Internal blocks to check: " + checkSet);
 
       // check data
       final int groupPosInFile = group*BLOCK_GROUP_SIZE;
       for (int i = 0; i < dataBlockBytes.length; i++) {
         boolean killed = false;
-        if (Arrays.binarySearch(killedDnIndex, i) >= 0){
+        if (!checkSet.contains(i)) {
           killed = true;
         }
         final byte[] actual = dataBlockBytes[i];
@@ -453,15 +469,15 @@ public class StripedFileTestUtil {
       }
 
       // check parity
-      verifyParityBlocks(dfs.getConf(), lbs.getLocatedBlocks().get(group)
-              .getBlockSize(),
-          BLOCK_STRIPED_CELL_SIZE, dataBlockBytes, parityBlockBytes, killedDnIndex);
+      verifyParityBlocks(dfs.getConf(),
+          lbs.getLocatedBlocks().get(group).getBlockSize(),
+          BLOCK_STRIPED_CELL_SIZE, dataBlockBytes, parityBlockBytes, checkSet);
     }
   }
 
-  static void verifyParityBlocks(Configuration conf, final long size, final int cellSize,
-      byte[][] dataBytes, byte[][] parityBytes, int[] killedDnIndex) {
-    Arrays.sort(killedDnIndex);
+  static void verifyParityBlocks(Configuration conf, final long size,
+      final int cellSize, byte[][] dataBytes, byte[][] parityBytes,
+      Set<Integer> checkSet) {
     // verify the parity blocks
     int parityBlkSize = (int) StripedBlockUtil.getInternalBlockLength(
         size, cellSize, dataBytes.length, dataBytes.length);
@@ -482,9 +498,9 @@ public class StripedFileTestUtil {
         CodecUtil.createRSRawEncoder(conf, dataBytes.length, parityBytes.length);
     encoder.encode(dataBytes, expectedParityBytes);
     for (int i = 0; i < parityBytes.length; i++) {
-      if (Arrays.binarySearch(killedDnIndex, dataBytes.length + i) < 0){
-        Assert.assertArrayEquals("i=" + i + ", killedDnIndex=" + Arrays.toString(killedDnIndex),
-            expectedParityBytes[i], parityBytes[i]);
+      if (checkSet.contains(i + dataBytes.length)){
+        Assert.assertArrayEquals("i=" + i, expectedParityBytes[i],
+            parityBytes[i]);
       }
     }
   }

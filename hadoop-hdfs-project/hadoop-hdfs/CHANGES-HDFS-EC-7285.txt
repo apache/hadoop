@@ -455,3 +455,6 @@
     DFSStripedOutputStream. (jing9 and Walter Su)
 
     HDFS-9185. Fix null tracer in ErasureCodingWorker. (Rakesh R via jing9)
+
+    HDFS-9180. Update excluded DataNodes in DFSStripedOutputStream based on failures
+    in data streamers. (jing9)

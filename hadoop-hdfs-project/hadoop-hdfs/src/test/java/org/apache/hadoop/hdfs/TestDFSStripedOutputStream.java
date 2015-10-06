@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -151,6 +155,6 @@ public class TestDFSStripedOutputStream {
     StripedFileTestUtil.waitBlockGroupsReported(fs, src);
 
     StripedFileTestUtil.checkData(fs, testPath, writeBytes,
-        new int[]{}, 0);
+        new ArrayList<DatanodeInfo>(), null);
   }
 }
