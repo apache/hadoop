@@ -1670,7 +1670,10 @@ public class UserGroupInformation {
       if (LOG.isDebugEnabled()) {
         LOG.debug("PrivilegedActionException as:" + this + " cause:" + cause);
       }
-      if (cause instanceof IOException) {
+      if (cause == null) {
+        throw new RuntimeException("PrivilegedActionException with no " +
+                "underlying cause. UGI [" + this + "]", pae);
+      } else if (cause instanceof IOException) {
         throw (IOException) cause;
       } else if (cause instanceof Error) {
         throw (Error) cause;
