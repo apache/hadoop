@@ -489,6 +489,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4176. Resync NM nodelabels with RM periodically for distributed nodelabels. 
     (Bibin A Chundatt via wangda)
 
+    YARN-4215. RMNodeLabels Manager Need to verify and replace node labels for the 
+    only modified Node Label Mappings in the request. (Naganarasimha G R via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
