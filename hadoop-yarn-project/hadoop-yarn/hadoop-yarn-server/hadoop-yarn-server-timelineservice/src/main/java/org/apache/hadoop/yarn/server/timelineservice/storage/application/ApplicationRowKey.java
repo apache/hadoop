@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineWriterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 /**
  * Represents a rowkey for the application table.
@@ -90,7 +90,7 @@ public class ApplicationRowKey {
       String flowId, Long flowRunId) {
     byte[] first = Bytes.toBytes(
         Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowId));
-    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
+    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
     return Separator.QUALIFIERS.join(first, second, new byte[0]);
   }
 
@@ -112,8 +112,8 @@ public class ApplicationRowKey {
             flowId));
     // Note that flowRunId is a long, so we can't encode them all at the same
     // time.
-    byte[] second = Bytes.toBytes(TimelineWriterUtils.invert(flowRunId));
-    byte[] third = Bytes.toBytes(appId);
+    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
+    byte[] third = TimelineStorageUtils.encodeAppId(appId);
     return Separator.QUALIFIERS.join(first, second, third);
   }
 
@@ -135,9 +135,8 @@ public class ApplicationRowKey {
     String flowId =
         Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
     long flowRunId =
-        TimelineWriterUtils.invert(Bytes.toLong(rowKeyComponents[3]));
-    String appId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[4]));
+        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
+    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[4]);
     return new ApplicationRowKey(clusterId, userId, flowId, flowRunId, appId);
   }
 }
