@@ -393,8 +393,7 @@ public class TestDataNodeVolumeFailure {
 
     // underReplicatedBlocks are due to failed volumes
     int underReplicatedBlocks =
-        BlockManagerTestUtil.checkHeartbeatAndGetUnderReplicatedBlocksCount(
-            cluster.getNamesystem(), bm);
+        BlockManagerTestUtil.checkHeartbeatAndGetUnderReplicatedBlocksCount(bm);
     assertTrue("There is no under replicated block after volume failure",
         underReplicatedBlocks > 0);
   }

@@ -366,12 +366,12 @@ public class DecommissionManager {
       numBlocksChecked = 0;
       numNodesChecked = 0;
       // Check decom progress
-      namesystem.writeLock();
+      blockManager.writeLock();
       try {
         processPendingNodes();
         check();
       } finally {
-        namesystem.writeUnlock();
+        blockManager.writeUnlock();
       }
       if (numBlocksChecked + numNodesChecked > 0) {
         LOG.info("Checked {} blocks and {} nodes this tick", numBlocksChecked,

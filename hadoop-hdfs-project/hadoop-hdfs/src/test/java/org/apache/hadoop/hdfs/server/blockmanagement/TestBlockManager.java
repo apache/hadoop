@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,12 +65,12 @@ import org.junit.Assert;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestBlockManager {
   private DatanodeStorageInfo[] storages;
@@ -97,11 +99,16 @@ public class TestBlockManager {
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
              "need to set a dummy value here so it assumes a multi-rack cluster");
-    fsn = Mockito.mock(FSNamesystem.class);
-    Mockito.doReturn(true).when(fsn).hasWriteLock();
-    Mockito.doReturn(true).when(fsn).hasReadLock();
-    Mockito.doReturn(true).when(fsn).isRunning();
+    fsn = mock(FSNamesystem.class);
+    doReturn(true).when(fsn).isRunning();
+    Lock lockImpl = mock(Lock.class);
+    BlockManagerLock lock = mock(BlockManagerLock.class);
     bm = new BlockManager(fsn, conf);
+    Whitebox.setInternalState(bm, "lock", lock);
+    doReturn(true).when(lock).hasWriteLock();
+    doReturn(true).when(lock).hasReadLock();
+    doReturn(lockImpl).when(lock).readLock();
+    doReturn(lockImpl).when(lock).writeLock();
     final String[] racks = {
         "/rackA",
         "/rackA",
@@ -438,9 +445,9 @@ public class TestBlockManager {
   
   private BlockInfo addBlockOnNodes(long blockId, List<DatanodeDescriptor> nodes) {
     long inodeId = ++mockINodeId;
-    BlockCollection bc = Mockito.mock(BlockCollection.class);
-    Mockito.doReturn(inodeId).when(bc).getId();
-    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    BlockCollection bc = mock(BlockCollection.class);
+    doReturn(inodeId).when(bc).getId();
+    doReturn(bc).when(fsn).getBlockCollection(inodeId);
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
 
     blockInfo.setReplication((short) 3);
@@ -749,7 +756,7 @@ public class TestBlockManager {
     Block block = new Block(blkId);
     BlockInfo blockInfo =
         new BlockInfoContiguous(block, (short) 3);
-    BlockCollection bc = Mockito.mock(BlockCollection.class);
+    BlockCollection bc = mock(BlockCollection.class);
     long inodeId = ++mockINodeId;
     doReturn(inodeId).when(bc).getId();
     bm.blocksMap.addBlockCollection(blockInfo, bc);
@@ -761,7 +768,7 @@ public class TestBlockManager {
     Block block = new Block(blkId);
     BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 3);
     blockInfo.convertToBlockUnderConstruction(UNDER_CONSTRUCTION, null);
-    BlockCollection bc = Mockito.mock(BlockCollection.class);
+    BlockCollection bc = mock(BlockCollection.class);
     long inodeId = ++mockINodeId;
     doReturn(inodeId).when(bc).getId();
     bm.blocksMap.addBlockCollection(blockInfo, bc);

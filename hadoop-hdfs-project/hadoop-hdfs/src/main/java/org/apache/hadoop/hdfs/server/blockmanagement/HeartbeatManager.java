@@ -351,20 +351,20 @@ class HeartbeatManager implements DatanodeStatistics {
       }
       if (dead != null) {
         // acquire the fsnamesystem lock, and then remove the dead node.
-        namesystem.writeLock();
+        blockManager.writeLock();
         try {
           dm.removeDeadDatanode(dead);
         } finally {
-          namesystem.writeUnlock();
+          blockManager.writeUnlock();
         }
       }
       if (failedStorage != null) {
         // acquire the fsnamesystem lock, and remove blocks on the storage.
-        namesystem.writeLock();
+        blockManager.writeLock();
         try {
           blockManager.removeBlocksAssociatedTo(failedStorage);
         } finally {
-          namesystem.writeUnlock();
+          blockManager.writeUnlock();
         }
       }
     }

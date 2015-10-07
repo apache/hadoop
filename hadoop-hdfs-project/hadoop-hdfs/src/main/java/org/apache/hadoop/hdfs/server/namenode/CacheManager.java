@@ -928,7 +928,7 @@ public final class CacheManager {
 
   public final void processCacheReport(final DatanodeID datanodeID,
       final List<Long> blockIds) throws IOException {
-    namesystem.writeLock();
+    blockManager.writeLock();
     final long startTime = Time.monotonicNow();
     final long endTime;
     try {
@@ -942,7 +942,7 @@ public final class CacheManager {
       processCacheReportImpl(datanode, blockIds);
     } finally {
       endTime = Time.monotonicNow();
-      namesystem.writeUnlock();
+      blockManager.writeUnlock();
     }
 
     // Log the block report processing stats from Namenode perspective

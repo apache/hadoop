@@ -55,7 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-;
 
 /**
  * Scans the namesystem, scheduling blocks to be cached as appropriate.
@@ -218,7 +217,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * after are not atomic.
    */
   public void waitForRescanIfNeeded() {
-    Preconditions.checkArgument(!namesystem.hasWriteLock(),
+    Preconditions.checkArgument(!blockManager.hasWriteLock(),
         "Must not hold the FSN write lock when waiting for a rescan.");
     Preconditions.checkArgument(lock.isHeldByCurrentThread(),
         "Must hold the CRM lock when waiting for a rescan.");
@@ -263,7 +262,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    */
   @Override
   public void close() throws IOException {
-    Preconditions.checkArgument(namesystem.hasWriteLock());
+    Preconditions.checkArgument(blockManager.hasWriteLock());
     lock.lock();
     try {
       if (shutdown) return;
@@ -285,7 +284,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     scannedDirectives = 0;
     scannedBlocks = 0;
     try {
-      namesystem.writeLock();
+      blockManager.writeLock();
       try {
         lock.lock();
         if (shutdown) {
@@ -302,7 +301,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       rescanCachedBlockMap();
       blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
-      namesystem.writeUnlock();
+      blockManager.writeUnlock();
     }
   }
 

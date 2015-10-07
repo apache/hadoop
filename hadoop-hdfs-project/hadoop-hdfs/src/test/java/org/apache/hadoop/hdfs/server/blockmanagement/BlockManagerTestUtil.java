@@ -172,10 +172,10 @@ public class BlockManagerTestUtil {
    * @param dnName the name of the DataNode
    */
   public static void noticeDeadDatanode(NameNode nn, String dnName) {
-    FSNamesystem namesystem = nn.getNamesystem();
-    namesystem.writeLock();
+    final BlockManager bm = nn.getNamesystem().getBlockManager();
+    bm.writeLock();
     try {
-      DatanodeManager dnm = namesystem.getBlockManager().getDatanodeManager();
+      DatanodeManager dnm = bm.getDatanodeManager();
       HeartbeatManager hbm = dnm.getHeartbeatManager();
       DatanodeDescriptor[] dnds = hbm.getDatanodes();
       DatanodeDescriptor theDND = null;
@@ -191,7 +191,7 @@ public class BlockManagerTestUtil {
         hbm.heartbeatCheck();
       }
     } finally {
-      namesystem.writeUnlock();
+      bm.writeUnlock();
     }
   }
   
@@ -220,18 +220,17 @@ public class BlockManagerTestUtil {
    * Call heartbeat check function of HeartbeatManager and get
    * under replicated blocks count within write lock to make sure
    * computeDatanodeWork doesn't interfere.
-   * @param namesystem the FSNamesystem
    * @param bm the BlockManager to manipulate
    * @return the number of under replicated blocks
    */
   public static int checkHeartbeatAndGetUnderReplicatedBlocksCount(
-      FSNamesystem namesystem, BlockManager bm) {
-    namesystem.writeLock();
+      BlockManager bm) {
+    bm.writeLock();
     try {
       bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
       return bm.getUnderReplicatedNotMissingBlocks();
     } finally {
-      namesystem.writeUnlock();
+      bm.writeUnlock();
     }
   }
 

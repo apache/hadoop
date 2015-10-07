@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /** Namesystem operations. */
 @InterfaceAudience.Private
 public interface Namesystem extends RwLock, SafeMode {
@@ -67,4 +69,6 @@ public interface Namesystem extends RwLock, SafeMode {
   CacheManager getCacheManager();
 
   HAContext getHAContext();
+
+  ReentrantReadWriteLock getLockImplementation();
 }
