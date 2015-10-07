@@ -665,17 +665,24 @@ public class TestDirectoryScanner {
           interruptor.schedule(new Runnable() {
             @Override
             public void run() {
-              scanner.shutdown();
               nowMs.set(Time.monotonicNow());
+              scanner.shutdown();
             }
           }, 2L, TimeUnit.SECONDS);
 
           scanner.reconcile();
           assertFalse(scanner.getRunStatus());
-          LOG.info("Scanner took " + (Time.monotonicNow() - nowMs.get())
-              + "ms to shutdown");
-          assertTrue("Scanner took too long to shutdown",
-              Time.monotonicNow() - nowMs.get() < 1000L);
+
+          long finalMs = nowMs.get();
+
+          // If the scan didn't complete before the shutdown was run, check
+          // that the shutdown was timely
+          if (finalMs > 0) {
+            LOG.info("Scanner took " + (Time.monotonicNow() - finalMs)
+                + "ms to shutdown");
+            assertTrue("Scanner took too long to shutdown",
+                Time.monotonicNow() - finalMs < 1000L);
+          }
 
           ratio =
               (float)scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
