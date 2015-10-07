@@ -1312,6 +1312,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12213. Interrupted exception can occur when Client#stop is called.
     (Kuhu Shukla via ozawa)
 
+    HADOOP-12465. Incorrect javadoc in WritableUtils.java.
+    (Jagadesh Kiran N via aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
