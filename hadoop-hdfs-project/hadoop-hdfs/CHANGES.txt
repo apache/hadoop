@@ -1967,6 +1967,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7899. Improve EOF error message (Jagadesh Kiran N via vinayakumarb)
 
+    HDFS-9196. Fix TestWebHdfsContentLength. (Masatake Iwasaki via jing9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
