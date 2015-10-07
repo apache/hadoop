@@ -1020,6 +1020,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3619. ContainerMetrics unregisters during getMetrics and leads to
     ConcurrentModificationException (Zhihai Xu via jlowe)
 
+    YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
+    by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
