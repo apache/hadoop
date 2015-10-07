@@ -919,6 +919,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4141. Runtime Application Priority change should not throw exception
     for applications at finishing states (Sunil G via jlowe)
 
+    YARN-4228. FileSystemRMStateStore use IOUtils#close instead of fs#close. (Bibin A Chundatt via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
