@@ -211,7 +211,7 @@ public class WebHdfsFileSystem extends FileSystem
               failoverSleepMaxMillis);
     }
 
-    this.workingDir = makeQualified(getHomeDirectory());
+    this.workingDir = makeQualified(new Path(getHomeDirectoryString(ugi)));
     this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
     this.disallowFallbackToInsecureCluster = !conf.getBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
