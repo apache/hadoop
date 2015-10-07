@@ -1971,6 +1971,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9196. Fix TestWebHdfsContentLength. (Masatake Iwasaki via jing9)
 
+    HDFS-9159. [OIV] : return value of the command is not correct if invalid
+    value specified in "-p (processor)" option (nijel via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
