@@ -2454,7 +2454,7 @@
 
 <property>
   <name>dfs.datanode.stripedread.buffer.size</name>
-  <value>262144</value>
+  <value>65536</value>
   <description>Datanode striped read buffer size.
   </description>
 </property>
