@@ -341,6 +341,15 @@ public class TestOfflineImageViewer {
         new FileSystemTestHelper().getTestRootDir() + "/delimited.db");
   }
 
+  @Test
+  public void testInvalidProcessorOption() throws Exception {
+    int status =
+        OfflineImageViewerPB.run(new String[] { "-i",
+            originalFsimage.getAbsolutePath(), "-o", "-", "-p", "invalid" });
+    assertTrue("Exit code returned for invalid processor option is incorrect",
+        status != 0);
+  }
+
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";
