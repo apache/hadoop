@@ -513,6 +513,81 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+    BREAKDOWN OF HADOOP-11264 SUBTASKS AND RELATED JIRAS (Common part of HDFS-7285)
+
+      HADOOP-11514. Raw Erasure Coder API for concrete encoding and decoding
+      (Kai Zheng via umamahesh)
+
+      HADOOP-11534. Minor improvements for raw erasure coders
+      ( Kai Zheng via vinayakumarb )
+
+      HADOOP-11541. Raw XOR coder
+      ( Kai Zheng )
+
+      HADOOP-11542. Raw Reed-Solomon coder in pure Java. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11643. Define EC schema API for ErasureCodec. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11646. Erasure Coder API for encoding and decoding of block group
+      ( Kai Zheng via vinayakumarb )
+
+      HADOOP-11705. Make erasure coder configurable. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11706. Refine a little bit erasure coder API. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11707. Add factory to create raw erasure coder. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11647. Reed-Solomon ErasureCoder. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11782 Correct two thrown messages in ECSchema class. Contributed by Xinwei Qin
+      ( Xinwei Qin via Kai Zheng )
+
+      HADOOP-11740. Combine erasure encoder and decoder interfaces (Zhe Zhang)
+
+      HADOOP-11805 Better to rename some raw erasure coders. Contributed by Kai Zheng
+      ( Kai Zheng )
+
+      HADOOP-11645. Erasure Codec API covering the essential aspects for an erasure code
+      ( Kai Zheng via vinayakumarb )
+
+      HADOOP-11818. Minor improvements for erasurecode classes. (Rakesh R via Kai Zheng)
+
+      HADOOP-11841. Remove unused ecschema-def.xml files.  (szetszwo)
+
+      HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng via Zhe Zhang)
+
+      HADOOP-11920. Refactor some codes for erasure coders. (Kai Zheng via Zhe Zhang)
+
+      HADOOP-11566. Add tests and fix for erasure coders to recover erased parity
+      units. (Kai Zheng via Zhe Zhang)
+
+      HADOOP-11938. Enhance ByteBuffer version encode/decode API of raw erasure
+      coder. (Kai Zheng via Zhe Zhang)
+
+      HADOOP-12013. Generate fixed data to perform erasure coder test. (Kai Zheng)
+
+      HADOOP-12029. Remove chunkSize from ECSchema as its not required for coders
+      (vinayakumarb)
+
+      HADOOP-11847. Enhance raw coder allowing to read least required inputs in decoding.
+      (Kai Zheng)
+
+      HADOOP-12011. Allow to dump verbose information to ease debugging in raw erasure coders
+      (Kai Zheng)
+
+      HADOOP-12065. Using more meaningful keys in EC schema. (Kai Zheng)
+
+      HADOOP-12060. Fix ByteBuffer usage for raw erasure coders. (Kai Zheng via
+      jing9)
+
+      HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

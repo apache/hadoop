@@ -424,7 +424,7 @@ public class DFSOutputStream extends FSOutputSummer
     currentPacket = null;
   }
 
-  void enqueueCurrentPacketFull() throws IOException {
+  synchronized void enqueueCurrentPacketFull() throws IOException {
     LOG.debug("enqueue full {}, src={}, bytesCurBlock={}, blockSize={},"
             + " appendChunk={}, {}", currentPacket, src, getStreamer()
             .getBytesCurBlock(), blockSize, getStreamer().getAppendChunk(),
