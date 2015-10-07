@@ -718,7 +718,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     new FSAction<Void>() {
       @Override
       public Void run() throws Exception {
-        fs.close();
+        IOUtils.closeStream(fs);
         return null;
       }
     }.runWithRetries();
