@@ -2028,6 +2028,9 @@ Release 2.7.2 - UNRELEASED
     pool to be scanned but there are suspicious blocks. (Colin Patrick McCabe
     via yliu)
 
+    HDFS-9178. Slow datanode I/O can cause a wrong node to be marked bad
+    (kihwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
