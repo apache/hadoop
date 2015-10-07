@@ -817,6 +817,9 @@ Trunk (Unreleased)
       HDFS-9206. Inconsistent default value of dfs.datanode.stripedread.buffer.size.
       (Walter Su via jing9)
 
+      HDFS-9209. Erasure coding: Add apache license header in
+      TestFileStatusWithECPolicy.java. (Surendra Singh Lilhore via jing9)
+
 Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
