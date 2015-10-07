@@ -236,13 +236,13 @@ public final class WritableUtils  {
 
   /**
    * Serializes an integer to a binary stream with zero-compressed encoding.
-   * For -120 <= i <= 127, only one byte is used with the actual value.
+   * For -112 <= i <= 127, only one byte is used with the actual value.
    * For other values of i, the first byte value indicates whether the
    * integer is positive or negative, and the number of bytes that follow.
+   * If the first byte value v is between -113 and -116, the following integer
+   * is positive, with number of bytes that follow are -(v+112).
    * If the first byte value v is between -121 and -124, the following integer
-   * is positive, with number of bytes that follow are -(v+120).
-   * If the first byte value v is between -125 and -128, the following integer
-   * is negative, with number of bytes that follow are -(v+124). Bytes are
+   * is negative, with number of bytes that follow are -(v+120). Bytes are
    * stored in the high-non-zero-byte-first order.
    *
    * @param stream Binary output stream
