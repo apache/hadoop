@@ -735,6 +735,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12230. hadoop-project declares duplicate, conflicting curator
     dependencies. (Rakesh R via aajisaka)
 
+    HADOOP-12465. Incorrect javadoc in WritableUtils.java.
+    (Jagadesh Kiran N via aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
