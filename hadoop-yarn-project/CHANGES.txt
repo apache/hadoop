@@ -97,6 +97,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
     by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
 
+    YARN-4005. Completed container whose app is finished is possibly not
+    removed from NMStateStore. (Jun Gong via jianhe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
