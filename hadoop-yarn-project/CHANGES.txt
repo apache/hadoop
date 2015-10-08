@@ -39,6 +39,9 @@ Release 2.6.2 - UNRELEASED
     YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
     after NM is reconnected. (zhihai xu via xgong)
 
+    YARN-3194. RM should handle NMContainerStatuses sent by NM while
+    registering if NM is Reconnected node (Rohith via jlowe)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
