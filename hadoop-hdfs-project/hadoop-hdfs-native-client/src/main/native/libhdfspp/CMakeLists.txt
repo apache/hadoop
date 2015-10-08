@@ -18,6 +18,8 @@
 
 project (libhdfspp)
 
+enable_testing()
+
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
@@ -32,7 +34,7 @@ endif()
 # Mac OS 10.7 and later deprecates most of the methods in OpenSSL.
 # Add -Wno-deprecated-declarations to avoid the warnings.
 if(APPLE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations -Wno-unused-local-typedef")
 endif()
 
 if(DOXYGEN_FOUND)
@@ -48,9 +50,10 @@ include_directories(
   ${PROJECT_BINARY_DIR}/lib/proto
   third_party/asio-1.10.2/include
   third_party/gmock-1.7.0
+  ${OPENSSL_INCLUDE_DIR}
 )
 
-set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../proto)
+set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../hadoop-hdfs-client/src/main/proto)
 set(PROTO_HADOOP_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/main/proto)
 set(PROTO_HADOOP_TEST_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../../hadoop-common-project/hadoop-common/src/test/proto)
 

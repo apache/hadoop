@@ -98,6 +98,11 @@ endfunction()
 
 add_subdirectory(main/native/libhdfs)
 add_subdirectory(main/native/libhdfs-tests)
+add_subdirectory(main/native/libhdfspp)
+
+if(REQUIRE_LIBWEBHDFS)
+    add_subdirectory(contrib/libwebhdfs)
+endif()
 
 # Find Linux FUSE
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
