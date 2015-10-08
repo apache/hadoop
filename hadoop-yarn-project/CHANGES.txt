@@ -492,6 +492,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4215. RMNodeLabels Manager Need to verify and replace node labels for the 
     only modified Node Label Mappings in the request. (Naganarasimha G R via wangda)
 
+    YARN-3943. Use separate threshold configurations for disk-full detection
+    and disk-not-full detection. (Zhihai Xu via jlowe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

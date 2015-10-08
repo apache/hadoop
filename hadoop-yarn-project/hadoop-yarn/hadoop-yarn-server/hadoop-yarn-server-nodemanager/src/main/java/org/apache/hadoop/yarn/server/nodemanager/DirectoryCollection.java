@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DiskChecker;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Manages a list of local storage directories.
  */
@@ -88,8 +90,9 @@ public class DirectoryCollection {
   private List<String> fullDirs;
 
   private int numFailures;
-  
-  private float diskUtilizationPercentageCutoff;
+
+  private float diskUtilizationPercentageCutoffHigh;
+  private float diskUtilizationPercentageCutoffLow;
   private long diskUtilizationSpaceCutoff;
 
   private int goodDirsDiskUtilizationPercentage;
@@ -103,7 +106,7 @@ public class DirectoryCollection {
    *          directories to be monitored
    */
   public DirectoryCollection(String[] dirs) {
-    this(dirs, 100.0F, 0);
+    this(dirs, 100.0F, 100.0F, 0);
   }
 
   /**
@@ -119,7 +122,7 @@ public class DirectoryCollection {
    * 
    */
   public DirectoryCollection(String[] dirs, float utilizationPercentageCutOff) {
-    this(dirs, utilizationPercentageCutOff, 0);
+    this(dirs, utilizationPercentageCutOff, utilizationPercentageCutOff, 0);
   }
 
   /**
@@ -134,7 +137,7 @@ public class DirectoryCollection {
    * 
    */
   public DirectoryCollection(String[] dirs, long utilizationSpaceCutOff) {
-    this(dirs, 100.0F, utilizationSpaceCutOff);
+    this(dirs, 100.0F, 100.0F, utilizationSpaceCutOff);
   }
 
   /**
@@ -145,25 +148,29 @@ public class DirectoryCollection {
    * 
    * @param dirs
    *          directories to be monitored
-   * @param utilizationPercentageCutOff
+   * @param utilizationPercentageCutOffHigh
    *          percentage of disk that can be used before the dir is taken out of
    *          the good dirs list
+   * @param utilizationPercentageCutOffLow
+   *          percentage of disk that can be used when the dir is moved from
+   *          the bad dirs list to the good dirs list
    * @param utilizationSpaceCutOff
    *          minimum space, in MB, that must be available on the disk for the
    *          dir to be marked as good
    * 
    */
-  public DirectoryCollection(String[] dirs, 
-      float utilizationPercentageCutOff,
+  public DirectoryCollection(String[] dirs,
+      float utilizationPercentageCutOffHigh,
+      float utilizationPercentageCutOffLow,
       long utilizationSpaceCutOff) {
     localDirs = new CopyOnWriteArrayList<String>(dirs);
     errorDirs = new CopyOnWriteArrayList<String>();
     fullDirs = new CopyOnWriteArrayList<String>();
 
-    diskUtilizationPercentageCutoff =
-        utilizationPercentageCutOff < 0.0F ? 0.0F
-            : (utilizationPercentageCutOff > 100.0F ? 100.0F
-                : utilizationPercentageCutOff);
+    diskUtilizationPercentageCutoffHigh = Math.max(0.0F, Math.min(100.0F,
+        utilizationPercentageCutOffHigh));
+    diskUtilizationPercentageCutoffLow = Math.max(0.0F, Math.min(
+        diskUtilizationPercentageCutoffHigh, utilizationPercentageCutOffLow));
     diskUtilizationSpaceCutoff =
         utilizationSpaceCutOff < 0 ? 0 : utilizationSpaceCutOff;
 
@@ -254,7 +261,8 @@ public class DirectoryCollection {
     List<String> allLocalDirs =
         DirectoryCollection.concat(localDirs, failedDirs);
 
-    Map<String, DiskErrorInformation> dirsFailedCheck = testDirs(allLocalDirs);
+    Map<String, DiskErrorInformation> dirsFailedCheck = testDirs(allLocalDirs,
+        preCheckGoodDirs);
 
     localDirs.clear();
     errorDirs.clear();
@@ -314,7 +322,8 @@ public class DirectoryCollection {
     return setChanged;
   }
 
-  Map<String, DiskErrorInformation> testDirs(List<String> dirs) {
+  Map<String, DiskErrorInformation> testDirs(List<String> dirs,
+      Set<String> goodDirs) {
     HashMap<String, DiskErrorInformation> ret =
         new HashMap<String, DiskErrorInformation>();
     for (final String dir : dirs) {
@@ -322,7 +331,10 @@ public class DirectoryCollection {
       try {
         File testDir = new File(dir);
         DiskChecker.checkDir(testDir);
-        if (isDiskUsageOverPercentageLimit(testDir)) {
+        float diskUtilizationPercentageCutoff = goodDirs.contains(dir) ?
+            diskUtilizationPercentageCutoffHigh : diskUtilizationPercentageCutoffLow;
+        if (isDiskUsageOverPercentageLimit(testDir,
+            diskUtilizationPercentageCutoff)) {
           msg =
               "used space above threshold of "
                   + diskUtilizationPercentageCutoff
@@ -374,7 +386,8 @@ public class DirectoryCollection {
     }
   }
 
-  private boolean isDiskUsageOverPercentageLimit(File dir) {
+  private boolean isDiskUsageOverPercentageLimit(File dir,
+      float diskUtilizationPercentageCutoff) {
     float freePercentage =
         100 * (dir.getUsableSpace() / (float) dir.getTotalSpace());
     float usedPercentage = 100.0F - freePercentage;
@@ -402,17 +415,24 @@ public class DirectoryCollection {
       }
     }
   }
-  
-  public float getDiskUtilizationPercentageCutoff() {
-    return diskUtilizationPercentageCutoff;
+
+  @VisibleForTesting
+  float getDiskUtilizationPercentageCutoffHigh() {
+    return diskUtilizationPercentageCutoffHigh;
+  }
+
+  @VisibleForTesting
+  float getDiskUtilizationPercentageCutoffLow() {
+    return diskUtilizationPercentageCutoffLow;
   }
 
   public void setDiskUtilizationPercentageCutoff(
-      float diskUtilizationPercentageCutoff) {
-    this.diskUtilizationPercentageCutoff =
-        diskUtilizationPercentageCutoff < 0.0F ? 0.0F
-            : (diskUtilizationPercentageCutoff > 100.0F ? 100.0F
-                : diskUtilizationPercentageCutoff);
+      float utilizationPercentageCutOffHigh,
+      float utilizationPercentageCutOffLow) {
+    diskUtilizationPercentageCutoffHigh = Math.max(0.0F, Math.min(100.0F,
+        utilizationPercentageCutOffHigh));
+    diskUtilizationPercentageCutoffLow = Math.max(0.0F, Math.min(
+        diskUtilizationPercentageCutoffHigh, utilizationPercentageCutOffLow));
   }
 
   public long getDiskUtilizationSpaceCutoff() {
