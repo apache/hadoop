@@ -106,6 +106,9 @@ Release 2.7.2 - UNRELEASED
     YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
     after NM is reconnected. (zhihai xu via xgong)
 
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    has not been reset synchronously. (Jun Gong via rohithsharmaks)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
