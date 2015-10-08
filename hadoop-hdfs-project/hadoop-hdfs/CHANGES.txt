@@ -356,6 +356,9 @@ Trunk (Unreleased)
 
     HDFS-8800. hdfs --daemon stop namenode corrupts logs (John Smith via aw)
 
+    HDFS-9204. DatanodeDescriptor#PendingReplicationWithoutTargets is wrongly
+    calculated. (Mingliang Liu via jing9)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and

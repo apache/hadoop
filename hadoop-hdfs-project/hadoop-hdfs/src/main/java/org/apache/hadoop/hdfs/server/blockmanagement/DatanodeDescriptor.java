@@ -256,7 +256,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private boolean disallowed = false;
 
   // The number of replication work pending before targets are determined
-  private int PendingReplicationWithoutTargets = 0;
+  private int pendingReplicationWithoutTargets = 0;
 
   // HB processing can use it to tell if it is the first HB since DN restarted
   private boolean heartbeatedSinceRegistration = false;
@@ -594,11 +594,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   void incrementPendingReplicationWithoutTargets() {
-    PendingReplicationWithoutTargets++;
+    pendingReplicationWithoutTargets++;
   }
 
   void decrementPendingReplicationWithoutTargets() {
-    PendingReplicationWithoutTargets--;
+    pendingReplicationWithoutTargets--;
   }
 
   /**
@@ -651,7 +651,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * The number of work items that are pending to be replicated
    */
   int getNumberOfBlocksToBeReplicated() {
-    return PendingReplicationWithoutTargets + replicateBlocks.size();
+    return pendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
   /**
