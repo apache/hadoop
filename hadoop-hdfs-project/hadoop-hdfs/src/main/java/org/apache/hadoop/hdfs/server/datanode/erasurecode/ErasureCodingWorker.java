@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockReader;
@@ -86,6 +87,7 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.convertIndex4Decode;
  * response. BPOfferService delegates the work to this class for handling EC
  * commands.
  */
+@InterfaceAudience.Private
 public final class ErasureCodingWorker {
   private static final Log LOG = DataNode.LOG;
   

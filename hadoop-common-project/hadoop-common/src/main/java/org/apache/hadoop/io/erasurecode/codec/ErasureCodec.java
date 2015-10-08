@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.codec;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
 import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
@@ -26,6 +27,7 @@ import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
  * Currently it cares only block grouper and erasure coder. In future we may
  * add more aspects here to make the behaviors customizable.
  */
+@InterfaceAudience.Private
 public interface ErasureCodec extends Configurable {
 
   /**

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
@@ -28,6 +29,7 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  *
  * It implements {@link ErasureCoder}.
  */
+@InterfaceAudience.Private
 public class RSErasureEncoder extends AbstractErasureEncoder {
   private RawErasureEncoder rawEncoder;
 

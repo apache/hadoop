@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 import java.nio.ByteBuffer;
@@ -28,6 +29,7 @@ import java.nio.ByteBuffer;
  *
  * It extends the {@link RawErasureCoder} interface.
  */
+@InterfaceAudience.Private
 public interface RawErasureEncoder extends RawErasureCoder {
 
   /**

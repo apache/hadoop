@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Some utilities for Reed-Solomon coding.
  */
+@InterfaceAudience.Private
 public class RSUtil {
 
   // We always use the byte system (with symbol size 8, field size 256,

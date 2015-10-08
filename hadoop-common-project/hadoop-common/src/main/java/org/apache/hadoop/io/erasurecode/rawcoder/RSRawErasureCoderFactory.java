@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A raw coder factory for raw Reed-Solomon coder in Java.
  */
+@InterfaceAudience.Private
 public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
 
   @Override

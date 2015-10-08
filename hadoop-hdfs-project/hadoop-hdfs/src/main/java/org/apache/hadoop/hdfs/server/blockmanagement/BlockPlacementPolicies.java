@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.ReflectionUtils;
 
+@InterfaceAudience.Private
 public class BlockPlacementPolicies{
 
   private final BlockPlacementPolicy replicationPolicy;

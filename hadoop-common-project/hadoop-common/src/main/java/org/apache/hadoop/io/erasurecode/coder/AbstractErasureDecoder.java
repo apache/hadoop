@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -26,6 +27,7 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
  *
  * It implements the {@link ErasureCoder} interface.
  */
+@InterfaceAudience.Private
 public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
 
   public AbstractErasureDecoder(int numDataUnits, int numParityUnits) {

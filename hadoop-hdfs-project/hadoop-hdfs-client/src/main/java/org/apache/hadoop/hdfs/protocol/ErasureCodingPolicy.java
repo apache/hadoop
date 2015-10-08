@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
  * A policy about how to write/read/code an erasure coding file.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class ErasureCodingPolicy {
 
   private final String name;

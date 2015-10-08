@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
  * array's size can be larger than (m+k). Thus currently we use an extra byte
  * array to record the block index for each triplet.
  */
+@InterfaceAudience.Private
 public class BlockInfoStriped extends BlockInfo {
   private final ErasureCodingPolicy ecPolicy;
   /**

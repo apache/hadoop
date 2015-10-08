@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.erasurecode.ECBlockGroup;
  * of multiple coding steps.
  *
  */
+@InterfaceAudience.Private
 public interface ErasureCoder extends Configurable {
 
   /**

@@ -19,9 +19,12 @@ package org.apache.hadoop.io.erasurecode;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A wrapper for ByteBuffer or bytes array for an erasure code chunk.
  */
+@InterfaceAudience.Private
 public class ECChunk {
 
   private ByteBuffer chunkBuffer;

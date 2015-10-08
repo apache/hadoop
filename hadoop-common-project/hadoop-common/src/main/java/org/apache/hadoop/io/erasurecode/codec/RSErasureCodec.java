@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.codec;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
 import org.apache.hadoop.io.erasurecode.coder.RSErasureDecoder;
@@ -25,6 +26,7 @@ import org.apache.hadoop.io.erasurecode.coder.RSErasureEncoder;
 /**
  * A Reed-Solomon erasure codec.
  */
+@InterfaceAudience.Private
 public class RSErasureCodec extends AbstractErasureCodec {
 
   public RSErasureCodec(ECSchema schema) {

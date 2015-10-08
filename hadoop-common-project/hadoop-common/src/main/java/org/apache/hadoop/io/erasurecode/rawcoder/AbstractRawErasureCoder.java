@@ -18,16 +18,17 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * A common class of basic facilities to be shared by encoder and decoder
  *
  * It implements the {@link RawErasureCoder} interface.
  */
+@InterfaceAudience.Private
 public abstract class AbstractRawErasureCoder
     extends Configured implements RawErasureCoder {
 

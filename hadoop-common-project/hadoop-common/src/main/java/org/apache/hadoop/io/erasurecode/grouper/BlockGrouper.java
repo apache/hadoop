@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.grouper;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -25,6 +26,7 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
  * As part of a codec, to handle how to form a block group for encoding
  * and provide instructions on how to recover erased blocks from a block group
  */
+@InterfaceAudience.Private
 public class BlockGrouper {
 
   private ECSchema schema;

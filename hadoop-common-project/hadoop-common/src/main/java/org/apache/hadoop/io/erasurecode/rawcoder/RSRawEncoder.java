@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 
 import java.nio.ByteBuffer;
@@ -26,6 +27,7 @@ import java.nio.ByteBuffer;
  * isn't available in some environment. Please always use native implementations
  * when possible.
  */
+@InterfaceAudience.Private
 public class RSRawEncoder extends AbstractRawErasureEncoder {
   private int[] generatingPolynomial;
 

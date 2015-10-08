@@ -21,9 +21,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Erasure coding schema to housekeeper relevant information.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class ECSchema {
   public static final String NUM_DATA_UNITS_KEY = "numDataUnits";
   public static final String NUM_PARITY_UNITS_KEY = "numParityUnits";

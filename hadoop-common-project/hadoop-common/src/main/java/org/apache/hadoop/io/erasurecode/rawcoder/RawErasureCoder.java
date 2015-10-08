@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 
 /**
@@ -33,6 +34,7 @@ import org.apache.hadoop.conf.Configurable;
  * low level constructs, since it only takes care of the math calculation with
  * a group of byte buffers.
  */
+@InterfaceAudience.Private
 public interface RawErasureCoder extends Configurable {
 
   /**

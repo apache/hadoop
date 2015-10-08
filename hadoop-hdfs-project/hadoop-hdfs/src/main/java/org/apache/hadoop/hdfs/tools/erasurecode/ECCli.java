@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdfs.tools.erasurecode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.shell.CommandFactory;
@@ -25,6 +26,7 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * CLI for the erasure code encoding operations.
  */
+@InterfaceAudience.Private
 public class ECCli extends FsShell {
 
   private final static String usagePrefix =

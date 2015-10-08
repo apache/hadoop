@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 
 /**
@@ -25,6 +26,7 @@ import org.apache.hadoop.io.erasurecode.ECBlock;
  *
  * It implements {@link ErasureEncodingStep}.
  */
+@InterfaceAudience.Private
 public abstract class AbstractErasureCodingStep implements ErasureCodingStep {
 
   private ECBlock[] inputBlocks;

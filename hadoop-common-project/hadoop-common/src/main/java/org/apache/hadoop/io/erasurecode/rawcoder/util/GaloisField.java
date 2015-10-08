@@ -21,10 +21,13 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Implementation of Galois field arithmetic with 2^p elements. The input must
  * be unsigned integers. It's ported from HDFS-RAID, slightly adapted.
  */
+@InterfaceAudience.Private
 public class GaloisField {
 
   // Field size 256 is good for byte based system

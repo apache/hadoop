@@ -173,6 +173,9 @@ Trunk (Unreleased)
     HDFS-9182. Cleanup the findbugs and other issues after HDFS EC merged to trunk.
     (umamahesh)
 
+    HDFS-8632. Add InterfaceAudience annotation to the erasure coding classes.
+    (Rakesh R via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

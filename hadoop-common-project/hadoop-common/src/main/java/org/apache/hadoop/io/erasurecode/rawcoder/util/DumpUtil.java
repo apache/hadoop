@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 /**
  * A dump utility class for debugging data erasure coding/decoding issues. Don't
  * suggest they are used in runtime production codes.
  */
+@InterfaceAudience.Private
 public final class DumpUtil {
   private static final String HEX_CHARS_STR = "0123456789ABCDEF";
   private static final char[] HEX_CHARS = HEX_CHARS_STR.toCharArray();

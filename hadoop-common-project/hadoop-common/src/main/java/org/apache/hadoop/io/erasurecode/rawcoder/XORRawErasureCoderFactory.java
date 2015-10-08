@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A raw coder factory for raw XOR coder.
  */
+@InterfaceAudience.Private
 public class XORRawErasureCoderFactory implements RawErasureCoderFactory {
 
   @Override

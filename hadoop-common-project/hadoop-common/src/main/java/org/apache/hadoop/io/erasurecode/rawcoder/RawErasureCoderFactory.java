@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Raw erasure coder factory that can be used to create raw encoder and decoder.
  * It helps in configuration since only one factory class is needed to be
  * configured.
  */
+@InterfaceAudience.Private
 public interface RawErasureCoderFactory {
 
   /**

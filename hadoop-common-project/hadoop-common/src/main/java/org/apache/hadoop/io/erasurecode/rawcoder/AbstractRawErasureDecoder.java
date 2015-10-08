@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 import java.nio.ByteBuffer;
@@ -28,6 +29,7 @@ import java.util.Arrays;
  *
  * It implements the {@link RawErasureDecoder} interface.
  */
+@InterfaceAudience.Private
 public abstract class AbstractRawErasureDecoder extends AbstractRawErasureCoder
     implements RawErasureDecoder {
 

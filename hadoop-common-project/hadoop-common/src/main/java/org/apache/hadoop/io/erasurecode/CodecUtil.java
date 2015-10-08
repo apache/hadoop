@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.rawcoder.*;
@@ -24,6 +25,7 @@ import org.apache.hadoop.io.erasurecode.rawcoder.*;
 /**
  * A codec & coder utility to help create raw coders conveniently.
  */
+@InterfaceAudience.Private
 public final class CodecUtil {
 
   private CodecUtil() { }

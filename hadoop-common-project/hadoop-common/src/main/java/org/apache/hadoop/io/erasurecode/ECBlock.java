@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A wrapper of block level data source/output that {@link ECChunk}s can be
  * extracted from. For HDFS, it can be an HDFS block (250MB). Note it only cares
  * about erasure coding specific logic thus avoids coupling with any HDFS block
  * details. We can have something like HdfsBlock extend it.
  */
+@InterfaceAudience.Private
 public class ECBlock {
 
   private boolean isParity;

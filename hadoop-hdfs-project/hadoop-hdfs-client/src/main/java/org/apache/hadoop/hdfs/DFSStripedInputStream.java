@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -61,6 +62,7 @@ import java.util.concurrent.Future;
 /**
  * DFSStripedInputStream reads from striped block groups
  */
+@InterfaceAudience.Private
 public class DFSStripedInputStream extends DFSInputStream {
 
   private static class ReaderRetryPolicy {
