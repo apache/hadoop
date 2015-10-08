@@ -1983,6 +1983,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9176. Fix TestDirectoryScanner#testThrottling often fails.
     (Daniel Templeton via lei)
 
+    HDFS-9137. DeadLock between DataNode#refreshVolumes and
+    BPOfferService#registrationSucceeded. (Uma Maheswara Rao G via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
