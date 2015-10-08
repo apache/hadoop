@@ -30,6 +30,9 @@ Release 2.6.2 - UNRELEASED
     YARN-3727. For better error recovery, check if the directory exists before
     using it for localization. (Zhihai Xu via jlowe)
 
+    YARN-4005. Completed container whose app is finished is possibly not
+    removed from NMStateStore. (Jun Gong via jianhe)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
