@@ -1060,6 +1060,18 @@ public class YarnConfiguration extends Configuration {
       90.0F;
 
   /**
+   * The low threshold percentage of disk space used when an offline disk is
+   * marked as online. Values can range from 0.0 to 100.0. The value shouldn't
+   * be more than NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE. If its value is
+   * more than NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE or not set, it will be
+   * set to the same value as NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE.
+   * This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_WM_LOW_PER_DISK_UTILIZATION_PERCENTAGE =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+      "disk-utilization-watermark-low-per-disk-percentage";
+
+  /**
    * The minimum space that must be available on a local dir for it to be used.
    * This applies to nm-local-dirs and nm-log-dirs.
    */

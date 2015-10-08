@@ -114,22 +114,40 @@ public class LocalDirsHandlerService extends AbstractService {
   private final class MonitoringTimerTask extends TimerTask {
 
     public MonitoringTimerTask(Configuration conf) throws YarnRuntimeException {
-      float maxUsableSpacePercentagePerDisk =
+      float highUsableSpacePercentagePerDisk =
           conf.getFloat(
             YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE,
             YarnConfiguration.DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE);
+      float lowUsableSpacePercentagePerDisk =
+          conf.getFloat(
+              YarnConfiguration.NM_WM_LOW_PER_DISK_UTILIZATION_PERCENTAGE,
+              highUsableSpacePercentagePerDisk);
+      if (lowUsableSpacePercentagePerDisk > highUsableSpacePercentagePerDisk) {
+        LOG.warn("Using " + YarnConfiguration.
+            NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE + " as " +
+            YarnConfiguration.NM_WM_LOW_PER_DISK_UTILIZATION_PERCENTAGE +
+            ", because " + YarnConfiguration.
+            NM_WM_LOW_PER_DISK_UTILIZATION_PERCENTAGE +
+            " is not configured properly.");
+        lowUsableSpacePercentagePerDisk = highUsableSpacePercentagePerDisk;
+      }
       long minFreeSpacePerDiskMB =
           conf.getLong(YarnConfiguration.NM_MIN_PER_DISK_FREE_SPACE_MB,
             YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
       localDirs =
           new DirectoryCollection(
-            validatePaths(conf
-              .getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)),
-            maxUsableSpacePercentagePerDisk, minFreeSpacePerDiskMB);
+              validatePaths(conf
+                  .getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)),
+              highUsableSpacePercentagePerDisk,
+              lowUsableSpacePercentagePerDisk,
+              minFreeSpacePerDiskMB);
       logDirs =
           new DirectoryCollection(
-            validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
-            maxUsableSpacePercentagePerDisk, minFreeSpacePerDiskMB);
+              validatePaths(conf
+                  .getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
+              highUsableSpacePercentagePerDisk,
+              lowUsableSpacePercentagePerDisk,
+              minFreeSpacePerDiskMB);
 
       String local = conf.get(YarnConfiguration.NM_LOCAL_DIRS);
       conf.set(NM_GOOD_LOCAL_DIRS,

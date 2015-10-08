@@ -1318,6 +1318,17 @@
   </property>
 
   <property>
+    <description>The low threshold percentage of disk space used when a bad disk is
+    marked as good. Values can range from 0.0 to 100.0. This applies to
+    yarn-nodemanager.local-dirs and yarn.nodemanager.log-dirs.
+    Note that if its value is more than yarn.nodemanager.disk-health-checker.
+    max-disk-utilization-per-disk-percentage or not set, it will be set to the same value as
+    yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage.</description>
+    <name>yarn.nodemanager.disk-health-checker.disk-utilization-watermark-low-per-disk-percentage</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The minimum space that must be available on a disk for
     it to be used. This applies to yarn-nodemanager.local-dirs and 
     yarn.nodemanager.log-dirs.</description>
