@@ -1491,6 +1491,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9170. Move libhdfs / fuse-dfs / libwebhdfs to hdfs-client. (wheat9)
 
+    HDFS-8164. cTime is 0 in VERSION file for newly formatted NameNode.
+    (Xiao Chen via Yongjun Zhang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

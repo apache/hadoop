@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -368,7 +369,30 @@ public class TestFSImage {
       }
     }
   }
-  
+
+  /**
+   * Ensure ctime is set during namenode formatting.
+   */
+  @Test(timeout=60000)
+  public void testCtime() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      final long pre = Time.now();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final long post = Time.now();
+      final long ctime = cluster.getNamesystem().getCTime();
+
+      assertTrue(pre <= ctime);
+      assertTrue(ctime <= post);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /**
    * In this test case, I have created an image with a file having
    * preferredblockSize = 0. We are trying to read this image (since file with
