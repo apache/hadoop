@@ -127,7 +127,12 @@ public interface RMNode {
   public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
 
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
-  
+
+  /**
+   * Reset lastNodeHeartbeatResponse's ID to 0.
+   */
+  void resetLastNodeHeartBeatResponse();
+
   /**
    * Get and clear the list of containerUpdates accumulated across NM
    * heartbeats.

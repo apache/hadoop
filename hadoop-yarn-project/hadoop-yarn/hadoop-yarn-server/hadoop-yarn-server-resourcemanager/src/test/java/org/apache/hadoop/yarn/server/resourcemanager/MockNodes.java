@@ -186,6 +186,10 @@ public class MockNodes {
     }
 
     @Override
+    public void resetLastNodeHeartBeatResponse() {
+    }
+
+    @Override
     public String getNodeManagerVersion() {
       return null;
     }
