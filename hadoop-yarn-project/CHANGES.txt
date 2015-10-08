@@ -705,9 +705,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3655. FairScheduler: potential livelock due to maxAMShare limitation
     and container reservation. (Zhihai Xu via kasha)
 
-    YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
-    (zhihai xu via devaraj)
-
     YARN-3747. TestLocalDirsHandlerService should delete the created test directory logDir2.
     (David Moore via devaraj)
 
@@ -724,9 +721,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3824. Fix two minor nits in member variable properties
     of YarnConfiguration. (Ray Chiang via devaraj)
-
-    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
-    after NM is reconnected. (zhihai xu via xgong)
 
     YARN-3835. hadoop-yarn-server-resourcemanager test package bundles
     core-site.xml, yarn-site.xml (vamsee via rkanter)
@@ -856,9 +850,6 @@ Release 2.8.0 - UNRELEASED
     YARN-3992. TestApplicationPriority.testApplicationPriorityAllocation fails 
     intermittently. (Contributed by Sunil G)
 
-    YARN-4005. Completed container whose app is finished is possibly not
-    removed from NMStateStore. (Jun Gong via jianhe)
-
     YARN-3987. Send AM container completed msg to NM once AM finishes.
     (sandflee via jianhe)
 
@@ -867,9 +858,6 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3986. getTransferredContainers in AbstractYarnScheduler should be present
     in YarnScheduler interface instead. (Varun Saxena via rohithsharmaks)
-
-    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
-    has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
     YARN-4082. Container shouldn't be killed when node's label updated.
     (Wangda Tan via vvasudev)
@@ -1024,6 +1012,18 @@ Release 2.7.2 - UNRELEASED
 
     YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
     by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
+
+    YARN-4005. Completed container whose app is finished is possibly not
+    removed from NMStateStore. (Jun Gong via jianhe)
+
+    YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
+    (zhihai xu via devaraj)
+
+    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
+    after NM is reconnected. (zhihai xu via xgong)
+
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
 Release 2.7.1 - 2015-07-06
 
@@ -1764,6 +1764,21 @@ Release 2.6.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-4005. Completed container whose app is finished is possibly not
+    removed from NMStateStore. (Jun Gong via jianhe)
+
+    YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
+    (zhihai xu via devaraj)
+
+    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
+    after NM is reconnected. (zhihai xu via xgong)
+
+    YARN-3194. RM should handle NMContainerStatuses sent by NM while
+    registering if NM is Reconnected node (Rohith via jlowe)
+
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
 Release 2.6.1 - 2015-09-23
 
