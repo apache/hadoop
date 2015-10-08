@@ -7,6 +7,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   ${PROTO_HDFS_DIR}/acl.proto
   ${PROTO_HDFS_DIR}/datatransfer.proto
   ${PROTO_HDFS_DIR}/encryption.proto
+  ${PROTO_HDFS_DIR}/erasurecoding.proto
   ${PROTO_HDFS_DIR}/hdfs.proto
   ${PROTO_HDFS_DIR}/inotify.proto
   ${PROTO_HDFS_DIR}/xattr.proto
