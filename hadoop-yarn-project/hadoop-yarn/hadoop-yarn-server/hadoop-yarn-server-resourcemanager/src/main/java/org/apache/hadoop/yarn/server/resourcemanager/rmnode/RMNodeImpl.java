@@ -600,7 +600,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.httpPort = newNode.getHttpPort();
         rmNode.httpAddress = newNode.getHttpAddress();
         boolean isCapabilityChanged = false;
-        if (rmNode.getTotalCapability() != newNode.getTotalCapability()) {
+        if (!rmNode.getTotalCapability().equals(
+            newNode.getTotalCapability())) {
           rmNode.totalCapability = newNode.getTotalCapability();
           isCapabilityChanged = true;
         }

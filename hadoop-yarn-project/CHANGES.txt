@@ -100,6 +100,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4005. Completed container whose app is finished is possibly not
     removed from NMStateStore. (Jun Gong via jianhe)
 
+    YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
+    (zhihai xu via devaraj)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
