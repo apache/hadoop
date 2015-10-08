@@ -36,6 +36,9 @@ Release 2.6.2 - UNRELEASED
     YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
     (zhihai xu via devaraj)
 
+    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
+    after NM is reconnected. (zhihai xu via xgong)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
