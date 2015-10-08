@@ -502,12 +502,29 @@ public class DataNode extends ReconfigurableBase
   public void reconfigurePropertyImpl(String property, String newVal)
       throws ReconfigurationException {
     if (property.equals(DFS_DATANODE_DATA_DIR_KEY)) {
+      IOException rootException = null;
       try {
         LOG.info("Reconfiguring " + property + " to " + newVal);
         this.refreshVolumes(newVal);
       } catch (IOException e) {
-        throw new ReconfigurationException(property, newVal,
-            getConf().get(property), e);
+        rootException = e;
+      } finally {
+        // Send a full block report to let NN acknowledge the volume changes.
+        try {
+          triggerBlockReport(
+              new BlockReportOptions.Factory().setIncremental(false).build());
+        } catch (IOException e) {
+          LOG.warn("Exception while sending the block report after refreshing"
+              + " volumes " + property + " to " + newVal, e);
+          if (rootException == null) {
+            rootException = e;
+          }
+        } finally {
+          if (rootException != null) {
+            throw new ReconfigurationException(property, newVal,
+                getConf().get(property), rootException);
+          }
+        }
       }
     } else {
       throw new ReconfigurationException(
@@ -689,10 +706,6 @@ public class DataNode extends ReconfigurableBase
       conf.set(DFS_DATANODE_DATA_DIR_KEY,
           Joiner.on(",").join(effectiveVolumes));
       dataDirs = getStorageLocations(conf);
-
-      // Send a full block report to let NN acknowledge the volume changes.
-      triggerBlockReport(new BlockReportOptions.Factory()
-          .setIncremental(false).build());
     }
   }
 

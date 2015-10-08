@@ -1169,6 +1169,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9211. Fix incorrect version in hadoop-hdfs-native-client/pom.xml
     from HDFS-9170 branch-2 backport. (Eric Payne via wang)
 
+    HDFS-9137. DeadLock between DataNode#refreshVolumes and
+    BPOfferService#registrationSucceeded. (Uma Maheswara Rao G via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
