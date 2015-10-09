@@ -40,6 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
@@ -850,6 +851,44 @@ public class MiniDFSCluster {
         shutdown();
       }
     }
+
+    for (NameNodeInfo nn : nameNodes) {
+      Configuration nnConf = nn.conf;
+      for (NameNodeInfo nnInfo : nameNodes) {
+        if (nn.equals(nnInfo)) {
+          continue;
+        }
+       copyKeys(conf, nnConf, nnInfo.nameserviceId, nnInfo.nnId);
+      }
+    }
+  }
+
+  private static void copyKeys(Configuration srcConf, Configuration destConf,
+      String nameserviceId, String nnId) {
+    String key = DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+      nameserviceId, nnId);
+    destConf.set(key, srcConf.get(key));
+
+    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        nameserviceId, nnId);
+    String val = srcConf.get(key);
+    if (val != null) {
+      destConf.set(key, srcConf.get(key));
+    }
+
+    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+        nameserviceId, nnId);
+    val = srcConf.get(key);
+    if (val != null) {
+      destConf.set(key, srcConf.get(key));
+    }
+
+    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        nameserviceId, nnId);
+    val = srcConf.get(key);
+    if (val != null) {
+      destConf.set(key, srcConf.get(key));
+    }
   }
   
   /**
@@ -985,15 +1024,13 @@ public class MiniDFSCluster {
 
       // Start all Namenodes
       for (NNConf nn : nameservice.getNNs()) {
-        initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs,
+        Configuration hdfsConf = new Configuration(conf);
+        initNameNodeConf(hdfsConf, nsId, nn.getNnId(), manageNameDfsDirs,
             enableManagedDfsDirsRedundancy, nnCounter);
-        createNameNode(nnCounter, conf, numDataNodes, false, operation,
+        createNameNode(nnCounter, hdfsConf, numDataNodes, false, operation,
             clusterId, nsId, nn.getNnId());
         // Record the last namenode uri
-        if (nameNodes[nnCounter] != null && nameNodes[nnCounter].conf != null) {
-          lastDefaultFileSystem =
-              nameNodes[nnCounter].conf.get(FS_DEFAULT_NAME_KEY);
-        }
+        lastDefaultFileSystem = hdfsConf.get(FS_DEFAULT_NAME_KEY);
         nnCounter++;
       }
       if (!federation && lastDefaultFileSystem != null) {
@@ -1100,50 +1137,43 @@ public class MiniDFSCluster {
     return args;
   }
   
-  private void createNameNode(int nnIndex, Configuration conf,
+  private void createNameNode(int nnIndex, Configuration hdfsConf,
       int numDataNodes, boolean format, StartupOption operation,
       String clusterId, String nameserviceId,
       String nnId)
       throws IOException {
     // Format and clean out DataNode directories
     if (format) {
-      DFSTestUtil.formatNameNode(conf);
+      DFSTestUtil.formatNameNode(hdfsConf);
     }
     if (operation == StartupOption.UPGRADE){
       operation.setClusterId(clusterId);
     }
     
     // Start the NameNode after saving the default file system.
-    String originalDefaultFs = conf.get(FS_DEFAULT_NAME_KEY);
     String[] args = createArgs(operation);
-    NameNode nn =  NameNode.createNameNode(args, conf);
+    NameNode nn =  NameNode.createNameNode(args, hdfsConf);
     if (operation == StartupOption.RECOVER) {
       return;
     }
     
     // After the NN has started, set back the bound ports into
     // the conf
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+    hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
         nameserviceId, nnId), nn.getNameNodeAddressHostPortString());
     if (nn.getHttpAddress() != null) {
-      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
+      hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
           nameserviceId, nnId), NetUtils.getHostPortString(nn.getHttpAddress()));
     }
     if (nn.getHttpsAddress() != null) {
-      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+      hdfsConf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
           nameserviceId, nnId), NetUtils.getHostPortString(nn.getHttpsAddress()));
     }
-
-    DFSUtil.setGenericConf(conf, nameserviceId, nnId,
+    copyKeys(hdfsConf, conf, nameserviceId, nnId);
+    DFSUtil.setGenericConf(hdfsConf, nameserviceId, nnId,
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
     nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId,
-        operation, new Configuration(conf));
-    // Restore the default fs name
-    if (originalDefaultFs == null) {
-      conf.set(FS_DEFAULT_NAME_KEY, "");
-    } else {
-      conf.set(FS_DEFAULT_NAME_KEY, originalDefaultFs);
-    }
+        operation, hdfsConf);
   }
 
   /**
@@ -2759,7 +2789,7 @@ public class MiniDFSCluster {
    * 
    * @return newly started namenode
    */
-  public NameNode addNameNode(Configuration conf, int namenodePort)
+  public void addNameNode(Configuration conf, int namenodePort)
       throws IOException {
     if(!federation)
       throw new IOException("cannot add namenode to non-federated cluster");
@@ -2790,7 +2820,6 @@ public class MiniDFSCluster {
 
     // Wait for new namenode to get registrations from all the datanodes
     waitActive(nnIndex);
-    return nameNodes[nnIndex].nameNode;
   }
   
   protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
