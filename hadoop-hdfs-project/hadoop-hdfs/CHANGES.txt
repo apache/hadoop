@@ -1503,6 +1503,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9181. Better handling of exceptions thrown during upgrade shutdown.
     (Wei-Chiu Chuang via Yongjun Zhang)
 
+    HDFS-9110. Use Files.walkFileTree in NNUpgradeUtil#doPreUpgrade for
+    better efficiency. (Charlie Helin via wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
