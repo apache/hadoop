@@ -1193,9 +1193,22 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
+  public RemoteIterator<Path> listCorruptFileBlocks(final Path path)
       throws IOException {
-    return new CorruptFileBlockIterator(dfs, path);
+    Path absF = fixRelativePart(path);
+    return new FileSystemLinkResolver<RemoteIterator<Path>>() {
+      @Override
+      public RemoteIterator<Path> doCall(final Path path) throws IOException,
+          UnresolvedLinkException {
+        return new CorruptFileBlockIterator(dfs, path);
+      }
+
+      @Override
+      public RemoteIterator<Path> next(final FileSystem fs, final Path path)
+          throws IOException {
+        return fs.listCorruptFileBlocks(path);
+      }
+    }.resolve(this, absF);
   }
 
   /** @return datanode statistics. */
