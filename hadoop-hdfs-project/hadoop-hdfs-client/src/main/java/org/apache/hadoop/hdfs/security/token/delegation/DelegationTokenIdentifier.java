@@ -61,7 +61,8 @@ public class DelegationTokenIdentifier
   @Override
   public String toString() {
     return getKind() + " token " + getSequenceNumber()
-        + " for " + getUser().getShortUserName();
+        + " for " + getUser().getShortUserName() + " with renewer " +
+        getRenewer();
   }
 
   /** @return a string representation of the token */

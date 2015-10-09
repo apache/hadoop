@@ -314,4 +314,13 @@ public class TestDelegationToken {
           }
         });
   }
+
+  @Test
+  public void testDelegationTokenIdentifierToString() throws Exception {
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
+        "SomeUser"), new Text("JobTracker"), null);
+    Assert.assertEquals("HDFS_DELEGATION_TOKEN token 0" +
+        " for SomeUser with renewer JobTracker",
+        dtId.toString());
+  }
 }
