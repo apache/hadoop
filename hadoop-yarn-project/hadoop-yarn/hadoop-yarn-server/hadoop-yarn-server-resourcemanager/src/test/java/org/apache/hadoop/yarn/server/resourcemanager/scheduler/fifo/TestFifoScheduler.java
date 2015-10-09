@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -112,7 +113,6 @@ public class TestFifoScheduler {
 
   private ResourceManager resourceManager = null;
   private static Configuration conf;
-  
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
   
@@ -937,9 +937,11 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        "rack1", BuilderUtils.newResource(GB, 1), 1));
+        "rack1", BuilderUtils.newResource(GB, 1), 1,
+        RMNodeLabelsManager.NO_LABEL));
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1,
+        RMNodeLabelsManager.NO_LABEL));
     fs.allocate(appAttemptId1, ask1, emptyId,
         Collections.singletonList(host_1_0), null, null, null);
 
