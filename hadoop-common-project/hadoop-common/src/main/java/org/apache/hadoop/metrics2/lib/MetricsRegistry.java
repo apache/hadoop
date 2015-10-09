@@ -188,16 +188,21 @@ public class MetricsRegistry {
    * @param valueName of the metric (e.g., "Time" or "Latency")
    * @param interval rollover interval of estimator in seconds
    * @return a new quantile estimator object
+   * @throws MetricsException if interval is not a positive integer
    */
   public synchronized MutableQuantiles newQuantiles(String name, String desc,
       String sampleName, String valueName, int interval) {
     checkMetricName(name);
-    MutableQuantiles ret = 
+    if (interval <= 0) {
+      throw new MetricsException("Interval should be positive.  Value passed" +
+          " is: " + interval);
+    }
+    MutableQuantiles ret =
         new MutableQuantiles(name, desc, sampleName, valueName, interval);
     metricsMap.put(name, ret);
     return ret;
   }
-  
+
   /**
    * Create a mutable metric with stats
    * @param name  of the metric
