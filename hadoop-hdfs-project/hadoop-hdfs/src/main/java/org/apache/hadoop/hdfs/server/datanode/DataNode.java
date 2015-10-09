@@ -1765,8 +1765,9 @@ public class DataNode extends ReconfigurableBase
         xserver.sendOOBToPeers();
         ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
         this.dataXceiverServer.interrupt();
-      } catch (Throwable e) {
+      } catch (Exception e) {
         // Ignore, since the out of band messaging is advisory.
+        LOG.trace("Exception interrupting DataXceiverServer: ", e);
       }
     }
 
