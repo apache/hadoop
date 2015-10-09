@@ -918,6 +918,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4235. FairScheduler PrimaryGroup does not handle empty groups returned 
     for a user. (Anubhav Dhoot via rohithsharmaks)
 
+    YARN-4140. RM container allocation delayed incase of app submitted to 
+    Nodelabel partition. (Bibin A Chundatt via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

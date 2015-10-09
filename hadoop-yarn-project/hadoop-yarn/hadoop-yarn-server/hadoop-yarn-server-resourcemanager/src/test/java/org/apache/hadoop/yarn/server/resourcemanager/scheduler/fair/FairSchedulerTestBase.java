@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -108,6 +109,7 @@ public class FairSchedulerTestBase {
     prio.setPriority(priority);
     request.setPriority(prio);
     request.setRelaxLocality(relaxLocality);
+    request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     return request;
   }
 
