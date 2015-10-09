@@ -359,6 +359,9 @@ Trunk (Unreleased)
     HDFS-9204. DatanodeDescriptor#PendingReplicationWithoutTargets is wrongly
     calculated. (Mingliang Liu via jing9)
 
+    HDFS-9217. Fix broken findbugsExcludeFile.xml for hadoop-hdfs-client module.
+    (Mingliang Liu via aajisaka)
+
     BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
 
       HDFS-7347. Configurable erasure coding policy for individual files and

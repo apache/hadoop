@@ -15,9 +15,9 @@
       <Class name="org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus"/>
       <Class name="org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport"/>
       <Class name="org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslResponseWithNegotiatedCipherOption"/>
-      <Class name="org.apache.hadoop.hdfs.DFSPacket”/>
-      <Class name="org.apache.hadoop.hdfs.protocol.LocatedStripedBlock”/>
-      <Class name=“org.apache.hadoop.hdfs.util.StripedBlockUtil$ChunkByteArray”/>
+      <Class name="org.apache.hadoop.hdfs.DFSPacket"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.LocatedStripedBlock"/>
+      <Class name="org.apache.hadoop.hdfs.util.StripedBlockUtil$ChunkByteArray"/>
     </Or>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
   </Match>
