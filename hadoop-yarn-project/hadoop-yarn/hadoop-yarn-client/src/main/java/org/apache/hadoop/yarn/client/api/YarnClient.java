@@ -138,6 +138,23 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
+   * Fail an application attempt identified by given ID.
+   * </p>
+   *
+   * @param applicationAttemptId
+   *          {@link ApplicationAttemptId} of the attempt to fail.
+   * @throws YarnException
+   *           in case of errors or if YARN rejects the request due to
+   *           access-control restrictions.
+   * @throws IOException
+   * @see #getQueueAclsInfo()
+   */
+  public abstract void failApplicationAttempt(
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
    * Kill an application identified by given ID.
    * </p>
    * 

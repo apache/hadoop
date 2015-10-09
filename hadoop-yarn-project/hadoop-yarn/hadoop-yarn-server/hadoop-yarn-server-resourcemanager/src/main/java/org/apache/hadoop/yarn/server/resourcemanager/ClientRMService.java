@@ -51,6 +51,8 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -139,6 +141,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeSignalContainerEvent;
@@ -611,6 +614,79 @@ public class ClientRMService extends AbstractService implements
 
     SubmitApplicationResponse response = recordFactory
         .newRecordInstance(SubmitApplicationResponse.class);
+    return response;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public FailApplicationAttemptResponse failApplicationAttempt(
+      FailApplicationAttemptRequest request) throws YarnException {
+
+    ApplicationAttemptId attemptId = request.getApplicationAttemptId();
+    ApplicationId applicationId = attemptId.getApplicationId();
+
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      RMAuditLogger.logFailure("UNKNOWN", AuditConstants.FAIL_ATTEMPT_REQUEST,
+          "UNKNOWN", "ClientRMService" , "Error getting UGI",
+          applicationId, attemptId);
+      throw RPCUtil.getRemoteException(ie);
+    }
+
+    RMApp application = this.rmContext.getRMApps().get(applicationId);
+    if (application == null) {
+      RMAuditLogger.logFailure(callerUGI.getUserName(),
+          AuditConstants.FAIL_ATTEMPT_REQUEST, "UNKNOWN", "ClientRMService",
+          "Trying to fail an attempt of an absent application", applicationId,
+          attemptId);
+      throw new ApplicationNotFoundException("Trying to fail an attempt "
+          + attemptId + " of an absent application " + applicationId);
+    }
+
+    RMAppAttempt appAttempt = application.getAppAttempts().get(attemptId);
+    if (appAttempt == null) {
+      throw new ApplicationAttemptNotFoundException(
+          "ApplicationAttempt with id '" + attemptId + "' doesn't exist in RM.");
+    }
+
+    if (!checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.MODIFY_APP, application)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.FAIL_ATTEMPT_REQUEST,
+          "User doesn't have permissions to "
+              + ApplicationAccessType.MODIFY_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot perform operation "
+          + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
+    }
+
+    FailApplicationAttemptResponse response =
+        recordFactory.newRecordInstance(FailApplicationAttemptResponse.class);
+
+    if (!ACTIVE_APP_STATES.contains(application.getState())) {
+      if (COMPLETED_APP_STATES.contains(application.getState())) {
+        RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
+            AuditConstants.FAIL_ATTEMPT_REQUEST, "ClientRMService",
+            applicationId);
+        return response;
+      }
+    }
+
+    this.rmContext
+        .getDispatcher()
+        .getEventHandler()
+        .handle(
+            new RMAppAttemptFailedEvent(attemptId,
+        "Attempt failed by user."));
+
+    RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
+        AuditConstants.FAIL_ATTEMPT_REQUEST, "ClientRMService", applicationId,
+        attemptId);
+
     return response;
   }
 

@@ -43,6 +43,7 @@ public class RMAuditLogger {
     static final String KEY_VAL_SEPARATOR = "=";
     static final char PAIR_SEPARATOR = '\t';
 
+    public static final String FAIL_ATTEMPT_REQUEST = "Fail Attempt Request";
     public static final String KILL_APP_REQUEST = "Kill Application Request";
     public static final String SUBMIT_APP_REQUEST = "Submit Application Request";
     public static final String MOVE_APP_REQUEST = "Move Application Request";

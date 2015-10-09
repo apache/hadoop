@@ -226,6 +226,9 @@ Release 2.8.0 - UNRELEASED
     YARN-1897. CLI and core support for signal container functionality.
     (Ming Ma via xgong)
  
+    YARN-261. Ability to fail AM attempts (Andrey Klochkov and
+    Rohith Sharma K S via jlowe)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

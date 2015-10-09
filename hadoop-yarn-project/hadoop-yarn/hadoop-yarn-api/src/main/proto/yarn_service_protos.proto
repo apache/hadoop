@@ -122,6 +122,13 @@ message SubmitApplicationRequestProto {
 message SubmitApplicationResponseProto {
 }
 
+message FailApplicationAttemptRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+}
+
+message FailApplicationAttemptResponseProto {
+}
+
 message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
 }

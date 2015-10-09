@@ -33,6 +33,7 @@ public abstract class YarnCLI extends Configured implements Tool {
   public static final String STATUS_CMD = "status";
   public static final String LIST_CMD = "list";
   public static final String KILL_CMD = "kill";
+  public static final String FAIL_CMD = "fail";
   public static final String MOVE_TO_QUEUE_CMD = "movetoqueue";
   public static final String HELP_CMD = "help";
   public static final String SIGNAL_CMD = "signal";
@@ -42,9 +43,13 @@ public abstract class YarnCLI extends Configured implements Tool {
 
   public YarnCLI() {
     super(new YarnConfiguration());
-    client = YarnClient.createYarnClient();
+    client = createYarnClient();
     client.init(getConf());
     client.start();
+  }
+
+  protected YarnClient createYarnClient() {
+    return YarnClient.createYarnClient();
   }
 
   public void setSysOutPrintStream(PrintStream sysout) {

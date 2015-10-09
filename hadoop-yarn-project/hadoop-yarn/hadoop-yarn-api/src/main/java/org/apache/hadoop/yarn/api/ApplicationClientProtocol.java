@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.retry.Idempotent;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
@@ -150,6 +152,32 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   
   /**
    * <p>The interface used by clients to request the 
+   * <code>ResourceManager</code> to fail an application attempt.</p>
+   *
+   * <p>The client, via {@link FailApplicationAttemptRequest} provides the
+   * {@link ApplicationAttemptId} of the attempt to be failed.</p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
+   * application, queue etc. before failing the attempt.</p>
+   *
+   * <p>Currently, the <code>ResourceManager</code> returns an empty response
+   * on success and throws an exception on rejecting the request.</p>
+   *
+   * @param request request to fail an attempt
+   * @return <code>ResourceManager</code> returns an empty response
+   *         on success and throws an exception on rejecting the request
+   * @throws YarnException
+   * @throws IOException
+   * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest)
+   */
+  @Public
+  @Unstable
+  public FailApplicationAttemptResponse failApplicationAttempt(
+      FailApplicationAttemptRequest request)
+  throws YarnException, IOException;
+
+  /**
+   * <p>The interface used by clients to request the
    * <code>ResourceManager</code> to abort submitted application.</p>
    * 
    * <p>The client, via {@link KillApplicationRequest} provides the
