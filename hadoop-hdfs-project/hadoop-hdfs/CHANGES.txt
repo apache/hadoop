@@ -1998,6 +1998,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9137. DeadLock between DataNode#refreshVolumes and
     BPOfferService#registrationSucceeded. (Uma Maheswara Rao G via yliu)
 
+    HDFS-9142. Separating Configuration object for namenode(s) in
+    MiniDFSCluster. (Siqi Li via mingma)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
