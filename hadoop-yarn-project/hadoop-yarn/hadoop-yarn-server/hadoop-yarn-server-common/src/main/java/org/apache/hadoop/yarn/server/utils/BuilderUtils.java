@@ -306,6 +306,18 @@ public class BuilderUtils {
     return request;
   }
 
+  public static ResourceRequest newResourceRequest(Priority priority,
+      String hostName, Resource capability, int numContainers, String label) {
+    ResourceRequest request =
+        recordFactory.newRecordInstance(ResourceRequest.class);
+    request.setPriority(priority);
+    request.setResourceName(hostName);
+    request.setCapability(capability);
+    request.setNumContainers(numContainers);
+    request.setNodeLabelExpression(label);
+    return request;
+  }
+
   public static ResourceRequest newResourceRequest(ResourceRequest r) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);

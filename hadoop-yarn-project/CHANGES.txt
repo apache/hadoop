@@ -105,6 +105,10 @@ Release 2.7.4 - UNRELEASED
     YARN-4925. ContainerRequest in AMRMClient, application should be able to
     specify nodes/racks together with nodeLabelExpression. Bibin A Chundatt
 
+    YARN-4140. RM container allocation delayed incase of app submitted to
+    Nodelabel partition. (Bibin A Chundatt via wangda)
+    Backport by Jonathan Hung.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

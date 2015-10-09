@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -397,9 +398,11 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        "rack1", BuilderUtils.newResource(GB, 1), 1));
+        "rack1", BuilderUtils.newResource(GB, 1), 1,
+        RMNodeLabelsManager.NO_LABEL));
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1,
+        RMNodeLabelsManager.NO_LABEL));
     fs.allocate(appAttemptId1, ask1, emptyId, Collections.singletonList(host_1_0), null);
     
     // Trigger container assignment
