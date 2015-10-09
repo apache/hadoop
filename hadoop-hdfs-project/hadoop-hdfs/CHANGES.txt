@@ -2004,6 +2004,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9142. Separating Configuration object for namenode(s) in
     MiniDFSCluster. (Siqi Li via mingma)
 
+    HDFS-8941. DistributedFileSystem listCorruptFileBlocks API should
+    resolve relative path. (Rakesh R via wang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
