@@ -32,6 +32,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -585,6 +587,14 @@ public class MockRM extends ResourceManager {
     ApplicationClientProtocol client = getClientRMService();
     KillApplicationRequest req = KillApplicationRequest.newInstance(appId);
     return client.forceKillApplication(req);
+  }
+
+  public FailApplicationAttemptResponse failApplicationAttempt(
+      ApplicationAttemptId attemptId) throws Exception {
+    ApplicationClientProtocol client = getClientRMService();
+    FailApplicationAttemptRequest req =
+        FailApplicationAttemptRequest.newInstance(attemptId);
+    return client.failApplicationAttempt(req);
   }
 
   // from AMLauncher

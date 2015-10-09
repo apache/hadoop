@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
@@ -1443,6 +1444,18 @@ public class TestYarnCLI {
 
   }
 
+  @Test
+  public void testFailApplicationAttempt() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    int exitCode =
+        cli.run(new String[] { "applicationattempt", "-fail",
+            "appattempt_1444199730803_0003_000001" });
+    Assert.assertEquals(0, exitCode);
+
+    verify(client).failApplicationAttempt(any(ApplicationAttemptId.class));
+    verifyNoMoreInteractions(client);
+  }
+
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
     cli.run(new String[] { "application" });
@@ -1527,6 +1540,7 @@ public class TestYarnCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: applicationattempt");
+    pw.println(" -fail <Application Attempt ID>     Fails application attempt.");
     pw.println(" -help                              Displays help for all commands.");
     pw.println(" -list <Application ID>             List application attempts for");
     pw.println("                                    aplication.");

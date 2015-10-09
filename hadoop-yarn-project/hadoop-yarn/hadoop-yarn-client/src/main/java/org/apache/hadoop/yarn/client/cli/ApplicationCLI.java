@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -138,9 +139,11 @@ public class ApplicationCLI extends YarnCLI {
           "Prints the status of the application attempt.");
       opts.addOption(LIST_CMD, true,
           "List application attempts for aplication.");
+      opts.addOption(FAIL_CMD, true, "Fails application attempt.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
       opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
       opts.getOption(LIST_CMD).setArgName("Application ID");
+      opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
     } else if (args.length > 0 && args[0].equalsIgnoreCase(CONTAINER)) {
       title = CONTAINER;
       opts.addOption(STATUS_CMD, true,
@@ -252,6 +255,12 @@ public class ApplicationCLI extends YarnCLI {
       }
       moveApplicationAcrossQueues(cliParser.getOptionValue(MOVE_TO_QUEUE_CMD),
           cliParser.getOptionValue(QUEUE_CMD));
+    } else if (cliParser.hasOption(FAIL_CMD)) {
+      if (!args[0].equalsIgnoreCase(APPLICATION_ATTEMPT)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      failApplicationAttempt(cliParser.getOptionValue(FAIL_CMD));
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(title, opts);
       return 0;
@@ -516,6 +525,25 @@ public class ApplicationCLI extends YarnCLI {
       client.moveApplicationAcrossQueues(appId, queue);
       sysout.println("Successfully completed move.");
     }
+  }
+
+  /**
+   * Fails an application attempt.
+   *
+   * @param attemptId ID of the attempt to fail. If provided, applicationId
+   *        parameter is not used.
+   * @throws YarnException
+   * @throws IOException
+   */
+  private void failApplicationAttempt(String attemptId) throws YarnException,
+      IOException {
+    ApplicationId appId;
+    ApplicationAttemptId attId;
+    attId = ConverterUtils.toApplicationAttemptId(attemptId);
+    appId = attId.getApplicationId();
+
+    sysout.println("Failing attempt " + attId + " of application " + appId);
+    client.failApplicationAttempt(attId);
   }
 
   /**

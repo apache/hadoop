@@ -16,38 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
 
-public enum RMAppAttemptEventType {
-  // Source: RMApp
-  START,
-  KILL,
-  FAIL,
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 
-  // Source: AMLauncher
-  LAUNCHED,
-  LAUNCH_FAILED,
+public class RMAppAttemptFailedEvent extends RMAppAttemptEvent {
 
-  // Source: AMLivelinessMonitor
-  EXPIRE,
-  
-  // Source: ApplicationMasterService
-  REGISTERED,
-  STATUS_UPDATE,
-  UNREGISTERED,
+  private final String diagnostics;
 
-  // Source: Containers
-  CONTAINER_ALLOCATED,
-  CONTAINER_FINISHED,
-  
-  // Source: RMStateStore
-  ATTEMPT_NEW_SAVED,
-  ATTEMPT_UPDATE_SAVED,
+  public RMAppAttemptFailedEvent(ApplicationAttemptId appAttemptId,
+      String diagnostics) {
+    super(appAttemptId, RMAppAttemptEventType.FAIL);
+    this.diagnostics = diagnostics;
+  }
 
-  // Source: Scheduler
-  ATTEMPT_ADDED,
-  
-  // Source: RMAttemptImpl.recover
-  RECOVER
+  public String getDiagnostics() {
+    return this.diagnostics;
+  }
 
 }

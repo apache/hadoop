@@ -70,6 +70,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -325,6 +327,12 @@ public class TestClientRedirect {
     public SubmitApplicationResponse submitApplication(
         SubmitApplicationRequest request) throws IOException {
       throw new IOException("Test");
+    }
+
+    @Override
+    public FailApplicationAttemptResponse failApplicationAttempt(
+        FailApplicationAttemptRequest request) throws IOException {
+      return recordFactory.newRecordInstance(FailApplicationAttemptResponse.class);
     }
 
     @Override
