@@ -423,7 +423,7 @@ public class CLI extends Configured implements Tool {
   private void displayUsage(String cmd) {
     String prefix = "Usage: job ";
     String jobPriorityValues = getJobPriorityNames();
-    String taskStates = "running, completed";
+    String taskStates = "pending, running, completed, failed, killed";
     
     if ("-submit".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-file>]");
