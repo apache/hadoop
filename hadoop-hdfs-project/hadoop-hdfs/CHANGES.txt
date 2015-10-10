@@ -2012,6 +2012,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9215. Suppress the RAT warnings in hdfs-native-client module. (wheat9)
 
+    HDFS-9222. Add hadoop-hdfs-client as a dependency of
+    hadoop-hdfs-native-client. (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
