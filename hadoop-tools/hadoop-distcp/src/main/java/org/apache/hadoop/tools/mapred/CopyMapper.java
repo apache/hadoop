@@ -288,7 +288,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     } catch (Exception e) {
       context.setStatus("Copy Failure: " + sourceFileStatus.getPath());
       throw new IOException("File copy failed: " + sourceFileStatus.getPath() +
-          " --> " + target, e.getCause());
+          " --> " + target, e);
     }
     incrementCounter(context, Counter.BYTESEXPECTED, sourceFileStatus.getLen());
     incrementCounter(context, Counter.BYTESCOPIED, bytesCopied);

@@ -713,7 +713,7 @@ public class TestCopyMapper {
             // wrapped twice - once in RetriableCommand and again in CopyMapper
             // itself.
             if (e.getCause() == null || e.getCause().getCause() == null ||
-                !(e.getCause() instanceof AccessControlException)) {
+                !(e.getCause().getCause() instanceof AccessControlException)) {
               throw new RuntimeException(e);
             }
           }
@@ -841,10 +841,8 @@ public class TestCopyMapper {
     }
     catch (Exception exception) {
       // Check that the exception suggests the use of -pb/-skipCrc.
-      Assert.assertTrue("Exception should have suggested the use of -pb.",
-          exception.getCause().getMessage().contains("pb"));
-      Assert.assertTrue("Exception should have suggested the use of -skipCrc.",
-          exception.getCause().getMessage().contains("skipCrc"));
+      Assert.assertTrue("Failure exception should have suggested the use of -pb.", exception.getCause().getCause().getMessage().contains("pb"));
+      Assert.assertTrue("Failure exception should have suggested the use of -skipCrc.", exception.getCause().getCause().getMessage().contains("skipCrc"));
     }
   }
 
