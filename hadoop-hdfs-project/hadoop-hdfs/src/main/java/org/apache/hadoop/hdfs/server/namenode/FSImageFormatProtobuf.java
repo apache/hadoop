@@ -18,14 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.DigestOutputStream;
@@ -177,9 +170,19 @@ public final class FSImageFormatProtobuf {
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       AltFileInputStream fin = new AltFileInputStream(file);
       try {
+        // loadInternal is should be hotspot.
         loadInternal(raFile, fin);
         long end = Time.monotonicNow();
         LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
+
+        long time = end - start;
+        File file1 = new File("/home/minglei/intervalTime.txt");
+        FileOutputStream out = new FileOutputStream(file1);
+        OutputStreamWriter osw  = new OutputStreamWriter(out);
+        BufferedWriter bw = new BufferedWriter(osw);
+        bw.write(String.valueOf(time) + " Milliseconds ");
+        bw.flush();
+
       } finally {
         fin.close();
         raFile.close();
