@@ -447,7 +447,8 @@ abstract public class Shell {
   /** Token separator regex used to parse Shell tool outputs */
   public static final String TOKEN_SEPARATOR_REGEX
                 = WINDOWS ? "[|\n\r]" : "[ \t\n\r\f]";
-
+  private static final int ERROR_MSG_MAX_LENGTH = 1024 * 1024;
+  
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed
   final private boolean redirectErrorStream; // merge stdout and stderr
@@ -554,6 +555,8 @@ abstract public class Shell {
           while((line != null) && !isInterrupted()) {
             errMsg.append(line);
             errMsg.append(System.getProperty("line.separator"));
+            errMsg.delete(0, (errMsg.length() - ERROR_MSG_MAX_LENGTH < 0) ? 0
+              : (errMsg.length() - ERROR_MSG_MAX_LENGTH));
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
