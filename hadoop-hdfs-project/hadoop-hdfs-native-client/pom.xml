@@ -65,6 +65,23 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/native/*</exclude>
+            <exclude>src/main/native/config/*</exclude>
+            <exclude>src/main/native/m4/*</exclude>
+            <exclude>src/main/native/util/tree.h</exclude>
+            <exclude>src/contrib/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <profile>
       <id>native-win</id>

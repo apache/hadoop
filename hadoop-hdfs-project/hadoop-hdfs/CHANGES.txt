@@ -2010,6 +2010,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-8941. DistributedFileSystem listCorruptFileBlocks API should
     resolve relative path. (Rakesh R via wang)
 
+    HDFS-9215. Suppress the RAT warnings in hdfs-native-client module. (wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
