@@ -1999,14 +1999,17 @@ public class YarnConfiguration extends Configuration {
   public static final String NODELABEL_CONFIGURATION_TYPE =
       NODE_LABELS_PREFIX + "configuration-type";
   
-  public static final String CENTALIZED_NODELABEL_CONFIGURATION_TYPE =
+  public static final String CENTRALIZED_NODELABEL_CONFIGURATION_TYPE =
       "centralized";
-  
+
+  public static final String DELEGATED_CENTALIZED_NODELABEL_CONFIGURATION_TYPE =
+      "delegated-centralized";
+
   public static final String DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE =
       "distributed";
   
   public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
-      CENTALIZED_NODELABEL_CONFIGURATION_TYPE;
+      CENTRALIZED_NODELABEL_CONFIGURATION_TYPE;
 
   public static final String MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY =
       YARN_PREFIX + "cluster.max-application-priority";
@@ -2016,6 +2019,20 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static boolean isDistributedNodeLabelConfiguration(Configuration conf) {
     return DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
+        NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
+  }
+
+  @Private
+  public static boolean isCentralizedNodeLabelConfiguration(
+      Configuration conf) {
+    return CENTRALIZED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
+        NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
+  }
+
+  @Private
+  public static boolean isDelegatedCentralizedNodeLabelConfiguration(
+      Configuration conf) {
+    return DELEGATED_CENTALIZED_NODELABEL_CONFIGURATION_TYPE.equals(conf.get(
         NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
   }
 
@@ -2054,6 +2071,23 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_PROVIDER_CONFIGURED_NODE_LABELS =
       NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-labels";
+
+  private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
+      + "node-labels.";
+
+  public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
+      RM_NODE_LABELS_PREFIX + "provider";
+
+  private static final String RM_NODE_LABELS_PROVIDER_PREFIX =
+      RM_NODE_LABELS_PREFIX + "provider.";
+
+  //If -1 is configured then no timer task should be created
+  public static final String RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
+      RM_NODE_LABELS_PROVIDER_PREFIX + "fetch-interval-ms";
+
+  //once in 30 mins
+  public static final long DEFAULT_RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
+      30 * 60 * 1000;
 
   public static final String AM_BLACKLISTING_ENABLED =
       YARN_PREFIX + "am.blacklisting.enabled";

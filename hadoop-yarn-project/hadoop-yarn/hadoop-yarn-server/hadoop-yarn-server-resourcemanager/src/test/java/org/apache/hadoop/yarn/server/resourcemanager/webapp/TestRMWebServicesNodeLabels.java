@@ -445,8 +445,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
 
-    //setting rmWebService for Distributed NodeLabel Configuration
-    rmWebService.isDistributedNodeLabelConfiguration = true;
+    //setting rmWebService for non Centralized NodeLabel Configuration
+    rmWebService.isCentralizedNodeLabelConfiguration = false;
 
     // Case1 : Replace labels using node-to-labels
     ntli = new NodeToLabelsEntryList();

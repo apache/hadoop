@@ -872,12 +872,12 @@ public class TestRMAdminService {
   }
 
   @Test(expected = YarnException.class)
-  public void testModifyLabelsOnNodesWithDistributedConfigurationEnabled()
+  public void testModifyLabelsOnNodesWithCentralizedConfigurationDisabled()
       throws IOException, YarnException {
     // create RM and set it's ACTIVE, and set distributed node label
     // configuration to true
     MockRM rm = new MockRM();
-    rm.adminService.isDistributedNodeLabelConfiguration = true;
+    rm.adminService.isCentralizedNodeLabelConfiguration = false;
 
     ((RMContextImpl) rm.getRMContext())
         .setHAServiceState(HAServiceState.ACTIVE);
@@ -893,14 +893,14 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRemoveClusterNodeLabelsWithDistributedConfigurationEnabled()
+  public void testRemoveClusterNodeLabelsWithCentralizedConfigurationDisabled()
       throws IOException, YarnException {
     // create RM and set it's ACTIVE
     MockRM rm = new MockRM();
     ((RMContextImpl) rm.getRMContext())
         .setHAServiceState(HAServiceState.ACTIVE);
     RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
-    rm.adminService.isDistributedNodeLabelConfiguration = true;
+    rm.adminService.isCentralizedNodeLabelConfiguration = false;
 
     // by default, distributed configuration for node label is disabled, this
     // should pass

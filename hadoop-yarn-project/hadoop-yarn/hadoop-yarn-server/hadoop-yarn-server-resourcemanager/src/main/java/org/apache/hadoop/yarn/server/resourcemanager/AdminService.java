@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -120,7 +121,7 @@ public class AdminService extends CompositeService implements
   private UserGroupInformation daemonUser;
 
   @VisibleForTesting
-  boolean isDistributedNodeLabelConfiguration = false;
+  boolean isCentralizedNodeLabelConfiguration = true;
 
   public AdminService(ResourceManager rm, RMContext rmContext) {
     super(AdminService.class.getName());
@@ -151,8 +152,8 @@ public class AdminService extends CompositeService implements
         .getCurrentUser());
     rmId = conf.get(YarnConfiguration.RM_HA_ID);
 
-    isDistributedNodeLabelConfiguration =
-        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+    isCentralizedNodeLabelConfiguration =
+        YarnConfiguration.isCentralizedNodeLabelConfiguration(conf);
 
     super.serviceInit(conf);
   }
@@ -745,7 +746,13 @@ public class AdminService extends CompositeService implements
     String operation = "replaceLabelsOnNode";
     final String msg = "set node to labels.";
 
-    checkAndThrowIfDistributedNodeLabelConfEnabled(operation);
+    try {
+      NodeLabelsUtils.verifyCentralizedNodeLabelConfEnabled(operation,
+          isCentralizedNodeLabelConfiguration);
+    } catch (IOException ioe) {
+      throw RPCUtil.getRemoteException(ioe);
+    }
+
     UserGroupInformation user = checkAcls(operation);
 
     checkRMStatus(user.getShortUserName(), operation, msg);
@@ -778,17 +785,6 @@ public class AdminService extends CompositeService implements
     RMAuditLogger.logFailure(user, operation, "",
         "AdminService", "Exception " + msg);
     return RPCUtil.getRemoteException(exception);
-  }
-
-  private void checkAndThrowIfDistributedNodeLabelConfEnabled(String operation)
-      throws YarnException {
-    if (isDistributedNodeLabelConfiguration) {
-      String msg =
-          String.format("Error when invoke method=%s because of "
-              + "distributed node label configuration enabled.", operation);
-      LOG.error(msg);
-      throw RPCUtil.getRemoteException(new IOException(msg));
-    }
   }
 
   @Override

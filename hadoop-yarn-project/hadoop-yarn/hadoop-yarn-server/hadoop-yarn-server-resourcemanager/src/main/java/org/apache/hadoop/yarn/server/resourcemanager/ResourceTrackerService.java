@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -43,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -63,6 +61,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRe
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -105,6 +104,7 @@ public class ResourceTrackerService extends AbstractService implements
   private int minAllocVcores;
 
   private boolean isDistributedNodeLabelsConf;
+  private boolean isDelegatedCentralizedNodeLabelsConf;
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
@@ -151,6 +151,8 @@ public class ResourceTrackerService extends AbstractService implements
 
     isDistributedNodeLabelsConf =
         YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+    isDelegatedCentralizedNodeLabelsConf = YarnConfiguration
+        .isDelegatedCentralizedNodeLabelConfiguration(conf);
 
     super.serviceInit(conf);
   }
@@ -239,17 +241,6 @@ public class ResourceTrackerService extends AbstractService implements
               nodeId);
       rmContext.getDispatcher().getEventHandler().handle(evt);
     }
-  }
-
-  static Set<String> convertToStringSet(Set<NodeLabel> nodeLabels) {
-    if (null == nodeLabels) {
-      return null;
-    }
-    Set<String> labels = new HashSet<String>();
-    for (NodeLabel label : nodeLabels) {
-      labels.add(label.getName());
-    }
-    return labels;
   }
 
   @SuppressWarnings("unchecked")
@@ -353,7 +344,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Update node's labels to RM's NodeLabelManager.
-    Set<String> nodeLabels = convertToStringSet(request.getNodeLabels());
+    Set<String> nodeLabels = NodeLabelsUtils.convertToStringSet(
+        request.getNodeLabels());
     if (isDistributedNodeLabelsConf && nodeLabels != null) {
       try {
         updateNodeLabelsFromNMReport(nodeLabels, nodeId);
@@ -363,6 +355,8 @@ public class ResourceTrackerService extends AbstractService implements
         response.setDiagnosticsMessage(ex.getMessage());
         response.setAreNodeLabelsAcceptedByRM(false);
       }
+    } else if (isDelegatedCentralizedNodeLabelsConf) {
+      this.rmContext.getRMDelegatedNodeLabelsUpdater().updateNodeLabels(nodeId);
     }
 
     StringBuilder message = new StringBuilder();
@@ -480,7 +474,8 @@ public class ResourceTrackerService extends AbstractService implements
     if (isDistributedNodeLabelsConf && request.getNodeLabels() != null) {
       try {
         updateNodeLabelsFromNMReport(
-            convertToStringSet(request.getNodeLabels()), nodeId);
+            NodeLabelsUtils.convertToStringSet(request.getNodeLabels()),
+            nodeId);
         nodeHeartBeatResponse.setAreNodeLabelsAcceptedByRM(true);
       } catch (IOException ex) {
         //ensure the error message is captured and sent across in response
