@@ -229,6 +229,9 @@ Release 2.8.0 - UNRELEASED
     YARN-261. Ability to fail AM attempts (Andrey Klochkov and
     Rohith Sharma K S via jlowe)
 
+    YARN-3964. Support NodeLabelsProvider at Resource Manager side.
+    (Dian Fu via devaraj)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before

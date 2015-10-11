@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -94,6 +95,7 @@ public class RMActiveServiceContext {
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
   private RMNodeLabelsManager nodeLabelManager;
+  private RMDelegatedNodeLabelsUpdater rmDelegatedNodeLabelsUpdater;
   private long epoch;
   private Clock systemClock = new SystemClock();
   private long schedulerRecoveryStartTime = 0;
@@ -388,6 +390,19 @@ public class RMActiveServiceContext {
   @Unstable
   public void setNodeLabelManager(RMNodeLabelsManager mgr) {
     nodeLabelManager = mgr;
+  }
+
+  @Private
+  @Unstable
+  public RMDelegatedNodeLabelsUpdater getRMDelegatedNodeLabelsUpdater() {
+    return rmDelegatedNodeLabelsUpdater;
+  }
+
+  @Private
+  @Unstable
+  public void setRMDelegatedNodeLabelsUpdater(
+      RMDelegatedNodeLabelsUpdater nodeLablesUpdater) {
+    rmDelegatedNodeLabelsUpdater = nodeLablesUpdater;
   }
 
   @Private
