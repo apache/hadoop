@@ -170,11 +170,25 @@ public final class FSImageFormatProtobuf {
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       AltFileInputStream fin = new AltFileInputStream(file);
       try {
+
         // loadInternal is should be hotspot.
         loadInternal(raFile, fin);
         long end = Time.monotonicNow();
         LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
 
+        /**
+         * Number Of Blocks : 1043093
+         * Block Size : 5MB
+         * Load Time :
+         *
+         *          4482 Milliseconds
+         *          4180 Milliseconds
+         *          4599 Milliseconds
+         *          4472 Milliseconds
+         *          4223 Milliseconds
+         *
+         *  Average Load FSImage Time : 4391 Milliseconds
+         */
         long time = end - start;
         File file1 = new File("/home/minglei/intervalTime.txt");
         FileOutputStream out = new FileOutputStream(file1);
@@ -455,6 +469,7 @@ public final class FSImageFormatProtobuf {
       snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
     }
 
+    // saveImage main method
     private void saveInternal(FileOutputStream fout,
         FSImageCompression compression, String filePath) throws IOException {
       StartupProgress prog = NameNode.getStartupProgress();
@@ -466,6 +481,7 @@ public final class FSImageFormatProtobuf {
 
       fileChannel = fout.getChannel();
 
+      // Will Revise
       FileSummary.Builder b = FileSummary.newBuilder()
           .setOndiskVersion(FSImageUtil.FILE_VERSION)
           .setLayoutVersion(
