@@ -352,4 +352,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @return maximum priority of cluster
    */
   Priority getMaxClusterLevelAppPriority();
+
+  /**
+   * Get SchedulerNode corresponds to nodeId.
+   *
+   * @param nodeId the node id of RMNode
+   *
+   * @return SchedulerNode corresponds to nodeId
+   */
+  SchedulerNode getSchedulerNode(NodeId nodeId);
 }

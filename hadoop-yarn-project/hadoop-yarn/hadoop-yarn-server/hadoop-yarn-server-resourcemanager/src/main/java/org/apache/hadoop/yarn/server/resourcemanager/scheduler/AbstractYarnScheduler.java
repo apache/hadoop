@@ -604,6 +604,7 @@ public abstract class AbstractYarnScheduler
       SchedContainerChangeRequest decreaseRequest,
       SchedulerApplicationAttempt attempt);
 
+  @Override
   public SchedulerNode getSchedulerNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }

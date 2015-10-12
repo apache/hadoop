@@ -383,6 +383,21 @@ public class TestAMRestart {
   public void testAMBlacklistPreventsRestartOnSameNode() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
+    testAMBlacklistPreventRestartOnSameNode(conf);
+  }
+
+  @Test(timeout = 100000)
+  public void testAMBlacklistPreventsRestartOnSameNodeForMinicluster()
+      throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.AM_BLACKLISTING_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME,
+        true);
+    testAMBlacklistPreventRestartOnSameNode(conf);
+  }
+
+  private void testAMBlacklistPreventRestartOnSameNode(YarnConfiguration conf)
+      throws Exception{
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
     final DrainDispatcher dispatcher = new DrainDispatcher();
