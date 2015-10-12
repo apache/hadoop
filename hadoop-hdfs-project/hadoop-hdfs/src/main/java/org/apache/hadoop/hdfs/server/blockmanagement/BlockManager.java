@@ -85,7 +85,6 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
-import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -206,7 +205,7 @@ public class BlockManager implements BlockStatsMXBean {
    * Maps a StorageID to the set of blocks that are "extra" for this
    * DataNode. We'll eventually remove these extras.
    */
-  public final Map<String, LightWeightLinkedSet<Block>> excessReplicateMap =
+  public final Map<String, LightWeightHashSet<Block>> excessReplicateMap =
     new HashMap<>();
 
   /**
@@ -1634,7 +1633,7 @@ public class BlockManager implements BlockStatsMXBean {
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(block);
     for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
-      LightWeightLinkedSet<Block> excessBlocks =
+      LightWeightHashSet<Block> excessBlocks =
         excessReplicateMap.get(node.getDatanodeUuid());
       int countableReplica = storage.getState() == State.NORMAL ? 1 : 0; 
       if ((nodesCorrupt != null) && (nodesCorrupt.contains(node)))
@@ -2888,8 +2887,8 @@ public class BlockManager implements BlockStatsMXBean {
         postponeBlock(block);
         return;
       }
-      LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(cur
-          .getDatanodeUuid());
+      LightWeightHashSet<Block> excessBlocks = excessReplicateMap.get(
+          cur.getDatanodeUuid());
       if (excessBlocks == null || !excessBlocks.contains(block)) {
         if (!cur.isDecommissionInProgress() && !cur.isDecommissioned()) {
           // exclude corrupt replicas
@@ -3006,9 +3005,10 @@ public class BlockManager implements BlockStatsMXBean {
 
   private void addToExcessReplicate(DatanodeInfo dn, Block block) {
     assert namesystem.hasWriteLock();
-    LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(dn.getDatanodeUuid());
+    LightWeightHashSet<Block> excessBlocks = excessReplicateMap.get(
+        dn.getDatanodeUuid());
     if (excessBlocks == null) {
-      excessBlocks = new LightWeightLinkedSet<Block>();
+      excessBlocks = new LightWeightHashSet<>();
       excessReplicateMap.put(dn.getDatanodeUuid(), excessBlocks);
     }
     if (excessBlocks.add(block)) {
@@ -3073,8 +3073,8 @@ public class BlockManager implements BlockStatsMXBean {
       // We've removed a block from a node, so it's definitely no longer
       // in "excess" there.
       //
-      LightWeightLinkedSet<Block> excessBlocks = excessReplicateMap.get(node
-          .getDatanodeUuid());
+      LightWeightHashSet<Block> excessBlocks = excessReplicateMap.get(
+          node.getDatanodeUuid());
       if (excessBlocks != null) {
         if (excessBlocks.remove(block)) {
           excessBlocksCount.decrementAndGet();
@@ -3272,8 +3272,8 @@ public class BlockManager implements BlockStatsMXBean {
       } else if (node.isDecommissioned()) {
         decommissioned++;
       } else {
-        LightWeightLinkedSet<Block> blocksExcess = excessReplicateMap.get(node
-            .getDatanodeUuid());
+        LightWeightHashSet<Block> blocksExcess = excessReplicateMap.get(
+             node.getDatanodeUuid());
         if (blocksExcess != null && blocksExcess.contains(b)) {
           excess++;
         } else {
@@ -3605,7 +3605,8 @@ public class BlockManager implements BlockStatsMXBean {
   private void removeFromExcessReplicateMap(Block block) {
     for (DatanodeStorageInfo info : blocksMap.getStorages(block)) {
       String uuid = info.getDatanodeDescriptor().getDatanodeUuid();
-      LightWeightLinkedSet<Block> excessReplicas = excessReplicateMap.get(uuid);
+      LightWeightHashSet<Block> excessReplicas =
+          excessReplicateMap.get(uuid);
       if (excessReplicas != null) {
         if (excessReplicas.remove(block)) {
           excessBlocksCount.decrementAndGet();
