@@ -621,6 +621,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12360. Create StatsD metrics2 sink. (Dave Marion via stevel)
 
+    HADOOP-10300. Allowed deferred sending of call responses. (Daryn Sharp via
+    yliu)
+
   IMPROVEMENTS
 
     HADOOP-12458. Retries is typoed to spell Retires in parts of
