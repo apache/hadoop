@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -1811,7 +1812,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private void addAMNodeToBlackList(NodeId nodeId) {
-    blacklistedNodesForAM.addNode(nodeId.getHost().toString());
+    SchedulerNode schedulerNode = scheduler.getSchedulerNode(nodeId);
+    if (schedulerNode != null) {
+      blacklistedNodesForAM.addNode(schedulerNode.getNodeName());
+    } else {
+      LOG.info(nodeId + " is not added to AM blacklist for "
+          + applicationAttemptId + ", because it has been removed");
+    }
   }
 
   @Override

@@ -924,6 +924,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4140. RM container allocation delayed incase of app submitted to 
     Nodelabel partition. (Bibin A Chundatt via wangda)
 
+    YARN-4201. AMBlacklist does not work for minicluster. (Jun Gong via zxu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
