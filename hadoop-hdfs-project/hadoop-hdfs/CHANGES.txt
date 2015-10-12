@@ -1512,6 +1512,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
     values() since it creates a temporary array. (Staffan Friberg via yliu)
 
+    HDFS-8988. Use LightWeightHashSet instead of LightWeightLinkedSet in
+    BlockManager#excessReplicateMap. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
