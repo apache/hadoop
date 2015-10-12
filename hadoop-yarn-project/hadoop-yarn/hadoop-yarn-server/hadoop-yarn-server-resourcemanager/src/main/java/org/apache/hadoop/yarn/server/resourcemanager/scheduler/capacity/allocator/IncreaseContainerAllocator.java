@@ -323,8 +323,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
           }
         }
 
-        // We already allocated something
-        if (!assigned.getSkipped()) {
+        // We may have allocated something
+        if (assigned != null && !assigned.getSkipped()) {
           break;
         }
       }

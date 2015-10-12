@@ -285,6 +285,78 @@ public class TestContainerResizing {
   }
 
   @Test
+  public void testIncreaseRequestWithNoHeadroomLeft() throws Exception {
+    /**
+     * Application has two containers running, try to increase one of them, the
+     * requested amount exceeds user's headroom for the queue.
+     */
+    MockRM rm1 = new MockRM() {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB);
+
+    // app1 -> a1
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "default");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    FiCaSchedulerApp app = getFiCaSchedulerApp(rm1, app1.getApplicationId());
+
+    // Allocate 1 container
+    am1.allocate(
+        Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1), "*",
+                Resources.createResource(2 * GB), 1)),
+        null);
+    ContainerId containerId2 =
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
+    Assert.assertTrue(rm1.waitForState(nm1, containerId2,
+            RMContainerState.ALLOCATED, 10 * 1000));
+    // Acquire them, and NM report RUNNING
+    am1.allocate(null, null);
+    sentRMContainerLaunched(rm1, containerId2);
+
+    // am1 asks to change container2 from 2GB to 8GB, which will exceed user
+    // limit
+    am1.sendContainerResizingRequest(Arrays.asList(
+            ContainerResourceChangeRequest
+                .newInstance(containerId2, Resources.createResource(8 * GB))),
+        null);
+
+    checkPendingResource(rm1, "default", 6 * GB, null);
+    Assert.assertEquals(6 * GB,
+        app.getAppAttemptResourceUsage().getPending().getMemory());
+
+    // NM1 do 1 heartbeats
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    RMContainer rmContainer1 = app.getLiveContainersMap().get(containerId2);
+
+    /* Check reservation statuses */
+    // Increase request should *NOT* be reserved as it exceeds user limit
+    Assert.assertFalse(rmContainer1.hasIncreaseReservation());
+    Assert.assertTrue(app.getReservedContainers().isEmpty());
+    Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    // Pending resource will not be changed since it's not satisfied
+    checkPendingResource(rm1, "default", 6 * GB, null);
+    Assert.assertEquals(6 * GB,
+        app.getAppAttemptResourceUsage().getPending().getMemory());
+    // Queue/user/application's usage will *NOT* be updated
+    checkUsedResource(rm1, "default", 3 * GB, null);
+    Assert.assertEquals(3 * GB, ((LeafQueue) cs.getQueue("default"))
+            .getUser("user").getUsed().getMemory());
+    Assert.assertEquals(3 * GB,
+        app.getAppAttemptResourceUsage().getUsed().getMemory());
+    Assert.assertEquals(0 * GB,
+        app.getAppAttemptResourceUsage().getReserved().getMemory());
+    rm1.close();
+  }
+
+  @Test
   public void testExcessiveReservationWhenCancelIncreaseRequest()
       throws Exception {
     /**

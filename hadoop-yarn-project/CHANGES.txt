@@ -926,6 +926,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4201. AMBlacklist does not work for minicluster. (Jun Gong via zxu)
 
+    YARN-4230. RM crashes with NPE when increasing container resource if there is no headroom left.
+    (Meng Ding via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
