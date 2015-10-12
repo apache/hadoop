@@ -45,7 +45,8 @@ public class TestReplicationPolicyConsiderLoad
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { BlockPlacementPolicyDefault.class.getName() } });
+        { BlockPlacementPolicyDefault.class.getName() },
+        { BlockPlacementPolicyWithUpgradeDomain.class.getName() } });
   }
 
   @Override
@@ -111,7 +112,7 @@ public class TestReplicationPolicyConsiderLoad
               1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
 
       assertEquals(3, targets.length);
-      Set<DatanodeStorageInfo> targetSet = new HashSet<DatanodeStorageInfo>(
+      Set<DatanodeStorageInfo> targetSet = new HashSet<>(
           Arrays.asList(targets));
       for (int i = 3; i < storages.length; i++) {
         assertTrue(targetSet.contains(storages[i]));
