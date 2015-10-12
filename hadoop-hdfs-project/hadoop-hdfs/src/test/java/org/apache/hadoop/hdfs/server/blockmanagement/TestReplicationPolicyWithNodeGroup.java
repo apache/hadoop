@@ -137,7 +137,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
       DatanodeStorageInfo[] targets) {
     if(targets.length == 0)
       return true;
-    Set<String> targetSet = new HashSet<String>();
+    Set<String> targetSet = new HashSet<>();
     for(DatanodeStorageInfo storage:targets) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       String nodeGroup = NetworkTopology.getLastHalf(node.getNetworkLocation());
@@ -217,7 +217,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   }
 
   private void verifyNoTwoTargetsOnSameNodeGroup(DatanodeStorageInfo[] targets) {
-    Set<String> nodeGroupSet = new HashSet<String>();
+    Set<String> nodeGroupSet = new HashSet<>();
     for (DatanodeStorageInfo target: targets) {
       nodeGroupSet.add(target.getDatanodeDescriptor().getNetworkLocation());
     }
@@ -236,10 +236,10 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   public void testChooseTarget2() throws Exception {
     DatanodeStorageInfo[] targets;
     BlockPlacementPolicyDefault repl = (BlockPlacementPolicyDefault)replicator;
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
 
-    Set<Node> excludedNodes = new HashSet<Node>();
-    excludedNodes.add(dataNodes[1]); 
+    Set<Node> excludedNodes = new HashSet<>();
+    excludedNodes.add(dataNodes[1]);
     targets = repl.chooseTarget(filename, 4, dataNodes[0], chosenNodes, false, 
         excludedNodes, BLOCK_SIZE, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
     assertEquals(targets.length, 4);
@@ -415,7 +415,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   @Test
   public void testRereplicate1() throws Exception {
     updateHeartbeatWithUsage();
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     chosenNodes.add(storages[0]);
     DatanodeStorageInfo[] targets;
     
@@ -448,7 +448,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   @Test
   public void testRereplicate2() throws Exception {
     updateHeartbeatWithUsage();
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     chosenNodes.add(storages[0]);
     chosenNodes.add(storages[1]);
 
@@ -476,7 +476,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
   @Test
   public void testRereplicate3() throws Exception {
     updateHeartbeatWithUsage();
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     chosenNodes.add(storages[0]);
     chosenNodes.add(storages[3]);
 
@@ -511,9 +511,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
    */
   @Test
   public void testChooseReplicaToDelete() throws Exception {
-    List<DatanodeStorageInfo> replicaList = new ArrayList<DatanodeStorageInfo>();
-    final Map<String, List<DatanodeStorageInfo>> rackMap
-        = new HashMap<String, List<DatanodeStorageInfo>>();
+    List<DatanodeStorageInfo> replicaList = new ArrayList<>();
+    final Map<String, List<DatanodeStorageInfo>> rackMap = new HashMap<>();
     dataNodes[0].setRemaining(4*1024*1024);
     replicaList.add(storages[0]);
 
@@ -526,13 +525,13 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     dataNodes[5].setRemaining(1*1024*1024);
     replicaList.add(storages[5]);
 
-    List<DatanodeStorageInfo> first = new ArrayList<DatanodeStorageInfo>();
-    List<DatanodeStorageInfo> second = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> first = new ArrayList<>();
+    List<DatanodeStorageInfo> second = new ArrayList<>();
     replicator.splitNodesWithRack(
         replicaList, rackMap, first, second);
     assertEquals(3, first.size());
     assertEquals(1, second.size());
-    List<StorageType> excessTypes = new ArrayList<StorageType>();
+    List<StorageType> excessTypes = new ArrayList<>();
     excessTypes.add(StorageType.DEFAULT);
     DatanodeStorageInfo chosen = replicator.chooseReplicaToDelete(
         null, null, (short)3, first, second, excessTypes);
@@ -614,7 +613,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     chosenNodes.add(storagesInBoundaryCase[0]);
     chosenNodes.add(storagesInBoundaryCase[5]);
     DatanodeStorageInfo[] targets;
@@ -703,11 +702,10 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
-    
-    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
-    
+
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     DatanodeStorageInfo[] targets;
-    Set<Node> excludedNodes = new HashSet<Node>();
+    Set<Node> excludedNodes = new HashSet<>();
     excludedNodes.add(dataNodesForDependencies[5]);
     
     //try to select three targets as there are three node groups

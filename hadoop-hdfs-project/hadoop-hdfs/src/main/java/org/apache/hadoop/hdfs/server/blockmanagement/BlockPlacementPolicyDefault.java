@@ -125,14 +125,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
 
       Set<Node> favoriteAndExcludedNodes = excludedNodes == null ?
-          new HashSet<Node>() : new HashSet<Node>(excludedNodes);
+          new HashSet<Node>() : new HashSet<>(excludedNodes);
       final List<StorageType> requiredStorageTypes = storagePolicy
           .chooseStorageTypes((short)numOfReplicas);
       final EnumMap<StorageType, Integer> storageTypes =
           getRequiredStorageTypes(requiredStorageTypes);
 
       // Choose favored nodes
-      List<DatanodeStorageInfo> results = new ArrayList<DatanodeStorageInfo>();
+      List<DatanodeStorageInfo> results = new ArrayList<>();
       boolean avoidStaleNodes = stats != null
           && stats.isAvoidingStaleDataNodesForWrite();
 
@@ -192,14 +192,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     if (excludedNodes == null) {
-      excludedNodes = new HashSet<Node>();
+      excludedNodes = new HashSet<>();
     }
      
     int[] result = getMaxNodesPerRack(chosenStorage.size(), numOfReplicas);
     numOfReplicas = result[0];
     int maxNodesPerRack = result[1];
       
-    final List<DatanodeStorageInfo> results = new ArrayList<DatanodeStorageInfo>(chosenStorage);
+    final List<DatanodeStorageInfo> results = new ArrayList<>(chosenStorage);
     for (DatanodeStorageInfo storage : chosenStorage) {
       // add localMachine and related nodes to excludedNodes
       addToExcludedNodes(storage.getDatanodeDescriptor(), excludedNodes);
@@ -266,8 +266,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
   private EnumMap<StorageType, Integer> getRequiredStorageTypes(
       List<StorageType> types) {
-    EnumMap<StorageType, Integer> map = new EnumMap<StorageType,
-        Integer>(StorageType.class);
+    EnumMap<StorageType, Integer> map = new EnumMap<>(StorageType.class);
     for (StorageType type : types) {
       if (!map.containsKey(type)) {
         map.put(type, 1);
@@ -310,7 +309,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
 
     // Keep a copy of original excludedNodes
-    final Set<Node> oldExcludedNodes = new HashSet<Node>(excludedNodes);
+    final Set<Node> oldExcludedNodes = new HashSet<>(excludedNodes);
 
     // choose storage types; use fallbacks for unavailable storages
     final List<StorageType> requiredStorageTypes = storagePolicy
@@ -929,11 +928,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * So pick up first set if not empty. If first is empty, then pick second.
    */
   protected Collection<DatanodeStorageInfo> pickupReplicaSet(
-      Collection<DatanodeStorageInfo> first,
-      Collection<DatanodeStorageInfo> second) {
-    return first.isEmpty() ? second : first;
+      Collection<DatanodeStorageInfo> moreThanOne,
+      Collection<DatanodeStorageInfo> exactlyOne) {
+    return moreThanOne.isEmpty() ? exactlyOne : moreThanOne;
   }
-  
+
   @VisibleForTesting
   void setPreferLocalNode(boolean prefer) {
     this.preferLocalNode = prefer;

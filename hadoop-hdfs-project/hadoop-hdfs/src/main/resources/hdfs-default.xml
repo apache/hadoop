@@ -2491,4 +2491,18 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.upgrade.domain.factor</name>
+  <value>${dfs.replication}</value>
+  <description>
+    This is valid only when block placement policy is set to
+    BlockPlacementPolicyWithUpgradeDomain. It defines the number of
+    unique upgrade domains any block's replicas should have.
+    When the number of replicas is less or equal to this value, the policy
+    ensures each replica has an unique upgrade domain. When the number of
+    replicas is greater than this value, the policy ensures the number of
+    unique domains is at least this value.
+  </description>
+</property>
+
 </configuration>

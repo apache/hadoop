@@ -96,7 +96,6 @@ abstract public class BaseReplicationPolicyTest {
     // construct network topology
     for (int i=0; i < dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
-      //bm.getDatanodeManager().getHost2DatanodeMap().add(dataNodes[i]);
       bm.getDatanodeManager().getHeartbeatManager().addDatanode(
           dataNodes[i]);
     }
