@@ -129,12 +129,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   
   boolean resolveSymlinks;
 
-  private Tracer tracer;
-
-  protected final Tracer getTracer() {
-    return tracer;
-  }
-
   /**
    * This method adds a file system for testing so that we can find it later. It
    * is only for testing.
@@ -2712,7 +2706,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     try {
       Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
       FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
-      fs.tracer = tracer;
       fs.initialize(uri, conf);
       return fs;
     } finally {

@@ -47,7 +47,7 @@ class Globber {
     this.fc = null;
     this.pathPattern = pathPattern;
     this.filter = filter;
-    this.tracer = fs.getTracer();
+    this.tracer = FsTracer.get(fs.getConf());
   }
 
   public Globber(FileContext fc, Path pathPattern, PathFilter filter) {
