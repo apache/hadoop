@@ -44,7 +44,7 @@ public class TestSeveralNameNodes {
   private static final Log LOG = LogFactory.getLog(TestSeveralNameNodes.class);
 
   /** ms between failovers between NNs */
-  private static final int TIME_BETWEEN_FAILOVERS = 200;
+  private static final int TIME_BETWEEN_FAILOVERS = 1000;
   private static final int NUM_NAMENODES = 3;
   private static final int NUM_THREADS = 3;
   private static final int LIST_LENGTH = 50;
@@ -82,7 +82,7 @@ public class TestSeveralNameNodes {
         for (int i = 0; i < writers.size(); i++) {
           CircularWriter writer = writers.get(i);
           // remove the writer from the ones to check
-          if (writer.done.await(10, TimeUnit.MILLISECONDS)) {
+          if (writer.done.await(100, TimeUnit.MILLISECONDS)) {
             writers.remove(i--);
           }
         }

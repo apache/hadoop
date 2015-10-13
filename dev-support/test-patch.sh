@@ -2261,16 +2261,8 @@ function check_unittests
 
     test_logfile=${PATCH_DIR}/testrun_${module_suffix}.txt
     echo "  Running tests in ${module_suffix}"
-    # Temporary hack to run the parallel tests profile only for hadoop-common.
-    # This code will be removed once hadoop-hdfs is ready for parallel test
-    # execution.
-    if [[ ${module} == "hadoop-common-project/hadoop-common" ]] ; then
-      OPTIONAL_PARALLEL_TESTS_PROFILE=${PARALLEL_TESTS_PROFILE}
-    else
-      unset OPTIONAL_PARALLEL_TESTS_PROFILE
-    fi
     # shellcheck disable=2086
-    echo_and_redirect "${test_logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} ${OPTIONAL_PARALLEL_TESTS_PROFILE} ${TESTS_THREAD_COUNT} -D${PROJECT_NAME}PatchProcess
+    echo_and_redirect "${test_logfile}" "${MVN}" "${MAVEN_ARGS[@]}" clean install -fae ${NATIVE_PROFILE} ${REQUIRE_TEST_LIB_HADOOP} ${PARALLEL_TESTS_PROFILE} ${TESTS_THREAD_COUNT} -D${PROJECT_NAME}PatchProcess
     test_build_result=$?
 
     add_jira_footer "${module_suffix} test log" "@@BASE@@/testrun_${module_suffix}.txt"

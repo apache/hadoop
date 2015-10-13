@@ -503,14 +503,23 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>               
+                <id>create-parallel-tests-dirs</id>
                 <phase>test-compile</phase>
                 <configuration>
                   <target>
-                    <exec executable="${shell-executable}">
-                      <arg value="-c"/>
-                      <arg value="for i in {1..${testsThreadCount}}; do mkdir -p ${test.build.data}/$i; mkdir -p ${hadoop.tmp.dir}/$i; done"/>
-                    </exec>
+                    <script language="javascript"><![CDATA[
+                      var baseDirs = [
+                          "${test.build.data}",
+                          "${test.build.dir}",
+                          "${hadoop.tmp.dir}" ];
+                      for (var i in baseDirs) {
+                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
+                          var mkdir = project.createTask("mkdir");
+                          mkdir.setDir(new java.io.File(baseDirs[i], j));
+                          mkdir.perform();
+                        }
+                      }
+                    ]]></script>
                   </target>
                 </configuration>
                 <goals>
@@ -524,10 +533,24 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <forkCount>${testsThreadCount}</forkCount>
-              <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -DminiClusterDedicatedDirs=true</argLine>
+              <reuseForks>false</reuseForks>
+              <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
               <systemPropertyVariables>
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
+                <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+
+                <!-- This is intentionally the same directory for all JUnit -->
+                <!-- forks, for use in the very rare situation that -->
+                <!-- concurrent tests need to coordinate, such as using lock -->
+                <!-- files. -->
+                <test.build.shared.data>${test.build.data}</test.build.shared.data>
+
+                <!-- Due to a Maven quirk, setting this to just -->
+                <!-- surefire.forkNumber won't do the parameter substitution. -->
+                <!-- Putting a prefix in front of it like "fork-" makes it -->
+                <!-- work. -->
+                <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
               </systemPropertyVariables>
             </configuration>
           </plugin>

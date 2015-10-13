@@ -1541,6 +1541,9 @@ Release 2.8.0 - UNRELEASED
     DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
     via Colin P. McCabe)
 
+    HDFS-9139. Enable parallel JUnit tests for HDFS Pre-commit
+    (Chris Nauroth and Vinayakumar B via vinayakumarb)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.

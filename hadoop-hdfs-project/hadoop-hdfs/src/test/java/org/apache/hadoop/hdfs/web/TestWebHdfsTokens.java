@@ -214,7 +214,11 @@ public class TestWebHdfsTokens {
       keystoresDir = new File(BASEDIR).getAbsolutePath();
       sslConfDir = KeyStoreTestUtil.getClasspathDir(TestWebHdfsTokens.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, clusterConf, false);
-	  
+      clusterConf.set(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+          KeyStoreTestUtil.getClientSSLConfigFileName());
+      clusterConf.set(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+          KeyStoreTestUtil.getServerSSLConfigFileName());
+
       // trick the NN into thinking security is enabled w/o it trying
       // to login from a keytab
       UserGroupInformation.setConfiguration(clusterConf);

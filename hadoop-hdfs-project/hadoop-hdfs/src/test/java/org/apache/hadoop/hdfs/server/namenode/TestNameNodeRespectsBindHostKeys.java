@@ -221,6 +221,10 @@ public class TestNameNodeRespectsBindHostKeys {
     LOG.info("Testing behavior without " + DFS_NAMENODE_HTTPS_BIND_HOST_KEY);
 
     setupSsl();
+    conf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getClientSSLConfigFileName());
+    conf.set(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        KeyStoreTestUtil.getServerSSLConfigFileName());
 
     conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
 

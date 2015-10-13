@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.web.oauth2;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.util.Timer;
 import org.apache.http.HttpStatus;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -74,7 +75,7 @@ public class TestClientCredentialTimeBasedTokenRefresher {
 
   @Test
   public void refreshUrlIsCorrect() throws IOException {
-    final int PORT = 7552;
+    final int PORT = ServerSocketUtil.getPort(0, 20);
     final String REFRESH_ADDRESS = "http://localhost:" + PORT + "/refresh";
 
     long tokenExpires = 0;

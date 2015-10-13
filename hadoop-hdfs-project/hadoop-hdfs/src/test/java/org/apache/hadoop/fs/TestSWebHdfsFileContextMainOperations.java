@@ -57,8 +57,6 @@ public class TestSWebHdfsFileContextMainOperations
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
 
-  private static Configuration sslConf;
-
   @BeforeClass
   public static void clusterSetupAtBeginning()
       throws IOException, LoginException, URISyntaxException {
@@ -67,15 +65,18 @@ public class TestSWebHdfsFileContextMainOperations
     FileUtil.fullyDelete(base);
     base.mkdirs();
     keystoresDir = new File(BASEDIR).getAbsolutePath();
-    sslConf = new Configuration();
-
     try {
       sslConfDir = KeyStoreTestUtil
           .getClasspathDir(TestSWebHdfsFileContextMainOperations.class);
-      KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, sslConf, false);
+      KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, CONF, false);
+      CONF.set(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+          KeyStoreTestUtil.getClientSSLConfigFileName());
+      CONF.set(DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+          KeyStoreTestUtil.getServerSSLConfigFileName());
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+
     CONF.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, "HTTPS_ONLY");
     CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
     CONF.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
