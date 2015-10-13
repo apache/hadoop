@@ -1213,6 +1213,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-12449. TestDNS and TestNetUtils failing if no network. (stevel)
 
+    HADOOP-11515. Upgrade jsch lib to jsch-0.1.51 to avoid problems running
+    on java7. (stevel and ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
