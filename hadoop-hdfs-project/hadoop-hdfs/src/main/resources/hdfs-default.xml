@@ -2406,6 +2406,14 @@
 </property>
 
 <property>
+    <name>dfs.webhdfs.ugi.expire.after.access</name>
+    <value>600000</value>
+    <description>How long in milliseconds after the last access
+      the cached UGI will expire. With 0, never expire.
+    </description>
+</property>
+
+<property>
   <name>dfs.namenode.blocks.per.postponedblocks.rescan</name>
   <value>10000</value>
   <description>Number of blocks to rescan for each iteration of

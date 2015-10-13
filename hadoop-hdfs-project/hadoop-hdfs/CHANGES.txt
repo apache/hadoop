@@ -2033,6 +2033,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9160. [OIV-Doc] : Missing details of 'delimited' for processor options
     (nijel via vinayakumarb)
 
+    HDFS-8855. Webhdfs client leaks active NameNode connections.
+    (Xiaobing Zhou via jitendra) 
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
