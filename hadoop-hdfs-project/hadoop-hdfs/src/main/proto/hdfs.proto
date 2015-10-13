@@ -607,4 +607,5 @@ message SnapshotInfoProto {
  */
 message RollingUpgradeStatusProto {
   required string blockPoolId = 1;
+  optional bool finalized = 2 [default = false];
 }

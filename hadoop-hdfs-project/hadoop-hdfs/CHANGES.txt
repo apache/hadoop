@@ -20,6 +20,9 @@ Release 2.7.2 - UNRELEASED
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
 
+    HDFS-7645. Rolling upgrade is restoring blocks from trash multiple times.
+    (Vinayakumar B and Keisuke Ogiwara via Arpit Agarwal)
+
   BUG FIXES
 
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and

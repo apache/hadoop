@@ -27,13 +27,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class RollingUpgradeStatus {
   private final String blockPoolId;
+  private final boolean finalized;
 
-  public RollingUpgradeStatus(String blockPoolId) {
+  public RollingUpgradeStatus(String blockPoolId, boolean finalized) {
     this.blockPoolId = blockPoolId;
+    this.finalized = finalized;
   }
 
   public String getBlockPoolId() {
     return blockPoolId;
+  }
+
+  public boolean isFinalized() {
+    return finalized;
   }
 
   @Override
@@ -48,8 +54,9 @@ public class RollingUpgradeStatus {
     } else if (obj == null || !(obj instanceof RollingUpgradeStatus)) {
       return false;
     }
-    final RollingUpgradeStatus that = (RollingUpgradeStatus)obj;
-    return this.blockPoolId.equals(that.blockPoolId);
+    final RollingUpgradeStatus that = (RollingUpgradeStatus) obj;
+    return this.blockPoolId.equals(that.blockPoolId)
+        && this.isFinalized() == that.isFinalized();
   }
 
   @Override

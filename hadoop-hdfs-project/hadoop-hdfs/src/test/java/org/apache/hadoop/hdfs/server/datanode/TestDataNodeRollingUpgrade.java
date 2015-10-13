@@ -19,12 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +38,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.TestRollingUpgrade;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -208,27 +205,51 @@ public class TestDataNodeRollingUpgrade {
   public void testDatanodeRollingUpgradeWithFinalize() throws Exception {
     try {
       startCluster();
-
-      // Create files in DFS.
-      Path testFile1 = new Path("/" + GenericTestUtils.getMethodName() + ".01.dat");
-      Path testFile2 = new Path("/" + GenericTestUtils.getMethodName() + ".02.dat");
-      DFSTestUtil.createFile(fs, testFile1, FILE_SIZE, REPL_FACTOR, SEED);
-      DFSTestUtil.createFile(fs, testFile2, FILE_SIZE, REPL_FACTOR, SEED);
-
-      startRollingUpgrade();
-      File blockFile = getBlockForFile(testFile2, true);
-      File trashFile = getTrashFileForBlock(blockFile, false);
-      deleteAndEnsureInTrash(testFile2, blockFile, trashFile);
-      finalizeRollingUpgrade();
-
-      // Ensure that delete file testFile2 stays deleted after finalize
-      assertFalse(isTrashRootPresent());
-      assert(!fs.exists(testFile2));
-      assert(fs.exists(testFile1));
-
+      rollingUpgradeAndFinalize();
+      // Do it again
+      rollingUpgradeAndFinalize();
     } finally {
       shutdownCluster();
     }
+  }
+
+  @Test(timeout = 600000)
+  public void testDatanodeRUwithRegularUpgrade() throws Exception {
+    try {
+      startCluster();
+      rollingUpgradeAndFinalize();
+      DataNodeProperties dn = cluster.stopDataNode(0);
+      cluster.restartNameNode(0, true, "-upgrade");
+      cluster.restartDataNode(dn, true);
+      cluster.waitActive();
+      fs = cluster.getFileSystem(0);
+      Path testFile3 = new Path("/" + GenericTestUtils.getMethodName()
+          + ".03.dat");
+      DFSTestUtil.createFile(fs, testFile3, FILE_SIZE, REPL_FACTOR, SEED);
+      cluster.getFileSystem().finalizeUpgrade();
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  private void rollingUpgradeAndFinalize() throws IOException, Exception {
+    // Create files in DFS.
+    Path testFile1 = new Path("/" + GenericTestUtils.getMethodName() + ".01.dat");
+    Path testFile2 = new Path("/" + GenericTestUtils.getMethodName() + ".02.dat");
+    DFSTestUtil.createFile(fs, testFile1, FILE_SIZE, REPL_FACTOR, SEED);
+    DFSTestUtil.createFile(fs, testFile2, FILE_SIZE, REPL_FACTOR, SEED);
+
+    startRollingUpgrade();
+    File blockFile = getBlockForFile(testFile2, true);
+    File trashFile = getTrashFileForBlock(blockFile, false);
+    cluster.triggerBlockReports();
+    deleteAndEnsureInTrash(testFile2, blockFile, trashFile);
+    finalizeRollingUpgrade();
+
+    // Ensure that delete file testFile2 stays deleted after finalize
+    assertFalse(isTrashRootPresent());
+    assert(!fs.exists(testFile2));
+    assert(fs.exists(testFile1));
   }
 
   @Test (timeout=600000)

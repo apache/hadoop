@@ -168,11 +168,11 @@ public class DataStorage extends Storage {
     }
   }
 
-  public void restoreTrash(String bpid) {
+  public void clearTrash(String bpid) {
     if (trashEnabledBpids.contains(bpid)) {
-      getBPStorage(bpid).restoreTrash();
+      getBPStorage(bpid).clearTrash();
       trashEnabledBpids.remove(bpid);
-      LOG.info("Restored trash for bpid " + bpid);
+      LOG.info("Cleared trash for bpid " + bpid);
     }
   }
 

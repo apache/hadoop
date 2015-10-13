@@ -306,7 +306,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void restoreTrash(String bpid) {
+  public void clearTrash(String bpid) {
 
   }
 

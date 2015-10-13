@@ -1219,7 +1219,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public void restoreTrash(String bpid) {
+  public void clearTrash(String bpid) {
   }
 
   @Override

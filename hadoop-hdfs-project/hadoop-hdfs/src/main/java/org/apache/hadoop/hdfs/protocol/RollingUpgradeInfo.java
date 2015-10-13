@@ -29,12 +29,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class RollingUpgradeInfo extends RollingUpgradeStatus {
   private final long startTime;
-  private final long finalizeTime;
+  private long finalizeTime;
   private boolean createdRollbackImages;
   
   public RollingUpgradeInfo(String blockPoolId, boolean createdRollbackImages,
       long startTime, long finalizeTime) {
-    super(blockPoolId);
+    super(blockPoolId, finalizeTime != 0);
     this.createdRollbackImages = createdRollbackImages;
     this.startTime = startTime;
     this.finalizeTime = finalizeTime;
@@ -56,9 +56,21 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
   public long getStartTime() {
     return startTime;
   }
-  
+
+  @Override
   public boolean isFinalized() {
     return finalizeTime != 0;
+  }
+
+  /**
+   * Finalize the upgrade if not already finalized
+   * @param finalizeTime
+   */
+  public void finalize(long finalizeTime) {
+    if (finalizeTime != 0) {
+      this.finalizeTime = finalizeTime;
+      createdRollbackImages = false;
+    }
   }
 
   public long getFinalizeTime() {

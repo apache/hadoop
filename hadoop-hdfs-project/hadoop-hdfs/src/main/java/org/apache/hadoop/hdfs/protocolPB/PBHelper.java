@@ -1687,11 +1687,13 @@ public class PBHelper {
       RollingUpgradeStatus status) {
     return RollingUpgradeStatusProto.newBuilder()
         .setBlockPoolId(status.getBlockPoolId())
+        .setFinalized(status.isFinalized())
         .build();
   }
 
   public static RollingUpgradeStatus convert(RollingUpgradeStatusProto proto) {
-    return new RollingUpgradeStatus(proto.getBlockPoolId());
+    return new RollingUpgradeStatus(proto.getBlockPoolId(),
+        proto.getFinalized());
   }
 
   public static RollingUpgradeInfoProto convert(RollingUpgradeInfo info) {

@@ -490,9 +490,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   public void enableTrash(String bpid);
 
   /**
-   * Restore trash
+   * Clear trash
    */
-  public void restoreTrash(String bpid);
+  public void clearTrash(String bpid);
 
   /**
    * @return true when trash is enabled
