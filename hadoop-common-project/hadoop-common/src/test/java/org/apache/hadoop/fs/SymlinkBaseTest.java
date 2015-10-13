@@ -52,13 +52,6 @@ public abstract class SymlinkBaseTest {
   abstract protected String testBaseDir2() throws IOException;
   abstract protected URI testURI();
 
-  // Returns true if the filesystem is emulating symlink support. Certain
-  // checks will be bypassed if that is the case.
-  //
-  protected boolean emulatingSymlinksOnWindows() {
-    return false;
-  }
-
   protected IOException unwrapException(IOException e) {
     return e;
   }
@@ -235,7 +228,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Stat a link to a file */
   public void testStatLinkToFile() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file = new Path(testBaseDir1()+"/file");
     Path linkToFile = new Path(testBaseDir1()+"/linkToFile");
     createAndWriteFile(file);
@@ -361,11 +353,6 @@ public abstract class SymlinkBaseTest {
   /* Assert that the given link to a file behaves as expected. */
   private void checkLink(Path linkAbs, Path expectedTarget, Path targetQual)
       throws IOException {
-
-    // If we are emulating symlinks then many of these checks will fail
-    // so we skip them.
-    //
-    assumeTrue(!emulatingSymlinksOnWindows());
 
     Path dir = new Path(testBaseDir1());
     // isFile/Directory
@@ -663,7 +650,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Create symlink through a symlink */
   public void testCreateLinkViaLink() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path dir1        = new Path(testBaseDir1());
     Path file        = new Path(testBaseDir1(), "file");
     Path linkToDir   = new Path(testBaseDir2(), "linkToDir");
@@ -706,7 +692,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Test create symlink using the same path */
   public void testCreateLinkTwice() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file = new Path(testBaseDir1(), "file");
     Path link = new Path(testBaseDir1(), "linkToFile");
     createAndWriteFile(file);
@@ -895,8 +880,7 @@ public abstract class SymlinkBaseTest {
     assertFalse(wrapper.exists(linkViaLink));
     // Check that we didn't rename the link target
     assertTrue(wrapper.exists(file));
-    assertTrue(wrapper.getFileLinkStatus(linkNewViaLink).isSymlink() ||
-        emulatingSymlinksOnWindows());
+    assertTrue(wrapper.getFileLinkStatus(linkNewViaLink).isSymlink());
     readFile(linkNewViaLink);
   }
 
@@ -1034,8 +1018,7 @@ public abstract class SymlinkBaseTest {
     createAndWriteFile(file);
     wrapper.createSymlink(file, link1, false);
     wrapper.rename(link1, link2);
-    assertTrue(wrapper.getFileLinkStatus(link2).isSymlink() ||
-        emulatingSymlinksOnWindows());
+    assertTrue(wrapper.getFileLinkStatus(link2).isSymlink());
     readFile(link2);
     readFile(file);
     assertFalse(wrapper.exists(link1));
@@ -1059,11 +1042,8 @@ public abstract class SymlinkBaseTest {
     }
     wrapper.rename(link, file1, Rename.OVERWRITE);
     assertFalse(wrapper.exists(link));
-
-    if (!emulatingSymlinksOnWindows()) {
-      assertTrue(wrapper.getFileLinkStatus(file1).isSymlink());
-      assertEquals(file2, wrapper.getLinkTarget(file1));
-    }
+    assertTrue(wrapper.getFileLinkStatus(file1).isSymlink());
+    assertEquals(file2, wrapper.getLinkTarget(file1));
   }
 
   @Test(timeout=10000)
@@ -1125,7 +1105,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Rename a symlink */
   public void testRenameSymlink() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file  = new Path(testBaseDir1(), "file");
     Path link1 = new Path(testBaseDir1(), "linkToFile1");
     Path link2 = new Path(testBaseDir1(), "linkToFile2");
@@ -1223,7 +1202,6 @@ public abstract class SymlinkBaseTest {
   @Test(timeout=10000)
   /** Test rename the symlink's target */
   public void testRenameLinkTarget() throws IOException {
-    assumeTrue(!emulatingSymlinksOnWindows());
     Path file    = new Path(testBaseDir1(), "file");
     Path fileNew = new Path(testBaseDir1(), "fileNew");
     Path link    = new Path(testBaseDir1(), "linkToFile");

@@ -75,7 +75,7 @@ public class DataChecksum implements Checksum {
    * is chosen depending on the platform.
    */
   public static Checksum newCrc32() {
-    return Shell.isJava7OrAbove()? new CRC32(): new PureJavaCrc32();
+    return new CRC32();
   }
 
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {

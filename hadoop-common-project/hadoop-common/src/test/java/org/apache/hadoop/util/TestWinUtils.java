@@ -45,13 +45,18 @@ public class TestWinUtils {
 
   private static final Log LOG = LogFactory.getLog(TestWinUtils.class);
   private static File TEST_DIR = new File(System.getProperty("test.build.data",
-      "/tmp"), TestWinUtils.class.getSimpleName());
+      "target"+File.pathSeparator + "tmp"), TestWinUtils.class.getSimpleName());
+
+  String winutils;
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     // Not supported on non-Windows platforms
     assumeTrue(Shell.WINDOWS);
     TEST_DIR.mkdirs();
+    assertTrue("Failed to create Test directory " + TEST_DIR,
+        TEST_DIR.isDirectory() );
+    winutils = Shell.getWinutilsPath();
   }
 
   @After
@@ -59,46 +64,55 @@ public class TestWinUtils {
     FileUtil.fullyDelete(TEST_DIR);
   }
 
+  private void requireWinutils() throws IOException {
+    Shell.getWinutilsPath();
+  }
+
   // Helper routine that writes the given content to the file.
   private void writeFile(File file, String content) throws IOException {
     byte[] data = content.getBytes();
-    FileOutputStream os = new FileOutputStream(file);
-    os.write(data);
-    os.close();
+    try (FileOutputStream os = new FileOutputStream(file)) {
+      os.write(data);
+      os.close();
+    }
   }
 
   // Helper routine that reads the first 100 bytes from the file.
   private String readFile(File file) throws IOException {
-    FileInputStream fos = new FileInputStream(file);
-    byte[] b = new byte[100];
-    fos.read(b);
-    return b.toString();
+    byte[] b;
+    try (FileInputStream fos = new FileInputStream(file)) {
+      b = new byte[100];
+      int count = fos.read(b);
+      assertEquals(100, count);
+    }
+    return new String(b);
   }
 
   @Test (timeout = 30000)
   public void testLs() throws IOException {
+    requireWinutils();
     final String content = "6bytes";
     final int contentSize = content.length();
     File testFile = new File(TEST_DIR, "file1");
     writeFile(testFile, content);
 
     // Verify permissions and file name return tokens
+    String testPath = testFile.getCanonicalPath();
     String output = Shell.execCommand(
-        Shell.WINUTILS, "ls", testFile.getCanonicalPath());
+        winutils, "ls", testPath);
     String[] outputArgs = output.split("[ \r\n]");
-    assertTrue(outputArgs[0].equals("-rwx------"));
-    assertTrue(outputArgs[outputArgs.length - 1]
-        .equals(testFile.getCanonicalPath()));
+    assertEquals("-rwx------", outputArgs[0]);
+    assertEquals(outputArgs[outputArgs.length - 1], testPath);
 
     // Verify most tokens when using a formatted output (other tokens
     // will be verified with chmod/chown)
     output = Shell.execCommand(
-        Shell.WINUTILS, "ls", "-F", testFile.getCanonicalPath());
+        winutils, "ls", "-F", testPath);
     outputArgs = output.split("[|\r\n]");
     assertEquals(9, outputArgs.length);
-    assertTrue(outputArgs[0].equals("-rwx------"));
+    assertEquals("-rwx------", outputArgs[0]);
     assertEquals(contentSize, Long.parseLong(outputArgs[4]));
-    assertTrue(outputArgs[8].equals(testFile.getCanonicalPath()));
+    assertEquals(outputArgs[8], testPath);
 
     testFile.delete();
     assertFalse(testFile.exists());
@@ -106,41 +120,42 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testGroups() throws IOException {
+    requireWinutils();
     String currentUser = System.getProperty("user.name");
 
     // Verify that groups command returns information about the current user
     // groups when invoked with no args
     String outputNoArgs = Shell.execCommand(
-        Shell.WINUTILS, "groups").trim();
+        winutils, "groups").trim();
     String output = Shell.execCommand(
-        Shell.WINUTILS, "groups", currentUser).trim();
+        winutils, "groups", currentUser).trim();
     assertEquals(output, outputNoArgs);
 
     // Verify that groups command with the -F flag returns the same information
     String outputFormat = Shell.execCommand(
-        Shell.WINUTILS, "groups", "-F", currentUser).trim();
+        winutils, "groups", "-F", currentUser).trim();
     outputFormat = outputFormat.replace("|", " ");
     assertEquals(output, outputFormat);
   }
 
   private void chmod(String mask, File file) throws IOException {
     Shell.execCommand(
-        Shell.WINUTILS, "chmod", mask, file.getCanonicalPath());
+        winutils, "chmod", mask, file.getCanonicalPath());
   }
 
   private void chmodR(String mask, File file) throws IOException {
     Shell.execCommand(
-        Shell.WINUTILS, "chmod", "-R", mask, file.getCanonicalPath());
+        winutils, "chmod", "-R", mask, file.getCanonicalPath());
   }
 
   private String ls(File file) throws IOException {
     return Shell.execCommand(
-        Shell.WINUTILS, "ls", file.getCanonicalPath());
+        winutils, "ls", file.getCanonicalPath());
   }
 
   private String lsF(File file) throws IOException {
     return Shell.execCommand(
-        Shell.WINUTILS, "ls", "-F", file.getCanonicalPath());
+        winutils, "ls", "-F", file.getCanonicalPath());
   }
 
   private void assertPermissions(File file, String expected)
@@ -151,6 +166,7 @@ public class TestWinUtils {
 
   private void testChmodInternal(String mode, String expectedPerm)
       throws IOException {
+    requireWinutils();
     File a = new File(TEST_DIR, "file1");
     assertTrue(a.createNewFile());
 
@@ -168,6 +184,7 @@ public class TestWinUtils {
   }
 
   private void testNewFileChmodInternal(String expectedPerm) throws IOException {
+    requireWinutils();
     // Create a new directory
     File dir = new File(TEST_DIR, "dir1");
 
@@ -190,6 +207,7 @@ public class TestWinUtils {
 
   private void testChmodInternalR(String mode, String expectedPerm,
       String expectedPermx) throws IOException {
+    requireWinutils();
     // Setup test folder hierarchy
     File a = new File(TEST_DIR, "a");
     assertTrue(a.mkdir());
@@ -226,6 +244,7 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testBasicChmod() throws IOException {
+    requireWinutils();
     // - Create a file.
     // - Change mode to 377 so owner does not have read permission.
     // - Verify the owner truly does not have the permissions to read.
@@ -249,7 +268,7 @@ public class TestWinUtils {
  
     try {
       writeFile(a, "test");
-      assertFalse("writeFile should have failed!", true);
+      fail("writeFile should have failed!");
     } catch (IOException ex) {
       LOG.info("Expected: Failed write to a file with permissions 577");
     }
@@ -261,14 +280,14 @@ public class TestWinUtils {
     // - Change mode to 677 so owner does not have execute permission.
     // - Verify the owner truly does not have the permissions to execute the file.
 
-    File winutilsFile = new File(Shell.WINUTILS);
+    File winutilsFile = Shell.getWinutilsFile();
     File aExe = new File(TEST_DIR, "a.exe");
     FileUtils.copyFile(winutilsFile, aExe);
     chmod("677", aExe);
 
     try {
       Shell.execCommand(aExe.getCanonicalPath(), "ls");
-      assertFalse("executing " + aExe + " should have failed!", true);
+      fail("executing " + aExe + " should have failed!");
     } catch (IOException ex) {
       LOG.info("Expected: Failed to execute a file with permissions 677");
     }
@@ -278,6 +297,7 @@ public class TestWinUtils {
   /** Validate behavior of chmod commands on directories on Windows. */
   @Test (timeout = 30000)
   public void testBasicChmodOnDir() throws IOException {
+    requireWinutils();
     // Validate that listing a directory with no read permission fails
     File a = new File(TEST_DIR, "a");
     File b = new File(a, "b");
@@ -287,8 +307,7 @@ public class TestWinUtils {
     // Remove read permissions on directory a
     chmod("300", a);
     String[] files = a.list();
-    assertTrue("Listing a directory without read permission should fail",
-        null == files);
+    assertNull("Listing a directory without read permission should fail", files);
 
     // restore permissions
     chmod("700", a);
@@ -306,7 +325,7 @@ public class TestWinUtils {
       // FILE_WRITE_DATA/FILE_ADD_FILE privilege is denied on
       // the dir.
       c.createNewFile();
-      assertFalse("writeFile should have failed!", true);
+      fail("writeFile should have failed!");
     } catch (IOException ex) {
       LOG.info("Expected: Failed to create a file when directory "
           + "permissions are 577");
@@ -356,6 +375,7 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testChmod() throws IOException {
+    requireWinutils();
     testChmodInternal("7", "-------rwx");
     testChmodInternal("70", "----rwx---");
     testChmodInternal("u-x,g+r,o=g", "-rw-r--r--");
@@ -376,7 +396,7 @@ public class TestWinUtils {
 
   private void chown(String userGroup, File file) throws IOException {
     Shell.execCommand(
-        Shell.WINUTILS, "chown", userGroup, file.getCanonicalPath());
+        winutils, "chown", userGroup, file.getCanonicalPath());
   }
 
   private void assertOwners(File file, String expectedUser,
@@ -390,6 +410,7 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testChown() throws IOException {
+    requireWinutils();
     File a = new File(TEST_DIR, "a");
     assertTrue(a.createNewFile());
     String username = System.getProperty("user.name");
@@ -415,12 +436,13 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testSymlinkRejectsForwardSlashesInLink() throws IOException {
+    requireWinutils();
     File newFile = new File(TEST_DIR, "file");
     assertTrue(newFile.createNewFile());
     String target = newFile.getPath();
     String link = new File(TEST_DIR, "link").getPath().replaceAll("\\\\", "/");
     try {
-      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      Shell.execCommand(winutils, "symlink", link, target);
       fail(String.format("did not receive expected failure creating symlink "
         + "with forward slashes in link: link = %s, target = %s", link, target));
     } catch (IOException e) {
@@ -431,12 +453,13 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testSymlinkRejectsForwardSlashesInTarget() throws IOException {
+    requireWinutils();
     File newFile = new File(TEST_DIR, "file");
     assertTrue(newFile.createNewFile());
     String target = newFile.getPath().replaceAll("\\\\", "/");
     String link = new File(TEST_DIR, "link").getPath();
     try {
-      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      Shell.execCommand(winutils, "symlink", link, target);
       fail(String.format("did not receive expected failure creating symlink "
         + "with forward slashes in target: link = %s, target = %s", link, target));
     } catch (IOException e) {
@@ -447,6 +470,7 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testReadLink() throws IOException {
+    requireWinutils();
     // Create TEST_DIR\dir1\file1.txt
     //
     File dir1 = new File(TEST_DIR, "dir1");
@@ -462,18 +486,18 @@ public class TestWinUtils {
     // symlink to file1.txt.
     //
     Shell.execCommand(
-        Shell.WINUTILS, "symlink", dirLink.toString(), dir1.toString());
+        winutils, "symlink", dirLink.toString(), dir1.toString());
     Shell.execCommand(
-        Shell.WINUTILS, "symlink", fileLink.toString(), file1.toString());
+        winutils, "symlink", fileLink.toString(), file1.toString());
 
     // Read back the two links and ensure we get what we expected.
     //
-    String readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+    String readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         dirLink.toString());
     assertThat(readLinkOutput, equalTo(dir1.toString()));
 
-    readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+    readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         fileLink.toString());
     assertThat(readLinkOutput, equalTo(file1.toString()));
@@ -483,7 +507,7 @@ public class TestWinUtils {
     try {
       // No link name specified.
       //
-      Shell.execCommand(Shell.WINUTILS, "readlink", "");
+      Shell.execCommand(winutils, "readlink", "");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
@@ -492,7 +516,7 @@ public class TestWinUtils {
     try {
       // Bad link name.
       //
-      Shell.execCommand(Shell.WINUTILS, "readlink", "ThereIsNoSuchLink");
+      Shell.execCommand(winutils, "readlink", "ThereIsNoSuchLink");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
@@ -501,7 +525,7 @@ public class TestWinUtils {
     try {
       // Non-symlink directory target.
       //
-      Shell.execCommand(Shell.WINUTILS, "readlink", dir1.toString());
+      Shell.execCommand(winutils, "readlink", dir1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
@@ -510,7 +534,7 @@ public class TestWinUtils {
     try {
       // Non-symlink file target.
       //
-      Shell.execCommand(Shell.WINUTILS, "readlink", file1.toString());
+      Shell.execCommand(winutils, "readlink", file1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
@@ -519,7 +543,7 @@ public class TestWinUtils {
     try {
       // Too many parameters.
       //
-      Shell.execCommand(Shell.WINUTILS, "readlink", "a", "b");
+      Shell.execCommand(winutils, "readlink", "a", "b");
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
       assertThat(ece.getExitCode(), is(1));
@@ -529,6 +553,7 @@ public class TestWinUtils {
   @SuppressWarnings("deprecation")
   @Test(timeout=10000)
   public void testTaskCreate() throws IOException {
+    requireWinutils();
     File batch = new File(TEST_DIR, "testTaskCreate.cmd");
     File proof = new File(TEST_DIR, "testTaskCreate.out");
     FileWriter fw = new FileWriter(batch);
@@ -538,7 +563,7 @@ public class TestWinUtils {
     
     assertFalse(proof.exists());
     
-    Shell.execCommand(Shell.WINUTILS, "task", "create", "testTaskCreate" + testNumber, 
+    Shell.execCommand(winutils, "task", "create", "testTaskCreate" + testNumber,
         batch.getAbsolutePath());
     
     assertTrue(proof.exists());
@@ -550,30 +575,31 @@ public class TestWinUtils {
 
   @Test (timeout = 30000)
   public void testTaskCreateWithLimits() throws IOException {
+    requireWinutils();
     // Generate a unique job id
     String jobId = String.format("%f", Math.random());
 
     // Run a task without any options
-    String out = Shell.execCommand(Shell.WINUTILS, "task", "create",
+    String out = Shell.execCommand(winutils, "task", "create",
         "job" + jobId, "cmd /c echo job" + jobId);
     assertTrue(out.trim().equals("job" + jobId));
 
     // Run a task without any limits
     jobId = String.format("%f", Math.random());
-    out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-1", "-m",
+    out = Shell.execCommand(winutils, "task", "create", "-c", "-1", "-m",
         "-1", "job" + jobId, "cmd /c echo job" + jobId);
     assertTrue(out.trim().equals("job" + jobId));
 
     // Run a task with limits (128MB should be enough for a cmd)
     jobId = String.format("%f", Math.random());
-    out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "10000", "-m",
+    out = Shell.execCommand(winutils, "task", "create", "-c", "10000", "-m",
         "128", "job" + jobId, "cmd /c echo job" + jobId);
     assertTrue(out.trim().equals("job" + jobId));
 
     // Run a task without enough memory
     try {
       jobId = String.format("%f", Math.random());
-      out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-m", "128", "job"
+      out = Shell.execCommand(winutils, "task", "create", "-m", "128", "job"
           + jobId, "java -Xmx256m -version");
       fail("Failed to get Shell.ExitCodeException with insufficient memory");
     } catch (Shell.ExitCodeException ece) {
@@ -584,7 +610,7 @@ public class TestWinUtils {
     //
     try {
       jobId = String.format("%f", Math.random());
-      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-1", "-m",
+      Shell.execCommand(winutils, "task", "create", "-c", "-1", "-m",
           "-1", "foo", "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
@@ -593,7 +619,7 @@ public class TestWinUtils {
 
     try {
       jobId = String.format("%f", Math.random());
-      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-m", "-1",
+      Shell.execCommand(winutils, "task", "create", "-c", "-m", "-1",
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
@@ -602,7 +628,7 @@ public class TestWinUtils {
 
     try {
       jobId = String.format("%f", Math.random());
-      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "foo",
+      Shell.execCommand(winutils, "task", "create", "-c", "foo",
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
