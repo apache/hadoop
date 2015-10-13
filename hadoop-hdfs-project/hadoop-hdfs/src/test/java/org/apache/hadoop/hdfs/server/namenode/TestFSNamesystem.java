@@ -36,6 +36,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -240,5 +243,58 @@ public class TestFSNamesystem {
     latch.await();
     Assert.assertEquals("Expected number of blocked thread not found",
                         threadCount, rwLock.getQueueLength());
+  }
+
+  /**
+   * Test when FSNamesystem lock is held for a long time, logger will report it.
+   */
+  @Test(timeout=45000)
+  public void testFSLockLongHoldingReport() throws Exception {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+
+    LogCapturer logs = LogCapturer.captureLogs(FSNamesystem.LOG);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.INFO);
+
+    // Don't report if the write lock is held for a short time
+    fsn.writeLock();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2);
+    fsn.writeUnlock();
+    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+
+
+    // Report if the write lock is held for a long time
+    fsn.writeLock();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD + 100);
+    logs.clearOutput();
+    fsn.writeUnlock();
+    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+
+    // Report if the write lock is held (interruptibly) for a long time
+    fsn.writeLockInterruptibly();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD + 100);
+    logs.clearOutput();
+    fsn.writeUnlock();
+    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+
+    // Report if it's held for a long time when re-entering write lock
+    fsn.writeLock();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2 + 1);
+    fsn.writeLockInterruptibly();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2 + 1);
+    fsn.writeLock();
+    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2);
+    logs.clearOutput();
+    fsn.writeUnlock();
+    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+    logs.clearOutput();
+    fsn.writeUnlock();
+    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
+    logs.clearOutput();
+    fsn.writeUnlock();
+    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
   }
 }

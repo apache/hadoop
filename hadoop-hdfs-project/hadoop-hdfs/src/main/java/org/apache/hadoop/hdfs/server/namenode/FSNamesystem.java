@@ -1472,6 +1472,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return Util.stringCollectionAsURIs(dirNames);
   }
 
+  /** Threshold (ms) for long holding write lock report. */
+  static final short WRITELOCK_REPORTING_THRESHOLD = 1000;
+  /** Last time stamp for write lock. Keep the longest one for multi-entrance.*/
+  private long writeLockHeldTimeStamp;
+
   @Override
   public void readLock() {
     this.fsLock.readLock().lock();
@@ -1483,14 +1488,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override
   public void writeLock() {
     this.fsLock.writeLock().lock();
+    if (fsLock.getWriteHoldCount() == 1) {
+      writeLockHeldTimeStamp = monotonicNow();
+    }
   }
   @Override
   public void writeLockInterruptibly() throws InterruptedException {
     this.fsLock.writeLock().lockInterruptibly();
+    if (fsLock.getWriteHoldCount() == 1) {
+      writeLockHeldTimeStamp = monotonicNow();
+    }
   }
   @Override
   public void writeUnlock() {
+    final boolean needReport = fsLock.getWriteHoldCount() == 1 &&
+        fsLock.isWriteLockedByCurrentThread();
     this.fsLock.writeLock().unlock();
+
+    if (needReport) {
+      long writeLockInterval = monotonicNow() - writeLockHeldTimeStamp;
+      if (writeLockInterval >= WRITELOCK_REPORTING_THRESHOLD) {
+        LOG.info("FSNamesystem write lock held for " + writeLockInterval +
+            " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()));
+      }
+    }
   }
   @Override
   public boolean hasWriteLock() {

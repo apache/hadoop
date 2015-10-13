@@ -195,6 +195,10 @@ public abstract class GenericTestUtils {
       logger.removeAppender(appender);
 
     }
+
+    public void clearOutput() {
+      sw.getBuffer().setLength(0);
+    }
   }
   
   
