@@ -2042,6 +2042,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8855. Webhdfs client leaks active NameNode connections.
     (Xiaobing Zhou via jitendra) 
 
+    HDFS-9235. hdfs-native-client build getting errors when built with cmake
+    2.6. (Eric Payne via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
