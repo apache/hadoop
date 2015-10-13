@@ -160,6 +160,7 @@ public class DataStorage extends Storage {
    */
   public void enableTrash(String bpid) {
     if (trashEnabledBpids.add(bpid)) {
+      getBPStorage(bpid).stopTrashCleaner();
       LOG.info("Enabled trash for bpid " + bpid);
     }
   }
