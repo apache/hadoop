@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -1228,7 +1229,9 @@ public class TestFileTruncate {
       NameNode.doRollback(conf, false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM)
         .format(false)
-        .nameNodePort(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT)
+        .nameNodePort(
+            ServerSocketUtil.getPort(
+                HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT, 10))
         .startupOption(o==StartupOption.ROLLBACK ? StartupOption.REGULAR : o)
         .dnStartupOption(o!=StartupOption.ROLLBACK ? StartupOption.REGULAR : o)
         .build();
