@@ -2045,6 +2045,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9235. hdfs-native-client build getting errors when built with cmake
     2.6. (Eric Payne via wheat9)
 
+    HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
+    (wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
