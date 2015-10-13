@@ -61,17 +61,17 @@ void set_nm_uid(uid_t user, gid_t group) {
  * get the executable filename.
  */
 char* get_executable() {
-  char buffer[PATH_MAX];
-  snprintf(buffer, PATH_MAX, "/proc/%u/exe", getpid());
-  char *filename = malloc(PATH_MAX);
-  ssize_t len = readlink(buffer, filename, PATH_MAX);
+  char buffer[EXECUTOR_PATH_MAX];
+  snprintf(buffer, EXECUTOR_PATH_MAX, "/proc/%u/exe", getpid());
+  char *filename = malloc(EXECUTOR_PATH_MAX);
+  ssize_t len = readlink(buffer, filename, EXECUTOR_PATH_MAX);
   if (len == -1) {
     fprintf(ERRORFILE, "Can't get executable name from %s - %s\n", buffer,
             strerror(errno));
     exit(-1);
-  } else if (len >= PATH_MAX) {
+  } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE, "Executable name %.*s is longer than %d characters.\n",
-            PATH_MAX, filename, PATH_MAX);
+            EXECUTOR_PATH_MAX, filename, EXECUTOR_PATH_MAX);
     exit(-1);
   }
   filename[len] = '\0';
@@ -1429,7 +1429,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 #else
   char *controller = malloc(strlen(pair));
   char *mount_path = malloc(strlen(pair));
-  char hier_path[PATH_MAX];
+  char hier_path[EXECUTOR_PATH_MAX];
   int result = 0;
 
   if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
@@ -1441,7 +1441,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
     if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
       char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
       *buf++ = '/';
-      snprintf(buf, PATH_MAX - (buf - hier_path), "%s", hierarchy);
+      snprintf(buf, EXECUTOR_PATH_MAX - (buf - hier_path), "%s", hierarchy);
 
       // create hierarchy as 0750 and chown to Hadoop NM user
       const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;

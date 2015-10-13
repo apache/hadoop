@@ -18,6 +18,10 @@
 
 #include <stddef.h>
 
+/** Define a platform-independent constant instead of using PATH_MAX */
+
+#define EXECUTOR_PATH_MAX 4096
+
 /**
  * Ensure that the configuration file and all of the containing directories
  * are only writable by root. Otherwise, an attacker can change the 
