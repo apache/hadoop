@@ -34,6 +34,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
+@SuppressWarnings("deprecation")
 public class TestContainerExecutor {
   
   private ContainerExecutor containerExecutor = new DefaultContainerExecutor();

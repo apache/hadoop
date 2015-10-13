@@ -19,6 +19,7 @@ package org.apache.hadoop.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InputStream;
@@ -30,41 +31,74 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** 
- * A base class for running a Unix command.
- * 
- * <code>Shell</code> can be used to run unix commands like <code>du</code> or
+/**
+ * A base class for running a Shell command.
+ *
+ * <code>Shell</code> can be used to run shell commands like <code>du</code> or
  * <code>df</code>. It also offers facilities to gate commands by 
  * time-intervals.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Unstable
-abstract public class Shell {
-  
-  public static final Log LOG = LogFactory.getLog(Shell.class);
-  
-  private static boolean IS_JAVA7_OR_ABOVE =
-      System.getProperty("java.version").substring(0, 3).compareTo("1.7") >= 0;
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public abstract class Shell {
+  public static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
+  /**
+   * Text to include when there are windows-specific problems.
+   * {@value}
+   */
+  private static final String WINDOWS_PROBLEMS =
+      "https://wiki.apache.org/hadoop/WindowsProblems";
+
+  /**
+   * Name of the windows utils binary: {@value}.
+   */
+  static final String WINUTILS_EXE = "winutils.exe";
+
+  /**
+   * System property for the Hadoop home directory: {@value}.
+   */
+  public static final String SYSPROP_HADOOP_HOME_DIR = "hadoop.home.dir";
+
+  /**
+   * Environment variable for Hadoop's home dir: {@value}.
+   */
+  public static final String ENV_HADOOP_HOME = "HADOOP_HOME";
+
+  /**
+   * query to see if system is Java 7 or later.
+   * Now that Hadoop requires Java 7 or later, this always returns true.
+   * @deprecated This call isn't needed any more: please remove uses of it.
+   * @return true, always.
+   */
+  @Deprecated
   public static boolean isJava7OrAbove() {
-    return IS_JAVA7_OR_ABOVE;
+    return true;
   }
 
   /**
    * Maximum command line length in Windows
    * KB830473 documents this as 8191
    */
-  public static final int WINDOWS_MAX_SHELL_LENGHT = 8191;
+  public static final int WINDOWS_MAX_SHELL_LENGTH = 8191;
 
   /**
-   * Checks if a given command (String[]) fits in the Windows maximum command line length
-   * Note that the input is expected to already include space delimiters, no extra count
-   * will be added for delimiters.
+   * mis-spelling of {@link #WINDOWS_MAX_SHELL_LENGTH}.
+   * @deprecated use the correctly spelled constant.
+   */
+  @Deprecated
+  public static final int WINDOWS_MAX_SHELL_LENGHT = WINDOWS_MAX_SHELL_LENGTH;
+
+  /**
+   * Checks if a given command (String[]) fits in the Windows maximum command
+   * line length Note that the input is expected to already include space
+   * delimiters, no extra count will be added for delimiters.
    *
    * @param commands command parts, including any space delimiters
    */
@@ -74,19 +108,19 @@ abstract public class Shell {
     for (String s: commands) {
       len += s.length();
     }
-    if (len > WINDOWS_MAX_SHELL_LENGHT) {
+    if (len > WINDOWS_MAX_SHELL_LENGTH) {
       throw new IOException(String.format(
-          "The command line has a length of %d exceeds maximum allowed length of %d. " +
-          "Command starts with: %s",
-          len, WINDOWS_MAX_SHELL_LENGHT,
-          StringUtils.join("", commands).substring(0, 100)));
+        "The command line has a length of %d exceeds maximum allowed length" +
+            " of %d. Command starts with: %s",
+        len, WINDOWS_MAX_SHELL_LENGTH,
+        StringUtils.join("", commands).substring(0, 100)));
     }
   }
 
-  /** a Unix command to get the current user's name */
-  public final static String USER_NAME_COMMAND = "whoami";
+  /** a Unix command to get the current user's name: {@value}. */
+  public static final String USER_NAME_COMMAND = "whoami";
 
-  /** Windows CreateProcess synchronization object */
+  /** Windows <code>CreateProcess</code> synchronization object. */
   public static final Object WindowsProcessLaunchLock = new Object();
 
   // OSType detection
@@ -100,9 +134,13 @@ abstract public class Shell {
     OS_TYPE_OTHER
   }
 
+  /**
+   * Get the type of the operating system, as determined from parsing
+   * the <code>os.name</code> property.
+   */
   public static final OSType osType = getOSType();
 
-  static private OSType getOSType() {
+  private static OSType getOSType() {
     String osName = System.getProperty("os.name");
     if (osName.startsWith("Windows")) {
       return OSType.OS_TYPE_WIN;
@@ -131,46 +169,49 @@ abstract public class Shell {
   public static final boolean PPC_64
                 = System.getProperties().getProperty("os.arch").contains("ppc64");
 
-  /** a Unix command to get the current user's groups list */
+  /** a Unix command to get the current user's groups list. */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
                     : new String[]{"bash", "-c", "groups"};
   }
 
   /**
-   * a Unix command to get a given user's groups list.
+   * A command to get a given user's groups list.
    * If the OS is not WINDOWS, the command will get the user's primary group
    * first and finally get the groups list which includes the primary group.
    * i.e. the user's primary group will be included twice.
    */
   public static String[] getGroupsForUserCommand(final String user) {
-    //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
-                    : new String [] {"bash", "-c", "id -gn " + user
-                                     + "&& id -Gn " + user};
+    //'groups username' command return is inconsistent across different unixes
+    return WINDOWS ?
+      new String[]
+          { getWinutilsPath(), "groups", "-F", "\"" + user + "\"" }
+      : new String [] {"bash", "-c", "id -gn " + user + "&& id -Gn " + user};
   }
 
-  /** a Unix command to get a given netgroup's user list */
+  /** A command to get a given netgroup's user list. */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}
+    return WINDOWS ? new String [] {"cmd", "/c", "getent netgroup " + netgroup}
                     : new String [] {"bash", "-c", "getent netgroup " + netgroup};
   }
 
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
-    return (WINDOWS) ? new String[] { WINUTILS, "ls", "-F" }
+    return (WINDOWS) ? new String[] { getWinutilsPath(), "ls", "-F" }
                      : new String[] { "/bin/ls", "-ld" };
   }
 
-  /** Return a command to set permission */
+  /** Return a command to set permission. */
   public static String[] getSetPermissionCommand(String perm, boolean recursive) {
     if (recursive) {
-      return (WINDOWS) ? new String[] { WINUTILS, "chmod", "-R", perm }
-                         : new String[] { "chmod", "-R", perm };
+      return (WINDOWS) ?
+          new String[] { getWinutilsPath(), "chmod", "-R", perm }
+          : new String[] { "chmod", "-R", perm };
     } else {
-      return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
-                       : new String[] { "chmod", perm };
+      return (WINDOWS) ?
+          new String[] { getWinutilsPath(), "chmod", perm }
+          : new String[] { "chmod", perm };
     }
   }
 
@@ -182,45 +223,52 @@ abstract public class Shell {
    * @param file String file to set
    * @return String[] containing command and arguments
    */
-  public static String[] getSetPermissionCommand(String perm, boolean recursive,
-                                                 String file) {
+  public static String[] getSetPermissionCommand(String perm,
+      boolean recursive, String file) {
     String[] baseCmd = getSetPermissionCommand(perm, recursive);
     String[] cmdWithFile = Arrays.copyOf(baseCmd, baseCmd.length + 1);
     cmdWithFile[cmdWithFile.length - 1] = file;
     return cmdWithFile;
   }
 
-  /** Return a command to set owner */
+  /** Return a command to set owner. */
   public static String[] getSetOwnerCommand(String owner) {
-    return (WINDOWS) ? new String[] { WINUTILS, "chown", "\"" + owner + "\"" }
-                     : new String[] { "chown", owner };
-  }
-  
-  /** Return a command to create symbolic links */
-  public static String[] getSymlinkCommand(String target, String link) {
-    return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
-                   : new String[] { "ln", "-s", target, link };
+    return (WINDOWS) ?
+        new String[] { getWinutilsPath(), "chown", "\"" + owner + "\"" }
+        : new String[] { "chown", owner };
   }
 
-  /** Return a command to read the target of the a symbolic link*/
+  /** Return a command to create symbolic links. */
+  public static String[] getSymlinkCommand(String target, String link) {
+    return WINDOWS ?
+       new String[] { getWinutilsPath(), "symlink", link, target }
+       : new String[] { "ln", "-s", target, link };
+  }
+
+  /** Return a command to read the target of the a symbolic link. */
   public static String[] getReadlinkCommand(String link) {
-    return WINDOWS ? new String[] { WINUTILS, "readlink", link }
+    return WINDOWS ?
+        new String[] { getWinutilsPath(), "readlink", link }
         : new String[] { "readlink", link };
   }
 
-  /** Return a command for determining if process with specified pid is alive. */
+  /**
+   * Return a command for determining if process with specified pid is alive.
+   * @param pid process ID
+   * @return a <code>kill -0</code> command or equivalent
+   */
   public static String[] getCheckProcessIsAliveCommand(String pid) {
     return getSignalKillCommand(0, pid);
   }
 
-  /** Return a command to send a signal to a given pid */
+  /** Return a command to send a signal to a given pid. */
   public static String[] getSignalKillCommand(int code, String pid) {
     // Code == 0 means check alive
     if (Shell.WINDOWS) {
       if (0 == code) {
-        return new String[] { Shell.WINUTILS, "task", "isAlive", pid };
+        return new String[] {Shell.getWinutilsPath(), "task", "isAlive", pid };
       } else {
-        return new String[] { Shell.WINUTILS, "task", "kill", pid };
+        return new String[] {Shell.getWinutilsPath(), "task", "kill", pid };
       }
     }
 
@@ -232,18 +280,20 @@ abstract public class Shell {
     }
   }
 
+  /** Regular expression for environment variables: {@value}. */
   public static final String ENV_NAME_REGEX = "[A-Za-z_][A-Za-z0-9_]*";
-  /** Return a regular expression string that match environment variables */
+
+  /** Return a regular expression string that match environment variables. */
   public static String getEnvironmentVariableRegex() {
     return (WINDOWS)
         ? "%(" + ENV_NAME_REGEX + "?)%"
         : "\\$(" + ENV_NAME_REGEX + ")";
   }
-  
+
   /**
    * Returns a File referencing a script with the given basename, inside the
-   * given parent directory.  The file extension is inferred by platform: ".cmd"
-   * on Windows, or ".sh" otherwise.
+   * given parent directory.  The file extension is inferred by platform:
+   * <code>".cmd"</code> on Windows, or <code>".sh"</code> otherwise.
    * 
    * @param parent File parent directory
    * @param basename String script file basename
@@ -254,9 +304,11 @@ abstract public class Shell {
   }
 
   /**
-   * Returns a script file name with the given basename.  The file extension is
-   * inferred by platform: ".cmd" on Windows, or ".sh" otherwise.
-   * 
+   * Returns a script file name with the given basename.
+   *
+   * The file extension is inferred by platform:
+   * <code>".cmd"</code> on Windows, or <code>".sh"</code> otherwise.
+   *
    * @param basename String script file basename
    * @return String script file name
    */
@@ -267,129 +319,372 @@ abstract public class Shell {
   /**
    * Returns a command to run the given script.  The script interpreter is
    * inferred by platform: cmd on Windows or bash otherwise.
-   * 
+   *
    * @param script File script to run
    * @return String[] command to run the script
    */
   public static String[] getRunScriptCommand(File script) {
     String absolutePath = script.getAbsolutePath();
-    return WINDOWS ? new String[] { "cmd", "/c", absolutePath } :
-      new String[] { "/bin/bash", absolutePath };
+    return WINDOWS ?
+      new String[] { "cmd", "/c", absolutePath }
+      : new String[] { "/bin/bash", absolutePath };
   }
 
-  /** a Unix command to set permission */
+  /** a Unix command to set permission: {@value}. */
   public static final String SET_PERMISSION_COMMAND = "chmod";
-  /** a Unix command to set owner */
+  /** a Unix command to set owner: {@value}. */
   public static final String SET_OWNER_COMMAND = "chown";
 
-  /** a Unix command to set the change user's groups list */
+  /** a Unix command to set the change user's groups list: {@value}. */
   public static final String SET_GROUP_COMMAND = "chgrp";
-  /** a Unix command to create a link */
+  /** a Unix command to create a link: {@value}. */
   public static final String LINK_COMMAND = "ln";
-  /** a Unix command to get a link target */
+  /** a Unix command to get a link target: {@value}. */
   public static final String READ_LINK_COMMAND = "readlink";
 
-  /**Time after which the executing script would be timedout*/
+  /**Time after which the executing script would be timedout. */
   protected long timeOutInterval = 0L;
   /** If or not script timed out*/
-  private AtomicBoolean timedOut;
+  private final AtomicBoolean timedOut = new AtomicBoolean(false);
 
-
-  /** Centralized logic to discover and validate the sanity of the Hadoop 
-   *  home directory. Returns either NULL or a directory that exists and 
-   *  was specified via either -Dhadoop.home.dir or the HADOOP_HOME ENV 
-   *  variable.  This does a lot of work so it should only be called 
+  /**
+   *  Centralized logic to discover and validate the sanity of the Hadoop
+   *  home directory.
+   *
+   *  This does a lot of work so it should only be called
    *  privately for initialization once per process.
-   **/
-  private static String checkHadoopHome() {
+   *
+   * @return A directory that exists and via was specified on the command line
+   * via <code>-Dhadoop.home.dir</code> or the <code>HADOOP_HOME</code>
+   * environment variable.
+   * @throws FileNotFoundException if the properties are absent or the specified
+   * path is not a reference to a valid directory.
+   */
+  private static File checkHadoopHome() throws FileNotFoundException {
 
     // first check the Dflag hadoop.home.dir with JVM scope
-    String home = System.getProperty("hadoop.home.dir");
+    String home = System.getProperty(SYSPROP_HADOOP_HOME_DIR);
 
     // fall back to the system/user-global env variable
     if (home == null) {
-      home = System.getenv("HADOOP_HOME");
+      home = System.getenv(ENV_HADOOP_HOME);
+    }
+    return checkHadoopHomeInner(home);
+  }
+
+  /*
+  A set of exception strings used to construct error messages;
+  these are referred to in tests
+  */
+  static final String E_DOES_NOT_EXIST = "does not exist";
+  static final String E_IS_RELATIVE = "is not an absolute path.";
+  static final String E_NOT_DIRECTORY = "is not a directory.";
+  static final String E_NO_EXECUTABLE = "Could not locate Hadoop executable";
+  static final String E_NOT_EXECUTABLE_FILE = "Not an executable file";
+  static final String E_HADOOP_PROPS_UNSET = ENV_HADOOP_HOME + " and "
+      + SYSPROP_HADOOP_HOME_DIR + " are unset.";
+  static final String E_HADOOP_PROPS_EMPTY = ENV_HADOOP_HOME + " or "
+      + SYSPROP_HADOOP_HOME_DIR + " set to an empty string";
+  static final String E_NOT_A_WINDOWS_SYSTEM = "Not a Windows system";
+
+  /**
+   *  Validate the accessibility of the Hadoop home directory.
+   *
+   * @return A directory that is expected to be the hadoop home directory
+   * @throws FileNotFoundException if the specified
+   * path is not a reference to a valid directory.
+   */
+  @VisibleForTesting
+  static File checkHadoopHomeInner(String home) throws FileNotFoundException {
+    // couldn't find either setting for hadoop's home directory
+    if (home == null) {
+      throw new FileNotFoundException(E_HADOOP_PROPS_UNSET);
+    }
+    // strip off leading and trailing double quotes
+    while (home.startsWith("\"")) {
+      home = home.substring(1);
+    }
+    while (home.endsWith("\"")) {
+      home = home.substring(0, home.length() - 1);
     }
 
+    // after stripping any quotes, check for home dir being non-empty
+    if (home.isEmpty()) {
+      throw new FileNotFoundException(E_HADOOP_PROPS_EMPTY);
+    }
+
+    // check that the hadoop home dir value
+    // is an absolute reference to a directory
+    File homedir = new File(home);
+    if (!homedir.isAbsolute()) {
+      throw new FileNotFoundException("Hadoop home directory " + homedir
+          + " " + E_IS_RELATIVE);
+    }
+    if (!homedir.exists()) {
+      throw new FileNotFoundException("Hadoop home directory " + homedir
+          + " " + E_DOES_NOT_EXIST);
+    }
+    if (!homedir.isDirectory()) {
+      throw new FileNotFoundException("Hadoop home directory " + homedir
+          + " "+ E_NOT_DIRECTORY);
+    }
+    return homedir;
+  }
+
+  /**
+   * The Hadoop home directory.
+   */
+  private static final File HADOOP_HOME_FILE;
+
+  /**
+   * Rethrowable cause for the failure to determine the hadoop
+   * home directory
+   */
+  private static final IOException HADOOP_HOME_DIR_FAILURE_CAUSE;
+
+  static {
+    File home;
+    IOException ex;
     try {
-       // couldn't find either setting for hadoop's home directory
-       if (home == null) {
-         throw new IOException("HADOOP_HOME or hadoop.home.dir are not set.");
-       }
-
-       if (home.startsWith("\"") && home.endsWith("\"")) {
-         home = home.substring(1, home.length()-1);
-       }
-
-       // check that the home setting is actually a directory that exists
-       File homedir = new File(home);
-       if (!homedir.isAbsolute() || !homedir.exists() || !homedir.isDirectory()) {
-         throw new IOException("Hadoop home directory " + homedir
-           + " does not exist, is not a directory, or is not an absolute path.");
-       }
-
-       home = homedir.getCanonicalPath();
-
+      home = checkHadoopHome();
+      ex = null;
     } catch (IOException ioe) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Failed to detect a valid hadoop home directory", ioe);
       }
+      ex = ioe;
       home = null;
     }
-    
-    return home;
+    HADOOP_HOME_FILE = home;
+    HADOOP_HOME_DIR_FAILURE_CAUSE = ex;
   }
-  private static String HADOOP_HOME_DIR = checkHadoopHome();
 
-  // Public getter, throws an exception if HADOOP_HOME failed validation
-  // checks and is being referenced downstream.
-  public static final String getHadoopHome() throws IOException {
-    if (HADOOP_HOME_DIR == null) {
-      throw new IOException("Misconfigured HADOOP_HOME cannot be referenced.");
+  /**
+   * Optionally extend an error message with some OS-specific text.
+   * @param message core error message
+   * @return error message, possibly with some extra text
+   */
+  private static String addOsText(String message) {
+    return WINDOWS ? (message + " -see " + WINDOWS_PROBLEMS) : message;
+  }
+
+  /**
+   * Create a {@code FileNotFoundException} with the inner nested cause set
+   * to the given exception. Compensates for the fact that FNFE doesn't
+   * have an initializer that takes an exception.
+   * @param text error text
+   * @param ex inner exception
+   * @return a new exception to throw.
+   */
+  private static FileNotFoundException fileNotFoundException(String text,
+      Exception ex) {
+    return (FileNotFoundException) new FileNotFoundException(text)
+        .initCause(ex);
+  }
+
+  /**
+   * Get the Hadoop home directory. Raises an exception if not found
+   * @return the home dir
+   * @throws IOException if the home directory cannot be located.
+   */
+  public static String getHadoopHome() throws IOException {
+    return getHadoopHomeDir().getCanonicalPath();
+  }
+
+  /**
+   * Get the Hadoop home directory. If it is invalid,
+   * throw an exception.
+   * @return a path referring to hadoop home.
+   * @throws FileNotFoundException if the directory doesn't exist.
+   */
+  private static File getHadoopHomeDir() throws FileNotFoundException {
+    if (HADOOP_HOME_DIR_FAILURE_CAUSE != null) {
+      throw fileNotFoundException(
+          addOsText(HADOOP_HOME_DIR_FAILURE_CAUSE.toString()),
+          HADOOP_HOME_DIR_FAILURE_CAUSE);
     }
-
-    return HADOOP_HOME_DIR;
+    return HADOOP_HOME_FILE;
   }
 
-  /** fully qualify the path to a binary that should be in a known hadoop 
+  /**
+   *  Fully qualify the path to a binary that should be in a known hadoop
    *  bin location. This is primarily useful for disambiguating call-outs 
    *  to executable sub-components of Hadoop to avoid clashes with other 
    *  executables that may be in the path.  Caveat:  this call doesn't 
    *  just format the path to the bin directory.  It also checks for file 
    *  existence of the composed path. The output of this call should be 
    *  cached by callers.
-   * */
-  public static final String getQualifiedBinPath(String executable) 
-  throws IOException {
+   *
+   * @param executable executable
+   * @return executable file reference
+   * @throws FileNotFoundException if the path does not exist
+   */
+  public static File getQualifiedBin(String executable)
+      throws FileNotFoundException {
     // construct hadoop bin path to the specified executable
-    String fullExeName = HADOOP_HOME_DIR + File.separator + "bin" 
-      + File.separator + executable;
-
-    File exeFile = new File(fullExeName);
-    if (!exeFile.exists()) {
-      throw new IOException("Could not locate executable " + fullExeName
-        + " in the Hadoop binaries.");
-    }
-
-    return exeFile.getCanonicalPath();
+    return getQualifiedBinInner(getHadoopHomeDir(), executable);
   }
 
-  /** a Windows utility to emulate Unix commands */
-  public static final String WINUTILS = getWinUtilsPath();
-
-  public static final String getWinUtilsPath() {
-    String winUtilsPath = null;
-
-    try {
-      if (WINDOWS) {
-        winUtilsPath = getQualifiedBinPath("winutils.exe");
-      }
-    } catch (IOException ioe) {
-       LOG.error("Failed to locate the winutils binary in the hadoop binary path",
-         ioe);
+  /**
+   * Inner logic of {@link #getQualifiedBin(String)}, accessible
+   * for tests.
+   * @param hadoopHomeDir home directory (assumed to be valid)
+   * @param executable executable
+   * @return path to the binary
+   * @throws FileNotFoundException if the executable was not found/valid
+   */
+  static File getQualifiedBinInner(File hadoopHomeDir, String executable)
+      throws FileNotFoundException {
+    String binDirText = "Hadoop bin directory ";
+    File bin = new File(hadoopHomeDir, "bin");
+    if (!bin.exists()) {
+      throw new FileNotFoundException(addOsText(binDirText + E_DOES_NOT_EXIST
+          + ": " + bin));
+    }
+    if (!bin.isDirectory()) {
+      throw new FileNotFoundException(addOsText(binDirText + E_NOT_DIRECTORY
+          + ": " + bin));
     }
 
-    return winUtilsPath;
+    File exeFile = new File(bin, executable);
+    if (!exeFile.exists()) {
+      throw new FileNotFoundException(
+          addOsText(E_NO_EXECUTABLE + ": " + exeFile));
+    }
+    if (!exeFile.isFile()) {
+      throw new FileNotFoundException(
+          addOsText(E_NOT_EXECUTABLE_FILE + ": " + exeFile));
+    }
+    try {
+      return exeFile.getCanonicalFile();
+    } catch (IOException e) {
+      // this isn't going to happen, because of all the upfront checks.
+      // so if it does, it gets converted to a FNFE and rethrown
+      throw fileNotFoundException(e.toString(), e);
+    }
+  }
+
+  /**
+   *  Fully qualify the path to a binary that should be in a known hadoop
+   *  bin location. This is primarily useful for disambiguating call-outs
+   *  to executable sub-components of Hadoop to avoid clashes with other
+   *  executables that may be in the path.  Caveat:  this call doesn't
+   *  just format the path to the bin directory.  It also checks for file
+   *  existence of the composed path. The output of this call should be
+   *  cached by callers.
+   *
+   * @param executable executable
+   * @return executable file reference
+   * @throws FileNotFoundException if the path does not exist
+   * @throws IOException on path canonicalization failures
+   */
+  public static String getQualifiedBinPath(String executable)
+      throws IOException {
+    return getQualifiedBin(executable).getCanonicalPath();
+  }
+
+  /**
+   * Location of winutils as a string; null if not found.
+   * <p>
+   * <i>Important: caller must check for this value being null</i>.
+   * The lack of such checks has led to many support issues being raised.
+   * <p>
+   * @deprecated use one of the exception-raising getter methods,
+   * specifically {@link #getWinutilsPath()} or {@link #getWinutilsFile()}
+   */
+  @Deprecated
+  public static final String WINUTILS;
+
+  /** Canonical path to winutils, private to Shell. */
+  private static final String WINUTILS_PATH;
+
+  /** file reference to winutils. */
+  private static final File WINUTILS_FILE;
+
+  /** the exception raised on a failure to init the WINUTILS fields. */
+  private static final IOException WINUTILS_FAILURE;
+
+  /*
+   * Static WINUTILS_* field initializer.
+   * On non-Windows systems sets the paths to null, and
+   * adds a specific exception to the failure cause, so
+   * that on any attempt to resolve the paths will raise
+   * a meaningful exception.
+   */
+  static {
+    IOException ioe = null;
+    String path = null;
+    File file = null;
+    // invariant: either there's a valid file and path,
+    // or there is a cached IO exception.
+    if (WINDOWS) {
+      try {
+        file = getQualifiedBin(WINUTILS_EXE);
+        path = file.getCanonicalPath();
+        ioe = null;
+      } catch (IOException e) {
+        LOG.warn("Did not find {}: {}", WINUTILS_EXE, e);
+        // stack trace comes at debug level
+        LOG.debug("Failed to find " + WINUTILS_EXE, e);
+        file = null;
+        path = null;
+        ioe = e;
+      }
+    } else {
+      // on a non-windows system, the invariant is kept
+      // by adding an explicit exception.
+      ioe = new FileNotFoundException(E_NOT_A_WINDOWS_SYSTEM);
+    }
+    WINUTILS_PATH = path;
+    WINUTILS_FILE = file;
+
+    WINUTILS = path;
+    WINUTILS_FAILURE = ioe;
+  }
+
+  /**
+   * Predicate to indicate whether or not the path to winutils is known.
+   *
+   * If true, then {@link #WINUTILS} is non-null, and both
+   * {@link #getWinutilsPath()} and {@link #getWinutilsFile()}
+   * will successfully return this value. Always false on non-windows systems.
+   * @return true if there is a valid path to the binary
+   */
+  public static boolean hasWinutilsPath() {
+    return WINUTILS_PATH != null;
+  }
+
+  /**
+   * Locate the winutils binary, or fail with a meaningful
+   * exception and stack trace as an RTE.
+   * This method is for use in methods which don't explicitly throw
+   * an <code>IOException</code>.
+   * @return the path to {@link #WINUTILS_EXE}
+   * @throws RuntimeException if the path is not resolvable
+   */
+  public static String getWinutilsPath() {
+    if (WINUTILS_FAILURE == null) {
+      return WINUTILS_PATH;
+    } else {
+      throw new RuntimeException(WINUTILS_FAILURE.toString(),
+          WINUTILS_FAILURE);
+    }
+  }
+
+  /**
+   * Get a file reference to winutils.
+   * Always raises an exception if there isn't one
+   * @return the file instance referring to the winutils bin.
+   * @throws FileNotFoundException on any failure to locate that file.
+   */
+  public static File getWinutilsFile() throws FileNotFoundException {
+    if (WINUTILS_FAILURE == null) {
+      return WINUTILS_FILE;
+    } else {
+      // raise a new exception to generate a new stack trace
+      throw fileNotFoundException(WINUTILS_FAILURE.toString(),
+          WINUTILS_FAILURE);
+    }
   }
 
   public static final boolean isBashSupported = checkIsBashSupported();
@@ -412,7 +707,15 @@ abstract public class Shell {
     return supported;
   }
 
+  /**
+   * Flag which is true if setsid exists.
+   */
   public static final boolean isSetsidAvailable = isSetsidSupported();
+
+  /**
+   * Look for <code>setsid</code>.
+   * @return true if <code>setsid</code> was present
+   */
   private static boolean isSetsidSupported() {
     if (Shell.WINDOWS) {
       return false;
@@ -427,7 +730,8 @@ abstract public class Shell {
       LOG.debug("setsid is not available on this machine. So not using it.");
       setsidSupported = false;
     }  catch (Error err) {
-      if (err.getMessage().contains("posix_spawn is not " +
+      if (err.getMessage() != null
+          && err.getMessage().contains("posix_spawn is not " +
           "a supported process launch mechanism")
           && (Shell.FREEBSD || Shell.MAC)) {
         // HADOOP-11924: This is a workaround to avoid failure of class init
@@ -444,69 +748,86 @@ abstract public class Shell {
     return setsidSupported;
   }
 
-  /** Token separator regex used to parse Shell tool outputs */
+  /** Token separator regex used to parse Shell tool outputs. */
   public static final String TOKEN_SEPARATOR_REGEX
                 = WINDOWS ? "[|\n\r]" : "[ \t\n\r\f]";
 
-  private long    interval;   // refresh interval in msec
-  private long    lastTime;   // last time the command was performed
-  final private boolean redirectErrorStream; // merge stdout and stderr
+  private long interval;   // refresh interval in msec
+  private long lastTime;   // last time the command was performed
+  private final boolean redirectErrorStream; // merge stdout and stderr
   private Map<String, String> environment; // env for the command execution
   private File dir;
   private Process process; // sub process used to execute the command
   private int exitCode;
 
-  /**If or not script finished executing*/
-  private volatile AtomicBoolean completed;
-  
-  public Shell() {
+  /** Flag to indicate whether or not the script has finished executing. */
+  private final AtomicBoolean completed = new AtomicBoolean(false);
+
+  /**
+   * Create an instance with no minimum interval between runs; stderr is
+   * not merged with stdout.
+   */
+  protected Shell() {
     this(0L);
   }
-  
-  public Shell(long interval) {
+
+  /**
+   * Create an instance with a minimum interval between executions; stderr is
+   * not merged with stdout.
+   * @param interval interval in milliseconds between command executions.
+   */
+  protected Shell(long interval) {
     this(interval, false);
   }
 
   /**
-   * @param interval the minimum duration to wait before re-executing the 
-   *        command.
+   * Create a shell instance which can be re-executed when the {@link #run()}
+   * method is invoked with a given elapsed time between calls.
+   *
+   * @param interval the minimum duration in milliseconds to wait before
+   *        re-executing the command. If set to 0, there is no minimum.
+   * @param redirectErrorStream should the error stream be merged with
+   *        the normal output stream?
    */
-  public Shell(long interval, boolean redirectErrorStream) {
+  protected Shell(long interval, boolean redirectErrorStream) {
     this.interval = interval;
-    this.lastTime = (interval<0) ? 0 : -interval;
+    this.lastTime = (interval < 0) ? 0 : -interval;
     this.redirectErrorStream = redirectErrorStream;
   }
-  
-  /** set the environment for the command 
+
+  /**
+   * Set the environment for the command.
    * @param env Mapping of environment variables
    */
   protected void setEnvironment(Map<String, String> env) {
     this.environment = env;
   }
 
-  /** set the working directory 
-   * @param dir The directory where the command would be executed
+  /**
+   * Set the working directory.
+   * @param dir The directory where the command will be executed
    */
   protected void setWorkingDirectory(File dir) {
     this.dir = dir;
   }
 
-  /** check to see if a command needs to be executed and execute if needed */
+  /** Check to see if a command needs to be executed and execute if needed. */
   protected void run() throws IOException {
-    if (lastTime + interval > Time.monotonicNow())
+    if (lastTime + interval > Time.monotonicNow()) {
       return;
+    }
     exitCode = 0; // reset for next run
     runCommand();
   }
 
-  /** Run a command */
+  /** Run the command. */
   private void runCommand() throws IOException { 
     ProcessBuilder builder = new ProcessBuilder(getExecString());
     Timer timeOutTimer = null;
     ShellTimeoutTimerTask timeoutTimerTask = null;
-    timedOut = new AtomicBoolean(false);
-    completed = new AtomicBoolean(false);
-    
+    timedOut.set(false);
+    completed.set(false);
+
     if (environment != null) {
       builder.environment().putAll(this.environment);
     }
@@ -539,11 +860,11 @@ abstract public class Shell {
     final BufferedReader errReader = 
             new BufferedReader(new InputStreamReader(
                 process.getErrorStream(), Charset.defaultCharset()));
-    BufferedReader inReader = 
+    BufferedReader inReader =
             new BufferedReader(new InputStreamReader(
                 process.getInputStream(), Charset.defaultCharset()));
     final StringBuffer errMsg = new StringBuffer();
-    
+
     // read error and input streams as this would free up the buffers
     // free the error stream buffer
     Thread errThread = new Thread() {
@@ -641,28 +962,30 @@ abstract public class Shell {
     }
   }
 
-  /** return an array containing the command name & its parameters */ 
+  /** return an array containing the command name and its parameters. */
   protected abstract String[] getExecString();
-  
+
   /** Parse the execution result */
   protected abstract void parseExecResult(BufferedReader lines)
   throws IOException;
 
-  /** 
-   * Get the environment variable
+  /**
+   * Get an environment variable.
+   * @param env the environment var
+   * @return the value or null if it was unset.
    */
   public String getEnvironment(String env) {
     return environment.get(env);
   }
-  
-  /** get the current sub-process executing the given command 
+
+  /** get the current sub-process executing the given command.
    * @return process executing the command
    */
   public Process getProcess() {
     return process;
   }
 
-  /** get the exit code 
+  /** get the exit code.
    * @return the exit code of the process
    */
   public int getExitCode() {
@@ -674,12 +997,12 @@ abstract public class Shell {
    */
   public static class ExitCodeException extends IOException {
     private final int exitCode;
-    
+
     public ExitCodeException(int exitCode, String message) {
       super(message);
       this.exitCode = exitCode;
     }
-    
+
     public int getExitCode() {
       return exitCode;
     }
@@ -694,7 +1017,7 @@ abstract public class Shell {
       return sb.toString();
     }
   }
-  
+
   public interface CommandExecutor {
 
     void execute() throws IOException;
@@ -704,33 +1027,33 @@ abstract public class Shell {
     String getOutput() throws IOException;
 
     void close();
-    
+
   }
-  
+
   /**
    * A simple shell command executor.
    * 
-   * <code>ShellCommandExecutor</code>should be used in cases where the output 
-   * of the command needs no explicit parsing and where the command, working 
-   * directory and the environment remains unchanged. The output of the command 
+   * <code>ShellCommandExecutor</code>should be used in cases where the output
+   * of the command needs no explicit parsing and where the command, working
+   * directory and the environment remains unchanged. The output of the command
    * is stored as-is and is expected to be small.
    */
   public static class ShellCommandExecutor extends Shell 
       implements CommandExecutor {
-    
+
     private String[] command;
     private StringBuffer output;
-    
-    
+
+
     public ShellCommandExecutor(String[] execString) {
       this(execString, null);
     }
-    
+
     public ShellCommandExecutor(String[] execString, File dir) {
       this(execString, dir, null);
     }
-   
-    public ShellCommandExecutor(String[] execString, File dir, 
+
+    public ShellCommandExecutor(String[] execString, File dir,
                                  Map<String, String> env) {
       this(execString, dir, env , 0L);
     }
@@ -746,7 +1069,7 @@ abstract public class Shell {
      *            key-value pairs specified in the map. If null, the current
      *            environment is not modified.
      * @param timeout Specifies the time in milliseconds, after which the
-     *                command will be killed and the status marked as timedout.
+     *                command will be killed and the status marked as timed-out.
      *                If 0, the command will not be timed out. 
      */
     public ShellCommandExecutor(String[] execString, File dir, 
@@ -760,10 +1083,19 @@ abstract public class Shell {
       }
       timeOutInterval = timeout;
     }
-        
 
-    /** Execute the shell command. */
+    /**
+     * Execute the shell command.
+     * @throws IOException if the command fails, or if the command is
+     * not well constructed.
+     */
     public void execute() throws IOException {
+      for (String s : command) {
+        if (s == null) {
+          throw new IOException("(null) entry in command string: "
+              + StringUtils.join(" ", command));
+        }
+      }
       this.run();    
     }
 
@@ -781,8 +1113,8 @@ abstract public class Shell {
         output.append(buf, 0, nRead);
       }
     }
-    
-    /** Get the output of the shell command.*/
+
+    /** Get the output of the shell command. */
     public String getOutput() {
       return (output == null) ? "" : output.toString();
     }
@@ -813,7 +1145,7 @@ abstract public class Shell {
     public void close() {
     }
   }
-  
+
   /**
    * To check if the passed script to shell command executor timed out or
    * not.
@@ -823,15 +1155,15 @@ abstract public class Shell {
   public boolean isTimedOut() {
     return timedOut.get();
   }
-  
+
   /**
-   * Set if the command has timed out.
+   * Declare that the command has timed out.
    * 
    */
   private void setTimedOut() {
     this.timedOut.set(true);
   }
-  
+
   /** 
    * Static method to execute a shell command. 
    * Covers most of the simple cases without requiring the user to implement  
@@ -842,17 +1174,18 @@ abstract public class Shell {
   public static String execCommand(String ... cmd) throws IOException {
     return execCommand(null, cmd, 0L);
   }
-  
-  /** 
-   * Static method to execute a shell command. 
-   * Covers most of the simple cases without requiring the user to implement  
+
+  /**
+   * Static method to execute a shell command.
+   * Covers most of the simple cases without requiring the user to implement
    * the <code>Shell</code> interface.
    * @param env the map of environment key=value
    * @param cmd shell command to execute.
    * @param timeout time in milliseconds after which script should be marked timeout
-   * @return the output of the executed command.o
+   * @return the output of the executed command.
+   * @throws IOException on any problem.
    */
-  
+
   public static String execCommand(Map<String, String> env, String[] cmd,
       long timeout) throws IOException {
     ShellCommandExecutor exec = new ShellCommandExecutor(cmd, null, env, 
@@ -861,25 +1194,26 @@ abstract public class Shell {
     return exec.getOutput();
   }
 
-  /** 
-   * Static method to execute a shell command. 
-   * Covers most of the simple cases without requiring the user to implement  
+  /**
+   * Static method to execute a shell command.
+   * Covers most of the simple cases without requiring the user to implement
    * the <code>Shell</code> interface.
    * @param env the map of environment key=value
    * @param cmd shell command to execute.
    * @return the output of the executed command.
+   * @throws IOException on any problem.
    */
-  public static String execCommand(Map<String,String> env, String ... cmd) 
+  public static String execCommand(Map<String,String> env, String ... cmd)
   throws IOException {
     return execCommand(env, cmd, 0L);
   }
-  
+
   /**
    * Timer which is used to timeout scripts spawned off by shell.
    */
   private static class ShellTimeoutTimerTask extends TimerTask {
 
-    private Shell shell;
+    private final Shell shell;
 
     public ShellTimeoutTimerTask(Shell shell) {
       this.shell = shell;

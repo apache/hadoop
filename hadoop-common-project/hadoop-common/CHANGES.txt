@@ -885,6 +885,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12344. Improve validateSocketPathSecurity0 error message (Casey
     Brotherton via Colin P. McCabe)
 
+    HADOOP-10775. Shell operations to fail with meaningful errors on windows if
+    winutils.exe not found. (stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
