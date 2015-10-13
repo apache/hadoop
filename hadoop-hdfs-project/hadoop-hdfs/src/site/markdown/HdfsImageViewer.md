@@ -141,7 +141,7 @@ Options
 |:---- |:---- |
 | `-i`\|`--inputFile` *input file* | Specify the input fsimage file to process. Required. |
 | `-o`\|`--outputFile` *output file* | Specify the output filename, if the specified output processor generates one. If the specified file already exists, it is silently overwritten. (output to stdout by default)\|
-| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are Web (default), XML and FileDistribution. |
+| `-p`\|`--processor` *processor* | Specify the image processor to apply against the image file. Currently valid options are Web (default), XML, Delimited and FileDistribution. |
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |

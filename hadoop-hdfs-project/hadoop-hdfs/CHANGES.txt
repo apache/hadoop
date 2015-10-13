@@ -2027,6 +2027,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9224. TestFileTruncate fails intermittently with BindException
     (Brahma Reddy Battula via vinayakumarb)
 
+    HDFS-9160. [OIV-Doc] : Missing details of 'delimited' for processor options
+    (nijel via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
