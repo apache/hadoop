@@ -2051,6 +2051,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
     (wheat9)
 
+    HDFS-9187. Fix null pointer error in Globber when FS was not constructed
+    via FileSystem#createFileSystem (cmccabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
