@@ -1283,6 +1283,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12441. Fixed shell-kill command behaviour to work correctly on some
     Linux distributions after HADOOP-12317. (Wangda Tan via vinodkv)
 
+    HADOOP-12474. MiniKMS should use random ports for Jetty server by default.
+    (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
