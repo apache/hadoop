@@ -1547,6 +1547,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9139. Enable parallel JUnit tests for HDFS Pre-commit
     (Chris Nauroth and Vinayakumar B via vinayakumarb)
 
+    HDFS-9145. Tracking methods that hold FSNamesytemLock for too long.
+    (Mingliang Liu via wheat9)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
