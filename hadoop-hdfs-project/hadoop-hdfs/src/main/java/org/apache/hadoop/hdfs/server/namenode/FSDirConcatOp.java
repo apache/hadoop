@@ -154,10 +154,11 @@ class FSDirConcatOp {
             + " which is greater than the target file's preferred block size "
             + targetINode.getPreferredBlockSize());
       }
-      // TODO currently we do not support concatenating EC files
-      if (srcINodeFile.isStriped()) {
-        throw new HadoopIllegalArgumentException("concat: the src file " + src
-            + " is with striped blocks");
+      if(srcINodeFile.getErasureCodingPolicyID() !=
+          targetINode.getErasureCodingPolicyID()) {
+        throw new HadoopIllegalArgumentException("Source file " + src
+            + " and target file " + targetIIP.getPath()
+            + " have different erasure coding policy");
       }
       si.add(srcINodeFile);
     }
