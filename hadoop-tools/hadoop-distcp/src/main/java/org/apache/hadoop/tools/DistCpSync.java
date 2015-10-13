@@ -20,7 +20,7 @@ package org.apache.hadoop.tools;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -165,13 +165,13 @@ class DistCpSync {
             entry.getType() == SnapshotDiffReport.DiffType.CREATE ||
             entry.getType() == SnapshotDiffReport.DiffType.DELETE) {
           final Path source =
-              new Path(DFSUtil.bytes2String(entry.getSourcePath()));
+              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
           list.add(new DiffInfo(source, null, entry.getType()));
         } else if (entry.getType() == SnapshotDiffReport.DiffType.RENAME) {
           final Path source =
-              new Path(DFSUtil.bytes2String(entry.getSourcePath()));
+              new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
           final Path target =
-              new Path(DFSUtil.bytes2String(entry.getTargetPath()));
+              new Path(DFSUtilClient.bytes2String(entry.getTargetPath()));
           list.add(new DiffInfo(source, target, entry.getType()));
         }
       }
