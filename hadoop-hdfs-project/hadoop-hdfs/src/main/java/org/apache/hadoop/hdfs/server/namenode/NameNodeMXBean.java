@@ -81,9 +81,10 @@ public interface NameNodeMXBean {
   public boolean isUpgradeFinalized();
 
   /**
-   * Gets the RollingUpgrade information
+   * Gets the RollingUpgrade information.
    *
-   * @return Rolling upgrade information
+   * @return Rolling upgrade information if an upgrade is in progress. Else
+   * (e.g. if there is no upgrade or the upgrade is finalized), returns null.
    */
   public RollingUpgradeInfo.Bean getRollingUpgradeStatus();
 

@@ -847,8 +847,9 @@ public interface ClientProtocol {
 
   /**
    * Rolling upgrade operations.
-   * @param action either query, start or finailze.
-   * @return rolling upgrade information.
+   * @param action either query, prepare or finalize.
+   * @return rolling upgrade information. On query, if no upgrade is in
+   * progress, returns null.
    */
   @Idempotent
   public RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
