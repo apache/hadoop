@@ -277,13 +277,14 @@ public class TestDataNodeMetrics {
       }
 
       for (int x =0; x < 50; x++) {
-        String s = DFSTestUtil.readFile(fs, new Path("/time.txt." + x));
+        DFSTestUtil.readFile(fs, new Path("/time.txt." + x));
       }
 
       MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
       long endWriteValue = getLongCounter("TotalWriteTime", rbNew);
       long endReadValue = getLongCounter("TotalReadTime", rbNew);
-
+      // Lets Metric system update latest metrics
+      Thread.sleep(100);
       assertTrue(endReadValue > startReadValue);
       assertTrue(endWriteValue > startWriteValue);
     } finally {

@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -122,9 +123,11 @@ public class TestEditLogTailer {
     
     // Have to specify IPC ports so the NNs can talk to each other.
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setIpcPort(10031))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setIpcPort(10032)));
+        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+            .addNN(new MiniDFSNNTopology.NNConf("nn1")
+                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
+            .addNN(new MiniDFSNNTopology.NNConf("nn2")
+                .setIpcPort(ServerSocketUtil.getPort(0, 100))));
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
@@ -146,13 +149,17 @@ public class TestEditLogTailer {
       long startTxId) throws Exception {
     URI sharedUri = cluster.getSharedEditsDir(0, 1);
     File sharedDir = new File(sharedUri.getPath(), "current");
-    final File expectedLog = new File(sharedDir,
-        NNStorage.getInProgressEditsFileName(startTxId));
-    
+    final File expectedInProgressLog =
+        new File(sharedDir, NNStorage.getInProgressEditsFileName(startTxId));
+    final File expectedFinalizedLog = new File(sharedDir,
+        NNStorage.getFinalizedEditsFileName(startTxId, startTxId + 1));
+    // There is a chance that multiple rolling happens by multiple NameNodes
+    // And expected inprogress file would have also finalized. So look for the
+    // finalized edits file as well
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return expectedLog.exists();
+        return expectedInProgressLog.exists() || expectedFinalizedLog.exists();
       }
     }, 100, 10000);
   }

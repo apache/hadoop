@@ -714,6 +714,9 @@ Release 2.8.0 - UNRELEASED
     DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
     via Colin P. McCabe)
 
+    HDFS-9139. Enable parallel JUnit tests for HDFS Pre-commit
+    (Chris Nauroth and Vinayakumar B via vinayakumarb)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to

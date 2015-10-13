@@ -263,6 +263,7 @@ public class TestFSNamesystem {
     }
 
     latch.await();
+    Thread.sleep(10); // Lets all threads get BLOCKED
     Assert.assertEquals("Expected number of blocked thread not found",
                         threadCount, rwLock.getQueueLength());
   }
