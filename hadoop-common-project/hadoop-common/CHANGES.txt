@@ -1211,6 +1211,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12284. UserGroupInformation doAs can throw misleading exception
     (Aaron Dosset via stevel)
 
+    HADOOP-12449. TestDNS and TestNetUtils failing if no network. (stevel)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

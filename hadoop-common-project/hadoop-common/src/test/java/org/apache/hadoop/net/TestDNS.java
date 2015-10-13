@@ -25,6 +25,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.net.InetAddress;
 
+import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
 
 import org.apache.commons.logging.Log;
@@ -165,8 +166,8 @@ public class TestDNS {
     InetAddress localhost = getLocalIPAddr();
     try {
       String s = DNS.reverseDns(localhost, null);
-      LOG.info("Local revers DNS hostname is " + s);
-    } catch (NameNotFoundException e) {
+      LOG.info("Local reverse DNS hostname is " + s);
+    } catch (NameNotFoundException | CommunicationException e) {
       if (!localhost.isLinkLocalAddress() || localhost.isLoopbackAddress()) {
         //these addresses probably won't work with rDNS anyway, unless someone
         //has unusual entries in their DNS server mapping 1.0.0.127 to localhost
