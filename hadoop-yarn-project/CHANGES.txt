@@ -929,6 +929,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4230. RM crashes with NPE when increasing container resource if there is no headroom left.
     (Meng Ding via jianhe)
 
+    YARN-4017. container-executor overuses PATH_MAX. (Sidharta Seethana via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

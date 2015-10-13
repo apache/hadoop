@@ -68,17 +68,17 @@ void set_nm_uid(uid_t user, gid_t group) {
  * get the executable filename.
  */
 char* get_executable() {
-  char buffer[PATH_MAX];
-  snprintf(buffer, PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
-  char *filename = malloc(PATH_MAX);
-  ssize_t len = readlink(buffer, filename, PATH_MAX);
+  char buffer[EXECUTOR_PATH_MAX];
+  snprintf(buffer, EXECUTOR_PATH_MAX, "/proc/%" PRId64 "/exe", (int64_t)getpid());
+  char *filename = malloc(EXECUTOR_PATH_MAX);
+  ssize_t len = readlink(buffer, filename, EXECUTOR_PATH_MAX);
   if (len == -1) {
     fprintf(ERRORFILE, "Can't get executable name from %s - %s\n", buffer,
             strerror(errno));
     exit(-1);
-  } else if (len >= PATH_MAX) {
+  } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE, "Executable name %.*s is longer than %d characters.\n",
-            PATH_MAX, filename, PATH_MAX);
+            EXECUTOR_PATH_MAX, filename, EXECUTOR_PATH_MAX);
     exit(-1);
   }
   filename[len] = '\0';
@@ -1060,8 +1060,8 @@ char* parse_docker_command_file(const char* command_file) {
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
   char* docker_binary = get_value(DOCKER_BINARY_KEY);
-  char* docker_command_with_binary = calloc(sizeof(char), PATH_MAX);
-  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
+  char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
+  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
   char **args = extract_values_delim(docker_command_with_binary, " ");
 
   int exit_code = -1;
@@ -1207,11 +1207,11 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char docker_command_with_binary[PATH_MAX];
-  char docker_wait_command[PATH_MAX];
-  char docker_logs_command[PATH_MAX];
-  char docker_inspect_command[PATH_MAX];
-  char docker_rm_command[PATH_MAX];
+  char docker_command_with_binary[EXECUTOR_PATH_MAX];
+  char docker_wait_command[EXECUTOR_PATH_MAX];
+  char docker_logs_command[EXECUTOR_PATH_MAX];
+  char docker_inspect_command[EXECUTOR_PATH_MAX];
+  char docker_rm_command[EXECUTOR_PATH_MAX];
   int container_file_source =-1;
   int cred_file_source = -1;
   int BUFFER_SIZE = 4096;
@@ -1256,7 +1256,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_command_with_binary, PATH_MAX, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
 
   FILE* start_docker = popen(docker_command_with_binary, "r");
   if (pclose (start_docker) != 0)
@@ -1268,7 +1268,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_inspect_command, PATH_MAX,
+  snprintf(docker_inspect_command, EXECUTOR_PATH_MAX,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
@@ -1307,7 +1307,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    snprintf(docker_wait_command, PATH_MAX,
+    snprintf(docker_wait_command, EXECUTOR_PATH_MAX,
       "%s wait %s", docker_binary, container_id);
 
     FILE* wait_docker = popen(docker_wait_command, "r");
@@ -1318,7 +1318,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       fflush(ERRORFILE);
     }
     if(exit_code != 0) {
-      snprintf(docker_logs_command, PATH_MAX, "%s logs --tail=250 %s",
+      snprintf(docker_logs_command, EXECUTOR_PATH_MAX, "%s logs --tail=250 %s",
         docker_binary, container_id);
       FILE* logs = popen(docker_logs_command, "r");
       if(logs != NULL) {
@@ -1347,7 +1347,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     }
   }
 
-  snprintf(docker_rm_command, PATH_MAX,
+  snprintf(docker_rm_command, EXECUTOR_PATH_MAX,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
@@ -1766,7 +1766,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 #else
   char *controller = malloc(strlen(pair));
   char *mount_path = malloc(strlen(pair));
-  char hier_path[PATH_MAX];
+  char hier_path[EXECUTOR_PATH_MAX];
   int result = 0;
 
   if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
@@ -1778,7 +1778,7 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
     if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
       char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
       *buf++ = '/';
-      snprintf(buf, PATH_MAX - (buf - hier_path), "%s", hierarchy);
+      snprintf(buf, EXECUTOR_PATH_MAX - (buf - hier_path), "%s", hierarchy);
 
       // create hierarchy as 0750 and chown to Hadoop NM user
       const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;

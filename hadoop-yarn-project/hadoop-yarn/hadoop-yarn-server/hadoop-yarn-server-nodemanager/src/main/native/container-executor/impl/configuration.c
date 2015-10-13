@@ -95,12 +95,12 @@ static int is_only_root_writable(const char *file) {
  */
 char *resolve_config_path(const char* file_name, const char *root) {
   const char *real_fname = NULL;
-  char buffer[PATH_MAX*2 + 1];
+  char buffer[EXECUTOR_PATH_MAX*2 + 1];
 
   if (file_name[0] == '/') {
     real_fname = file_name;
   } else if (realpath(root, buffer) != NULL) {
-    strncpy(strrchr(buffer, '/') + 1, file_name, PATH_MAX);
+    strncpy(strrchr(buffer, '/') + 1, file_name, EXECUTOR_PATH_MAX);
     real_fname = buffer;
   }
 
