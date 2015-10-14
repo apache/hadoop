@@ -401,7 +401,7 @@ public abstract class ContainerExecutor implements Configurable {
           cpuRate = Math.min(10000, (int) (containerCpuPercentage * 100));
         }
       }
-      return new String[] { Shell.getWinutilsPath(), "task", "create", "-m",
+      return new String[] { Shell.getWinUtilsPath(), "task", "create", "-m",
           String.valueOf(memory), "-c", String.valueOf(cpuRate), groupId,
           "cmd /c " + command };
     } else {

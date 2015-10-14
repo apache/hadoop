@@ -137,7 +137,7 @@ public class HardLink {
     @Override
     String[] linkCount(File file) throws IOException {
       // trigger the check for winutils
-      Shell.getWinutilsFile();
+      Shell.getWinUtilsFile();
       String[] buf = new String[getLinkCountCommand.length];
       System.arraycopy(getLinkCountCommand, 0, buf, 0, 
                        getLinkCountCommand.length);

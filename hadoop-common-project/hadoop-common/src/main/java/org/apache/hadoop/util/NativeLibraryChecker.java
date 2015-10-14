@@ -108,7 +108,7 @@ public class NativeLibraryChecker {
     if (Shell.WINDOWS) {
       // winutils.exe is required on Windows
       try {
-        winutilsPath = Shell.getWinutilsFile().getCanonicalPath();
+        winutilsPath = Shell.getWinUtilsFile().getCanonicalPath();
         winutilsExists = true;
       } catch (IOException e) {
         LOG.debug("No Winutils: ", e);
