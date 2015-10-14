@@ -131,7 +131,7 @@ class BlocksMap {
     for(int idx = size - 1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       if (dn != null) {
-        dn.removeBlock(blockInfo); // remove from the list and wipe the location
+        removeBlock(dn, blockInfo); // remove from the list and wipe the location
       }
     }
   }
@@ -195,13 +195,23 @@ class BlocksMap {
       return false;
 
     // remove block from the data-node list and the node from the block info
-    boolean removed = node.removeBlock(info);
+    boolean removed = removeBlock(node, info);
 
     if (info.hasNoStorage()    // no datanodes left
         && info.isDeleted()) { // does not belong to a file
       blocks.remove(b);  // remove block from the map
     }
     return removed;
+  }
+
+  /**
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
+   */
+  static boolean removeBlock(DatanodeDescriptor dn, BlockInfo b) {
+    final DatanodeStorageInfo s = b.findStorageInfo(dn);
+    // if block exists on this datanode
+    return s != null && s.removeBlock(b);
   }
 
   int size() {

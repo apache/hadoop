@@ -309,7 +309,7 @@ public class DatanodeManager {
   
   void activate(final Configuration conf) {
     decomManager.activate(conf);
-    heartbeatManager.activate(conf);
+    heartbeatManager.activate();
   }
 
   void close() {
@@ -659,7 +659,7 @@ public class DatanodeManager {
   }
 
   private boolean shouldCountVersion(DatanodeDescriptor node) {
-    return node.getSoftwareVersion() != null && node.isAlive &&
+    return node.getSoftwareVersion() != null && node.isAlive() &&
       !isDatanodeDead(node);
   }
 
@@ -1343,7 +1343,7 @@ public class DatanodeManager {
           throw new DisallowedDatanodeException(nodeinfo);
         }
 
-        if (nodeinfo == null || !nodeinfo.isAlive) {
+        if (nodeinfo == null || !nodeinfo.isAlive()) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
 
