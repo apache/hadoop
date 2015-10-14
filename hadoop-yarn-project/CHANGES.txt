@@ -937,6 +937,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4253. Standardize on using PrivilegedOperationExecutor for all
     invocations of container-executor in LinuxContainerExecutor. (Sidharta Seethana via vvasudev)
 
+    YARN-4255. container-executor does not clean up docker operation command files.
+    (Sidharta Seethana via vvasudev)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
