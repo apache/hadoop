@@ -155,12 +155,17 @@ public class PrivilegedOperationExecutor {
         LOG.debug(exec.getOutput());
       }
     } catch (ExitCodeException e) {
-      String logLine = new StringBuffer("Shell execution returned exit code: ")
+      StringBuilder logBuilder = new StringBuilder("Shell execution returned "
+          + "exit code: ")
           .append(exec.getExitCode())
           .append(". Privileged Execution Operation Output: ")
-          .append(System.lineSeparator()).append(exec.getOutput()).toString();
+          .append(System.lineSeparator()).append(exec.getOutput());
 
-      LOG.warn(logLine);
+      logBuilder.append("Full command array for failed execution: ")
+          .append(System.lineSeparator());
+      logBuilder.append(Arrays.toString(fullCommandArray));
+
+      LOG.warn(logBuilder.toString());
 
       //stderr from shell executor seems to be stuffed into the exception
       //'message' - so, we have to extract it and set it as the error out

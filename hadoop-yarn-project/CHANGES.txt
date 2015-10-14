@@ -501,6 +501,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3943. Use separate threshold configurations for disk-full detection
     and disk-not-full detection. (Zhihai Xu via jlowe)
 
+    YARN-4252. Log container-executor invocation details when exit code is non-zero.
+    (Sidharta Seethana via vvasudev)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
