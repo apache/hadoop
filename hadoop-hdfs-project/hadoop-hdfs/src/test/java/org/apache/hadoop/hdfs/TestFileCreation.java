@@ -40,10 +40,9 @@ import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
@@ -66,7 +65,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -1000,15 +998,9 @@ public class TestFileCreation {
       for(DatanodeInfo datanodeinfo: locatedblock.getLocations()) {
         DataNode datanode = cluster.getDataNode(datanodeinfo.getIpcPort());
         ExtendedBlock blk = locatedblock.getBlock();
-        Block b = DataNodeTestUtils.getFSDataset(datanode).getStoredBlock(
-            blk.getBlockPoolId(), blk.getBlockId());
-        final File blockfile = DataNodeTestUtils.getFile(datanode,
-            blk.getBlockPoolId(), b.getBlockId());
-        System.out.println("blockfile=" + blockfile);
-        if (blockfile != null) {
-          BufferedReader in = new BufferedReader(new FileReader(blockfile));
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(
+            datanode.getFSDataset().getBlockInputStream(blk, 0)))) {
           assertEquals("something", in.readLine());
-          in.close();
           successcount++;
         }
       }
