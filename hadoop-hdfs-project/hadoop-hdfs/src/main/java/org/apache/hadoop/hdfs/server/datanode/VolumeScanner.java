@@ -216,8 +216,9 @@ public class VolumeScanner extends Thread {
   }
 
   public void printStats(StringBuilder p) {
-    p.append(String.format("Block scanner information for volume %s with base" +
-        " path %s%n" + volume.getStorageID(), volume.getBasePath()));
+    p.append("Block scanner information for volume " +
+        volume.getStorageID() + " with base path " + volume.getBasePath() +
+        "%n");
     synchronized (stats) {
       p.append(String.format("Bytes verified in last hour       : %57d%n",
           stats.bytesScannedInPastHour));
@@ -244,7 +245,7 @@ public class VolumeScanner extends Thread {
           stats.lastBlockScanned.toString())));
       p.append(String.format("More blocks to scan in period     : %57s%n",
           !stats.eof));
-      p.append(String.format("%n"));
+      p.append("%n");
     }
   }
 
