@@ -86,7 +86,7 @@ class ReplicaUnderConstruction extends Block {
    * Is data-node the replica belongs to alive.
    */
   boolean isAlive() {
-    return expectedLocation.getDatanodeDescriptor().isAlive;
+    return expectedLocation.getDatanodeDescriptor().isAlive();
   }
 
   @Override // Block
