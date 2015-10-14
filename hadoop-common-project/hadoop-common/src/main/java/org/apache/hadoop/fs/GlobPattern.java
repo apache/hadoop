@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
+import com.google.re2j.Pattern;
+import com.google.re2j.PatternSyntaxException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -164,6 +164,7 @@ public class GlobPattern {
   }
 
   private static void error(String message, String pattern, int pos) {
-    throw new PatternSyntaxException(message, pattern, pos);
+    String fullMessage = String.format("%s at pos %d", message, pos);
+    throw new PatternSyntaxException(fullMessage, pattern);
   }
 }

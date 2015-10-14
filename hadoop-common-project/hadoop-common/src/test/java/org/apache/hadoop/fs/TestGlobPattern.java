@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.regex.PatternSyntaxException;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import com.google.re2j.PatternSyntaxException;
 /**
  * Tests for glob patterns
  */
@@ -69,6 +69,11 @@ public class TestGlobPattern {
   }
 
   @Test public void testInvalidPatterns() {
-    shouldThrow("[", "[[]]", "[][]", "{", "\\");
+    shouldThrow("[", "[[]]", "{", "\\");
+  }
+
+  @Test(timeout=1000) public void testPathologicalPatterns() {
+    String badFilename = "job_1429571161900_4222-1430338332599-tda%2D%2D+******************************+++...%270%27%28Stage-1430338580443-39-2000-SUCCEEDED-production%2Dhigh-1430338340360.jhist";
+    assertMatch(true, badFilename, badFilename);
   }
 }
