@@ -109,6 +109,9 @@ Release 2.7.4 - UNRELEASED
     Nodelabel partition. (Bibin A Chundatt via wangda)
     Backport by Jonathan Hung.
 
+    YARN-4250. NPE in AppSchedulingInfo#isRequestLabelChanged.
+    (Brahma Reddy Battula via rohithsharmaks)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

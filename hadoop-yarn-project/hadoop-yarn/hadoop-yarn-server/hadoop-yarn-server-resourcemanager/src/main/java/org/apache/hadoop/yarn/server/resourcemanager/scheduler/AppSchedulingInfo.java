@@ -222,7 +222,15 @@ public class AppSchedulingInfo {
       ResourceRequest requestTwo) {
     String requestOneLabelExp = requestOne.getNodeLabelExpression();
     String requestTwoLabelExp = requestTwo.getNodeLabelExpression();
-    return (!(requestOneLabelExp.equals(requestTwoLabelExp)));
+    // First request label expression can be null and second request
+    // is not null then we have to consider it as changed.
+    if ((null == requestOneLabelExp) && (null != requestTwoLabelExp)) {
+      return true;
+    }
+    // If the label is not matching between both request when
+    // requestOneLabelExp is not null.
+    return ((null != requestOneLabelExp) && !(requestOneLabelExp
+        .equals(requestTwoLabelExp)));
   }
 
   /**
