@@ -1501,7 +1501,7 @@ function hadoop_start_secure_daemon
   local daemonname=$1
   local class=$2
 
-  # pid file to create for our deamon
+  # pid file to create for our daemon
   local daemonpidfile=$3
 
   # where to send stdout. jsvc has bad habits so this *may* be &1
@@ -1662,6 +1662,7 @@ function hadoop_stop_daemon
   shift 2
 
   local pid
+  local cur_pid
 
   if [[ -f "${pidfile}" ]]; then
     pid=$(cat "$pidfile")
@@ -1675,7 +1676,12 @@ function hadoop_stop_daemon
     if ps -p "${pid}" > /dev/null 2>&1; then
       hadoop_error "ERROR: Unable to kill ${pid}"
     else
-      rm -f "${pidfile}" >/dev/null 2>&1
+      cur_pid=$(cat "$pidfile")
+      if [[ "${pid}" = "${cur_pid}" ]]; then
+        rm -f "${pidfile}" >/dev/null 2>&1
+      else
+        hadoop_error "WARNING: pid has changed for ${cmd}, skip deleting pid file"
+      fi
     fi
   fi
 }
@@ -1697,9 +1703,31 @@ function hadoop_stop_secure_daemon
   shift 3
   local ret
 
+  local daemon_pid
+  local priv_pid
+  local cur_daemon_pid
+  local cur_priv_pid
+
+  daemon_pid=$(cat "$daemonpidfile")
+  priv_pid=$(cat "$privpidfile")
+
   hadoop_stop_daemon "${command}" "${daemonpidfile}"
   ret=$?
-  rm -f "${daemonpidfile}" "${privpidfile}" 2>/dev/null
+
+  cur_daemon_pid=$(cat "$daemonpidfile")
+  cur_priv_pid=$(cat "$privpidfile")
+
+  if [[ "${daemon_pid}" = "${cur_daemon_pid}" ]]; then
+    rm -f "${daemonpidfile}" >/dev/null 2>&1
+  else
+    hadoop_error "WARNING: daemon pid has changed for ${command}, skip deleting daemon pid file"
+  fi
+
+  if [[ "${priv_pid}" = "${cur_priv_pid}" ]]; then
+    rm -f "${privpidfile}" >/dev/null 2>&1
+  else
+    hadoop_error "WARNING: priv pid has changed for ${command}, skip deleting priv pid file"
+  fi
   return ${ret}
 }
 

@@ -510,6 +510,9 @@ Trunk (Unreleased)
     HADOOP-11942. Add links to SLGUserGuide to site index.
     (Masatake Iwasaki via xyao)
 
+    HADOOP-12364. Deleting pid file after stop is causing the daemons to
+    keep restarting (Sigi Li via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
