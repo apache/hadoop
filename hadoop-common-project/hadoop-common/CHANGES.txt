@@ -511,7 +511,7 @@ Trunk (Unreleased)
     (Masatake Iwasaki via xyao)
 
     HADOOP-12364. Deleting pid file after stop is causing the daemons to
-    keep restarting (Sigi Li via aw)
+    keep restarting (Siqi Li via aw)
 
   OPTIMIZATIONS
 
