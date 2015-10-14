@@ -645,9 +645,34 @@ public class BlockManager implements BlockStatsMXBean {
     
     final boolean b = commitBlock(lastBlock, commitBlock);
     if (countNodes(lastBlock).liveReplicas() >= minReplication) {
+      if (b) {
+        addExpectedReplicasToPending(lastBlock);
+      }
       completeBlock(lastBlock, false);
     }
     return b;
+  }
+
+  /**
+   * If IBR is not sent from expected locations yet, add the datanodes to
+   * pendingReplications in order to keep ReplicationMonitor from scheduling
+   * the block.
+   */
+  private void addExpectedReplicasToPending(BlockInfo lastBlock) {
+    DatanodeStorageInfo[] expectedStorages =
+        lastBlock.getUnderConstructionFeature().getExpectedStorageLocations();
+    if (expectedStorages.length - lastBlock.numNodes() > 0) {
+      ArrayList<DatanodeDescriptor> pendingNodes =
+          new ArrayList<DatanodeDescriptor>();
+      for (DatanodeStorageInfo storage : expectedStorages) {
+        DatanodeDescriptor dnd = storage.getDatanodeDescriptor();
+        if (lastBlock.findStorageInfo(dnd) == null) {
+          pendingNodes.add(dnd);
+        }
+      }
+      pendingReplications.increment(lastBlock,
+          pendingNodes.toArray(new DatanodeDescriptor[pendingNodes.size()]));
+    }
   }
 
   /**
@@ -3443,8 +3468,9 @@ public class BlockManager implements BlockStatsMXBean {
     for (BlockInfo block : bc.getBlocks()) {
       final short expected = block.getReplication();
       final NumberReplicas n = countNodes(block);
-      if (isNeededReplication(block, n.liveReplicas())) {
-        neededReplications.add(block, n.liveReplicas(),
+      final int pending = pendingReplications.getNumReplicas(block);
+      if (!hasEnoughEffectiveReplicas(block, n, pending, expected)) {
+        neededReplications.add(block, n.liveReplicas() + pending,
             n.decommissionedAndDecommissioning(), expected);
       } else if (n.liveReplicas() > expected) {
         processOverReplicatedBlock(block, expected, null, null);
