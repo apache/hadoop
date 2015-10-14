@@ -194,7 +194,7 @@ public class TestShell extends Assert {
 
     if (Shell.WINDOWS) {
       expectedCommand =
-          new String[]{getWinutilsPath(), "task", "isAlive", anyPid };
+          new String[]{getWinUtilsPath(), "task", "isAlive", anyPid };
     } else if (Shell.isSetsidAvailable) {
       expectedCommand = new String[] { "bash", "-c", "kill -0 -- -" + anyPid };
     } else {
@@ -214,7 +214,7 @@ public class TestShell extends Assert {
 
     if (Shell.WINDOWS) {
       expectedCommand =
-          new String[]{getWinutilsPath(), "task", "kill", anyPid };
+          new String[]{getWinUtilsPath(), "task", "kill", anyPid };
     } else if (Shell.isSetsidAvailable) {
       expectedCommand = new String[] { "bash", "-c", "kill -9 -- -" + anyPid };
     } else {
@@ -342,12 +342,12 @@ public class TestShell extends Assert {
   public void testNoWinutilsOnUnix() throws Throwable {
     Assume.assumeFalse(WINDOWS);
     try {
-      getWinutilsFile();
+      getWinUtilsFile();
     } catch (FileNotFoundException ex) {
       assertExContains(ex, E_NOT_A_WINDOWS_SYSTEM);
     }
     try {
-      getWinutilsPath();
+      getWinUtilsPath();
     } catch (RuntimeException ex) {
       assertExContains(ex, E_NOT_A_WINDOWS_SYSTEM);
       if ( ex.getCause() == null

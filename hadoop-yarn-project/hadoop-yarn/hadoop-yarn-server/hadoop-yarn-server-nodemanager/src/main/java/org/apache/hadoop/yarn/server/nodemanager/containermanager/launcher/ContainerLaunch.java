@@ -747,7 +747,7 @@ public class ContainerLaunch implements Callable<Integer> {
       String srcFileStr = srcFile.getPath();
       String dstFileStr = new File(dst.toString()).getPath();
       lineWithLenCheck(String.format("@%s symlink \"%s\" \"%s\"",
-          Shell.getWinutilsPath(), dstFileStr, srcFileStr));
+          Shell.getWinUtilsPath(), dstFileStr, srcFileStr));
       errorCheck();
     }
 

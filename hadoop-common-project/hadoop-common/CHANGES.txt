@@ -1225,6 +1225,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11515. Upgrade jsch lib to jsch-0.1.51 to avoid problems running
     on java7. (stevel and ozawa)
 
+    HADOOP-12478. Shell.getWinUtilsPath() has been renamed
+    Shell.getWinutilsPath(). (stevel)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

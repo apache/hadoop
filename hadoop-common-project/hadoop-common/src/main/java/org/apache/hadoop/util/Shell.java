@@ -185,7 +185,7 @@ public abstract class Shell {
     //'groups username' command return is inconsistent across different unixes
     return WINDOWS ?
       new String[]
-          { getWinutilsPath(), "groups", "-F", "\"" + user + "\"" }
+          { getWinUtilsPath(), "groups", "-F", "\"" + user + "\"" }
       : new String [] {"bash", "-c", "id -gn " + user + "&& id -Gn " + user};
   }
 
@@ -198,7 +198,7 @@ public abstract class Shell {
 
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
-    return (WINDOWS) ? new String[] { getWinutilsPath(), "ls", "-F" }
+    return (WINDOWS) ? new String[] { getWinUtilsPath(), "ls", "-F" }
                      : new String[] { "/bin/ls", "-ld" };
   }
 
@@ -206,11 +206,11 @@ public abstract class Shell {
   public static String[] getSetPermissionCommand(String perm, boolean recursive) {
     if (recursive) {
       return (WINDOWS) ?
-          new String[] { getWinutilsPath(), "chmod", "-R", perm }
+          new String[] { getWinUtilsPath(), "chmod", "-R", perm }
           : new String[] { "chmod", "-R", perm };
     } else {
       return (WINDOWS) ?
-          new String[] { getWinutilsPath(), "chmod", perm }
+          new String[] { getWinUtilsPath(), "chmod", perm }
           : new String[] { "chmod", perm };
     }
   }
@@ -234,21 +234,21 @@ public abstract class Shell {
   /** Return a command to set owner. */
   public static String[] getSetOwnerCommand(String owner) {
     return (WINDOWS) ?
-        new String[] { getWinutilsPath(), "chown", "\"" + owner + "\"" }
+        new String[] { getWinUtilsPath(), "chown", "\"" + owner + "\"" }
         : new String[] { "chown", owner };
   }
 
   /** Return a command to create symbolic links. */
   public static String[] getSymlinkCommand(String target, String link) {
     return WINDOWS ?
-       new String[] { getWinutilsPath(), "symlink", link, target }
+       new String[] { getWinUtilsPath(), "symlink", link, target }
        : new String[] { "ln", "-s", target, link };
   }
 
   /** Return a command to read the target of the a symbolic link. */
   public static String[] getReadlinkCommand(String link) {
     return WINDOWS ?
-        new String[] { getWinutilsPath(), "readlink", link }
+        new String[] { getWinUtilsPath(), "readlink", link }
         : new String[] { "readlink", link };
   }
 
@@ -266,9 +266,9 @@ public abstract class Shell {
     // Code == 0 means check alive
     if (Shell.WINDOWS) {
       if (0 == code) {
-        return new String[] {Shell.getWinutilsPath(), "task", "isAlive", pid };
+        return new String[] {Shell.getWinUtilsPath(), "task", "isAlive", pid };
       } else {
-        return new String[] {Shell.getWinutilsPath(), "task", "kill", pid };
+        return new String[] {Shell.getWinUtilsPath(), "task", "kill", pid };
       }
     }
 
@@ -590,7 +590,7 @@ public abstract class Shell {
    * The lack of such checks has led to many support issues being raised.
    * <p>
    * @deprecated use one of the exception-raising getter methods,
-   * specifically {@link #getWinutilsPath()} or {@link #getWinutilsFile()}
+   * specifically {@link #getWinUtilsPath()} or {@link #getWinUtilsFile()}
    */
   @Deprecated
   public static final String WINUTILS;
@@ -646,7 +646,7 @@ public abstract class Shell {
    * Predicate to indicate whether or not the path to winutils is known.
    *
    * If true, then {@link #WINUTILS} is non-null, and both
-   * {@link #getWinutilsPath()} and {@link #getWinutilsFile()}
+   * {@link #getWinUtilsPath()} and {@link #getWinUtilsFile()}
    * will successfully return this value. Always false on non-windows systems.
    * @return true if there is a valid path to the binary
    */
@@ -662,7 +662,7 @@ public abstract class Shell {
    * @return the path to {@link #WINUTILS_EXE}
    * @throws RuntimeException if the path is not resolvable
    */
-  public static String getWinutilsPath() {
+  public static String getWinUtilsPath() {
     if (WINUTILS_FAILURE == null) {
       return WINUTILS_PATH;
     } else {
@@ -677,7 +677,7 @@ public abstract class Shell {
    * @return the file instance referring to the winutils bin.
    * @throws FileNotFoundException on any failure to locate that file.
    */
-  public static File getWinutilsFile() throws FileNotFoundException {
+  public static File getWinUtilsFile() throws FileNotFoundException {
     if (WINUTILS_FAILURE == null) {
       return WINUTILS_FILE;
     } else {

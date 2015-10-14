@@ -1072,7 +1072,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testWindowsShellScriptBuilderLink() throws IOException {
     // Test is only relevant on Windows
     Assume.assumeTrue(Shell.WINDOWS);
-    String linkCmd = "@" + Shell.getWinutilsPath() + " symlink \"\" \"\"";
+    String linkCmd = "@" + Shell.getWinUtilsPath() + " symlink \"\" \"\"";
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);

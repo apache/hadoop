@@ -55,7 +55,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
         return false;
       }
       ShellCommandExecutor shellExecutor = new ShellCommandExecutor(
-          new String[] { Shell.getWinutilsPath(), "help" });
+          new String[] { Shell.getWinUtilsPath(), "help" });
       try {
         shellExecutor.execute();
       } catch (IOException e) {
@@ -80,7 +80,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   String getAllProcessInfoFromShell() {
     try {
       ShellCommandExecutor shellExecutor = new ShellCommandExecutor(
-          new String[] {Shell.getWinutilsFile().getCanonicalPath(),
+          new String[] {Shell.getWinUtilsFile().getCanonicalPath(),
               "task", "processList", taskProcessId });
       shellExecutor.execute();
       return shellExecutor.getOutput();
