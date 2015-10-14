@@ -2060,8 +2060,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-9187. Fix null pointer error in Globber when FS was not constructed
     via FileSystem#createFileSystem (cmccabe)
 
-    HDFS-9210. Fix some misuse of %n in VolumeScanner#printStats. (xyao)
-
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
