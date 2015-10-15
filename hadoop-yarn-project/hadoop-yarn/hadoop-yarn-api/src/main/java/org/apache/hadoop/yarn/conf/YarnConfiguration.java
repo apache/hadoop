@@ -1120,6 +1120,36 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
           "/usr/bin/docker";
 
+  /** Prefix for runtime configuration constants. */
+  public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
+      "runtime.linux.";
+  public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
+
+  /** Capabilities allowed (and added by default) for docker containers. **/
+  public static final String NM_DOCKER_CONTAINER_CAPABILITIES =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "capabilities";
+
+  /** These are the default capabilities added by docker. We'll use the same
+   * set here. While these may not be case-sensitive from a docker
+   * perspective, it is best to keep these uppercase.
+   */
+  public static final String[] DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES = {
+      "CHOWN",
+      "DAC_OVERRIDE",
+      "FSETID",
+      "FOWNER",
+      "MKNOD",
+      "NET_RAW",
+      "SETGID",
+      "SETUID",
+      "SETFCAP",
+      "SETPCAP",
+      "NET_BIND_SERVICE",
+      "SYS_CHROOT",
+      "KILL",
+      "AUDIT_WRITE" };
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
