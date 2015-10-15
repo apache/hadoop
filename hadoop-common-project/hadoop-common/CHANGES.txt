@@ -243,9 +243,6 @@ Trunk (Unreleased)
 
     HADOOP-12249. pull argument parsing into a function (aw)
 
-    HADOOP-12436. GlobPattern regex library has performance issues with
-    wildcard characters (Matthew Paduano via aw)
-
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
