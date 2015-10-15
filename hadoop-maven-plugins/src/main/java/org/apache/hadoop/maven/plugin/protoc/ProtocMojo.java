@@ -248,9 +248,13 @@ public class ProtocMojo extends AbstractMojo {
 
         exec = new Exec(this);
         out = new ArrayList<String>();
-        if (exec.run(command, out) != 0) {
+        List<String> err = new ArrayList<>();
+        if (exec.run(command, out, err) != 0) {
           getLog().error("protoc compiler error");
           for (String s : out) {
+            getLog().error(s);
+          }
+          for (String s : err) {
             getLog().error(s);
           }
           throw new MojoExecutionException("protoc failure");

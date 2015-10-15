@@ -42,12 +42,26 @@ public class Exec {
   /**
    * Runs the specified command and saves each line of the command's output to
    * the given list.
-   * 
+   *
    * @param command List containing command and all arguments
    * @param output List in/out parameter to receive command output
    * @return int exit code of command
    */
   public int run(List<String> command, List<String> output) {
+    return this.run(command, output, null);
+  }
+
+  /**
+   * Runs the specified command and saves each line of the command's output to
+   * the given list and each line of the command's stderr to the other list.
+   *
+   * @param command List containing command and all arguments
+   * @param output List in/out parameter to receive command output
+   * @param errors List in/out parameter to receive command stderr
+   * @return int exit code of command
+   */
+  public int run(List<String> command, List<String> output,
+      List<String> errors) {
     int retCode = 1;
     ProcessBuilder pb = new ProcessBuilder(command);
     try {
@@ -66,6 +80,9 @@ public class Exec {
       stdOut.join();
       stdErr.join();
       output.addAll(stdOut.getOutput());
+      if (errors != null) {
+        errors.addAll(stdErr.getOutput());
+      }
     } catch (Exception ex) {
       mojo.getLog().warn(command + " failed: " + ex.toString());
     }
