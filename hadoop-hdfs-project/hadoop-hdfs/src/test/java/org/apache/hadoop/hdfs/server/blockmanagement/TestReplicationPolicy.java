@@ -836,7 +836,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         // Adding the blocks directly to normal priority
 
         neededReplications.add(genBlockInfo(ThreadLocalRandom.current().
-            nextLong()), 2, 0, 3);
+            nextLong()), 2, 0, 0, 3);
       }
       // Lets wait for the replication interval, to start process normal
       // priority blocks
@@ -844,7 +844,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       
       // Adding the block directly to high priority list
       neededReplications.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 1, 0, 3);
+          nextLong()), 1, 0, 0, 3);
 
       // Lets wait for the replication interval
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
@@ -868,23 +868,23 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     for (int i = 0; i < 5; i++) {
       // Adding QUEUE_HIGHEST_PRIORITY block
       underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 1, 0, 3);
+          nextLong()), 1, 0, 0, 3);
 
       // Adding QUEUE_VERY_UNDER_REPLICATED block
       underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 2, 0, 7);
+          nextLong()), 2, 0, 0, 7);
 
       // Adding QUEUE_REPLICAS_BADLY_DISTRIBUTED block
       underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 6, 0, 6);
+          nextLong()), 6, 0, 0, 6);
 
       // Adding QUEUE_UNDER_REPLICATED block
       underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 5, 0, 6);
+          nextLong()), 5, 0, 0, 6);
 
       // Adding QUEUE_WITH_CORRUPT_BLOCKS block
       underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 0, 0, 3);
+          nextLong()), 0, 0, 0, 3);
     }
 
     // Choose 6 blocks from UnderReplicatedBlocks. Then it should pick 5 blocks
@@ -902,13 +902,12 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
     // Adding QUEUE_HIGHEST_PRIORITY
     underReplicatedBlocks.add(genBlockInfo(ThreadLocalRandom.current().
-        nextLong()), 1, 0, 3);
+        nextLong()), 0, 1, 0, 3);
 
     // Choose 10 blocks from UnderReplicatedBlocks. Then it should pick 1 block from
     // QUEUE_HIGHEST_PRIORITY, 4 blocks from QUEUE_REPLICAS_BADLY_DISTRIBUTED
-    // and 5 blocks from QUEUE_WITH_CORRUPT_BLOCKS.
     chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(10);
-    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 4, 5);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 4);
 
     // Since it is reached to end of all lists,
     // should start picking the blocks from start.
@@ -920,29 +919,15 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   
   /** asserts the chosen blocks with expected priority blocks */
   private void assertTheChosenBlocks(
-      List<List<BlockInfo>> chosenBlocks, int firstPrioritySize,
-      int secondPrioritySize, int thirdPrioritySize, int fourthPrioritySize,
-      int fifthPrioritySize) {
-    assertEquals(
-        "Not returned the expected number of QUEUE_HIGHEST_PRIORITY blocks",
-        firstPrioritySize, chosenBlocks.get(
-            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY).size());
-    assertEquals(
-        "Not returned the expected number of QUEUE_VERY_UNDER_REPLICATED blocks",
-        secondPrioritySize, chosenBlocks.get(
-            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED).size());
-    assertEquals(
-        "Not returned the expected number of QUEUE_UNDER_REPLICATED blocks",
-        thirdPrioritySize, chosenBlocks.get(
-            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED).size());
-    assertEquals(
-        "Not returned the expected number of QUEUE_REPLICAS_BADLY_DISTRIBUTED blocks",
-        fourthPrioritySize, chosenBlocks.get(
-            UnderReplicatedBlocks.QUEUE_REPLICAS_BADLY_DISTRIBUTED).size());
-    assertEquals(
-        "Not returned the expected number of QUEUE_WITH_CORRUPT_BLOCKS blocks",
-        fifthPrioritySize, chosenBlocks.get(
-            UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS).size());
+      List<List<BlockInfo>> chosenBlocks, int... expectedSizes) {
+    int i = 0;
+    for(; i < chosenBlocks.size(); i++) {
+      assertEquals("Not returned the expected number for i=" + i,
+          expectedSizes[i], chosenBlocks.get(i).size());
+    }
+    for(; i < expectedSizes.length; i++) {
+      assertEquals("Expected size is non-zero for i=" + i, 0, expectedSizes[i]);
+    }
   }
   
   /**
@@ -1101,14 +1086,14 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     // Adding QUEUE_VERY_UNDER_REPLICATED block
     final int block1CurReplicas = 2;
     final int block1ExpectedReplicas = 7;
-    underReplicatedBlocks.add(block1, block1CurReplicas, 0,
+    underReplicatedBlocks.add(block1, block1CurReplicas, 0, 0,
         block1ExpectedReplicas);
 
     // Adding QUEUE_VERY_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 2, 0, 7);
+    underReplicatedBlocks.add(block2, 2, 0, 0, 7);
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block3, 2, 0, 6);
+    underReplicatedBlocks.add(block3, 2, 0, 0, 6);
 
     List<List<BlockInfo>> chosenBlocks;
 
@@ -1119,7 +1104,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
     // Increasing the replications will move the block down a
     // priority.  This simulates a replica being completed in between checks.
-    underReplicatedBlocks.update(block1, block1CurReplicas+1, 0,
+    underReplicatedBlocks.update(block1, block1CurReplicas+1, 0, 0,
         block1ExpectedReplicas, 1, 0);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
@@ -1147,10 +1132,10 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     BlockInfo block2 = genBlockInfo(ThreadLocalRandom.current().nextLong());
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 1, 1);
+    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 1, 1);
+    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
@@ -1205,10 +1190,10 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     BlockInfo block2 = genBlockInfo(blkID2);
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 1, 1);
+    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 1, 1);
+    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
@@ -1268,10 +1253,10 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     BlockInfo block2 = genBlockInfo(ThreadLocalRandom.current().nextLong());
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block1, 0, 1, 1);
+    underReplicatedBlocks.add(block1, 0, 0, 1, 1);
 
     // Adding QUEUE_UNDER_REPLICATED block
-    underReplicatedBlocks.add(block2, 0, 1, 1);
+    underReplicatedBlocks.add(block2, 0, 0, 1, 1);
 
     List<List<BlockInfo>> chosenBlocks;
 
