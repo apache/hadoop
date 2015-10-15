@@ -450,6 +450,70 @@ public class TimelineReaderWebServices {
   }
 
   /**
+   * Return a set of flows runs for the given flow id.
+   * Cluster ID is not provided by client so default cluster ID has to be taken.
+   */
+  @GET
+  @Path("/flowruns/{flowid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRuns(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("flowid") String flowId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("fields") String fields) {
+    return getFlowRuns(req, res, null, flowId, userId, limit, createdTimeStart,
+        createdTimeEnd, fields);
+  }
+
+  /**
+   * Return a set of flow runs for the given cluster and flow id.
+   */
+  @GET
+  @Path("/flowruns/{clusterid}/{flowid}/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Set<TimelineEntity> getFlowRuns(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res,
+      @PathParam("clusterid") String clusterId,
+      @PathParam("flowid") String flowId,
+      @QueryParam("userid") String userId,
+      @QueryParam("limit") String limit,
+      @QueryParam("createdtimestart") String createdTimeStart,
+      @QueryParam("createdtimeend") String createdTimeEnd,
+      @QueryParam("fields") String fields) {
+    String url = req.getRequestURI() +
+        (req.getQueryString() == null ? "" :
+            QUERY_STRING_SEP + req.getQueryString());
+    UserGroupInformation callerUGI = getUser(req);
+    LOG.info("Received URL " + url + " from user " + getUserName(callerUGI));
+    long startTime = Time.monotonicNow();
+    init(res);
+    TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
+    Set<TimelineEntity> entities = null;
+    try {
+      entities = timelineReaderManager.getEntities(
+          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
+          null, null, TimelineEntityType.YARN_FLOW_RUN.toString(),
+          parseLongStr(limit), parseLongStr(createdTimeStart),
+          parseLongStr(createdTimeEnd), null, null, null, null, null, null,
+          null, null, parseFieldsStr(fields, COMMA_DELIMITER));
+    } catch (Exception e) {
+      handleException(e, url, startTime, "createdTime start/end or limit");
+    }
+    long endTime = Time.monotonicNow();
+    if (entities == null) {
+      entities = Collections.emptySet();
+    }
+    LOG.info("Processed URL " + url +
+        " (Took " + (endTime - startTime) + " ms.)");
+    return entities;
+  }
+
+  /**
    * Return a list of flows for a given cluster id. Cluster ID is not
    * provided by client so default cluster ID has to be taken.
    */
