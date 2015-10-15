@@ -21,9 +21,11 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -35,8 +37,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -284,5 +288,24 @@ public class TestOfflineEditsViewer {
     }
 
     return true;
+  }
+
+  @Test
+  public void testOfflineEditsViewerHelpMessage() throws Throwable {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    try {
+      System.setOut(out);
+      int status = new OfflineEditsViewer().run(new String[] { "-h" });
+      assertTrue("" + "Exit code returned for help option is incorrect",
+          status == 0);
+      Assert.assertFalse(
+          "Invalid Command error displayed when help option is passed.", bytes
+              .toString().contains("Error parsing command-line options"));
+    } finally {
+      System.setOut(oldOut);
+      IOUtils.closeStream(out);
+    }
   }
 }
