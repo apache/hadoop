@@ -23,6 +23,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
  */
 public class NumberReplicas {
   private int liveReplicas;
+  private int readOnlyReplicas;
 
   // Tracks only the decommissioning replicas
   private int decommissioning;
@@ -33,17 +34,18 @@ public class NumberReplicas {
   private int replicasOnStaleNodes;
 
   NumberReplicas() {
-    initialize(0, 0, 0, 0, 0, 0);
+    this(0, 0, 0, 0, 0, 0, 0);
   }
 
-  NumberReplicas(int live, int decommissioned, int decommissioning, int corrupt,
-                 int excess, int stale) {
-    initialize(live, decommissioned, decommissioning, corrupt, excess, stale);
+  NumberReplicas(int live, int readonly, int decommissioned,
+      int decommissioning, int corrupt, int excess, int stale) {
+    set(live, readonly, decommissioned, decommissioning, corrupt, excess, stale);
   }
 
-  void initialize(int live, int decommissioned, int decommissioning,
-                  int corrupt, int excess, int stale) {
+  void set(int live, int readonly, int decommissioned, int decommissioning,
+      int corrupt, int excess, int stale) {
     liveReplicas = live;
+    readOnlyReplicas = readonly;
     this.decommissioning = decommissioning;
     this.decommissioned = decommissioned;
     corruptReplicas = corrupt;
@@ -53,6 +55,10 @@ public class NumberReplicas {
 
   public int liveReplicas() {
     return liveReplicas;
+  }
+
+  public int readOnlyReplicas() {
+    return readOnlyReplicas;
   }
 
   /**

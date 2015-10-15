@@ -573,7 +573,7 @@ public class DecommissionManager {
               blockManager.isPopulatingReplQueues()) {
             // Process these blocks only when active NN is out of safe mode.
             blockManager.neededReplications.add(block,
-                curReplicas,
+                liveReplicas, num.readOnlyReplicas(),
                 num.decommissionedAndDecommissioning(),
                 block.getReplication());
           }
