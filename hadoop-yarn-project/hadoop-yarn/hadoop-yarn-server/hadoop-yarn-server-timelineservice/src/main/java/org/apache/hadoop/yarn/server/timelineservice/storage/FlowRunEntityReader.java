@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
@@ -56,7 +58,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
     super(userId, clusterId, flowId, flowRunId, appId, entityType, limit,
         createdTimeBegin, createdTimeEnd, modifiedTimeBegin, modifiedTimeEnd,
         relatesTo, isRelatedTo, infoFilters, configFilters, metricFilters,
-        eventFilters, fieldsToRetrieve, false);
+        eventFilters, fieldsToRetrieve, true);
   }
 
   public FlowRunEntityReader(String userId, String clusterId,
@@ -79,11 +81,27 @@ class FlowRunEntityReader extends TimelineEntityReader {
     Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
     Preconditions.checkNotNull(userId, "userId shouldn't be null");
     Preconditions.checkNotNull(flowId, "flowId shouldn't be null");
-    Preconditions.checkNotNull(flowRunId, "flowRunId shouldn't be null");
+    if (singleEntityRead) {
+      Preconditions.checkNotNull(flowRunId, "flowRunId shouldn't be null");
+    }
   }
 
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn) {
+    if (!singleEntityRead) {
+      if (fieldsToRetrieve == null) {
+        fieldsToRetrieve = EnumSet.noneOf(Field.class);
+      }
+      if (limit == null || limit < 0) {
+        limit = TimelineReader.DEFAULT_LIMIT;
+      }
+      if (createdTimeBegin == null) {
+        createdTimeBegin = DEFAULT_BEGIN_TIME;
+      }
+      if (createdTimeEnd == null) {
+        createdTimeEnd = DEFAULT_END_TIME;
+      }
+    }
   }
 
   @Override
@@ -99,8 +117,11 @@ class FlowRunEntityReader extends TimelineEntityReader {
   @Override
   protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
-    throw new UnsupportedOperationException(
-        "multiple entity query is not supported");
+    Scan scan = new Scan();
+    scan.setRowPrefixFilter(
+        FlowRunRowKey.getRowKeyPrefix(clusterId, userId, flowId));
+    scan.setFilter(new PageFilter(limit));
+    return table.getResultScanner(hbaseConf, conn, scan);
   }
 
   @Override
@@ -108,13 +129,23 @@ class FlowRunEntityReader extends TimelineEntityReader {
     FlowRunEntity flowRun = new FlowRunEntity();
     flowRun.setUser(userId);
     flowRun.setName(flowId);
-    flowRun.setRunId(flowRunId);
+    if (singleEntityRead) {
+      flowRun.setRunId(flowRunId);
+    } else {
+      FlowRunRowKey rowKey = FlowRunRowKey.parseRowKey(result.getRow());
+      flowRun.setRunId(rowKey.getFlowRunId());
+    }
 
     // read the start time
     Number startTime = (Number)FlowRunColumn.MIN_START_TIME.readResult(result);
     if (startTime != null) {
       flowRun.setStartTime(startTime.longValue());
     }
+    if (!singleEntityRead && (flowRun.getStartTime() < createdTimeBegin ||
+        flowRun.getStartTime() > createdTimeEnd)) {
+      return null;
+    }
+
     // read the end time if available
     Number endTime = (Number)FlowRunColumn.MAX_END_TIME.readResult(result);
     if (endTime != null) {
@@ -128,7 +159,9 @@ class FlowRunEntityReader extends TimelineEntityReader {
     }
 
     // read metrics
-    readMetrics(flowRun, result, FlowRunColumnPrefix.METRIC);
+    if (singleEntityRead || fieldsToRetrieve.contains(Field.METRICS)) {
+      readMetrics(flowRun, result, FlowRunColumnPrefix.METRIC);
+    }
 
     // set the id
     flowRun.setId(flowRun.getId());
