@@ -233,8 +233,13 @@ public class JWTRedirectAuthenticationHandler extends
     }
     String loginURL = authenticationProviderUrl + delimiter
         + ORIGINAL_URL_QUERY_PARAM
-        + request.getRequestURL().toString();
+        + request.getRequestURL().toString() + getOriginalQueryString(request);
     return loginURL;
+  }
+
+  private String getOriginalQueryString(HttpServletRequest request) {
+    String originalQueryString = request.getQueryString();
+    return (originalQueryString == null) ? "" : "?" + originalQueryString;
   }
 
   /**
