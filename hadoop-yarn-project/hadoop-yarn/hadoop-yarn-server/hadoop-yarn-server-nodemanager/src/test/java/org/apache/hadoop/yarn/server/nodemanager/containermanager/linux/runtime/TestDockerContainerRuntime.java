@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -44,9 +45,12 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 import static org.mockito.Matchers.eq;
@@ -154,6 +158,10 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(LOG_DIRS, logDirs)
         .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
 
+    String[] testCapabilities = {"NET_BIND_SERVICE", "SYS_CHROOT"};
+
+    conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        testCapabilities);
     runtime.launchContainer(builder.build());
 
     ArgumentCaptor<PrivilegedOperation> opCaptor = ArgumentCaptor.forClass(
@@ -195,11 +203,23 @@ public class TestDockerContainerRuntime {
 
     String dockerCommandFile = args.get(11);
 
+    /* Ordering of capabilities depends on HashSet ordering. */
+
+    Set<String> capabilitySet = new HashSet<>(Arrays.asList(testCapabilities));
+    StringBuilder expectedCapabilitiesString = new StringBuilder(
+        "--cap-drop=ALL ");
+    for(String capability : capabilitySet) {
+      expectedCapabilitiesString.append("--cap-add=").append(capability)
+          .append(" ");
+    }
+    
     //This is the expected docker invocation for this case
     StringBuffer expectedCommandTemplate = new StringBuffer("run --name=%1$s ")
         .append("--user=%2$s -d ")
         .append("--workdir=%3$s ")
-        .append("--net=host -v /etc/passwd:/etc/password:ro ")
+        .append("--net=host ")
+        .append(expectedCapabilitiesString)
+        .append("-v /etc/passwd:/etc/password:ro ")
         .append("-v %4$s:%4$s ")
         .append("-v %5$s:%5$s ")
         .append("-v %6$s:%6$s ")

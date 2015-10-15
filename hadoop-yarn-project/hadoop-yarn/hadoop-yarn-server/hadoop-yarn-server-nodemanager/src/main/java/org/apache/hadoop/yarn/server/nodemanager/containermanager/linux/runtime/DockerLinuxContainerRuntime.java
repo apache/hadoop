@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
@@ -43,8 +44,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -154,12 +158,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     List<String> localDirs = ctx.getExecutionAttribute(LOCAL_DIRS);
     @SuppressWarnings("unchecked")
     List<String> logDirs = ctx.getExecutionAttribute(LOG_DIRS);
+    Set<String> capabilities = new HashSet<>(Arrays.asList(conf.getStrings(
+        YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
+
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
         runAsUser, imageName)
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType("host")
+        .setCapabilities(capabilities)
         .addMountLocation("/etc/passwd", "/etc/password:ro");
     List<String> allDirs = new ArrayList<>(localDirs);
 

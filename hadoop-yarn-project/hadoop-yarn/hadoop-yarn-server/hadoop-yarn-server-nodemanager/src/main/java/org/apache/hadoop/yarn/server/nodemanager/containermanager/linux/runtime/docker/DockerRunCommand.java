@@ -24,6 +24,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class DockerRunCommand extends DockerCommand {
   private static final String RUN_COMMAND = "run";
@@ -68,6 +69,17 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand setCapabilities(Set<String> capabilties) {
+    //first, drop all capabilities
+    super.addCommandArguments("--cap-drop=ALL");
+
+    //now, add the capabilities supplied
+    for (String capability : capabilties) {
+      super.addCommandArguments("--cap-add=" + capability);
+    }
+
+    return this;
+  }
   public DockerRunCommand addDevice(String sourceDevice, String
       destinationDevice) {
     super.addCommandArguments("--device=" + sourceDevice + ":" +
