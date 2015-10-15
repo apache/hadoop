@@ -2066,6 +2066,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9187. Fix null pointer error in Globber when FS was not constructed
     via FileSystem#createFileSystem (cmccabe)
 
+    HDFS-9157. [OEV and OIV] : Unnecessary parsing for mandatory arguements if
+    '-h' option is specified as the only option (nijel via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
