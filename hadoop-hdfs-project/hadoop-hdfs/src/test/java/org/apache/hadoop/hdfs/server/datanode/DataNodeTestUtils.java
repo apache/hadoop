@@ -158,20 +158,6 @@ public class DataNodeTestUtils {
     return dn.getFSDataset();
   }
 
-  public static File getFile(DataNode dn, String bpid, long bid) {
-    return FsDatasetTestUtil.getFile(dn.getFSDataset(), bpid, bid);
-  }
-
-  public static File getBlockFile(DataNode dn, String bpid, Block b
-      ) throws IOException {
-    return FsDatasetTestUtil.getBlockFile(dn.getFSDataset(), bpid, b);
-  }
-
-  public static File getMetaFile(DataNode dn, String bpid, Block b)
-      throws IOException {
-    return FsDatasetTestUtil.getMetaFile(dn.getFSDataset(), bpid, b);
-  }
-
   public static long getPendingAsyncDeletions(DataNode dn) {
     return FsDatasetTestUtil.getPendingAsyncDeletions(dn.getFSDataset());
   }

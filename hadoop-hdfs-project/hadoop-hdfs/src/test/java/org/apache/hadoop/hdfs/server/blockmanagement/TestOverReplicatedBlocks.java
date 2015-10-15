@@ -69,7 +69,7 @@ public class TestOverReplicatedBlocks {
       
       // corrupt the block on datanode 0
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
-      assertTrue(cluster.corruptReplica(0, block));
+      cluster.corruptReplica(0, block);
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
       File scanCursor = new File(new File(MiniDFSCluster.getFinalizedDir(

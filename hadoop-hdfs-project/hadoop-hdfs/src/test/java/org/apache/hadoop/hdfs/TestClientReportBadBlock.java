@@ -18,11 +18,9 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.RandomAccessFile;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -39,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.security.AccessControlException;
@@ -217,7 +214,7 @@ public class TestClientReportBadBlock {
     for (int i = 0; i < corruptBlockCount; i++) {
       DatanodeInfo dninfo = datanodeinfos[i];
       final DataNode dn = cluster.getDataNode(dninfo.getIpcPort());
-      corruptBlock(block, dn);
+      cluster.corruptReplica(dn, block);
       LOG.debug("Corrupted block " + block.getBlockName() + " on data node "
           + dninfo);
 
@@ -290,30 +287,6 @@ public class TestClientReportBadBlock {
     } catch (BlockMissingException bme) {
       LOG.debug("DfsClientReadFile caught BlockMissingException.");
     }
-  }
-
-  /**
-   * Corrupt a block on a data node. Replace the block file content with content
-   * of 1, 2, ...BLOCK_SIZE.
-   * 
-   * @param block
-   *          the ExtendedBlock to be corrupted
-   * @param dn
-   *          the data node where the block needs to be corrupted
-   * @throws FileNotFoundException
-   * @throws IOException
-   */
-  private static void corruptBlock(final ExtendedBlock block, final DataNode dn)
-      throws FileNotFoundException, IOException {
-    final File f = DataNodeTestUtils.getBlockFile(
-        dn, block.getBlockPoolId(), block.getLocalBlock());
-    final RandomAccessFile raFile = new RandomAccessFile(f, "rw");
-    final byte[] bytes = new byte[(int) BLOCK_SIZE];
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-      bytes[i] = (byte) (i);
-    }
-    raFile.write(bytes);
-    raFile.close();
   }
 
   private static void verifyFsckHealth(String expected) throws Exception {

@@ -268,10 +268,12 @@ public class TestProcessCorruptBlocks {
 
   private void corruptBlock(MiniDFSCluster cluster, FileSystem fs, final Path fileName,
       int dnIndex, ExtendedBlock block) throws IOException {
-    // corrupt the block on datanode dnIndex
+    // Truncate the block on the first datanode that has not been corrupted,
+    // so that directory scanner can discover the corruption from file size
+    // change.
     // the indexes change once the nodes are restarted.
     // But the datadirectory will not change
-    assertTrue(cluster.corruptReplica(dnIndex, block));
+    cluster.getMaterializedReplica(0, block).truncateData(10);
 
     // Run directory scanner to update the DN's volume map  
     DataNodeTestUtils.runDirectoryScanner(cluster.getDataNodes().get(0));
