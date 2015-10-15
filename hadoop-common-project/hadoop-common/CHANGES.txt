@@ -1228,6 +1228,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12475. Replace guava Cache with ConcurrentHashMap for caching
     Connection in ipc Client (Walter Su via sjlee)
 
+    HADOOP-12479. ProtocMojo does not log the reason for a protoc compilation
+    failure. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
