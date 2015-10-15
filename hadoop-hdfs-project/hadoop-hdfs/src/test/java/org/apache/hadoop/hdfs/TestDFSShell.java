@@ -39,8 +39,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils.MaterializedReplica;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
@@ -1507,32 +1507,31 @@ public class TestDFSShell {
     }
   }
 
-  static List<File> getBlockFiles(MiniDFSCluster cluster) throws IOException {
-    List<File> files = new ArrayList<File>();
-    List<DataNode> datanodes = cluster.getDataNodes();
+  private static List<MaterializedReplica> getMaterializedReplicas(
+      MiniDFSCluster cluster) throws IOException {
+    List<MaterializedReplica> replicas = new ArrayList<>();
     String poolId = cluster.getNamesystem().getBlockPoolId();
-    List<Map<DatanodeStorage, BlockListAsLongs>> blocks = cluster.getAllBlockReports(poolId);
+    List<Map<DatanodeStorage, BlockListAsLongs>> blocks =
+        cluster.getAllBlockReports(poolId);
     for(int i = 0; i < blocks.size(); i++) {
-      DataNode dn = datanodes.get(i);
       Map<DatanodeStorage, BlockListAsLongs> map = blocks.get(i);
       for(Map.Entry<DatanodeStorage, BlockListAsLongs> e : map.entrySet()) {
         for(Block b : e.getValue()) {
-          files.add(DataNodeTestUtils.getFile(dn, poolId, b.getBlockId()));
+          replicas.add(cluster.getMaterializedReplica(i,
+              new ExtendedBlock(poolId, b)));
         }
       }
     }
-    return files;
+    return replicas;
   }
 
-  static void corrupt(List<File> files) throws IOException {
-    for(File f : files) {
-      StringBuilder content = new StringBuilder(DFSTestUtil.readFile(f));
-      char c = content.charAt(0);
-      content.setCharAt(0, ++c);
-      PrintWriter out = new PrintWriter(f);
-      out.print(content);
-      out.flush();
-      out.close();
+  private static void corrupt(
+      List<MaterializedReplica> replicas, String content) throws IOException {
+    StringBuilder sb = new StringBuilder(content);
+    char c = content.charAt(0);
+    sb.setCharAt(0, ++c);
+    for(MaterializedReplica replica : replicas) {
+      replica.corruptData(sb.toString().getBytes("UTF8"));
     }
   }
 
@@ -1636,7 +1635,7 @@ public class TestDFSShell {
       assertEquals(localfcontent, runner.run(0, "-ignoreCrc"));
 
       // find block files to modify later
-      List<File> files = getBlockFiles(cluster);
+      List<MaterializedReplica> replicas = getMaterializedReplicas(cluster);
 
       // Shut down cluster and then corrupt the block files by overwriting a
       // portion with junk data.  We must shut down the cluster so that threads
@@ -1649,8 +1648,8 @@ public class TestDFSShell {
       dfs.close();
       cluster.shutdown();
 
-      show("files=" + files);
-      corrupt(files);
+      show("replicas=" + replicas);
+      corrupt(replicas, localfcontent);
 
       // Start the cluster again, but do not reformat, so prior files remain.
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(false)
