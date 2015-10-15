@@ -28,6 +28,7 @@ import java.util.Arrays;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -389,5 +390,47 @@ public class TestFileAppend2 {
     // this test failed.
     //
     assertTrue("testComplexAppend Worker encountered exceptions.", globalStatus);
+  }
+
+  /**
+   * Make sure when the block length after appending is less than 512 bytes, the
+   * checksum re-calculation and overwrite are performed correctly.
+   */
+  @Test
+  public void testAppendLessThanChecksumChunk() throws Exception {
+    final byte[] buf = new byte[1024];
+    final MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(new HdfsConfiguration()).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    FSDataOutputStream out = null;
+    FSDataInputStream in = null;
+    try {
+      final int len1 = 200;
+      final int len2 = 300;
+      final Path p = new Path("/foo");
+
+      out = fs.create(p);
+      out.write(buf, 0, len1);
+      out.close();
+
+      out = fs.append(p);
+      out.write(buf, 0, len2);
+      // flush but leave open
+      out.hflush();
+
+      // read data to verify the replica's content and checksum are correct
+      in = fs.open(p);
+      final int length = in.read(0, buf, 0, len1 + len2);
+      assertTrue(length > 0);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+      if (out != null) {
+        out.close();
+      }
+      cluster.shutdown();
+    }
   }
 }

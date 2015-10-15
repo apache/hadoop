@@ -742,11 +742,10 @@ class BlockReceiver implements Closeable {
             final int offset = checksumBuf.arrayOffset() +
                 checksumBuf.position() + skip;
             final int end = offset + checksumLen - skip;
-            // If offset > end, there is no more checksum to write.
+            // If offset >= end, there is no more checksum to write.
             // I.e. a partial chunk checksum rewrite happened and there is no
             // more to write after that.
-            if (offset > end) {
-              assert crcBytes != null;
+            if (offset >= end && doCrcRecalc) {
               lastCrc = crcBytes;
             } else {
               final int remainingBytes = checksumLen - skip;
