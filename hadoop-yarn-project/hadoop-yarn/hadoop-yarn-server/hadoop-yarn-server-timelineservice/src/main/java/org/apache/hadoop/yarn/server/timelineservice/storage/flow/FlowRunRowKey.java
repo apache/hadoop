@@ -55,6 +55,21 @@ public class FlowRunRowKey {
   }
 
   /**
+   * Constructs a row key prefix for the flow run table as follows: {
+   * clusterId!userI!flowId!}
+   *
+   * @param clusterId
+   * @param userId
+   * @param flowId
+   * @return byte array with the row key prefix
+   */
+  public static byte[] getRowKeyPrefix(String clusterId, String userId,
+      String flowId) {
+    return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, userId,
+        flowId, ""));
+  }
+
+  /**
    * Constructs a row key for the entity table as follows: {
    * clusterId!userI!flowId!Inverted Flow Run Id}
    *

@@ -44,6 +44,9 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
  */
 abstract class TimelineEntityReader {
   private static final Log LOG = LogFactory.getLog(TimelineEntityReader.class);
+  protected static final long DEFAULT_BEGIN_TIME = 0L;
+  protected static final long DEFAULT_END_TIME = Long.MAX_VALUE;
+
   protected final boolean singleEntityRead;
 
   protected String userId;
