@@ -172,11 +172,11 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     id = "application_11111111111111_2223";
     entity3.setId(id);
     entity3.setType(type);
-    cTime = 1425016501030L;
+    cTime = 1425016501037L;
     entity3.setCreatedTime(cTime);
     TimelineEvent event2 = new TimelineEvent();
     event2.setId(ApplicationMetricsConstants.CREATED_EVENT_TYPE);
-    event2.setTimestamp(1436512802030L);
+    event2.setTimestamp(1436512802037L);
     event2.addInfo("foo_event", "test");
     entity3.addEvent(event2);
     te3.addEntity(entity3);
@@ -358,6 +358,119 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "MAP_SLOT_MILLIS", ts - 80000, 141L);
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(verifyMetrics(metric, m1, m2));
+      }
+    } finally {
+      client.destroy();
+    }
+  }
+
+
+  @Test
+  public void testGetFlowRuns() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1");
+      ClientResponse resp = getResponse(client, uri);
+      Set<FlowRunEntity> entities =
+          resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(2, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+            (entity.getRunId() == 1002345678919L) &&
+            (entity.getStartTime() == 1425016501000L)) ||
+            ((entity.getId().equals("user1@flow_name/1002345678920")) &&
+            (entity.getRunId() == 1002345678920L) &&
+            (entity.getStartTime() == 1425016501034L)));
+        assertEquals(0, entity.getMetrics().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1&limit=1");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(1, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+            entity.getId().equals("user1@flow_name/1002345678920") &&
+            entity.getRunId() == 1002345678920L &&
+            entity.getStartTime() == 1425016501034L);
+        assertEquals(0, entity.getMetrics().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1&" +
+          "createdtimestart=1425016501030");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(1, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+            entity.getId().equals("user1@flow_name/1002345678920") &&
+            entity.getRunId() == 1002345678920L &&
+            entity.getStartTime() == 1425016501034L);
+        assertEquals(0, entity.getMetrics().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1&" +
+          "createdtimestart=1425016500999&createdtimeend=1425016501035");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(2, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+            (entity.getRunId() == 1002345678919L) &&
+            (entity.getStartTime() == 1425016501000L)) ||
+            ((entity.getId().equals("user1@flow_name/1002345678920")) &&
+            (entity.getRunId() == 1002345678920L) &&
+            (entity.getStartTime() == 1425016501034L)));
+        assertEquals(0, entity.getMetrics().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1&" +
+          "createdtimeend=1425016501030");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(1, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+             entity.getId().equals("user1@flow_name/1002345678919") &&
+             entity.getRunId() == 1002345678919L &&
+             entity.getStartTime() == 1425016501000L);
+        assertEquals(0, entity.getMetrics().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/flowruns/cluster1/flow_name?userid=user1&fields=metrics");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<FlowRunEntity>>(){});
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertNotNull(entities);
+      assertEquals(2, entities.size());
+      for (FlowRunEntity entity : entities) {
+        assertTrue("Id, run id or start time does not match.",
+            ((entity.getId().equals("user1@flow_name/1002345678919")) &&
+            (entity.getRunId() == 1002345678919L) &&
+            (entity.getStartTime() == 1425016501000L) &&
+            (entity.getMetrics().size() == 2)) ||
+            ((entity.getId().equals("user1@flow_name/1002345678920")) &&
+            (entity.getRunId() == 1002345678920L) &&
+            (entity.getStartTime() == 1425016501034L) &&
+            (entity.getMetrics().size() == 0)));
       }
     } finally {
       client.destroy();

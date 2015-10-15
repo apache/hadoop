@@ -60,9 +60,6 @@ class GenericEntityReader extends TimelineEntityReader {
   private static final EntityTable ENTITY_TABLE = new EntityTable();
   private static final Log LOG = LogFactory.getLog(GenericEntityReader.class);
 
-  protected static final long DEFAULT_BEGIN_TIME = 0L;
-  protected static final long DEFAULT_END_TIME = Long.MAX_VALUE;
-
   /**
    * Used to look up the flow context.
    */
