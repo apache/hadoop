@@ -2129,6 +2129,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8676. Delayed rolling upgrade finalization can cause heartbeat
     expiration. (Walter Su via kihwal)
 
+    HDFS-9220. Reading small file (< 512 bytes) that is open for append fails
+    due to incorrect checksum (Jing Zhao via kihwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
