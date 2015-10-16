@@ -849,6 +849,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-9257. improve error message for "Absolute path required" in INode.java
+    to contain the rejected path (Marcell Szabo via harsh)
+
     HDFS-2390. dfsadmin -setBalancerBandwidth does not validate -ve value
     (Gautam Gopalakrishnan via harsh)
 
