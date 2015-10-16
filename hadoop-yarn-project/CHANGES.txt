@@ -507,6 +507,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4258. Add support for controlling capabilities for docker containers.
     (Sidharta Seethana via vvasudev)
 
+    YARN-4162. CapacityScheduler: Add resource usage by partition and queue capacity 
+    by partition to REST API. (Naganarasimha G R via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -29,12 +29,11 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class NodeLabel implements Comparable<NodeLabel> {
 
   /**
-   * Default node label partition.
+   * Default node label partition used for displaying.
    */
   @Private
   @Unstable
-  public static final String DEFAULT_NODE_LABEL_PARTITION =
-      "<DEFAULT_PARTITION>";
+  public static final String DEFAULT_NODE_LABEL_PARTITION = "<DEFAULT_PARTITION>";
 
   /**
    * Node Label expression not set .

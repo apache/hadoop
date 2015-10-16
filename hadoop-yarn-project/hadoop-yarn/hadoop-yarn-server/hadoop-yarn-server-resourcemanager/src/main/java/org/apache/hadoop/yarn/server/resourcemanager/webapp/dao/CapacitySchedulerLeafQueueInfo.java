@@ -22,6 +22,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
 @XmlRootElement
@@ -49,8 +50,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   CapacitySchedulerLeafQueueInfo() {
   };
 
-  CapacitySchedulerLeafQueueInfo(LeafQueue q, String nodeLabel) {
-    super(q, nodeLabel);
+  CapacitySchedulerLeafQueueInfo(LeafQueue q) {
+    super(q);
     numActiveApplications = q.getNumActiveApplications();
     numPendingApplications = q.getNumPendingApplications();
     numContainers = q.getNumContainers();
@@ -66,6 +67,11 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     orderingPolicyInfo = q.getOrderingPolicy().getInfo();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
+  }
+
+  @Override
+  protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
+    resources = new ResourceUsageInfo(queueResourceUsage);
   }
 
   public int getNumActiveApplications() {
