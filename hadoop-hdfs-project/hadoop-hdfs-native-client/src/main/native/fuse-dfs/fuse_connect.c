@@ -19,7 +19,7 @@
 #include "fuse_connect.h"
 #include "fuse_dfs.h"
 #include "fuse_users.h" 
-#include "libhdfs/hdfs.h"
+#include "hdfs/hdfs.h"
 #include "util/tree.h"
 
 #include <inttypes.h>

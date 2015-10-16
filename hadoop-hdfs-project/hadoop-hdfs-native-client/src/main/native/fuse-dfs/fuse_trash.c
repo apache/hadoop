@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#include <hdfs.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>

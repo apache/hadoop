@@ -21,7 +21,7 @@
 #ifndef _HDFS_HTTP_CLIENT_H_
 #define _HDFS_HTTP_CLIENT_H_
 
-#include "hdfs.h" /* for tSize */
+#include "hdfs/hdfs.h" /* for tSize */
 
 #include <pthread.h> /* for pthread_t */
 #include <unistd.h> /* for size_t */

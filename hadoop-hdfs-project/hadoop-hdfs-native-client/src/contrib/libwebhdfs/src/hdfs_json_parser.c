@@ -17,7 +17,7 @@
  */
 
 #include "exception.h"
-#include "hdfs.h" /* for hdfsFileInfo */
+#include "hdfs/hdfs.h" /* for hdfsFileInfo */
 #include "hdfs_json_parser.h"
 
 #include <stdlib.h>

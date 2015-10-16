@@ -27,6 +27,7 @@ include_directories(
     ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/main/native
     ${CMAKE_SOURCE_DIR}/main/native/libhdfs
+    ${CMAKE_SOURCE_DIR}/main/native/libhdfs/include
     ${OS_DIR}
     ${JANSSON_INCLUDE_DIR}
 )

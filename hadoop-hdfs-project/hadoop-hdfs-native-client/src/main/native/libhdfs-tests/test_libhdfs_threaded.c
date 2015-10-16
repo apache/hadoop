@@ -17,7 +17,7 @@
  */
 
 #include "expect.h"
-#include "hdfs.h"
+#include "hdfs/hdfs.h"
 #include "native_mini_dfs.h"
 #include "os/thread.h"
 

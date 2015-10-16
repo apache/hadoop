@@ -19,7 +19,7 @@
 #define FUSE_USE_VERSION 26
 
 #include "fuse-dfs/test/fuse_workload.h"
-#include "libhdfs/expect.h"
+#include "libhdfs-tests/expect.h"
 #include "util/posix_util.h"
 
 #include <dirent.h>

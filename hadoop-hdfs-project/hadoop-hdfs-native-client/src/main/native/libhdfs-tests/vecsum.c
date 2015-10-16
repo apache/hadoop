@@ -36,7 +36,7 @@
 #endif
 
 #include "config.h"
-#include "hdfs.h"
+#include "hdfs/hdfs.h"
 
 #define VECSUM_CHUNK_SIZE (8 * 1024 * 1024)
 #define ZCR_READ_CHUNK_SIZE (1024 * 1024 * 8)

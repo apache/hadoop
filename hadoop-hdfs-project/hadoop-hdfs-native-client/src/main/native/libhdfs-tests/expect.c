@@ -17,7 +17,7 @@
  */
 
 #include "expect.h"
-#include "hdfs.h"
+#include "hdfs/hdfs.h"
 
 #include <inttypes.h>
 #include <stdio.h>

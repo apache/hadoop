@@ -176,7 +176,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                         <echo message="Finished @{test}"/>
                       </sequential>
                     </macrodef>
-                    <run-test test="test_libhdfs_threaded"/>
+                    <run-test test="test_libhdfs_threaded_hdfs_static"/>
                     <echo message="Skipping test_libhdfs_zerocopy"/>
                     <run-test test="test_native_mini_dfs"/>
                   </target>
@@ -237,9 +237,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                         <echo message="Finished @{test}"/>
                       </sequential>
                     </macrodef>
-                    <run-test test="test_libhdfs_threaded"/>
-                    <run-test test="test_libhdfs_zerocopy"/>
-                    <run-test test="test_native_mini_dfs"/>
+                    <run-test test="test_libhdfs_threaded_hdfs_static"/>
+                    <run-test test="test_libhdfs_zerocopy_hdfs_static"/>
+                    <run-test test="../libhdfs-tests/test_native_mini_dfs"/>
                   </target>
                 </configuration>
               </execution>

@@ -18,6 +18,7 @@
 add_definitions(-DLIBHDFS_DLL_EXPORT)
 
 include_directories(
+    include
     ${GENERATED_JAVAH}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
@@ -50,92 +51,24 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
-add_executable(test_libhdfs_ops
-    test/test_libhdfs_ops.c
-)
-target_link_libraries(test_libhdfs_ops
-    hdfs_static
-    ${JAVA_JVM_LIBRARY}
-)
-
-add_executable(test_libhdfs_read
-    test/test_libhdfs_read.c
-)
-target_link_libraries(test_libhdfs_read
-    hdfs_static
-    ${JAVA_JVM_LIBRARY}
-)
-
-add_executable(test_libhdfs_write
-    test/test_libhdfs_write.c
-)
-target_link_libraries(test_libhdfs_write
-    hdfs_static
-    ${JAVA_JVM_LIBRARY}
-)
-
-add_library(native_mini_dfs
-    native_mini_dfs.c
-    common/htable.c
-    exception.c
-    jni_helper.c
-    ${OS_DIR}/mutexes.c
-    ${OS_DIR}/thread_local_storage.c
-)
-target_link_libraries(native_mini_dfs
-    ${JAVA_JVM_LIBRARY}
-    ${LIB_DL}
-    ${OS_LINK_LIBRARIES}
-)
-
-add_executable(test_native_mini_dfs
-    test_native_mini_dfs.c
-)
-target_link_libraries(test_native_mini_dfs
-    native_mini_dfs
-)
-
-add_executable(test_libhdfs_threaded
-    expect.c
-    test_libhdfs_threaded.c
-    ${OS_DIR}/thread.c
-)
-target_link_libraries(test_libhdfs_threaded
-    hdfs_static
-    native_mini_dfs
-    ${OS_LINK_LIBRARIES}
-)
-
-add_executable(test_libhdfs_zerocopy
-    expect.c
-    test/test_libhdfs_zerocopy.c
-)
-target_link_libraries(test_libhdfs_zerocopy
-    hdfs_static
-    native_mini_dfs
-    ${OS_LINK_LIBRARIES}
-)
-
-add_executable(test_htable
-    common/htable.c
-    test/test_htable.c
-)
-target_link_libraries(test_htable
-    ${OS_LINK_LIBRARIES}
-)
+add_libhdfs_test(test_libhdfs_ops hdfs_static test_libhdfs_ops.c)
+link_libhdfs_test(test_libhdfs_ops hdfs_static ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(test_libhdfs_reads hdfs_static test_libhdfs_read.c)
+link_libhdfs_test(test_libhdfs_reads hdfs_static ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(test_libhdfs_write hdfs_static test_libhdfs_write.c)
+link_libhdfs_test(test_libhdfs_write hdfs_static ${JAVA_JVM_LIBRARY})
+add_libhdfs_test(test_libhdfs_threaded hdfs_static expect.c test_libhdfs_threaded.c ${OS_DIR}/thread.c)
+link_libhdfs_test(test_libhdfs_threaded hdfs_static native_mini_dfs)
+add_libhdfs_test(test_libhdfs_zerocopy hdfs_static expect.c test_libhdfs_zerocopy.c)
+link_libhdfs_test(test_libhdfs_zerocopy hdfs_static native_mini_dfs ${OS_LINK_LIBRARIES})
 
 # Skip vecsum on Windows.  This could be made to work in the future by
 # introducing an abstraction layer over the sys/mman.h functions.
 if(NOT WIN32)
-    add_executable(test_libhdfs_vecsum test/vecsum.c)
+    add_libhdfs_test(test_libhdfs_vecsum hdfs vecsum.c)
     if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-        target_link_libraries(test_libhdfs_vecsum
-            hdfs
-            pthread)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread)
     else()
-        target_link_libraries(test_libhdfs_vecsum
-            hdfs
-            pthread
-            rt)
+        link_libhdfs_test(test_libhdfs_vecsum hdfs pthread rt)
     endif()
 endif()

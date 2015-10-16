@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-#include "expect.h"
-#include "hdfs.h"
-#include "native_mini_dfs.h"
+#include "libhdfs-tests/expect.h"
+#include "hdfs/hdfs.h"
+#include "libhdfs-tests/native_mini_dfs.h"
 
 #include <errno.h>
 #include <semaphore.h>

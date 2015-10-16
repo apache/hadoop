@@ -36,6 +36,7 @@ include_directories(
     ${JNI_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/main/native
     ${CMAKE_SOURCE_DIR}/main/native/libhdfs
+    ${CMAKE_SOURCE_DIR}/main/native/libhdfs/include
     ${OS_DIR}
     ${FUSE_INCLUDE_DIRS})
 
@@ -84,5 +85,6 @@ add_executable(test_fuse_dfs
 target_link_libraries(test_fuse_dfs
     ${FUSE_LIBRARIES}
     native_mini_dfs
+    ${JAVA_JVM_LIBRARY}
     pthread
 )

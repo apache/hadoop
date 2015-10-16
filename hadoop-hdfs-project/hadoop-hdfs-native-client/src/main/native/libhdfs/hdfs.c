@@ -17,7 +17,7 @@
  */
 
 #include "exception.h"
-#include "hdfs.h"
+#include "hdfs/hdfs.h"
 #include "jni_helper.h"
 #include "platform.h"
 
