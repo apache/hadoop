@@ -179,8 +179,6 @@ Trunk (Unreleased)
     HDFS-8632. Add InterfaceAudience annotation to the erasure coding classes.
     (Rakesh R via wang)
 
-    HDFS-9205. Do not schedule corrupt blocks for replication.  (szetszwo)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1532,6 +1530,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9223. Code cleanup for DatanodeDescriptor and HeartbeatManager. (jing9)
 
     HDFS-9188. Make block corruption related tests FsDataset-agnostic. (lei)
+
+    HDFS-9205. Do not schedule corrupt blocks for replication.  (szetszwo)
 
   OPTIMIZATIONS
 
