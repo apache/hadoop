@@ -20,10 +20,12 @@ package org.apache.hadoop.service.launcher;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.service.ServiceOperations;
+import static org.apache.hadoop.test.GenericTestUtils.*;
 import org.apache.hadoop.util.ExitCodeProvider;
 import org.apache.hadoop.util.ExitUtil;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -39,13 +41,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 public class AbstractServiceLauncherTestBase extends Assert implements
     LauncherExitCodes {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractServiceLauncherTestBase.class);
   public static final String CONF_FILE_DIR = "target/conf";
+
+  /**
+   * A service which will be automatically stopped on teardown
+   */
+  private Service serviceToTeardown;
 
   /**
    * All tests have a short life.
@@ -69,43 +75,20 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   }
 
   /**
-   * Formatted fail
-   * @param format format string
-   * @param args argument list. If the last argument is a throwable, it
-   * is used as the inner cause of the exception
-   * @throws AssertionError with the formatted message
-   */
-  protected static void failf(String format, Object... args) {
-    String message = String.format(Locale.ENGLISH, format, args);
-    AssertionError error = new AssertionError(message);
-    int len = args.length;
-    if (len > 0 && args[len - 1] instanceof Throwable) {
-      error.initCause((Throwable) args[len - 1]);
-    }
-    throw error;
-  }
-
-  /**
-   * Conditional formatted fail
-   * @param format format string
-   * @param args argument list. If the last argument is a throwable, it
-   * is used as the inner cause of the exception
-   * @throws AssertionError with the formatted message
-   */
-  protected static void failif(boolean condition,
-      String format,
-      Object... args) {
-    if (condition) {
-      failf(format, args);
-    }
-  }
-
-  /**
    * rule to name the thread JUnit.
    */
   @Before
   public void nameThread() {
     Thread.currentThread().setName("JUnit");
+  }
+
+  @After
+  public void stopService() {
+    ServiceOperations.stopQuietly(serviceToTeardown);
+  }
+
+  public void setServiceToTeardown(Service serviceToTeardown) {
+    this.serviceToTeardown = serviceToTeardown;
   }
 
   /**
@@ -116,9 +99,9 @@ public class AbstractServiceLauncherTestBase extends Assert implements
   protected void assertInState(Service service, Service.STATE expected) {
     assertNotNull(service);
     Service.STATE actual = service.getServiceState();
-    failif(actual != expected,
-        "Service %s in state %s expected state: %s",
-        service.getName(), actual, expected);
+    failFormattedIf(actual != expected,
+        "Service %s in state %s expected state: %s", service.getName(), actual, expected);
+
   }
 
   /**
@@ -144,18 +127,12 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     boolean failed = expected != exitCode;
     failed |= StringUtils.isNotEmpty(text)
               && !StringUtils.contains(toString, text);
-    if (failed) {
-      String error = String.format(
-          "Expected exception with exit code %d and text \"%s\""
-          + " but got the exit code %d"
-          + " and text \"%s\"",
-          expected, text,
-          exitCode, toString);
-      LOG.error(error, e);
-      AssertionError assertionError = new AssertionError(error);
-      assertionError.initCause((Throwable) e);
-      throw assertionError;
-    }
+    failFormattedIf(failed,
+        "Expected exception with exit code %d and text \"%s\""
+            + " but got the exit code %d"
+            + " in \"%s\"",
+        expected, text,
+        exitCode, e);
   }
 
   /**
@@ -261,8 +238,10 @@ public class AbstractServiceLauncherTestBase extends Assert implements
     ExitUtil.ExitException exitException =
         serviceLauncher.launchService(conf, args, false, execute);
     if (exitException.getExitCode() == 0) {
+      // success
       return serviceLauncher;
     } else {
+      // launch failure
       throw exitException;
     }
   }
@@ -310,37 +289,23 @@ public class AbstractServiceLauncherTestBase extends Assert implements
           Arrays.asList(args),
           true);
 
-      failf("Expected an exception with error code %d and text \"%s\" "
-            + " -but the service completed with :%s",
-          errorCode, expectedText, launch.getServiceException());
+      failFormatted("Expected an exception with error code %d and text \"%s\" "
+              + " -but the service completed with :%s",
+          errorCode, expectedText,
+          launch.getServiceException());
       return null;
     } catch (ExitUtil.ExitException e) {
       int actualCode = e.getExitCode();
-      failif(errorCode != actualCode ||
-             !StringUtils.contains(e.toString(), expectedText),
+      boolean condition = errorCode != actualCode ||
+             !StringUtils.contains(e.toString(), expectedText);
+      failFormattedIf(condition,
           "Expected an exception with error code %d and text \"%s\" "
-          + " -but the service threw an exception with exit code %d: %s",
-          errorCode, expectedText, actualCode, e);
+            + " -but the service threw an exception with exit code %d: %s",
+          errorCode, expectedText,
+          actualCode, e);
+
       return e;
     }
   }
 
-  /**
-   * Assert that an exception message contains a search string
-   * @param exception exception to get a message from
-   * @param search search key
-   */
-  protected void assertMessageContains(Exception exception, String search) {
-    assertContains(exception.getMessage(), search);
-  }
-
-  /**
-   * assert that a text string contains the search text
-   * @param text text to look through
-   * @param search search key
-   */
-  protected void assertContains(String text, String search) {
-    failif(!StringUtils.contains(text, search),
-        "String \"%s\" not found in \"%s\"", text, search);
-  }
 }

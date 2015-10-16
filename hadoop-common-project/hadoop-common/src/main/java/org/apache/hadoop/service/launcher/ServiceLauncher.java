@@ -237,7 +237,7 @@ public class ServiceLauncher<S extends Service>
     final StringBuilder sb = new StringBuilder("\"ServiceLauncher for \"");
     sb.append(serviceName);
     if (serviceClassName != null && !serviceClassName.isEmpty()) {
-      sb.append("serviceClassName='").append(serviceClassName).append('\'');
+      sb.append(", serviceClassName='").append(serviceClassName).append('\'');
     }
     if (service != null) {
       sb.append(", service=").append(service);
@@ -793,7 +793,7 @@ public class ServiceLauncher<S extends Service>
 
     return parseCommandArgs(conf, createOptions(), coreArgs);
   }
-    
+
   public List<String> extractConfigurationArgs1(Configuration conf,
       List<String> args) {
 
@@ -902,6 +902,7 @@ public class ServiceLauncher<S extends Service>
       // and bail out if they don't exist
       if (line.hasOption(ARG_CONF)) {
         verifyConfigurationFilesExist(line.getOptionValues(ARG_CONF));
+        // TODO: load configurations
       }
       if (line.hasOption(ARG_CONFCLASS)) {
         // new resources to instantiate as configurations
@@ -931,7 +932,7 @@ public class ServiceLauncher<S extends Service>
       if (!file.exists()) {
         // no configuration file
         throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
-            ARG_CONF + ": configuration file not found: %s",
+            "--" + ARG_CONF + ": configuration file not found: %s",
             file.getAbsolutePath());
       }
     }

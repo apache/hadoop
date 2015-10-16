@@ -28,9 +28,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.List;
 
-public class TestServiceConf extends AbstractServiceLauncherTestBase {
+public class TestServiceConf
+    extends AbstractServiceLauncherTestBase {
 
-  public static final String DASH_CONF = "-"+LauncherArguments.ARG_CONF;
+  public static final String DASH_CONF = "-" + LauncherArguments.ARG_CONF;
 
   @Test
   public void testRunService() throws Throwable {
@@ -49,7 +50,6 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testUnbalancedConfArg() throws Throwable {
-    Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
         LauncherArguments.E_PARSE_FAILED,
         LaunchableRunningService.NAME,
@@ -58,7 +58,6 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
 
   @Test
   public void testConfArgMissingFile() throws Throwable {
-    Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
         LauncherArguments.E_PARSE_FAILED,
         LaunchableRunningService.NAME,
@@ -134,9 +133,10 @@ public class TestServiceConf extends AbstractServiceLauncherTestBase {
   @Test
   public void testConfArgWrongFiletype() throws Throwable {
     File file = new File(CONF_FILE_DIR, methodName.getMethodName());
-    FileWriter fileWriter = new FileWriter(file);
-    fileWriter.write("not-a-conf-file");
-    fileWriter.close();
+    try (FileWriter fileWriter = new FileWriter(file)) {
+      fileWriter.write("not-a-conf-file");
+      fileWriter.close();
+    }
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
         "SAXParseException",
         RunningService.NAME,

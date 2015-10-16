@@ -27,7 +27,6 @@ import org.junit.Test;
 public class TestServiceLauncherCreationFailures extends
     AbstractServiceLauncherTestBase {
 
-
   public static final String SELF =
       "org.apache.hadoop.service.launcher.TestServiceLauncherCreationFailures";
 

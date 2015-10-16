@@ -39,6 +39,9 @@ public class TestServiceLauncherInnerMethods extends
   public void testLaunchService() throws Throwable {
     ServiceLauncher<NoArgsAllowedService> launcher =
         launchService(NoArgsAllowedService.class, new Configuration());
+    NoArgsAllowedService service = launcher.getService();
+    assertNotNull("null service from " + launcher, service);
+    service.stop();
   }
 
   @Test
@@ -72,6 +75,9 @@ public class TestServiceLauncherInnerMethods extends
   public void testBreakableServiceLifecycle() throws Throwable {
     ServiceLauncher<BreakableService> launcher =
         launchService(BreakableService.class, new Configuration());
+    BreakableService service = launcher.getService();
+    assertNotNull("null service from " + launcher, service);
+    service.stop();
   }
 
   @Test

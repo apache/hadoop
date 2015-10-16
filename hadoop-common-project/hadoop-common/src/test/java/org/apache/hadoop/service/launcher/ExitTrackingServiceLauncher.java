@@ -18,34 +18,34 @@
 
 package org.apache.hadoop.service.launcher;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
-import org.junit.Test;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.ExitUtil;
 
-public class TestServiceLaunchedRunning extends AbstractServiceLauncherTestBase {
+/**
+ * Service launcher for testing: The exit operation has been overloaded to
+ * record the exit exception.
+ *
+ * It relies on the test runner to have disabled exits in the {@link ExitUtil} class.
+ * @param <S> type of service to launch
+ */
+public class ExitTrackingServiceLauncher<S extends Service> extends
+    ServiceLauncher<S> {
 
-  @Test
-  public void testRunService() throws Throwable {
-    assertRuns(LaunchableRunningService.NAME);
+  public ExitUtil.ExitException exitException;
+
+  public ExitTrackingServiceLauncher(String serviceClassName) {
+    super(serviceClassName);
   }
 
-  @Test
-  public void testConfPropagationOverInitBindings() throws Throwable {
-    Configuration conf = newConf(LaunchableRunningService.FAIL_IN_RUN, "true");
-    assertLaunchOutcome(EXIT_FAIL,
-        "failed",
-        LauncherArguments.ARG_CONF,
-        configFile(conf),
-        LaunchableRunningService.NAME
-        );
+  @Override
+  protected void exit(ExitUtil.ExitException ee) {
+    exitException = ee;
+    super.exit(ee);
   }
 
-  @Test
-  public void testArgBinding() throws Throwable {
-    assertLaunchOutcome(EXIT_OTHER_FAILURE,
-        "",
-        LaunchableRunningService.NAME,
-        LaunchableRunningService.ARG_FAILING);
+  @Override
+  protected void exit(int exitCode, String message) {
+    exit(new ServiceLaunchException(exitCode, message));
   }
 
 }

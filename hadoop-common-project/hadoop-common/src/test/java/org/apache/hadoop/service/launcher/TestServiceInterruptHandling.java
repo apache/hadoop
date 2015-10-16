@@ -28,10 +28,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Test service launcher interrupt handling
  */
-public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBase {
+public class TestServiceInterruptHandling
+    extends AbstractServiceLauncherTestBase {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       TestServiceInterruptHandling.class);
-
 
   @Test
   public void testRegisterAndRaise() throws Throwable {
@@ -44,7 +45,7 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
     // allow for an async event
     Thread.sleep(500);
     IrqHandler.InterruptData data = catcher.interruptData;
-    assertNotNull(data);
+    assertNotNull("interrupt data", data);
     assertEquals(name, data.name);
     assertEquals(1, irqHandler.getSignalCount());
   }
@@ -52,8 +53,8 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
 
   @Test
   public void testInterruptEscalationShutdown() throws Throwable {
-    NonExitingServiceLauncher<BreakableService> launcher =
-        new NonExitingServiceLauncher<>(BreakableService.class.getName());
+    ExitTrackingServiceLauncher<BreakableService> launcher =
+        new ExitTrackingServiceLauncher<>(BreakableService.class.getName());
     BreakableService service = new BreakableService();
     launcher.setService(service);
 
@@ -63,44 +64,45 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
     // call the interrupt operation directly
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
-      fail("Expected an exception to be raised");
+      fail("Expected an exception to be raised in " + escalator);
     } catch (ExitUtil.ExitException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
     //the service is now stopped
     assertStopped(service);
-    assertTrue(escalator.isSignalAlreadyReceived());
-    assertFalse(escalator.isForcedShutdownTimedOut());
+    assertTrue("isSignalAlreadyReceived() == false in " + escalator,
+        escalator.isSignalAlreadyReceived());
+    assertFalse("isForcedShutdownTimedOut() == true in " + escalator,
+        escalator.isForcedShutdownTimedOut());
 
     // now interrupt it a second time and expect it to escalate to a halt
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
-      fail("Expected an exception to be raised");
+      fail("Expected an exception to be raised in " + escalator);
     } catch (ExitUtil.HaltException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
   }
 
-
   @Test
   public void testBlockingShutdownTimeouts() throws Throwable {
-    NonExitingServiceLauncher<FailureTestService> launcher =
-        new NonExitingServiceLauncher<>(FailureTestService.class.getName());
+    ExitTrackingServiceLauncher<FailureTestService> launcher =
+        new ExitTrackingServiceLauncher<>(FailureTestService.class.getName());
     FailureTestService service =
         new FailureTestService(false, false, false, 2000);
     launcher.setService(service);
 
-    InterruptEscalator escalator =
-        new InterruptEscalator(launcher, 500);
+    InterruptEscalator escalator = new InterruptEscalator(launcher, 500);
     // call the interrupt operation directly
     try {
       escalator.interrupted(new IrqHandler.InterruptData("INT", 3));
-      fail("Expected an exception to be raised");
+      fail("Expected an exception to be raised from " + escalator);
     } catch (ExitUtil.ExitException e) {
       assertExceptionDetails(EXIT_INTERRUPTED, "", e);
     }
 
-    assertTrue(escalator.isForcedShutdownTimedOut());
+    assertTrue("isForcedShutdownTimedOut() == false in " + escalator,
+        escalator.isForcedShutdownTimedOut());
   }
 
   private static class InterruptCatcher implements IrqHandler.Interrupted {

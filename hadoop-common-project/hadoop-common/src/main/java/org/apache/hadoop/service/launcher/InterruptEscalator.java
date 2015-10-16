@@ -73,7 +73,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
 
   public InterruptEscalator(ServiceLauncher owner, int shutdownTimeMillis) {
     Preconditions.checkArgument(owner != null, "null owner");
-    this.ownerRef = new WeakReference<ServiceLauncher>(owner);
+    this.ownerRef = new WeakReference<>(owner);
     this.shutdownTimeMillis = shutdownTimeMillis;
   }
 
@@ -86,6 +86,19 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
     return owner != null ? owner.getService() : null;
   }
 
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder("InterruptEscalator{");
+    sb.append(" signalAlreadyReceived=").append(signalAlreadyReceived.get());
+    ServiceLauncher owner = ownerRef.get();
+    if (owner != null) {
+      sb.append(", owner= ").append(owner.toString());
+    }
+    sb.append(", shutdownTimeMillis=").append(shutdownTimeMillis);
+    sb.append(", forcedShutdownTimedOut=").append(forcedShutdownTimedOut);
+    sb.append('}');
+    return sb.toString();
+  }
 
   @Override
   public void interrupted(IrqHandler.InterruptData interruptData) {
