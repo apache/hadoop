@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -435,6 +436,48 @@ public class TestApplicationMasterService {
         rm.close();
       }
     }
+  }
+
+  @Test(timeout = 300000)
+  public void testPriorityInAllocatedResponse() throws Exception {
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    // Set Max Application Priority as 10
+    conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    // Register node1
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+
+    // Submit an application
+    Priority appPriority1 = Priority.newInstance(5);
+    RMApp app1 = rm.submitApp(2048, appPriority1);
+
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+
+    AllocateRequestPBImpl allocateRequest = new AllocateRequestPBImpl();
+    List<ContainerId> release = new ArrayList<ContainerId>();
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
+    allocateRequest.setReleaseList(release);
+    allocateRequest.setAskList(ask);
+
+    AllocateResponse response1 = am1.allocate(allocateRequest);
+    Assert.assertEquals(appPriority1, response1.getApplicationPriority());
+
+    // get scheduler
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Change the priority of App1 to 8
+    Priority appPriority2 = Priority.newInstance(8);
+    cs.updateApplicationPriority(appPriority2, app1.getApplicationId());
+
+    AllocateResponse response2 = am1.allocate(allocateRequest);
+    Assert.assertEquals(appPriority2, response2.getApplicationPriority());
+    rm.stop();
   }
 
   private static class MyResourceManager extends MockRM {

@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
@@ -314,4 +315,17 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setAMRMToken(Token amRMToken);
+
+  /**
+   * Priority of the application
+   *
+   * @return get application priority
+   */
+  @Public
+  @Unstable
+  public abstract Priority getApplicationPriority();
+
+  @Private
+  @Unstable
+  public abstract void setApplicationPriority(Priority priority);
 }
