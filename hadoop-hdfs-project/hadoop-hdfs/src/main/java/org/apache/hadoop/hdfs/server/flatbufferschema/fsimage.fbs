@@ -1,0 +1,276 @@
+// Generated from fsimage.proto
+
+namespace ;
+
+enum IntelStorageTypeProto : int {
+  DISK = 1,
+  SSD = 2,
+  ARCHIVE = 3,
+  RAM_DISK = 4,
+}
+
+namespace _IntelINodeSection._IntelINode;
+
+enum IntelType : int {
+  FILE = 1,
+  DIRECTORY = 2,
+  SYMLINK = 3,
+}
+
+namespace _IntelSnapshotDiffSection._IntelDiffEntry;
+
+enum IntelType : int {
+  FILEDIFF = 1,
+  DIRECTORYDIFF = 2,
+}
+
+namespace ;
+
+table IntelBlockProto {
+  blockId:ulong;
+  genStamp:ulong;
+  numBytes:ulong;
+}
+
+namespace ;
+
+table IntelFileSummary {
+  ondiskVersion:uint;
+  layoutVersion:uint;
+  codec:string;
+  sections:[_IntelFileSummary.IntelSection];
+}
+
+namespace _IntelFileSummary;
+
+table IntelSection {
+  name:string;
+  length:ulong;
+  offset:ulong;
+}
+
+namespace ;
+
+table IntelNameSystemSection {
+  namespaceId:uint;
+  genstampV1:ulong;
+  genstampV2:ulong;
+  genstampV1Limit:ulong;
+  lastAllocatedBlockId:ulong;
+  transactionId:ulong;
+  rollingUpgradeStartTime:ulong;
+}
+
+table IntelINodeSection {
+  lastInodeId:ulong;
+  numInodes:ulong;
+}
+
+namespace _IntelINodeSection;
+
+table IntelFileUnderConstructionFeature {
+  clientName:string;
+  clientMachine:string;
+}
+
+table IntelAclFeatureProto {
+  entries:[uint];
+}
+
+table IntelXAttrCompactProto {
+  name:uint;
+  value:string;
+}
+
+table IntelXAttrFeatureProto {
+  xAttrs:[_IntelINodeSection.IntelXAttrCompactProto];
+}
+
+table IntelINodeFile {
+  replication:uint;
+  modificationTime:ulong;
+  accessTime:ulong;
+  preferredBlockSize:ulong;
+  permission:ulong;
+  blocks:[IntelBlockProto];
+  fileUC:_IntelINodeSection.IntelFileUnderConstructionFeature;
+  acl:_IntelINodeSection.IntelAclFeatureProto;
+  xAttrs:_IntelINodeSection.IntelXAttrFeatureProto;
+  storagePolicyID:uint;
+}
+
+table IntelQuotaByStorageTypeEntryProto {
+  storageType:int;
+  quota:ulong;
+}
+
+table IntelQuotaByStorageTypeFeatureProto {
+  quotas:[_IntelINodeSection.IntelQuotaByStorageTypeEntryProto];
+}
+
+table IntelINodeDirectory {
+  modificationTime:ulong;
+  nsQuota:ulong;
+  dsQuota:ulong;
+  permission:ulong;
+  acl:_IntelINodeSection.IntelAclFeatureProto;
+  xAttrs:_IntelINodeSection.IntelXAttrFeatureProto;
+  typeQuotas:_IntelINodeSection.IntelQuotaByStorageTypeFeatureProto;
+}
+
+table IntelINodeSymlink {
+  permission:ulong;
+  target:string;
+  modificationTime:ulong;
+  accessTime:ulong;
+}
+
+table IntelINode {
+  type:int;
+  id:ulong;
+  name:string;
+  file:_IntelINodeSection.IntelINodeFile;
+  directory:_IntelINodeSection.IntelINodeDirectory;
+  symlink:_IntelINodeSection.IntelINodeSymlink;
+}
+
+namespace ;
+
+table IntelFilesUnderConstructionSection {
+}
+
+namespace _IntelFilesUnderConstructionSection;
+
+table IntelFileUnderConstructionEntry {
+  inodeId:ulong;
+  fullPath:string;
+}
+
+namespace ;
+
+table IntelINodeDirectorySection {
+}
+
+namespace _IntelINodeDirectorySection;
+
+table IntelDirEntry {
+  parent:ulong;
+  children:[ulong];
+  refChildren:[uint];
+}
+
+namespace ;
+
+table IntelINodeReferenceSection {
+}
+
+namespace _IntelINodeReferenceSection;
+
+table IntelINodeReference {
+  referredId:ulong;
+  name:string;
+  dstSnapshotId:uint;
+  lastSnapshotId:uint;
+}
+
+namespace ;
+
+table IntelSnapshotSection {
+  snapshotCounter:uint;
+  snapshottableDir:[ulong];
+  numSnapshots:uint;
+}
+
+namespace _IntelSnapshotSection;
+
+table IntelSnapshot {
+  snapshotId:uint;
+  root:_IntelINodeSection.IntelINode;
+}
+
+namespace ;
+
+table IntelSnapshotDiffSection {
+}
+
+namespace _IntelSnapshotDiffSection;
+
+table IntelCreatedListEntry {
+  name:string;
+}
+
+table IntelDirectoryDiff {
+  snapshotId:uint;
+  childrenSize:uint;
+  isSnapshotRoot:bool;
+  name:string;
+  snapshotCopy:_IntelINodeSection.IntelINodeDirectory;
+  createdListSize:uint;
+  deletedINode:[ulong];
+  deletedINodeRef:[uint];
+}
+
+table IntelFileDiff {
+  snapshotId:uint;
+  fileSize:ulong;
+  name:string;
+  snapshotCopy:_IntelINodeSection.IntelINodeFile;
+  blocks:[IntelBlockProto];
+}
+
+table IntelDiffEntry {
+  type:int;
+  inodeId:ulong;
+  numOfDiff:uint;
+}
+
+namespace ;
+
+table IntelStringTableSection {
+  numEntry:uint;
+}
+
+namespace _IntelStringTableSection;
+
+table IntelEntry {
+  id:uint;
+  str:string;
+}
+
+namespace ;
+
+table IntelSecretManagerSection {
+  currentId:uint;
+  tokenSequenceNumber:uint;
+  numKeys:uint;
+  numTokens:uint;
+}
+
+namespace _IntelSecretManagerSection;
+
+table IntelDelegationKey {
+  id:uint;
+  expiryDate:ulong;
+  key:string;
+}
+
+table IntelPersistToken {
+  version:uint;
+  owner:string;
+  renewer:string;
+  realUser:string;
+  issueDate:ulong;
+  maxDate:ulong;
+  sequenceNumber:uint;
+  masterKeyId:uint;
+  expiryDate:ulong;
+}
+
+namespace ;
+
+table IntelCacheManagerSection {
+  nextDirectiveId:ulong;
+  numPools:uint;
+  numDirectives:uint;
+}
+
