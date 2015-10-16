@@ -232,6 +232,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3964. Support NodeLabelsProvider at Resource Manager side.
     (Dian Fu via devaraj)
 
+    YARN-2556. Tool to measure the performance of the timeline server (Chang Li
+    via sjlee)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
