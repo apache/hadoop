@@ -66,7 +66,25 @@ endif()
 # Configure JNI.
 include(HadoopJNI)
 
+function(add_libhdfs_test NAME LIBRARY)
+    set(FILES)
+    foreach(FIL ${ARGN})
+        if (IS_ABSOLUTE ${FIL})
+            list(APPEND FILES ${FIL})
+        else()
+            list(APPEND FILES ${CMAKE_SOURCE_DIR}/main/native/libhdfs-tests/${FIL})
+        endif()
+    endforeach()
+    add_executable("${NAME}_${LIBRARY}" ${FILES})
+endfunction()
+
+function(link_libhdfs_test NAME LIBRARY)
+target_link_libraries("${NAME}_${LIBRARY}" ${LIBRARY} ${ARGN})
+endfunction()
+
 add_subdirectory(main/native/libhdfs)
+add_subdirectory(main/native/libhdfs-tests)
+
 
 if(REQUIRE_LIBWEBHDFS)
     add_subdirectory(contrib/libwebhdfs)

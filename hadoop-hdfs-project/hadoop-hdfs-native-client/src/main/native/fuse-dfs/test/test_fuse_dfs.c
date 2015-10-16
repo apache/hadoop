@@ -17,9 +17,9 @@
  */
 
 #include "fuse-dfs/test/fuse_workload.h"
-#include "libhdfs/expect.h"
-#include "libhdfs/hdfs.h"
-#include "libhdfs/native_mini_dfs.h"
+#include "hdfs/hdfs.h"
+#include "libhdfs-tests/expect.h"
+#include "libhdfs-tests/native_mini_dfs.h"
 #include "util/posix_util.h"
 
 #include <ctype.h>

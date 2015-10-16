@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "hdfs.h" 
+#include "hdfs/hdfs.h" 
 #include "hdfs_test.h" 
 #include "platform.h"
 

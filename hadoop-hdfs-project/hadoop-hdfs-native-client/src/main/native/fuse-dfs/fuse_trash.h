@@ -19,7 +19,7 @@
 #ifndef __FUSE_TRASH_H__
 #define __FUSE_TRASH_H__
 
-#include <hdfs.h>
+#include <hdfs/hdfs.h>
 
 int hdfsDeleteWithTrash(hdfsFS userFS, const char *path, int useTrash);
 

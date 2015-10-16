@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#include "hdfs.h"
-#include "native_mini_dfs.h"
+#include "hdfs/hdfs.h"
+#include "libhdfs-tests/native_mini_dfs.h"
 
 #include <inttypes.h>
 #include <jni.h>

@@ -20,8 +20,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "exception.h"
-#include "hdfs.h"
+#include "libhdfs/exception.h"
+#include "hdfs/hdfs.h"
 #include "hdfs_http_client.h"
 #include "hdfs_http_query.h"
 #include "hdfs_json_parser.h"

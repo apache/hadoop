@@ -19,7 +19,7 @@
 #ifndef __FUSE_CONTEXT_HANDLE_H__
 #define __FUSE_CONTEXT_HANDLE_H__
 
-#include <hdfs.h>
+#include <hdfs/hdfs.h>
 #include <stddef.h>
 #include <sys/types.h>
 

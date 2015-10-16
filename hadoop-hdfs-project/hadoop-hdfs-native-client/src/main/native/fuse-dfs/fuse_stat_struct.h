@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "hdfs.h"
+#include "hdfs/hdfs.h"
 
 /**
  * Converts from a hdfs hdfsFileInfo to a POSIX stat struct

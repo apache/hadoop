@@ -1568,6 +1568,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9167. Update pom.xml in other modules to depend on hdfs-client instead
     of hdfs. (Mingliang Liu via wheat9)
 
+    HDFS-9253. Refactor tests of libhdfs into a directory. (wheat9)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
