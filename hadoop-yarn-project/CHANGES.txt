@@ -945,6 +945,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4250. NPE in AppSchedulingInfo#isRequestLabelChanged. (Brahma Reddy Battula via rohithsharmaks)
 
+    YARN-4000. RM crashes with NPE if leaf queue becomes parent queue during restart. 
+    (Varun Saxena via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

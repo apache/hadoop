@@ -141,7 +141,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeSignalContainerEvent;
@@ -676,11 +677,8 @@ public class ClientRMService extends AbstractService implements
       }
     }
 
-    this.rmContext
-        .getDispatcher()
-        .getEventHandler()
-        .handle(
-            new RMAppAttemptFailedEvent(attemptId,
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppAttemptEvent(attemptId, RMAppAttemptEventType.FAIL,
         "Attempt failed by user."));
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
@@ -735,8 +733,9 @@ public class ClientRMService extends AbstractService implements
       return KillApplicationResponse.newInstance(true);
     }
 
-    this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMAppEvent(applicationId, RMAppEventType.KILL));
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppEvent(applicationId, RMAppEventType.KILL,
+        "Application killed by user."));
 
     // For UnmanagedAMs, return true so they don't retry
     return KillApplicationResponse.newInstance(

@@ -45,7 +45,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerRescheduledEvent;
@@ -511,8 +512,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      container.eventHandler.handle(new RMAppAttemptContainerAllocatedEvent(
-          container.appAttemptId));
+      container.eventHandler.handle(new RMAppAttemptEvent(
+          container.appAttemptId, RMAppAttemptEventType.CONTAINER_ALLOCATED));
     }
   }
 

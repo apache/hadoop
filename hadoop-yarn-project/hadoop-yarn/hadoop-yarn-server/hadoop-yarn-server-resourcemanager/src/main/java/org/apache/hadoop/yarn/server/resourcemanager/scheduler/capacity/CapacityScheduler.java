@@ -80,7 +80,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationCons
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -97,8 +96,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptE
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueInvalidException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
@@ -666,47 +665,97 @@ public class CapacityScheduler extends
     return queues.get(queueName);
   }
 
-  private synchronized void addApplication(ApplicationId applicationId,
-      String queueName, String user, boolean isAppRecovering, Priority priority) {
-    // sanity checks.
+  private synchronized void addApplicationOnRecovery(
+      ApplicationId applicationId, String queueName, String user,
+      Priority priority) {
     CSQueue queue = getQueue(queueName);
     if (queue == null) {
       //During a restart, this indicates a queue was removed, which is
       //not presently supported
-      if (isAppRecovering) {
+      if (!YarnConfiguration.shouldRMFailFast(getConfig())) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(applicationId, RMAppEventType.KILL,
+            "Application killed on recovery as it was submitted to queue " +
+            queueName + " which no longer exists after restart."));
+        return;
+      } else {
         String queueErrorMsg = "Queue named " + queueName
-           + " missing during application recovery."
-           + " Queue removal during recovery is not presently supported by the"
-           + " capacity scheduler, please restart with all queues configured"
-           + " which were present before shutdown/restart.";
+            + " missing during application recovery."
+            + " Queue removal during recovery is not presently supported by the"
+            + " capacity scheduler, please restart with all queues configured"
+            + " which were present before shutdown/restart.";
         LOG.fatal(queueErrorMsg);
-        throw new QueueNotFoundException(queueErrorMsg);
+        throw new QueueInvalidException(queueErrorMsg);
       }
-      String message = "Application " + applicationId + 
+    }
+    if (!(queue instanceof LeafQueue)) {
+      // During RM restart, this means leaf queue was converted to a parent
+      // queue, which is not supported for running apps.
+      if (!YarnConfiguration.shouldRMFailFast(getConfig())) {
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(applicationId, RMAppEventType.KILL,
+            "Application killed on recovery as it was submitted to queue " +
+            queueName + " which is no longer a leaf queue after restart."));
+        return;
+      } else {
+        String queueErrorMsg = "Queue named " + queueName
+            + " is no longer a leaf queue during application recovery."
+            + " Changing a leaf queue to a parent queue during recovery is"
+            + " not presently supported by the capacity scheduler. Please"
+            + " restart with leaf queues before shutdown/restart continuing"
+            + " as leaf queues.";
+        LOG.fatal(queueErrorMsg);
+        throw new QueueInvalidException(queueErrorMsg);
+      }
+    }
+    // Submit to the queue
+    try {
+      queue.submitApplication(applicationId, user, queueName);
+    } catch (AccessControlException ace) {
+      // Ignore the exception for recovered app as the app was previously
+      // accepted.
+    }
+    queue.getMetrics().submitApp(user);
+    SchedulerApplication<FiCaSchedulerApp> application =
+        new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+    applications.put(applicationId, application);
+    LOG.info("Accepted application " + applicationId + " from user: " + user
+        + ", in queue: " + queueName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
+    }
+  }
+
+  private synchronized void addApplication(ApplicationId applicationId,
+      String queueName, String user, Priority priority) {
+    // Sanity checks.
+    CSQueue queue = getQueue(queueName);
+    if (queue == null) {
+      String message = "Application " + applicationId +
       " submitted by user " + user + " to unknown queue: " + queueName;
       this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(applicationId, message));
+          .handle(new RMAppEvent(applicationId,
+              RMAppEventType.APP_REJECTED, message));
       return;
     }
     if (!(queue instanceof LeafQueue)) {
       String message = "Application " + applicationId + 
           " submitted by user " + user + " to non-leaf queue: " + queueName;
       this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(applicationId, message));
+          .handle(new RMAppEvent(applicationId,
+              RMAppEventType.APP_REJECTED, message));
       return;
     }
     // Submit to the queue
     try {
       queue.submitApplication(applicationId, user, queueName);
     } catch (AccessControlException ace) {
-      // Ignore the exception for recovered app as the app was previously accepted
-      if (!isAppRecovering) {
-        LOG.info("Failed to submit application " + applicationId + " to queue "
-            + queueName + " from user " + user, ace);
-        this.rmContext.getDispatcher().getEventHandler()
-            .handle(new RMAppRejectedEvent(applicationId, ace.toString()));
-        return;
-      }
+      LOG.info("Failed to submit application " + applicationId + " to queue "
+          + queueName + " from user " + user, ace);
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppEvent(applicationId,
+              RMAppEventType.APP_REJECTED, ace.toString()));
+      return;
     }
     // update the metrics
     queue.getMetrics().submitApp(user);
@@ -715,14 +764,8 @@ public class CapacityScheduler extends
     applications.put(applicationId, application);
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", in queue: " + queueName);
-    if (isAppRecovering) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
-      }
-    } else {
-      rmContext.getDispatcher().getEventHandler()
+    rmContext.getDispatcher().getEventHandler()
         .handle(new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
-    }
   }
 
   private synchronized void addApplicationAttempt(
@@ -731,6 +774,11 @@ public class CapacityScheduler extends
       boolean isAttemptRecovering) {
     SchedulerApplication<FiCaSchedulerApp> application =
         applications.get(applicationAttemptId.getApplicationId());
+    if (application == null) {
+      LOG.warn("Application " + applicationAttemptId.getApplicationId() +
+          " cannot be found in scheduler.");
+      return;
+    }
     CSQueue queue = (CSQueue) application.getQueue();
 
     FiCaSchedulerApp attempt = new FiCaSchedulerApp(applicationAttemptId,
@@ -1277,11 +1325,13 @@ public class CapacityScheduler extends
               appAddedEvent.getApplicationId(),
               appAddedEvent.getReservationID());
       if (queueName != null) {
-        addApplication(appAddedEvent.getApplicationId(),
-            queueName,
-            appAddedEvent.getUser(),
-            appAddedEvent.getIsAppRecovering(),
-            appAddedEvent.getApplicatonPriority());
+        if (!appAddedEvent.getIsAppRecovering()) {
+          addApplication(appAddedEvent.getApplicationId(), queueName,
+              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority());
+        } else {
+          addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
+              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority());
+        }
       }
     }
     break;
@@ -1631,7 +1681,8 @@ public class CapacityScheduler extends
                 + " submitted to a reservation which is not yet currently active: "
                 + resQName;
         this.rmContext.getDispatcher().getEventHandler()
-            .handle(new RMAppRejectedEvent(applicationId, message));
+            .handle(new RMAppEvent(applicationId,
+                RMAppEventType.APP_REJECTED, message));
         return null;
       }
       if (!queue.getParent().getQueueName().equals(queueName)) {
@@ -1640,7 +1691,8 @@ public class CapacityScheduler extends
                 + resQName + " which does not belong to the specified queue: "
                 + queueName;
         this.rmContext.getDispatcher().getEventHandler()
-            .handle(new RMAppRejectedEvent(applicationId, message));
+            .handle(new RMAppEvent(applicationId,
+                RMAppEventType.APP_REJECTED, message));
         return null;
       }
       // use the reservation queue to run the app
