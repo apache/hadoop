@@ -976,16 +976,6 @@ public class TestCapacityScheduler {
       CapacityScheduler.schedule(cs);
     }
   }
-  
-  private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
-      throws Exception {
-    RMAppAttempt attempt = app.getCurrentAppAttempt();
-    nm.nodeHeartbeat(true);
-    MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
-    am.registerAppAttempt();
-    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
-    return am;
-  }
 
   private void waitForAppPreemptionInfo(RMApp app, Resource preempted,
       int numAMPreempted, int numTaskPreempted,
@@ -1156,7 +1146,8 @@ public class TestCapacityScheduler {
 
     // create app and launch the AM
     RMApp app0 = rm1.submitApp(CONTAINER_MEMORY);
-    MockAM am0 = launchAM(app0, rm1, nm1);
+    MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
+    am0.registerAppAttempt();
 
     // get scheduler app
     FiCaSchedulerApp schedulerAppAttempt =
@@ -1190,7 +1181,9 @@ public class TestCapacityScheduler {
         Resource.newInstance(0, 0), false, 0);
 
     // launch app0-attempt1
-    MockAM am1 = launchAM(app0, rm1, nm1);
+    MockAM am1 = MockRM.launchAM(app0, rm1, nm1);
+    am1.registerAppAttempt();
+
     schedulerAppAttempt =
         cs.getSchedulerApplications().get(app0.getApplicationId())
             .getCurrentAppAttempt();

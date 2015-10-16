@@ -510,6 +510,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4162. CapacityScheduler: Add resource usage by partition and queue capacity 
     by partition to REST API. (Naganarasimha G R via wangda)
 
+    YARN-4170. AM need to be notified with priority in AllocateResponse.
+    (Sunil G via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
