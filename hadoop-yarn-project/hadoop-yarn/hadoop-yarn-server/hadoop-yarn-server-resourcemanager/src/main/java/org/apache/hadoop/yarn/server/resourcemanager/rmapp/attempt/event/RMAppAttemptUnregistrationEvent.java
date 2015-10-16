@@ -27,14 +27,13 @@ public class RMAppAttemptUnregistrationEvent extends RMAppAttemptEvent {
 
   private final String finalTrackingUrl;
   private final FinalApplicationStatus finalStatus;
-  private final String diagnostics;
 
   public RMAppAttemptUnregistrationEvent(ApplicationAttemptId appAttemptId,
-      String trackingUrl, FinalApplicationStatus finalStatus, String diagnostics) {
-    super(appAttemptId, RMAppAttemptEventType.UNREGISTERED);
+      String trackingUrl, FinalApplicationStatus finalStatus,
+      String diagnostics) {
+    super(appAttemptId, RMAppAttemptEventType.UNREGISTERED, diagnostics);
     this.finalTrackingUrl = trackingUrl;
     this.finalStatus = finalStatus;
-    this.diagnostics = diagnostics;
   }
 
   public String getFinalTrackingUrl() {
@@ -43,10 +42,6 @@ public class RMAppAttemptUnregistrationEvent extends RMAppAttemptEvent {
 
   public FinalApplicationStatus getFinalApplicationStatus() {
     return this.finalStatus;
-  }
-
-  public String getDiagnostics() {
-    return this.diagnostics;
   }
 
 }

@@ -24,13 +24,24 @@ import org.apache.hadoop.yarn.event.AbstractEvent;
 public class RMAppEvent extends AbstractEvent<RMAppEventType>{
 
   private final ApplicationId appId;
+  private final String diagnosticMsg;
 
   public RMAppEvent(ApplicationId appId, RMAppEventType type) {
+    this(appId, type, "");
+  }
+
+  public RMAppEvent(ApplicationId appId, RMAppEventType type,
+      String diagnostic) {
     super(type);
     this.appId = appId;
+    this.diagnosticMsg = diagnostic;
   }
 
   public ApplicationId getApplicationId() {
     return this.appId;
+  }
+
+  public String getDiagnosticMsg() {
+    return this.diagnosticMsg;
   }
 }
