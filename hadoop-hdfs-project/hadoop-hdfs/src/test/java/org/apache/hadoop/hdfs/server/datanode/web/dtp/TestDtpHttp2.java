@@ -19,35 +19,16 @@ package org.apache.hadoop.hdfs.server.datanode.web.dtp;
 
 import static org.junit.Assert.assertEquals;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
-import io.netty.handler.codec.http2.DelegatingDecompressorFrameListener;
-import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
-import io.netty.handler.codec.http2.Http2InboundFrameLogger;
-import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
-import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
-import io.netty.handler.codec.http2.HttpUtil;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
-import io.netty.handler.logging.LogLevel;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.timeout.TimeoutException;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.AsciiString;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -57,14 +38,17 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.hdfs.web.http2.ClientHttp2ConnectionHandler;
+import org.apache.hadoop.hdfs.web.http2.Http2DataReceiver;
+import org.apache.hadoop.hdfs.web.http2.Http2StreamBootstrap;
+import org.apache.hadoop.hdfs.web.http2.Http2StreamChannel;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestDtpHttp2 {
+import com.google.common.io.ByteStreams;
 
-  private static final Http2FrameLogger FRAME_LOGGER = new Http2FrameLogger(
-      LogLevel.INFO, TestDtpHttp2.class);
+public class TestDtpHttp2 {
 
   private static final Configuration CONF = WebHdfsTestUtil.createConf();
 
@@ -74,16 +58,15 @@ public class TestDtpHttp2 {
 
   private static Channel CHANNEL;
 
-  private static Http2ResponseHandler RESPONSE_HANDLER;
+  private static Http2StreamChannel STREAM;
 
   @BeforeClass
   public static void setUp() throws IOException, URISyntaxException,
-      TimeoutException {
+      TimeoutException, InterruptedException, ExecutionException {
     CLUSTER = new MiniDFSCluster.Builder(CONF).numDataNodes(1).build();
     CLUSTER.waitActive();
 
-    RESPONSE_HANDLER = new Http2ResponseHandler();
-    Bootstrap bootstrap =
+    CHANNEL =
         new Bootstrap()
             .group(WORKER_GROUP)
             .channel(NioSocketChannel.class)
@@ -93,22 +76,31 @@ public class TestDtpHttp2 {
 
               @Override
               protected void initChannel(Channel ch) throws Exception {
-                Http2Connection connection = new DefaultHttp2Connection(false);
-                Http2ConnectionHandler connectionHandler =
-                    new HttpToHttp2ConnectionHandler(connection, frameReader(),
-                        frameWriter(), new DelegatingDecompressorFrameListener(
-                            connection, new InboundHttp2ToHttpAdapter.Builder(
-                                connection).maxContentLength(Integer.MAX_VALUE)
-                                .propagateSettings(true).build()));
-                ch.pipeline().addLast(connectionHandler, RESPONSE_HANDLER);
+                ch.pipeline().addLast(
+                  ClientHttp2ConnectionHandler.create(ch, CONF));
               }
-            });
-    CHANNEL = bootstrap.connect().syncUninterruptibly().channel();
+            }).connect().syncUninterruptibly().channel();
+    STREAM =
+        new Http2StreamBootstrap()
+            .channel(CHANNEL)
+            .headers(
+              new DefaultHttp2Headers().method(
+                new AsciiString(HttpMethod.GET.name())).path(
+                new AsciiString("/"))).endStream(true)
+            .handler(new ChannelInitializer<Channel>() {
 
+              @Override
+              protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new Http2DataReceiver());
+              }
+            }).connect().syncUninterruptibly().get();
   }
 
   @AfterClass
   public static void tearDown() throws IOException {
+    if (STREAM != null) {
+      STREAM.close();
+    }
     if (CHANNEL != null) {
       CHANNEL.close().syncUninterruptibly();
     }
@@ -118,28 +110,14 @@ public class TestDtpHttp2 {
     }
   }
 
-  private static Http2FrameReader frameReader() {
-    return new Http2InboundFrameLogger(new DefaultHttp2FrameReader(),
-        FRAME_LOGGER);
-  }
-
-  private static Http2FrameWriter frameWriter() {
-    return new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(),
-        FRAME_LOGGER);
-  }
-
   @Test
-  public void test() throws InterruptedException, ExecutionException {
-    int streamId = 3;
-    FullHttpRequest request =
-        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-    request.headers().add(HttpUtil.ExtensionHeaderNames.STREAM_ID.text(),
-      streamId);
-    Promise<FullHttpResponse> promise = CHANNEL.eventLoop().newPromise();
-    RESPONSE_HANDLER.put(streamId, promise);
-    CHANNEL.writeAndFlush(request);
-    assertEquals(HttpResponseStatus.OK, promise.get().status());
-    ByteBuf content = promise.get().content();
-    assertEquals("HTTP/2 DTP", content.toString(StandardCharsets.UTF_8));
+  public void test() throws InterruptedException, ExecutionException,
+      IOException {
+    Http2DataReceiver receiver = STREAM.pipeline().get(Http2DataReceiver.class);
+    assertEquals(HttpResponseStatus.OK.codeAsText(), receiver.waitForResponse()
+        .status());
+    assertEquals("HTTP/2 DTP",
+      new String(ByteStreams.toByteArray(receiver.content()),
+          StandardCharsets.UTF_8));
   }
 }

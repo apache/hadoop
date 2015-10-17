@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
@@ -92,7 +93,7 @@ public class TestHttp2Server extends AbstractTestHttp2Server {
                       throws Exception {
                     ch.pipeline().addLast(new HelloWorldHandler());
                   }
-                }));
+                }, new Configuration()));
           }
 
         }).bind(0).syncUninterruptibly().channel();

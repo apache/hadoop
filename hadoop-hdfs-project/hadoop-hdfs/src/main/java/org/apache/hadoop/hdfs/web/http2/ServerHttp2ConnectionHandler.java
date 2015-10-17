@@ -20,21 +20,18 @@ package org.apache.hadoop.hdfs.web.http2;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2FrameListener;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
-import io.netty.handler.codec.http2.Http2InboundFrameLogger;
-import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.logging.LogLevel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * An {@link Http2ConnectionHandler} used at server side.
@@ -48,39 +45,36 @@ public class ServerHttp2ConnectionHandler extends Http2ConnectionHandler {
   private static final Http2FrameLogger FRAME_LOGGER = new Http2FrameLogger(
       LogLevel.INFO, ServerHttp2ConnectionHandler.class);
 
-  private ServerHttp2ConnectionHandler(Http2Connection connection,
-      Http2FrameReader frameReader, Http2FrameWriter frameWriter,
-      Http2FrameListener listener) {
-    super(connection, frameReader, frameWriter, listener);
+  private ServerHttp2ConnectionHandler(Http2ConnectionDecoder decoder,
+      Http2ConnectionEncoder encoder) {
+    super(decoder, encoder);
   }
+
+  private static final Http2Util.Http2ConnectionHandlerFactory<ServerHttp2ConnectionHandler> FACTORY =
+      new Http2Util.Http2ConnectionHandlerFactory<ServerHttp2ConnectionHandler>() {
+
+        @Override
+        public ServerHttp2ConnectionHandler create(
+            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+          return new ServerHttp2ConnectionHandler(decoder, encoder);
+        }
+      };
 
   /**
    * Create and initialize an {@link ServerHttp2ConnectionHandler}.
    * @param channel
    * @param initializer
-   * @param verbose whether to log inbound and outbound HTTP/2 messages
+   * @param conf
    * @return the initialized {@link ServerHttp2ConnectionHandler}
+   * @throws Http2Exception
    */
   public static ServerHttp2ConnectionHandler create(Channel channel,
-      ChannelInitializer<Http2StreamChannel> initializer) {
+      ChannelInitializer<Http2StreamChannel> initializer, Configuration conf)
+      throws Http2Exception {
     Http2Connection conn = new DefaultHttp2Connection(true);
     ServerHttp2EventListener listener =
         new ServerHttp2EventListener(channel, conn, initializer);
-    conn.addListener(listener);
-    Http2FrameReader frameReader;
-    Http2FrameWriter frameWriter;
-    if (LOG.isDebugEnabled()) {
-      frameReader =
-          new Http2InboundFrameLogger(new DefaultHttp2FrameReader(),
-              FRAME_LOGGER);
-      frameWriter =
-          new Http2OutboundFrameLogger(new DefaultHttp2FrameWriter(),
-              FRAME_LOGGER);
-    } else {
-      frameReader = new DefaultHttp2FrameReader();
-      frameWriter = new DefaultHttp2FrameWriter();
-    }
-    return new ServerHttp2ConnectionHandler(conn, frameReader, frameWriter,
-        listener);
+    return Http2Util.create(conf, conn, listener, FACTORY,
+      LOG.isDebugEnabled() ? FRAME_LOGGER : null);
   }
 }

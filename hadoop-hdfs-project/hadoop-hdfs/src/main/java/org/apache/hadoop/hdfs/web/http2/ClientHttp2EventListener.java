@@ -18,41 +18,25 @@
 package org.apache.hadoop.hdfs.web.http2;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
 import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * An HTTP/2 FrameListener and EventListener to manage
- * {@link Http2StreamChannel}s for server.
+ * {@link Http2StreamChannel}s for client.
  */
 @InterfaceAudience.Private
-public class ServerHttp2EventListener extends AbstractHttp2EventListener {
+public class ClientHttp2EventListener extends AbstractHttp2EventListener {
 
-  private final ChannelInitializer<Http2StreamChannel> subChannelInitializer;
-
-  public ServerHttp2EventListener(Channel parentChannel, Http2Connection conn,
-      ChannelInitializer<Http2StreamChannel> subChannelInitializer) {
+  public ClientHttp2EventListener(Channel parentChannel, Http2Connection conn) {
     super(parentChannel, conn);
-    this.subChannelInitializer = subChannelInitializer;
   }
 
   @Override
-  protected void initChannelOnStreamActive(final Http2StreamChannel subChannel) {
-    subChannel.pipeline().addFirst(subChannelInitializer);
-    parentChannel.eventLoop().register(subChannel)
-        .addListener(new FutureListener<Void>() {
-
-          @Override
-          public void operationComplete(Future<Void> future) throws Exception {
-            if (!future.isSuccess()) {
-              subChannel.stream().removeProperty(subChannelPropKey);
-            }
-          }
-
-        });
+  protected void initChannelOnStreamActive(Http2StreamChannel subChannel) {
+    // disable read until pipeline initialized
+    subChannel.config().setAutoRead(false);
   }
+
 }

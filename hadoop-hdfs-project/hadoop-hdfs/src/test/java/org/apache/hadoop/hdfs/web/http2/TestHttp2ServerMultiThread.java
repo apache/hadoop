@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
@@ -83,8 +84,7 @@ public class TestHttp2ServerMultiThread extends AbstractTestHttp2Server {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg)
         throws Exception {
-      ByteBuf out = msg.readBytes(msg.readableBytes());
-      ctx.writeAndFlush(out);
+      ctx.writeAndFlush(msg.readBytes(msg.readableBytes()));
     }
 
     @Override
@@ -133,7 +133,7 @@ public class TestHttp2ServerMultiThread extends AbstractTestHttp2Server {
                       throws Exception {
                     ch.pipeline().addLast(new DispatchHandler());
                   }
-                }));
+                }, new Configuration()));
           }
 
         }).bind(0).syncUninterruptibly().channel();
@@ -203,5 +203,4 @@ public class TestHttp2ServerMultiThread extends AbstractTestHttp2Server {
     Thread.sleep(1000);
     assertEquals(requestCount, handlerClosedCount.get());
   }
-
 }

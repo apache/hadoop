@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.net.InetSocketAddress;
@@ -66,7 +67,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
         new URLDispatcher(proxyHost, conf, confForCreate));
   }
 
-  private void configureHttp2(ChannelHandlerContext ctx) {
+  private void configureHttp2(ChannelHandlerContext ctx) throws Http2Exception {
     ctx.pipeline().addLast(
       ServerHttp2ConnectionHandler.create(ctx.channel(),
         new ChannelInitializer<Http2StreamChannel>() {
@@ -75,7 +76,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
           protected void initChannel(Http2StreamChannel ch) throws Exception {
             ch.pipeline().addLast(new DtpChannelHandler());
           }
-        }));
+        }, conf));
   }
 
   @Override
