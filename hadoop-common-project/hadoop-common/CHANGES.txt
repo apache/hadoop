@@ -1234,6 +1234,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12479. ProtocMojo does not log the reason for a protoc compilation
     failure. (cnauroth)
 
+    HADOOP-11628. SPNEGO auth does not work with CNAMEs in JDK8.
+    (Daryn Sharp via stevel).
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
