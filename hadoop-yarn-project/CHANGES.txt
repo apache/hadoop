@@ -957,6 +957,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4000. RM crashes with NPE if leaf queue becomes parent queue during restart. 
     (Varun Saxena via jianhe)
 
+    YARN-4155. TestLogAggregationService.testLogAggregationServiceWithInterval failing
+    (Bibin A Chundatt via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
