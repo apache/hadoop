@@ -18,7 +18,6 @@
 package org.apache.hadoop.util;
 
 import java.net.InetAddress;
-
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -141,6 +140,10 @@ public class MachineList {
       return true;
     }
     
+    if (ipAddress == null) {
+      throw new IllegalArgumentException("ipAddress is null.");
+    }
+
     //check in the set of ipAddresses
     if ((ipAddresses != null) && ipAddresses.contains(ipAddress)) {
       return true;

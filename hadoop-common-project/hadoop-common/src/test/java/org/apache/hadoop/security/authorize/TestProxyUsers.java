@@ -334,6 +334,45 @@ public class TestProxyUsers {
     assertNotAuthorized(proxyUserUgi, "10.221.0.0");
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testNullUser() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserGroupConfKey(REAL_USER_NAME),
+        "*");
+    conf.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserIpConfKey(REAL_USER_NAME),
+        PROXY_IP_RANGE);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    // user is null
+    ProxyUsers.authorize(null, "10.222.0.0");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testNullIpAddress() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserGroupConfKey(REAL_USER_NAME),
+        "*");
+    conf.set(
+        DefaultImpersonationProvider.getTestProvider().
+            getProxySuperuserIpConfKey(REAL_USER_NAME),
+        PROXY_IP_RANGE);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+
+    // First try proxying a group that's allowed
+    UserGroupInformation realUserUgi = UserGroupInformation
+        .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    // remote address is null
+    ProxyUsers.authorize(proxyUserUgi, null);
+  }
+
   @Test
   public void testWithDuplicateProxyGroups() throws Exception {
     Configuration conf = new Configuration();
