@@ -932,6 +932,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11984. Enable parallel JUnit tests in pre-commit.
     (Chris Nauroth via vinayakumarb)
 
+    HADOOP-12450. UserGroupInformation should not log at WARN level if no groups
+    are found. (Elliott Clark via stevel)
+
   BUG FIXES
 
     HADOOP-12374. Updated expunge command description.
