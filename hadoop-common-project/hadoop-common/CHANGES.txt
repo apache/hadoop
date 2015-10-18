@@ -1240,6 +1240,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11628. SPNEGO auth does not work with CNAMEs in JDK8.
     (Daryn Sharp via stevel).
 
+    HADOOP-10941. Proxy user verification NPEs if remote host is unresolvable.
+    (Benoy Antony via stevel).
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
