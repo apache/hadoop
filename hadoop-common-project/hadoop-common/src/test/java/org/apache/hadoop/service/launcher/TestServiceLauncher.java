@@ -28,6 +28,9 @@ import org.apache.hadoop.service.launcher.testservices.NullBindLaunchableService
 import org.apache.hadoop.service.launcher.testservices.RunningService;
 import org.apache.hadoop.service.launcher.testservices.StoppingInStartLaunchableService;
 import org.apache.hadoop.service.launcher.testservices.StringConstructorOnlyService;
+
+import static org.apache.hadoop.service.launcher.LauncherArguments.*;
+
 import static org.apache.hadoop.test.GenericTestUtils.*;
 import static org.apache.hadoop.service.launcher.testservices.ExceptionInExecuteLaunchableService.*;
 
@@ -35,7 +38,6 @@ import org.junit.Test;
 
 
 public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
-
 
   @Test
   public void testRunService() throws Throwable {
@@ -178,7 +180,7 @@ public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
     Configuration conf = newConf(RunningService.FAIL_IN_RUN, "true");
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
-        LauncherArguments.ARG_CONF,
+        ARG_CONF_PREFIXED,
         configFile(conf),
         LaunchableRunningService.NAME);
   }
@@ -217,7 +219,6 @@ public class TestServiceLauncher extends AbstractServiceLauncherTestBase {
     ServiceShutdownHook hook = new ServiceShutdownHook(service);
     hook.run();
     assertStopped(service);
-
   }
 
 }

@@ -24,9 +24,13 @@ package org.apache.hadoop.service.launcher;
  */
 public interface LauncherArguments {
   /**
-   * Name of the configuration argument on the CLI: {@value} 
+   * Name of the configuration argument on the CLI: {@value}.
    */
   String ARG_CONF = "conf";
+  String ARG_CONF_SHORT = "conf";
+
+  /** prefixed version of {@link #ARG_CONF}: {@value}. */
+  String ARG_CONF_PREFIXED = "--" + ARG_CONF;
 
   /**
    * Name of a configuration class which is loaded before any
@@ -34,12 +38,16 @@ public interface LauncherArguments {
    * <p>
    * {@value}
    */
-  String ARG_CONFCLASS = "confclass";
+  String ARG_CONFCLASS = "hadoopconf";
+  String ARG_CONFCLASS_SHORT = "hadoopconf";
+
+  /** prefixed version of {@link #ARG_CONFCLASS}: {@value}. */
+  String ARG_CONFCLASS_PREFIXED = "--" + ARG_CONFCLASS;
 
   /**
    * Error string on a parse failure
    * <p>
    * {@value}
    */
-  String E_PARSE_FAILED = "Failed to parse:";
+  String E_PARSE_FAILED = "Failed to parse: ";
 }

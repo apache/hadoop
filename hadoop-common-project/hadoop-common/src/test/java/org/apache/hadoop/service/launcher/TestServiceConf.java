@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.testservices.LaunchableRunningService;
 import org.apache.hadoop.service.launcher.testservices.RunningService;
+import static org.apache.hadoop.service.launcher.LauncherArguments.*;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,8 +31,6 @@ import java.util.List;
 
 public class TestServiceConf
     extends AbstractServiceLauncherTestBase {
-
-  public static final String DASH_CONF = "-" + LauncherArguments.ARG_CONF;
 
   @Test
   public void testRunService() throws Throwable {
@@ -44,24 +43,24 @@ public class TestServiceConf
     assertLaunchOutcome(EXIT_FAIL,
         "failed",
         LaunchableRunningService.NAME,
-        DASH_CONF,
+        ARG_CONF_PREFIXED,
         configFile(conf));
   }
 
   @Test
   public void testUnbalancedConfArg() throws Throwable {
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
-        LauncherArguments.E_PARSE_FAILED,
+        E_PARSE_FAILED,
         LaunchableRunningService.NAME,
-        DASH_CONF);
+        ARG_CONF_PREFIXED);
   }
 
   @Test
   public void testConfArgMissingFile() throws Throwable {
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
-        LauncherArguments.E_PARSE_FAILED,
+        E_PARSE_FAILED,
         LaunchableRunningService.NAME,
-        DASH_CONF,
+        ARG_CONF_PREFIXED,
         "no-file.xml");
   }
 
@@ -71,7 +70,7 @@ public class TestServiceConf
     assertLaunchOutcome(EXIT_EXCEPTION_THROWN,
         RunningService.FAILURE_MESSAGE,
         RunningService.NAME,
-        DASH_CONF,
+        ARG_CONF_PREFIXED,
         configFile(conf));
   }
 
@@ -90,7 +89,7 @@ public class TestServiceConf
     Configuration extracted = new Configuration(false);
 
     List<String> argsList =
-        asList("Name", DASH_CONF, configFile(conf));
+        asList("Name", ARG_CONF_PREFIXED, configFile(conf));
     List<String> args = launcher.extractCommandOptions(extracted,
         argsList);
     if (!args.isEmpty()) {
@@ -117,8 +116,8 @@ public class TestServiceConf
 
     List<String> argsList =
         asList("Name",
-            DASH_CONF, configFile(conf1),
-            DASH_CONF, configFile(conf2));
+            ARG_CONF_PREFIXED, configFile(conf1),
+            ARG_CONF_PREFIXED, configFile(conf2));
     List<String> args = launcher.extractCommandOptions(extracted,
         argsList);
     if (!args.isEmpty()) {
@@ -140,7 +139,7 @@ public class TestServiceConf
     assertLaunchOutcome(EXIT_COMMAND_ARGUMENT_ERROR,
         "SAXParseException",
         RunningService.NAME,
-        DASH_CONF,
+        ARG_CONF_PREFIXED,
         file.getAbsolutePath());
   }
 

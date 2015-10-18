@@ -91,15 +91,18 @@ public class ServiceLauncher<S extends Service>
    */
   public static final String NAME = "ServiceLauncher";
 
+  protected static final String USAGE_NAME = "Usage: " + NAME;
+  protected static final String USAGE_SERVICE_ARGUMENTS = "service-classname <service arguments>";
   /**
    * Usage message.
    * <p>
    * {@value}
    */
   public static final String USAGE_MESSAGE =
-      "Usage: " + NAME + " classname " +
-      "[" + ARG_CONF + " <conf file>] " +
-      "<service arguments> ";
+      USAGE_NAME
+          + " [" + ARG_CONF_PREFIXED + " <conf file>]"
+          + " [" + ARG_CONFCLASS_PREFIXED + " <configuration classname>]"
+          + " "  + USAGE_SERVICE_ARGUMENTS;
 
   /**
    * The shutdown time on an interrupt: {@value}
@@ -150,6 +153,9 @@ public class ServiceLauncher<S extends Service>
    * List of resources to load to configuration before instantiating class
    */
   private List<String> confResources = new ArrayList<>();
+
+  /** Command options. Preserved for usage statements */
+  private Options commandOptions;
 
   /**
    * List of the standard configurations to create (and so load in properties)
@@ -261,24 +267,62 @@ public class ServiceLauncher<S extends Service>
    * assumed to be the service classname.
    */
   public void launchServiceAndExit(List<String> args) {
-
+    StringBuilder builder = new StringBuilder();
+    for (String arg : args) {
+      builder.append('"').append(arg).append("\" ");
+    }
+    String argumentString = builder.toString();
     if (LOG.isDebugEnabled()) {
       LOG.debug(startupShutdownMessage(serviceName, args));
-      StringBuilder builder = new StringBuilder();
-      for (String arg : args) {
-        builder.append('"').append(arg).append("\" ");
-      }
-      LOG.debug(builder.toString());
+      LOG.debug(argumentString);
     }
     registerFailureHandling();
     // set up the configs, using reflection to push in the -site.xml files
     createDefaultConfigs();
     Configuration conf = createConfiguration();
-    List<String> processedArgs = extractCommandOptions(conf, args);
-    ExitUtil.ExitException ee = launchService(conf, processedArgs, true, true);
+    commandOptions = createOptions();
+    ExitUtil.ExitException exitException;
+    try {
+      List<String> processedArgs = extractCommandOptions(conf, args);
+      exitException = launchService(conf, processedArgs, true, true);
+    } catch (ExitUtil.ExitException e) {
+      exitException = e;
+      noteException(exitException);
+    }
+    if (exitException.getExitCode() != 0) {
+      // something went wrong. Print the usage and commands
+      System.err.println(getUsageMessage());
+      System.err.println("Command: " + argumentString);
+    }
     System.out.flush();
     System.err.flush();
-    exit(ee);
+    exit(exitException);
+  }
+
+  /**
+   * An exception has been raised.
+   * Save it to {@link #serviceException}, with the exit code in
+   * {@link #serviceExitCode}
+   * @param exitException exception
+   */
+  void noteException(ExitUtil.ExitException exitException) {
+    LOG.debug("Exception raised", exitException);
+    serviceExitCode = exitException.getExitCode();
+    serviceException = exitException;
+  }
+
+  /**
+   * Get the usage message, ideally dynamically
+   * @return the usage message
+   */
+  protected String getUsageMessage() {
+    String message =   USAGE_MESSAGE;
+    if (commandOptions != null) {
+      message = USAGE_NAME
+          + " " + commandOptions.toString()
+          + " " + USAGE_SERVICE_ARGUMENTS;
+    }
+    return message;
   }
 
   /**
@@ -286,45 +330,27 @@ public class ServiceLauncher<S extends Service>
    * standard options set.
    * @return the new options.
    */
+  @SuppressWarnings("static-access")
   protected Options createOptions() {
     Options options = new Options();
-    options.addOption(null, ARG_CONF, true, ARG_CONF);
-    return options;
-  }
-
-  /**
-   * Add the core Hadoop tool options, <i>except</i>
-   * those added for MR jobs: <code>libjars</code>,
-   *  <code>files</code> and <code>archives</code>
-   */
-  @SuppressWarnings("static-access")
-  protected static Options buildHadoopToolOptions(Options opts) {
-    Option fs = OptionBuilder.withArgName("filesystem URI")
-        .hasArg()
-        .withDescription("specify a filesystem")
-        .create("fs");
     Option oconf = OptionBuilder.withArgName("configuration file")
         .hasArg()
         .withDescription("specify an application configuration file")
-        .create("conf");
+        .withLongOpt(ARG_CONF)
+        .create(ARG_CONF_SHORT);
+    Option confclass = OptionBuilder.withArgName("configuration classname")
+        .hasArg()
+        .withDescription("Classname of a subclass of Hadoop Configuration file to load")
+        .withLongOpt(ARG_CONFCLASS)
+        .create(ARG_CONFCLASS_SHORT);
     Option property = OptionBuilder.withArgName("property=value")
         .hasArg()
         .withDescription("use value for given property")
         .create('D');
-
-
-    // file with security tokens
-    Option tokensFile = OptionBuilder.withArgName("tokensFile")
-        .hasArg()
-        .withDescription("name of the file with the tokens")
-        .create("tokenCacheFile");
-
-    opts.addOption(fs);
-    opts.addOption(oconf);
-    opts.addOption(property);
-    opts.addOption(tokensFile);
-
-    return opts;
+    options.addOption(oconf);
+    options.addOption(property);
+    options.addOption(confclass);
+    return options;
   }
 
   /**
@@ -441,8 +467,7 @@ public class ServiceLauncher<S extends Service>
     } catch (Throwable thrown) {
       exitException = convertToExitException(thrown);
     }
-    serviceExitCode = exitException.getExitCode();
-    serviceException = exitException;
+    noteException(exitException);
     return exitException;
   }
 
@@ -556,10 +581,9 @@ public class ServiceLauncher<S extends Service>
     Preconditions.checkArgument(!serviceClassName.isEmpty(), "undefined service classname");
     configuration = conf;
 
-    //Instantiate the class --this requires the service to have a public
-    // zero-argument constructor
+    // Instantiate the class. this requires the service to have a public
+    // zero-argument or string-argument constructor
     Object instance;
-    
     try {
       Class<?> serviceClass = getClassLoader().loadClass(serviceClassName);
       try {
@@ -791,7 +815,7 @@ public class ServiceLauncher<S extends Service>
     }
     List<String> coreArgs = args.subList(1, size);
 
-    return parseCommandArgs(conf, createOptions(), coreArgs);
+    return parseCommandArgs(conf, coreArgs);
   }
 
   public List<String> extractConfigurationArgs1(Configuration conf,
@@ -816,7 +840,7 @@ public class ServiceLauncher<S extends Service>
         if (index == size) {
           //overshot the end of the file
           exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-              ARG_CONF + ": missing configuration file");
+              ARG_CONF_PREFIXED + ": missing configuration file");
           // never called, but retained for completeness
           break;
         }
@@ -851,7 +875,7 @@ public class ServiceLauncher<S extends Service>
     if (!file.exists()) {
       // no configuration file
       exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-          ARG_CONF + ": configuration file not found: " + file);
+          ARG_CONF_PREFIXED + ": configuration file not found: " + file);
     } else {
       try {
         Configuration c = new Configuration(false);
@@ -861,7 +885,7 @@ public class ServiceLauncher<S extends Service>
       } catch (Exception e) {
         // this means that the file could not be parsed
         exitWithMessage(EXIT_COMMAND_ARGUMENT_ERROR,
-            ARG_CONF + ": configuration file not loadable: " + file);
+            ARG_CONF_PREFIXED + ": configuration file not loadable: " + file);
       }
     }
     return fileURL;
@@ -869,48 +893,54 @@ public class ServiceLauncher<S extends Service>
 
   /**
    * Parse the command arguments, extracting the service class as the last
-   * element of the list (after extracting all the rest)
+   * element of the list (after extracting all the rest).
+   *
+   * The field {@link #commandOptions} must already have been set.
    * @param conf configuration to use
-   * @param options custom options; pass in an empty Options if unused
    * @param args command line argument list
    * @return the remaining arguments
    * @throws ServiceLaunchException if processing of arguments failed
    */
-  @VisibleForTesting
-  public List<String> parseCommandArgs(Configuration conf, 
-      Options options,
+  protected List<String> parseCommandArgs(Configuration conf,
       List<String> args) {
+    Preconditions.checkNotNull(commandOptions,
+        "Command options have not been created");
     StringBuilder argString = new StringBuilder(args.size() * 32);
     for (String arg : args) {
-      LOG.debug(arg);
       argString.append("\"").append(arg).append("\" ");
     }
+    LOG.debug("Command line: {}", argString);
     try {
-      GenericOptionsParser parser;
       String[] argArray = args.toArray(new String[args.size()]);
       // parse this the standard way. This will
       // update the configuration in the parser, and potentially
       // patch the user credentials
-      parser = new GenericOptionsParser(conf, options, argArray);
+      GenericOptionsParser parser = createGenericOptionsParser(conf, argArray);
       if (!parser.isParseSuccessful()) {
         throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
             E_PARSE_FAILED + " %s", argString);
       }
       CommandLine line = parser.getCommandLine();
+      List<String> remainingArgs = Arrays.asList(parser.getRemainingArgs());
+      LOG.debug("Remaining arguments {}", remainingArgs);
 
       // Scan the list of configuration files
       // and bail out if they don't exist
       if (line.hasOption(ARG_CONF)) {
-        verifyConfigurationFilesExist(line.getOptionValues(ARG_CONF));
+        String[] filenames = line.getOptionValues(ARG_CONF);
+        LOG.debug("Configuration files {}", filenames);
+        verifyConfigurationFilesExist(filenames);
         // TODO: load configurations
       }
       if (line.hasOption(ARG_CONFCLASS)) {
         // new resources to instantiate as configurations
-        String[] confClassnames = line.getOptionValues(ARG_CONFCLASS);
-        confResources.addAll(Arrays.asList(confClassnames));
+        List<String> classnameList = Arrays.asList(
+            line.getOptionValues(ARG_CONFCLASS));
+        LOG.debug("Configuration classes {}", classnameList);
+        confResources.addAll(classnameList);
       }
-      // then extract the remainder
-      return Arrays.asList(parser.getRemainingArgs());
+      // return the remainder
+      return remainingArgs;
     } catch (IOException e) {
       // parsing problem: convert to a command argument error with
       // the original text
@@ -920,6 +950,18 @@ public class ServiceLauncher<S extends Service>
       throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
           E_PARSE_FAILED + " %s : %s", argString, e);
     }
+  }
+
+  /**
+   * Override point: create a generic options parser or subclass thereof.
+   * @param conf Hadoop configuration
+   * @param argArray array of arguments
+   * @return a generic options parser to parse the arguments
+   * @throws IOException on any failure
+   */
+  protected GenericOptionsParser createGenericOptionsParser(Configuration conf,
+      String[] argArray) throws IOException {
+    return new MinimalGenericOptionsParser(conf, commandOptions, argArray);
   }
 
   protected void verifyConfigurationFilesExist(String[] filenames) {
@@ -932,7 +974,7 @@ public class ServiceLauncher<S extends Service>
       if (!file.exists()) {
         // no configuration file
         throw new ServiceLaunchException(EXIT_COMMAND_ARGUMENT_ERROR,
-            "--" + ARG_CONF + ": configuration file not found: %s",
+            ARG_CONF_PREFIXED + ": configuration file not found: %s",
             file.getAbsolutePath());
       }
     }
@@ -1011,4 +1053,18 @@ public class ServiceLauncher<S extends Service>
     }
   }
 
+  /**
+   * A generic options parser which does not parse any of the traditional Hadoop options.
+   */
+  protected static class MinimalGenericOptionsParser extends GenericOptionsParser {
+    public MinimalGenericOptionsParser(Configuration conf, Options options, String[] args)
+        throws IOException {
+      super(conf, options, args);
+    }
+
+    @Override
+    protected Options buildGeneralOptions(Options opts) {
+      return opts;
+    }
+  }
 }
