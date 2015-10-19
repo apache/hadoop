@@ -1428,20 +1428,14 @@ public class Client {
       throw new IOException(e);
     }
 
-    boolean interrupted = false;
     synchronized (call) {
       while (!call.done) {
         try {
           call.wait();                           // wait for the result
         } catch (InterruptedException ie) {
-          // save the fact that we were interrupted
-          interrupted = true;
+          Thread.currentThread().interrupt();
+          throw new InterruptedIOException("Call interrupted");
         }
-      }
-
-      if (interrupted) {
-        // set the interrupt flag now that we are done waiting
-        Thread.currentThread().interrupt();
       }
 
       if (call.error != null) {

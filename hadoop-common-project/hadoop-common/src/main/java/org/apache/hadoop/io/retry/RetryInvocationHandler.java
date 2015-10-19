@@ -105,6 +105,10 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
         hasMadeASuccessfulCall = true;
         return ret;
       } catch (Exception ex) {
+        if (Thread.currentThread().isInterrupted()) {
+          // If interrupted, do not retry.
+          throw ex;
+        }
         boolean isIdempotentOrAtMostOnce = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
             .isAnnotationPresent(Idempotent.class);
