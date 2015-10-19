@@ -87,6 +87,9 @@ Release 2.7.4 - UNRELEASED
     operation on internal dirs.
     (Contributed by Tianyin Xiu via Brahma Reddy Battula)
 
+    HADOOP-12483. Maintain wrapped SASL ordering for postponed IPC responses.
+    (Daryn Sharp via yliu)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
