@@ -76,7 +76,9 @@ public class TestDataNodeVolumeFailureToleration {
 
   @After
   public void tearDown() throws Exception {
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   /**

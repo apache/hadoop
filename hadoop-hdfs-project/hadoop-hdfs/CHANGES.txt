@@ -2074,6 +2074,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9157. [OEV and OIV] : Unnecessary parsing for mandatory arguements if
     '-h' option is specified as the only option (nijel via vinayakumarb)
 
+    HDFS-9237. NPE at TestDataNodeVolumeFailureToleration#tearDown.
+    (Brahma Reddy Battula via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
