@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.slive.ArgumentParser.ParsedOutput;
 import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.fs.slive.DataVerifier.VerifyOutput;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,8 +63,7 @@ public class TestSlive {
 
   /** gets the test write location according to the coding guidelines */
   private static File getWriteLoc() {
-    String writeLoc = System.getProperty(TEST_DATA_PROP, "build/test/data/");
-    File writeDir = new File(writeLoc, "slive");
+    File writeDir = GenericTestUtils.getRandomizedTestDir();
     writeDir.mkdirs();
     return writeDir;
   }
