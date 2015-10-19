@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
@@ -184,6 +185,9 @@ public class LocatedBlock {
     }
     // Not present in loc, add it and go
     cachedList.add(loc);
+    Preconditions.checkArgument(cachedLocs != EMPTY_LOCS,
+        "Cached locations should only be added when having a backing"
+            + " disk replica!", loc, locs.length, Arrays.toString(locs));
     cachedLocs = cachedList.toArray(cachedLocs);
   }
 
