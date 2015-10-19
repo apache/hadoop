@@ -519,6 +519,10 @@ Release 2.8.0 - UNRELEASED
     YARN-4170. AM need to be notified with priority in AllocateResponse.
     (Sunil G via jianhe)
 
+    YARN-4267. Add additional logging to container launch implementations in
+    container-executor. (Sidharta Seethana via vvasudev)
+
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
