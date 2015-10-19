@@ -32,20 +32,20 @@ load hadoop-functions_test_helper
 
 @test "hadoop_common_slave_mode_execute (--slaves 1)" {
   run  hadoop_common_slave_mode_execute --slaves command
-  [ ${output} = command ]
+  [ "${output}" = "command" ]
 }
 
 @test "hadoop_common_slave_mode_execute (--slaves 2)" {
   run  hadoop_common_slave_mode_execute --slaves command1 command2
-  [ ${output} = "command1 command2" ]
+  [ "${output}" = "command1 command2" ]
 }
 
 @test "hadoop_common_slave_mode_execute (--hosts)" {
   run  hadoop_common_slave_mode_execute --hosts filename command
-  [ ${output} = command ]
+  [ "${output}" = "command" ]
 }
 
 @test "hadoop_common_slave_mode_execute (--hostnames 2)" {
   run  hadoop_common_slave_mode_execute --hostnames "host1,host2" command1 command2
-  [ ${output} = "command1 command2" ]
+  [ "${output}" = "command1 command2" ]
 }

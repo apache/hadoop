@@ -72,7 +72,7 @@ createdirs () {
    HADOOP_USER_CLASSPATH_FIRST=""
    hadoop_add_to_classpath_userpath
    echo ">${CLASSPATH}<"
-   [ ${CLASSPATH} = "${TMP}/foo" ]
+   [ "${CLASSPATH}" = "${TMP}/foo" ]
 }
 
 @test "hadoop_add_to_classpath_userpath (3+2 after)" {
@@ -83,7 +83,7 @@ createdirs () {
    HADOOP_USER_CLASSPATH_FIRST=""
    hadoop_add_to_classpath_userpath
    echo ">${CLASSPATH}<"
-   [ ${CLASSPATH} = "${TMP}/foo:${TMP}/bar:${TMP}/baz:${TMP}/new:${TMP}/old" ]
+   [ "${CLASSPATH}" = "${TMP}/foo:${TMP}/bar:${TMP}/baz:${TMP}/new:${TMP}/old" ]
 }
 
 @test "hadoop_add_to_classpath_userpath (3+2 before)" {
@@ -94,5 +94,5 @@ createdirs () {
    HADOOP_USER_CLASSPATH_FIRST="true"
    hadoop_add_to_classpath_userpath
    echo ">${CLASSPATH}<"
-   [ ${CLASSPATH} = "${TMP}/new:${TMP}/old:${TMP}/foo:${TMP}/bar:${TMP}/baz" ]
+   [ "${CLASSPATH}" = "${TMP}/new:${TMP}/old:${TMP}/foo:${TMP}/bar:${TMP}/baz" ]
 }
