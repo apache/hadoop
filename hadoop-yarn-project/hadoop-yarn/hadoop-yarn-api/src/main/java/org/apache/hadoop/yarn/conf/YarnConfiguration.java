@@ -1150,6 +1150,21 @@ public class YarnConfiguration extends Configuration {
       "KILL",
       "AUDIT_WRITE" };
 
+  /** Allow privileged containers. Use with extreme care. */
+  public static final String NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "privileged-containers.allowed";
+
+  /** Privileged containers are disabled by default. */
+  public static final boolean DEFAULT_NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS =
+      false;
+
+  /** ACL list for users allowed to run privileged containers. */
+  public static final String NM_DOCKER_PRIVILEGED_CONTAINERS_ACL =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "privileged-containers.acl";
+
+  /** Default list for users allowed to run privileged containers is empty. */
+  public static final String DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL = "";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
