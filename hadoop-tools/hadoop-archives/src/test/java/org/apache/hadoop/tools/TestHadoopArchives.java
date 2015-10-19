@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -776,8 +777,7 @@ public class TestHadoopArchives {
     final String fullHarPathStr = makeArchive();
 
     // make path to copy the file to:
-    final String tmpDir
-      = System.getProperty("test.build.data","build/test/data") + "/work-dir/har-fs-tmp";
+    final String tmpDir = GenericTestUtils.getTempPath("har-fs-tmp");
     final Path tmpPath = new Path(tmpDir);
     final LocalFileSystem localFs = FileSystem.getLocal(new Configuration());
     localFs.delete(tmpPath, true);
