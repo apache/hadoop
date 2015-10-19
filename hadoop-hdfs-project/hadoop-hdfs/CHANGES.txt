@@ -348,7 +348,8 @@ Trunk (Unreleased)
     HDFS-7673. synthetic load generator docs give incorrect/incomplete commands
     (Brahma Reddy Battula via aw)
 
-    HDFS-8332. DFS client API calls should check filesystem closed (Rakesh R via umamahesh)
+    HDFS-8332. DFS client API calls should check filesystem closed
+    (Rakesh R via umamahesh)
 
     HDFS-8412. Fix the test failures in HTTPFS. (umamahesh)
 
@@ -371,7 +372,7 @@ Trunk (Unreleased)
       directories ( Zhe Zhang via vinayakumarb )
 
       HDFS-7339. Representing striped block groups in NameNode with hierarchical
-      naming protocol ( Zhe Zhang )
+      naming protocol ( zhz )
 
       HDFS-7652. Process block reports for erasure coded blocks (Zhe Zhang)
 
