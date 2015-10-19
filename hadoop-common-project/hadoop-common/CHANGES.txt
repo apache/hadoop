@@ -1243,6 +1243,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10941. Proxy user verification NPEs if remote host is unresolvable.
     (Benoy Antony via stevel).
 
+    HADOOP-12483. Maintain wrapped SASL ordering for postponed IPC responses.
+    (Daryn Sharp via yliu)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
