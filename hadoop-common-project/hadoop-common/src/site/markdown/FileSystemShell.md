@@ -320,6 +320,10 @@ Exit Code:
 
 Returns 0 on success and -1 on error.
 
+Options:
+
+The -f option will overwrite the destination if it already exists.
+
 getfacl
 -------
 

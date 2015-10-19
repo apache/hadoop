@@ -191,11 +191,12 @@ class CopyCommands {
   public static class Get extends CommandWithDestination {
     public static final String NAME = "get";
     public static final String USAGE =
-      "[-p] [-ignoreCrc] [-crc] <src> ... <localdst>";
+      "[-f] [-p] [-ignoreCrc] [-crc] <src> ... <localdst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> " +
       "to the local name.  <src> is kept.  When copying multiple " +
       "files, the destination must be a directory. Passing " +
+      "-f overwrites the destination if it already exists and " +
       "-p preserves access and modification times, " +
       "ownership and the mode.\n";
 
@@ -203,11 +204,12 @@ class CopyCommands {
     protected void processOptions(LinkedList<String> args)
     throws IOException {
       CommandFormat cf = new CommandFormat(
-          1, Integer.MAX_VALUE, "crc", "ignoreCrc", "p");
+          1, Integer.MAX_VALUE, "crc", "ignoreCrc", "p", "f");
       cf.parse(args);
       setWriteChecksum(cf.getOpt("crc"));
       setVerifyChecksum(!cf.getOpt("ignoreCrc"));
       setPreserve(cf.getOpt("p"));
+      setOverwrite(cf.getOpt("f"));
       setRecursive(true);
       getLocalDestination(args);
     }
