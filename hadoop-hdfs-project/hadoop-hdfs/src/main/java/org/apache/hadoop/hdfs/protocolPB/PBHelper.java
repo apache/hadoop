@@ -187,7 +187,9 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelStorageTypeProto;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -1837,6 +1839,23 @@ public class PBHelper {
       protos.add(convertStorageType(types[i]));
     }
     return protos; 
+  }
+
+  // return IntelStorageTypeProto
+  public static int convertIntelStorageType(StorageType type) {
+    switch (type) {
+      case DISK:
+        return IntelStorageTypeProto.DISK;
+      case SSD:
+        return IntelStorageTypeProto.SSD;
+      case ARCHIVE:
+        return IntelStorageTypeProto.ARCHIVE;
+      case RAM_DISK:
+        return IntelStorageTypeProto.RAM_DISK;
+      default:
+        throw new IllegalStateException(
+            "BUG: IntelStorageType not found, type=" + type);
+    }
   }
 
   public static StorageTypeProto convertStorageType(StorageType type) {

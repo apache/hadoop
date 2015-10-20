@@ -1,5 +1,6 @@
 // automatically generated, do not modify
 package org.apache.hadoop.hdfs.server.flatbuffer;
+
 import java.nio.*;
 import java.lang.*;
 import java.util.*;
@@ -43,5 +44,6 @@ public final class IntelFileSummary extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelFileSummaryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

@@ -22,10 +22,13 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.updateBlocksMap;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeDirectory;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeFile;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -35,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
+import com.google.flatbuffers.FlatBufferBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
@@ -44,6 +48,10 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelFileSummary;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelINodeDirectory;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelSnapshot;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelSnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -395,16 +403,84 @@ public class FSImageFormatPBSnapshot {
   public final static class Saver {
     private final FSNamesystem fsn;
     private final FileSummary.Builder headers;
+    private final FlatBufferBuilder fbb;
     private final FSImageFormatProtobuf.Saver parent;
     private final SaveNamespaceContext context;
 
     public Saver(FSImageFormatProtobuf.Saver parent,
-        FileSummary.Builder headers, SaveNamespaceContext context,
+        FileSummary.Builder headers, FlatBufferBuilder fbb, SaveNamespaceContext context,
         FSNamesystem fsn) {
       this.parent = parent;
       this.headers = headers;
+      this.fbb = fbb;
       this.context = context;
       this.fsn = fsn;
+    }
+
+    /**
+     * save all the snapshottable directories and snapshots to fsimage
+     */
+    public void serializeIntelSnapshotSection(OutputStream out) throws IOException {
+      SnapshotManager sm = fsn.getSnapshotManager();
+
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      ByteBuffer byteBuffer = null;
+      IntelSnapshotSection.addSnapshotCounter(fbb, sm.getSnapshotCounter());
+      IntelSnapshotSection.addNumSnapshots(fbb, sm.getNumSnapshots());
+
+      INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
+      long[] data = new long[snapshottables.length];
+      for (int i = 0; i < data.length;i++) {
+        data[i] = snapshottables[i].getId();
+      }
+      int dir = IntelSnapshotSection.createSnapshottableDirVector(fbb, data);
+      IntelSnapshotSection.addSnapshottableDir(fbb, dir);
+      byteBuffer = fbb.dataBuffer();
+      int len = byteBuffer.capacity() - byteBuffer.position();
+      byte[] bytes = new byte[len];
+      byteBuffer.get(bytes);
+      DataOutputStream dos = new DataOutputStream(out);
+      dos.write(len);
+      dos.write(bytes);
+      dos.flush();
+      int i = 0;
+      FlatBufferBuilder fbb1 = new FlatBufferBuilder();
+      ByteBuffer byteBuffer1 = null;
+      for(INodeDirectory sdir : snapshottables) {
+        for (Snapshot s : sdir.getDirectorySnapshottableFeature()
+            .getSnapshotList()) {
+          Root sroot = s.getRoot();
+
+
+          IntelSnapshot.addSnapshotId(fbb1, s.getId());
+//          SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
+//              .newBuilder().setSnapshotId(s.getId());
+
+          IntelINodeDirectory id = buildIntelINodeDirectory(sroot, parent.getSaverContext());
+
+//          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
+//              parent.getSaverContext());
+
+
+          INodeSection.INode r = INodeSection.INode.newBuilder()
+              .setId(sroot.getId())
+              .setType(INodeSection.INode.Type.DIRECTORY)
+              .setName(ByteString.copyFrom(sroot.getLocalNameBytes()))
+              .setDirectory(db).build();
+
+
+
+
+
+          sb.setRoot(r).build().writeDelimitedTo(out);
+          i++;
+          if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+            context.checkCancelled();
+          }
+        }
+      }
+      Preconditions.checkState(i == sm.getNumSnapshots());
+      parent.commitSection(headers, FSImageFormatProtobuf.SectionName.SNAPSHOT);
     }
 
     /**
@@ -426,6 +502,7 @@ public class FSImageFormatPBSnapshot {
         for (Snapshot s : sdir.getDirectorySnapshottableFeature()
             .getSnapshotList()) {
           Root sroot = s.getRoot();
+
           SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());
           INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,

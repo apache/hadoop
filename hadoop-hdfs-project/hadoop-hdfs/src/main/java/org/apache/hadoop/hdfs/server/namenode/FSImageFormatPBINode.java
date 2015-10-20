@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.flatbuffers.FlatBufferBuilder;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -46,6 +50,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstructionContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.flatbuffer.*;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
@@ -454,19 +459,42 @@ public final class FSImageFormatPBINode {
       
       return b;
     }
+    // rewrite by minglei
+    private static IntelQuotaByStorageTypeFeatureProto
+      buildIntelQuotaByStorageTypeEntries(QuotaCounts q)
+    {
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+
+      for (StorageType t: StorageType.getTypesSupportingQuota())
+      {
+        if (q.getTypeSpace(t) >= 0) {
+          int storageType = PBHelper.convertIntelStorageType(t);
+          long quota = q.getTypeSpace(t);
+          int quotasOffset = IntelQuotaByStorageTypeEntryProto.createIntelQuotaByStorageTypeEntryProto(fbb, storageType, quota);
+          IntelQuotaByStorageTypeFeatureProto.addQuotas(fbb, quotasOffset);
+        }
+      }
+      ByteBuffer byteBuffer = fbb.dataBuffer();
+      return IntelQuotaByStorageTypeFeatureProto.getRootAsIntelQuotaByStorageTypeFeatureProto(byteBuffer);
+    }
 
     private static QuotaByStorageTypeFeatureProto.Builder
-        buildQuotaByStorageTypeEntries(QuotaCounts q) {
-      QuotaByStorageTypeFeatureProto.Builder b =
-          QuotaByStorageTypeFeatureProto.newBuilder();
-      for (StorageType t: StorageType.getTypesSupportingQuota()) {
-        if (q.getTypeSpace(t) >= 0) {
-          QuotaByStorageTypeEntryProto.Builder eb =
-              QuotaByStorageTypeEntryProto.newBuilder().
-              setStorageType(PBHelper.convertStorageType(t)).
-              setQuota(q.getTypeSpace(t));
-          b.addQuotas(eb);
-        }
+      buildQuotaByStorageTypeEntries(QuotaCounts q) {
+
+        QuotaByStorageTypeFeatureProto.Builder b =
+            QuotaByStorageTypeFeatureProto.newBuilder();
+
+        for (StorageType t: StorageType.getTypesSupportingQuota())
+        {
+          if (q.getTypeSpace(t) >= 0) {
+            QuotaByStorageTypeEntryProto.Builder eb =
+                QuotaByStorageTypeEntryProto.newBuilder().
+
+                setStorageType(PBHelper.convertStorageType(t)).
+                setQuota(q.getTypeSpace(t));
+
+            b.addQuotas(eb);
+          }
       }
       return b;
     }
@@ -492,9 +520,56 @@ public final class FSImageFormatPBINode {
       return b;
     }
 
+    public static IntelINodeDirectory buildIntelINodeDirectory(
+        INodeDirectoryAttributes dir, final SaverContext state) {
+      QuotaCounts quota = dir.getQuotaCounts();
+
+
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      ByteBuffer byteBuffer = null;
+      IntelINodeDirectory.addModificationTime(fbb, dir.getModificationTime());
+      IntelINodeDirectory.addNsQuota(fbb, quota.getNameSpace());
+      IntelINodeDirectory.addDsQuota(fbb, quota.getStorageSpace());
+      IntelINodeDirectory.addPermission(fbb, buildPermissionStatus(dir, state.getStringMap()));
+
+
+//      INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
+//          .newBuilder().setModificationTime(dir.getModificationTime())
+//          .setNsQuota(quota.getNameSpace())
+//          .setDsQuota(quota.getStorageSpace())
+//          .setPermission(buildPermissionStatus(dir, state.getStringMap()));
+
+      if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
+//        b.setTypeQuotas(buildQuotaByStorageTypeEntries(quota));
+
+
+        IntelQuotaByStorageTypeEntryProto.createIntelQuotaByStorageTypeEntryProto()
+
+        int typeQuotasOffset = IntelQuotaByStorageTypeFeatureProto.
+            createIntelQuotaByStorageTypeFeatureProto(fbb, );
+
+        IntelINodeDirectory.addTypeQuotas(fbb, typeQuotasOffset);
+
+      }
+
+      AclFeature f = dir.getAclFeature();
+      if (f != null) {
+        b.setAcl(buildAclEntries(f, state.getStringMap()));
+
+        int aclOffset = ;
+        IntelINodeDirectory.addAcl(fbb, aclOffset);
+      }
+      XAttrFeature xAttrFeature = dir.getXAttrFeature();
+      if (xAttrFeature != null) {
+        b.setXAttrs(buildXAttrs(xAttrFeature, state.getStringMap()));
+      }
+      return b;
+    }
+
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
         INodeDirectoryAttributes dir, final SaverContext state) {
       QuotaCounts quota = dir.getQuotaCounts();
+
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.getNameSpace())
@@ -520,15 +595,79 @@ public final class FSImageFormatPBINode {
     private final FileSummary.Builder summary;
     private final SaveNamespaceContext context;
     private final FSImageFormatProtobuf.Saver parent;
+    private final FlatBufferBuilder fbb;
 
-    Saver(FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary) {
+
+    Saver(FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary,FlatBufferBuilder fbb) {
       this.parent = parent;
       this.summary = summary;
       this.context = parent.getContext();
       this.fsn = context.getSourceNamesystem();
+      this.fbb = fbb;
     }
 
-    void serializeINodeDirectorySection(OutputStream out) throws IOException {
+    void serializeIntelINodeDirectorySection(OutputStream out) throws IOException {
+      FlatBufferBuilder fbb = null;
+      Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
+          .getINodeMap().getMapIterator();
+      final ArrayList<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
+      int i = 0;
+      while (iter.hasNext()) {
+        INodeWithAdditionalFields n = iter.next();
+        if (!n.isDirectory()) {
+          continue;
+        }
+
+        ReadOnlyList<INode> children = n.asDirectory().getChildrenList(
+            Snapshot.CURRENT_STATE_ID);
+
+        if (children.size() > 0) {
+
+          INodeDirectorySection.DirEntry.Builder b = INodeDirectorySection.
+              DirEntry.newBuilder().setParent(n.getId());
+          // rewrite
+          fbb = new FlatBufferBuilder();
+          ByteBuffer byteBuffer = null;
+          IntelDirEntry.addParent(fbb, n.getId());
+          ArrayList<Long> data = new ArrayList<Long>();
+          ArrayList<Integer> data1 = new ArrayList<Integer>();
+
+          for (int i1 = 0; i1< children.size() ; i1++){
+            if (!children.get(i1).isReference()) {
+              data.add(children.get(i1).getId());
+            } else {
+              refList.add(children.get(i1).asReference());
+              data1.add(refList.size() - 1);
+            }
+          }
+          int childrenOffset = IntelDirEntry.createChildrenVector
+              (fbb, ArrayUtils.toPrimitive(data.toArray(new Long[children.size()])));
+          IntelDirEntry.addChildren(fbb, childrenOffset);
+
+          int refChildrenOffset = IntelDirEntry.createRefChildrenVector
+              (fbb, ArrayUtils.toPrimitive(data1.toArray(new Integer[children.size()])));
+          IntelDirEntry.addRefChildren(fbb, refChildrenOffset);
+          IntelDirEntry.endIntelDirEntry(fbb);
+          byteBuffer = fbb.dataBuffer();
+          int serializedLength = byteBuffer.capacity() - byteBuffer.position();
+          byte[] bytes = new byte[serializedLength];
+          byteBuffer.get(bytes);
+          DataOutputStream dos = new DataOutputStream(out);
+          dos.write(serializedLength);
+          dos.write(bytes);
+          dos.flush();
+        }
+
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
+      }
+        parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE_DIR, fbb);
+    }
+
+      void serializeINodeDirectorySection(OutputStream out) throws IOException {
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
       final ArrayList<INodeReference> refList = parent.getSaverContext()
@@ -562,8 +701,39 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
       }
-      parent.commitSection(summary,
-          FSImageFormatProtobuf.SectionName.INODE_DIR);
+        parent.commitSection(summary,
+            FSImageFormatProtobuf.SectionName.INODE_DIR);
+    }
+
+    void serializeIntelINodeSection(OutputStream out) throws IOException {
+      INodeMap inodesMap = fsn.dir.getINodeMap();
+
+      FlatBufferBuilder fbb = new FlatBufferBuilder();
+      IntelINodeSection.startIntelINodeSection(fbb);
+      IntelINodeSection.addLastInodeId(fbb, fsn.dir.getLastInodeId());
+      IntelINodeSection.addNumInodes(fbb, inodesMap.size());
+      IntelINodeSection.endIntelINodeSection(fbb);
+
+      ByteBuffer byteBuffer = fbb.dataBuffer();
+      int len = byteBuffer.capacity() - byteBuffer.position();
+      byte[] bytes = new byte[len];
+      byteBuffer.get(bytes);
+      DataOutputStream dos = new DataOutputStream(out);
+      dos.write(len);
+      dos.write(bytes);
+      dos.flush();
+
+      int i = 0;
+      Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
+      while (iter.hasNext()) {
+        INodeWithAdditionalFields n = iter.next();
+        save(out, n);
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
+      }
+      parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE, fbb);
     }
 
     void serializeINodeSection(OutputStream out) throws IOException {
@@ -585,6 +755,39 @@ public final class FSImageFormatPBINode {
         }
       }
       parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
+    }
+
+    void serializeIntelFilesUCSection(OutputStream out) throws IOException {
+      Collection<Long> filesWithUC = fsn.getLeaseManager()
+          .getINodeIdWithLeases();
+      for (Long id : filesWithUC) {
+        INode inode = fsn.getFSDirectory().getInode(id);
+        if (inode == null) {
+          LOG.warn("Fail to find inode " + id + " when saving the leases.");
+          continue;
+        }
+        INodeFile file = inode.asFile();
+        if (!file.isUnderConstruction()) {
+          LOG.warn("Fail to save the lease for inode id " + id
+              + " as the file is not under construction");
+          continue;
+        }
+        String path = file.getFullPathName();
+
+        FlatBufferBuilder fbb = new FlatBufferBuilder();
+        IntelFileUnderConstructionEntry.addInodeId(fbb, file.getId());
+        IntelFileUnderConstructionEntry.addFullPath(fbb, fbb.createString(path));
+        ByteBuffer byteBuffer = fbb.dataBuffer();
+        int serializedLength = byteBuffer.capacity() - byteBuffer.position();
+        byte[] bytes = new byte[serializedLength];
+        byteBuffer.get(bytes);
+        DataOutputStream dos = new DataOutputStream(out);
+        dos.write(serializedLength);
+        dos.write(bytes);
+        dos.flush();
+      }
+      parent.commitIntelSection(
+          FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);
     }
 
     void serializeFilesUCSection(OutputStream out) throws IOException {
