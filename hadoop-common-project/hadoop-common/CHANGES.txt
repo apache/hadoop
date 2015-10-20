@@ -31,6 +31,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-10980. TestActiveStandbyElector fails occasionally in trunk
     (Eric Badger via jlowe)
 
+    HADOOP-12418. TestRPC.testRPCInterruptedSimple fails intermittently.
+    (kihwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -177,8 +180,6 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-13312. Updated CHANGES.txt to reflect all the changes in branch-2.7.
     (Akira Ajisaka via vinodkv)
-
-Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
 

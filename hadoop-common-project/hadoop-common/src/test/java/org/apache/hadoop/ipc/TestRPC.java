@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.Closeable;
+import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -881,11 +882,13 @@ public class TestRPC {
       proxy.ping();
       fail("Interruption did not cause IPC to fail");
     } catch (IOException ioe) {
-      if (!ioe.toString().contains("InterruptedException")) {
-        throw ioe;
+      if (ioe.toString().contains("InterruptedException") ||
+          ioe instanceof InterruptedIOException) {
+        // clear interrupt status for future tests
+        Thread.interrupted();
+        return;
       }
-      // clear interrupt status for future tests
-      Thread.interrupted();
+      throw ioe;
     } finally {
       server.stop();
     }
