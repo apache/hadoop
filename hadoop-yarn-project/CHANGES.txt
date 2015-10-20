@@ -235,6 +235,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2556. Tool to measure the performance of the timeline server (Chang Li
     via sjlee)
 
+    YARN-4262. Allow whitelisted users to run privileged docker containers.
+    (Sidharta Seethana via vvasudev)
+
   IMPROVEMENTS
 
     YARN-644. Basic null check is not performed on passed in arguments before
@@ -515,6 +518,10 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4170. AM need to be notified with priority in AllocateResponse.
     (Sunil G via jianhe)
+
+    YARN-4267. Add additional logging to container launch implementations in
+    container-executor. (Sidharta Seethana via vvasudev)
+
 
   OPTIMIZATIONS
 

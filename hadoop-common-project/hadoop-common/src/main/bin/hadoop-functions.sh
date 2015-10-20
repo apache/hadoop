@@ -512,7 +512,10 @@ function hadoop_basic_init
     exit 1
   fi
 
+  # if for some reason the shell doesn't have $USER defined
+  # let's define it as 'hadoop'
   HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
+  HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-hadoop}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_PREFIX}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
   HADOOP_LOGLEVEL=${HADOOP_LOGLEVEL:-INFO}
@@ -963,7 +966,9 @@ function hadoop_add_to_classpath_userpath
       array[${c}]=${idx}
       ((c=c+1))
     done
-    ((j=c-1))
+
+    # bats gets confused by j getting set to 0
+    ((j=c-1)) || ${QATESTMODE}
 
     if [[ -z "${HADOOP_USE_CLIENT_CLASSLOADER}" ]]; then
       if [[ -z "${HADOOP_USER_CLASSPATH_FIRST}" ]]; then

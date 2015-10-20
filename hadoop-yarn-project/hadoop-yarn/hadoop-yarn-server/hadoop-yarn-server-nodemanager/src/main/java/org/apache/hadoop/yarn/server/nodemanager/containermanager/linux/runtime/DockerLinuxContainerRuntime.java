@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -67,11 +69,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE";
-
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER =
+      "YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER";
 
   private Configuration conf;
   private DockerClient dockerClient;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private AccessControlList privilegedContainersAcl;
 
   public static boolean isDockerContainerRequested(
       Map<String, String> env) {
@@ -94,6 +99,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     this.conf = conf;
     dockerClient = new DockerClient(conf);
+    privilegedContainersAcl = new AccessControlList(conf.get(
+        YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
+        YarnConfiguration.DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL));
   }
 
   @Override
@@ -133,6 +141,70 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         throw new ContainerExecutionException(e);
       }
     }
+  }
+
+  private boolean allowPrivilegedContainerExecution(Container container)
+      throws ContainerExecutionException {
+    //For a privileged container to be run all of the following three conditions
+    // must be satisfied:
+    //1) Submitting user must request for a privileged container
+    //2) Privileged containers must be enabled on the cluster
+    //3) Submitting user must be whitelisted to run a privileged container
+
+    Map<String, String> environment = container.getLaunchContext()
+        .getEnvironment();
+    String runPrivilegedContainerEnvVar = environment
+        .get(ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER);
+
+    if (runPrivilegedContainerEnvVar == null) {
+      return false;
+    }
+
+    if (!runPrivilegedContainerEnvVar.equalsIgnoreCase("true")) {
+      LOG.warn("NOT running a privileged container. Value of " +
+          ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER
+          + "is invalid: " + runPrivilegedContainerEnvVar);
+      return false;
+    }
+
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Privileged container requested for : " + container
+          .getContainerId().toString());
+    }
+
+    //Ok, so we have been asked to run a privileged container. Security
+    // checks need to be run. Each violation is an error.
+
+    //check if privileged containers are enabled.
+    boolean privilegedContainersEnabledOnCluster = conf.getBoolean(
+        YarnConfiguration.NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS,
+            YarnConfiguration.DEFAULT_NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS);
+
+    if (!privilegedContainersEnabledOnCluster) {
+      String message = "Privileged container being requested but privileged "
+          + "containers are not enabled on this cluster";
+      LOG.warn(message);
+      throw new ContainerExecutionException(message);
+    }
+
+    //check if submitting user is in the whitelist.
+    String submittingUser = container.getUser();
+    UserGroupInformation submitterUgi = UserGroupInformation
+        .createRemoteUser(submittingUser);
+
+    if (!privilegedContainersAcl.isUserAllowed(submitterUgi)) {
+      String message = "Cannot launch privileged container. Submitting user ("
+          + submittingUser + ") fails ACL check.";
+      LOG.warn(message);
+      throw new ContainerExecutionException(message);
+    }
+
+    if (LOG.isInfoEnabled()) {
+      LOG.info("All checks pass. Launching privileged container for : "
+          + container.getContainerId().toString());
+    }
+
+    return true;
   }
 
 
@@ -176,6 +248,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     allDirs.addAll(logDirs);
     for (String dir: allDirs) {
       runCommand.addMountLocation(dir, dir);
+    }
+
+    if (allowPrivilegedContainerExecution(container)) {
+      runCommand.setPrivileged();
     }
 
     String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);

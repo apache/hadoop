@@ -69,7 +69,7 @@ check_var_values () {
     eval ${j}=${i}
     hadoop_basic_init
     echo "Verifying $j has >${i}< >${!j}<"
-    [ ${!j} = ${i} ]
+    [ "${!j}" = "${i}" ]
   done
 }
 
@@ -89,6 +89,6 @@ check_var_values () {
     hadoop_basic_init
     check_var_values
     echo "Verifying $j has foo >${!j}<"
-    [ ${j} = foo ]
+    [ "${j}" = "foo" ]
   done
 }

@@ -69,6 +69,12 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  /* Run a privileged container. Use with extreme care */
+  public DockerRunCommand setPrivileged() {
+    super.addCommandArguments("--privileged");
+    return this;
+  }
+
   public DockerRunCommand setCapabilities(Set<String> capabilties) {
     //first, drop all capabilities
     super.addCommandArguments("--cap-drop=ALL");
