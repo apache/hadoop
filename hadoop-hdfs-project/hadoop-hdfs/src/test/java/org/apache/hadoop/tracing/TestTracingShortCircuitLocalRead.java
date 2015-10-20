@@ -19,6 +19,7 @@ package org.apache.hadoop.tracing;
 
 import static org.junit.Assume.assumeTrue;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -74,7 +75,8 @@ public class TestTracingShortCircuitLocalRead {
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
-        "testShortCircuitTraceHooks._PORT");
+        new File(sockDir.getDir(),
+            "testShortCircuitTraceHooks._PORT.sock").getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1)
