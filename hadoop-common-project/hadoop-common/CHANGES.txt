@@ -1324,6 +1324,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12474. MiniKMS should use random ports for Jetty server by default.
     (Mingliang Liu via wheat9)
 
+    HADOOP-12418. TestRPC.testRPCInterruptedSimple fails intermittently.
+    (kihwal)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
