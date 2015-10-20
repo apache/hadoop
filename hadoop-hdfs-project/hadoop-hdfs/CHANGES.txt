@@ -2081,6 +2081,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9237. NPE at TestDataNodeVolumeFailureToleration#tearDown.
     (Brahma Reddy Battula via ozawa)
 
+    HDFS-9208. Disabling atime may fail clients like distCp. (Kihwal Lee via
+    yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
