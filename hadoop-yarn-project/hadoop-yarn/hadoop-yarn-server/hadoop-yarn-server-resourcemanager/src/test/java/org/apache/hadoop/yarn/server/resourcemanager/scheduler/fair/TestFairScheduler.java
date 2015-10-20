@@ -760,6 +760,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Now queue 2 requests likewise
     ApplicationAttemptId attId = createSchedulingRequest(1024, "queue2", "user1", 1);
+
     scheduler.update();
     scheduler.handle(updateEvent);
 
@@ -787,6 +788,197 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
     assertEquals(0, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemory());
 
+  }
+
+  @Test (timeout = 5000)
+  public void testOffSwitchAppReservationThreshold() throws Exception {
+    conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 0.50f);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add three node
+    RMNode node1 =
+            MockNodes
+                    .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 =
+            MockNodes
+                    .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    RMNode node3 =
+            MockNodes
+                    .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.3");
+    NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
+    scheduler.handle(nodeEvent3);
+
+
+    // Ensure capacity on all nodes are allocated
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+
+    // Verify capacity allocation
+    assertEquals(6144, scheduler.getQueueManager().getQueue("queue1").
+            getResourceUsage().getMemory());
+
+    // Create new app with a resource request that can be satisfied by any
+    // node but would be
+    ApplicationAttemptId attId = createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+
+    assertEquals(1,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    assertEquals(2,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+
+    // No new reservations should happen since it exceeds threshold
+    assertEquals(2,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+
+    // Add 1 more node
+    RMNode node4 =
+            MockNodes
+                    .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.4");
+    NodeAddedSchedulerEvent nodeEvent4 = new NodeAddedSchedulerEvent(node4);
+    scheduler.handle(nodeEvent4);
+
+    // New node satisfies resource request
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node4));
+    assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
+            getResourceUsage().getMemory());
+
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+    scheduler.update();
+
+    // Verify number of reservations have decremented
+    assertEquals(0,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+  }
+
+  @Test (timeout = 5000)
+  public void testRackLocalAppReservationThreshold() throws Exception {
+    conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 0.50f);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add four node
+    RMNode node1 =
+            MockNodes
+                    .newNodeInfo(1, Resources.createResource(3072), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // These 3 on different rack
+    RMNode node2 =
+            MockNodes
+                    .newNodeInfo(2, Resources.createResource(3072), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    RMNode node3 =
+            MockNodes
+                    .newNodeInfo(2, Resources.createResource(3072), 1, "127.0.0.3");
+    NodeAddedSchedulerEvent nodeEvent3 = new NodeAddedSchedulerEvent(node3);
+    scheduler.handle(nodeEvent3);
+
+    RMNode node4 =
+            MockNodes
+                    .newNodeInfo(2, Resources.createResource(3072), 1, "127.0.0.4");
+    NodeAddedSchedulerEvent nodeEvent4 = new NodeAddedSchedulerEvent(node4);
+    scheduler.handle(nodeEvent4);
+
+    // Ensure capacity on all nodes are allocated
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+    createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node4));
+
+    // Verify capacity allocation
+    assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
+            getResourceUsage().getMemory());
+
+    // Create new app with a resource request that can be satisfied by any
+    // node but would be
+    ApplicationAttemptId attemptId =
+            createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    createMockRMApp(attemptId);
+
+    scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
+            false);
+    scheduler.addApplicationAttempt(attemptId, false, false);
+    List<ResourceRequest> asks = new ArrayList<ResourceRequest>();
+    asks.add(createResourceRequest(2048, node2.getRackName(), 1, 1, false));
+
+    scheduler.allocate(attemptId, asks, new ArrayList<ContainerId>(), null,
+            null, null, null);
+
+    ApplicationAttemptId attId = createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+
+    assertEquals(1,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    assertEquals(2,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+
+    // No new reservations should happen since it exceeds threshold
+    assertEquals(2,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
+
+    // Add 1 more node
+    RMNode node5 =
+            MockNodes
+                    .newNodeInfo(2, Resources.createResource(3072), 1, "127.0.0.4");
+    NodeAddedSchedulerEvent nodeEvent5 = new NodeAddedSchedulerEvent(node5);
+    scheduler.handle(nodeEvent5);
+
+    // New node satisfies resource request
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node4));
+    assertEquals(10240, scheduler.getQueueManager().getQueue("queue1").
+            getResourceUsage().getMemory());
+
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node3));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node4));
+    scheduler.update();
+
+    // Verify number of reservations have decremented
+    assertEquals(0,
+            scheduler.getSchedulerApp(attId).getNumReservations(null, true));
   }
 
   @Test (timeout = 500000)

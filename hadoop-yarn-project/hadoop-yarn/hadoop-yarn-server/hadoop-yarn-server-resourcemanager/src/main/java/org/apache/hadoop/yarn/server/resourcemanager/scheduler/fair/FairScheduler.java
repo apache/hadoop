@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -180,7 +181,13 @@ public class FairScheduler extends
   
   // Containers whose AMs have been warned that they will be preempted soon.
   private List<RMContainer> warnedContainers = new ArrayList<RMContainer>();
-  
+
+  private float reservableNodesRatio; // percentage of available nodes
+                                      // an app can be reserved on
+
+  // Count of number of nodes per rack
+  private Map<String, Integer> nodesPerRack = new ConcurrentHashMap<>();
+
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
   protected boolean continuousSchedulingEnabled; // Continuous Scheduling enabled or not
@@ -261,6 +268,14 @@ public class FairScheduler extends
 
   public FairSchedulerConfiguration getConf() {
     return conf;
+  }
+
+  public int getNumNodesInRack(String rackName) {
+    String rName = rackName == null ? "NULL" : rackName;
+    if (nodesPerRack.containsKey(rName)) {
+      return nodesPerRack.get(rName);
+    }
+    return 0;
   }
 
   public QueueManager getQueueManager() {
@@ -870,6 +885,12 @@ public class FairScheduler extends
       RMNode node) {
     FSSchedulerNode schedulerNode = new FSSchedulerNode(node, usePortForNodeName);
     nodes.put(node.getNodeID(), schedulerNode);
+    String rackName = node.getRackName() == null ? "NULL" : node.getRackName();
+    if (nodesPerRack.containsKey(rackName)) {
+      nodesPerRack.put(rackName, nodesPerRack.get(rackName) + 1);
+    } else {
+      nodesPerRack.put(rackName, 1);
+    }
     Resources.addTo(clusterResource, node.getTotalCapability());
     updateMaximumAllocation(schedulerNode, true);
 
@@ -916,6 +937,14 @@ public class FairScheduler extends
     }
 
     nodes.remove(rmNode.getNodeID());
+    String rackName = node.getRackName() == null ? "NULL" : node.getRackName();
+    if (nodesPerRack.containsKey(rackName)
+            && (nodesPerRack.get(rackName) > 0)) {
+      nodesPerRack.put(rackName, nodesPerRack.get(rackName) - 1);
+    } else {
+      LOG.error("Node [" + rmNode.getNodeAddress() + "] being removed from" +
+              " unknown rack [" + rackName + "] !!");
+    }
     queueMgr.getRootQueue().setSteadyFairShare(clusterResource);
     queueMgr.getRootQueue().recomputeSteadyShares();
     updateMaximumAllocation(node, false);
@@ -1367,6 +1396,7 @@ public class FairScheduler extends
       preemptionInterval = this.conf.getPreemptionInterval();
       waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
       usePortForNodeName = this.conf.getUsePortForNodeName();
+      reservableNodesRatio = this.conf.getReservableNodes();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {
@@ -1746,5 +1776,9 @@ public class FairScheduler extends
       SchedContainerChangeRequest decreaseRequest,
       SchedulerApplicationAttempt attempt) {
     // TODO Auto-generated method stub    
+  }
+
+  public float getReservableNodesRatio() {
+    return reservableNodesRatio;
   }
 }

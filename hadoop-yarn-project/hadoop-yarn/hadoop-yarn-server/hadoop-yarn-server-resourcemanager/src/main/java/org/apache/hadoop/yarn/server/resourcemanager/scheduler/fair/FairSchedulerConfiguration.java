@@ -137,6 +137,11 @@ public class FairSchedulerConfiguration extends Configuration {
       CONF_PREFIX + "update-interval-ms";
   public static final int DEFAULT_UPDATE_INTERVAL_MS = 500;
 
+  /** Ratio of nodes available for an app to make an reservation on. */
+  public static final String RESERVABLE_NODES =
+          CONF_PREFIX + "reservable-nodes";
+  public static final float RESERVABLE_NODES_DEFAULT = 0.05f;
+
   public FairSchedulerConfiguration() {
     super();
   }
@@ -245,6 +250,10 @@ public class FairSchedulerConfiguration extends Configuration {
   public boolean getUsePortForNodeName() {
     return getBoolean(YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME);
+  }
+
+  public float getReservableNodes() {
+    return getFloat(RESERVABLE_NODES, RESERVABLE_NODES_DEFAULT);
   }
 
   /**

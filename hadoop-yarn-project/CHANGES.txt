@@ -967,6 +967,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4155. TestLogAggregationService.testLogAggregationServiceWithInterval failing
     (Bibin A Chundatt via stevel)
 
+    YARN-4270. Limit application resource reservation on nodes for non-node/rack
+    specific requests (asuresh)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
