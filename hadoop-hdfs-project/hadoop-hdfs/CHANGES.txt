@@ -2087,6 +2087,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9208. Disabling atime may fail clients like distCp. (Kihwal Lee via
     yliu)
 
+    HDFS-9270. TestShortCircuitLocalRead should not leave socket after unit
+    test (Masatake Iwasaki via Colin P. McCabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

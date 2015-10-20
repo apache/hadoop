@@ -389,7 +389,8 @@ public class TestShortCircuitLocalRead {
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
-        "/tmp/testSkipWithVerifyChecksum._PORT");
+        new File(sockDir.getDir(),
+            "testSkipWithVerifyChecksum._PORT.sock").getAbsolutePath());
     DomainSocket.disableBindPathValidation();
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
@@ -435,7 +436,8 @@ public class TestShortCircuitLocalRead {
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
-        "/tmp/testHandleTruncatedBlockFile._PORT");
+        new File(sockDir.getDir(),
+            "testHandleTruncatedBlockFile._PORT.sock").getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
     final Path TEST_PATH = new Path("/a");
     final Path TEST_PATH2 = new Path("/b");
