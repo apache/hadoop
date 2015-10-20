@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.TestableZooKeeper;
@@ -321,22 +322,12 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         return tmpDir;
     }
 
-    private static int getPort(String hostPort) {
-        String[] split = hostPort.split(":");
-        String portstr = split[split.length-1];
-        String[] pc = portstr.split("/");
-        if (pc.length > 1) {
-            portstr = pc[0];
-        }
-        return Integer.parseInt(portstr);
-    }
-
     static ServerCnxnFactory createNewServerInstance(File dataDir,
             ServerCnxnFactory factory, String hostPort, int maxCnxns)
         throws IOException, InterruptedException
     {
         ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
-        final int PORT = getPort(hostPort);
+        final int PORT = NetUtils.getPortFromHostPort(hostPort);
         if (factory == null) {
             factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
         }
@@ -364,7 +355,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
             } catch (IOException ie) {
                 LOG.warn("Error closing logs ", ie);
             }
-            final int PORT = getPort(hostPort);
+            final int PORT = NetUtils.getPortFromHostPort(hostPort);
 
             Assert.assertTrue("waiting for server down",
                        ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + PORT,

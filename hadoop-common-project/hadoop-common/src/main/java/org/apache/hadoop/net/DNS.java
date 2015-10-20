@@ -19,6 +19,7 @@
 package org.apache.hadoop.net;
 
 import com.google.common.net.InetAddresses;
+import com.google.common.annotations.VisibleForTesting;
 import com.sun.istack.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import java.net.InetAddress;
+import java.net.Inet6Address;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -74,21 +76,22 @@ public class DNS {
    */
   public static String reverseDns(InetAddress hostIp, @Nullable String ns)
     throws NamingException {
-    //
-    // Builds the reverse IP lookup form
-    // This is formed by reversing the IP numbers and appending in-addr.arpa
-    //
-    String[] parts = hostIp.getHostAddress().split("\\.");
-    String reverseIP = parts[3] + "." + parts[2] + "." + parts[1] + "."
-      + parts[0] + ".in-addr.arpa";
+    String dnsQueryAddress;
+    if (hostIp instanceof Inet6Address) {
+      dnsQueryAddress = getIPv6DnsAddr((Inet6Address)hostIp, ns);
+    } else {
+      dnsQueryAddress = getIPv4DnsAddr(hostIp, ns);
+    }
+    LOG.info("Querying using DNS address: " + dnsQueryAddress);
 
     DirContext ictx = new InitialDirContext();
     Attributes attribute;
     try {
-      attribute = ictx.getAttributes("dns://"               // Use "dns:///" if the default
+      // Use "dns:///" if the default
+      // nameserver is to be used
+      attribute = ictx.getAttributes("dns://"
                          + ((ns == null) ? "" : ns) +
-                         // nameserver is to be used
-                         "/" + reverseIP, new String[] { "PTR" });
+                         "/" + dnsQueryAddress, new String[] { "PTR" });
     } finally {
       ictx.close();
     }
@@ -101,17 +104,52 @@ public class DNS {
     return hostname;
   }
 
+  private static String getIPv4DnsAddr(InetAddress hostIp, @Nullable String ns)
+    throws NamingException {
+    String ipString = hostIp.getHostAddress();
+    LOG.info("Doing reverse DNS lookup for IPv4 address: " + ipString);
+    String[] parts = ipString.split("\\.");
+    if (parts.length != 4) {
+      throw new NamingException("Invalid IPv4 address " + ipString);
+    }
+
+    return parts[3] + "." + parts[2] + "." + parts[1] + "."
+      + parts[0] + ".in-addr.arpa";
+  }
+
+  @VisibleForTesting
+  public static String getIPv6DnsAddr(Inet6Address hostIp, @Nullable String ns)
+    throws NamingException {
+    LOG.info("Doing reverse DNS lookup for IPv6 address: " +
+        hostIp.getHostAddress());
+
+    // bytes need to be converted to hex string and reversed to get IPv6
+    // reverse resolution address
+    byte[] bytes = hostIp.getAddress();
+    StringBuilder sb = new StringBuilder();
+    for(int pos = bytes.length - 1; pos >= 0; pos--) {
+      byte b = bytes[pos];
+      String hexStr = String.format("%02x", b);
+      sb.append(hexStr.charAt(1));
+      sb.append(".");
+      sb.append(hexStr.charAt(0));
+      sb.append(".");
+    }
+    sb.append("ip6.arpa");
+    return sb.toString();
+  }
+
   /**
    * @return NetworkInterface for the given subinterface name (eg eth0:0)
    *    or null if no interface with the given name can be found  
    */
   private static NetworkInterface getSubinterface(String strInterface)
       throws SocketException {
-    Enumeration<NetworkInterface> nifs = 
+    Enumeration<NetworkInterface> nifs =
       NetworkInterface.getNetworkInterfaces();
-      
+
     while (nifs.hasMoreElements()) {
-      Enumeration<NetworkInterface> subNifs = 
+      Enumeration<NetworkInterface> subNifs =
         nifs.nextElement().getSubInterfaces();
 
       while (subNifs.hasMoreElements()) {

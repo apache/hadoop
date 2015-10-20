@@ -78,8 +78,7 @@
 # memory size.
 # export HADOOP_HEAPSIZE_MIN=
 
-# Extra Java runtime options for all Hadoop commands. We don't support
-# IPv6 yet/still, so by default the preference is set to IPv4.
+# Extra Java runtime options for all Hadoop commands.
 # export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true"
 
 # Some parts of the shell code may do special things dependent upon

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.ipc.RpcConstants.*;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -98,6 +96,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.CodedOutputStream;
+import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
+import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -447,7 +447,7 @@ public class Client {
       this.authProtocol = trySasl ? AuthProtocol.SASL : AuthProtocol.NONE;
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
-          server.toString() +
+          NetUtils.getSocketAddressString(server) +
           " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
       this.setDaemon(true);
     }
@@ -578,8 +578,9 @@ public class Client {
                                server.getHostName(), server.getPort());
 
       if (!server.equals(currentAddr)) {
-        LOG.warn("Address change detected. Old: " + server.toString() +
-                                 " New: " + currentAddr.toString());
+        LOG.warn("Address change detected. Old: " + NetUtils
+            .getSocketAddressString(server) +
+            " New: " + NetUtils.getSocketAddressString(currentAddr));
         server = currentAddr;
         return true;
       }
@@ -1691,7 +1692,7 @@ public class Client {
     
     @Override
     public String toString() {
-      return address.toString();
+      return NetUtils.getSocketAddressString(address);
     }
   }  
 

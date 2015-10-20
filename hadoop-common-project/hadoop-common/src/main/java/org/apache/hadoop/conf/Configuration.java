@@ -2131,7 +2131,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return updateConnectAddr(addressProperty, addr);
     }
 
-    final String connectHost = connectHostPort.split(":")[0];
+    final String connectHost = NetUtils.getHostFromHostPort(connectHostPort);
     // Create connect address using client address hostname and server port.
     return updateConnectAddr(addressProperty, NetUtils.createSocketAddrForHost(
         connectHost, addr.getPort()));

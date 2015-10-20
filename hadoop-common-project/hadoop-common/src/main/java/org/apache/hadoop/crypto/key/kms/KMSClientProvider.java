@@ -76,6 +76,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.net.HostAndPort;
 
 /**
  * KMS client <code>KeyProvider</code> implementation.
@@ -253,16 +254,20 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         // In the current scheme, all hosts have to run on the same port
         int port = -1;
         String hostsPart = authority;
+
         if (authority.contains(":")) {
-          String[] t = authority.split(":");
           try {
-            port = Integer.parseInt(t[1]);
-          } catch (Exception e) {
+            HostAndPort hp = HostAndPort.fromString(hostsPart);
+            if (hp.hasPort()) {
+              port = hp.getPort();
+              hostsPart = hp.getHostText();
+            }
+          } catch (IllegalArgumentException e) {
             throw new IOException(
                 "Could not parse port in kms uri [" + origUrl + "]");
           }
-          hostsPart = t[0];
         }
+
         return createProvider(providerUri, conf, origUrl, port, hostsPart);
       }
       return null;
