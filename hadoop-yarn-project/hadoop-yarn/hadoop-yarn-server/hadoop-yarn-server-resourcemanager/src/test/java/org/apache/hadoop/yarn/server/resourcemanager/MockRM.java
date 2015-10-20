@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
@@ -813,6 +814,12 @@ public class MockRM extends ResourceManager {
         client.getApplicationReport(GetApplicationReportRequest
             .newInstance(appId));
     return response.getApplicationReport();
+  }
+
+  public void updateReservationState(ReservationUpdateRequest request)
+      throws IOException, YarnException {
+    ApplicationClientProtocol client = getClientRMService();
+    client.updateReservation(request);
   }
 
   // Explicitly reset queue metrics for testing.

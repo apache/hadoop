@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -103,8 +102,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
-import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
-import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -1115,7 +1112,8 @@ public class TestClientRMService {
     long duration = 60000;
     long deadline = (long) (arrival + 1.05 * duration);
     ReservationSubmissionRequest sRequest =
-        createSimpleReservationRequest(4, arrival, deadline, duration);
+        ReservationSystemTestUtil.createSimpleReservationRequest(4, arrival,
+            deadline, duration);
     ReservationSubmissionResponse sResponse = null;
     try {
       sResponse = clientService.submitReservation(sRequest);
@@ -1167,24 +1165,6 @@ public class TestClientRMService {
     rm = null;
   }
 
-  private ReservationSubmissionRequest createSimpleReservationRequest(
-      int numContainers, long arrival, long deadline, long duration) {
-    // create a request with a single atomic ask
-    ReservationRequest r =
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1),
-            numContainers, 1, duration);
-    ReservationRequests reqs =
-        ReservationRequests.newInstance(Collections.singletonList(r),
-            ReservationRequestInterpreter.R_ALL);
-    ReservationDefinition rDef =
-        ReservationDefinition.newInstance(arrival, deadline, reqs,
-            "testClientRMService#reservation");
-    ReservationSubmissionRequest request =
-        ReservationSubmissionRequest.newInstance(rDef,
-            ReservationSystemTestUtil.reservationQ);
-    return request;
-  }
-  
   @Test
   public void testGetNodeLabels() throws Exception {
     MockRM rm = new MockRM() {

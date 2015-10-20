@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.CapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.InMemoryPlan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.InMemoryReservationAllocation;
@@ -89,9 +90,10 @@ public class TestGreedyReservationAgent {
     agent = new GreedyReservationAgent();
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
+    RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
     plan = new InMemoryPlan(queueMetrics, policy, agent, clusterCapacity, step,
-        res, minAlloc, maxAlloc, "dedicated", null, true);
+        res, minAlloc, maxAlloc, "dedicated", null, true, context);
   }
 
   @SuppressWarnings("javadoc")
@@ -141,9 +143,12 @@ public class TestGreedyReservationAgent {
     // create a completely utilized segment around time 30
     int[] f = { 100, 100 };
 
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            30 * step, 30 * step + f.length * step, f.length * step);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 30 * step, 30 * step + f.length * step,
             ReservationSystemTestUtil.generateAllocation(30 * step, step, f),
             res, minAlloc)));
@@ -195,10 +200,12 @@ public class TestGreedyReservationAgent {
     prepareBasicPlan();
     // create a completely utilized segment at time 30
     int[] f = { 100, 100 };
-
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            30, 30 * step + f.length * step, f.length * step);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 30 * step, 30 * step + f.length * step,
             ReservationSystemTestUtil.generateAllocation(30 * step, step, f),
             res, minAlloc)));
@@ -515,10 +522,12 @@ public class TestGreedyReservationAgent {
     // conditions for assignment that are non-empty
 
     int[] f = { 10, 10, 20, 20, 20, 10, 10 };
-
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            0, 0 + f.length * step, f.length * step);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 0L, 0L + f.length * step, ReservationSystemTestUtil
                 .generateAllocation(0, step, f), res, minAlloc)));
 
@@ -527,7 +536,7 @@ public class TestGreedyReservationAgent {
         ReservationSystemTestUtil.generateAllocation(5000, step, f2);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null, "u1",
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 5000, 5000 + f2.length * step, alloc, res, minAlloc)));
 
     System.out.println("--------BEFORE AGENT----------");
@@ -562,9 +571,11 @@ public class TestGreedyReservationAgent {
             instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
     policy.init(reservationQ, conf);
+    RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
     plan = new InMemoryPlan(scheduler.getRootQueueMetrics(), policy, agent,
-      clusterCapacity, step, res, minAlloc, maxAlloc, "dedicated", null, true);
+      clusterCapacity, step, res, minAlloc, maxAlloc, "dedicated", null,
+        true, context);
 
     int acc = 0;
     List<ReservationDefinition> list = new ArrayList<ReservationDefinition>();

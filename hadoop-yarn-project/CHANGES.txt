@@ -522,6 +522,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4267. Add additional logging to container launch implementations in
     container-executor. (Sidharta Seethana via vvasudev)
 
+    YARN-3985. Make ReservationSystem persist state using RMStateStore
+    reservation APIs. (adhoot via asuresh)
 
   OPTIMIZATIONS
 
