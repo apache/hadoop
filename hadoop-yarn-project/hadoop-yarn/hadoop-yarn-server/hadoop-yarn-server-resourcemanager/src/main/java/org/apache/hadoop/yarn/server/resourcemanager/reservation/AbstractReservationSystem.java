@@ -349,7 +349,7 @@ public abstract class AbstractReservationSystem extends AbstractService
             getAgent(planQueuePath), totCap, planStepSize, rescCalc,
             minAllocation, maxAllocation, planQueueName,
             getReplanner(planQueuePath), getReservationSchedulerConfiguration()
-            .getMoveOnExpiry(planQueuePath));
+            .getMoveOnExpiry(planQueuePath), rmContext);
     LOG.info("Intialized plan {0} based on reservable queue {1}",
         plan.toString(), planQueueName);
     return plan;

@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.CapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.InMemoryPlan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.InMemoryReservationAllocation;
@@ -724,6 +725,7 @@ public class TestAlignedPlanner {
     policy.init(reservationQ, conf);
 
     QueueMetrics queueMetrics = mock(QueueMetrics.class);
+    RMContext context = ReservationSystemTestUtil.createMockRMContext();
 
     // Set planning agent
     agent = new AlignedPlannerWithGreedy();
@@ -731,7 +733,7 @@ public class TestAlignedPlanner {
     // Create Plan
     plan =
         new InMemoryPlan(queueMetrics, policy, agent, clusterCapacity, step,
-            res, minAlloc, maxAlloc, "dedicated", null, true);
+            res, minAlloc, maxAlloc, "dedicated", null, true, context);
   }
 
   private int initializeScenario1() throws PlanningException {
@@ -782,9 +784,12 @@ public class TestAlignedPlanner {
   private void addFixedAllocation(long start, long step, int[] f)
       throws PlanningException {
 
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            start, start + f.length * step, f.length * step);
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
-            ReservationSystemTestUtil.getNewReservationId(), null,
+            ReservationSystemTestUtil.getNewReservationId(), rDef,
             "user_fixed", "dedicated", start, start + f.length * step,
             ReservationSystemTestUtil.generateAllocation(start, step, f), res,
             minAlloc)));
