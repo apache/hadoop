@@ -1540,6 +1540,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9250. Add Precondition check to LocatedBlock#addCachedLoc.
     (Xiao Chen via wang)
 
+    HDFS-9251. Refactor TestWriteToReplica and TestFsDatasetImpl to avoid
+    explicitly creating Files in the tests code. (lei)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

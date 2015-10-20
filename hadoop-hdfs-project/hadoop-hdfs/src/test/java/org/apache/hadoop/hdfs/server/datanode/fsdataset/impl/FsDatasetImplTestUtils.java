@@ -23,10 +23,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -175,5 +185,104 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     File metaFile = FsDatasetUtil.getMetaFile(
         blockFile, block.getGenerationStamp());
     return new FsDatasetImplMaterializedReplica(blockFile, metaFile);
+  }
+
+  @Override
+  public Replica createFinalizedReplica(ExtendedBlock block)
+      throws IOException {
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      return createFinalizedReplica(volumes.get(0), block);
+    }
+  }
+
+  @Override
+  public Replica createFinalizedReplica(FsVolumeSpi volume, ExtendedBlock block)
+      throws IOException {
+    FsVolumeImpl vol = (FsVolumeImpl) volume;
+    ReplicaInfo info = new FinalizedReplica(block.getLocalBlock(), vol,
+        vol.getCurrentDir().getParentFile());
+    dataset.volumeMap.add(block.getBlockPoolId(), info);
+    info.getBlockFile().createNewFile();
+    info.getMetaFile().createNewFile();
+    return info;
+  }
+
+  @Override
+  public Replica createReplicaInPipeline(ExtendedBlock block)
+      throws IOException {
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      return createReplicaInPipeline(volumes.get(0), block);
+    }
+  }
+
+  @Override
+  public Replica createReplicaInPipeline(
+      FsVolumeSpi volume, ExtendedBlock block) throws IOException {
+    FsVolumeImpl vol = (FsVolumeImpl) volume;
+    ReplicaInPipeline rip = new ReplicaInPipeline(
+        block.getBlockId(), block.getGenerationStamp(), volume,
+        vol.createTmpFile(
+            block.getBlockPoolId(), block.getLocalBlock()).getParentFile(),
+        0);
+    dataset.volumeMap.add(block.getBlockPoolId(), rip);
+    return rip;
+  }
+
+
+  @Override
+  public Replica createRBW(ExtendedBlock eb) throws IOException {
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      return createRBW(volumes.get(0), eb);
+    }
+  }
+
+  @Override
+  public Replica createRBW(FsVolumeSpi volume, ExtendedBlock eb)
+      throws IOException {
+    FsVolumeImpl vol = (FsVolumeImpl) volume;
+    final String bpid = eb.getBlockPoolId();
+    final Block block = eb.getLocalBlock();
+    ReplicaBeingWritten rbw = new ReplicaBeingWritten(
+        eb.getLocalBlock(), volume,
+        vol.createRbwFile(bpid, block).getParentFile(), null);
+    rbw.getBlockFile().createNewFile();
+    rbw.getMetaFile().createNewFile();
+    dataset.volumeMap.add(bpid, rbw);
+    return rbw;
+  }
+
+  @Override
+  public Replica createReplicaWaitingToBeRecovered(ExtendedBlock eb)
+      throws IOException {
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      return createReplicaInPipeline(volumes.get(0), eb);
+    }
+  }
+
+  @Override
+  public Replica createReplicaWaitingToBeRecovered(
+      FsVolumeSpi volume, ExtendedBlock eb) throws IOException {
+    FsVolumeImpl vol = (FsVolumeImpl) volume;
+    final String bpid = eb.getBlockPoolId();
+    final Block block = eb.getLocalBlock();
+    ReplicaWaitingToBeRecovered rwbr =
+        new ReplicaWaitingToBeRecovered(eb.getLocalBlock(), volume,
+            vol.createRbwFile(bpid, block).getParentFile());
+    dataset.volumeMap.add(bpid, rwbr);
+    return rwbr;
+  }
+
+  @Override
+  public Replica createReplicaUnderRecovery(
+      ExtendedBlock block, long recoveryId) throws IOException {
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      FsVolumeImpl volume = (FsVolumeImpl) volumes.get(0);
+      ReplicaUnderRecovery rur = new ReplicaUnderRecovery(new FinalizedReplica(
+          block.getLocalBlock(), volume, volume.getCurrentDir().getParentFile()),
+          recoveryId
+      );
+      dataset.volumeMap.add(block.getBlockPoolId(), rur);
+      return rur;
+    }
   }
 }

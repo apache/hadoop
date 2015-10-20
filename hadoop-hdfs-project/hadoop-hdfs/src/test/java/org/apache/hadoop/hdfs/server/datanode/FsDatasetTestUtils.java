@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.FileNotFoundException;
@@ -137,4 +138,58 @@ public interface FsDatasetTestUtils {
    */
   MaterializedReplica getMaterializedReplica(ExtendedBlock block)
           throws ReplicaNotFoundException;
+
+  /**
+   * Create a finalized replica and add it into the FsDataset.
+   */
+  Replica createFinalizedReplica(ExtendedBlock block) throws IOException;
+
+  /**
+   * Create a finalized replica on a particular volume, and add it into
+   * the FsDataset.
+   */
+  Replica createFinalizedReplica(FsVolumeSpi volume, ExtendedBlock block)
+      throws IOException;
+
+  /**
+   * Create a {@link ReplicaInPipeline} and add it into the FsDataset.
+   */
+  Replica createReplicaInPipeline(ExtendedBlock block) throws IOException;
+
+  /**
+   * Create a {@link ReplicaInPipeline} and add it into the FsDataset.
+   */
+  Replica createReplicaInPipeline(FsVolumeSpi volume, ExtendedBlock block)
+      throws IOException;
+
+  /**
+   * Create a {@link ReplicaBeingWritten} and add it into the FsDataset.
+   */
+  Replica createRBW(ExtendedBlock block) throws IOException;
+
+  /**
+   * Create a {@link ReplicaBeingWritten} on the particular volume, and add it
+   * into the FsDataset.
+   */
+  Replica createRBW(FsVolumeSpi volume, ExtendedBlock block) throws IOException;
+
+  /**
+   * Create a {@link ReplicaWaitingToBeRecovered} object and add it into the
+   * FsDataset.
+   */
+  Replica createReplicaWaitingToBeRecovered(ExtendedBlock block)
+      throws IOException;
+
+  /**
+   * Create a {@link ReplicaWaitingToBeRecovered} on the particular volume,
+   * and add it into the FsDataset.
+   */
+  Replica createReplicaWaitingToBeRecovered(
+      FsVolumeSpi volume, ExtendedBlock block) throws IOException;
+
+  /**
+   * Create a {@link ReplicaUnderRecovery} object and add it into the FsDataset.
+   */
+  Replica createReplicaUnderRecovery(ExtendedBlock block, long recoveryId)
+      throws IOException;
 }
