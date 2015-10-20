@@ -606,8 +606,8 @@ public final class FSImageFormatPBINode {
       this.fbb = fbb;
     }
 
-    void serializeIntelINodeDirectorySection(OutputStream out) throws IOException {
-      FlatBufferBuilder fbb = null;
+    void serializeIntelINodeDirectorySection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+//      FlatBufferBuilder fbb = null;
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
       final ArrayList<INodeReference> refList = parent.getSaverContext()
@@ -705,10 +705,9 @@ public final class FSImageFormatPBINode {
             FSImageFormatProtobuf.SectionName.INODE_DIR);
     }
 
-    void serializeIntelINodeSection(OutputStream out) throws IOException {
+    void serializeIntelINodeSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
       IntelINodeSection.startIntelINodeSection(fbb);
       IntelINodeSection.addLastInodeId(fbb, fsn.dir.getLastInodeId());
       IntelINodeSection.addNumInodes(fbb, inodesMap.size());
@@ -757,7 +756,7 @@ public final class FSImageFormatPBINode {
       parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
     }
 
-    void serializeIntelFilesUCSection(OutputStream out) throws IOException {
+    void serializeIntelFilesUCSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
       Collection<Long> filesWithUC = fsn.getLeaseManager()
           .getINodeIdWithLeases();
       for (Long id : filesWithUC) {
@@ -774,7 +773,7 @@ public final class FSImageFormatPBINode {
         }
         String path = file.getFullPathName();
 
-        FlatBufferBuilder fbb = new FlatBufferBuilder();
+//        FlatBufferBuilder fbb = new FlatBufferBuilder();
         IntelFileUnderConstructionEntry.addInodeId(fbb, file.getId());
         IntelFileUnderConstructionEntry.addFullPath(fbb, fbb.createString(path));
         ByteBuffer byteBuffer = fbb.dataBuffer();
