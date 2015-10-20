@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.util.Time;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -306,6 +307,36 @@ public class TestSetTimes {
       cluster.getFileSystem().getFileBlockLocations(p, 0, 100);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test whether atime can be set explicitly even when the atime support is
+   * disabled.
+   */
+  @Test
+  public void testAtimeUpdate() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .build();
+      fs = cluster.getFileSystem();
+
+      // Create an empty file
+      Path p = new Path("/testAtimeUpdate");
+      DFSTestUtil.createFile(cluster.getFileSystem(), p, 0, (short)1, 0L);
+
+      fs.setTimes(p, -1L, 123456L);
+      Assert.assertEquals(123456L, fs.getFileStatus(p).getAccessTime());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
