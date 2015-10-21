@@ -45,6 +45,9 @@ Release 2.6.2 - UNRELEASED
     YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
     has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
+    YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
+    SESSIONEXPIED. (ozawa and Varun Saxena)
+
 Release 2.6.1 - 2015-09-23
 
   INCOMPATIBLE CHANGES
