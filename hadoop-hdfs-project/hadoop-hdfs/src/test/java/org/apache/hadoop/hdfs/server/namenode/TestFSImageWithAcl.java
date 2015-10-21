@@ -206,6 +206,35 @@ public class TestFSImageWithAcl {
     doTestDefaultAclNewChildren(false);
   }
 
+  @Test
+  public void testRootACLAfterLoadingFsImage() throws IOException {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    Path rootdir = new Path("/");
+    AclEntry e1 = new AclEntry.Builder().setName("foo")
+        .setPermission(ALL).setScope(ACCESS).setType(GROUP).build();
+    AclEntry e2 = new AclEntry.Builder().setName("bar")
+        .setPermission(READ).setScope(ACCESS).setType(GROUP).build();
+    fs.modifyAclEntries(rootdir, Lists.newArrayList(e1, e2));
+
+    AclStatus s = cluster.getNamesystem().getAclStatus(rootdir.toString());
+    AclEntry[] returned =
+        Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(
+        new AclEntry[] { aclEntry(ACCESS, GROUP, READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, "bar", READ),
+            aclEntry(ACCESS, GROUP, "foo", ALL) }, returned);
+
+    // restart - hence save and load from fsimage
+    restart(fs, true);
+
+    s = cluster.getNamesystem().getAclStatus(rootdir.toString());
+    returned = Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(
+        new AclEntry[] { aclEntry(ACCESS, GROUP, READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, "bar", READ),
+            aclEntry(ACCESS, GROUP, "foo", ALL) }, returned);
+  }
+
   /**
    * Restart the NameNode, optionally saving a new checkpoint.
    *
