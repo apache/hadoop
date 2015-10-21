@@ -606,7 +606,7 @@ public final class FSImageFormatPBINode {
       this.fbb = fbb;
     }
 
-    void serializeIntelINodeDirectorySection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+    int serializeIntelINodeDirectorySection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
 //      FlatBufferBuilder fbb = null;
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
@@ -664,7 +664,7 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
       }
-        parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE_DIR, fbb);
+       return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE_DIR, fbb);
     }
 
       void serializeINodeDirectorySection(OutputStream out) throws IOException {
@@ -705,7 +705,8 @@ public final class FSImageFormatPBINode {
             FSImageFormatProtobuf.SectionName.INODE_DIR);
     }
 
-    void serializeIntelINodeSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+    int serializeIntelINodeSection(OutputStream out, FlatBufferBuilder fbb)
+        throws IOException {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
       IntelINodeSection.startIntelINodeSection(fbb);
@@ -732,7 +733,7 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
       }
-      parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE, fbb);
+      return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE, fbb);
     }
 
     void serializeINodeSection(OutputStream out) throws IOException {
@@ -756,7 +757,7 @@ public final class FSImageFormatPBINode {
       parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
     }
 
-    void serializeIntelFilesUCSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+    int serializeIntelFilesUCSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
       Collection<Long> filesWithUC = fsn.getLeaseManager()
           .getINodeIdWithLeases();
       for (Long id : filesWithUC) {
@@ -785,7 +786,7 @@ public final class FSImageFormatPBINode {
         dos.write(bytes);
         dos.flush();
       }
-      parent.commitIntelSection(
+      return parent.commitIntelSection(
           FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);
     }
 

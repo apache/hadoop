@@ -420,58 +420,32 @@ public class FSImageFormatPBSnapshot {
     /**
      * save all the snapshottable directories and snapshots to fsimage
      */
-    public void serializeIntelSnapshotSection(OutputStream out) throws IOException {
+    public int serializeIntelSnapshotSection(OutputStream out) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
-
-      FlatBufferBuilder fbb = new FlatBufferBuilder();
-      ByteBuffer byteBuffer = null;
-      IntelSnapshotSection.addSnapshotCounter(fbb, sm.getSnapshotCounter());
-      IntelSnapshotSection.addNumSnapshots(fbb, sm.getNumSnapshots());
+      SnapshotSection.Builder b = SnapshotSection.newBuilder()
+          .setSnapshotCounter(sm.getSnapshotCounter())
+          .setNumSnapshots(sm.getNumSnapshots());
 
       INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
-      long[] data = new long[snapshottables.length];
-      for (int i = 0; i < data.length;i++) {
-        data[i] = snapshottables[i].getId();
+      for (INodeDirectory sdir : snapshottables) {
+        b.addSnapshottableDir(sdir.getId());
       }
-      int dir = IntelSnapshotSection.createSnapshottableDirVector(fbb, data);
-      IntelSnapshotSection.addSnapshottableDir(fbb, dir);
-      byteBuffer = fbb.dataBuffer();
-      int len = byteBuffer.capacity() - byteBuffer.position();
-      byte[] bytes = new byte[len];
-      byteBuffer.get(bytes);
-      DataOutputStream dos = new DataOutputStream(out);
-      dos.write(len);
-      dos.write(bytes);
-      dos.flush();
+      b.build().writeDelimitedTo(out);
       int i = 0;
-      FlatBufferBuilder fbb1 = new FlatBufferBuilder();
-      ByteBuffer byteBuffer1 = null;
       for(INodeDirectory sdir : snapshottables) {
         for (Snapshot s : sdir.getDirectorySnapshottableFeature()
             .getSnapshotList()) {
           Root sroot = s.getRoot();
 
-
-          IntelSnapshot.addSnapshotId(fbb1, s.getId());
-//          SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
-//              .newBuilder().setSnapshotId(s.getId());
-
-          IntelINodeDirectory id = buildIntelINodeDirectory(sroot, parent.getSaverContext());
-
-//          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
-//              parent.getSaverContext());
-
-
+          SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
+              .newBuilder().setSnapshotId(s.getId());
+          INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
+              parent.getSaverContext());
           INodeSection.INode r = INodeSection.INode.newBuilder()
               .setId(sroot.getId())
               .setType(INodeSection.INode.Type.DIRECTORY)
               .setName(ByteString.copyFrom(sroot.getLocalNameBytes()))
               .setDirectory(db).build();
-
-
-
-
-
           sb.setRoot(r).build().writeDelimitedTo(out);
           i++;
           if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
@@ -480,7 +454,7 @@ public class FSImageFormatPBSnapshot {
         }
       }
       Preconditions.checkState(i == sm.getNumSnapshots());
-      parent.commitSection(headers, FSImageFormatProtobuf.SectionName.SNAPSHOT);
+     return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.SNAPSHOT, fbb);
     }
 
     /**
@@ -523,6 +497,22 @@ public class FSImageFormatPBSnapshot {
       parent.commitSection(headers, FSImageFormatProtobuf.SectionName.SNAPSHOT);
     }
 
+
+    /**
+     * This can only be called after serializing both INode_Dir and SnapshotDiff
+     */
+    public int serializeIntelINodeReferenceSection(OutputStream out)
+        throws IOException {
+      final List<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
+      for (INodeReference ref : refList) {
+        INodeReferenceSection.INodeReference.Builder rb = buildINodeReference(ref);
+        rb.build().writeDelimitedTo(out);
+      }
+     return parent.commitIntelSection(SectionName.INODE_REFERENCE, fbb);
+    }
+
+
     /**
      * This can only be called after serializing both INode_Dir and SnapshotDiff
      */
@@ -549,6 +539,28 @@ public class FSImageFormatPBSnapshot {
         rb.setDstSnapshotId(ref.getDstSnapshotId());
       }
       return rb;
+    }
+
+    public int serializeIntelSnapshotDiffSection(OutputStream out)
+        throws IOException {
+      INodeMap inodesMap = fsn.getFSDirectory().getINodeMap();
+      final List<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
+      int i = 0;
+      Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
+      while (iter.hasNext()) {
+        INodeWithAdditionalFields inode = iter.next();
+        if (inode.isFile()) {
+          serializeFileDiffList(inode.asFile(), out);
+        } else if (inode.isDirectory()) {
+          serializeDirDiffList(inode.asDirectory(), refList, out);
+        }
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
+      }
+      return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF, fbb);
     }
 
     /**

@@ -21,20 +21,23 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelFileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 @InterfaceAudience.Private
 public final class FSImageUtil {
-  public static final byte[] MAGIC_HEADER =
-      "HDFSIMG1".getBytes(Charsets.UTF_8);
+
+  public static final byte[] MAGIC_HEADER = "HDFSIMG1".getBytes(Charsets.UTF_8);
+
   public static final int FILE_VERSION = 1;
 
   public static boolean checkFileFormat(RandomAccessFile file)
@@ -48,6 +51,25 @@ public final class FSImageUtil {
       return false;
 
     return true;
+  }
+
+  public static IntelFileSummary loadIntelSummary(RandomAccessFile file)
+    throws IOException{
+    final int FILE_LENGTH_FIELD_SIZE = 4;
+    long fileLength = file.length(); // the file size, measured by bytes
+    file.seek(fileLength - FILE_LENGTH_FIELD_SIZE);
+    int summaryLength = file.readInt(); // IntelFileSummary length is summaryLength
+    if (summaryLength <=0) {
+      throw new IOException("Negative length of the file");
+    }
+    file.seek(fileLength - FILE_LENGTH_FIELD_SIZE - summaryLength);
+    byte[] summaryBytes = new byte[summaryLength];
+    byte[] bytes = new byte[file.readInt()];
+    file.readFully(bytes);
+    IntelFileSummary intelFileSummary =
+        IntelFileSummary.getRootAsIntelFileSummary(ByteBuffer.wrap(bytes));
+
+
   }
 
   public static FileSummary loadSummary(RandomAccessFile file)
@@ -67,6 +89,7 @@ public final class FSImageUtil {
 
     FileSummary summary = FileSummary
         .parseDelimitedFrom(new ByteArrayInputStream(summaryBytes));
+
     if (summary.getOndiskVersion() != FILE_VERSION) {
       throw new IOException("Unsupported file version "
           + summary.getOndiskVersion());
