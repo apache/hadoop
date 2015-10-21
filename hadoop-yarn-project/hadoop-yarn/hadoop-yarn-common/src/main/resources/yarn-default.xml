@@ -1449,6 +1449,12 @@
   </property>
 
   <property>
+    <description>Comma separated list of UIs that will be hosted</description>
+    <name>yarn.timeline-service.ui-names</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>
     Default maximum number of retires for timeline servive client
     and value -1 means no limit.

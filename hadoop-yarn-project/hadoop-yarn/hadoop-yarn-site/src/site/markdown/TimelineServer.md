@@ -185,6 +185,14 @@ selected if this policy is either of `HTTPS_ONLY` or `HTTP_AND_HTTPS`.
 | `yarn.timeline-service.client.retry-interval-ms` | The interval in milliseconds between retries for the timeline service client. Defaults to `1000`. |
 | `yarn.timeline-service.generic-application-history.max-applications` | The max number of applications could be fetched by using REST API or application history protocol and shown in timeline server web ui. Defaults to `10000`. |
 
+#### UI Hosting Configuration
+
+The timeline service can host multiple UIs if enabled. The service can support both static web sites hosted in a directory or war files bundled. The web UI is then hosted on the timeline service HTTP port under the path configured.
+| Configuration Property | Description |
+|:---- |:---- |
+| `yarn.timeline-service.ui-names` | Comma separated list of UIs that will be hosted. Defaults to `none`. |
+| `yarn.timeline-service.ui-on-disk-path.$name` | For each of the ui-names, an on disk path should be specified to the directory service static content or the location of a web archive (war file). |
+| `yarn.timeline-service.ui-web-path.$name` | For each of the ui-names, the web path should be specified relative to the Timeline server root. Paths should begin with a starting slash. |
 
 
 #### Security Configuration
