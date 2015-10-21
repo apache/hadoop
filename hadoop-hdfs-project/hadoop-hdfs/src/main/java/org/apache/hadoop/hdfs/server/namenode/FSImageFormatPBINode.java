@@ -607,6 +607,43 @@ public final class FSImageFormatPBINode {
     }
 
     int serializeIntelINodeDirectorySection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+      Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
+          .getINodeMap().getMapIterator();
+      final ArrayList<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
+      int i = 0;
+      while (iter.hasNext()) {
+        INodeWithAdditionalFields n = iter.next();
+        if (!n.isDirectory()) {
+          continue;
+        }
+
+        ReadOnlyList<INode> children = n.asDirectory().getChildrenList(
+            Snapshot.CURRENT_STATE_ID);
+        if (children.size() > 0) {
+          INodeDirectorySection.DirEntry.Builder b = INodeDirectorySection.
+              DirEntry.newBuilder().setParent(n.getId());
+          for (INode inode : children) {
+            if (!inode.isReference()) {
+              b.addChildren(inode.getId());
+            } else {
+              refList.add(inode.asReference());
+              b.addRefChildren(refList.size() - 1);
+            }
+          }
+          INodeDirectorySection.DirEntry e = b.build();
+          e.writeDelimitedTo(out);
+        }
+
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
+      }
+      return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE_DIR, fbb);
+    }
+
+    int serializeIntelINodeDirectorySectionV2(OutputStream out, FlatBufferBuilder fbb) throws IOException {
 //      FlatBufferBuilder fbb = null;
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
@@ -709,6 +746,28 @@ public final class FSImageFormatPBINode {
         throws IOException {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
+      INodeSection.Builder b = INodeSection.newBuilder()
+          .setLastInodeId(fsn.dir.getLastInodeId()).setNumInodes(inodesMap.size());
+      INodeSection s = b.build();
+      s.writeDelimitedTo(out);
+
+      int i = 0;
+      Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
+      while (iter.hasNext()) {
+        INodeWithAdditionalFields n = iter.next();
+        save(out, n);
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
+      }
+      return parent.commitIntelSection(FSImageFormatProtobuf.SectionName.INODE, fbb);
+    }
+
+    int serializeIntelINodeSectionV2(OutputStream out, FlatBufferBuilder fbb)
+        throws IOException {
+      INodeMap inodesMap = fsn.dir.getINodeMap();
+
       IntelINodeSection.startIntelINodeSection(fbb);
       IntelINodeSection.addLastInodeId(fbb, fsn.dir.getLastInodeId());
       IntelINodeSection.addNumInodes(fbb, inodesMap.size());
@@ -758,6 +817,31 @@ public final class FSImageFormatPBINode {
     }
 
     int serializeIntelFilesUCSection(OutputStream out, FlatBufferBuilder fbb) throws IOException {
+      Collection<Long> filesWithUC = fsn.getLeaseManager()
+          .getINodeIdWithLeases();
+      for (Long id : filesWithUC) {
+        INode inode = fsn.getFSDirectory().getInode(id);
+        if (inode == null) {
+          LOG.warn("Fail to find inode " + id + " when saving the leases.");
+          continue;
+        }
+        INodeFile file = inode.asFile();
+        if (!file.isUnderConstruction()) {
+          LOG.warn("Fail to save the lease for inode id " + id
+              + " as the file is not under construction");
+          continue;
+        }
+        String path = file.getFullPathName();
+        FileUnderConstructionEntry.Builder b = FileUnderConstructionEntry
+            .newBuilder().setInodeId(file.getId()).setFullPath(path);
+        FileUnderConstructionEntry e = b.build();
+        e.writeDelimitedTo(out);
+      }
+      return parent.commitIntelSection(
+          FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION, fbb);
+    }
+
+    int serializeIntelFilesUCSectionV2(OutputStream out, FlatBufferBuilder fbb) throws IOException {
       Collection<Long> filesWithUC = fsn.getLeaseManager()
           .getINodeIdWithLeases();
       for (Long id : filesWithUC) {

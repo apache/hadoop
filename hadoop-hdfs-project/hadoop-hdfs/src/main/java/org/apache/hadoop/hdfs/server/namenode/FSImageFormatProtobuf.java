@@ -812,7 +812,33 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.CACHE_MANAGER);
     }
 
+
     private int saveIntelNameSystemSection(FlatBufferBuilder fbb) throws IOException{
+      final FSNamesystem fsn = context.getSourceNamesystem();
+      OutputStream out = sectionOutputStream;
+      BlockIdManager blockIdManager = fsn.getBlockIdManager();
+      NameSystemSection.Builder b = NameSystemSection.newBuilder()
+          .setGenstampV1(blockIdManager.getGenerationStampV1())
+          .setGenstampV1Limit(blockIdManager.getGenerationStampV1Limit())
+          .setGenstampV2(blockIdManager.getGenerationStampV2())
+          .setLastAllocatedBlockId(blockIdManager.getLastAllocatedBlockId())
+          .setTransactionId(context.getTxId());
+
+      // We use the non-locked version of getNamespaceInfo here since
+      // the coordinating thread of saveNamespace already has read-locked
+      // the namespace for us. If we attempt to take another readlock
+      // from the actual saver thread, there's a potential of a
+      // fairness-related deadlock. See the comments on HDFS-2223.
+      b.setNamespaceId(fsn.unprotectedGetNamespaceInfo().getNamespaceID());
+      if (fsn.isRollingUpgrade()) {
+        b.setRollingUpgradeStartTime(fsn.getRollingUpgradeInfo().getStartTime());
+      }
+      NameSystemSection s = b.build();
+      s.writeDelimitedTo(out);
+      return commitIntelSection(SectionName.NS_INFO ,fbb);
+    }
+
+    private int saveIntelNameSystemSectionV2(FlatBufferBuilder fbb) throws IOException{
       final FSNamesystem fsn = context.getSourceNamesystem();
       OutputStream out = sectionOutputStream;
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
@@ -864,7 +890,23 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.NS_INFO);
     }
 
+
     private int saveIntelStringTableSection(FlatBufferBuilder fbb)
+        throws IOException {
+      OutputStream out = sectionOutputStream;
+      StringTableSection.Builder b = StringTableSection.newBuilder()
+          .setNumEntry(saverContext.stringMap.size());
+      b.build().writeDelimitedTo(out);
+      for (Entry<String, Integer> e : saverContext.stringMap.entrySet()) {
+        StringTableSection.Entry.Builder eb = StringTableSection.Entry
+            .newBuilder().setId(e.getValue()).setStr(e.getKey());
+        eb.build().writeDelimitedTo(out);
+      }
+      return commitIntelSection(SectionName.STRING_TABLE, fbb);
+    }
+
+
+    private int saveIntelStringTableSectionV2(FlatBufferBuilder fbb)
         throws IOException {
       OutputStream out = sectionOutputStream;
 
