@@ -650,6 +650,9 @@ Release 2.7.2 - UNRELEASED
     TaskAttemptImpl#sendJHStartEventForAssignedFailTask (Bibin A Chundatt via
     jlowe)
 
+    MAPREDUCE-6518. Set SO_KEEPALIVE on shuffle connections (Chang Li via
+    jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
