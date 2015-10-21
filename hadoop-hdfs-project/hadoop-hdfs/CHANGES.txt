@@ -42,6 +42,8 @@ Trunk (Unreleased)
     HDFS-9085. Show renewer information in DelegationTokenIdentifier#toString.
     (Zhihai Xu via cnauroth)
 
+    HDFS-9278. Fix preferredBlockSize typo in OIV XML output. (Nicole Pazmany via wang)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
