@@ -101,6 +101,9 @@ Release 2.7.2 - 2015-11-11
     HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
     (Brahma Reddy Battula via szetszwo)
 
+    HDFS-9273. ACLs on root directory may be lost after NN restart.
+    (Xiao Chen via cnauroth)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
