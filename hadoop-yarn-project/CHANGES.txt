@@ -86,6 +86,9 @@ Release 2.7.2 - UNRELEASED
 
     YARN-4281. 2.7 RM app page is broken (Chang Li via jlowe)
 
+    YARN-4000. RM crashes with NPE if leaf queue becomes parent queue during restart.
+    (Varun Saxena via jianhe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

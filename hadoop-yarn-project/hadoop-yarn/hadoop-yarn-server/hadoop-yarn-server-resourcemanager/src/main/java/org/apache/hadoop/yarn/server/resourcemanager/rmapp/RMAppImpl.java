@@ -957,12 +957,12 @@ public class RMAppImpl implements RMApp, Recoverable {
     if (this.submissionContext.getUnmanagedAM()) {
       // RM does not manage the AM. Do not retry
       msg = "Unmanaged application " + this.getApplicationId()
-              + " failed due to " + failedEvent.getDiagnostics()
+              + " failed due to " + failedEvent.getDiagnosticMsg()
               + ". Failing the application.";
     } else if (this.isNumAttemptsBeyondThreshold) {
       msg = "Application " + this.getApplicationId() + " failed "
               + this.maxAppAttempts + " times due to "
-              + failedEvent.getDiagnostics() + ". Failing the application.";
+              + failedEvent.getDiagnosticMsg() + ". Failing the application.";
     }
     return msg;
   }
@@ -1003,20 +1003,13 @@ public class RMAppImpl implements RMApp, Recoverable {
     String diags = null;
     switch (event.getType()) {
     case APP_REJECTED:
-      RMAppRejectedEvent rejectedEvent = (RMAppRejectedEvent) event;
-      diags = rejectedEvent.getMessage();
-      break;
     case ATTEMPT_FINISHED:
-      RMAppFinishedAttemptEvent finishedEvent =
-          (RMAppFinishedAttemptEvent) event;
-      diags = finishedEvent.getDiagnostics();
+    case ATTEMPT_KILLED:
+      diags = event.getDiagnosticMsg();
       break;
     case ATTEMPT_FAILED:
       RMAppFailedAttemptEvent failedEvent = (RMAppFailedAttemptEvent) event;
       diags = getAppAttemptFailedDiagnostics(failedEvent);
-      break;
-    case ATTEMPT_KILLED:
-      diags = getAppKilledDiagnostics();
       break;
     default:
       break;
@@ -1065,9 +1058,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     public void transition(RMAppImpl app, RMAppEvent event) {
-      RMAppFinishedAttemptEvent finishedEvent =
-          (RMAppFinishedAttemptEvent)event;
-      app.diagnostics.append(finishedEvent.getDiagnostics());
+      app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
     };
   }
@@ -1113,21 +1104,21 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.diagnostics.append(getAppKilledDiagnostics());
+      app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
     };
-  }
-
-  private static String getAppKilledDiagnostics() {
-    return "Application killed by user.";
   }
 
   private static class KillAttemptTransition extends RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.stateBeforeKilling = app.getState();
-      app.handler.handle(new RMAppAttemptEvent(app.currentAttempt
-        .getAppAttemptId(), RMAppAttemptEventType.KILL));
+      // Forward app kill diagnostics in the event to kill app attempt.
+      // These diagnostics will be returned back in ATTEMPT_KILLED event sent by
+      // RMAppAttemptImpl.
+      app.handler.handle(
+          new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(),
+              RMAppAttemptEventType.KILL, event.getDiagnosticMsg()));
     }
   }
 
@@ -1138,8 +1129,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     public void transition(RMAppImpl app, RMAppEvent event) {
-      RMAppRejectedEvent rejectedEvent = (RMAppRejectedEvent)event;
-      app.diagnostics.append(rejectedEvent.getMessage());
+      app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
     };
   }

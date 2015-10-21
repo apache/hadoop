@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
@@ -296,7 +295,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         // scheduler about the existence of the application
         assert application.getState() == RMAppState.NEW;
         this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(applicationId, e.getMessage()));
+          .handle(new RMAppEvent(applicationId,
+              RMAppEventType.APP_REJECTED, e.getMessage()));
         throw RPCUtil.getRemoteException(e);
       }
     } else {

@@ -66,7 +66,6 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -855,7 +854,8 @@ public class DelegationTokenRenewer extends AbstractService {
         // RMApp is in NEW state and thus we havne't yet informed the
         // Scheduler about the existence of the application
         rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppRejectedEvent(event.getApplicationId(), t.getMessage()));
+            new RMAppEvent(event.getApplicationId(),
+                RMAppEventType.APP_REJECTED, t.getMessage()));
       }
     }
   }

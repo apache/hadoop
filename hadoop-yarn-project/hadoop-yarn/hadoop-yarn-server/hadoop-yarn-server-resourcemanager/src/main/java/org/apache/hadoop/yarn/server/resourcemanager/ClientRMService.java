@@ -643,8 +643,9 @@ public class ClientRMService extends AbstractService implements
       return KillApplicationResponse.newInstance(true);
     }
 
-    this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMAppEvent(applicationId, RMAppEventType.KILL));
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppEvent(applicationId, RMAppEventType.KILL,
+        "Application killed by user."));
 
     // For UnmanagedAMs, return true so they don't retry
     return KillApplicationResponse.newInstance(

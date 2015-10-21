@@ -534,7 +534,9 @@ public abstract class AbstractYarnScheduler
       this.rmContext
           .getDispatcher()
           .getEventHandler()
-          .handle(new RMAppEvent(app.getApplicationId(), RMAppEventType.KILL));
+          .handle(new RMAppEvent(app.getApplicationId(), RMAppEventType.KILL,
+          "Application killed due to expiry of reservation queue " +
+          queueName + "."));
     }
   }
   
