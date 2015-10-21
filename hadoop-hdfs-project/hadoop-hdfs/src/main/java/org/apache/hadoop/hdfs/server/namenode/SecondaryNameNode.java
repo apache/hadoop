@@ -252,46 +252,8 @@ public class SecondaryNameNode implements Runnable,
 
     // Initialize other scheduling parameters from the configuration
     checkpointConf = new CheckpointConf(conf);
-
-    final InetSocketAddress httpAddr = infoSocAddr;
-
-    final String httpsAddrString = conf.getTrimmed(
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_DEFAULT);
-    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
-
-    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
-        httpAddr, httpsAddr, "secondary",
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
-
     nameNodeStatusBeanName = MBeans.register("SecondaryNameNode",
             "SecondaryNameNodeInfo", this);
-
-    infoServer = builder.build();
-
-    infoServer.setAttribute("secondary.name.node", this);
-    infoServer.setAttribute("name.system.image", checkpointImage);
-    infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    infoServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
-        ImageServlet.class, true);
-    infoServer.start();
-
-    LOG.info("Web server init done");
-
-    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
-    int connIdx = 0;
-    if (policy.isHttpEnabled()) {
-      InetSocketAddress httpAddress = infoServer.getConnectorAddress(connIdx++);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpAddress));
-    }
-
-    if (policy.isHttpsEnabled()) {
-      InetSocketAddress httpsAddress = infoServer.getConnectorAddress(connIdx);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
-          NetUtils.getHostPortString(httpsAddress));
-    }
 
     legacyOivImageDir = conf.get(
         DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY);
@@ -502,6 +464,49 @@ public class SecondaryNameNode implements Runnable,
   }
 
   /**
+   * Start the web server.
+   */
+  @VisibleForTesting
+  public void startInfoServer() throws IOException {
+    final InetSocketAddress httpAddr = getHttpAddress(conf);
+    final String httpsAddrString = conf.getTrimmed(
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_DEFAULT);
+    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
+
+    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+        httpAddr, httpsAddr, "secondary", DFSConfigKeys.
+            DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
+
+    infoServer = builder.build();
+    infoServer.setAttribute("secondary.name.node", this);
+    infoServer.setAttribute("name.system.image", checkpointImage);
+    infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    infoServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
+        ImageServlet.class, true);
+    infoServer.start();
+
+    LOG.info("Web server init done");
+
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    int connIdx = 0;
+    if (policy.isHttpEnabled()) {
+      InetSocketAddress httpAddress =
+          infoServer.getConnectorAddress(connIdx++);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpAddress));
+    }
+
+    if (policy.isHttpsEnabled()) {
+      InetSocketAddress httpsAddress =
+          infoServer.getConnectorAddress(connIdx);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpsAddress));
+    }
+  }
+
+  /**
    * Create a new checkpoint
    * @return if the image is fetched from primary or not
    */
@@ -680,6 +685,12 @@ public class SecondaryNameNode implements Runnable,
       }
 
       if (secondary != null) {
+        // The web server is only needed when starting SNN as a daemon,
+        // and not needed if called from shell command. Starting the web server
+        // from shell may fail when getting credentials, if the environment
+        // is not set up for it, which is most of the case.
+        secondary.startInfoServer();
+
         secondary.startCheckpointThread();
         secondary.join();
       }
