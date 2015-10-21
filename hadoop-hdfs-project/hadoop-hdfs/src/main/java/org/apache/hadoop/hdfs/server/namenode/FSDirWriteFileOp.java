@@ -26,6 +26,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -363,6 +364,12 @@ class FSDirWriteFileOp {
     if (inode != null && inode.isDirectory()) {
       throw new FileAlreadyExistsException(src +
           " already exists as a directory");
+    }
+
+    if (FSDirectory.isExactReservedName(src) || (FSDirectory.isReservedName(src)
+        && !FSDirectory.isReservedRawName(src)
+        && !FSDirectory.isReservedInodesName(src))) {
+      throw new InvalidPathException(src);
     }
 
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);

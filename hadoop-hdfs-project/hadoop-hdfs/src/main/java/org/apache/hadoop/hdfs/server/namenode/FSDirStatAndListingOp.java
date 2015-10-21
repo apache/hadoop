@@ -230,6 +230,9 @@ class FSDirStatAndListingOp {
       throws IOException {
     String srcs = FSDirectory.normalizePath(src);
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
+    if (FSDirectory.isExactReservedName(srcs)) {
+      return getReservedListing(fsd);
+    }
 
     fsd.readLock();
     try {
@@ -339,6 +342,15 @@ class FSDirStatAndListingOp {
         listing, snapshots.size() - skipSize - numOfListing);
   }
 
+  /**
+   * Get a listing of the /.reserved directory.
+   * @param fsd FSDirectory
+   * @return listing containing child directories of /.reserved
+   */
+  private static DirectoryListing getReservedListing(FSDirectory fsd) {
+    return new DirectoryListing(fsd.getReservedStatuses(), 0);
+  }
+
   /** Get the file info for a specific file.
    * @param fsd FSDirectory
    * @param src The string representation of the path to the file
@@ -375,6 +387,10 @@ class FSDirStatAndListingOp {
       FSDirectory fsd, String src, boolean resolveLink, boolean isRawPath)
     throws IOException {
     String srcs = FSDirectory.normalizePath(src);
+    if (FSDirectory.isExactReservedName(src)) {
+      return FSDirectory.DOT_RESERVED_STATUS;
+    }
+
     if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
       if (fsd.getINode4DotSnapshot(srcs) != null) {
         return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,

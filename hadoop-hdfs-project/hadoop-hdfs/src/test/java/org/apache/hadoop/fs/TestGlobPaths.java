@@ -1193,10 +1193,6 @@ public class TestGlobPaths {
       Assert.assertEquals(reservedRoot,
         TestPath.mergeStatuses(wrap.
             globStatus(new Path(reservedRoot), new AcceptAllPathFilter())));
-      // These inodes don't show up via listStatus.
-      Assert.assertEquals("",
-        TestPath.mergeStatuses(wrap.
-            globStatus(new Path("/.reserved/*"), new AcceptAllPathFilter())));
     }
   }
 
