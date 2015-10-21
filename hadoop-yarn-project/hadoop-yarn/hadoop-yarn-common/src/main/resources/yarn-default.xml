@@ -1869,6 +1869,12 @@
   </property>
 
   <property>
+    <description>Comma separated list of UIs that will be hosted</description>
+    <name>yarn.timeline-service.ui-names</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>
     Default maximum number of retries for timeline service client
     and value -1 means no limit.

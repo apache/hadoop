@@ -989,6 +989,8 @@ Release 2.7.2 - UNRELEASED
     YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
     G R  via ozawa)
 
+    YARN-2513. Host framework UIs in YARN for use with the ATS (jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
