@@ -208,7 +208,7 @@ public class TestReplicationPolicyWithUpgradeDomain
     second.add(storages[8]);
     DatanodeStorageInfo chosenStorage =
         upgradeDomainPolicy.chooseReplicaToDelete(
-            null, null, (short)3, first, second, excessTypes);
+            (short)3, first, second, excessTypes);
     assertEquals(chosenStorage, storages[1]);
     first.clear();
     second.clear();
@@ -219,7 +219,7 @@ public class TestReplicationPolicyWithUpgradeDomain
     first.add(storages[4]);
     first.add(storages[5]);
     chosenStorage = upgradeDomainPolicy.chooseReplicaToDelete(
-        null, null, (short)3, first, second, excessTypes);
+        (short)3, first, second, excessTypes);
     assertTrue(chosenStorage.equals(storages[1]) ||
         chosenStorage.equals(storages[4]));
   }
@@ -265,7 +265,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[4]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertFalse(status.isPlacementPolicySatisfied());
 
     // 3 upgrade domains (enough), 2 racks (enough)
@@ -275,7 +276,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[5]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertTrue(status.isPlacementPolicySatisfied());
 
     // 3 upgrade domains (enough), 1 rack (not enough)
@@ -285,7 +287,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[2]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertFalse(status.isPlacementPolicySatisfied());
     assertFalse(status.getErrorDescription().contains("upgrade domain"));
 
@@ -296,7 +299,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[8]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertFalse(status.isPlacementPolicySatisfied());
     assertTrue(status.getErrorDescription().contains("upgrade domain"));
 
@@ -307,7 +311,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[8]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertTrue(status.isPlacementPolicySatisfied());
 
 
@@ -319,7 +324,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[8]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertTrue(status.isPlacementPolicySatisfied());
 
     // 2 upgrade domains (not enough), 3 racks (enough), 4 replicas
@@ -330,7 +336,8 @@ public class TestReplicationPolicyWithUpgradeDomain
     set.add(storages[8]);
     locatedBlock = BlockManager.newLocatedBlock(b,
         set.toArray(new DatanodeStorageInfo[set.size()]), 0, false);
-    status = replicator.verifyBlockPlacement("", locatedBlock, set.size());
+    status = replicator.verifyBlockPlacement(locatedBlock.getLocations(),
+        set.size());
     assertFalse(status.isPlacementPolicySatisfied());
   }
 

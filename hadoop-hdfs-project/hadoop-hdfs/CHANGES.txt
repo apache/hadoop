@@ -1543,6 +1543,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9251. Refactor TestWriteToReplica and TestFsDatasetImpl to avoid
     explicitly creating Files in the tests code. (lei)
 
+    HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
+    (Brahma Reddy Battula via mingma)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
