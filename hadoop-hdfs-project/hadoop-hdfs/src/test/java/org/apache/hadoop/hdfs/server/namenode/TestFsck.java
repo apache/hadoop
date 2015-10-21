@@ -625,9 +625,11 @@ public class TestFsck {
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE")); 
       // Use -openforwrite option to list open files
-      outStr = runFsck(conf, 0, true, topDir, "-openforwrite");
+      outStr = runFsck(conf, 0, true, topDir, "-files", "-blocks",
+          "-locations", "-openforwrite");
       System.out.println(outStr);
       assertTrue(outStr.contains("OPENFORWRITE"));
+      assertTrue(outStr.contains("Under Construction Block:"));
       assertTrue(outStr.contains("openFile"));
       // Close the file
       out.close(); 
@@ -636,12 +638,84 @@ public class TestFsck {
       System.out.println(outStr);
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       assertFalse(outStr.contains("OPENFORWRITE"));
+      assertFalse(outStr.contains("Under Construction Block:"));
       util.cleanup(fs, topDir);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  @Test
+  public void testFsckOpenECFiles() throws Exception {
+    DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsckECFile").
+        setNumFiles(4).build();
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    String outStr;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(10).build();
+      cluster.getFileSystem().getClient().setErasureCodingPolicy("/", null);
+      String topDir = "/myDir";
+      byte[] randomBytes = new byte[3000000];
+      int seed = 42;
+      new Random(seed).nextBytes(randomBytes);
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      util.createFiles(fs, topDir);
+
+      // Open a EC file for writing and do not close for now
+      Path openFile = new Path(topDir + "/openECFile");
+      FSDataOutputStream out = fs.create(openFile);
+      int writeCount = 0;
+      while (writeCount != 300) {
+        out.write(randomBytes);
+        writeCount++;
+      }
+
+      // We expect the filesystem to be HEALTHY and show one open file
+      outStr = runFsck(conf, 0, true, openFile.toString(), "-files",
+          "-blocks", "-openforwrite");
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("OPENFORWRITE"));
+      assertTrue(outStr.contains("Live_repl=9"));
+      assertTrue(outStr.contains("Expected_repl=9"));
+
+      // Use -openforwrite option to list open files
+      outStr = runFsck(conf, 0, true, openFile.toString(), "-files", "-blocks",
+          "-locations", "-openforwrite", "-replicaDetails");
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("OPENFORWRITE"));
+      assertTrue(outStr.contains("Live_repl=9"));
+      assertTrue(outStr.contains("Expected_repl=9"));
+      assertTrue(outStr.contains("Under Construction Block:"));
+
+      // Close the file
+      out.close();
+
+      // Now, fsck should show HEALTHY fs and should not show any open files
+      outStr = runFsck(conf, 0, true, openFile.toString(), "-files", "-blocks",
+          "-locations", "-racks", "-replicaDetails");
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertFalse(outStr.contains("OPENFORWRITE"));
+      assertFalse(outStr.contains("Under Construction Block:"));
+      assertFalse(outStr.contains("Expected_repl=9"));
+      assertTrue(outStr.contains("Live_repl=9"));
+      util.cleanup(fs, topDir);
+    } finally {
+      if (fs != null) {
+        try {
+          fs.close();
+        } catch (Exception e) {
+        }
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
