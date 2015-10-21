@@ -49,6 +49,11 @@ public interface MRJobConfig {
 
   public static final String TASK_CLEANUP_NEEDED = "mapreduce.job.committer.task.cleanup.needed";
 
+  public static final String TASK_LOCAL_WRITE_LIMIT_BYTES =
+          "mapreduce.task.local-fs.write-limit.bytes";
+  // negative values disable the limit
+  public static final long DEFAULT_TASK_LOCAL_WRITE_LIMIT_BYTES = -1;
+
   public static final String TASK_PROGRESS_REPORT_INTERVAL =
       "mapreduce.task.progress-report.interval";
   /** The number of milliseconds between progress reports. */
