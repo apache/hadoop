@@ -179,6 +179,9 @@ Trunk (Unreleased)
     HDFS-8632. Add InterfaceAudience annotation to the erasure coding classes.
     (Rakesh R via wang)
 
+    HDFS-9070. Allow fsck display pending replica location information for
+    being-written blocks. (GAO Rui via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1545,9 +1548,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
     (Brahma Reddy Battula via mingma)
-
-    HDFS-9070. Allow fsck display pending replica location information for
-    being-written blocks. (GAO Rui via jing9)
 
   OPTIMIZATIONS
 
