@@ -1549,6 +1549,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8647. Abstract BlockManager's rack policy into BlockPlacementPolicy.
     (Brahma Reddy Battula via mingma)
 
+    HDFS-9225. Fix intermittent test failure of
+    TestBlockManager.testBlocksAreNotUnderreplicatedInSingleRack.
+    (Masatake Iwasaki via wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
