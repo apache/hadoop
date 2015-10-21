@@ -493,6 +493,7 @@ public class ShuffleHandler extends AuxiliaryService {
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+    bootstrap.setOption("child.keepAlive", true);
     bootstrap.setPipelineFactory(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
     Channel ch = bootstrap.bind(new InetSocketAddress(port));
