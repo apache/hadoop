@@ -817,6 +817,9 @@ public abstract class Shell {
       return;
     }
     exitCode = 0; // reset for next run
+    if (Shell.MAC) {
+      System.setProperty("jdk.lang.Process.launchMechanism", "POSIX_SPAWN");
+    }
     runCommand();
   }
 
