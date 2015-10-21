@@ -156,6 +156,7 @@
     <menu name="Tools" inherit="top">
       <item name="Hadoop Streaming" href="hadoop-streaming/HadoopStreaming.html"/>
       <item name="Hadoop Archives" href="hadoop-archives/HadoopArchives.html"/>
+      <item name="Hadoop Archive Logs" href="hadoop-archive-logs/HadoopArchiveLogs.html"/>
       <item name="DistCp" href="hadoop-distcp/DistCp.html"/>
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>

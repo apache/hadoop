@@ -18,6 +18,7 @@ MapReduce Commands Guide
 * [Overview](#Overview)
 * [User Commands](#User_Commands)
     * [archive](#archive)
+    * [archive-logs](#archive-logs)
     * [classpath](#classpath)
     * [distcp](#distcp)
     * [job](#job)
@@ -52,6 +53,12 @@ Commands useful for users of a hadoop cluster.
 
 Creates a hadoop archive. More information can be found at
 [Hadoop Archives Guide](../../hadoop-archives/HadoopArchives.html).
+
+### `archive-logs`
+
+A tool to combine YARN aggregated logs into Hadoop archives to reduce the number
+of files in HDFS. More information can be found at
+[Hadoop Archive Logs Guide](../../hadoop-archive-logs/HadoopArchiveLogs.html).
 
 ### `classpath`
 
