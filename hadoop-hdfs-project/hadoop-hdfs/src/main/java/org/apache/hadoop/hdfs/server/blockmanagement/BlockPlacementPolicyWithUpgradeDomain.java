@@ -32,7 +32,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.net.NetworkTopology;
 
 /**
@@ -135,13 +134,13 @@ public class BlockPlacementPolicyWithUpgradeDomain extends
   }
 
   @Override
-  public BlockPlacementStatus verifyBlockPlacement(String srcPath,
-      LocatedBlock lBlk, int numberOfReplicas) {
-    BlockPlacementStatus defaultStatus = super.verifyBlockPlacement(srcPath,
-        lBlk, numberOfReplicas);
+  public BlockPlacementStatus verifyBlockPlacement(DatanodeInfo[] locs,
+      int numberOfReplicas) {
+    BlockPlacementStatus defaultStatus = super.verifyBlockPlacement(locs,
+        numberOfReplicas);
     BlockPlacementStatusWithUpgradeDomain upgradeDomainStatus =
         new BlockPlacementStatusWithUpgradeDomain(defaultStatus,
-            getUpgradeDomainsFromNodes(lBlk.getLocations()),
+            getUpgradeDomainsFromNodes(locs),
                 numberOfReplicas, upgradeDomainFactor);
     return upgradeDomainStatus;
   }

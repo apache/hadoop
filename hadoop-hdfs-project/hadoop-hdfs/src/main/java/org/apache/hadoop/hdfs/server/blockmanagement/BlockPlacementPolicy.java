@@ -30,9 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -103,37 +101,33 @@ public abstract class BlockPlacementPolicy {
    * Verify if the block's placement meets requirement of placement policy,
    * i.e. replicas are placed on no less than minRacks racks in the system.
    * 
-   * @param srcPath the full pathname of the file to be verified
-   * @param lBlk block with locations
+   * @param locs block with locations
    * @param numOfReplicas replica number of file to be verified
    * @return the result of verification
    */
-  abstract public BlockPlacementStatus verifyBlockPlacement(String srcPath,
-      LocatedBlock lBlk,
-      int numOfReplicas);
-  /**
-   * Decide whether deleting the specified replica of the block still makes 
-   * the block conform to the configured block placement policy.
-   * 
-   * @param srcBC block collection of file to which block-to-be-deleted belongs
-   * @param block The block to be deleted
-   * @param replicationFactor The required number of replicas for this block
-   * @param moreThanOne The replica locations of this block that are present
-   *                    on more than one unique racks.
-   * @param exactlyOne Replica locations of this block that  are present
-   *                    on exactly one unique racks.
-   * @param excessTypes The excess {@link StorageType}s according to the
-   *                    {@link BlockStoragePolicy}.
-   * @return the replica that is the best candidate for deletion
-   */
-  abstract public DatanodeStorageInfo chooseReplicaToDelete(
-      BlockCollection srcBC,
-      Block block, 
-      short replicationFactor,
-      Collection<DatanodeStorageInfo> moreThanOne,
-      Collection<DatanodeStorageInfo> exactlyOne,
-      List<StorageType> excessTypes);
+  abstract public BlockPlacementStatus verifyBlockPlacement(
+      DatanodeInfo[] locs, int numOfReplicas);
 
+  /**
+   * Select the excess replica storages for deletion based on either
+   * delNodehint/Excess storage types.
+   *
+   * @param candidates
+   *          available replicas
+   * @param expectedNumOfReplicas
+   *          The required number of replicas for this block
+   * @param excessTypes
+   *          type of the storagepolicy
+   * @param addedNode
+   *          New replica reported
+   * @param delNodeHint
+   *          Hint for excess storage selection
+   * @return Returns the list of excess replicas chosen for deletion
+   */
+  abstract public List<DatanodeStorageInfo> chooseReplicasToDelete(
+      Collection<DatanodeStorageInfo> candidates, int expectedNumOfReplicas,
+      List<StorageType> excessTypes, DatanodeDescriptor addedNode,
+      DatanodeDescriptor delNodeHint);
   /**
    * Used to setup a BlockPlacementPolicy object. This should be defined by 
    * all implementations of a BlockPlacementPolicy.
