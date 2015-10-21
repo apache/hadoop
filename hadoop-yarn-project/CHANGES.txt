@@ -978,9 +978,6 @@ Release 2.7.2 - UNRELEASED
 
   NEW FEATURES
 
-    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
-    in ZKRMStateStore. (Jian He via junping_du)
-
   IMPROVEMENTS
 
     YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
@@ -988,9 +985,6 @@ Release 2.7.2 - UNRELEASED
 
     YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
     (Mit Desai via xgong)
-
-    YARN-4092. Fixed UI redirection to print useful messages when both RMs are
-    in standby mode. (Xuan Gong via jianhe)
 
     YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
     G R  via ozawa)
@@ -1028,17 +1022,11 @@ Release 2.7.2 - UNRELEASED
     YARN-3893. Both RM in active state when Admin#transitionToActive failure 
     from refeshAll() (Bibin A Chundatt via rohithsharmaks)
 
-    YARN-4101. RM should print alert messages if Zookeeper and Resourcemanager
-    gets connection issue. (Xuan Gong via jianhe)
-
     YARN-4103. RM WebServices missing scheme for appattempts logLinks.
     (Jonathan Eagles via vvasudeb)
 
     YARN-4105. Capacity Scheduler headroom for DRF is wrong (Chang Li via
     jlowe)
-
-    YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
-    state-store error occurs. (Jian He via xgong)
 
     YARN-4096. App local logs are leaked if log aggregation fails to initialize
     for the app. (Jason Lowe via zxu)
@@ -1067,26 +1055,11 @@ Release 2.7.2 - UNRELEASED
     YARN-4180. AMLauncher does not retry on failures when talking to NM.
     (adhoot)
 
-    YARN-3727. For better error recovery, check if the directory exists before
-    using it for localization. (Zhihai Xu via jlowe)
-
     YARN-3619. ContainerMetrics unregisters during getMetrics and leads to
     ConcurrentModificationException (Zhihai Xu via jlowe)
 
     YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
     by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
-
-    YARN-4005. Completed container whose app is finished is possibly not
-    removed from NMStateStore. (Jun Gong via jianhe)
-
-    YARN-3780. Should use equals when compare Resource in RMNodeImpl#ReconnectNodeTransition.
-    (zhihai xu via devaraj)
-
-    YARN-3802. Two RMNodes for the same NodeId are used in RM sometimes
-    after NM is reconnected. (zhihai xu via xgong)
-
-    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
-    has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
 Release 2.7.1 - 2015-07-06
 
@@ -1149,9 +1122,6 @@ Release 2.7.1 - 2015-07-06
 
     YARN-3358. Audit log not present while refreshing Service ACLs. 
     (Varun Saxena via devaraj)
-
-    YARN-3554. Default value for maximum nodemanager connect wait time is too
-    high (Naganarasimha G R via jlowe)
 
     YARN-3476. Nodemanager can fail to delete local logs if log aggregation
     fails (Rohith via jlowe)
@@ -1755,9 +1725,6 @@ Release 2.7.0 - 2015-04-20
     YARN-933. Fixed InvalidStateTransitonException at FINAL_SAVING state in
     RMApp. (Rohith Sharmaks via jianhe)
 
-    YARN-3194. RM should handle NMContainerStatuses sent by NM while
-    registering if NM is Reconnected node (Rohith via jlowe)
-
     YARN-3247. TestQueueMappings should use CapacityScheduler explicitly.
     (Zhihai Xu via ozawa)
 
@@ -1822,11 +1789,29 @@ Release 2.6.2 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
+    in ZKRMStateStore. (Jian He via junping_du)
+
   IMPROVEMENTS
+
+    YARN-4092. Fixed UI redirection to print useful messages when both RMs are
+    in standby mode. (Xuan Gong via jianhe)
+
+    YARN-4101. RM should print alert messages if Zookeeper and Resourcemanager
+    gets connection issue. (Xuan Gong via jianhe)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
+    state-store error occurs. (Jian He via xgong)
+
+    YARN-3554. Default value for maximum nodemanager connect wait time is too
+    high (Naganarasimha G R via jlowe)
+
+    YARN-3727. For better error recovery, check if the directory exists before
+    using it for localization. (Zhihai Xu via jlowe)
 
     YARN-4005. Completed container whose app is finished is possibly not
     removed from NMStateStore. (Jun Gong via jianhe)
@@ -1842,6 +1827,9 @@ Release 2.6.2 - UNRELEASED
 
     YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
     has not been reset synchronously. (Jun Gong via rohithsharmaks)
+
+    YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
+    SESSIONEXPIED. (ozawa and Varun Saxena)
 
 Release 2.6.1 - 2015-09-23
 
