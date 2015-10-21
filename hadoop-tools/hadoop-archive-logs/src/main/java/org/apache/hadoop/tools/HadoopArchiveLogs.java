@@ -221,7 +221,7 @@ public class HadoopArchiveLogs implements Tool {
       CommandLine commandLine = parser.parse(opts, args);
       if (commandLine.hasOption(HELP_OPTION)) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("yarn archive-logs", opts);
+        formatter.printHelp("mapred archive-logs", opts);
         System.exit(0);
       }
       if (commandLine.hasOption(MAX_ELIGIBLE_APPS_OPTION)) {
@@ -254,7 +254,7 @@ public class HadoopArchiveLogs implements Tool {
       }
     } catch (ParseException pe) {
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("yarn archive-logs", opts);
+      formatter.printHelp("mapred archive-logs", opts);
       throw pe;
     }
   }
