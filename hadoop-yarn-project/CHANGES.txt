@@ -112,6 +112,8 @@ Release 2.7.2 - UNRELEASED
     YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of
     SESSIONEXPIED. (ozawa and Varun Saxena)
 
+    YARN-4281. 2.7 RM app page is broken (Chang Li via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

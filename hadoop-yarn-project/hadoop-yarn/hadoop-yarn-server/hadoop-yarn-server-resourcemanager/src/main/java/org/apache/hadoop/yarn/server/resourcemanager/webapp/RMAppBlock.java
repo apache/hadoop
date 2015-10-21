@@ -20,21 +20,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 
-import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
-import java.util.Set;
-
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -42,18 +34,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
-//import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
-import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
+
+import java.util.Collection;
+import java.util.Set;
 
 public class RMAppBlock extends AppBlock{
 
@@ -65,8 +56,8 @@ public class RMAppBlock extends AppBlock{
   @Inject
   RMAppBlock(ViewContext ctx, Configuration conf, ResourceManager rm) {
     super(rm.getClientRMService(), ctx, conf);
-    this.rm = rm;
     this.conf = conf;
+    this.rm = rm;
   }
 
   @Override
@@ -118,12 +109,15 @@ public class RMAppBlock extends AppBlock{
   }
 
   @Override
-  protected void createApplicationAttemptTable(Block html,
+  protected void generateApplicationTable(Block html,
+      UserGroupInformation callerUGI,
       Collection<ApplicationAttemptReport> attempts) {
-    TBODY<TABLE<Hamlet>> tbody =
+    // Application Attempt Table
+    Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody =
         html.table("#attempts").thead().tr().th(".id", "Attempt ID")
-          .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
-          ._()._().tbody();
+            .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
+            .th(".blacklistednodes", "Blacklisted Nodes")._()._().tbody();
+
     RMApp rmApp = this.rm.getRMContext().getRMApps().get(this.appID);
     if (rmApp == null) {
       return;
@@ -136,113 +130,27 @@ public class RMAppBlock extends AppBlock{
         continue;
       }
       AppAttemptInfo attemptInfo =
-          new AppAttemptInfo(rm, rmAppAttempt, rmApp.getUser(),
+          new AppAttemptInfo(this.rm, rmAppAttempt, rmApp.getUser(),
               WebAppUtils.getHttpSchemePrefix(conf));
+      String blacklistedNodesCount = "N/A";
+      Set<String> nodes =
+          RMAppAttemptBlock.getBlacklistedNodes(rm,
+            rmAppAttempt.getAppAttemptId());
+      if(nodes != null) {
+        blacklistedNodesCount = String.valueOf(nodes.size());
+      }
       String nodeLink = attemptInfo.getNodeHttpAddress();
       if (nodeLink != null) {
         nodeLink = WebAppUtils.getHttpSchemePrefix(conf) + nodeLink;
       }
       String logsLink = attemptInfo.getLogsLink();
       attemptsTableData
-        .append("[\"<a href='")
-        .append(url("appattempt", rmAppAttempt.getAppAttemptId().toString()))
-        .append("'>")
-        .append(String.valueOf(rmAppAttempt.getAppAttemptId()))
-        .append("</a>\",\"")
-        .append(attemptInfo.getStartTime())
-        .append("\",\"<a ")
-        .append(nodeLink == null ? "#" : "href='" + nodeLink)
-        .append("'>")
-        .append(
-          nodeLink == null ? "N/A" : StringEscapeUtils
-            .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
-        .append("</a>\",\"<a ")
-        .append(logsLink == null ? "#" : "href='" + logsLink).append("'>")
-        .append(logsLink == null ? "N/A" : "Logs").append("</a>\"],\n");
-    }
-    if (attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {
-      attemptsTableData.delete(attemptsTableData.length() - 2,
-        attemptsTableData.length() - 1);
-    }
-    attemptsTableData.append("]");
-    html.script().$type("text/javascript")
-      ._("var attemptsTableData=" + attemptsTableData)._();
-    tbody._()._();
-
-  }
-
-  protected void generateApplicationTable(Block html,
-      UserGroupInformation callerUGI,
-      Collection<ApplicationAttemptReport> attempts) {
-    // Application Attempt Table
-    Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody =
-        html.table("#attempts").thead().tr().th(".id", "Attempt ID")
-            .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
-            .th(".blacklistednodes", "Blacklisted Nodes")._()._().tbody();
-
-    StringBuilder attemptsTableData = new StringBuilder("[\n");
-    for (final ApplicationAttemptReport appAttemptReport : attempts) {
-      org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo appAttempt =
-          new org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo(
-            appAttemptReport);
-      ContainerReport containerReport = null;
-      try {
-        // AM container is always the first container of the attempt
-        final GetContainerReportRequest request =
-            GetContainerReportRequest.newInstance(ContainerId.newContainerId(
-                appAttemptReport.getApplicationAttemptId(), 1));
-        if (callerUGI == null) {
-          containerReport =
-              appBaseProt.getContainerReport(request).getContainerReport();
-        } else {
-          containerReport = callerUGI.doAs(
-              new PrivilegedExceptionAction<ContainerReport>() {
-                @Override
-                public ContainerReport run() throws Exception {
-                  ContainerReport report = null;
-                  try {
-                    report = appBaseProt.getContainerReport(request)
-                        .getContainerReport();
-                  } catch (ContainerNotFoundException ex) {
-                    LOG.warn(ex.getMessage());
-                  }
-                  return report;
-                }
-              });
-        }
-      } catch (Exception e) {
-        String message =
-            "Failed to read the AM container of the application attempt "
-                + appAttemptReport.getApplicationAttemptId() + ".";
-        LOG.error(message, e);
-        html.p()._(message)._();
-        return;
-      }
-      long startTime = 0L;
-      String logsLink = null;
-      String nodeLink = null;
-      if (containerReport != null) {
-        ContainerInfo container = new ContainerInfo(containerReport);
-        startTime = container.getStartedTime();
-        logsLink = containerReport.getLogUrl();
-        nodeLink = containerReport.getNodeHttpAddress();
-      }
-      String blacklistedNodesCount = "N/A";
-      Set<String> nodes = RMAppAttemptBlock.getBlacklistedNodes(rm,
-          ConverterUtils.toApplicationAttemptId(appAttempt.getAppAttemptId()));
-      if(nodes != null) {
-        blacklistedNodesCount = String.valueOf(nodes.size());
-      }
-
-      // AppAttemptID numerical value parsed by parseHadoopID in
-      // yarn.dt.plugins.js
-      attemptsTableData
           .append("[\"<a href='")
-          .append(url("appattempt", appAttempt.getAppAttemptId()))
+          .append(url("appattempt", rmAppAttempt.getAppAttemptId().toString()))
           .append("'>")
-          .append(appAttempt.getAppAttemptId())
+          .append(String.valueOf(rmAppAttempt.getAppAttemptId()))
           .append("</a>\",\"")
-          .append(startTime)
+          .append(attemptInfo.getStartTime())
           .append("\",\"<a ")
           .append(nodeLink == null ? "#" : "href='" + nodeLink)
           .append("'>")
