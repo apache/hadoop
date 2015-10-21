@@ -13,49 +13,47 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-project-dist</artifactId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
-  <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-common-project</artifactId>
+  <artifactId>hadoop-common-client</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <description>Apache Hadoop Common Project</description>
-  <name>Apache Hadoop Common Project</name>
-  <packaging>pom</packaging>
+  <description>Common client-side libraries for Apache Hadoop</description>
+  <name>Apache Hadoop Common Client</name>
+  <packaging>jar</packaging>
 
-  <modules>
-    <module>hadoop-auth</module>
-    <module>hadoop-auth-examples</module>
-    <module>hadoop-common-client</module>
-    <module>hadoop-common</module>
-    <module>hadoop-annotations</module>
-    <module>hadoop-nfs</module>
-    <module>hadoop-minikdc</module>
-    <module>hadoop-kms</module>
-  </modules>
+  <dependencies>
+  </dependencies>
 
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
+          <excludes>
+            <exclude>dev-support/findbugsExcludeFile.xml</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <excludePackageNames>org.apache.hadoop.hdfs.protocol.proto</excludePackageNames>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>
