@@ -2095,6 +2095,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-3059. ssl-server.xml causes NullPointer. (Xiao Chen via wang)
 
+    HDFS-9274. Default value of dfs.datanode.directoryscan.throttle.limit.ms.per.sec
+    should be consistent. (Yi Liu via zhz)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
