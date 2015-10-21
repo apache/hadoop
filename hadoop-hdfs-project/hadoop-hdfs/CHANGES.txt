@@ -21,6 +21,9 @@ Release 2.6.4 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9273. ACLs on root directory may be lost after NN restart.
+    (Xiao Chen via cnauroth)
+
 Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
