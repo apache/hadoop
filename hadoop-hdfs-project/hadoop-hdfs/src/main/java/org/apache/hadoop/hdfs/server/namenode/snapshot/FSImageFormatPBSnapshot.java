@@ -22,7 +22,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.updateBlocksMap;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeDirectory;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeFile;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
+//import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildIntelINodeDirectory;
 
 import java.io.DataOutputStream;
 import java.io.IOException;

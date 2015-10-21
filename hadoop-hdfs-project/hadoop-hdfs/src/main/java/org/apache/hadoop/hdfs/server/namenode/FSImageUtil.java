@@ -68,8 +68,14 @@ public final class FSImageUtil {
     file.readFully(bytes);
     IntelFileSummary intelFileSummary =
         IntelFileSummary.getRootAsIntelFileSummary(ByteBuffer.wrap(bytes));
-
-
+    if (intelFileSummary.ondiskVersion() != FILE_VERSION) {
+      throw new IOException("Unsopported file version " + intelFileSummary.ondiskVersion());
+    }
+//    if (!NameNodeLayoutVersion.supports(Feature.PROTOBUF_FORMAT, (int)intelFileSummary.layoutVersion())) {
+//      throw new IOException("Unsupported layout version "
+//          + intelFileSummary.layoutVersion());
+//    }
+    return intelFileSummary;
   }
 
   public static FileSummary loadSummary(RandomAccessFile file)
