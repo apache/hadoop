@@ -122,6 +122,11 @@ public class FSDirectory implements Closeable {
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
 
+  public final static HdfsFileStatus DOT_RESERVED_STATUS =
+      new HdfsFileStatus(0, true, 0, 0, 0, 0, new FsPermission((short) 01770),
+          null, null, null, HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits
@@ -168,6 +173,8 @@ public class FSDirectory implements Closeable {
   private final INodeId inodeId;
 
   private final FSEditLog editLog;
+
+  private HdfsFileStatus[] reservedStatuses;
 
   private INodeAttributeProvider attributeProvider;
 
@@ -312,7 +319,44 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_KEY,
         DFSConfigKeys.DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT);
   }
-    
+
+  /**
+   * Get HdfsFileStatuses of the reserved paths: .inodes and raw.
+   *
+   * @return Array of HdfsFileStatus
+   */
+  HdfsFileStatus[] getReservedStatuses() {
+    Preconditions.checkNotNull(reservedStatuses, "reservedStatuses should "
+        + " not be null. It is populated when FSNamesystem loads FS image."
+        + " It has to be set at this time instead of initialization time"
+        + " because CTime is loaded during FSNamesystem#loadFromDisk.");
+    return reservedStatuses;
+  }
+
+  /**
+   * Create HdfsFileStatuses of the reserved paths: .inodes and raw.
+   * These statuses are solely for listing purpose. All other operations
+   * on the reserved dirs are disallowed.
+   * Operations on sub directories are resolved by
+   * {@link FSDirectory#resolvePath(String, byte[][], FSDirectory)}
+   * and conducted directly, without the need to check the reserved dirs.
+   *
+   * This method should only be invoked once during namenode initialization.
+   *
+   * @param cTime CTime of the file system
+   * @return Array of HdfsFileStatus
+   */
+  void createReservedStatuses(long cTime) {
+    HdfsFileStatus inodes = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
+        new FsPermission((short) 0770), null, supergroup, null,
+        DOT_INODES, -1L, 0, null,
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+    HdfsFileStatus raw = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
+        new FsPermission((short) 0770), null, supergroup, null, RAW, -1L,
+        0, null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+    reservedStatuses = new HdfsFileStatus[] {inodes, raw};
+  }
+
   FSNamesystem getFSNamesystem() {
     return namesystem;
   }
@@ -1263,9 +1307,18 @@ public class FSDirectory implements Closeable {
     return src.startsWith(DOT_RESERVED_PATH_PREFIX + Path.SEPARATOR);
   }
 
+  public static boolean isExactReservedName(String src) {
+    return CHECK_RESERVED_FILE_NAMES && src.equals(DOT_RESERVED_PATH_PREFIX);
+  }
+
   static boolean isReservedRawName(String src) {
     return src.startsWith(DOT_RESERVED_PATH_PREFIX +
         Path.SEPARATOR + RAW_STRING);
+  }
+
+  static boolean isReservedInodesName(String src) {
+    return src.startsWith(DOT_RESERVED_PATH_PREFIX +
+        Path.SEPARATOR + DOT_INODES_STRING);
   }
 
   /**
@@ -1319,7 +1372,13 @@ public class FSDirectory implements Closeable {
       if (nComponents == 3) {
         return Path.SEPARATOR;
       } else {
-        return constructRemainingPath("", pathComponents, 3);
+        if (nComponents == 4
+            && Arrays.equals(DOT_RESERVED, pathComponents[3])) {
+          /* It's /.reserved/raw/.reserved so don't strip */
+          return src;
+        } else {
+          return constructRemainingPath("", pathComponents, 3);
+        }
       }
     } else {
       /* It's some sort of /.reserved/<unknown> path. Ignore it. */
