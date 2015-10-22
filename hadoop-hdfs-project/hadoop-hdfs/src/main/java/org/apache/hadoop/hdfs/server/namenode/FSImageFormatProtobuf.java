@@ -664,7 +664,7 @@ public final class FSImageFormatProtobuf {
       for (int i = 0; i < data.length ; i++) {
         data[i] = listSection.get(i);
       }
-
+      
       /**
        * how to construct these data?  Use IntelSection.createIntelSection() will
        * return an int represent the current section.
