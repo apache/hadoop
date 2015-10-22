@@ -975,6 +975,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4270. Limit application resource reservation on nodes for non-node/rack
     specific requests (asuresh)
 
+    YARN-4256. YARN fair scheduler vcores with decimal values. (Jun Gong via zxu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
