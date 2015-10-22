@@ -545,10 +545,32 @@ public class NativeAzureFileSystem extends FileSystem {
 
         // Get a lease on source to block write access.
         String srcName = fs.pathToKey(srcFile);
-        SelfRenewingLease lease = fs.acquireLease(srcFile);
-
-        // Delete the file. This will free the lease too.
-        fs.getStoreInterface().delete(srcName, lease);
+        SelfRenewingLease lease = null;
+        try {
+          lease = fs.acquireLease(srcFile);
+          // Delete the file. This will free the lease too.
+          fs.getStoreInterface().delete(srcName, lease);
+        } catch(AzureException e) {
+            String errorCode = "";
+            try {
+              StorageException e2 = (StorageException) e.getCause();
+              errorCode = e2.getErrorCode();
+            } catch(Exception e3) {
+              // do nothing if cast fails
+            }
+            // If the rename already finished do nothing
+            if(!errorCode.equals("BlobNotFound")){
+              throw e;
+            }
+        } finally {
+          try {
+            if(lease != null){
+              lease.free();
+            }
+          } catch(StorageException e) {
+            LOG.warn("Unable to free lease because: " + e.getMessage());
+          }
+        }
       } else if (!srcExists && dstExists) {
 
         // The rename already finished, so do nothing.

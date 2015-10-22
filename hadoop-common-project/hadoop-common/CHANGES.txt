@@ -1338,6 +1338,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12334. Change Mode Of Copy Operation of HBase WAL Archiving to bypass
     Azure Storage Throttling after retries. (Gaurav Kanade via cnauroth)
 
+    HADOOP-12484. Single File Rename Throws Incorrectly In Potential Race
+    Condition Scenarios. (Gaurav Kanade via cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
