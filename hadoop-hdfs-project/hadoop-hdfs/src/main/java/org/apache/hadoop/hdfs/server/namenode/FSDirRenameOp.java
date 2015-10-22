@@ -499,6 +499,12 @@ class FSDirRenameOp {
           + error);
       throw new IOException(error);
     }
+
+    if (FSDirectory.isExactReservedName(src)
+        || FSDirectory.isExactReservedName(dst)) {
+      error = "Cannot rename to or from /.reserved";
+      throw new InvalidPathException(error);
+    }
   }
 
   private static void validateOverwrite(

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -175,6 +176,10 @@ class FSDirDeleteOp {
     assert fsn.hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+    }
+
+    if (FSDirectory.isExactReservedName(src)) {
+      throw new InvalidPathException(src);
     }
 
     FSDirectory fsd = fsn.getFSDirectory();
