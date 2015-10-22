@@ -180,17 +180,14 @@ public class DelegationTokenSecretManager
 
   public static class SecretManagerState {
     public final SecretManagerSection section;
-    public final IntelSecretManagerSection intelsection;
     public final List<SecretManagerSection.DelegationKey> keys;
     public final List<SecretManagerSection.PersistToken> tokens;
 
     public SecretManagerState(
         SecretManagerSection s,
-        IntelSecretManagerSection intelS,
         List<SecretManagerSection.DelegationKey> keys,
         List<SecretManagerSection.PersistToken> tokens) {
       this.section = s;
-      this.intelsection = intelS;
       this.keys = keys;
       this.tokens = tokens;
     }
