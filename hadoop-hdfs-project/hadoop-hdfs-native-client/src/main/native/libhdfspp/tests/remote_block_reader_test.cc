@@ -128,7 +128,7 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   block.set_poolid("foo");
   block.set_blockid(0);
   block.set_generationstamp(0);
-  
+
   std::string data(kChunkSize, 0);
   ReadContent(&conn, nullptr, block, kChunkSize, 0,
               buffer(const_cast<char *>(data.c_str()), data.size()),

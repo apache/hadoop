@@ -24,8 +24,8 @@ using ::hadoop::hdfs::LocatedBlocksProto;
 
 InputStream::~InputStream() {}
 
-InputStreamImpl::InputStreamImpl(::asio::io_service *io_service, 
-                                 const std::string &client_name, 
+InputStreamImpl::InputStreamImpl(::asio::io_service *io_service,
+                                 const std::string &client_name,
                                  const ::hadoop::hdfs::LocatedBlocksProto *blocks)
     : io_service_(io_service), client_name_(client_name), file_length_(blocks->filelength()) {
   for (const auto &block : blocks->blocks()) {

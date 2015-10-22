@@ -51,7 +51,7 @@ void NameNodeConnection::Connect(const std::string &server,
   });
 }
 
-void NameNodeConnection::GetBlockLocations(const std::string & path, 
+void NameNodeConnection::GetBlockLocations(const std::string & path,
   std::function<void(const Status &, const ::hadoop::hdfs::LocatedBlocksProto*)> handler)
 {
   using ::hadoop::hdfs::GetBlockLocationsRequestProto;
@@ -60,8 +60,8 @@ void NameNodeConnection::GetBlockLocations(const std::string & path,
   struct State {
     GetBlockLocationsRequestProto req;
     std::shared_ptr<GetBlockLocationsResponseProto> resp;
-  }; 
- 
+  };
+
   auto m = continuation::Pipeline<State>::Create();
   auto &req = m->state().req;
   req.set_src(path);
@@ -82,7 +82,7 @@ void NameNodeConnection::GetBlockLocations(const std::string & path,
 }
 
 
-  
+
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(
@@ -116,7 +116,7 @@ void FileSystemImpl::Connect(const std::string &server,
 void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, InputStream *)> &handler) {
-  
+
   nn_.GetBlockLocations(path, [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations) {
     handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, locations)
                             : nullptr);

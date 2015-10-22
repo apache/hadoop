@@ -29,9 +29,9 @@ namespace hdfs {
 /**
  * NameNodeConnection: abstracts the details of communicating with a NameNode
  * and the implementation of the communications protocol.
- * 
+ *
  * Will eventually handle retry and failover.
- * 
+ *
  * Threading model: thread-safe; all operations can be called concurrently
  */
 class NameNodeConnection {
@@ -53,16 +53,16 @@ private:
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
 };
- 
+
 /*
  * FileSystem: The consumer's main point of interaction with the cluster as
- * a whole.  
- * 
+ * a whole.
+ *
  * Initially constructed in a disconnected state; call Connect before operating
  * on the FileSystem.
- * 
+ *
  * All open files must be closed before the FileSystem is destroyed.
- * 
+ *
  * Threading model: thread-safe for all operations
  */
 class FileSystemImpl : public FileSystem {
@@ -81,15 +81,15 @@ private:
 
 /*
  * InputStreamImpl: connects to DNs, does one-shot reads.
- * 
+ *
  * This will eventually be split into DNConnection and ReadOperation classes
- * 
+ *
  * Threading model: not thread-safe; consumers and io_service should not call
  *    concurrently
  */
 class InputStreamImpl : public InputStream {
 public:
-  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name, 
+  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
                   const ::hadoop::hdfs::LocatedBlocksProto *blocks);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
