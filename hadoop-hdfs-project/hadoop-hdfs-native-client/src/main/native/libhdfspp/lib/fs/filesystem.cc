@@ -51,6 +51,38 @@ void NameNodeConnection::Connect(const std::string &server,
   });
 }
 
+void NameNodeConnection::GetBlockLocations(const std::string & path, 
+  std::function<void(const Status &, const ::hadoop::hdfs::LocatedBlocksProto*)> handler)
+{
+  using ::hadoop::hdfs::GetBlockLocationsRequestProto;
+  using ::hadoop::hdfs::GetBlockLocationsResponseProto;
+
+  struct State {
+    GetBlockLocationsRequestProto req;
+    std::shared_ptr<GetBlockLocationsResponseProto> resp;
+  }; 
+ 
+  auto m = continuation::Pipeline<State>::Create();
+  auto &req = m->state().req;
+  req.set_src(path);
+  req.set_offset(0);
+  req.set_length(std::numeric_limits<long long>::max());
+  m->state().resp.reset(new GetBlockLocationsResponseProto());
+
+  State *s = &m->state();
+  m->Push(continuation::Bind(
+      [this, s](const continuation::Continuation::Next &next) {
+        namenode_.GetBlockLocations(&s->req, s->resp, next);
+      }));
+  //TODO-BTH: Put client name et. al. into "ClusterInfo" object
+  m->Run([this, handler](const Status &stat, const State &s) {
+    handler(stat, stat.ok() ? &s.resp->locations()
+                            : nullptr);
+  });
+}
+
+
+  
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(
@@ -85,13 +117,9 @@ void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, InputStream *)> &handler) {
   
-  auto foo = [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations){};
-  nn_.GetBlockLocations(path, foo);
-  
-  
   nn_.GetBlockLocations(path, [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations) {
-//    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, locations)
-//                            : nullptr);
+    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, locations)
+                            : nullptr);
   });
 }
 }
