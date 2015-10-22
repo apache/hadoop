@@ -106,7 +106,7 @@ void FileSystemImpl::Open(
       }));
   //TODO: Put client name et. al. into "ClusterInfo" object
   m->Run([this, handler](const Status &stat, const State &s) {
-    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), nn_.engine_.client_name(), this, &s.resp->locations())
+    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), nn_.engine_.client_name(), &s.resp->locations())
                             : nullptr);
   });
 }

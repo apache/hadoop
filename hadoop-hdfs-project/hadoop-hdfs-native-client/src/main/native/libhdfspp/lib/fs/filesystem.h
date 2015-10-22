@@ -62,7 +62,7 @@ private:
 class InputStreamImpl : public InputStream {
 public:
   InputStreamImpl(::asio::io_service *io_service, const std::string &client_name, 
-                  FileSystemImpl *fs, const ::hadoop::hdfs::LocatedBlocksProto *blocks);
+                  const ::hadoop::hdfs::LocatedBlocksProto *blocks);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
                const std::set<std::string> &excluded_datanodes,
@@ -81,7 +81,6 @@ public:
 private:
   ::asio::io_service *io_service_;
   const std::string client_name_;
-  FileSystemImpl *fs_; //TODO: get rid of this?
   unsigned long long file_length_;
   std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
   template <class Reader> struct HandshakeContinuation;
