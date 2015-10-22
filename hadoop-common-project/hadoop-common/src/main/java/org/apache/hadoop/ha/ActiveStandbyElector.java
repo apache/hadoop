@@ -208,8 +208,49 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    */
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
-      List<ZKAuthInfo> authInfo,
-      ActiveStandbyElectorCallback app, int maxRetryNum) throws IOException,
+      List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
+      int maxRetryNum) throws IOException, HadoopIllegalArgumentException,
+      KeeperException {
+    this(zookeeperHostPorts, zookeeperSessionTimeout, parentZnodeName, acl,
+      authInfo, app, maxRetryNum, true);
+  }
+
+  /**
+   * Create a new ActiveStandbyElector object <br/>
+   * The elector is created by providing to it the Zookeeper configuration, the
+   * parent znode under which to create the znode and a reference to the
+   * callback interface. <br/>
+   * The parent znode name must be the same for all service instances and
+   * different across services. <br/>
+   * After the leader has been lost, a new leader will be elected after the
+   * session timeout expires. Hence, the app must set this parameter based on
+   * its needs for failure response time. The session timeout must be greater
+   * than the Zookeeper disconnect timeout and is recommended to be 3X that
+   * value to enable Zookeeper to retry transient disconnections. Setting a very
+   * short session timeout may result in frequent transitions between active and
+   * standby states during issues like network outages/GS pauses.
+   * 
+   * @param zookeeperHostPorts
+   *          ZooKeeper hostPort for all ZooKeeper servers
+   * @param zookeeperSessionTimeout
+   *          ZooKeeper session timeout
+   * @param parentZnodeName
+   *          znode under which to create the lock
+   * @param acl
+   *          ZooKeeper ACL's
+   * @param authInfo a list of authentication credentials to add to the
+   *                 ZK connection
+   * @param app
+   *          reference to callback interface object
+   * @param failFast
+   *          whether need to add the retry when establishing ZK connection.
+   * @throws IOException
+   * @throws HadoopIllegalArgumentException
+   */
+  public ActiveStandbyElector(String zookeeperHostPorts,
+      int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
+      List<ZKAuthInfo> authInfo, ActiveStandbyElectorCallback app,
+      int maxRetryNum, boolean failFast) throws IOException,
       HadoopIllegalArgumentException, KeeperException {
     if (app == null || acl == null || parentZnodeName == null
         || zookeeperHostPorts == null || zookeeperSessionTimeout <= 0) {
@@ -225,8 +266,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     zkBreadCrumbPath = znodeWorkingDir + "/" + BREADCRUMB_FILENAME;
     this.maxRetryNum = maxRetryNum;
 
-    // createConnection for future API calls
-    createConnection();
+    // establish the ZK Connection for future API calls
+    if (failFast) {
+      createConnection();
+    } else {
+      reEstablishSession();
+    }
   }
 
   /**
