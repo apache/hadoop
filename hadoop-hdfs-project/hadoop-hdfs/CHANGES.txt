@@ -1591,6 +1591,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9253. Refactor tests of libhdfs into a directory. (wheat9)
 
+    HDFS-9280. Document NFS gateway export point parameter. (Xiao Chen via zhz)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
