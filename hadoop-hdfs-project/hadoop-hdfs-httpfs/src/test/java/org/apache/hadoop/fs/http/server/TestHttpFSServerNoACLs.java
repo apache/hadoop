@@ -243,12 +243,13 @@ public class TestHttpFSServerNoACLs extends HTestCase {
   @TestJetty
   public void testWithNoAcls() throws Exception {
     final String aclUser1 = "user:foo:rw-";
+    final String rmAclUser1 = "user:foo:";
     final String aclUser2 = "user:bar:r--";
     final String aclGroup1 = "group::r--";
     final String aclSpec = "aclspec=user::rwx," + aclUser1 + ","
             + aclGroup1 + ",other::---";
     final String modAclSpec = "aclspec=" + aclUser2;
-    final String remAclSpec = "aclspec=" + aclUser1;
+    final String remAclSpec = "aclspec=" + rmAclUser1;
     final String defUser1 = "default:user:glarch:r-x";
     final String defSpec1 = "aclspec=" + defUser1;
     final String dir = "/noACLs";
