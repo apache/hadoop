@@ -32,6 +32,26 @@ static const int kNamenodeProtocolVersion = 1;
 
 using ::asio::ip::tcp;
 
+void NameNodeConnection::Connect(const std::string &server,
+                             const std::string &service,
+                             std::function<void(const Status &)> &handler) {
+  using namespace continuation;
+  typedef std::vector<tcp::endpoint> State;
+  auto m = Pipeline<State>::Create();
+  m->Push(Resolve(io_service_, server, service,
+                  std::back_inserter(m->state())))
+      .Push(Bind([this, m](const Continuation::Next &next) {
+        engine_.Connect(m->state().front(), next);
+      }));
+  m->Run([this, handler](const Status &status, const State &) {
+    if (status.ok()) {
+      engine_.Start();
+    }
+    handler(status);
+  });
+}
+
+
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(
@@ -51,28 +71,14 @@ void FileSystem::New(
 
 FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
     : io_service_(static_cast<IoServiceImpl *>(io_service)),
-      engine_(&io_service_->io_service(), options,
+      nn_(&io_service_->io_service(), options,
               RpcEngine::GetRandomClientName(), kNamenodeProtocol,
-              kNamenodeProtocolVersion),
-      namenode_(&engine_) {}
+              kNamenodeProtocolVersion) {}
 
 void FileSystemImpl::Connect(const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &&handler) {
-  using namespace continuation;
-  typedef std::vector<tcp::endpoint> State;
-  auto m = Pipeline<State>::Create();
-  m->Push(Resolve(&io_service_->io_service(), server, service,
-                  std::back_inserter(m->state())))
-      .Push(Bind([this, m](const Continuation::Next &next) {
-        engine_.Connect(m->state().front(), next);
-      }));
-  m->Run([this, handler](const Status &status, const State &) {
-    if (status.ok()) {
-      engine_.Start();
-    }
-    handler(status);
-  });
+  nn_.Connect(server, service, handler);
 }
 
 void FileSystemImpl::Open(
@@ -96,10 +102,11 @@ void FileSystemImpl::Open(
   State *s = &m->state();
   m->Push(continuation::Bind(
       [this, s](const continuation::Continuation::Next &next) {
-        namenode_.GetBlockLocations(&s->req, s->resp, next);
+        nn_.namenode_.GetBlockLocations(&s->req, s->resp, next);
       }));
+  //TODO: Put client name et. al. into "ClusterInfo" object
   m->Run([this, handler](const Status &stat, const State &s) {
-    handler(stat, stat.ok() ? new InputStreamImpl(this, &s.resp->locations())
+    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), nn_.engine_.client_name(), this, &s.resp->locations())
                             : nullptr);
   });
 }

@@ -78,7 +78,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks);
+  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(), &fs, &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -92,7 +92,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+       block, dn, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, const std::string &, size_t transferred) {
         stat = status;
         read = transferred;
@@ -112,7 +112,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks);
+  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(), &fs, &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -127,7 +127,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+       block, dn, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, const std::string &,
                      size_t transferred) {
         stat = status;
@@ -148,7 +148,7 @@ TEST(InputStreamTest, TestReadError) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks);
+  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(), &fs, &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -165,7 +165,7 @@ TEST(InputStreamTest, TestReadError) {
   };
 
   is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-      "client", block, dn, 0, asio::buffer(buf, sizeof(buf)),
+       block, dn, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, const std::string &,
                      size_t transferred) {
         stat = status;
@@ -195,7 +195,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&fs, &blocks);
+  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(), &fs, &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {

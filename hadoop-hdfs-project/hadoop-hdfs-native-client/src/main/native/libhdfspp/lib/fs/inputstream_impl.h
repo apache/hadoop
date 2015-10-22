@@ -162,23 +162,22 @@ void InputStreamImpl::AsyncPreadSome(
       it->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   AsyncReadBlock<RemoteBlockReaderTrait>(
-      fs_->rpc_engine().client_name(), *it, *chosen_dn, offset_within_block,
+      *it, *chosen_dn, offset_within_block,
       asio::buffer(buffers, size_within_block), handler);
 }
 
 template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
 void InputStreamImpl::AsyncReadBlock(
-    const std::string &client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
     const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
     const MutableBufferSequence &buffers, const Handler &handler) {
 
   typedef typename BlockReaderTrait::Reader Reader;
   auto m =
-      BlockReaderTrait::CreatePipeline(&fs_->rpc_engine().io_service(), dn);
+      BlockReaderTrait::CreatePipeline(io_service_, dn);
   auto &s = m->state();
   size_t size = asio::buffer_size(buffers);
-  m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name, nullptr,
+  m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name_, nullptr,
                                             &block.b(), size, offset))
       .Push(new ReadBlockContinuation<Reader, MutableBufferSequence>(
           s.reader(), buffers, s.transferred()));

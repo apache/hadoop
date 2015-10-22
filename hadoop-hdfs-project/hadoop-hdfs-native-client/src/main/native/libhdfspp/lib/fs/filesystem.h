@@ -26,6 +26,24 @@
 
 namespace hdfs {
 
+class NameNodeConnection {
+public:
+  NameNodeConnection(::asio::io_service *io_service, const Options &options,
+            const std::string &client_name, const char *protocol_name,
+            int protocol_version) :
+  io_service_(io_service),
+  engine_(io_service, options, client_name, protocol_name, protocol_version),
+  namenode_(& engine_) {}
+
+  void Connect(const std::string &server,
+               const std::string &service,
+               std::function<void(const Status &)> &handler);
+
+  ::asio::io_service * io_service_;
+  RpcEngine engine_;
+  ClientNamenodeProtocol namenode_;
+};
+  
 class FileSystemImpl : public FileSystem {
 public:
   FileSystemImpl(IoService *io_service, const Options &options);
@@ -34,18 +52,17 @@ public:
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, InputStream *)>
                         &handler) override;
-  RpcEngine &rpc_engine() { return engine_; }
+//  RpcEngine &rpc_engine() { return engine_; }
 
 private:
   IoServiceImpl *io_service_;
-  RpcEngine engine_;
-  ClientNamenodeProtocol namenode_;
+  NameNodeConnection nn_;
 };
 
 class InputStreamImpl : public InputStream {
 public:
-  InputStreamImpl(FileSystemImpl *fs,
-                  const ::hadoop::hdfs::LocatedBlocksProto *blocks);
+  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name, 
+                  FileSystemImpl *fs, const ::hadoop::hdfs::LocatedBlocksProto *blocks);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
                const std::set<std::string> &excluded_datanodes,
@@ -56,14 +73,15 @@ public:
                       const std::set<std::string> &excluded_datanodes,
                       const Handler &handler);
   template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
-  void AsyncReadBlock(const std::string &client_name,
-                      const hadoop::hdfs::LocatedBlockProto &block,
+  void AsyncReadBlock(const hadoop::hdfs::LocatedBlockProto &block,
                       const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
                       const MutableBufferSequence &buffers,
                       const Handler &handler);
 
 private:
-  FileSystemImpl *fs_;
+  ::asio::io_service *io_service_;
+  const std::string client_name_;
+  FileSystemImpl *fs_; //TODO: get rid of this?
   unsigned long long file_length_;
   std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
   template <class Reader> struct HandshakeContinuation;
