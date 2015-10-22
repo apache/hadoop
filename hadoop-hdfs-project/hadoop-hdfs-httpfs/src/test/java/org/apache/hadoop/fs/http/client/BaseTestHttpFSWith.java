@@ -738,6 +738,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
 
     final String aclUser1 = "user:foo:rw-";
+    final String rmAclUser1 = "user:foo:";
     final String aclUser2 = "user:bar:r--";
     final String aclGroup1 = "group::r--";
     final String aclSet = "user::rwx," + aclUser1 + ","
@@ -765,7 +766,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
 
-    httpfs.removeAclEntries(path, AclEntry.parseAclSpec(aclUser1, true));
+    httpfs.removeAclEntries(path, AclEntry.parseAclSpec(rmAclUser1, false));
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);

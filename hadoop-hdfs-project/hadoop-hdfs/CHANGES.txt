@@ -2114,6 +2114,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9273. ACLs on root directory may be lost after NN restart.
     (Xiao Chen via cnauroth)
 
+    HDFS-9286. HttpFs does not parse ACL syntax correctly for operation
+    REMOVEACLENTRIES. (Wei-Chiu Chuang via cnauroth)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
