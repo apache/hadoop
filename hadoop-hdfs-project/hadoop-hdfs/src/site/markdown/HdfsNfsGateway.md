@@ -195,6 +195,14 @@ It's strongly recommended for the users to update a few configuration properties
 
             log4j.logger.org.apache.hadoop.oncrpc=DEBUG
 
+*   Export point. One can specify the NFS export point of HDFS. Exactly one export point is supported.
+    Full path is required when configuring the export point. By default, the export point is the root directory "/".
+
+        <property>
+          <name>nfs.export.point</name>
+          <value>/</value>
+        </property>
+
 Start and stop NFS gateway service
 ----------------------------------
 

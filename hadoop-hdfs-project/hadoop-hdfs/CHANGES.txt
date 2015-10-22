@@ -755,6 +755,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9253. Refactor tests of libhdfs into a directory. (wheat9)
 
+    HDFS-9280. Document NFS gateway export point parameter. (Xiao Chen via zhz)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to
