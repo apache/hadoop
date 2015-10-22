@@ -215,7 +215,6 @@ public class ReservationSystemTestUtil {
     return context;
   }
 
-  @SuppressWarnings("unchecked")
   public CapacityScheduler mockCapacityScheduler(int numContainers)
       throws IOException {
     // stolen from TestCapacityScheduler

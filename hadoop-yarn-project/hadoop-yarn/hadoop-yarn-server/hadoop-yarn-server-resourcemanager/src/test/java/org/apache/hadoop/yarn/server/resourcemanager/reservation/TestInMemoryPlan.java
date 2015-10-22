@@ -113,7 +113,7 @@ public class TestInMemoryPlan {
             start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -147,7 +147,7 @@ public class TestInMemoryPlan {
             start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -175,7 +175,7 @@ public class TestInMemoryPlan {
             start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -189,7 +189,7 @@ public class TestInMemoryPlan {
 
     // Try to add it again
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
       Assert.fail("Add should fail as it already exists");
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage().endsWith("already exists"));
@@ -221,7 +221,7 @@ public class TestInMemoryPlan {
             start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -316,7 +316,7 @@ public class TestInMemoryPlan {
             start, start + alloc.length, allocs, resCalc, minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -388,7 +388,7 @@ public class TestInMemoryPlan {
             minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID1));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }
@@ -419,7 +419,7 @@ public class TestInMemoryPlan {
             minAlloc);
     Assert.assertNull(plan.getReservationById(reservationID2));
     try {
-      plan.addReservation(rAllocation);
+      plan.addReservation(rAllocation, false);
     } catch (PlanningException e) {
       Assert.fail(e.getMessage());
     }

@@ -711,9 +711,8 @@ public class TestAlignedPlanner {
 
     Resource clusterCapacity = Resource.newInstance(capacityMem, capacityCores);
 
-    // Set configuration
-    ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
-    String reservationQ = testUtil.getFullReservationQueueName();
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
     float instConstraint = 100;
     float avgConstraint = 100;
 
@@ -792,7 +791,7 @@ public class TestAlignedPlanner {
             ReservationSystemTestUtil.getNewReservationId(), rDef,
             "user_fixed", "dedicated", start, start + f.length * step,
             ReservationSystemTestUtil.generateAllocation(start, step, f), res,
-            minAlloc)));
+            minAlloc), false));
 
   }
 
