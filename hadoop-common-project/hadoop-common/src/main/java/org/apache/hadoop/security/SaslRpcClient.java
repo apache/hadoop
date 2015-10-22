@@ -33,7 +33,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -75,6 +74,7 @@ import org.apache.hadoop.util.ProtoUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import com.google.re2j.Pattern;
 /**
  * A utility class that encapsulates SASL logic for RPC client
  */
