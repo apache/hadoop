@@ -389,6 +389,13 @@
   </property>
 
   <property>
+    <description>When automatic failover is enabled, number of zookeeper
+      operation retry times in ActiveStandbyElector</description>
+    <name>yarn.resourcemanager.ha.failover-controller.active-standby-elector.zk.retries</name>
+    <!--<value>3</value>-->
+  </property>
+
+  <property>
     <description>The maximum number of completed applications RM state
     store keeps, less than or equals to ${yarn.resourcemanager.max-completed-applications}.
     By default, it equals to ${yarn.resourcemanager.max-completed-applications}.

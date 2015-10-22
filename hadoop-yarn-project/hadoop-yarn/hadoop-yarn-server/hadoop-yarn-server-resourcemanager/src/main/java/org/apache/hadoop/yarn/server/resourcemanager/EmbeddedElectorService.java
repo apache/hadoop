@@ -86,11 +86,12 @@ public class EmbeddedElectorService extends AbstractService
     List<ACL> zkAcls = RMZKUtils.getZKAcls(conf);
     List<ZKUtil.ZKAuthInfo> zkAuths = RMZKUtils.getZKAuths(conf);
 
-    int maxRetryNum = conf.getInt(
-        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY,
-        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+    int maxRetryNum =
+        conf.getInt(YarnConfiguration.RM_HA_FC_ELECTOR_ZK_RETRIES_KEY, conf
+          .getInt(CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY,
+            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT));
     elector = new ActiveStandbyElector(zkQuorum, (int) zkSessionTimeout,
-        electionZNode, zkAcls, zkAuths, this, maxRetryNum);
+        electionZNode, zkAcls, zkAuths, this, maxRetryNum, false);
 
     elector.ensureParentZNode();
     if (!isParentZnodeSafe(clusterId)) {

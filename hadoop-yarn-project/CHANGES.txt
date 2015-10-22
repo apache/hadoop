@@ -528,6 +528,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3985. Make ReservationSystem persist state using RMStateStore
     reservation APIs. (adhoot via asuresh)
 
+    YARN-4243. Add retry on establishing Zookeeper conenction in 
+    EmbeddedElectorService#serviceInit. (Xuan Gong via junping_du)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
