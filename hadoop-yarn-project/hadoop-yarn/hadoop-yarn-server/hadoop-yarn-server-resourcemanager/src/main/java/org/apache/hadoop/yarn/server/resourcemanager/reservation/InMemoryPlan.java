@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.Planner;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
@@ -54,7 +55,7 @@ public class InMemoryPlan implements Plan {
   private static final Logger LOG = LoggerFactory.getLogger(InMemoryPlan.class);
 
   private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0);
-  private final RMContext rmContext;
+  private final RMStateStore rmStateStore;
 
   private TreeMap<ReservationInterval, Set<InMemoryReservationAllocation>> currentReservations =
       new TreeMap<ReservationInterval, Set<InMemoryReservationAllocation>>();
@@ -112,7 +113,7 @@ public class InMemoryPlan implements Plan {
     this.replanner = replanner;
     this.getMoveOnExpiry = getMoveOnExpiry;
     this.clock = clock;
-    this.rmContext = rmContext;
+    this.rmStateStore = rmContext.getStateStore();
   }
 
   @Override
@@ -174,8 +175,8 @@ public class InMemoryPlan implements Plan {
   }
 
   @Override
-  public boolean addReservation(ReservationAllocation reservation)
-      throws PlanningException {
+  public boolean addReservation(ReservationAllocation reservation,
+      boolean isRecovering) throws PlanningException {
     // Verify the allocation is memory based otherwise it is not supported
     InMemoryReservationAllocation inMemReservation =
         (InMemoryReservationAllocation) reservation;
@@ -198,9 +199,16 @@ public class InMemoryPlan implements Plan {
       }
       // Validate if we can accept this reservation, throws exception if
       // validation fails
-      policy.validate(this, inMemReservation);
-      // we record here the time in which the allocation has been accepted
-      reservation.setAcceptanceTimestamp(clock.getTime());
+      if (!isRecovering) {
+        policy.validate(this, inMemReservation);
+        // we record here the time in which the allocation has been accepted
+        reservation.setAcceptanceTimestamp(clock.getTime());
+        if (rmStateStore != null) {
+          rmStateStore.storeNewReservation(
+              ReservationSystemUtil.buildStateProto(inMemReservation),
+              getQueueName(), inMemReservation.getReservationId().toString());
+        }
+      }
       ReservationInterval searchInterval =
           new ReservationInterval(inMemReservation.getStartTime(),
               inMemReservation.getEndTime());
@@ -217,9 +225,6 @@ public class InMemoryPlan implements Plan {
       currentReservations.put(searchInterval, reservations);
       reservationTable.put(inMemReservation.getReservationId(),
           inMemReservation);
-      rmContext.getStateStore().storeNewReservation(
-          ReservationSystemUtil.buildStateProto(inMemReservation),
-          getQueueName(), inMemReservation.getReservationId().toString());
       incrementAllocation(inMemReservation);
       LOG.info("Sucessfully added reservation: {} to plan.",
           inMemReservation.getReservationId());
@@ -253,7 +258,7 @@ public class InMemoryPlan implements Plan {
         return result;
       }
       try {
-        result = addReservation(reservation);
+        result = addReservation(reservation, false);
       } catch (PlanningException e) {
         LOG.error("Unable to update reservation: {} from plan due to {}.",
             reservation.getReservationId(), e.getMessage());
@@ -264,7 +269,7 @@ public class InMemoryPlan implements Plan {
         return result;
       } else {
         // rollback delete
-        addReservation(currReservation);
+        addReservation(currReservation, false);
         LOG.info("Rollbacked update reservation: {} from plan.",
             reservation.getReservationId());
         return result;
@@ -282,6 +287,10 @@ public class InMemoryPlan implements Plan {
     Set<InMemoryReservationAllocation> reservations =
         currentReservations.get(searchInterval);
     if (reservations != null) {
+      if (rmStateStore != null) {
+        rmStateStore.removeReservation(getQueueName(),
+            reservation.getReservationId().toString());
+      }
       if (!reservations.remove(reservation)) {
         LOG.error("Unable to remove reservation: {} from plan.",
             reservation.getReservationId());
@@ -298,8 +307,6 @@ public class InMemoryPlan implements Plan {
       throw new IllegalArgumentException(errMsg);
     }
     reservationTable.remove(reservation.getReservationId());
-    rmContext.getStateStore().removeReservation(
-        getQueueName(), reservation.getReservationId().toString());
     decrementAllocation(reservation);
     LOG.info("Sucessfully deleted reservation: {} in plan.",
         reservation.getReservationId());

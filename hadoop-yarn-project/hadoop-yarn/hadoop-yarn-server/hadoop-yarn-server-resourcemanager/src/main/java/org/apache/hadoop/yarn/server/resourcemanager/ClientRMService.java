@@ -1363,7 +1363,7 @@ public class ClientRMService extends AbstractService implements
           .format(
               "Reservation {0} is within threshold so attempting to create synchronously.",
               reservationId));
-      reservationSystem.synchronizePlan(planName);
+      reservationSystem.synchronizePlan(planName, true);
       LOG.info(MessageFormat.format("Created reservation {0} synchronously.",
           reservationId));
     }

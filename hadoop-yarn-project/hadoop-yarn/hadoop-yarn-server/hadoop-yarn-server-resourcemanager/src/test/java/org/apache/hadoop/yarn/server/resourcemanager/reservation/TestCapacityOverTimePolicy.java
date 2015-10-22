@@ -75,10 +75,11 @@ public class TestCapacityOverTimePolicy {
     maxAlloc = Resource.newInstance(1024 * 8, 8);
 
     mAgent = mock(ReservationAgent.class);
-    ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     QueueMetrics rootQueueMetrics = mock(QueueMetrics.class);
-    String reservationQ = testUtil.getFullReservationQueueName();
-    Resource clusterResource = testUtil.calculateClusterResource(totCont);
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
+    Resource clusterResource =
+        ReservationSystemTestUtil.calculateClusterResource(totCont);
     ReservationSchedulerConfiguration conf =
         ReservationSystemTestUtil.createConf(reservationQ, timeWindow,
             instConstraint, avgConstraint);
@@ -113,7 +114,7 @@ public class TestCapacityOverTimePolicy {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
   }
 
   @Test
@@ -130,7 +131,7 @@ public class TestCapacityOverTimePolicy {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
   }
 
   @Test
@@ -146,7 +147,7 @@ public class TestCapacityOverTimePolicy {
               ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
     }
   }
 
@@ -163,7 +164,7 @@ public class TestCapacityOverTimePolicy {
               ReservationSystemTestUtil.getNewReservationId(), rDef, "u" + i,
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
     }
   }
 
@@ -179,7 +180,7 @@ public class TestCapacityOverTimePolicy {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     Assert.fail("should not have accepted this");
   }
 
@@ -195,20 +196,20 @@ public class TestCapacityOverTimePolicy {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", initTime, initTime + f.length,
             ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
     try {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
               ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
               "dedicated", initTime, initTime + f.length,
               ReservationSystemTestUtil.generateAllocation(initTime, step, f),
-              res, minAlloc)));
+              res, minAlloc), false));
       Assert.fail();
     } catch (PlanningQuotaException p) {
       // expected
@@ -232,7 +233,7 @@ public class TestCapacityOverTimePolicy {
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
-            "dedicated", initTime, initTime + win, req, res, minAlloc)));
+            "dedicated", initTime, initTime + win, req, res, minAlloc), false));
   }
 
   @Test
@@ -251,13 +252,13 @@ public class TestCapacityOverTimePolicy {
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
-            "dedicated", initTime, initTime + win, req, res, minAlloc)));
+            "dedicated", initTime, initTime + win, req, res, minAlloc), false));
 
     try {
       assertTrue(plan.toString(),
           plan.addReservation(new InMemoryReservationAllocation(
               ReservationSystemTestUtil.getNewReservationId(), null, "u1",
-              "dedicated", initTime, initTime + win, req, res, minAlloc)));
+              "dedicated", initTime, initTime + win, req, res, minAlloc), false));
 
       Assert.fail("should not have accepted this");
     } catch (PlanningQuotaException e) {

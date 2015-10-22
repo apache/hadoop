@@ -94,7 +94,7 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
     if (oldReservation != null) {
       return plan.updateReservation(capReservation);
     } else {
-      return plan.addReservation(capReservation);
+      return plan.addReservation(capReservation, false);
     }
 
   }

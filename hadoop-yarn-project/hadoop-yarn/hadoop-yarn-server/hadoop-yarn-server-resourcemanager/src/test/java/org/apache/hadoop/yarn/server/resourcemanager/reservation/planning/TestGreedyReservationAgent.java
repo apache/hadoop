@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,8 +75,8 @@ public class TestGreedyReservationAgent {
     long timeWindow = 1000000L;
     Resource clusterCapacity = Resource.newInstance(100 * 1024, 100);
     step = 1000L;
-    ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
-    String reservationQ = testUtil.getFullReservationQueueName();
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
 
     float instConstraint = 100;
     float avgConstraint = 100;
@@ -151,7 +150,7 @@ public class TestGreedyReservationAgent {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 30 * step, 30 * step + f.length * step,
             ReservationSystemTestUtil.generateAllocation(30 * step, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
 
     // create a chain of 4 RR, mixing gang and non-gang
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
@@ -208,7 +207,7 @@ public class TestGreedyReservationAgent {
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 30 * step, 30 * step + f.length * step,
             ReservationSystemTestUtil.generateAllocation(30 * step, step, f),
-            res, minAlloc)));
+            res, minAlloc), false));
 
     // create a chain of 4 RR, mixing gang and non-gang
     ReservationDefinition rr = new ReservationDefinitionPBImpl();
@@ -529,7 +528,7 @@ public class TestGreedyReservationAgent {
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
             "dedicated", 0L, 0L + f.length * step, ReservationSystemTestUtil
-                .generateAllocation(0, step, f), res, minAlloc)));
+                .generateAllocation(0, step, f), res, minAlloc), false));
 
     int[] f2 = { 5, 5, 5, 5, 5, 5, 5 };
     Map<ReservationInterval, Resource> alloc =
@@ -537,7 +536,8 @@ public class TestGreedyReservationAgent {
     assertTrue(plan.toString(),
         plan.addReservation(new InMemoryReservationAllocation(
             ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
-            "dedicated", 5000, 5000 + f2.length * step, alloc, res, minAlloc)));
+            "dedicated", 5000, 5000 + f2.length * step, alloc, res, minAlloc),
+        false));
 
     System.out.println("--------BEFORE AGENT----------");
     System.out.println(plan.toString());
@@ -563,7 +563,8 @@ public class TestGreedyReservationAgent {
     step = 1000L;
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(500 * 100);
-    String reservationQ = testUtil.getFullReservationQueueName();
+    String reservationQ =
+        ReservationSystemTestUtil.getFullReservationQueueName();
     float instConstraint = 100;
     float avgConstraint = 100;
     ReservationSchedulerConfiguration conf =
