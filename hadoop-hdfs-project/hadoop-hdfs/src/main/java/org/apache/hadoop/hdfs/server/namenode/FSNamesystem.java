@@ -672,7 +672,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (nnMetrics != null) {
       nnMetrics.setFsImageLoadTime((int) timeTakenToLoadFSImage);
     }
-    namesystem.getFSDirectory().createReservedStatuses(namesystem.getCTime());
     return namesystem;
   }
   
