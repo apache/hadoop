@@ -522,6 +522,27 @@ public class TestSequenceFile extends TestCase {
     assertTrue("InputStream for " + path + " should have been closed.", openedFile[0].isClosed());
   }
 
+  /**
+   * Test to makes sure zero length sequence file is handled properly while
+   * initializing.
+   */
+  public void testInitZeroLengthSequenceFile() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+
+    // create an empty file (which is not a valid sequence file)
+    Path path = new Path(System.getProperty("test.build.data", ".") +
+      "/zerolength.seq");
+    fs.create(path).close();
+
+    try {
+      new SequenceFile.Reader(conf, SequenceFile.Reader.file(path));
+      fail("IOException expected.");
+    } catch (IOException expected) {
+      assertTrue(expected instanceof EOFException);
+    }
+  }
+
    /**
    * Test that makes sure createWriter succeeds on a file that was 
    * already created
