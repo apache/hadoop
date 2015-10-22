@@ -1912,17 +1912,26 @@ public class SequenceFile {
      */
     private void init(boolean tempReader) throws IOException {
       byte[] versionBlock = new byte[VERSION.length];
-      in.readFully(versionBlock);
+      String exceptionMsg = this + " not a SequenceFile";
+
+      // Try to read sequence file header.
+      try {
+        in.readFully(versionBlock);
+      } catch (EOFException e) {
+        throw new EOFException(exceptionMsg);
+      }
 
       if ((versionBlock[0] != VERSION[0]) ||
           (versionBlock[1] != VERSION[1]) ||
-          (versionBlock[2] != VERSION[2]))
+          (versionBlock[2] != VERSION[2])) {
         throw new IOException(this + " not a SequenceFile");
+      }
 
       // Set 'version'
       version = versionBlock[3];
-      if (version > VERSION[3])
+      if (version > VERSION[3]) {
         throw new VersionMismatchException(VERSION[3], version);
+      }
 
       if (version < BLOCK_COMPRESS_VERSION) {
         UTF8 className = new UTF8();
