@@ -38,7 +38,12 @@ public:
   void Connect(const std::string &server,
                const std::string &service,
                std::function<void(const Status &)> &handler);
-
+  
+  // GetBlockLocations:
+  //   handler: void (const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations)
+  template<class Handler>
+  void GetBlockLocations(const std::string & path, Handler handler);
+private:
   ::asio::io_service * io_service_;
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
@@ -52,10 +57,9 @@ public:
   virtual void Open(const std::string &path,
                     const std::function<void(const Status &, InputStream *)>
                         &handler) override;
-//  RpcEngine &rpc_engine() { return engine_; }
-
 private:
   IoServiceImpl *io_service_;
+  const std::string client_name_;
   NameNodeConnection nn_;
 };
 
@@ -91,5 +95,6 @@ private:
 }
 
 #include "inputstream_impl.h"
+#include "namenodeconnection_impl.h"
 
 #endif

@@ -51,7 +51,6 @@ void NameNodeConnection::Connect(const std::string &server,
   });
 }
 
-
 FileSystem::~FileSystem() {}
 
 void FileSystem::New(
@@ -71,6 +70,7 @@ void FileSystem::New(
 
 FileSystemImpl::FileSystemImpl(IoService *io_service, const Options &options)
     : io_service_(static_cast<IoServiceImpl *>(io_service)),
+      client_name_(RpcEngine::GetRandomClientName()),
       nn_(&io_service_->io_service(), options,
               RpcEngine::GetRandomClientName(), kNamenodeProtocol,
               kNamenodeProtocolVersion) {}
@@ -84,30 +84,14 @@ void FileSystemImpl::Connect(const std::string &server,
 void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, InputStream *)> &handler) {
-  using ::hadoop::hdfs::GetBlockLocationsRequestProto;
-  using ::hadoop::hdfs::GetBlockLocationsResponseProto;
-
-  struct State {
-    GetBlockLocationsRequestProto req;
-    std::shared_ptr<GetBlockLocationsResponseProto> resp;
-  };
-
-  auto m = continuation::Pipeline<State>::Create();
-  auto &req = m->state().req;
-  req.set_src(path);
-  req.set_offset(0);
-  req.set_length(std::numeric_limits<long long>::max());
-  m->state().resp.reset(new GetBlockLocationsResponseProto());
-
-  State *s = &m->state();
-  m->Push(continuation::Bind(
-      [this, s](const continuation::Continuation::Next &next) {
-        nn_.namenode_.GetBlockLocations(&s->req, s->resp, next);
-      }));
-  //TODO: Put client name et. al. into "ClusterInfo" object
-  m->Run([this, handler](const Status &stat, const State &s) {
-    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), nn_.engine_.client_name(), &s.resp->locations())
-                            : nullptr);
+  
+  auto foo = [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations){};
+  nn_.GetBlockLocations(path, foo);
+  
+  
+  nn_.GetBlockLocations(path, [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations) {
+//    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, locations)
+//                            : nullptr);
   });
 }
 }
