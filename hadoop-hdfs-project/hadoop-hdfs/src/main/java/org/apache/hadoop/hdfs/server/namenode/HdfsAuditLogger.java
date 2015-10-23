@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -36,8 +37,8 @@ public abstract class HdfsAuditLogger implements AuditLogger {
   public void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus status) {
-    logAuditEvent(succeeded, userName, addr, cmd, src, dst, status, null,
-        null);
+    logAuditEvent(succeeded, userName, addr, cmd, src, dst, status,
+        null /*callerContext*/, null /*ugi*/, null /*dtSecretManager*/);
   }
 
   /**
@@ -61,6 +62,6 @@ public abstract class HdfsAuditLogger implements AuditLogger {
    */
   public abstract void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst,
-      FileStatus stat, UserGroupInformation ugi,
+      FileStatus stat, CallerContext callerContext, UserGroupInformation ugi,
       DelegationTokenSecretManager dtSecretManager);
 }
