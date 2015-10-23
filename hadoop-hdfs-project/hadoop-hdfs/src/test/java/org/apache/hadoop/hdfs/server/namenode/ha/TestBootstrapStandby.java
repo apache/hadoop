@@ -24,11 +24,14 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.TimeoutException;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -212,6 +215,64 @@ public class TestBootstrapStandby {
     assertSuccessfulBootstrapFromIndex(1);
   }
 
+  /**
+   * Test that bootstrapping standby NN is not limited by
+   * {@link DFSConfigKeys#DFS_IMAGE_TRANSFER_RATE_KEY}, but is limited by
+   * {@link DFSConfigKeys#DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY}
+   * created by HDFS-8808.
+   */
+  @Test
+  public void testRateThrottling() throws Exception {
+    cluster.getConfiguration(0).setLong(
+        DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 1);
+    cluster.restartNameNode(0);
+    cluster.waitActive();
+    nn0 = cluster.getNameNode(0);
+    cluster.transitionToActive(0);
+    // Each edit has at least 1 byte. So the lowRate definitely should cause
+    // a timeout, if enforced. If lowRate is not enforced, any reasonable test
+    // machine should at least download an image with 5 edits in 5 seconds.
+    for (int i = 0; i < 5; i++) {
+      nn0.getRpcServer().rollEditLog();
+    }
+    // A very low DFS_IMAGE_TRANSFER_RATE_KEY value won't affect bootstrapping
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        try {
+          testSuccessfulBaseCase();
+          return true;
+        } catch (Exception e) {
+          return false;
+        }
+      }
+    }, 500, 5000);
+
+    shutdownCluster();
+    setupCluster();
+    cluster.getConfiguration(0).setLong(
+        DFSConfigKeys.DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY, 1);
+    cluster.restartNameNode(0);
+    cluster.waitActive();
+    nn0 = cluster.getNameNode(0);
+    cluster.transitionToActive(0);
+    // A very low DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY value should
+    // cause timeout
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        public Boolean get() {
+          try {
+            testSuccessfulBaseCase();
+            return true;
+          } catch (Exception e) {
+            return false;
+          }
+        }
+      }, 500, 5000);
+      fail("Did not timeout");
+    } catch (TimeoutException e) {
+      LOG.info("Encountered expected timeout.");
+    }
+  }
   private void removeStandbyNameDirs() {
     for (int i = 1; i < maxNNCount; i++) {
       for (URI u : cluster.getNameDirs(i)) {

@@ -1563,6 +1563,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9264. Minor cleanup of operations on FsVolumeList#volumes.
     (Walter Su via lei)
 
+    HDFS-8808. dfs.image.transfer.bandwidthPerSec should not apply to
+    -bootstrapStandby (zhz)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

@@ -1073,14 +1073,30 @@
   <name>dfs.image.transfer.bandwidthPerSec</name>
   <value>0</value>
   <description>
-        Maximum bandwidth used for image transfer in bytes per second.
+        Maximum bandwidth used for regular image transfers (instead of
+        bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing. The maximum bandwidth and timeout in
         dfs.image.transfer.timeout should be set such that normal image
         transfers can complete successfully.
-        A default value of 0 indicates that throttling is disabled. 
+        A default value of 0 indicates that throttling is disabled.
+        The maximum bandwidth used for bootstrapping standby namenode is
+        configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
   </description>
 </property>
+
+  <property>
+    <name>dfs.image.transfer-bootstrap-standby.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Maximum bandwidth used for transferring image to bootstrap standby
+      namenode, in bytes per second.
+      A default value of 0 indicates that throttling is disabled. This default
+      value should be used in most cases, to ensure timely HA operations.
+      The maximum bandwidth used for regular image transfers is configured
+      with dfs.image.transfer.bandwidthPerSec.
+    </description>
+  </property>
 
 <property>
   <name>dfs.image.transfer.chunksize</name>
