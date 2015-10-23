@@ -905,6 +905,8 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9692. Improving log message when SequenceFile reader throws
     EOFException on zero-length file. (Zhe Zhang and Chu Tong via ozawa)
 
+    HADOOP-7266. Deprecate metrics v1. (Akira AJISAKA via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

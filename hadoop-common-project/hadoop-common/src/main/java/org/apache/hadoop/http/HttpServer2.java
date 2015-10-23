@@ -541,7 +541,9 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default servlets.
+   * Note: /metrics servlet will be removed in 3.X release.
    */
+  @SuppressWarnings("deprecation")
   protected void addDefaultServlets() {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
