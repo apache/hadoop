@@ -60,3 +60,17 @@ IMPORTANT: when using IP addresses, browsers ignore cookies with domain settings
 `hadoop.http.authentication.kerberos.principal`: Indicates the Kerberos principal to be used for HTTP endpoint when using 'kerberos' authentication. The principal short name must be `HTTP` per Kerberos HTTP SPNEGO specification. The default value is `HTTP/_HOST@$LOCALHOST`, where `_HOST` -if present- is replaced with bind address of the HTTP server.
 
 `hadoop.http.authentication.kerberos.keytab`: Location of the keytab file with the credentials for the Kerberos principal used for the HTTP endpoint. The default value is `$user.home/hadoop.keytab`.i
+
+CORS
+----
+To enable cross-origin support (CORS), please set the following configuration parameters:
+
+Add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.filter.initializers in core-site.xml. You will also need to set the following properties in core-site.xml -
+
+| Property | Default Value | Description |
+|:---- |:---- |:---- |:---- |
+| hadoop.http.cross-origin.enabled | false | Enables cross origin support for all web-services |
+| hadoop.http.cross-origin.allowed-origins | \* | Comma separated list of origins that are allowed, wildcards (\*) and patterns allowed |
+| hadoop.http.cross-origin.allowed-methods | GET,POST,HEAD | Comma separated list of methods that are allowed |
+| hadoop.http.cross-origin.allowed-headers | X-Requested-With,Content-Type,Accept,Origin | Comma separated list of headers that are allowed |
+| hadoop.http.cross-origin.max-age | 1800 | Number of seconds a pre-flighted request can be cached |

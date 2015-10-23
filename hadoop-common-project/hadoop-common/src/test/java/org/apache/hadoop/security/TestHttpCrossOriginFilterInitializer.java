@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timeline.webapp;
+package org.apache.hadoop.security;
 
 import java.util.Map;
 
@@ -25,21 +25,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestCrossOriginFilterInitializer {
+public class TestHttpCrossOriginFilterInitializer {
 
   @Test
   public void testGetFilterParameters() {
 
     // Initialize configuration object
     Configuration conf = new Configuration();
-    conf.set(CrossOriginFilterInitializer.PREFIX + "rootparam", "rootvalue");
-    conf.set(CrossOriginFilterInitializer.PREFIX + "nested.param",
+    conf.set(HttpCrossOriginFilterInitializer.PREFIX + "rootparam",
+        "rootvalue");
+    conf.set(HttpCrossOriginFilterInitializer.PREFIX + "nested.param",
         "nestedvalue");
     conf.set("outofscopeparam", "outofscopevalue");
 
     // call function under test
-    Map<String, String> filterParameters =
-        CrossOriginFilterInitializer.getFilterParameters(conf);
+    Map<String, String> filterParameters = HttpCrossOriginFilterInitializer
+        .getFilterParameters(conf, HttpCrossOriginFilterInitializer.PREFIX);
 
     // retrieve values
     String rootvalue = filterParameters.get("rootparam");
