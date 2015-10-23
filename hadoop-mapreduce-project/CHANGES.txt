@@ -605,6 +605,9 @@ Release 2.8.0 - UNRELEASED
 
    MAPREDUCE-6495. Docs for archive-logs tool (rkanter)
 
+   MAPREDUCE-6508. TestNetworkedJob fails consistently due to delegation 
+   token changes on RM. (Akira AJISAKA via junping_du)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
