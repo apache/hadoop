@@ -121,6 +121,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3864. Implement support for querying single app and all apps for a
     flow run (Varun Saxena via sjlee)
 
+    YARN-4179. [reader implementation] support flow activity queries based on
+    time (Varun Saxena via sjlee)
+
   IMPROVEMENTS
 
     YARN-3276. Code cleanup for timeline service API records. (Junping Du via

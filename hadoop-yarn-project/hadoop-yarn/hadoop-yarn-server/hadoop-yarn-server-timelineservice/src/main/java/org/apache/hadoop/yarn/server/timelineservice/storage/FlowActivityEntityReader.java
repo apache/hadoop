@@ -87,6 +87,12 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     if (limit == null || limit < 0) {
       limit = TimelineReader.DEFAULT_LIMIT;
     }
+    if (createdTimeBegin == null) {
+      createdTimeBegin = DEFAULT_BEGIN_TIME;
+    }
+    if (createdTimeEnd == null) {
+      createdTimeEnd = DEFAULT_END_TIME;
+    }
   }
 
   @Override
@@ -100,7 +106,16 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   protected ResultScanner getResults(Configuration hbaseConf,
       Connection conn) throws IOException {
     Scan scan = new Scan();
-    scan.setRowPrefixFilter(FlowActivityRowKey.getRowKeyPrefix(clusterId));
+    if (createdTimeBegin == DEFAULT_BEGIN_TIME &&
+        createdTimeEnd == DEFAULT_END_TIME) {
+      scan.setRowPrefixFilter(FlowActivityRowKey.getRowKeyPrefix(clusterId));
+    } else {
+      scan.setStartRow(
+          FlowActivityRowKey.getRowKeyPrefix(clusterId, createdTimeEnd));
+      scan.setStopRow(
+          FlowActivityRowKey.getRowKeyPrefix(clusterId,
+              (createdTimeBegin <= 0 ? 0: (createdTimeBegin - 1))));
+    }
     // use the page filter to limit the result to the page size
     // the scanner may still return more than the limit; therefore we need to
     // read the right number as we iterate
