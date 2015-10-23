@@ -91,6 +91,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4000. RM crashes with NPE if leaf queue becomes parent queue during restart.
     (Varun Saxena via jianhe)
 
+    YARN-4041. Slow delegation token renewal can severely prolong RM recovery
+    (Sunil G via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

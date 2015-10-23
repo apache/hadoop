@@ -1166,24 +1166,24 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // Need to wait for a while as now token renewal happens on another thread
     // and is asynchronous in nature.
-    waitForTokensToBeRenewed(rm2);
+    waitForTokensToBeRenewed(rm2, tokenSet);
 
     // verify tokens are properly populated back to rm2 DelegationTokenRenewer
     Assert.assertEquals(tokenSet, rm2.getRMContext()
       .getDelegationTokenRenewer().getDelegationTokens());
   }
 
-  private void waitForTokensToBeRenewed(MockRM rm2) throws Exception {
-    int waitCnt = 20;
-    boolean atleastOneAppInNEWState = true;
-    while (waitCnt-- > 0 && atleastOneAppInNEWState) {
-      atleastOneAppInNEWState = false;
-      for (RMApp rmApp : rm2.getRMContext().getRMApps().values()) {
-        if (rmApp.getState() == RMAppState.NEW) {
-          Thread.sleep(1000);
-          atleastOneAppInNEWState = true;
-          break;
-        }
+  private void waitForTokensToBeRenewed(MockRM rm2,
+      HashSet<Token<RMDelegationTokenIdentifier>> tokenSet) throws Exception {
+    // Max wait time to get the token renewal can be kept as 1sec (100 * 10ms)
+    int waitCnt = 100;
+    while (waitCnt-- > 0) {
+      if (tokenSet.equals(rm2.getRMContext().getDelegationTokenRenewer()
+          .getDelegationTokens())) {
+        // Stop waiting as tokens are populated to DelegationTokenRenewer.
+        break;
+      } else {
+        Thread.sleep(10);
       }
     }
   }

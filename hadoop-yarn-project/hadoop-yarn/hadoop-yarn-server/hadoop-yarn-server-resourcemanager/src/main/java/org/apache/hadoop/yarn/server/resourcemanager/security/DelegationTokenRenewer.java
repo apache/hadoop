@@ -386,6 +386,25 @@ public class DelegationTokenRenewer extends AbstractService {
   }
 
   /**
+   * Asynchronously add application tokens for renewal.
+   *
+   * @param applicationId
+   *          added application
+   * @param ts
+   *          tokens
+   * @param shouldCancelAtEnd
+   *          true if tokens should be canceled when the app is done else false.
+   * @param user
+   *          user
+   */
+  public void addApplicationAsyncDuringRecovery(ApplicationId applicationId,
+      Credentials ts, boolean shouldCancelAtEnd, String user) {
+    processDelegationTokenRenewerEvent(
+        new DelegationTokenRenewerAppRecoverEvent(applicationId, ts,
+            shouldCancelAtEnd, user));
+  }
+
+  /**
    * Synchronously renew delegation tokens.
    * @param user user
    */
@@ -396,7 +415,7 @@ public class DelegationTokenRenewer extends AbstractService {
       applicationId, ts, shouldCancelAtEnd, user));
   }
 
-  private void handleAppSubmitEvent(DelegationTokenRenewerAppSubmitEvent evt)
+  private void handleAppSubmitEvent(AbstractDelegationTokenRenewerAppEvent evt)
       throws IOException, InterruptedException {
     ApplicationId applicationId = evt.getApplicationId();
     Credentials ts = evt.getCredentials();
@@ -825,6 +844,10 @@ public class DelegationTokenRenewer extends AbstractService {
         DelegationTokenRenewerAppSubmitEvent appSubmitEvt =
             (DelegationTokenRenewerAppSubmitEvent) evt;
         handleDTRenewerAppSubmitEvent(appSubmitEvt);
+      } else if (evt instanceof DelegationTokenRenewerAppRecoverEvent) {
+        DelegationTokenRenewerAppRecoverEvent appRecoverEvt =
+            (DelegationTokenRenewerAppRecoverEvent) evt;
+        handleDTRenewerAppRecoverEvent(appRecoverEvt);
       } else if (evt.getType().equals(
           DelegationTokenRenewerEventType.FINISH_APPLICATION)) {
         DelegationTokenRenewer.this.handleAppFinishEvent(evt);
@@ -859,17 +882,50 @@ public class DelegationTokenRenewer extends AbstractService {
       }
     }
   }
-  
-  static class DelegationTokenRenewerAppSubmitEvent extends
+
+  @SuppressWarnings("unchecked")
+  private void handleDTRenewerAppRecoverEvent(
+      DelegationTokenRenewerAppRecoverEvent event) {
+    try {
+      // Setup tokens for renewal during recovery
+      DelegationTokenRenewer.this.handleAppSubmitEvent(event);
+    } catch (Throwable t) {
+      LOG.warn(
+          "Unable to add the application to the delegation token renewer.", t);
+    }
+  }
+
+  static class DelegationTokenRenewerAppSubmitEvent
+      extends
+        AbstractDelegationTokenRenewerAppEvent {
+    public DelegationTokenRenewerAppSubmitEvent(ApplicationId appId,
+        Credentials credentails, boolean shouldCancelAtEnd, String user) {
+      super(appId, credentails, shouldCancelAtEnd, user,
+          DelegationTokenRenewerEventType.VERIFY_AND_START_APPLICATION);
+    }
+  }
+
+  static class DelegationTokenRenewerAppRecoverEvent
+      extends
+        AbstractDelegationTokenRenewerAppEvent {
+    public DelegationTokenRenewerAppRecoverEvent(ApplicationId appId,
+        Credentials credentails, boolean shouldCancelAtEnd, String user) {
+      super(appId, credentails, shouldCancelAtEnd, user,
+          DelegationTokenRenewerEventType.RECOVER_APPLICATION);
+    }
+  }
+
+  static class AbstractDelegationTokenRenewerAppEvent extends
       DelegationTokenRenewerEvent {
 
     private Credentials credentials;
     private boolean shouldCancelAtEnd;
     private String user;
 
-    public DelegationTokenRenewerAppSubmitEvent(ApplicationId appId,
-        Credentials credentails, boolean shouldCancelAtEnd, String user) {
-      super(appId, DelegationTokenRenewerEventType.VERIFY_AND_START_APPLICATION);
+    public AbstractDelegationTokenRenewerAppEvent(ApplicationId appId,
+        Credentials credentails, boolean shouldCancelAtEnd, String user,
+        DelegationTokenRenewerEventType type) {
+      super(appId, type);
       this.credentials = credentails;
       this.shouldCancelAtEnd = shouldCancelAtEnd;
       this.user = user;
@@ -890,6 +946,7 @@ public class DelegationTokenRenewer extends AbstractService {
   
   enum DelegationTokenRenewerEventType {
     VERIFY_AND_START_APPLICATION,
+    RECOVER_APPLICATION,
     FINISH_APPLICATION
   }
   
