@@ -1076,6 +1076,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
     by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
 
+    YARN-4041. Slow delegation token renewal can severely prolong RM recovery
+    (Sunil G via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
