@@ -1560,6 +1560,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7087. Ability to list /.reserved. (Xiao Chen via wang)
 
+    HDFS-9264. Minor cleanup of operations on FsVolumeList#volumes.
+    (Walter Su via lei)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
