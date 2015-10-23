@@ -16,6 +16,7 @@ NodeManager REST API's
 =======================
 
 * [Overview](#Overview)
+* [Enabling CORS support](#Enabling_CORS_support)
 * [NodeManager Information API](#NodeManager_Information_API)
 * [Applications API](#Applications_API)
 * [Application API](#Application_API)
@@ -26,6 +27,13 @@ Overview
 --------
 
 The NodeManager REST API's allow the user to get status on the node and information about applications and containers running on that node.
+
+Enabling CORS support
+---------------------
+To enable cross-origin support (CORS) for the NM only(without enabling it for the RM), please set the following configuration parameters:
+
+In core-site.xml, add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.filter.initializers.
+In yarn-site.xml, set yarn.nodemanager.webapp.cross-origin.enabled to true.
 
 NodeManager Information API
 ---------------------------

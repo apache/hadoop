@@ -30,6 +30,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -242,10 +243,17 @@ public class ApplicationHistoryServer extends CompositeService {
       if(conf.getBoolean(YarnConfiguration
           .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED, YarnConfiguration
               .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT)) {
-        if (initializers.length() != 0) {
-          initializers += ",";
+        if (initializers.contains(HttpCrossOriginFilterInitializer.class.getName())) {
+          initializers =
+            initializers.replaceAll(HttpCrossOriginFilterInitializer.class.getName(),
+              CrossOriginFilterInitializer.class.getName());
         }
-        initializers += CrossOriginFilterInitializer.class.getName();
+        else {
+          if (initializers.length() != 0) {
+            initializers += ",";
+          }
+          initializers += CrossOriginFilterInitializer.class.getName();
+        }
         modifiedInitializers = true;
       }
     }

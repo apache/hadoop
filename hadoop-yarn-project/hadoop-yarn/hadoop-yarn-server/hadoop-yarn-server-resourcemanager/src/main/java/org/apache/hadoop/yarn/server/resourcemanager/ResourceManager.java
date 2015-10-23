@@ -28,10 +28,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
-import org.apache.hadoop.security.AuthenticationFilterInitializer;
-import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.*;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
@@ -841,6 +838,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // 4. hadoop.http.filter.initializers container AuthenticationFilterInitializer
 
     Configuration conf = getConfig();
+    boolean enableCorsFilter =
+        conf.getBoolean(YarnConfiguration.RM_WEBAPP_ENABLE_CORS_FILTER,
+            YarnConfiguration.DEFAULT_RM_WEBAPP_ENABLE_CORS_FILTER);
     boolean useYarnAuthenticationFilter =
         conf.getBoolean(
           YarnConfiguration.RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER,
@@ -851,6 +851,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     String actualInitializers = "";
     Class<?>[] initializersClasses =
         conf.getClasses(filterInitializerConfKey);
+
+    // setup CORS
+    if (enableCorsFilter) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
 
     boolean hasHadoopAuthFilterInitializer = false;
     boolean hasRMAuthFilterInitializer = false;

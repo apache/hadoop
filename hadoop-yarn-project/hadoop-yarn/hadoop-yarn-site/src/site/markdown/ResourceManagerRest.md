@@ -16,6 +16,7 @@ ResourceManager REST API's.
 ===========================
 
 * [Overview](#Overview)
+* [Enabling CORS support](#Enabling_CORS_support)
 * [Cluster Information API](#Cluster_Information_API)
 * [Cluster Metrics API](#Cluster_Metrics_API)
 * [Cluster Scheduler API](#Cluster_Scheduler_API)
@@ -36,6 +37,13 @@ Overview
 --------
 
 The ResourceManager REST API's allow the user to get information about the cluster - status on the cluster, metrics on the cluster, scheduler information, information about nodes in the cluster, and information about applications on the cluster.
+
+Enabling CORS support
+---------------------
+To enable cross-origin support (CORS) for the RM only(without enabling it for the NM), please set the following configuration parameters:
+
+In core-site.xml, add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.filter.initializers.
+In yarn-site.xml, set yarn.resourcemanager.webapp.cross-origin.enabled to true.
 
 Cluster Information API
 -----------------------

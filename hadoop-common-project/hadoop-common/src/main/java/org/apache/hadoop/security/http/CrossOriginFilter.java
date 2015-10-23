@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timeline.webapp;
+package org.apache.hadoop.security.http;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -246,7 +246,7 @@ public class CrossOriginFilter implements Filter {
     if (accessControlRequestHeaders == null) {
       return true;
     }
-    String headers[] = accessControlRequestHeaders.trim().split("\\s*,\\s*");
+    String[] headers = accessControlRequestHeaders.trim().split("\\s*,\\s*");
     return allowedHeaders.containsAll(Arrays.asList(headers));
   }
 

@@ -333,6 +333,11 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_WEBAPP_DELEGATION_TOKEN_AUTH_FILTER =
       true;
 
+  /** Enable cross origin (CORS) support. **/
+  public static final String RM_WEBAPP_ENABLE_CORS_FILTER =
+      RM_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_RM_WEBAPP_ENABLE_CORS_FILTER = false;
+
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
@@ -852,7 +857,12 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_WEBAPP_HTTPS_PORT = 8044;
   public static final String DEFAULT_NM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
       + DEFAULT_NM_WEBAPP_HTTPS_PORT; 
-  
+
+  /** Enable/disable CORS filter. */
+  public static final String NM_WEBAPP_ENABLE_CORS_FILTER =
+      NM_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_NM_WEBAPP_ENABLE_CORS_FILTER = false;
+
   /** How often to monitor containers.*/
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
