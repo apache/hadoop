@@ -101,10 +101,9 @@ class Checkpointer extends Daemon {
     checkpointConf = new CheckpointConf(conf);
 
     // Pull out exact http address for posting url to avoid ip aliasing issues
-    String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
+    String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
                                    DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT);
-    infoBindAddress = fullInfoAddr.substring(0, fullInfoAddr.indexOf(":"));
-
+    infoBindAddress = fullInfoAddr.substring(0, fullInfoAddr.lastIndexOf(":"));
     LOG.info("Checkpoint Period : " +
              checkpointConf.getPeriod() + " secs " +
              "(" + checkpointConf.getPeriod()/60 + " min)");

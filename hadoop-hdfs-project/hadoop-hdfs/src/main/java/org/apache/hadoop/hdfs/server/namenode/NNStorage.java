@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
+import org.apache.http.conn.util.InetAddressUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -964,11 +965,15 @@ public class NNStorage extends Storage implements Closeable,
     String ip = "unknownIP";
     try {
       ip = DNS.getDefaultIP("default");
+      if (InetAddressUtils.isIPv6StdAddress(ip)) {
+        // HDFS doesn't support ":" in path, replace it with "."
+        ip = "[" + ip.replaceAll(":", ".") + "]";
+      }
     } catch (UnknownHostException e) {
       LOG.warn("Could not find ip address of \"default\" inteface.");
       throw e;
     }
-    
+
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
     String bpid = "BP-" + rand + "-"+ ip + "-" + Time.now();
     return bpid;
@@ -986,14 +991,14 @@ public class NNStorage extends Storage implements Closeable,
       throw new InconsistentFSStateException(storage, "file "
           + Storage.STORAGE_FILE_VERSION + " has no block pool Id.");
     }
-    
+
     if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
       throw new InconsistentFSStateException(storage,
           "Unexepcted blockpoolID " + bpid + " . Expected " + blockpoolID);
     }
     setBlockPoolID(bpid);
   }
-  
+
   public String getBlockPoolID() {
     return blockpoolID;
   }

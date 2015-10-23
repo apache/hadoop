@@ -181,7 +181,7 @@ public class BlockReaderTestUtil {
     return new BlockReaderFactory(fs.getClient().getConf()).
       setInetSocketAddress(targetAddr).
       setBlock(block).
-      setFileName(targetAddr.toString()+ ":" + block.getBlockId()).
+      setFileName(NetUtils.getSocketAddressString(targetAddr)+ ":" + block.getBlockId()).
       setBlockToken(testBlock.getBlockToken()).
       setStartOffset(offset).
       setLength(lenToRead).

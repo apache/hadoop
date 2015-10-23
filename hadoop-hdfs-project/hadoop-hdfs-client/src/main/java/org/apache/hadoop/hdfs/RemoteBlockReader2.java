@@ -360,7 +360,7 @@ public class RemoteBlockReader2  implements BlockReader {
    */
   public static String getFileName(final InetSocketAddress s,
       final String poolId, final long blockId) {
-    return s.toString() + ":" + poolId + ":" + blockId;
+    return NetUtils.getSocketAddressString(s) + ":" + poolId + ":" + blockId;
   }
 
   @Override

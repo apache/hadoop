@@ -502,26 +502,26 @@ public class TestDFSUtil {
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "ns2-nn1"),
         NS2_NN1_HOST);
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "ns2-nn2"),
+            DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "ns2-nn2"),
         NS2_NN2_HOST);
-    
+
     Map<String, Map<String, InetSocketAddress>> map =
       DFSUtil.getHaNnRpcAddresses(conf);
 
     assertTrue(HAUtil.isHAEnabled(conf, "ns1"));
     assertTrue(HAUtil.isHAEnabled(conf, "ns2"));
     assertFalse(HAUtil.isHAEnabled(conf, "ns3"));
-    
-    assertEquals(NS1_NN1_HOST, map.get("ns1").get("ns1-nn1").toString());
-    assertEquals(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2").toString());
-    assertEquals(NS2_NN1_HOST, map.get("ns2").get("ns2-nn1").toString());
-    assertEquals(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2").toString());
-    
-    assertEquals(NS1_NN1_HOST, 
+
+    assertEquals(NS1_NN1_HOST, NetUtils.getHostPortString(map.get("ns1").get("ns1-nn1")));
+    assertEquals(NS1_NN2_HOST, NetUtils.getHostPortString(map.get("ns1").get("ns1-nn2")));
+    assertEquals(NS2_NN1_HOST, NetUtils.getHostPortString(map.get("ns2").get("ns2-nn1")));
+    assertEquals(NS2_NN2_HOST, NetUtils.getHostPortString(map.get("ns2").get("ns2-nn2")));
+
+    assertEquals(NS1_NN1_HOST,
         DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn1"));
-    assertEquals(NS1_NN2_HOST, 
+    assertEquals(NS1_NN2_HOST,
         DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn2"));
-    assertEquals(NS2_NN1_HOST, 
+    assertEquals(NS2_NN1_HOST,
         DFSUtil.getNamenodeServiceAddr(conf, "ns2", "ns2-nn1"));
 
     // No nameservice was given and we can't determine which service addr
@@ -589,8 +589,26 @@ public class TestDFSUtil {
     Map<String, Map<String, InetSocketAddress>> map =
         DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
-    assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
-    assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
+    assertEquals(NS1_NN1_ADDR, NetUtils.getHostPortString(map.get("ns1").get("nn1")));
+    assertEquals(NS1_NN2_ADDR, NetUtils.getHostPortString(map.get(
+        "ns1").get("nn2")));
+  }
+
+  @Test
+  public void testIPv6GetHaNnHttpAddresses() throws IOException {
+    final String LOGICAL_HOST_NAME = "ns1";
+    final String NS1_NN1_ADDR      = "[0:0:0:0:0:b00c:c0a8:12a]:8020";
+    final String NS1_NN2_ADDR      = "[::face:a0b:182a]:8020";
+
+    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
+
+    Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
+
+    assertEquals(NS1_NN1_ADDR, NetUtils.getHostPortString(map.get("ns1").get("nn1")));
+    assertEquals(NS1_NN2_ADDR.replace("::", "0:0:0:0:0:"),
+        NetUtils.getHostPortString(map.get(
+        "ns1").get("nn2")));
   }
 
   private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {

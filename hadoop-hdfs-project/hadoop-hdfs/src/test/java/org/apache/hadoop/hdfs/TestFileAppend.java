@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -424,7 +425,8 @@ public class TestFileAppend{
 
       // stop one datanode
       DataNodeProperties dnProp = cluster.stopDataNode(0);
-      String dnAddress = dnProp.datanode.getXferAddress().toString();
+      String dnAddress = NetUtils.getSocketAddressString(
+          dnProp.datanode.getXferAddress());
       if (dnAddress.startsWith("/")) {
         dnAddress = dnAddress.substring(1);
       }
@@ -478,7 +480,8 @@ public class TestFileAppend{
 
       // stop one datanode
       DataNodeProperties dnProp = cluster.stopDataNode(0);
-      String dnAddress = dnProp.datanode.getXferAddress().toString();
+      String dnAddress = NetUtils
+          .getSocketAddressString(dnProp.datanode.getXferAddress());
       if (dnAddress.startsWith("/")) {
         dnAddress = dnAddress.substring(1);
       }
