@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -24,22 +23,43 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-public interface SystemMetricsPublisher {
+/**
+ * This class does nothing when any of the methods are invoked on
+ * SystemMetricsPublisher
+ */
+public class NoOpSystemMetricPublisher implements SystemMetricsPublisher{
 
-  void appCreated(RMApp app, long createdTime);
+  @Override
+  public void appCreated(RMApp app, long createdTime) {
+  }
 
-  void appACLsUpdated(RMApp app, String appViewACLs, long updatedTime);
+  @Override
+  public void appFinished(RMApp app, RMAppState state, long finishedTime) {
+  }
 
-  void appUpdated(RMApp app, long updatedTime);
+  @Override
+  public void appACLsUpdated(RMApp app, String appViewACLs, long updatedTime) {
+  }
 
-  void appFinished(RMApp app, RMAppState state, long finishedTime);
+  @Override
+  public void appAttemptRegistered(RMAppAttempt appAttempt,
+      long registeredTime) {
+  }
 
-  void appAttemptRegistered(RMAppAttempt appAttempt, long registeredTime);
+  @Override
+  public void appAttemptFinished(RMAppAttempt appAttempt,
+      RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
+  }
 
-  void appAttemptFinished(RMAppAttempt appAttempt,
-      RMAppAttemptState appAttemtpState, RMApp app, long finishedTime);
+  @Override
+  public void containerCreated(RMContainer container, long createdTime) {
+  }
 
-  void containerCreated(RMContainer container, long createdTime);
+  @Override
+  public void containerFinished(RMContainer container, long finishedTime) {
+  }
 
-  void containerFinished(RMContainer container, long finishedTime);
+  @Override
+  public void appUpdated(RMApp app, long currentTimeMillis) {
+  }
 }

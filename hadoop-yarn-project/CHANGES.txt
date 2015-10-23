@@ -135,6 +135,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3836. add equals and hashCode to TimelineEntity and other classes in
     the data model (Li Lu via sjlee)
 
+    YARN-4129. Refactor the SystemMetricPublisher in RM to better support
+    newer events (Naganarasimha G R via sjlee)
+
   OPTIMIZATIONS
 
   BUG FIXES

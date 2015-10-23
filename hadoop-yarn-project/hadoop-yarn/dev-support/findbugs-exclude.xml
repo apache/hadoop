@@ -117,12 +117,12 @@
 
   <!-- Object cast is based on the event type -->
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.AbstractTimelineServicePublisher" />
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher$ApplicationEventHandler" />
      <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher$ApplicationEventHandler" />
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher$TimelineV2EventHandler" />
      <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
