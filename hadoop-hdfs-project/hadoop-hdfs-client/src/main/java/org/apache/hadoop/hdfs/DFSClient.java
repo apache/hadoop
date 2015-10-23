@@ -721,7 +721,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     static {
       //Ensure that HDFS Configuration files are loaded before trying to use
       // the renewer.
-      HdfsConfigurationLoader.init();
+      HdfsConfiguration.init();
     }
 
     @Override

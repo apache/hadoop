@@ -113,7 +113,7 @@ public class DistributedFileSystem extends FileSystem {
   private boolean verifyChecksum = true;
 
   static{
-    HdfsConfigurationLoader.init();
+    HdfsConfiguration.init();
   }
 
   public DistributedFileSystem() {
