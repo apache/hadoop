@@ -255,6 +255,14 @@
   </property>
 
   <property>
+    <description>Flag to enable cross-origin (CORS) support in the RM. This flag
+    requires the CORS filter initializer to be added to the filter initializers
+    list in core-site.xml.</description>
+    <name>yarn.resourcemanager.webapp.cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>How long to wait until a node manager is considered dead.</description>
     <name>yarn.nm.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -2314,6 +2322,14 @@
     file-system security attributes.
     </description>
     <name>yarn.intermediate-data-encryption.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Flag to enable cross-origin (CORS) support in the NM. This flag
+    requires the CORS filter initializer to be added to the filter initializers
+    list in core-site.xml.</description>
+    <name>yarn.nodemanager.webapp.cross-origin.enabled</name>
     <value>false</value>
   </property>
 

@@ -1404,6 +1404,42 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 
+<!-- HTTP CORS support -->
+<property>
+  <description>Enable/disable the cross-origin (CORS) filter.</description>
+  <name>hadoop.http.cross-origin.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>Comma separated list of origins that are allowed for web
+    services needing cross-origin (CORS) support. Wildcards (*) and patterns
+    allowed</description>
+  <name>hadoop.http.cross-origin.allowed-origins</name>
+  <value>*</value>
+</property>
+
+<property>
+  <description>Comma separated list of methods that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-methods</name>
+  <value>GET,POST,HEAD</value>
+</property>
+
+<property>
+  <description>Comma separated list of headers that are allowed for web
+    services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.allowed-headers</name>
+  <value>X-Requested-With,Content-Type,Accept,Origin</value>
+</property>
+
+<property>
+  <description>The number of seconds a pre-flighted request can be cached
+    for web services needing cross-origin (CORS) support.</description>
+  <name>hadoop.http.cross-origin.max-age</name>
+  <value>1800</value>
+</property>
+
 <property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>

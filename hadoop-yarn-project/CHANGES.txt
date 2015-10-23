@@ -988,6 +988,8 @@ Release 2.7.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-4009. CORS support for ResourceManager REST API. ( Varun Vasudev via jeagles)
+
     YARN-3170. YARN architecture document needs updating. (Brahma Reddy Battula
     via ozawa)
 
