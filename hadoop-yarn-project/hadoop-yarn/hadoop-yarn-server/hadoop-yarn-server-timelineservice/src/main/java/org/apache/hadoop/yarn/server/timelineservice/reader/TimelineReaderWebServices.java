@@ -19,12 +19,18 @@
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -54,6 +60,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Singleton;
 
 /** REST end point for Timeline Reader */
@@ -70,9 +77,94 @@ public class TimelineReaderWebServices {
   private static final String COMMA_DELIMITER = ",";
   private static final String COLON_DELIMITER = ":";
   private static final String QUERY_STRING_SEP = "?";
+  private static final String RANGE_DELIMITER = "-";
+  private static final String DATE_PATTERN = "yyyyMMdd";
+
+  @VisibleForTesting
+  static ThreadLocal<DateFormat> DATE_FORMAT = new ThreadLocal<DateFormat>() {
+    @Override
+    protected DateFormat initialValue() {
+      SimpleDateFormat format =
+          new SimpleDateFormat(DATE_PATTERN, Locale.ENGLISH);
+      format.setTimeZone(TimeZone.getTimeZone("GMT"));
+      format.setLenient(false);
+      return format;
+    }
+  };
 
   private void init(HttpServletResponse response) {
     response.setContentType(null);
+  }
+
+  private static class DateRange {
+    Long dateStart;
+    Long dateEnd;
+    private DateRange(Long start, Long end) {
+      this.dateStart = start;
+      this.dateEnd = end;
+    }
+  }
+
+  private static long parseDate(String strDate) throws ParseException {
+    Date date = DATE_FORMAT.get().parse(strDate);
+    return date.getTime();
+  }
+
+  /**
+   * Parses date range which can be a single date or in the format
+   * "[startdate]-[enddate]" where either of start or end date may not exist.
+   * @param dateRange
+   * @return a {@link DateRange} object.
+   * @throws IllegalArgumentException
+   */
+  private static DateRange parseDateRange(String dateRange)
+      throws IllegalArgumentException {
+    if (dateRange == null || dateRange.isEmpty()) {
+      return new DateRange(null, null);
+    }
+    // Split date range around "-" fetching two components indicating start and
+    // end date.
+    String[] dates = dateRange.split(RANGE_DELIMITER, 2);
+    Long start = null;
+    Long end = null;
+    try {
+      String startDate = dates[0].trim();
+      if (!startDate.isEmpty()) {
+        // Start date is not in yyyyMMdd format.
+        if (startDate.length() != DATE_PATTERN.length()) {
+          throw new IllegalArgumentException("Invalid date range " + dateRange);
+        }
+        // Parse start date which exists before "-" in date range.
+        // If "-" does not exist in date range, this effectively
+        // gives single date.
+        start = parseDate(startDate);
+      }
+      if (dates.length > 1) {
+        String endDate = dates[1].trim();
+        if (!endDate.isEmpty()) {
+          // End date is not in yyyyMMdd format.
+          if (endDate.length() != DATE_PATTERN.length()) {
+            throw new IllegalArgumentException(
+                "Invalid date range " + dateRange);
+          }
+          // Parse end date which exists after "-" in date range.
+          end = parseDate(endDate);
+        }
+      } else {
+        // Its a single date(without "-" in date range), so set
+        // end equal to start.
+        end = start;
+      }
+      if (start != null && end != null) {
+        if (start > end) {
+          throw new IllegalArgumentException("Invalid date range " + dateRange);
+        }
+      }
+      return new DateRange(start, end);
+    } catch (ParseException e) {
+      // Date could not be parsed.
+      throw new IllegalArgumentException("Invalid date range " + dateRange);
+    }
   }
 
   private static Set<String> parseValuesStr(String str, String delimiter) {
@@ -205,7 +297,8 @@ public class TimelineReaderWebServices {
     if (e instanceof NumberFormatException) {
       throw new BadRequestException(invalidNumMsg + " is not a numeric value.");
     } else if (e instanceof IllegalArgumentException) {
-      throw new BadRequestException("Requested Invalid Field.");
+      throw new BadRequestException(e.getMessage() == null ?
+          "Requested Invalid Field." : e.getMessage());
     } else {
       LOG.error("Error while processing REST request", e);
       throw new WebApplicationException(e,
@@ -514,8 +607,20 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of flows for a given cluster id. Cluster ID is not
-   * provided by client so default cluster ID has to be taken.
+   * Return a list of flows. Cluster ID is not provided by client so default
+   * cluster ID has to be taken. daterange, if specified is given as
+   * "[startdate]-[enddate]"(i.e. start and end date separated by -) or
+   * single date. Dates are interpreted in yyyyMMdd format and are assumed to
+   * be in GMT. If a single date is specified, all flows active on that date are
+   * returned. If both startdate and enddate is given, all flows active between
+   * start and end date will be returned. If only startdate is given, flows
+   * active on and after startdate are returned. If only enddate is given, flows
+   * active on and before enddate are returned.
+   * For example :
+   * "daterange=20150711" returns flows active on 20150711.
+   * "daterange=20150711-20150714" returns flows active between these 2 dates.
+   * "daterange=20150711-" returns flows active on and after 20150711.
+   * "daterange=-20150711" returns flows active on and before 20150711.
    */
   @GET
   @Path("/flows/")
@@ -524,12 +629,25 @@ public class TimelineReaderWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @QueryParam("limit") String limit,
+      @QueryParam("daterange") String dateRange,
       @QueryParam("fields") String fields) {
-    return getFlows(req, res, null, limit, fields);
+    return getFlows(req, res, null, limit, dateRange, fields);
   }
 
   /**
-   * Return a list of flows for a given cluster id.
+   * Return a list of flows for a given cluster id. daterange, if specified is
+   * given as "[startdate]-[enddate]"(i.e. start and end date separated by -) or
+   * single date. Dates are interpreted in yyyyMMdd format and are assumed to
+   * be in GMT. If a single date is specified, all flows active on that date are
+   * returned. If both startdate and enddate is given, all flows active between
+   * start and end date will be returned. If only startdate is given, flows
+   * active on and after startdate are returned. If only enddate is given, flows
+   * active on and before enddate are returned.
+   * For example :
+   * "daterange=20150711" returns flows active on 20150711.
+   * "daterange=20150711-20150714" returns flows active between these 2 dates.
+   * "daterange=20150711-" returns flows active on and after 20150711.
+   * "daterange=-20150711" returns flows active on and before 20150711.
    */
   @GET
   @Path("/flows/{clusterid}/")
@@ -539,6 +657,7 @@ public class TimelineReaderWebServices {
       @Context HttpServletResponse res,
       @PathParam("clusterid") String clusterId,
       @QueryParam("limit") String limit,
+      @QueryParam("daterange") String dateRange,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -550,11 +669,12 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     Set<TimelineEntity> entities = null;
     try {
+      DateRange range = parseDateRange(dateRange);
       entities = timelineReaderManager.getEntities(
           null, parseStr(clusterId), null, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), parseLongStr(limit),
-          null, null, null, null, null, null, null, null, null, null,
-          parseFieldsStr(fields, COMMA_DELIMITER));
+          range.dateStart, range.dateEnd, null, null, null, null, null, null,
+          null, null, parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
