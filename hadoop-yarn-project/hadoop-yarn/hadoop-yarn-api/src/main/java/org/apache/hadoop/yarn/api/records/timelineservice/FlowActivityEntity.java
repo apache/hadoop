@@ -140,7 +140,15 @@ public class FlowActivityEntity extends TimelineEntity {
   }
 
   public Date getDate() {
-    return (Date)getInfo().get(DATE_INFO_KEY);
+    Object date = getInfo().get(DATE_INFO_KEY);
+    if (date != null) {
+      if (date instanceof Long) {
+        return new Date((Long)date);
+      } else if (date instanceof Date) {
+        return (Date)date;
+      }
+    }
+    return null;
   }
 
   public void setDate(long time) {
