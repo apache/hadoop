@@ -2126,6 +2126,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9286. HttpFs does not parse ACL syntax correctly for operation
     REMOVEACLENTRIES. (Wei-Chiu Chuang via cnauroth)
 
+    HDFS-9301. HDFS clients can't construct HdfsConfiguration instances.
+    (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

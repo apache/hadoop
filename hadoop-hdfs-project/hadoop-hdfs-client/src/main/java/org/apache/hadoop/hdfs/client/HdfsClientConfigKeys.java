@@ -155,6 +155,59 @@ public interface HdfsClientConfigKeys {
   String  DFS_USER_HOME_DIR_PREFIX_KEY = "dfs.user.home.dir.prefix";
   String  DFS_USER_HOME_DIR_PREFIX_DEFAULT = "/user";
 
+  /**
+   * These are deprecated config keys to client code.
+   */
+  interface DeprecatedKeys {
+    String DFS_NAMENODE_BACKUP_ADDRESS_KEY =
+        "dfs.namenode.backup.address";
+    String DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY =
+        "dfs.namenode.backup.http-address";
+    String DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY =
+        "dfs.datanode.balance.bandwidthPerSec";
+    //Following keys have no defaults
+    String DFS_DATANODE_DATA_DIR_KEY = "dfs.datanode.data.dir";
+    String DFS_NAMENODE_MAX_OBJECTS_KEY = "dfs.namenode.max.objects";
+    String DFS_NAMENODE_NAME_DIR_KEY = "dfs.namenode.name.dir";
+    String DFS_NAMENODE_NAME_DIR_RESTORE_KEY = "dfs.namenode.name.dir.restore";
+    String DFS_NAMENODE_EDITS_DIR_KEY = "dfs.namenode.edits.dir";
+    String DFS_NAMENODE_SAFEMODE_EXTENSION_KEY =
+        "dfs.namenode.safemode.extension";
+    String DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY =
+        "dfs.namenode.safemode.threshold-pct";
+    String DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY =
+        "dfs.namenode.secondary.http-address";
+    String DFS_NAMENODE_CHECKPOINT_DIR_KEY = "dfs.namenode.checkpoint.dir";
+    String DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY =
+        "dfs.namenode.checkpoint.edits.dir";
+    String DFS_NAMENODE_CHECKPOINT_PERIOD_KEY =
+        "dfs.namenode.checkpoint.period";
+    String DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY =
+        "dfs.namenode.heartbeat.recheck-interval";
+    String DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY =
+        "dfs.client.https.keystore.resource";
+    String DFS_CLIENT_HTTPS_NEED_AUTH_KEY = "dfs.client.https.need-auth";
+    String DFS_DATANODE_HOST_NAME_KEY = "dfs.datanode.hostname";
+    String DFS_METRICS_SESSION_ID_KEY = "dfs.metrics.session-id";
+    String DFS_NAMENODE_ACCESSTIME_PRECISION_KEY =
+        "dfs.namenode.accesstime.precision";
+    String DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY =
+        "dfs.namenode.replication.considerLoad";
+    String DFS_NAMENODE_REPLICATION_INTERVAL_KEY =
+        "dfs.namenode.replication.interval";
+    String DFS_NAMENODE_REPLICATION_MIN_KEY = "dfs.namenode.replication.min";
+    String DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY =
+        "dfs.namenode.replication.pending.timeout-sec";
+    String DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY =
+        "dfs.namenode.replication.max-streams";
+    String DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";
+    String DFS_PERMISSIONS_SUPERUSERGROUP_KEY =
+        "dfs.permissions.superusergroup";
+    String DFS_DATANODE_MAX_RECEIVER_THREADS_KEY =
+        "dfs.datanode.max.transfer.threads";
+    String DFS_NAMESERVICE_ID = "dfs.nameservice.id";
+  }
+
   /** dfs.client.retry configuration properties */
   interface Retry {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "retry.";
