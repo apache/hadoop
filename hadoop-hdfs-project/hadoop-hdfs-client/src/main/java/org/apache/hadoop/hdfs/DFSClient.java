@@ -1296,8 +1296,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       LastBlockWithStatus blkWithStatus = namenode.append(src, clientName,
           new EnumSetWritable<>(flag, CreateFlag.class));
+      HdfsFileStatus status = blkWithStatus.getFileStatus();
+      if (status == null) {
+        DFSClient.LOG.debug("NameNode is on an older version, request file " +
+            "info with additional RPC call for file: " + src);
+        status = getFileInfo(src);
+      }
       return DFSOutputStream.newStreamForAppend(this, src, flag, progress,
-          blkWithStatus.getLastBlock(), blkWithStatus.getFileStatus(),
+          blkWithStatus.getLastBlock(), status,
           dfsClientConf.createChecksum(null), favoredNodes);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
