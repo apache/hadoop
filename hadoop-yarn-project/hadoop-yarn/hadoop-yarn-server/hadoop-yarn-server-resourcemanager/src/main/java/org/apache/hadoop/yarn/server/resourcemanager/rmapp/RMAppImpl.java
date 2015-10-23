@@ -946,14 +946,16 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
 
       if (UserGroupInformation.isSecurityEnabled()) {
-        // synchronously renew delegation token on recovery.
+        // asynchronously renew delegation token on recovery.
         try {
-          app.rmContext.getDelegationTokenRenewer().addApplicationSync(
-            app.getApplicationId(), app.parseCredentials(),
-            app.submissionContext.getCancelTokensWhenComplete(), app.getUser());
+          app.rmContext.getDelegationTokenRenewer()
+              .addApplicationAsyncDuringRecovery(app.getApplicationId(),
+                  app.parseCredentials(),
+                  app.submissionContext.getCancelTokensWhenComplete(),
+                  app.getUser());
         } catch (Exception e) {
-          String msg = "Failed to renew token for " + app.applicationId
-                  + " on recovery : " + e.getMessage();
+          String msg = "Failed to fetch user credentials from application:"
+              + e.getMessage();
           app.diagnostics.append(msg);
           LOG.error(msg, e);
         }
