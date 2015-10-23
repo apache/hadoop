@@ -531,6 +531,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4243. Add retry on establishing Zookeeper conenction in 
     EmbeddedElectorService#serviceInit. (Xuan Gong via junping_du)
 
+    YARN-2913. Fair scheduler should have ability to set MaxResourceDefault for
+    each queue. (Siqi Li via mingma)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
