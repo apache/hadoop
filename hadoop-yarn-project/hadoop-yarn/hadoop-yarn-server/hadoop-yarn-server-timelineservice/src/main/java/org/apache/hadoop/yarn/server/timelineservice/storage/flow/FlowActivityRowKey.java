@@ -55,8 +55,29 @@ public class FlowActivityRowKey {
     return flowId;
   }
 
+  /**
+   * Constructs a row key prefix for the flow activity table as follows:
+   * {@code clusterId!}
+   *
+   * @param clusterId
+   * @return byte array with the row key prefix
+   */
   public static byte[] getRowKeyPrefix(String clusterId) {
     return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, ""));
+  }
+
+  /**
+   * Constructs a row key prefix for the flow activity table as follows:
+   * {@code clusterId!dayTimestamp!}
+   *
+   * @param clusterId
+   * @param dayTs
+   * @return byte array with the row key prefix
+   */
+  public static byte[] getRowKeyPrefix(String clusterId, long dayTs) {
+    return Separator.QUALIFIERS.join(
+        Bytes.toBytes(Separator.QUALIFIERS.encode(clusterId)),
+        Bytes.toBytes(TimelineStorageUtils.invertLong(dayTs)), new byte[0]);
   }
 
   /**
