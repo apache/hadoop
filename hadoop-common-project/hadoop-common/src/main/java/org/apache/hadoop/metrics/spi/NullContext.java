@@ -27,7 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * default context, so that no performance data is emitted if no configuration
  * data is found.
  * 
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class NullContext extends AbstractMetricsContext {

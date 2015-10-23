@@ -33,7 +33,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * our standard naming convention as described in the doc
  *  for {link {@link #registerMBean(String, String, Object)}
  *
+ * @deprecated Use {@link org.apache.hadoop.metrics2.util.MBeans} instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MBeanUtil {
 	

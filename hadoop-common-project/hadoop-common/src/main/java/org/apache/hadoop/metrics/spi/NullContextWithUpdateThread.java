@@ -33,7 +33,9 @@ import org.apache.hadoop.metrics.ContextFactory;
  * The default impl of start and stop monitoring:
  *  is the AbstractMetricsContext is good enough.
  * 
+ * @deprecated Use org.apache.hadoop.metrics2 package instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class NullContextWithUpdateThread extends AbstractMetricsContext {

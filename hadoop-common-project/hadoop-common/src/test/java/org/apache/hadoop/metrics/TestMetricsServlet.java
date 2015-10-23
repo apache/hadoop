@@ -32,6 +32,7 @@ import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.mortbay.util.ajax.JSON;
 
+@Deprecated
 public class TestMetricsServlet extends TestCase {
   MetricsContext nc1;
   MetricsContext nc2;

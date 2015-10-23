@@ -39,8 +39,11 @@ import org.apache.hadoop.metrics.spi.Util;
 
 /**
  * Context for sending metrics to Ganglia.
- * 
+ *
+ * @deprecated Use {@link org.apache.hadoop.metrics2.sink.ganglia.GangliaSink30}
+ * instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GangliaContext extends AbstractMetricsContext {
