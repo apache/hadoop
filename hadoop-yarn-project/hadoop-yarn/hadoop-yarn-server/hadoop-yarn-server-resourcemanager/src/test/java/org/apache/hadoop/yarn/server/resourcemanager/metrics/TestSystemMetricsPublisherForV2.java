@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.metrics.AbstractTimelineServicePublisher.MultiThreadedDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -75,7 +74,7 @@ public class TestSystemMetricsPublisherForV2 {
       TestSystemMetricsPublisherForV2.class.getName() + "-localDir")
       .getAbsoluteFile();
 
-  private static SystemMetricsPublisher metricsPublisher;
+  private static TimelineServiceV2Publisher metricsPublisher;
   private static DrainDispatcher dispatcher = new DrainDispatcher();
   private static final String DEFAULT_FLOW_VERSION = "1";
   private static final long DEFAULT_FLOW_RUN = 1;
@@ -103,10 +102,11 @@ public class TestSystemMetricsPublisherForV2 {
     rmTimelineCollectorManager.init(conf);
     rmTimelineCollectorManager.start();
 
-    metricsPublisher = new SystemMetricsPublisher(rmContext) {
+    dispatcher.init(conf);
+    dispatcher.start();
+    metricsPublisher = new TimelineServiceV2Publisher(rmContext) {
       @Override
-      Dispatcher createDispatcher(
-          TimelineServicePublisher timelineServicePublisher) {
+      protected Dispatcher getDispatcher() {
         return dispatcher;
       }
     };
@@ -150,8 +150,8 @@ public class TestSystemMetricsPublisherForV2 {
   @Test
   public void testSystemMetricPublisherInitialization() {
     @SuppressWarnings("resource")
-    SystemMetricsPublisher metricsPublisher =
-        new SystemMetricsPublisher(mock(RMContext.class));
+    TimelineServiceV2Publisher metricsPublisher =
+        new TimelineServiceV2Publisher(mock(RMContext.class));
     try {
       Configuration conf = getTimelineV2Conf();
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_METRICS_ENABLED,
@@ -163,20 +163,18 @@ public class TestSystemMetricsPublisherForV2 {
 
       metricsPublisher.stop();
 
-      metricsPublisher = new SystemMetricsPublisher(mock(RMContext.class));
+      metricsPublisher = new TimelineServiceV2Publisher(mock(RMContext.class));
       conf = getTimelineV2Conf();
       metricsPublisher.init(conf);
+      metricsPublisher.start();
       assertTrue("Expected to publish container Metrics from RM",
           metricsPublisher.isPublishContainerMetrics());
-      assertTrue(
-          "MultiThreadedDispatcher expected when container Metrics is not published",
-          metricsPublisher.getDispatcher() instanceof MultiThreadedDispatcher);
     } finally {
       metricsPublisher.stop();
     }
   }
 
-  @Test(timeout = 1000000)
+  @Test(timeout = 10000)
   public void testPublishApplicationMetrics() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     RMApp app = createAppAndRegister(appId);
