@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBuffere
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Identifies fully qualified columns for the {@link AppToFlowTable}.
@@ -43,7 +42,12 @@ public enum AppToFlowColumn implements Column<AppToFlowTable> {
   /**
    * The flow run ID
    */
-  FLOW_RUN_ID(AppToFlowColumnFamily.MAPPING, "flow_run_id");
+  FLOW_RUN_ID(AppToFlowColumnFamily.MAPPING, "flow_run_id"),
+
+  /**
+   * The user
+   */
+  USER_ID(AppToFlowColumnFamily.MAPPING, "user_id");
 
   private final ColumnHelper<AppToFlowTable> column;
   private final ColumnFamily<AppToFlowTable> columnFamily;
