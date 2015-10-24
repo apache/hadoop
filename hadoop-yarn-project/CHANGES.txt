@@ -986,6 +986,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4294. [JDK8] Fix javadoc errors caused by wrong reference and illegal
     tag. (aajisaka)
 
+    YARN-4289. TestDistributedShell failing with bind exception.
+    (Brahma Reddy Battula via stevel)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
