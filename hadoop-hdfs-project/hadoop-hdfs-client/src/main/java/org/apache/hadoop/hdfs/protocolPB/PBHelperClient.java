@@ -1508,6 +1508,8 @@ public class PBHelperClient {
       return SafeModeActionProto.SAFEMODE_ENTER;
     case SAFEMODE_GET:
       return SafeModeActionProto.SAFEMODE_GET;
+    case SAFEMODE_FORCE_EXIT:
+      return  SafeModeActionProto.SAFEMODE_FORCE_EXIT;
     default:
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }
@@ -1522,7 +1524,7 @@ public class PBHelperClient {
   }
 
   public static long[] convert(GetFsStatsResponseProto res) {
-    long[] result = new long[7];
+    long[] result = new long[ClientProtocol.STATS_ARRAY_LENGTH];
     result[ClientProtocol.GET_STATS_CAPACITY_IDX] = res.getCapacity();
     result[ClientProtocol.GET_STATS_USED_IDX] = res.getUsed();
     result[ClientProtocol.GET_STATS_REMAINING_IDX] = res.getRemaining();
@@ -1534,6 +1536,8 @@ public class PBHelperClient {
         res.getMissingBlocks();
     result[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
         res.getMissingReplOneBlocks();
+    result[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX] =
+        res.hasBlocksInFuture() ? res.getBlocksInFuture() : 0;
     return result;
   }
 
@@ -1897,6 +1901,12 @@ public class PBHelperClient {
         ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX + 1)
       result.setMissingReplOneBlocks(
           fsStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX]);
+
+    if (fsStats.length >=
+        ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX + 1) {
+      result.setBlocksInFuture(
+          fsStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX]);
+    }
     return result.build();
   }
 
@@ -1920,6 +1930,8 @@ public class PBHelperClient {
       return SafeModeAction.SAFEMODE_ENTER;
     case SAFEMODE_GET:
       return SafeModeAction.SAFEMODE_GET;
+    case SAFEMODE_FORCE_EXIT:
+      return  SafeModeAction.SAFEMODE_FORCE_EXIT;
     default:
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }

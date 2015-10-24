@@ -537,6 +537,17 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Returns number of bytes within blocks with future generation stamp. These
+   * are bytes that will be potentially deleted if we forceExit from safe mode.
+   *
+   * @return number of bytes.
+   */
+  public long getBytesWithFutureGenerationStamps() throws IOException {
+    statistics.incrementReadOps(1);
+    return dfs.getBytesInFutureBlocks();
+  }
+
+  /**
    * Deprecated. Prefer {@link FileSystem#getAllStoragePolicies()}
    * @throws IOException
    */

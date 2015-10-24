@@ -1373,7 +1373,7 @@ public class NameNode implements NameNodeStatusMXBean {
     conf.set(DFS_NAMENODE_STARTUP_KEY, opt.name());
   }
 
-  static StartupOption getStartupOption(Configuration conf) {
+  public static StartupOption getStartupOption(Configuration conf) {
     return StartupOption.valueOf(conf.get(DFS_NAMENODE_STARTUP_KEY,
                                           StartupOption.REGULAR.toString()));
   }
@@ -1686,6 +1686,11 @@ public class NameNode implements NameNodeStatusMXBean {
   @Override // NameNodeStatusMXBean
   public long getLastHATransitionTime() {
     return state.getLastHATransitionTime();
+  }
+
+  @Override //NameNodeStatusMXBean
+  public long getBytesWithFutureGenerationStamps() {
+    return getNamesystem().getBytesInFuture();
   }
 
   /**

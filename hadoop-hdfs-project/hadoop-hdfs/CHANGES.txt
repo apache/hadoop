@@ -1566,6 +1566,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8808. dfs.image.transfer.bandwidthPerSec should not apply to
     -bootstrapStandby (zhz)
 
+    HDFS-4015. Safemode should count and report orphaned blocks.
+    (Anu Engineer via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

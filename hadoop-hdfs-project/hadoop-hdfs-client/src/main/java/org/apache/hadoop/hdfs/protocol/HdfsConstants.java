@@ -118,7 +118,7 @@ public final class HdfsConstants {
 
   // SafeMode actions
   public enum SafeModeAction {
-    SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET
+    SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET, SAFEMODE_FORCE_EXIT
   }
 
   public enum RollingUpgradeAction {

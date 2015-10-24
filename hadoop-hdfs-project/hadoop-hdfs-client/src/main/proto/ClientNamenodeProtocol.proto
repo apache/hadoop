@@ -306,6 +306,7 @@ message GetFsStatsResponseProto {
   required uint64 corrupt_blocks = 5;
   required uint64 missing_blocks = 6;
   optional uint64 missing_repl_one_blocks = 7;
+  optional uint64 blocks_in_future = 8;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
@@ -348,6 +349,7 @@ enum SafeModeActionProto {
   SAFEMODE_LEAVE = 1;
   SAFEMODE_ENTER = 2;
   SAFEMODE_GET = 3;
+  SAFEMODE_FORCE_EXIT = 4;
 }
 
 message SetSafeModeRequestProto {
