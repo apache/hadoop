@@ -983,6 +983,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4256. YARN fair scheduler vcores with decimal values. (Jun Gong via zxu)
 
+    YARN-4294. [JDK8] Fix javadoc errors caused by wrong reference and illegal
+    tag. (aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
