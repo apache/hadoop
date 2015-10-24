@@ -2074,6 +2074,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Returns number of bytes that reside in Blocks with future generation
+   * stamps.
+   * @return Bytes in Blocks with future generation stamps.
+   * @throws IOException
+   */
+  public long getBytesInFutureBlocks() throws IOException {
+    return callGetStats()[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX];
+  }
+
+  /**
    * @return a list in which each entry describes a corrupt file/block
    * @throws IOException
    */

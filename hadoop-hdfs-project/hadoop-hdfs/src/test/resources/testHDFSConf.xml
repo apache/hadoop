@@ -15684,7 +15684,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-safemode &lt;enter\|leave\|get\|wait&gt;:( |\t)*Safe mode maintenance command.( )*</expected-output>
+          <expected-output>^-safemode &lt;enter\|leave\|get\|wait\|forceExit&gt;:( |\t)*Safe mode maintenance command.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -16228,6 +16228,24 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!-- TESTED -->
+      <description>safemode: Test for foceExit </description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode enter</dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -safemode forceExit</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Safe mode is OFF</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
 
     <test> <!-- TESTED -->
       <description>safemode: Test for leave - Namenode is already in safemode</description>

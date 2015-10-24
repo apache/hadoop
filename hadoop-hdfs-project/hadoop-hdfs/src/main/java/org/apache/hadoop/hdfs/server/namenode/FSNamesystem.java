@@ -3848,6 +3848,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCount();
     stats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
         getMissingReplOneBlocksCount();
+    stats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX] =
+        blockManager.getBytesInFuture();
     return stats;
   }
 
@@ -4242,13 +4244,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      * Leave safe mode.
      * <p>
      * Check for invalid, under- & over-replicated blocks in the end of startup.
+     * @param force - true to force exit
      */
-    private synchronized void leave() {
+    private synchronized void leave(boolean force) {
       // if not done yet, initialize replication queues.
       // In the standby, do not populate repl queues
       if (!blockManager.isPopulatingReplQueues() && blockManager.shouldPopulateReplQueues()) {
         blockManager.initializeReplQueues();
       }
+
+
+      if (!force && (blockManager.getBytesInFuture() > 0)) {
+        LOG.error("Refusing to leave safe mode without a force flag. " +
+            "Exiting safe mode will cause a deletion of " + blockManager
+            .getBytesInFuture() + " byte(s). Please use " +
+            "-forceExit flag to exit safe mode forcefully if data loss is " +
+            "acceptable.");
+        return;
+      }
+
       long timeInSafemode = now() - startTime;
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
                                     + timeInSafemode/1000 + " secs");
@@ -4346,7 +4360,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // the threshold is reached or was reached before
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave(); // leave safe mode
+        this.leave(false); // leave safe mode
         return;
       }
       if (reached > 0) {  // threshold has already been reached before
@@ -4497,6 +4511,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + "the minimum number %d. ",
             numLive, datanodeThreshold);
       }
+
+      if(blockManager.getBytesInFuture() > 0) {
+        msg += "Name node detected blocks with generation stamps " +
+            "in future. This means that Name node metadata is inconsistent." +
+            "This can happen if Name node metadata files have been manually " +
+            "replaced. Exiting safe mode will cause loss of " + blockManager
+            .getBytesInFuture() + " byte(s). Please restart name node with " +
+            "right metadata or use \"hdfs dfsadmin -safemode forceExit" +
+            "if you are certain that the NameNode was started with the" +
+            "correct FsImage and edit logs. If you encountered this during" +
+            "a rollback, it is safe to exit with -safemode forceExit.";
+        return msg;
+      }
+
+
       msg += (reached > 0) ? "In safe mode extension. " : "";
       msg += "Safe mode will be turned off automatically ";
 
@@ -4598,7 +4627,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
           if (safeMode.canLeave()) {
             // Leave safe mode.
-            safeMode.leave();
+            safeMode.leave(false);
             smmthread = null;
             break;
           }
@@ -4623,10 +4652,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkSuperuserPrivilege();
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
+        if (blockManager.getBytesInFuture() > 0) {
+          LOG.error("Refusing to leave safe mode without a force flag. " +
+              "Exiting safe mode will cause a deletion of " + blockManager
+              .getBytesInFuture() + " byte(s). Please use " +
+              "-forceExit flag to exit safe mode forcefully and data loss is " +
+              "acceptable.");
+          return isInSafeMode();
+        }
         leaveSafeMode();
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
+        break;
+      case SAFEMODE_FORCE_EXIT:
+        if (blockManager.getBytesInFuture() > 0) {
+          LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
+              + "loss of " + blockManager.getBytesInFuture() + " byte(s).");
+          safeMode.leave(true);
+          blockManager.clearBytesInFuture();
+        } else {
+          LOG.warn("forceExit used when normal exist would suffice. Treating " +
+              "force exit as normal safe mode exit.");
+        }
+        leaveSafeMode();
         break;
       default:
         LOG.error("Unexpected safe mode action");
@@ -4806,7 +4855,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF"); 
         return;
       }
-      safeMode.leave();
+      safeMode.leave(false);
     } finally {
       writeUnlock();
     }
@@ -7304,6 +7353,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } else {
       return "";
     }
+  }
+
+  /**
+   * Gets number of bytes in the blocks in future generation stamps.
+   *
+   * @return number of bytes that can be deleted if exited from safe mode.
+   */
+  public long getBytesInFuture() {
+    return blockManager.getBytesInFuture();
+  }
+
+  @VisibleForTesting
+  synchronized void enableSafeModeForTesting(Configuration conf) {
+    SafeModeInfo newSafemode = new SafeModeInfo(conf);
+    newSafemode.enter();
+    this.safeMode = newSafemode;
   }
 }
 
