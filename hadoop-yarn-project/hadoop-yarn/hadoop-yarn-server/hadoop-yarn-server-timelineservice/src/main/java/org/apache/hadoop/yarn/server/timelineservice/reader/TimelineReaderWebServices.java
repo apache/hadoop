@@ -265,11 +265,6 @@ public class TimelineReaderWebServices {
     return str == null ? null : str.trim();
   }
 
-  private static String parseUser(UserGroupInformation callerUGI, String user) {
-    return (callerUGI != null && (user == null || user.isEmpty()) ?
-        callerUGI.getUserName().trim() : parseStr(user));
-  }
-
   private static UserGroupInformation getUser(HttpServletRequest req) {
     String remoteUser = req.getRemoteUser();
     UserGroupInformation callerUGI = null;
@@ -389,7 +384,7 @@ public class TimelineReaderWebServices {
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
-          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
+          parseStr(userId), parseStr(clusterId), parseStr(flowId),
           parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
           parseLongStr(limit), parseLongStr(createdTimeStart),
           parseLongStr(createdTimeEnd), parseLongStr(modifiedTimeStart),
@@ -463,7 +458,7 @@ public class TimelineReaderWebServices {
     TimelineEntity entity = null;
     try {
       entity = timelineReaderManager.getEntity(
-          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
+          parseStr(userId), parseStr(clusterId), parseStr(flowId),
           parseLongStr(flowRunId), parseStr(appId), parseStr(entityType),
           parseStr(entityId), parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
@@ -482,35 +477,35 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a single flow run for the given cluster, flow id and run id.
+   * Return a single flow run for the given user, flow id and run id.
    * Cluster ID is not provided by client so default cluster ID has to be taken.
    */
   @GET
-  @Path("/flowrun/{flowid}/{flowrunid}/")
+  @Path("/flowrun/{userid}/{flowid}/{flowrunid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("flowid") String flowId,
       @PathParam("flowrunid") String flowRunId,
-      @QueryParam("userid") String userId,
       @QueryParam("fields") String fields) {
-    return getFlowRun(req, res, null, flowId, flowRunId, userId, fields);
+    return getFlowRun(req, res, userId, null, flowId, flowRunId, fields);
   }
 
   /**
-   * Return a single flow run for the given cluster, flow id and run id.
+   * Return a single flow run for the given user, cluster, flow id and run id.
    */
   @GET
-  @Path("/flowrun/{clusterid}/{flowid}/{flowrunid}/")
+  @Path("/flowrun/{userid}/{clusterid}/{flowid}/{flowrunid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
       @PathParam("flowid") String flowId,
       @PathParam("flowrunid") String flowRunId,
-      @QueryParam("userid") String userId,
       @QueryParam("fields") String fields) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
@@ -522,9 +517,8 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
     try {
-      entity = timelineReaderManager.getEntity(
-          parseUser(callerUGI, userId), parseStr(clusterId),
-          parseStr(flowId), parseLongStr(flowRunId), null,
+      entity = timelineReaderManager.getEntity(parseStr(userId),
+          parseStr(clusterId), parseStr(flowId), parseLongStr(flowRunId), null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null,
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
@@ -543,37 +537,37 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a set of flows runs for the given flow id.
+   * Return a set of flows runs for the given user and flow id.
    * Cluster ID is not provided by client so default cluster ID has to be taken.
    */
   @GET
-  @Path("/flowruns/{flowid}/")
+  @Path("/flowruns/{userid}/{flowid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("flowid") String flowId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
       @QueryParam("fields") String fields) {
-    return getFlowRuns(req, res, null, flowId, userId, limit, createdTimeStart,
+    return getFlowRuns(req, res, userId, null, flowId, limit, createdTimeStart,
         createdTimeEnd, fields);
   }
 
   /**
-   * Return a set of flow runs for the given cluster and flow id.
+   * Return a set of flow runs for the given user, cluster and flow id.
    */
   @GET
-  @Path("/flowruns/{clusterid}/{flowid}/")
+  @Path("/flowruns/{userid}/{clusterid}/{flowid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
       @PathParam("flowid") String flowId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
@@ -589,11 +583,11 @@ public class TimelineReaderWebServices {
     Set<TimelineEntity> entities = null;
     try {
       entities = timelineReaderManager.getEntities(
-          parseUser(callerUGI, userId), parseStr(clusterId), parseStr(flowId),
-          null, null, TimelineEntityType.YARN_FLOW_RUN.toString(),
-          parseLongStr(limit), parseLongStr(createdTimeStart),
-          parseLongStr(createdTimeEnd), null, null, null, null, null, null,
-          null, null, parseFieldsStr(fields, COMMA_DELIMITER));
+          parseStr(userId), parseStr(clusterId), parseStr(flowId), null, null,
+          TimelineEntityType.YARN_FLOW_RUN.toString(), parseLongStr(limit),
+          parseLongStr(createdTimeStart), parseLongStr(createdTimeEnd), null,
+          null, null, null, null, null, null, null,
+          parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -730,10 +724,9 @@ public class TimelineReaderWebServices {
     TimelineReaderManager timelineReaderManager = getTimelineReaderManager();
     TimelineEntity entity = null;
     try {
-      entity = timelineReaderManager.getEntity(
-          parseUser(callerUGI, userId), parseStr(clusterId),
-          parseStr(flowId), parseLongStr(flowRunId), parseStr(appId),
-          TimelineEntityType.YARN_APPLICATION.toString(), null,
+      entity = timelineReaderManager.getEntity(parseStr(userId),
+          parseStr(clusterId), parseStr(flowId), parseLongStr(flowRunId),
+          parseStr(appId), TimelineEntityType.YARN_APPLICATION.toString(), null,
           parseFieldsStr(fields, COMMA_DELIMITER));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
@@ -750,20 +743,20 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for given flow id and flow run id. Cluster ID is not
-   * provided by client so default cluster ID has to be taken. If number of
-   * matching apps are more than the limit, most recent apps till the limit is
-   * reached, will be returned.
+   * Return a list of apps for given user, flow id and flow run id. Cluster ID
+   * is not provided by client so default cluster ID has to be taken. If number
+   * of matching apps are more than the limit, most recent apps till the limit
+   * is reached, will be returned.
    */
   @GET
-  @Path("/flowrunapps/{flowid}/{flowrunid}/")
+  @Path("/flowrunapps/{userid}/{flowid}/{flowrunid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("flowid") String flowId,
       @PathParam("flowrunid") String flowRunId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
@@ -784,20 +777,20 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for a given cluster id, flow id and flow run id. If
-   * number of matching apps are more than the limit, most recent apps till the
-   * limit is reached, will be returned.
+   * Return a list of apps for a given user, cluster id, flow id and flow run
+   * id. If number of matching apps are more than the limit, most recent apps
+   * till the limit is reached, will be returned.
    */
   @GET
-  @Path("/flowrunapps/{clusterid}/{flowid}/{flowrunid}/")
+  @Path("/flowrunapps/{userid}/{clusterid}/{flowid}/{flowrunid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
       @PathParam("flowid") String flowId,
       @PathParam("flowrunid") String flowRunId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
@@ -818,19 +811,19 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for given flow id. Cluster ID is not provided by
-   * client so default cluster ID has to be taken. If number of matching apps
-   * are more than the limit, most recent apps till the limit is reached, will
-   * be returned.
+   * Return a list of apps for given user and flow id. Cluster ID is not
+   * provided by client so default cluster ID has to be taken. If number of
+   * matching apps are more than the limit, most recent apps till the limit is
+   * reached, will be returned.
    */
   @GET
-  @Path("/flowapps/{flowid}/")
+  @Path("/flowapps/{userid}/{flowid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("flowid") String flowId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,
@@ -851,19 +844,19 @@ public class TimelineReaderWebServices {
   }
 
   /**
-   * Return a list of apps for a given cluster id and flow id. If number of
-   * matching apps are more than the limit, most recent apps till the limit is
-   * reached, will be returned.
+   * Return a list of apps for a given user, cluster id and flow id. If number
+   * of matching apps are more than the limit, most recent apps till the limit
+   * is reached, will be returned.
    */
   @GET
-  @Path("/flowapps/{clusterid}/{flowid}/")
+  @Path("/flowapps/{userid}/{clusterid}/{flowid}/")
   @Produces(MediaType.APPLICATION_JSON)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @PathParam("userid") String userId,
       @PathParam("clusterid") String clusterId,
       @PathParam("flowid") String flowId,
-      @QueryParam("userid") String userId,
       @QueryParam("limit") String limit,
       @QueryParam("createdtimestart") String createdTimeStart,
       @QueryParam("createdtimeend") String createdTimeEnd,

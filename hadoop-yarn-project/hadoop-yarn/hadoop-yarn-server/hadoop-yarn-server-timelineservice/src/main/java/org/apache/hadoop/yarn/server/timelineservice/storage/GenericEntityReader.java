@@ -100,6 +100,7 @@ class GenericEntityReader extends TimelineEntityReader {
     Result result = appToFlowTable.getResult(hbaseConf, conn, get);
     if (result != null && !result.isEmpty()) {
       return new FlowContext(
+          AppToFlowColumn.USER_ID.readResult(result).toString(),
           AppToFlowColumn.FLOW_ID.readResult(result).toString(),
           ((Number)AppToFlowColumn.FLOW_RUN_ID.readResult(result)).longValue());
     } else {
@@ -110,9 +111,11 @@ class GenericEntityReader extends TimelineEntityReader {
   }
 
   protected static class FlowContext {
+    protected final String userId;
     protected final String flowId;
     protected final Long flowRunId;
-    public FlowContext(String flowId, Long flowRunId) {
+    public FlowContext(String user, String flowId, Long flowRunId) {
+      this.userId = user;
       this.flowId = flowId;
       this.flowRunId = flowRunId;
     }
@@ -120,7 +123,6 @@ class GenericEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(userId, "userId shouldn't be null");
     Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
     Preconditions.checkNotNull(appId, "appId shouldn't be null");
     Preconditions.checkNotNull(entityType, "entityType shouldn't be null");
@@ -132,12 +134,13 @@ class GenericEntityReader extends TimelineEntityReader {
   @Override
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
-    // In reality both should be null or neither should be null
-    if (flowId == null || flowRunId == null) {
+    // In reality all three should be null or neither should be null
+    if (flowId == null || flowRunId == null || userId == null) {
       FlowContext context =
           lookupFlowContext(clusterId, appId, hbaseConf, conn);
       flowId = context.flowId;
       flowRunId = context.flowRunId;
+      userId = context.userId;
     }
     if (fieldsToRetrieve == null) {
       fieldsToRetrieve = EnumSet.noneOf(Field.class);
