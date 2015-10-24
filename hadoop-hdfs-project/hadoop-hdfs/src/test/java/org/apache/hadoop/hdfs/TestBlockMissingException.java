@@ -67,7 +67,8 @@ public class TestBlockMissingException {
           0, numBlocks * blockSize);
       // remove block of file
       LOG.info("Remove first block of file");
-      corruptBlock(file1, locations.get(0).getBlock());
+      dfs.corruptBlockOnDataNodesByDeletingBlockFile(
+          locations.get(0).getBlock());
 
       // validate that the system throws BlockMissingException
       validateFile(fileSys, file1);
@@ -117,17 +118,5 @@ public class TestBlockMissingException {
     }
     stm.close();
     assertTrue("Expected BlockMissingException ", gotException);
-  }
-
-  //
-  // Corrupt specified block of file
-  //
-  void corruptBlock(Path file, ExtendedBlock blk) {
-    // Now deliberately remove/truncate data blocks from the file.
-    File[] blockFiles = dfs.getAllBlockFiles(blk);
-    for (File f : blockFiles) {
-      f.delete();
-      LOG.info("Deleted block " + f);
-    }
   }
 }
