@@ -90,12 +90,12 @@ class ApplicationEntityReader extends GenericEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(userId, "userId shouldn't be null");
     Preconditions.checkNotNull(clusterId, "clusterId shouldn't be null");
     Preconditions.checkNotNull(entityType, "entityType shouldn't be null");
     if (singleEntityRead) {
       Preconditions.checkNotNull(appId, "appId shouldn't be null");
     } else {
+      Preconditions.checkNotNull(userId, "userId shouldn't be null");
       Preconditions.checkNotNull(flowId, "flowId shouldn't be null");
     }
   }
@@ -104,11 +104,12 @@ class ApplicationEntityReader extends GenericEntityReader {
   protected void augmentParams(Configuration hbaseConf, Connection conn)
       throws IOException {
     if (singleEntityRead) {
-      if (flowId == null || flowRunId == null) {
+      if (flowId == null || flowRunId == null || userId == null) {
         FlowContext context =
             lookupFlowContext(clusterId, appId, hbaseConf, conn);
         flowId = context.flowId;
         flowRunId = context.flowRunId;
+        userId = context.userId;
       }
     }
     if (fieldsToRetrieve == null) {

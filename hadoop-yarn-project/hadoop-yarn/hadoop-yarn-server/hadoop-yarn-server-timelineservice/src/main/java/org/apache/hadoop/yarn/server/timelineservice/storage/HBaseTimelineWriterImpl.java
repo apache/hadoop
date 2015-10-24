@@ -162,8 +162,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       String flowName, String flowVersion, long flowRunId, String appId,
       TimelineEntity te) throws IOException {
     // store in App to flow table
-    storeInAppToFlowTable(clusterId, userId, flowName, flowVersion, flowRunId,
-        appId, te);
+    storeInAppToFlowTable(clusterId, userId, flowName, flowRunId, appId, te);
     // store in flow run table
     storeAppCreatedInFlowRunTable(clusterId, userId, flowName, flowVersion,
         flowRunId, appId, te);
@@ -200,11 +199,12 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   }
 
   private void storeInAppToFlowTable(String clusterId, String userId,
-      String flowName, String flowVersion, long flowRunId, String appId,
-      TimelineEntity te) throws IOException {
+      String flowName, long flowRunId, String appId, TimelineEntity te)
+      throws IOException {
     byte[] rowKey = AppToFlowRowKey.getRowKey(clusterId, appId);
     AppToFlowColumn.FLOW_ID.store(rowKey, appToFlowTable, null, flowName);
     AppToFlowColumn.FLOW_RUN_ID.store(rowKey, appToFlowTable, null, flowRunId);
+    AppToFlowColumn.USER_ID.store(rowKey, appToFlowTable, null, userId);
   }
 
   /*
