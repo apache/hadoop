@@ -138,6 +138,8 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-4129. Refactor the SystemMetricPublisher in RM to better support
     newer events (Naganarasimha G R via sjlee)
 
+    YARN-4221. Store user in app to flow table (Varun Saxena via sjlee)
+
   OPTIMIZATIONS
 
   BUG FIXES
