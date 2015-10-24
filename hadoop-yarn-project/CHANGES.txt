@@ -534,6 +534,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2913. Fair scheduler should have ability to set MaxResourceDefault for
     each queue. (Siqi Li via mingma)
 
+    YARN-4296. DistributedShell Log.info is not friendly.
+    (Xiaowei Wang via stevel)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

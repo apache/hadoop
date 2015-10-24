@@ -453,9 +453,9 @@ public class Client {
     for (NodeReport node : clusterNodeReports) {
       LOG.info("Got node report from ASM for"
           + ", nodeId=" + node.getNodeId() 
-          + ", nodeAddress" + node.getHttpAddress()
-          + ", nodeRackName" + node.getRackName()
-          + ", nodeNumContainers" + node.getNumContainers());
+          + ", nodeAddress=" + node.getHttpAddress()
+          + ", nodeRackName=" + node.getRackName()
+          + ", nodeNumContainers=" + node.getNumContainers());
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
