@@ -766,6 +766,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9280. Document NFS gateway export point parameter. (Xiao Chen via zhz)
 
+    HDFS-9297. Update TestBlockMissingException to use corruptBlockOnDataNodesByDeletingBlockFile().
+    (Tony Wu via lei)
+
   BUG FIXES
 
     HDFS-8091: ACLStatus and XAttributes should be presented to
