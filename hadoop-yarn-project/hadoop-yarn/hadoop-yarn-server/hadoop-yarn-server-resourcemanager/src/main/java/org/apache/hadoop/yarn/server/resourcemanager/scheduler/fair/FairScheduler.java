@@ -1244,7 +1244,8 @@ public class FairScheduler extends
       String queueName =
           resolveReservationQueueName(appAddedEvent.getQueue(),
               appAddedEvent.getApplicationId(),
-              appAddedEvent.getReservationID());
+              appAddedEvent.getReservationID(),
+              appAddedEvent.getIsAppRecovering());
       if (queueName != null) {
         addApplication(appAddedEvent.getApplicationId(),
             queueName, appAddedEvent.getUser(),
@@ -1317,7 +1318,8 @@ public class FairScheduler extends
   }
 
   private synchronized String resolveReservationQueueName(String queueName,
-      ApplicationId applicationId, ReservationId reservationID) {
+      ApplicationId applicationId, ReservationId reservationID,
+      boolean isRecovering) {
     FSQueue queue = queueMgr.getQueue(queueName);
     if ((queue == null) || !allocConf.isReservable(queue.getQueueName())) {
       return queueName;
@@ -1328,6 +1330,11 @@ public class FairScheduler extends
       String resQName = queueName + "." + reservationID.toString();
       queue = queueMgr.getQueue(resQName);
       if (queue == null) {
+        // reservation has terminated during failover
+        if (isRecovering && allocConf.getMoveOnExpiry(queueName)) {
+          // move to the default child queue of the plan
+          return getDefaultQueueForPlanQueue(queueName);
+        }
         String message =
             "Application "
                 + applicationId
