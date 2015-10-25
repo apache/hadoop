@@ -537,6 +537,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4296. DistributedShell Log.info is not friendly.
     (Xiaowei Wang via stevel)
 
+    YARN-3738. Add support for recovery of reserved apps running under dynamic
+    queues (subru via asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

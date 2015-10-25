@@ -1320,10 +1320,9 @@ public class CapacityScheduler extends
     case APP_ADDED:
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
-      String queueName =
-          resolveReservationQueueName(appAddedEvent.getQueue(),
-              appAddedEvent.getApplicationId(),
-              appAddedEvent.getReservationID());
+      String queueName = resolveReservationQueueName(appAddedEvent.getQueue(),
+          appAddedEvent.getApplicationId(), appAddedEvent.getReservationID(),
+          appAddedEvent.getIsAppRecovering());
       if (queueName != null) {
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
@@ -1664,8 +1663,13 @@ public class CapacityScheduler extends
     }
   }
 
+  private String getDefaultReservationQueueName(String planQueueName) {
+    return planQueueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+  }
+
   private synchronized String resolveReservationQueueName(String queueName,
-      ApplicationId applicationId, ReservationId reservationID) {
+      ApplicationId applicationId, ReservationId reservationID,
+      boolean isRecovering) {
     CSQueue queue = getQueue(queueName);
     // Check if the queue is a plan queue
     if ((queue == null) || !(queue instanceof PlanQueue)) {
@@ -1675,10 +1679,15 @@ public class CapacityScheduler extends
       String resQName = reservationID.toString();
       queue = getQueue(resQName);
       if (queue == null) {
+        // reservation has terminated during failover
+        if (isRecovering
+            && conf.getMoveOnExpiry(getQueue(queueName).getQueuePath())) {
+          // move to the default child queue of the plan
+          return getDefaultReservationQueueName(queueName);
+        }
         String message =
-            "Application "
-                + applicationId
-                + " submitted to a reservation which is not yet currently active: "
+            "Application " + applicationId
+                + " submitted to a reservation which is not currently active: "
                 + resQName;
         this.rmContext.getDispatcher().getEventHandler()
             .handle(new RMAppEvent(applicationId,
@@ -1699,7 +1708,7 @@ public class CapacityScheduler extends
       queueName = resQName;
     } else {
       // use the default child queue of the plan for unreserved apps
-      queueName = queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+      queueName = getDefaultReservationQueueName(queueName);
     }
     return queueName;
   }

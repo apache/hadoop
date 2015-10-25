@@ -304,6 +304,18 @@ public class ReservationSystemTestUtil {
     conf.setCapacity(A2, 70);
   }
 
+  public static void setupDynamicQueueConfiguration(
+      CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] { reservationQ });
+    final String dedicated = CapacitySchedulerConfiguration.ROOT
+        + CapacitySchedulerConfiguration.DOT + reservationQ;
+    conf.setCapacity(dedicated, 100);
+    // Set as reservation queue
+    conf.setReservable(dedicated, true);
+  }
+
   public static String getFullReservationQueueName() {
     return CapacitySchedulerConfiguration.ROOT
         + CapacitySchedulerConfiguration.DOT + reservationQ;
