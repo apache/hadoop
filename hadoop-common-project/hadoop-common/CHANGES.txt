@@ -30,6 +30,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-15279. Increase maven heap size recommendations.
     (Allen Wittenauer via aajisaka)
 
+    HADOOP-12472. Make GenericTestUtils.assertExceptionContains robust.
+    (Steve Loughran via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -131,6 +134,9 @@ Release 2.7.4 - 2017-08-04
     via aw)
 
     HADOOP-14440. Add metrics for connections dropped. (Eric Badger via kihwal)
+
+    HADOOP-12472. Make GenericTestUtils.assertExceptionContains robust.
+    (Steve Loughran via jing9)
 
   OPTIMIZATIONS
 
