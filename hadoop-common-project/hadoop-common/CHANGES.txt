@@ -907,6 +907,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-7266. Deprecate metrics v1. (Akira AJISAKA via ozawa)
 
+    HADOOP-12472. Make GenericTestUtils.assertExceptionContains robust.
+    (Steve Loughran via jing9)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
