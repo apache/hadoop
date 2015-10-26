@@ -109,6 +109,11 @@
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 
 
   <!-- Ignore intentional switch fallthroughs -->
