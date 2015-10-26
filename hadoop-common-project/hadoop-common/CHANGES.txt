@@ -1259,6 +1259,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12483. Maintain wrapped SASL ordering for postponed IPC responses.
     (Daryn Sharp via yliu)
 
+    HADOOP-12513. Dockerfile lacks initial 'apt-get update'.
+    (Akihiro Suda via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
