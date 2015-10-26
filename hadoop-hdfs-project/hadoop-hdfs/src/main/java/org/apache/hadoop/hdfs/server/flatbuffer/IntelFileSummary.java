@@ -9,7 +9,14 @@ import com.google.flatbuffers.*;
 @SuppressWarnings("unused")
 public final class IntelFileSummary extends Table {
   public static IntelFileSummary getRootAsIntelFileSummary(ByteBuffer _bb) { return getRootAsIntelFileSummary(_bb, new IntelFileSummary()); }
-  public static IntelFileSummary getRootAsIntelFileSummary(ByteBuffer _bb, IntelFileSummary obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__init(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
+  public static IntelFileSummary getRootAsIntelFileSummary(ByteBuffer _bb, IntelFileSummary obj) {
+
+      _bb.order(ByteOrder.LITTLE_ENDIAN);
+      return (obj.__init(_bb.getInt(_bb.position()) + _bb.position(), _bb));
+
+  }
+
+
   public IntelFileSummary __init(int _i, ByteBuffer _bb) { bb_pos = _i; bb = _bb; return this; }
 
   public long ondiskVersion() { int o = __offset(4); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0; }

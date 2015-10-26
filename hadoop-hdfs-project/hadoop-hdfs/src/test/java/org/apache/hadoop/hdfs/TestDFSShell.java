@@ -2278,8 +2278,8 @@ public class TestDFSShell {
     }
   }
 
-  // force Copy Option is -f
-  @Test (timeout = 30000)
+  // force Copy Option is -f  (timeout = 30000)
+  @Test
   public void testCopyCommandsWithForceOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
