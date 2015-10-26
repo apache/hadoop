@@ -1578,6 +1578,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9291. Fix TestInterDatanodeProtocol to be FsDataset-agnostic. (lei)
 
+    HDFS-8945. Update the description about replica placement in HDFS
+    Architecture documentation. (Masatake Iwasaki via wang)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

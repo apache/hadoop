@@ -121,7 +121,26 @@ A simple but non-optimal policy is to place replicas on unique racks. This preve
 
 For the common case, when the replication factor is three, HDFS’s placement policy is to put one replica on one node in the local rack, another on a different node in the local rack, and the last on a different node in a different rack. This policy cuts the inter-rack write traffic which generally improves write performance. The chance of rack failure is far less than that of node failure; this policy does not impact data reliability and availability guarantees. However, it does reduce the aggregate network bandwidth used when reading data since a block is placed in only two unique racks rather than three. With this policy, the replicas of a file do not evenly distribute across the racks. One third of replicas are on one node, two thirds of replicas are on one rack, and the other third are evenly distributed across the remaining racks. This policy improves write performance without compromising data reliability or read performance.
 
+If the replication factor is greater than 3,
+the placement of the 4th and following replicas are determined randomly
+while keeping the number of replicas per rack below the upper limit
+(which is basically `(replicas - 1) / racks + 2`).
+
+Because the NameNode does not allow DataNodes to have multiple replicas of the same block,
+maximum number of replicas created is the total number of DataNodes at that time.
+
+After the support for
+[Storage Types and Storage Policies](ArchivalStorage.html) was added to HDFS,
+the NameNode takes the policy into account for replica placement
+in addition to the rack awareness described above.
+The NameNode chooses nodes based on rack awareness at first,
+then checks that the candidate node have storage required by the policy associated with the file.
+If the candidate node does not have the storage type, the NameNode looks for another node.
+If enough nodes to place replicas can not be found in the first path,
+the NameNode looks for nodes having fallback storage types in the second path.
+
 The current, default replica placement policy described here is a work in progress.
+
 
 ### Replica Selection
 
