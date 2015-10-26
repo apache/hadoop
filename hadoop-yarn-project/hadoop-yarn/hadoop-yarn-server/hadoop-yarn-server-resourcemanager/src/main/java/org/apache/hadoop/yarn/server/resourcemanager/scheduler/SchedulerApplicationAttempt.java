@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
@@ -146,7 +147,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   protected Queue queue;
   protected boolean isStopped = false;
-  
+
+  private String appAMNodePartitionName = CommonNodeLabelsManager.NO_LABEL;
+
   protected final RMContext rmContext;
   
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
@@ -247,8 +250,16 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return attemptResourceUsage.getAMUsed();
   }
 
+  public Resource getAMResource(String label) {
+    return attemptResourceUsage.getAMUsed(label);
+  }
+
   public void setAMResource(Resource amResource) {
     attemptResourceUsage.setAMUsed(amResource);
+  }
+
+  public void setAMResource(String label, Resource amResource) {
+    attemptResourceUsage.setAMUsed(label, amResource);
   }
 
   public boolean isAmRunning() {
@@ -885,5 +896,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public synchronized void increaseContainer(
       SchedContainerChangeRequest increaseRequest) {
     changeContainerResource(increaseRequest, true);
+  }
+
+  public void setAppAMNodePartitionName(String partitionName) {
+    this.appAMNodePartitionName = partitionName;
+  }
+
+  public String getAppAMNodePartitionName() {
+    return appAMNodePartitionName;
   }
 }
