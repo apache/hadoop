@@ -997,6 +997,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3724. Use POSIX nftw(3) instead of fts(3) (Alan Burlison via aw)
 
+    YARN-4246. NPE while listing app attempt. (Nijel S F via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
