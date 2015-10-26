@@ -145,7 +145,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public synchronized float getUsedCapacity() {
+  public float getUsedCapacity() {
     return queueCapacities.getUsedCapacity();
   }
 
@@ -198,7 +198,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public synchronized void setUsedCapacity(float usedCapacity) {
+  public void setUsedCapacity(float usedCapacity) {
     queueCapacities.setUsedCapacity(usedCapacity);
   }
   

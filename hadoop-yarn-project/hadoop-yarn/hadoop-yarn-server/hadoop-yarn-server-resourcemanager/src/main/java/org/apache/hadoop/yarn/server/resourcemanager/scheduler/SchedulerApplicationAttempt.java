@@ -676,11 +676,19 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         Resources.clone(attemptResourceUsage.getAllUsed());
     Resource reservedResourceClone =
         Resources.clone(attemptResourceUsage.getReserved());
+    Resource cluster = rmContext.getScheduler().getClusterResource();
+    ResourceCalculator calc = rmContext.getScheduler().getResourceCalculator();
+    float queueUsagePerc = calc.divide(cluster, usedResourceClone, Resources
+        .multiply(cluster, queue.getQueueInfo(false, false).getCapacity()))
+        * 100;
+    float clusterUsagePerc =
+        calc.divide(cluster, usedResourceClone, cluster) * 100;
     return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
         reservedContainers.size(), usedResourceClone, reservedResourceClone,
         Resources.add(usedResourceClone, reservedResourceClone),
         runningResourceUsage.getMemorySeconds(),
-        runningResourceUsage.getVcoreSeconds());
+        runningResourceUsage.getVcoreSeconds(),
+        queueUsagePerc, clusterUsagePerc);
   }
 
   public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {

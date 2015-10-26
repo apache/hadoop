@@ -543,6 +543,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3738. Add support for recovery of reserved apps running under dynamic
     queues (subru via asuresh)
 
+    YARN-4285. Display resource usage as percentage of queue and cluster in the
+    RM UI (Varun Vasudev via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

@@ -57,7 +57,7 @@ public class WebPageUtils {
     if (isFairSchedulerPage) {
       sb.append("[13]");
     } else if (isResourceManager) {
-      sb.append("[13]");
+      sb.append("[15]");
     } else {
       sb.append("[9]");
     }
