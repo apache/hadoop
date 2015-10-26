@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
@@ -125,7 +126,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     LOG.info("Created localDir in " + localDir.getAbsolutePath());
     LOG.info("Created tmpDir in " + tmpDir.getAbsolutePath());
 
-    String bindAddress = "0.0.0.0:12345";
+    String bindAddress = "0.0.0.0:"+ServerSocketUtil.getPort(49160, 10);
     conf.set(YarnConfiguration.NM_ADDRESS, bindAddress);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());

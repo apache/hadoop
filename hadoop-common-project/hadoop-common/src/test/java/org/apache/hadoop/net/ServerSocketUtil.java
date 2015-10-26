@@ -48,8 +48,8 @@ public class ServerSocketUtil {
       if (tryPort == 0) {
         continue;
       }
-      LOG.info("Using port " + tryPort);
       try (ServerSocket s = new ServerSocket(tryPort)) {
+        LOG.info("Using port " + tryPort);
         return tryPort;
       } catch (IOException e) {
         tries++;

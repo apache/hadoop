@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -215,7 +216,7 @@ public class TestNodeManagerReboot {
     
   }
 
-  private void restartNM(int maxTries) {
+  private void restartNM(int maxTries) throws IOException {
     nm.stop();
     nm = new MyNodeManager();
     nm.start();
@@ -296,7 +297,7 @@ public class TestNodeManagerReboot {
 
   private class MyNodeManager extends NodeManager {
 
-    public MyNodeManager() {
+    public MyNodeManager() throws IOException {
       super();
       this.init(createNMConfig());
     }
@@ -315,11 +316,13 @@ public class TestNodeManagerReboot {
       return delService;
     }
 
-    private YarnConfiguration createNMConfig() {
+    private YarnConfiguration createNMConfig() throws IOException {
       YarnConfiguration conf = new YarnConfiguration();
       conf.setInt(YarnConfiguration.NM_PMEM_MB, 5 * 1024); // 5GB
-      conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
-      conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
+      conf.set(YarnConfiguration.NM_ADDRESS,
+          "127.0.0.1:" + ServerSocketUtil.getPort(49152, 10));
+      conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:"
+          + ServerSocketUtil.getPort(49153, 10));
       conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
       conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
