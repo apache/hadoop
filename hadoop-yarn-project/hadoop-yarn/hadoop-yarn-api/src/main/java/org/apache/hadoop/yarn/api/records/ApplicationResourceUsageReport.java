@@ -36,7 +36,7 @@ public abstract class ApplicationResourceUsageReport {
   public static ApplicationResourceUsageReport newInstance(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
-      long vcoreSeconds) {
+      long vcoreSeconds, float queueUsagePerc, float clusterUsagePerc) {
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
@@ -46,6 +46,8 @@ public abstract class ApplicationResourceUsageReport {
     report.setNeededResources(neededResources);
     report.setMemorySeconds(memorySeconds);
     report.setVcoreSeconds(vcoreSeconds);
+    report.setQueueUsagePercentage(queueUsagePerc);
+    report.setClusterUsagePercentage(clusterUsagePerc);
     return report;
   }
 
@@ -152,4 +154,38 @@ public abstract class ApplicationResourceUsageReport {
   @Public
   @Unstable
   public abstract long getVcoreSeconds();
+
+  /**
+   * Get the percentage of resources of the queue that the app is using.
+   * @return the percentage of resources of the queue that the app is using.
+   */
+  @Public
+  @Stable
+  public abstract float getQueueUsagePercentage();
+
+  /**
+   * Set the percentage of resources of the queue that the app is using.
+   * @param queueUsagePerc the percentage of resources of the queue that
+   *                       the app is using.
+   */
+  @Private
+  @Unstable
+  public abstract void setQueueUsagePercentage(float queueUsagePerc);
+
+  /**
+   * Get the percentage of resources of the cluster that the app is using.
+   * @return the percentage of resources of the cluster that the app is using.
+   */
+  @Public
+  @Stable
+  public abstract float getClusterUsagePercentage();
+
+  /**
+   * Set the percentage of resources of the cluster that the app is using.
+   * @param clusterUsagePerc the percentage of resources of the cluster that
+   *                         the app is using.
+   */
+  @Private
+  @Unstable
+  public abstract void setClusterUsagePercentage(float clusterUsagePerc);
 }

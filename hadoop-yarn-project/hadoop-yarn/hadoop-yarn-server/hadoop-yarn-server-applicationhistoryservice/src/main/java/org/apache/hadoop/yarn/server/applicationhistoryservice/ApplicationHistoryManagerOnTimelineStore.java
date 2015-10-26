@@ -334,8 +334,9 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                 ApplicationMetricsConstants.APP_CPU_METRICS).toString());
         long memorySeconds=Long.parseLong(entityInfo.get(
                 ApplicationMetricsConstants.APP_MEM_METRICS).toString());
-        appResources=ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds);
+        appResources = ApplicationResourceUsageReport
+            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, 0,
+                0);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {
         appTags = new HashSet<String>();

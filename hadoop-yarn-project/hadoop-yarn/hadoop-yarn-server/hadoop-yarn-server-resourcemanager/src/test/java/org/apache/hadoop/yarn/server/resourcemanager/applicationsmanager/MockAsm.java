@@ -305,7 +305,7 @@ public abstract class MockAsm extends MockApps {
           String clientUserName, boolean allowAccess) {
         ApplicationResourceUsageReport usageReport =
             ApplicationResourceUsageReport.newInstance(0, 0, null, null, null, 
-            0, 0);
+            0, 0, 0, 0);
         ApplicationReport report = ApplicationReport.newInstance(
             getApplicationId(), appAttemptId, getUser(), getQueue(), 
             getName(), null, 0, null, null, getDiagnostics().toString(), 
