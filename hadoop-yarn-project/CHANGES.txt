@@ -1008,6 +1008,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4223. Fixed findbugs warnings in hadoop-yarn-server-nodemanager project
     (varun saxena via rohithsharmaks)
 
+    YARN-4284. condition for AM blacklisting is too narrow (Sangjin Lee via
+    jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
