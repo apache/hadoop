@@ -149,10 +149,12 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
 
-    isDistributedNodeLabelsConf =
-        YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
-    isDelegatedCentralizedNodeLabelsConf = YarnConfiguration
-        .isDelegatedCentralizedNodeLabelConfiguration(conf);
+    if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      isDistributedNodeLabelsConf =
+          YarnConfiguration.isDistributedNodeLabelConfiguration(conf);
+      isDelegatedCentralizedNodeLabelsConf =
+          YarnConfiguration.isDelegatedCentralizedNodeLabelConfiguration(conf);
+    }
 
     super.serviceInit(conf);
   }

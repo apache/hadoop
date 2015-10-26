@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -137,18 +138,21 @@ public class NodeManager extends CompositeService
     case YarnConfiguration.CONFIG_NODE_LABELS_PROVIDER:
       provider = new ConfigurationNodeLabelsProvider();
       break;
+    case YarnConfiguration.SCRIPT_NODE_LABELS_PROVIDER:
+      provider = new ScriptBasedNodeLabelsProvider();
+      break;
     default:
       try {
         Class<? extends NodeLabelsProvider> labelsProviderClass =
-            conf.getClass(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG, null,
-                NodeLabelsProvider.class);
+            conf.getClass(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG,
+                null, NodeLabelsProvider.class);
         provider = labelsProviderClass.newInstance();
       } catch (InstantiationException | IllegalAccessException
           | RuntimeException e) {
         LOG.error("Failed to create NodeLabelsProvider based on Configuration",
             e);
-        throw new IOException("Failed to create NodeLabelsProvider : "
-            + e.getMessage(), e);
+        throw new IOException(
+            "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -315,7 +319,7 @@ public class NodeManager extends CompositeService
       nodeStatusUpdater =
           createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
     } else {
-      addService(nodeLabelsProvider);
+      addIfService(nodeLabelsProvider);
       nodeStatusUpdater =
           createNodeStatusUpdater(context, dispatcher, nodeHealthChecker,
               nodeLabelsProvider);

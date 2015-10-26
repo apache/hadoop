@@ -19,14 +19,11 @@
 package org.apache.hadoop.yarn.server.nodemanager.nodelabels;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
@@ -43,13 +40,9 @@ public class ConfigurationNodeLabelsProvider extends AbstractNodeLabelsProvider 
 
   private void updateNodeLabelsFromConfig(Configuration conf)
       throws IOException {
-    String confLabelString =
-        conf.get(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_LABELS, null);
-    String[] nodeLabelsFromConfiguration =
-        (confLabelString == null || confLabelString.isEmpty()) ? new String[] {}
-            : StringUtils.getStrings(confLabelString);
-    setNodeLabels(convertToNodeLabelSet(new HashSet<String>(
-        Arrays.asList(nodeLabelsFromConfiguration))));
+    String configuredNodePartition =
+        conf.get(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_PARTITION, null);
+    setNodeLabels(convertToNodeLabelSet(configuredNodePartition));
   }
 
   private class ConfigurationMonitorTimerTask extends TimerTask {
@@ -66,5 +59,10 @@ public class ConfigurationNodeLabelsProvider extends AbstractNodeLabelsProvider 
   @Override
   public TimerTask createTimerTask() {
     return new ConfigurationMonitorTimerTask();
+  }
+
+  @Override
+  protected void cleanUp() throws Exception {
+    //No cleanup Req!
   }
 }
