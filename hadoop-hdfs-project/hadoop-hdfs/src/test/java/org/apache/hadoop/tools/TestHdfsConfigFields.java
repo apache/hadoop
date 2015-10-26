@@ -22,6 +22,7 @@ import java.util.HashSet;
 
 import org.apache.hadoop.conf.TestConfigurationFieldsBase;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 /**
  * Unit test class to compare the following MR Configuration classes:
@@ -39,7 +40,8 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
   @Override
   public void initializeMemberVariables() {
     xmlFilename = new String("hdfs-default.xml");
-    configurationClasses = new Class[] { DFSConfigKeys.class };
+    configurationClasses = new Class[] { HdfsClientConfigKeys.class,
+        DFSConfigKeys.class};
 
     // Set error modes
     errorIfMissingConfigProps = true;
