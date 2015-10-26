@@ -85,7 +85,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final String MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT =
     PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX;
-  
+
   @Private
   public static final String QUEUES = "queues";
   
@@ -138,7 +138,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final float 
   DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT = 0.1f;
-  
+
   @Private
   public static final float UNDEFINED = -1;
   
@@ -512,6 +512,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   public void setDefaultNodeLabelExpression(String queue, String exp) {
     set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
+  }
+
+  public float getMaximumAMResourcePercentPerPartition(String queue,
+      String label) {
+    // If per-partition max-am-resource-percent is not configured,
+    // use default value as max-am-resource-percent for this queue.
+    return getFloat(getNodeLabelPrefix(queue, label)
+        + MAXIMUM_AM_RESOURCE_SUFFIX,
+        getMaximumApplicationMasterResourcePerQueuePercent(queue));
+  }
+
+  public void setMaximumAMResourcePercentPerPartition(String queue,
+      String label, float percent) {
+    setFloat(getNodeLabelPrefix(queue, label)
+        + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
 
   /*
