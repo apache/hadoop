@@ -285,4 +285,11 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
       return rur;
     }
   }
+
+  @Override
+  public void checkStoredReplica(Replica replica) throws IOException {
+    Preconditions.checkArgument(replica instanceof ReplicaInfo);
+    ReplicaInfo r = (ReplicaInfo) replica;
+    FsDatasetImpl.checkReplicaFiles(r);
+  }
 }

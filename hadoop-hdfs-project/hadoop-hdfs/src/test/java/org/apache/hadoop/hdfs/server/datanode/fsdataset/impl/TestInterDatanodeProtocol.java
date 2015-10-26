@@ -359,7 +359,7 @@ public class TestInterDatanodeProtocol {
       Assert.assertEquals(ReplicaState.RUR, replica.getState());
 
       //check meta data before update
-      FsDatasetImpl.checkReplicaFiles(replica);
+      cluster.getFsDatasetTestUtils(datanode).checkStoredReplica(replica);
 
       //case "THIS IS NOT SUPPOSED TO HAPPEN"
       //with (block length) != (stored replica's on disk length). 
