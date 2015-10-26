@@ -23,7 +23,11 @@
 #include <libgen.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <fts.h>
+#ifdef __sun
+#include <sys/param.h>
+#define NAME_MAX MAXNAMELEN
+#endif
+#include <ftw.h>
 #include <errno.h>
 #include <grp.h>
 #include <unistd.h>
@@ -1574,134 +1578,131 @@ static int rmdir_as_nm(const char* path) {
 }
 
 /**
+ * nftw callback and associated TLS.
+ */
+
+typedef struct {
+  int errnum;
+  int chmods;
+} nftw_state_t;
+
+static __thread nftw_state_t nftws;
+
+static int nftw_cb(const char *path,
+                   const struct stat *stat,
+                   int type,
+                   struct FTW *ftw) {
+
+  /* Leave the top-level directory to be deleted by the caller. */
+  if (ftw->level == 0) {
+    return 0;
+  }
+
+  switch (type) {
+    /* Directory, post-order. Should be empty so remove the directory. */
+    case FTW_DP:
+      if (rmdir(path) != 0) {
+        /* Record the first errno. */
+        if (errno != ENOENT && nftws.errnum == 0) {
+          nftws.errnum = errno;
+        }
+        fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", path, strerror(errno));
+        /* Read-only filesystem, no point in continuing. */
+        if (errno == EROFS) {
+          return -1;
+        }
+      }
+      break;
+    /* File or symlink. Remove. */
+    case FTW_F:
+    case FTW_SL:
+      if (unlink(path) != 0) {
+        /* Record the first errno. */
+        if (errno != ENOENT && nftws.errnum == 0) {
+          nftws.errnum = errno;
+        }
+        fprintf(LOGFILE, "Couldn't delete file %s - %s\n", path, strerror(errno));
+        /* Read-only filesystem, no point in continuing. */
+        if (errno == EROFS) {
+          return -1;
+        }
+      }
+      break;
+    /* Unreadable file or directory. Attempt to chmod. */
+    case FTW_DNR:
+      if (chmod(path, 0700) == 0) {
+        nftws.chmods++;
+      } else {
+        /* Record the first errno. */
+        if (errno != ENOENT && nftws.errnum == 0) {
+          nftws.errnum = errno;
+        }
+        fprintf(LOGFILE, "Couldn't chmod %s - %s.\n", path, strerror(errno));
+      }
+      break;
+    /* Should never happen. */
+    default:
+      fprintf(LOGFILE, "Internal error deleting %s\n", path);
+      return -1;
+  }
+  return 0;
+}
+
+/**
  * Recursively delete the given path.
  * full_path : the path to delete
  * needs_tt_user: the top level directory must be deleted by the tt user.
  */
 static int delete_path(const char *full_path, 
                        int needs_tt_user) {
-  int exit_code = 0;
 
+  /* Return an error if the path is null. */
   if (full_path == NULL) {
     fprintf(LOGFILE, "Path is null\n");
-    exit_code = UNABLE_TO_BUILD_PATH; // may be malloc failed
-  } else {
-    char *(paths[]) = {strdup(full_path), 0};
-    if (paths[0] == NULL) {
-      fprintf(LOGFILE, "Malloc failed in delete_path\n");
-      return -1;
-    }
-    // check to make sure the directory exists
-    if (access(full_path, F_OK) != 0) {
-      if (errno == ENOENT) {
-        free(paths[0]);
-        return 0;
-      }
-    }
-    FTS* tree = fts_open(paths, FTS_PHYSICAL | FTS_XDEV, NULL);
-    FTSENT* entry = NULL;
-    int ret = 0;
-    int ret_errno = 0;
-
-    if (tree == NULL) {
-      fprintf(LOGFILE,
-              "Cannot open file traversal structure for the path %s:%s.\n", 
-              full_path, strerror(errno));
-      free(paths[0]);
-      return -1;
-    }
-    while (((entry = fts_read(tree)) != NULL) && exit_code == 0) {
-      switch (entry->fts_info) {
-
-      case FTS_DP:        // A directory being visited in post-order
-        if (!needs_tt_user ||
-            strcmp(entry->fts_path, full_path) != 0) {
-          if (rmdir(entry->fts_accpath) != 0) {
-            fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", 
-                    entry->fts_path, strerror(errno));
-            if (errno == EROFS) {
-              exit_code = -1;
-            }
-            // record the first errno
-            if (errno != ENOENT && ret_errno == 0) {
-              ret_errno = errno;
-            }
-          }
-        }
-        break;
-
-      case FTS_F:         // A regular file
-      case FTS_SL:        // A symbolic link
-      case FTS_SLNONE:    // A broken symbolic link
-      case FTS_DEFAULT:   // Unknown type of file
-        if (unlink(entry->fts_accpath) != 0) {
-          fprintf(LOGFILE, "Couldn't delete file %s - %s\n", entry->fts_path,
-                  strerror(errno));
-          if (errno == EROFS) {
-            exit_code = -1;
-          }
-          // record the first errno
-          if (errno != ENOENT && ret_errno == 0) {
-            ret_errno = errno;
-          }
-        }
-        break;
-
-      case FTS_DNR:       // Unreadable directory
-        fprintf(LOGFILE, "Unreadable directory %s. Skipping..\n", 
-                entry->fts_path);
-        break;
-
-      case FTS_D:         // A directory in pre-order
-        // if the directory isn't readable, chmod it
-        if ((entry->fts_statp->st_mode & 0200) == 0) {
-          fprintf(LOGFILE, "Unreadable directory %s, chmoding.\n", 
-                  entry->fts_path);
-          if (chmod(entry->fts_accpath, 0700) != 0) {
-            fprintf(LOGFILE, "Error chmoding %s - %s, continuing\n", 
-                    entry->fts_path, strerror(errno));
-          }
-        }
-        break;
-
-      case FTS_NS:        // A file with no stat(2) information
-        // usually a root directory that doesn't exist
-        fprintf(LOGFILE, "Directory not found %s\n", entry->fts_path);
-        break;
-
-      case FTS_DC:        // A directory that causes a cycle
-      case FTS_DOT:       // A dot directory
-      case FTS_NSOK:      // No stat information requested
-        break;
-
-      case FTS_ERR:       // Error return
-        fprintf(LOGFILE, "Error traversing directory %s - %s\n", 
-                entry->fts_path, strerror(entry->fts_errno));
-        exit_code = -1;
-        break;
-        break;
-      default:
-        exit_code = -1;
-        break;
-      }
-    }
-    ret = fts_close(tree);
-    if (ret_errno != 0) {
-      exit_code = -1;
-    }
-    if (exit_code == 0 && ret != 0) {
-      fprintf(LOGFILE, "Error in fts_close while deleting %s\n", full_path);
-      exit_code = -1;
-    }
-    if (needs_tt_user) {
-      // If the delete failed, try a final rmdir as root on the top level.
-      // That handles the case where the top level directory is in a directory
-      // that is owned by the node manager.
-      exit_code = rmdir_as_nm(full_path);
-    }
-    free(paths[0]);
+    return UNABLE_TO_BUILD_PATH;
   }
-  return exit_code;
+  /* If the path doesn't exist there is nothing to do, so return success. */
+  if (access(full_path, F_OK) != 0) {
+    if (errno == ENOENT) {
+        return 0;
+    }
+  }
+
+  /* Recursively delete the tree with nftw. */
+  nftws.errnum = 0;
+  int ret = 0;
+  do {
+    nftws.chmods = 0;
+    ret = nftw(full_path, &nftw_cb, 20, FTW_PHYS | FTW_MOUNT | FTW_DEPTH);
+    if (ret != 0) {
+      fprintf(LOGFILE, "Error in nftw while deleting %s\n", full_path);
+    }
+  } while (nftws.chmods != 0);
+
+  /*
+   * If required, do the final rmdir as root on the top level.
+   * That handles the case where the top level directory is in a directory
+   * owned by the node manager.
+   */
+  if (needs_tt_user) {
+    ret = rmdir_as_nm(full_path);
+  /* Otherwise rmdir the top level as the current user. */
+  } else {
+    if (rmdir(full_path) != 0) {
+      /* Record the first errno. */
+      if (errno != ENOENT && nftws.errnum == 0) {
+        nftws.errnum = errno;
+      }
+      fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", full_path, strerror(errno));
+    }
+  }
+
+  /* If there was an error, set errno to the first observed value. */
+  errno = nftws.errnum;
+  if (nftws.errnum != 0) {
+    ret = -1;
+  }
+  return ret;
 }
 
 /**

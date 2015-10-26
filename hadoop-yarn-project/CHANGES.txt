@@ -995,6 +995,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4289. TestDistributedShell failing with bind exception.
     (Brahma Reddy Battula via stevel)
 
+    YARN-3724. Use POSIX nftw(3) instead of fts(3) (Alan Burlison via aw)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
