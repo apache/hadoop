@@ -2218,6 +2218,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9290. DFSClient#callAppend() is not backward compatible for slightly
     older NameNodes. (Tony Wu via kihwal)
 
+    HDFS-9305. Delayed heartbeat processing causes storm of subsequent
+    heartbeats. (Arpit Agarwal)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
