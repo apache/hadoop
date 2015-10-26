@@ -349,8 +349,9 @@ public class ApplicationCLI extends YarnCLI {
       appAttemptReportStr.println(appAttemptReport
           .getYarnApplicationAttemptState());
       appAttemptReportStr.print("\tAMContainer : ");
-      appAttemptReportStr.println(appAttemptReport.getAMContainerId()
-          .toString());
+      appAttemptReportStr
+          .println(appAttemptReport.getAMContainerId() == null ? "N/A"
+              : appAttemptReport.getAMContainerId().toString());
       appAttemptReportStr.print("\tTracking-URL : ");
       appAttemptReportStr.println(appAttemptReport.getTrackingUrl());
       appAttemptReportStr.print("\tRPC Port : ");
@@ -667,6 +668,7 @@ public class ApplicationCLI extends YarnCLI {
       writer.printf(APPLICATION_ATTEMPTS_PATTERN, appAttemptReport
           .getApplicationAttemptId(), appAttemptReport
           .getYarnApplicationAttemptState(), appAttemptReport
+          .getAMContainerId() == null ? "N/A" : appAttemptReport
           .getAMContainerId().toString(), appAttemptReport.getTrackingUrl());
     }
     writer.flush();
