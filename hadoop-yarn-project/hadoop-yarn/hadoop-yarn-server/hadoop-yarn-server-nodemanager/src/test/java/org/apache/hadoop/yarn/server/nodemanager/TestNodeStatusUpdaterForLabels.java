@@ -192,13 +192,9 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     }
   }
 
-  public static class DummyNodeLabelsProvider extends NodeLabelsProvider {
+  public static class DummyNodeLabelsProvider implements NodeLabelsProvider {
 
     private Set<NodeLabel> nodeLabels = CommonNodeLabelsManager.EMPTY_NODELABEL_SET;
-
-    public DummyNodeLabelsProvider() {
-      super(DummyNodeLabelsProvider.class.getName());
-    }
 
     @Override
     public synchronized Set<NodeLabel> getNodeLabels() {

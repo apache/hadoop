@@ -216,9 +216,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     // set if node labels enabled
-    nodeLabelsEnabled =
-        conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
-            YarnConfiguration.DEFAULT_NODE_LABELS_ENABLED);
+    nodeLabelsEnabled = YarnConfiguration.areNodeLabelsEnabled(conf);
 
     isCentralizedNodeLabelConfiguration  =
         YarnConfiguration.isCentralizedNodeLabelConfiguration(conf);

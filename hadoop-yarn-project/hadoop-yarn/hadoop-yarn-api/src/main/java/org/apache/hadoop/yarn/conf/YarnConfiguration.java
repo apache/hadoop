@@ -2112,6 +2112,12 @@ public class YarnConfiguration extends Configuration {
         NODELABEL_CONFIGURATION_TYPE, DEFAULT_NODELABEL_CONFIGURATION_TYPE));
   }
 
+  @Private
+  public static boolean areNodeLabelsEnabled(
+      Configuration conf) {
+    return conf.getBoolean(NODE_LABELS_ENABLED, DEFAULT_NODE_LABELS_ENABLED);
+  }
+
   private static final String NM_NODE_LABELS_PREFIX = NM_PREFIX
       + "node-labels.";
 
@@ -2120,6 +2126,7 @@ public class YarnConfiguration extends Configuration {
 
   // whitelist names for the yarn.nodemanager.node-labels.provider
   public static final String CONFIG_NODE_LABELS_PROVIDER = "config";
+  public static final String SCRIPT_NODE_LABELS_PROVIDER = "script";
 
   private static final String NM_NODE_LABELS_PROVIDER_PREFIX =
       NM_NODE_LABELS_PREFIX + "provider.";
@@ -2145,8 +2152,8 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_TIMEOUT_MS =
       DEFAULT_NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS * 2;
 
-  public static final String NM_PROVIDER_CONFIGURED_NODE_LABELS =
-      NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-labels";
+  public static final String NM_PROVIDER_CONFIGURED_NODE_PARTITION =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "configured-node-partition";
 
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
@@ -2173,6 +2180,15 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "am.blacklisting.disable-failure-threshold";
   public static final float DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
 
+
+  private static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX =
+      NM_NODE_LABELS_PROVIDER_PREFIX + "script.";
+
+  public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PATH =
+      NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "path";
+
+  public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_SCRIPT_OPTS =
+      NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "opts";
 
   public YarnConfiguration() {
     super();

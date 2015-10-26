@@ -976,7 +976,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             .append(StringUtils.join(",", previousNodeLabels)).append("}");
       } else {
         // case where provider is set but RM did not accept the Node Labels
-        LOG.error(regNMResponse.getDiagnosticsMessage());
+        String errorMsgFromRM = regNMResponse.getDiagnosticsMessage();
+        LOG.error(
+            "NodeLabels sent from NM while registration were rejected by RM. "
+            + ((errorMsgFromRM == null)
+                ? "Seems like RM is configured with Centralized Labels."
+                : "And with message " + regNMResponse.getDiagnosticsMessage()));
       }
       return successfulNodeLabelsRegistrationMsg.toString();
     }

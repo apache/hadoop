@@ -2169,14 +2169,14 @@
   <!-- Distributed Node Labels Configuration -->
   <property>
     <description>
-    When node labels "yarn.node-labels.configuration-type" is
-    of type "distributed" Administrators can configure the source of the
-    node labels provider by configuring this parameter. Administrators can
-    specify either "config" or the class name of the provider. Configured
+    When "yarn.node-labels.configuration-type" parameter in RM is configured as
+    "distributed", Administrators can configure in NM, the provider for	the
+    node labels by configuring this parameter. Administrators can
+    specify "config", "script" or the class name of the provider. Configured
     class needs to extend
     org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider.
-    If "config" is specified then, "ConfigurationNodeLabelsProvider" will
-    be used.
+    If "config" is specified then "ConfigurationNodeLabelsProvider" and
+    "script" then "ScriptNodeLabelsProvider" will be used.
     </description>
     <name>yarn.nodemanager.node-labels.provider</name>
   </property>
@@ -2207,9 +2207,9 @@
     <description>
     When node labels "yarn.nodemanager.node-labels.provider"
     is of type "config" then ConfigurationNodeLabelsProvider fetches the
-    labels this parameter.
+    partition from this parameter.
     </description>
-    <name>yarn.nodemanager.node-labels.provider.configured-node-labels</name>
+    <name>yarn.nodemanager.node-labels.provider.configured-node-partition</name>
   </property>
 
   <property>
@@ -2247,6 +2247,18 @@
     </description>
     <name>yarn.resourcemanager.node-labels.provider.fetch-interval-ms</name>
     <value>1800000</value>
+  </property>
+
+  <property>
+    <description>The Node Label script to run. Script output Lines starting with
+     "NODE_PARTITION:" will be considered for Node Labels. In case of multiple
+     lines having the pattern, last one will be considered</description>
+    <name>yarn.nodemanager.node-labels.provider.script.path</name>
+  </property>
+
+  <property>
+    <description>The arguments to pass to the Node label script.</description>
+    <name>yarn.nodemanager.node-labels.provider.script.opts</name>
   </property>
   <!-- Other Configuration -->
 
