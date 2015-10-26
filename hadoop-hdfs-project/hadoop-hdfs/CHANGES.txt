@@ -2135,6 +2135,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9301. HDFS clients can't construct HdfsConfiguration instances.
     (Mingliang Liu via wheat9)
 
+    HDFS-9304. Add HdfsClientConfigKeys class to TestHdfsConfigFields
+    #configurationClasses. (Mingliang Liu via wheat9)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
