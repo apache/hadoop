@@ -1002,6 +1002,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3528. Tests with 12345 as hard-coded port break jenkins.
     (Brahma Reddy Battula via ozawa)
 
+    YARN-4223. Fixed findbugs warnings in hadoop-yarn-server-nodemanager project
+    (varun saxena via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
