@@ -393,8 +393,8 @@ public abstract class BlockInfo extends Block
     List<ReplicaUnderConstruction> staleReplicas = uc.getStaleReplicas(genStamp);
     for (ReplicaUnderConstruction r : staleReplicas) {
       r.getExpectedStorageLocation().removeBlock(this);
-      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica "
-          + "from location: {}", r.getExpectedStorageLocation());
+      NameNode.blockStateChangeLog.debug("BLOCK* Removing stale replica {}"
+          + " of {}", r, Block.toString(r));
     }
   }
 
