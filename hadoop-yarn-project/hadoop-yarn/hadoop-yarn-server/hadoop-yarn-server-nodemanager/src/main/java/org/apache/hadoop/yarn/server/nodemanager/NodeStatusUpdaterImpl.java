@@ -632,6 +632,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
 
+  @VisibleForTesting
+  Thread.State getStatusUpdaterThreadState() {
+    return statusUpdater.getState();
+  }
+
   public boolean isContainerRecentlyStopped(ContainerId containerId) {
     synchronized (recentlyStoppedContainers) {
       return recentlyStoppedContainers.containsKey(containerId);

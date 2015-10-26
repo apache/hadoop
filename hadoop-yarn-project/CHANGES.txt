@@ -1014,6 +1014,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4284. condition for AM blacklisting is too narrow (Sangjin Lee via
     jlowe)
 
+    YARN-4169. Fix racing condition of TestNodeStatusUpdaterForLabels. 
+    (Naganarasimha G R via wangda)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
