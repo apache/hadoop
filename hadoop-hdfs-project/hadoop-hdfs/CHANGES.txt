@@ -2142,6 +2142,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9304. Add HdfsClientConfigKeys class to TestHdfsConfigFields
     #configurationClasses. (Mingliang Liu via wheat9)
 
+    HDFS-9268. fuse_dfs chown crashes when uid is passed as -1 (cmccabe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
