@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Shell;
@@ -153,7 +154,8 @@ public class TestNodeManagerResync {
   protected void testContainerPreservationOnResyncImpl(TestNodeManager1 nm,
       boolean isWorkPreservingRestartEnabled)
       throws IOException, YarnException, InterruptedException {
-    YarnConfiguration conf = createNMConfig();
+    int port = ServerSocketUtil.getPort(49153, 10);
+    YarnConfiguration conf = createNMConfig(port);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED,
         isWorkPreservingRestartEnabled);
 
@@ -162,7 +164,7 @@ public class TestNodeManagerResync {
       nm.start();
       ContainerId cId = TestNodeManagerShutdown.createContainerId();
       TestNodeManagerShutdown.startContainer(nm, cId, localFS, tmpDir,
-          processStartFile);
+          processStartFile, port);
 
       nm.setExistingContainerId(cId);
       Assert.assertEquals(1, ((TestNodeManager1) nm).getNMRegistrationCount());
@@ -191,7 +193,8 @@ public class TestNodeManagerResync {
   public void testBlockNewContainerRequestsOnStartAndResync()
       throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager2();
-    YarnConfiguration conf = createNMConfig();
+    int port = ServerSocketUtil.getPort(49154, 10);
+    YarnConfiguration conf = createNMConfig(port);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     nm.init(conf);
     nm.start();
@@ -199,7 +202,7 @@ public class TestNodeManagerResync {
     // Start the container in running state
     ContainerId cId = TestNodeManagerShutdown.createContainerId();
     TestNodeManagerShutdown.startContainer(nm, cId, localFS, tmpDir,
-      processStartFile);
+        processStartFile, port);
 
     nm.getNMDispatcher().getEventHandler()
       .handle(new NodeManagerEvent(NodeManagerEventType.RESYNC));
@@ -380,17 +383,22 @@ public class TestNodeManagerResync {
     }
   }
 
-  private YarnConfiguration createNMConfig() {
+  private YarnConfiguration createNMConfig(int port) throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.NM_PMEM_MB, 5*1024); // 5GB
-    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
-    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
+    conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:" + port);
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:"
+        + ServerSocketUtil.getPort(49155, 10));
     conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
       remoteLogsDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     return conf;
+  }
+
+  private YarnConfiguration createNMConfig() throws IOException {
+    return createNMConfig(ServerSocketUtil.getPort(49156, 10));
   }
 
   class TestNodeManager1 extends NodeManager {

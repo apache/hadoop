@@ -999,6 +999,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4246. NPE while listing app attempt. (Nijel S F via rohithsharmaks)
 
+    YARN-3528. Tests with 12345 as hard-coded port break jenkins.
+    (Brahma Reddy Battula via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
