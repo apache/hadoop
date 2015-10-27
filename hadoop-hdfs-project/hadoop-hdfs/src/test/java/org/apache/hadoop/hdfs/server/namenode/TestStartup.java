@@ -475,7 +475,8 @@ public class TestStartup {
     namenode.stop();
     namenode.join();
   }
-  
+
+  // Failed to load an FSImage file!
   @Test
   public void testImageChecksum() throws Exception {
     LOG.info("Test uncompressed image checksum");
@@ -562,6 +563,8 @@ public class TestStartup {
    * This test tests hosts include list contains host names.  After namenode
    * restarts, the still alive datanodes should not have any trouble in getting
    * registrant again.
+   *
+   * EOFException
    */
   @Test
   public void testNNRestart() throws IOException, InterruptedException {
@@ -708,6 +711,8 @@ public class TestStartup {
 
 
   /**
+   * AssertionError by minglei
+   *
    * Verify the following scenario.
    * 1. NN restarts.
    * 2. Heartbeat RPC will retry and succeed. NN asks DN to reregister.

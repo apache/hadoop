@@ -174,13 +174,9 @@ public final class FSImageFormatProtobuf {
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       AltFileInputStream fin = new AltFileInputStream(file);
       try {
-
-        // loadInternal is should be hotspot.
-//        loadInternal(raFile, fin);
         loadIntelInternal(raFile, fin);
         long end = Time.monotonicNow();
         LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
-
         /**
          * Number Of Blocks : 1043093
          * Block Size : 5MB
@@ -660,7 +656,6 @@ public final class FSImageFormatProtobuf {
       for (int i = 0; i < data.length ; i++) {
         data[i] = listSection.get(i);
       }
-      
       /**
        * how to construct these data?  Use IntelSection.createIntelSection() will
        * return an int represent the current section.
@@ -679,14 +674,8 @@ public final class FSImageFormatProtobuf {
                     (fbb, disk_version, layout_version, code, sections);
       IntelFileSummary.finishIntelFileSummaryBuffer(fbb, end);
       byteBuffer = fbb.dataBuffer();
-
       int serializedLength = byteBuffer.capacity() - byteBuffer.position();
-
-//      byte[] bytes = new byte[serializedLength];
-//      byteBuffer.get(bytes);
       byte[] bytes = fbb.sizedByteArray();
-//      byte[] bytes1 = fbb.sizedByteArray();
-//      IntelFileSummary summary = IntelFileSummary.getRootAsIntelFileSummary(byteBuffer);
       saveIntelFileSummary(underlyingOutputStream, serializedLength, bytes);
       underlyingOutputStream.close();
       savedDigest = new MD5Hash(digester.digest());
