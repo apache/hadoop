@@ -47,6 +47,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-8879. Quota by storage type usage incorrectly initialized upon namenode
     restart. (xyao)
 
+    HDFS-8950. NameNode refresh doesn't remove DataNodes that are no longer in
+    the allowed list (Daniel Templeton)
+
     HDFS-8995. Flaw in registration bookeeping can make DN die on reconnect.
     (Kihwal Lee via yliu)
 

@@ -126,9 +126,28 @@ class HostFileManager {
     return !includes.isEmpty();
   }
 
+  /**
+   * Read the includes and excludes lists from the named files.  Any previous
+   * includes and excludes lists are discarded.
+   * @param includeFile the path to the new includes list
+   * @param excludeFile the path to the new excludes list
+   * @throws IOException thrown if there is a problem reading one of the files
+   */
   void refresh(String includeFile, String excludeFile) throws IOException {
     HostSet newIncludes = readFile("included", includeFile);
     HostSet newExcludes = readFile("excluded", excludeFile);
+
+    refresh(newIncludes, newExcludes);
+  }
+
+  /**
+   * Set the includes and excludes lists by the new HostSet instances. The
+   * old instances are discarded.
+   * @param newIncludes the new includes list
+   * @param newExcludes the new excludes list
+   */
+  @VisibleForTesting
+  void refresh(HostSet newIncludes, HostSet newExcludes) {
     synchronized (this) {
       includes = newIncludes;
       excludes = newExcludes;
