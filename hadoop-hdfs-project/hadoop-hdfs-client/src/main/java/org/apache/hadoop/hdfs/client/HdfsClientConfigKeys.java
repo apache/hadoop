@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.util.concurrent.TimeUnit;
 
@@ -62,6 +63,10 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
   int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
   String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
+  String  DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY =
+      "dfs.client.socket.send.buffer.size";
+  int     DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT =
+      HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
   String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY =
       "dfs.client.socketcache.capacity";
   int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 16;

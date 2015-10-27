@@ -139,7 +139,9 @@ class DataStreamer extends Daemon {
     NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(),
         conf.getSocketTimeout());
     sock.setSoTimeout(timeout);
-    sock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
+    if (conf.getSocketSendBufferSize() > 0) {
+      sock.setSendBufferSize(conf.getSocketSendBufferSize());
+    }
     LOG.debug("Send buf size {}", sock.getSendBufferSize());
     return sock;
   }
