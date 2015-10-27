@@ -749,7 +749,12 @@ public class Client {
                       return setupSaslConnection(in2, out2);
                     }
                   });
-            } catch (Exception ex) {
+            } catch (IOException ex) {
+              if (saslRpcClient == null) {
+                // whatever happened -it can't be handled, so rethrow
+                throw ex;
+              }
+              // otherwise, assume a connection problem
               authMethod = saslRpcClient.getAuthMethod();
               if (rand == null) {
                 rand = new Random();
@@ -811,7 +816,7 @@ public class Client {
         if (t instanceof IOException) {
           markClosed((IOException)t);
         } else {
-          markClosed(new IOException("Couldn't set up IO streams", t));
+          markClosed(new IOException("Couldn't set up IO streams: " + t, t));
         }
         close();
       }
