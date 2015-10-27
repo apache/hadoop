@@ -513,6 +513,9 @@ Trunk (Unreleased)
     HADOOP-12364. Deleting pid file after stop is causing the daemons to
     keep restarting (Siqi Li via aw)
 
+    HADOOP-12515. Mockito dependency is missing in hadoop-kafka module.
+    (Kai Zheng via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
