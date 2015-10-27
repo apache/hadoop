@@ -167,7 +167,13 @@ import com.google.common.base.Preconditions;
  * will be resolved to another property in this Configuration, while
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
- * By default, warnings will be given to any deprecated configuration 
+ * <p>When <tt>conf.get("otherdir")</tt> is called, then <tt>${<i>env.BASE_DIR</i>}</tt>
+ * will be resolved to the value of the <tt>${<i>BASE_DIR</i>}</tt> environment variable.
+ * It supports <tt>${<i>env.NAME:-default</i>}</tt> and <tt>${<i>env.NAME-default</i>}</tt> notations.
+ * The former is resolved to "default" if <tt>${<i>NAME</i>}</tt> environment variable is undefined
+ * or its value is empty.
+ * The latter behaves the same way only if <tt>${<i>NAME</i>}</tt> is undefined.
+ * <p>By default, warnings will be given to any deprecated configuration 
  * parameters and these are suppressible by configuring
  * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
  * log4j.properties file.

@@ -65,7 +65,7 @@ class Delete {
             "-[rR]:  Recursively deletes directories.\n" +
             "-skipTrash: option bypasses trash, if enabled, and immediately " +
             "deletes <src>.\n" +
-            "-safely: option requires safety confirmation，if enabled, " +
+            "-safely: option requires safety confirmation, if enabled, " +
             "requires confirmation before deleting large directory with more " +
             "than <hadoop.shell.delete.limit.num.files> files. Delay is " +
             "expected when walking over large directory recursively to count " +
