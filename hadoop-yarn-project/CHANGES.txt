@@ -1020,6 +1020,8 @@ Release 2.8.0 - UNRELEASED
     YARN-4169. Fix racing condition of TestNodeStatusUpdaterForLabels. 
     (Naganarasimha G R via wangda)
 
+    YARN-4300. [JDK8] Fix javadoc errors caused by wrong tags. (aajisaka)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
