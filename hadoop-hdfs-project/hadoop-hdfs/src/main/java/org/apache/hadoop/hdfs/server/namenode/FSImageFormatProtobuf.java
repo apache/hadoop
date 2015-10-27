@@ -551,7 +551,6 @@ public final class FSImageFormatProtobuf {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
-//        saveInternal(fout, compression, file.getAbsolutePath());
         saveIntelInternal(fout, compression, file.getAbsolutePath());
       } finally {
         fout.close();
@@ -561,18 +560,12 @@ public final class FSImageFormatProtobuf {
     private static void saveIntelFileSummary(OutputStream out,
                                              int serializedLength, byte[] bytes)
       throws IOException{
-
       DataOutputStream dos = new DataOutputStream(out);
       dos.writeInt(serializedLength);
       dos.write(bytes);
-
-//      int length = getIntelOndiskTrunkSize(intelFileSummary);
       int length = serializedLength + 4;
       dos.writeInt(length);
       dos.flush();
-//      byte[] lengthBytes = new byte[4];
-//      ByteBuffer.wrap(lengthBytes).asIntBuffer().put(length);
-//      out.write(lengthBytes);
     }
 
     private static void saveFileSummary(OutputStream out, FileSummary summary)
