@@ -468,6 +468,7 @@ public class BlockManager implements BlockStatsMXBean {
   public void activate(Configuration conf) {
     pendingReplications.start();
     datanodeManager.activate(conf);
+    this.replicationThread.setName("ReplicationMonitor");
     this.replicationThread.start();
     mxBeanName = MBeans.register("NameNode", "BlockStats", this);
   }
