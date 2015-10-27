@@ -579,16 +579,13 @@ const uint32_t CRC32C_T8_7[256] = {0x00000000, 0x493C7D27, 0x9278FA4E, 0xDB44876
     0xCF56CE31, 0x14124958, 0x5D2E347F, 0xE54C35A1, 0xAC704886, 0x7734CFEF, 0x3E08B2C8, 0xC451B7CC,
     0x8D6DCAEB, 0x56294D82, 0x1F1530A5};
 
-#ifdef __aarch64__
-// Awaiting HW implementation
-#define SOFTWARE_CRC
+
+/* Use CRC32 intrinsics on x86 */
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#define USE_X86_CRC32
 #endif
 
-#ifndef SOFTWARE_CRC
-#define USE_HARDWARE_CRC32C 1
-#endif
-
-#ifdef USE_HARDWARE_CRC32C
+#ifdef USE_X86_CRC32
 
 static int cached_cpu_supports_crc32; // initialized by constructor below
 static uint32_t crc32c_hardware(uint32_t crc, const uint8_t* data, size_t length);
@@ -644,7 +641,7 @@ inline uint32_t _mm_crc32_u8(uint32_t crc, uint8_t value) {
 }
 
 /**
- * Hardware-accelerated CRC32C calculation using the 64-bit instructions.
+ * Hardware-accelerated x86 CRC32C calculation using the 64-bit instructions.
  */
 static uint32_t crc32c_hardware(uint32_t crc, const uint8_t* p_buf, size_t length) {
   // start directly at p_buf, even if it's an unaligned address. According
@@ -739,7 +736,7 @@ uint32_t crc32c_sb8_software(uint32_t crc, const uint8_t *buf, size_t length) {
 #endif
 
 uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length) {
-#ifdef USE_HARDWARE_CRC32C
+#ifdef USE_X86_CRC32
   if (likely(cached_cpu_supports_crc32)) {
     return crc32c_hardware(crc, buf, length);
   } else {
