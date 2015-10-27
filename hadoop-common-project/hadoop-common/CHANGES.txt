@@ -516,6 +516,9 @@ Trunk (Unreleased)
     HADOOP-12515. Mockito dependency is missing in hadoop-kafka module.
     (Kai Zheng via aajisaka)
 
+    HADOOP-12494. fetchdt stores the token based on token kind instead
+    of token service (HeeSoo Kim via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

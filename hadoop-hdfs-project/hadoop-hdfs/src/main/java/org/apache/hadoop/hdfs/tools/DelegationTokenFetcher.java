@@ -178,7 +178,7 @@ public class DelegationTokenFetcher {
     Token<?> token = fs.getDelegationToken(renewer);
     if (null != token) {
       Credentials cred = new Credentials();
-      cred.addToken(token.getKind(), token);
+      cred.addToken(token.getService(), token);
       cred.writeTokenStorageFile(tokenFile, conf);
 
       if (LOG.isDebugEnabled()) {
