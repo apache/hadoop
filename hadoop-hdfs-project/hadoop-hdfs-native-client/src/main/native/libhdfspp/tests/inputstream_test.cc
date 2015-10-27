@@ -59,7 +59,7 @@ template <class Trait> struct MockBlockReaderTrait {
   };
 
   static continuation::Pipeline<State> *
-  CreatePipeline(::asio::io_service *, const DatanodeInfoProto &) {
+  Connect(::asio::io_service *, const DatanodeInfoProto &) {
     auto m = continuation::Pipeline<State>::Create();
     *m->state().transferred() = 0;
     Trait::InitializeMockReader(m->state().reader());

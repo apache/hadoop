@@ -42,7 +42,7 @@ struct ReadOperation::RemoteBlockReaderTrait {
     const size_t *transferred() const { return &transferred_; }
   };
   static continuation::Pipeline<State> *
-  CreatePipeline(::asio::io_service *io_service,
+  Connect(::asio::io_service *io_service,
                  const ::hadoop::hdfs::DatanodeInfoProto &dn) {
     using namespace ::asio::ip;
     auto m = continuation::Pipeline<State>::Create();
@@ -175,7 +175,7 @@ void ReadOperation::AsyncReadBlock(
 
   typedef typename BlockReaderTrait::Reader Reader;
   auto m =
-      BlockReaderTrait::CreatePipeline(io_service_, dn);
+      BlockReaderTrait::Connect(io_service_, dn);
   auto &s = m->state();
   size_t size = asio::buffer_size(buffers);
   m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name_, nullptr,
