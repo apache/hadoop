@@ -211,6 +211,9 @@ Trunk (Unreleased)
     MAPREDUCE-6391. util/Timer.cc completely misunderstands _POSIX_CPUTIME
     (Alan Burlison via aw)
 
+    MAPREDUCE-6412. Make hadoop-mapreduce-client Native code -Wall-clean
+    (Alan Burlison via aw)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by

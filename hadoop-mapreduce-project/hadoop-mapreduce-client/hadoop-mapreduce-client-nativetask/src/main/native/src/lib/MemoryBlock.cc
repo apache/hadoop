@@ -39,8 +39,8 @@ MemoryBlock::MemoryBlock(char * pos, uint32_t size)
     : _base(pos), _size(size), _position(0), _sorted(false) {
 }
 
-KVBuffer * MemoryBlock::getKVBuffer(int index) {
-  if (index < 0 || index >= _kvOffsets.size()) {
+KVBuffer * MemoryBlock::getKVBuffer(uint32_t index) {
+  if (index >= _kvOffsets.size()) {
     return NULL;
   }
   uint32_t offset = _kvOffsets.at(index);
