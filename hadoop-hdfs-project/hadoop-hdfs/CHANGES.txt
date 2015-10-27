@@ -1587,6 +1587,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9259. Make SO_SNDBUF size configurable at DFSClient side for hdfs
     write scenario. (Mingliang Liu via mingma)
 
+    HDFS-9299. Give ReplicationMonitor a readable thread name (Staffan Friberg
+    via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
