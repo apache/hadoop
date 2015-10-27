@@ -102,7 +102,7 @@ struct WriteDelimitedPBMessageContinuation : Continuation {
     os.WriteVarint32(size);
     msg_->SerializeToCodedStream(&os);
     write_coroutine_ =
-        std::shared_ptr<Continuation>(Write(stream_, asio::buffer(buf_)));
+        std::shared_ptr<Continuation>(asio_continuation::Write(stream_, asio::buffer(buf_)));
     write_coroutine_->Run([next](const Status &stat) { next(stat); });
   }
 

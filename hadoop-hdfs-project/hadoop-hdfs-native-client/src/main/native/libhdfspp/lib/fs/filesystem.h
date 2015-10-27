@@ -79,17 +79,17 @@ private:
   NameNodeOperations nn_;
 };
 
+
+
 /*
- * InputStreamImpl: connects to DNs, does one-shot reads.
- *
- * This will eventually be split into DNConnection and ReadOperation classes
+ * ReadOperation: given DN connection, does one-shot reads.
  *
  * Threading model: not thread-safe; consumers and io_service should not call
  *    concurrently
  */
-class InputStreamImpl : public InputStream {
+class ReadOperation : public InputStream {
 public:
-  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
+  ReadOperation(::asio::io_service *io_service, const std::string &client_name,
                   const ::hadoop::hdfs::LocatedBlocksProto *blocks);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,

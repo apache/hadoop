@@ -29,12 +29,13 @@
 
 namespace hdfs {
 
-struct InputStreamImpl::RemoteBlockReaderTrait {
+struct ReadOperation::RemoteBlockReaderTrait {
   typedef RemoteBlockReader<asio::ip::tcp::socket> Reader;
   struct State {
     std::unique_ptr<asio::ip::tcp::socket> conn_;
-    std::shared_ptr<Reader> reader_;
     std::array<asio::ip::tcp::endpoint, 1> endpoints_;
+
+    std::shared_ptr<Reader> reader_;
     size_t transferred_;
     Reader *reader() { return reader_.get(); }
     size_t *transferred() { return &transferred_; }
@@ -52,14 +53,14 @@ struct InputStreamImpl::RemoteBlockReaderTrait {
     s.endpoints_[0] = tcp::endpoint(address::from_string(datanode.ipaddr()),
                                     datanode.xferport());
 
-    m->Push(continuation::Connect(s.conn_.get(), s.endpoints_.begin(),
+    m->Push(asio_continuation::Connect(s.conn_.get(), s.endpoints_.begin(),
                                   s.endpoints_.end()));
     return m;
   }
 };
 
 template <class Reader>
-struct InputStreamImpl::HandshakeContinuation : continuation::Continuation {
+struct ReadOperation::HandshakeContinuation : continuation::Continuation {
   HandshakeContinuation(Reader *reader, const std::string &client_name,
                         const hadoop::common::TokenProto *token,
                         const hadoop::hdfs::ExtendedBlockProto *block,
@@ -88,7 +89,7 @@ private:
 };
 
 template <class Reader, class MutableBufferSequence>
-struct InputStreamImpl::ReadBlockContinuation : continuation::Continuation {
+struct ReadOperation::ReadBlockContinuation : continuation::Continuation {
   ReadBlockContinuation(Reader *reader, MutableBufferSequence buffer,
                         size_t *transferred)
       : reader_(reader), buffer_(buffer),
@@ -127,7 +128,7 @@ private:
 };
 
 template <class MutableBufferSequence, class Handler>
-void InputStreamImpl::AsyncPreadSome(
+void ReadOperation::AsyncPreadSome(
     size_t offset, const MutableBufferSequence &buffers,
     const std::set<std::string> &excluded_datanodes, const Handler &handler) {
   using ::hadoop::hdfs::DatanodeInfoProto;
@@ -167,7 +168,7 @@ void InputStreamImpl::AsyncPreadSome(
 }
 
 template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
-void InputStreamImpl::AsyncReadBlock(
+void ReadOperation::AsyncReadBlock(
     const hadoop::hdfs::LocatedBlockProto &block,
     const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
     const MutableBufferSequence &buffers, const Handler &handler) {

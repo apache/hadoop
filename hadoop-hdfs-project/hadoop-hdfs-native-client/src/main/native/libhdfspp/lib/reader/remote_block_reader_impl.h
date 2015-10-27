@@ -68,8 +68,8 @@ void RemoteBlockReader<Stream>::async_connect(
       new continuation::ReadDelimitedPBMessageContinuation<Stream, 16384>(
           stream_, &s->response);
 
-  m->Push(continuation::Write(stream_, asio::buffer(s->header)))
-      .Push(continuation::WriteDelimitedPBMessage(stream_, &s->request))
+  m->Push(asio_continuation::Write(stream_, asio::buffer(s->header)))
+      .Push(asio_continuation::WriteDelimitedPBMessage(stream_, &s->request))
       .Push(read_pb_message);
 
   m->Run([this, handler, offset](const Status &status, const State &s) {

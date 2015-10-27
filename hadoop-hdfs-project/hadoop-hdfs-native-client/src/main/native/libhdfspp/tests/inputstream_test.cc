@@ -78,7 +78,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -112,7 +112,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -148,7 +148,7 @@ TEST(InputStreamTest, TestReadError) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -195,7 +195,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
   Status stat;
   size_t read = 0;
   struct Trait {

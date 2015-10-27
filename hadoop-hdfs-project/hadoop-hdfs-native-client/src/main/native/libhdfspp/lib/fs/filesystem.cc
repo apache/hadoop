@@ -35,7 +35,7 @@ using ::asio::ip::tcp;
 void NameNodeOperations::Connect(const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &handler) {
-  using namespace continuation;
+  using namespace asio_continuation;
   typedef std::vector<tcp::endpoint> State;
   auto m = Pipeline<State>::Create();
   m->Push(Resolve(io_service_, server, service,
@@ -118,7 +118,7 @@ void FileSystemImpl::Open(
     const std::function<void(const Status &, InputStream *)> &handler) {
 
   nn_.GetBlockLocations(path, [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations) {
-    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, locations)
+    handler(stat, stat.ok() ? new ReadOperation(&io_service_->io_service(), client_name_, locations)
                             : nullptr);
   });
 }

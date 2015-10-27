@@ -97,8 +97,8 @@ template <class Stream>
 template <class Handler>
 void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   using ::hadoop::hdfs::DataTransferEncryptorMessageProto;
-  using ::hdfs::continuation::Write;
-  using ::hdfs::continuation::WriteDelimitedPBMessage;
+  using ::hdfs::asio_continuation::Write;
+  using ::hdfs::asio_continuation::WriteDelimitedPBMessage;
 
   static const int kMagicNumber = htonl(kDataTransferSasl);
   static const asio::const_buffers_1 kMagicNumberBuffer = asio::buffer(
