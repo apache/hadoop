@@ -70,13 +70,13 @@ public:
   template <class MutableBufferSequence>
   size_t read_some(const MutableBufferSequence &buffers, Status *status);
 
-  Status connect(const std::string &client_name,
+  Status request(const std::string &client_name,
                  const hadoop::common::TokenProto *token,
                  const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                  uint64_t offset);
 
   template <class ConnectHandler>
-  void async_connect(const std::string &client_name,
+  void async_request(const std::string &client_name,
                      const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,

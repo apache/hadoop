@@ -42,7 +42,7 @@ public:
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
-  MOCK_METHOD6(async_connect,
+  MOCK_METHOD6(async_request,
                void(const std::string &, TokenProto *, ExtendedBlockProto *,
                     uint64_t, uint64_t,
                     const std::function<void(const Status &)> &));
@@ -83,7 +83,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   size_t read = 0;
   struct Trait {
     static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
+      EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
@@ -117,7 +117,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   size_t read = 0;
   struct Trait {
     static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
+      EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
@@ -153,7 +153,7 @@ TEST(InputStreamTest, TestReadError) {
   size_t read = 0;
   struct Trait {
     static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
+      EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
@@ -200,7 +200,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
   size_t read = 0;
   struct Trait {
     static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_connect(_, _, _, _, _, _))
+      EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
       EXPECT_CALL(*reader, async_read_some(_, _))
