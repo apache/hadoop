@@ -476,7 +476,6 @@ public class TestStartup {
     namenode.join();
   }
 
-  // Failed to load an FSImage file!
   @Test
   public void testImageChecksum() throws Exception {
     LOG.info("Test uncompressed image checksum");
@@ -564,7 +563,6 @@ public class TestStartup {
    * restarts, the still alive datanodes should not have any trouble in getting
    * registrant again.
    *
-   * EOFException
    */
   @Test
   public void testNNRestart() throws IOException, InterruptedException {
