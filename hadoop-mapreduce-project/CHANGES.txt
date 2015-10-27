@@ -214,6 +214,9 @@ Trunk (Unreleased)
     MAPREDUCE-6412. Make hadoop-mapreduce-client Native code -Wall-clean
     (Alan Burlison via aw)
 
+    MAPREDUCE-6416. Not all platforms have d_type in struct dirent
+    (Alan Burlison via aw)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
