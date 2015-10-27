@@ -87,8 +87,6 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
    * <li>Node Labels fetch script file exists</li>
    * </ol>
    *
-   * @param conf
-   * @return true if node labels script can be run.
    * @throws IOException
    */
   private void verifyConfiguredScript()
@@ -112,8 +110,6 @@ public class ScriptBasedNodeLabelsProvider extends AbstractNodeLabelsProvider {
 
   /**
    * Method used to terminate the Node Labels Fetch script.
-   *
-   * @throws Exception
    */
   @Override
   public void cleanUp() {
