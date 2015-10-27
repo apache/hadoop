@@ -32,7 +32,7 @@ static const int kNamenodeProtocolVersion = 1;
 
 using ::asio::ip::tcp;
 
-void NameNodeConnection::Connect(const std::string &server,
+void NameNodeOperations::Connect(const std::string &server,
                              const std::string &service,
                              std::function<void(const Status &)> &handler) {
   using namespace continuation;
@@ -51,7 +51,7 @@ void NameNodeConnection::Connect(const std::string &server,
   });
 }
 
-void NameNodeConnection::GetBlockLocations(const std::string & path,
+void NameNodeOperations::GetBlockLocations(const std::string & path,
   std::function<void(const Status &, const ::hadoop::hdfs::LocatedBlocksProto*)> handler)
 {
   using ::hadoop::hdfs::GetBlockLocationsRequestProto;

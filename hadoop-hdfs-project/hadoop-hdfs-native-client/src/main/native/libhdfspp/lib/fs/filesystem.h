@@ -34,9 +34,9 @@ namespace hdfs {
  *
  * Threading model: thread-safe; all operations can be called concurrently
  */
-class NameNodeConnection {
+class NameNodeOperations {
 public:
-  NameNodeConnection(::asio::io_service *io_service, const Options &options,
+  NameNodeOperations(::asio::io_service *io_service, const Options &options,
             const std::string &client_name, const char *protocol_name,
             int protocol_version) :
   io_service_(io_service),
@@ -76,7 +76,7 @@ public:
 private:
   IoServiceImpl *io_service_;
   const std::string client_name_;
-  NameNodeConnection nn_;
+  NameNodeOperations nn_;
 };
 
 /*
