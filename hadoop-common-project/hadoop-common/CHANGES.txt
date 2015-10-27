@@ -1265,6 +1265,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12513. Dockerfile lacks initial 'apt-get update'.
     (Akihiro Suda via ozawa)
 
+    HADOOP-12457. [JDK8] Fix a failure of compiling common by javadoc.
+    (Akira AJISAKA via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
