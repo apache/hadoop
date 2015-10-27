@@ -926,7 +926,7 @@ public class ResourceSchedulerWrapper
   @LimitedPrivate("yarn")
   @Unstable
   public Resource getClusterResource() {
-    return null;
+    return super.getClusterResource();
   }
 
   @Override

@@ -85,6 +85,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5543. ResourceManager SchedulingMonitor could potentially terminate the
     preemption checker thread. (Min Shen, Jonathan Hung via shv).
 
+    YARN-4302. SLS not able start due to NPE in SchedulerApplicationAttempt
+    (Bibin A Chundatt via vvasudev)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
