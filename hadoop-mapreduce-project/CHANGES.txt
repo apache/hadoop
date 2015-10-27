@@ -589,6 +589,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6484. Yarn Client uses local address instead of RM address as
     token renewer in a secure cluster when RM HA is enabled. (Zhihai Xu)
 
+    MAPREDUCE-6391. util/Timer.cc completely misunderstands _POSIX_CPUTIME
+    (Alan Burlison via aw)
+
    MAPREDUCE-6480. archive-logs tool may miss applications (rkanter)
 
    MAPREDUCE-6494. Permission issue when running archive-logs tool as
