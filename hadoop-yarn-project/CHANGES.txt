@@ -1022,6 +1022,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-4300. [JDK8] Fix javadoc errors caused by wrong tags. (aajisaka)
 
+    YARN-3573. MiniMRYarnCluster constructor that starts the timeline server
+    using a boolean should be marked deprecated. (Brahma Reddy Battula via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

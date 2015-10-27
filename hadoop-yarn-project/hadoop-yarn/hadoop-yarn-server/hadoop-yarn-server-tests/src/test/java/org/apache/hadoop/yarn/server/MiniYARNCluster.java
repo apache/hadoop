@@ -134,6 +134,7 @@ public class MiniYARNCluster extends CompositeService {
    * @param numLogDirs the number of nm-log-dirs per nodemanager
    * @param enableAHS enable ApplicationHistoryServer or not
    */
+  @Deprecated
   public MiniYARNCluster(
       String testName, int numResourceManagers, int numNodeManagers,
       int numLocalDirs, int numLogDirs, boolean enableAHS) {
