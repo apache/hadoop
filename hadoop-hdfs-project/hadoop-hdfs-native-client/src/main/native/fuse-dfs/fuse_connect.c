@@ -522,7 +522,21 @@ error:
   return ret;
 }
 
-int fuseConnect(const char *usrname, struct fuse_context *ctx,
+/**
+ * Get a libhdfs connection.
+ *
+ * If there is an existing connection, it will be reused.  If not, a new one
+ * will be created.
+ *
+ * You must call hdfsConnRelease on the connection you get back!
+ *
+ * @param usrname    The username to use
+ * @param ctx        The FUSE context to use (contains UID, PID of requestor)
+ * @param conn       (out param) The HDFS connection
+ *
+ * @return           0 on success; error code otherwise
+ */
+static int fuseConnect(const char *usrname, struct fuse_context *ctx,
                 struct hdfsConn **out)
 {
   int ret;
