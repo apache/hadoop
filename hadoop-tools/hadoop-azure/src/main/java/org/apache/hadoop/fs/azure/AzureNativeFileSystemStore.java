@@ -1503,10 +1503,23 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       storePermissionStatus(blob, permissionStatus);
       storeFolderAttribute(blob);
       openOutputStream(blob).close();
-    } catch (Exception e) {
+    } catch (StorageException e) {
       // Caught exception while attempting upload. Re-throw as an Azure
       // storage exception.
       throw new AzureException(e);
+    } catch (URISyntaxException e) {
+      throw new AzureException(e);
+    } catch (IOException e) {
+      Throwable t = e.getCause();
+      if (t != null && t instanceof StorageException) {
+        StorageException se = (StorageException) t;
+        // If we got this exception, the blob should have already been created
+        if (!se.getErrorCode().equals("LeaseIdMissing")) {
+          throw new AzureException(e);
+        }
+      } else {
+        throw new AzureException(e);
+      }
     }
   }
 

@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.azure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.Test;
 
 /*
@@ -103,5 +104,31 @@ public class TestNativeAzureFileSystemLive extends
       assertTrue(store.isAtomicRenameKey(s));
       assertTrue(store.isAtomicRenameKey(uriPrefix + s));
     }
+  }
+
+  /**
+   * Tests fs.mkdir() function to create a target blob while another thread
+   * is holding the lease on the blob. mkdir should not fail since the blob
+   * already exists.
+   * This is a scenario that would happen in HBase distributed log splitting.
+   * Multiple threads will try to create and update "recovered.edits" folder
+   * under the same path.
+   */
+  @Test
+  public void testMkdirOnExistingFolderWithLease() throws Exception {
+    SelfRenewingLease lease;
+    final String FILE_KEY = "folderWithLease";
+    // Create the folder
+    fs.mkdirs(new Path(FILE_KEY));
+    NativeAzureFileSystem nfs = (NativeAzureFileSystem) fs;
+    String fullKey = nfs.pathToKey(nfs.makeAbsolute(new Path(FILE_KEY)));
+    AzureNativeFileSystemStore store = nfs.getStore();
+    // Acquire the lease on the folder
+    lease = store.acquireLease(fullKey);
+    assertTrue(lease.getLeaseID() != null);
+    // Try to create the same folder
+    store.storeEmptyFolder(fullKey,
+      nfs.createPermissionStatus(FsPermission.getDirDefault()));
+    lease.free();
   }
 }
