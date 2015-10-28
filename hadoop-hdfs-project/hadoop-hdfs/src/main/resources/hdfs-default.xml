@@ -79,6 +79,33 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lifeline.rpc-address</name>
+  <value></value>
+  <description>
+    NameNode RPC lifeline address.  This is an optional separate RPC address
+    that can be used to isolate health checks and liveness to protect against
+    resource exhaustion in the main RPC handler pool.  In the case of
+    HA/Federation where multiple NameNodes exist, the name service ID is added
+    to the name e.g. dfs.namenode.lifeline.rpc-address.ns1.  The value of this
+    property will take the form of nn-host1:rpc-port.  If this property is not
+    defined, then the NameNode will not start a lifeline RPC server.  By
+    default, the property is not defined.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lifeline.rpc-bind-host</name>
+  <value></value>
+  <description>
+    The actual address the lifeline RPC server will bind to.  If this optional
+    address is set, it overrides only the hostname portion of
+    dfs.namenode.lifeline.rpc-address.  It can also be specified per name node
+    or name service for HA/Federation.  This is useful for making the name node
+    listen on all interfaces by setting it to 0.0.0.0.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
@@ -678,6 +705,18 @@
   requests from DataNodes and from all other non-client nodes.
   dfs.namenode.service.handler.count will be valid only if
   dfs.namenode.servicerpc-address is configured.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.lifeline.handler.count</name>
+  <value>1</value>
+  <description>
+    Sets number of RPC server threads the NameNode runs for handling the
+    lifeline RPC server.  The default value is 1, because this RPC server
+    handles only HA health check requests from ZKFC.  These are lightweight
+    requests that run single-threaded from the ZKFC client side.  This property
+    has no effect if dfs.namenode.lifeline.rpc-address is not defined.
   </description>
 </property>
 

@@ -50,6 +50,23 @@ public abstract class HAServiceTarget {
   public abstract InetSocketAddress getAddress();
 
   /**
+   * Returns an optional separate RPC server address for health checks at the
+   * target node.  If defined, then this address is used by the health monitor
+   * for the {@link HAServiceProtocol#monitorHealth()} and
+   * {@link HAServiceProtocol#getServiceStatus()} calls.  This can be useful for
+   * separating out these calls onto separate RPC handlers to protect against
+   * resource exhaustion in the main RPC handler pool.  If null (which is the
+   * default implementation), then all RPC calls go to the address defined by
+   * {@link #getAddress()}.
+   *
+   * @return IPC address of the lifeline RPC server on the target node, or null
+   *     if no lifeline RPC server is used
+   */
+  public InetSocketAddress getHealthMonitorAddress() {
+    return null;
+  }
+
+  /**
    * @return the IPC address of the ZKFC on the target node
    */
   public abstract InetSocketAddress getZKFCAddress();
@@ -73,15 +90,42 @@ public abstract class HAServiceTarget {
    */
   public HAServiceProtocol getProxy(Configuration conf, int timeoutMs)
       throws IOException {
+    return getProxyForAddress(conf, timeoutMs, getAddress());
+  }
+
+  /**
+   * Returns a proxy to connect to the target HA service for health monitoring.
+   * If {@link #getHealthMonitorAddress()} is implemented to return a non-null
+   * address, then this proxy will connect to that address.  Otherwise, the
+   * returned proxy defaults to using {@link #getAddress()}, which means this
+   * method's behavior is identical to {@link #getProxy(Configuration, int)}.
+   *
+   * @param conf Configuration
+   * @param timeoutMs timeout in milliseconds
+   * @return a proxy to connect to the target HA service for health monitoring
+   * @throws IOException if there is an error
+   */
+  public HAServiceProtocol getHealthMonitorProxy(Configuration conf,
+      int timeoutMs) throws IOException {
+    InetSocketAddress addr = getHealthMonitorAddress();
+    if (addr == null) {
+      addr = getAddress();
+    }
+    return getProxyForAddress(conf, timeoutMs, addr);
+  }
+
+  private HAServiceProtocol getProxyForAddress(Configuration conf,
+      int timeoutMs, InetSocketAddress addr) throws IOException {
     Configuration confCopy = new Configuration(conf);
     // Lower the timeout so we quickly fail to connect
-    confCopy.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
+    confCopy.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
     SocketFactory factory = NetUtils.getDefaultSocketFactory(confCopy);
     return new HAServiceProtocolClientSideTranslatorPB(
-        getAddress(),
+        addr,
         confCopy, factory, timeoutMs);
   }
-  
+
   /**
    * @return a proxy to the ZKFC which is associated with this HA service.
    */
