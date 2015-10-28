@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +36,8 @@ import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -58,7 +58,8 @@ import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
 public class TestWebHDFSOAuth2 {
-  public static final Log LOG = LogFactory.getLog(TestWebHDFSOAuth2.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      TestWebHDFSOAuth2.class);
 
   private ClientAndServer mockWebHDFS;
   private ClientAndServer mockOAuthServer;

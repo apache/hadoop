@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 /** Test NameNode port defaulting code. */
 public class TestDefaultNameNodePort {

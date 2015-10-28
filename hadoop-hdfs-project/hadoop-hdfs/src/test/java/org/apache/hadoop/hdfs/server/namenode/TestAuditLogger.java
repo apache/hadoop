@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -259,7 +259,7 @@ public class TestAuditLogger {
       auditlog.clearOutput();
 
       // long context is truncated
-      final String longContext = RandomStringUtils.randomAscii(200);
+      final String longContext = StringUtils.repeat("foo", 100);
       context = new CallerContext.Builder(longContext)
           .setSignature("L".getBytes(CallerContext.SIGNATURE_ENCODING))
           .build();
