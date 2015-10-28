@@ -120,7 +120,7 @@ private:
     } else if (*transferred_ >= buffer_size_) {
       next_(status);
     } else {
-      reader_->async_read_some(
+      reader_->async_read_packet(
           asio::buffer(buffer_ + *transferred_, buffer_size_ - *transferred_),
           std::bind(&ReadBlockContinuation::OnReadData, this, _1, _2));
     }

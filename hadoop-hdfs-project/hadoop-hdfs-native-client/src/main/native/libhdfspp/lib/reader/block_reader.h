@@ -64,11 +64,11 @@ public:
         chunk_padding_bytes_(0) {}
 
   template <class MutableBufferSequence, class ReadHandler>
-  void async_read_some(const MutableBufferSequence &buffers,
+  void async_read_packet(const MutableBufferSequence &buffers,
                        const ReadHandler &handler);
 
   template <class MutableBufferSequence>
-  size_t read_some(const MutableBufferSequence &buffers, Status *status);
+  size_t read_packet(const MutableBufferSequence &buffers, Status *status);
 
   Status request(const std::string &client_name,
                  const hadoop::common::TokenProto *token,

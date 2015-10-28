@@ -106,7 +106,7 @@ ReadContent(Stream *conn, TokenProto *token, const ExtendedBlockProto &block,
                           if (!stat.ok()) {
                             handler(stat, 0);
                           } else {
-                            reader->async_read_some(buf, handler);
+                            reader->async_read_packet(buf, handler);
                           }
                         });
   return reader;
@@ -207,7 +207,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
       "libhdfs++", nullptr, &block, data.size(), 0,
       [buf, reader, &data, &io_service](const Status &stat) {
         ASSERT_TRUE(stat.ok());
-        reader->async_read_some(
+        reader->async_read_packet(
             buf, [buf, reader, &data, &io_service](const Status &stat, size_t transferred) {
               ASSERT_TRUE(stat.ok());
               ASSERT_EQ(kChunkSize, transferred);
@@ -215,7 +215,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
               data.clear();
               data.resize(kChunkSize);
               transferred = 0;
-              reader->async_read_some(
+              reader->async_read_packet(
                   buf, [&data,&io_service](const Status &stat, size_t transferred) {
                     ASSERT_TRUE(stat.ok());
                     ASSERT_EQ(kChunkSize, transferred);

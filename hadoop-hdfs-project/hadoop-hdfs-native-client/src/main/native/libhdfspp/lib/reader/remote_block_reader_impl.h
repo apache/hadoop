@@ -285,7 +285,7 @@ private:
 
 template <class Stream>
 template <class MutableBufferSequence, class ReadHandler>
-void RemoteBlockReader<Stream>::async_read_some(
+void RemoteBlockReader<Stream>::async_read_packet(
     const MutableBufferSequence &buffers, const ReadHandler &handler) {
   assert(state_ != kOpen && "Not connected");
 
@@ -311,12 +311,12 @@ void RemoteBlockReader<Stream>::async_read_some(
 template <class Stream>
 template <class MutableBufferSequence>
 size_t
-RemoteBlockReader<Stream>::read_some(const MutableBufferSequence &buffers,
+RemoteBlockReader<Stream>::read_packet(const MutableBufferSequence &buffers,
                                      Status *status) {
   size_t transferred = 0;
   auto done = std::make_shared<std::promise<void>>();
   auto future = done->get_future();
-  async_read_some(buffers,
+  async_read_packet(buffers,
                   [status, &transferred, done](const Status &stat, size_t t) {
                     *status = stat;
                     transferred = t;

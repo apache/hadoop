@@ -38,7 +38,7 @@ class MockReader {
 public:
   virtual ~MockReader() {}
   MOCK_METHOD2(
-      async_read_some,
+      async_read_packet,
       void(const asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
@@ -86,7 +86,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
       EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_, _))
+      EXPECT_CALL(*reader, async_read_packet(_, _))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
     }
   };
@@ -120,7 +120,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
       EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_, _))
+      EXPECT_CALL(*reader, async_read_packet(_, _))
           .Times(4)
           .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
     }
@@ -156,7 +156,7 @@ TEST(InputStreamTest, TestReadError) {
       EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_, _))
+      EXPECT_CALL(*reader, async_read_packet(_, _))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
@@ -203,7 +203,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
       EXPECT_CALL(*reader, async_request(_, _, _, _, _, _))
           .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_some(_, _))
+      EXPECT_CALL(*reader, async_read_packet(_, _))
           .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
     }
   };
