@@ -52,7 +52,7 @@ void NameNodeOperations::Connect(const std::string &server,
 }
 
 void NameNodeOperations::GetBlockLocations(const std::string & path,
-  std::function<void(const Status &, const ::hadoop::hdfs::LocatedBlocksProto*)> handler)
+  std::function<void(const Status &, std::shared_ptr<struct FileInfo>)> handler)
 {
   using ::hadoop::hdfs::GetBlockLocationsRequestProto;
   using ::hadoop::hdfs::GetBlockLocationsResponseProto;
@@ -74,10 +74,26 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
       [this, s](const continuation::Continuation::Next &next) {
         namenode_.GetBlockLocations(&s->req, s->resp, next);
       }));
-  //TODO-BTH: Put client name et. al. into "ClusterInfo" object
+
   m->Run([this, handler](const Status &stat, const State &s) {
-    handler(stat, stat.ok() ? &s.resp->locations()
-                            : nullptr);
+    if (stat.ok()) {
+      auto file_info = std::make_shared<struct FileInfo>();
+      auto locations = s.resp->locations();
+      
+      file_info->file_length_ = locations.filelength();
+      
+      for (const auto &block : locations.blocks()) {
+        file_info->blocks_.push_back(block);
+      }
+
+      if (locations.has_lastblock() && locations.lastblock().b().numbytes()) {
+        file_info->blocks_.push_back(locations.lastblock());
+      }
+      
+      handler(stat, file_info);
+    } else {
+      handler(stat, nullptr);
+    }
   });
 }
 
@@ -117,8 +133,8 @@ void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, InputStream *)> &handler) {
 
-  nn_.GetBlockLocations(path, [this, handler](const Status &stat, const ::hadoop::hdfs::LocatedBlocksProto* locations) {
-    handler(stat, stat.ok() ? new ReadOperation(&io_service_->io_service(), client_name_, locations)
+  nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<struct FileInfo> file_info) {
+    handler(stat, stat.ok() ? new ReadOperation(&io_service_->io_service(), client_name_, file_info)
                             : nullptr);
   });
 }

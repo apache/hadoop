@@ -69,6 +69,7 @@ template <class Trait> struct MockBlockReaderTrait {
 }
 
 TEST(InputStreamTest, TestReadSingleTrunk) {
+  auto file_info = std::make_shared<struct FileInfo>();
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
   DatanodeInfoProto dn;
@@ -78,7 +79,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -103,7 +104,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
 }
 
 TEST(InputStreamTest, TestReadMultipleTrunk) {
-  LocatedBlocksProto blocks;
+  auto file_info = std::make_shared<struct FileInfo>();
   LocatedBlockProto block;
   DatanodeInfoProto dn;
   char buf[4096] = {
@@ -112,7 +113,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -139,7 +140,7 @@ TEST(InputStreamTest, TestReadMultipleTrunk) {
 }
 
 TEST(InputStreamTest, TestReadError) {
-  LocatedBlocksProto blocks;
+  auto file_info = std::make_shared<struct FileInfo>();
   LocatedBlockProto block;
   DatanodeInfoProto dn;
   char buf[4096] = {
@@ -148,7 +149,7 @@ TEST(InputStreamTest, TestReadError) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -177,15 +178,16 @@ TEST(InputStreamTest, TestReadError) {
 }
 
 TEST(InputStreamTest, TestExcludeDataNode) {
-  LocatedBlocksProto blocks;
-  LocatedBlockProto *block = blocks.add_blocks();
-  ExtendedBlockProto *b = block->mutable_b();
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
   b->set_poolid("");
   b->set_blockid(1);
   b->set_generationstamp(1);
   b->set_numbytes(4096);
 
-  DatanodeInfoProto *di = block->add_locs();
+  DatanodeInfoProto *di = block.add_locs();
   DatanodeIDProto *dnid = di->mutable_id();
   dnid->set_datanodeuuid("foo");
 
@@ -195,7 +197,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
   IoServiceImpl io_service;
   Options options;
   FileSystemImpl fs(&io_service, options);
-  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  &blocks);
+  ReadOperation is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
   struct Trait {

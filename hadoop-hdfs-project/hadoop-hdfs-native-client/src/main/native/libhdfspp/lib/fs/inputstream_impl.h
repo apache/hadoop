@@ -135,11 +135,11 @@ void ReadOperation::AsyncPreadSome(
   using ::hadoop::hdfs::LocatedBlockProto;
 
   auto it = std::find_if(
-      blocks_.begin(), blocks_.end(), [offset](const LocatedBlockProto &p) {
+      file_info_->blocks_.begin(), file_info_->blocks_.end(), [offset](const LocatedBlockProto &p) {
         return p.offset() <= offset && offset < p.offset() + p.b().numbytes();
       });
 
-  if (it == blocks_.end()) {
+  if (it == file_info_->blocks_.end()) {
     handler(Status::InvalidArgument("Cannot find corresponding blocks"), "", 0);
     return;
   }

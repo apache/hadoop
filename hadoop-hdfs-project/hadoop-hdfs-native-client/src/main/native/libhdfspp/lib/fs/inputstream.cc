@@ -26,15 +26,8 @@ InputStream::~InputStream() {}
 
 ReadOperation::ReadOperation(::asio::io_service *io_service,
                                  const std::string &client_name,
-                                 const ::hadoop::hdfs::LocatedBlocksProto *blocks)
-    : io_service_(io_service), client_name_(client_name), file_length_(blocks->filelength()) {
-  for (const auto &block : blocks->blocks()) {
-    blocks_.push_back(block);
-  }
-
-  if (blocks->has_lastblock() && blocks->lastblock().b().numbytes()) {
-    blocks_.push_back(blocks->lastblock());
-  }
+                                 const std::shared_ptr<struct FileInfo> file_info)
+    : io_service_(io_service), client_name_(client_name), file_info_(file_info) {
 }
 
 void ReadOperation::PositionRead(
