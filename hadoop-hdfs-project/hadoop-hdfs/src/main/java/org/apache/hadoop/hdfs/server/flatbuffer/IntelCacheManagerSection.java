@@ -34,5 +34,7 @@ public final class IntelCacheManagerSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelCacheManagerSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

@@ -288,7 +288,8 @@ public final class FSImageFormatProtobuf {
           case CACHE_MANAGER: {
             Step step = new Step(StepType.CACHE_POOLS);
             prog.beginStep(Phase.LOADING_FSIMAGE, step);
-            loadCacheManagerSection(in, prog, step);
+//            loadCacheManagerSection(in, prog, step);
+            loadIntelCacheManagerSection(in, prog, step);
             prog.endStep(Phase.LOADING_FSIMAGE, step);
           }
           break;
@@ -394,7 +395,8 @@ public final class FSImageFormatProtobuf {
         case CACHE_MANAGER: {
           Step step = new Step(StepType.CACHE_POOLS);
           prog.beginStep(Phase.LOADING_FSIMAGE, step);
-          loadCacheManagerSection(in, prog, step);
+//          loadCacheManagerSection(in, prog, step);
+          loadIntelCacheManagerSection(in, prog, step);
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;
@@ -498,6 +500,36 @@ public final class FSImageFormatProtobuf {
       fsn.loadSecretManagerState(s, keys, tokens);
     }
 
+
+    private void loadIntelCacheManagerSection(InputStream in, StartupProgress prog,
+                                         Step currentStep) throws IOException {
+
+      DataInputStream dis = new DataInputStream(in);
+      int len = dis.readInt();
+      byte[] bytes = new byte[len];
+      dis.read(bytes);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+      IntelCacheManagerSection cs =
+          IntelCacheManagerSection.getRootAsIntelCacheManagerSection(byteBuffer);
+
+      long numPools = cs.numPools();
+      ArrayList<CachePoolInfoProto> pools = Lists
+          .newArrayListWithCapacity((int)numPools);
+      ArrayList<CacheDirectiveInfoProto> directives = Lists
+          .newArrayListWithCapacity((int)cs.numDirectives());
+
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numPools);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numPools; ++i) {
+        pools.add(CachePoolInfoProto.parseDelimitedFrom(in));
+        counter.increment();
+      }
+      for (int i = 0; i < cs.numDirectives(); ++i)
+        directives.add(CacheDirectiveInfoProto.parseDelimitedFrom(in));
+      fsn.getCacheManager().loadState(
+          new CacheManager.PersistState(null, cs, pools, directives));
+    }
+
     private void loadCacheManagerSection(InputStream in, StartupProgress prog,
         Step currentStep) throws IOException {
       CacheManagerSection s = CacheManagerSection.parseDelimitedFrom(in);
@@ -515,7 +547,7 @@ public final class FSImageFormatProtobuf {
       for (int i = 0; i < s.getNumDirectives(); ++i)
         directives.add(CacheDirectiveInfoProto.parseDelimitedFrom(in));
       fsn.getCacheManager().loadState(
-          new CacheManager.PersistState(s, pools, directives));
+          new CacheManager.PersistState(s, null, pools, directives));
     }
 
   }
@@ -679,7 +711,7 @@ public final class FSImageFormatProtobuf {
         code = fbb.createString("");
         sectionOutputStream = underlyingOutputStream;
       }
-      listSection.add(saveIntelNameSystemSection(fbb));
+      listSection.add(saveIntelNameSystemSection(fbb)); // success
       context.checkCancelled();
       Step step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
@@ -694,7 +726,7 @@ public final class FSImageFormatProtobuf {
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
       listSection.add(saveIntelCacheManagerSection(fbb));
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
-      listSection.add(saveIntelStringTableSection(fbb));
+      listSection.add(saveIntelStringTableSection(fbb));  // success
       flushSectionOutputStream();
 
       Integer[] data = new Integer[listSection.size()];
@@ -821,7 +853,11 @@ public final class FSImageFormatProtobuf {
         throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       CacheManager.PersistState state = fsn.getCacheManager().saveState();
-      state.section.writeDelimitedTo(sectionOutputStream);
+      ByteBuffer byteBuffer = state.intelSection.getByteBuffer();
+      int size = byteBuffer.capacity() - byteBuffer.position();
+      byte[] bytes = new byte[size];
+      byteBuffer.get(bytes);
+      writeTo(bytes, bytes.length, sectionOutputStream);
 
       for (CachePoolInfoProto p : state.pools)
         p.writeDelimitedTo(sectionOutputStream);

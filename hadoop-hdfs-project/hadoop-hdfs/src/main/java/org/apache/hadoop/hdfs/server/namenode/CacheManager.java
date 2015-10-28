@@ -29,6 +29,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE
 import java.io.DataInput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +73,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelCacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -177,12 +180,14 @@ public final class CacheManager {
 
   public static final class PersistState {
     public final CacheManagerSection section;
+    public final IntelCacheManagerSection intelSection;
     public final List<CachePoolInfoProto> pools;
     public final List<CacheDirectiveInfoProto> directives;
 
-    public PersistState(CacheManagerSection section,
+    public PersistState(CacheManagerSection section, IntelCacheManagerSection intelSection,
         List<CachePoolInfoProto> pools, List<CacheDirectiveInfoProto> directives) {
       this.section = section;
+      this.intelSection = intelSection;
       this.pools = pools;
       this.directives = directives;
     }
@@ -1057,7 +1062,18 @@ public final class CacheManager {
         .setNextDirectiveId(nextDirectiveId).setNumPools(pools.size())
         .setNumDirectives(directives.size()).build();
 
-    return new PersistState(s, pools, directives);
+    /**
+     * Get IntelCacheManagerSection
+     */
+    FlatBufferBuilder fbb = new FlatBufferBuilder();
+    int offset = IntelCacheManagerSection.createIntelCacheManagerSection(fbb,
+        nextDirectiveId, pools.size(), directives.size());
+    IntelCacheManagerSection.finishIntelCacheManagerSectionBuffer(fbb, offset);
+    ByteBuffer byteBuffer = fbb.dataBuffer();
+    IntelCacheManagerSection is =
+        IntelCacheManagerSection.getRootAsIntelCacheManagerSection(byteBuffer);
+
+    return new PersistState(s, is, pools, directives);
   }
 
   /**

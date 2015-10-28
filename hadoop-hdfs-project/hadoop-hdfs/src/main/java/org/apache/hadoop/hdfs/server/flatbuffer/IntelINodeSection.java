@@ -30,5 +30,6 @@ public final class IntelINodeSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

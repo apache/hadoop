@@ -50,5 +50,6 @@ public final class IntelINode extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelINodeBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

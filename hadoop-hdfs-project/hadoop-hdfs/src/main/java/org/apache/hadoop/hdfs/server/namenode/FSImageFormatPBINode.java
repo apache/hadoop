@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -259,6 +256,38 @@ public final class FSImageFormatPBINode {
         }
       }
     }
+
+//    void loadIntelINodeSection(InputStream in, StartupProgress prog,
+//                          Step currentStep) throws IOException {
+//      DataInputStream dos = new DataInputStream(in);
+//      int len = dos.readInt();
+//      byte[] bytes = new byte[len];
+//      dos.read(bytes);
+//      IntelINodeSection intelINodeSection =
+//          IntelINodeSection.getRootAsIntelINodeSection(ByteBuffer.wrap(bytes));
+//
+//      fsn.dir.resetLastInodeId(intelINodeSection.lastInodeId());
+//      long numInodes = intelINodeSection.numInodes();
+//
+//      LOG.info("Loading " + numInodes + " INodes.");
+//      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
+//      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+//      for (int i = 0; i < numInodes; ++i) {
+//        DataInputStream dos1 = new DataInputStream(in);
+//        int len1 = dos.readInt();
+//        byte[] bytes1 = new byte[len];
+//        dos.read(bytes1);
+//        IntelINode iNode = IntelINode.getRootAsIntelINode(ByteBuffer.wrap(bytes1));
+//        if (iNode.id() == INodeId.ROOT_INODE_ID) {
+//          loadRootINode(p);
+//        } else {
+//          INode n = loadINode(p);
+//          dir.addToInodeMap(n);
+//        }
+//        counter.increment();
+//      }
+//    }
+
 
     void loadINodeSection(InputStream in, StartupProgress prog,
         Step currentStep) throws IOException {
