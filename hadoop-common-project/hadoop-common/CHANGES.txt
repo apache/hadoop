@@ -919,6 +919,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12520. Use XInclude in hadoop-azure test configuration to isolate
     Azure Storage account keys for service integration tests. (cnauroth)
 
+    HADOOP-11685. StorageException complaining " no lease ID" during HBase
+    distributed log splitting (Duo Xu via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp

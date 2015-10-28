@@ -1870,8 +1870,9 @@ public class NativeAzureFileSystem extends FileSystem {
    * @throws IOException
    *           If login fails in getCurrentUser
    */
-  private PermissionStatus createPermissionStatus(FsPermission permission)
-      throws IOException {
+  @VisibleForTesting
+  PermissionStatus createPermissionStatus(FsPermission permission)
+    throws IOException {
     // Create the permission status for this file based on current user
     return new PermissionStatus(
         UserGroupInformation.getCurrentUser().getShortUserName(),
