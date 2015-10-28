@@ -101,6 +101,7 @@ Usage:
               [-move | -delete | -openforwrite]
               [-files [-blocks [-locations | -racks]]]
               [-includeSnapshots]
+              [-storagepolicies] [-blockId <blk_Id>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -114,6 +115,8 @@ Usage:
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |
 | `-openforwrite` | Print out files opened for write. |
+| `-storagepolicies` | Print out storage policy summary for the blocks. |
+| `-blockId` | Print out information about the block. |
 
 Runs the HDFS filesystem checking utility. See [fsck](./HdfsUserGuide.html#fsck) for more info.
 
