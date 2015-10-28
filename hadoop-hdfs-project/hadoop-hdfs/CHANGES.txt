@@ -2176,6 +2176,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9302. WebHDFS throws NullPointerException if newLength is not
     provided. (Jagadesh Kiran N via yliu)
 
+    HDFS-9297. Decomissioned capacity should not be considered for 
+    configured/used capacity (Contributed by Kuhu Shukla)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
