@@ -2233,6 +2233,9 @@ Release 2.7.2 - UNRELEASED
     HDFS-9305. Delayed heartbeat processing causes storm of subsequent
     heartbeats. (Arpit Agarwal)
 
+    HDFS-9317. Document fsck -blockId and -storagepolicy options in branch-2.7.
+    (aajisaka)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
