@@ -64,7 +64,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BlockRecord;
+import org.apache.hadoop.hdfs.server.datanode.BlockRecoveryWorker.BlockRecord;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -79,7 +79,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -98,6 +97,8 @@ public class TestBlockRecovery {
   private static final String DATA_DIR =
     MiniDFSCluster.getBaseDirectory() + "data";
   private DataNode dn;
+  private DataNode spyDN;
+  private BlockRecoveryWorker recoveryWorker;
   private Configuration conf;
   private final static long RECOVERY_ID = 3000L;
   private final static String CLUSTER_ID = "testClusterID";
@@ -177,6 +178,8 @@ public class TestBlockRecovery {
     };
     // Trigger a heartbeat so that it acknowledges the NN as active.
     dn.getAllBpOs().get(0).triggerHeartbeatForTests();
+    spyDN = spy(dn);
+    recoveryWorker = new BlockRecoveryWorker(spyDN);
   }
 
   /**
@@ -222,7 +225,10 @@ public class TestBlockRecovery {
         anyLong(), anyLong())).thenReturn("storage1");
     when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
         anyLong(), anyLong())).thenReturn("storage2");
-    dn.syncBlock(rBlock, syncList);
+
+    BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+        recoveryWorker.new RecoveryTaskContiguous(rBlock);
+    RecoveryTaskContiguous.syncBlock(syncList);
   }
   
   /**
@@ -443,13 +449,17 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    DataNode spyDN = spy(dn);
     doThrow(new RecoveryInProgressException("Replica recovery is in progress")).
        when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
-    Daemon d = spyDN.recoverBlocks("fake NN", initRecoveringBlocks());
-    d.join();
-    verify(spyDN, never()).syncBlock(
-        any(RecoveringBlock.class), anyListOf(BlockRecord.class));
+
+    for(RecoveringBlock rBlock: initRecoveringBlocks()){
+      BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+          recoveryWorker.new RecoveryTaskContiguous(rBlock);
+      BlockRecoveryWorker.RecoveryTaskContiguous spyTask
+          = spy(RecoveryTaskContiguous);
+      spyTask.recover();
+      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+    }
   }
 
   /**
@@ -463,13 +473,21 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    DataNode spyDN = spy(dn);
     doThrow(new IOException()).
        when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
-    Daemon d = spyDN.recoverBlocks("fake NN", initRecoveringBlocks());
-    d.join();
-    verify(spyDN, never()).syncBlock(
-        any(RecoveringBlock.class), anyListOf(BlockRecord.class));
+
+    for(RecoveringBlock rBlock: initRecoveringBlocks()){
+      BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+          recoveryWorker.new RecoveryTaskContiguous(rBlock);
+      BlockRecoveryWorker.RecoveryTaskContiguous spyTask = spy(RecoveryTaskContiguous);
+      try {
+        spyTask.recover();
+        fail();
+      } catch(IOException e){
+        GenericTestUtils.assertExceptionContains("All datanodes failed", e);
+      }
+      verify(spyTask, never()).syncBlock(anyListOf(BlockRecord.class));
+    }
   }
 
   /**
@@ -482,13 +500,18 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    DataNode spyDN = spy(dn);
     doReturn(new ReplicaRecoveryInfo(block.getBlockId(), 0,
         block.getGenerationStamp(), ReplicaState.FINALIZED)).when(spyDN).
         initReplicaRecovery(any(RecoveringBlock.class));
-    Daemon d = spyDN.recoverBlocks("fake NN", initRecoveringBlocks());
-    d.join();
-    DatanodeProtocol dnP = dn.getActiveNamenodeForBP(POOL_ID);
+
+    for(RecoveringBlock rBlock: initRecoveringBlocks()){
+      BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+          recoveryWorker.new RecoveryTaskContiguous(rBlock);
+      BlockRecoveryWorker.RecoveryTaskContiguous spyTask
+          = spy(RecoveryTaskContiguous);
+      spyTask.recover();
+    }
+    DatanodeProtocol dnP = recoveryWorker.getActiveNamenodeForBP(POOL_ID);
     verify(dnP).commitBlockSynchronization(
         block, RECOVERY_ID, 0, true, true, DatanodeID.EMPTY_ARRAY, null);
   }
@@ -517,11 +540,12 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    DataNode spyDN = spy(dn);
     doThrow(new IOException()).when(spyDN).updateReplicaUnderRecovery(
         block, RECOVERY_ID, BLOCK_ID, block.getNumBytes());
     try {
-      spyDN.syncBlock(rBlock, initBlockRecords(spyDN));
+      BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+          recoveryWorker.new RecoveryTaskContiguous(rBlock);
+      RecoveryTaskContiguous.syncBlock(initBlockRecords(spyDN));
       fail("Sync should fail");
     } catch (IOException e) {
       e.getMessage().startsWith("Cannot recover ");
@@ -539,13 +563,15 @@ public class TestBlockRecovery {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
     dn.data.createRbw(StorageType.DEFAULT, block, false);
+    BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+        recoveryWorker.new RecoveryTaskContiguous(rBlock);
     try {
-      dn.syncBlock(rBlock, initBlockRecords(dn));
+      RecoveryTaskContiguous.syncBlock(initBlockRecords(dn));
       fail("Sync should fail");
     } catch (IOException e) {
       e.getMessage().startsWith("Cannot recover ");
     }
-    DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
+    DatanodeProtocol namenode = recoveryWorker.getActiveNamenodeForBP(POOL_ID);
     verify(namenode, never()).commitBlockSynchronization(
         any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
         anyBoolean(), any(DatanodeID[].class), any(String[].class));
@@ -569,13 +595,15 @@ public class TestBlockRecovery {
           DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 512));
       streams.getChecksumOut().write('a');
       dn.data.initReplicaRecovery(new RecoveringBlock(block, null, RECOVERY_ID+1));
+      BlockRecoveryWorker.RecoveryTaskContiguous RecoveryTaskContiguous =
+          recoveryWorker.new RecoveryTaskContiguous(rBlock);
       try {
-        dn.syncBlock(rBlock, initBlockRecords(dn));
+        RecoveryTaskContiguous.syncBlock(initBlockRecords(dn));
         fail("Sync should fail");
       } catch (IOException e) {
         e.getMessage().startsWith("Cannot recover ");
       }
-      DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
+      DatanodeProtocol namenode = recoveryWorker.getActiveNamenodeForBP(POOL_ID);
       verify(namenode, never()).commitBlockSynchronization(
           any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
           anyBoolean(), any(DatanodeID[].class), any(String[].class));

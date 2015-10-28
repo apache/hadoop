@@ -343,11 +343,16 @@ public class PBHelper {
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
-    ExtendedBlock block = PBHelperClient.convert(b.getBlock().getB());
-    DatanodeInfo[] locs = PBHelperClient.convert(b.getBlock().getLocsList());
-    return (b.hasTruncateBlock()) ?
-        new RecoveringBlock(block, locs, PBHelperClient.convert(b.getTruncateBlock())) :
-        new RecoveringBlock(block, locs, b.getNewGenStamp());
+    LocatedBlock lb = PBHelperClient.convert(b.getBlock());
+    RecoveringBlock rBlock;
+    if (b.hasTruncateBlock()) {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          PBHelperClient.convert(b.getTruncateBlock()));
+    } else {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          b.getNewGenStamp());
+    }
+    return rBlock;
   }
 
   public static ReplicaState convert(ReplicaStateProto state) {

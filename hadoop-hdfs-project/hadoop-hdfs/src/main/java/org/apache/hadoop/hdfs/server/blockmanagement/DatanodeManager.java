@@ -1385,15 +1385,17 @@ public class DatanodeManager {
               // in block recovery.
               recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
             }
+            RecoveringBlock rBlock;
             if(truncateRecovery) {
               Block recoveryBlock = (copyOnTruncateRecovery) ? b :
                   uc.getTruncateBlock();
-              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
-                                                recoveryBlock));
+              rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
+                  recoveryBlock);
             } else {
-              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
-                                                uc.getBlockRecoveryId()));
+              rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
+                  uc.getBlockRecoveryId());
             }
+            brCommand.add(rBlock);
           }
           return new DatanodeCommand[] { brCommand };
         }
