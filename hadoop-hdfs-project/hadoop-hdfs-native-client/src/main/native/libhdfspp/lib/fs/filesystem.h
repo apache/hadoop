@@ -26,10 +26,14 @@
 
 namespace hdfs {
 
-  struct FileInfo {
-    unsigned long long file_length_;
-    std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
-  };
+/**
+ * Information that is assumed to be unchaning about a file for the duration of
+ * the operations.
+ */
+struct FileInfo {
+  unsigned long long file_length_;
+  std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
+};
   
 /**
  * NameNodeConnection: abstracts the details of communicating with a NameNode
@@ -52,7 +56,7 @@ public:
                const std::string &service,
                std::function<void(const Status &)> &handler);
 
-  void GetBlockLocations(const std::string & path, std::function<void(const Status &, std::shared_ptr<struct FileInfo>)> handler);
+void GetBlockLocations(const std::string & path, std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
 private:
   ::asio::io_service * io_service_;
   RpcEngine engine_;
@@ -95,7 +99,7 @@ private:
 class ReadOperation : public InputStream {
 public:
   ReadOperation(::asio::io_service *io_service, const std::string &client_name,
-                  const std::shared_ptr<struct FileInfo> file_info);
+                  const std::shared_ptr<const struct FileInfo> file_info);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
                const std::set<std::string> &excluded_datanodes,
@@ -114,7 +118,7 @@ public:
 private:
   ::asio::io_service *io_service_;
   const std::string client_name_;
-  const std::shared_ptr<struct FileInfo> file_info_;
+  const std::shared_ptr<const struct FileInfo> file_info_;
   template <class Reader> struct HandshakeContinuation;
   template <class Reader, class MutableBufferSequence>
   struct ReadBlockContinuation;

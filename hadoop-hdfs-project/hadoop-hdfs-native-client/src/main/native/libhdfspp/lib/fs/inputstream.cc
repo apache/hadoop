@@ -26,7 +26,7 @@ InputStream::~InputStream() {}
 
 ReadOperation::ReadOperation(::asio::io_service *io_service,
                                  const std::string &client_name,
-                                 const std::shared_ptr<struct FileInfo> file_info)
+                                 const std::shared_ptr<const struct FileInfo> file_info)
     : io_service_(io_service), client_name_(client_name), file_info_(file_info) {
 }
 

@@ -52,7 +52,7 @@ void NameNodeOperations::Connect(const std::string &server,
 }
 
 void NameNodeOperations::GetBlockLocations(const std::string & path,
-  std::function<void(const Status &, std::shared_ptr<struct FileInfo>)> handler)
+  std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler)
 {
   using ::hadoop::hdfs::GetBlockLocationsRequestProto;
   using ::hadoop::hdfs::GetBlockLocationsResponseProto;
@@ -133,7 +133,7 @@ void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, InputStream *)> &handler) {
 
-  nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<struct FileInfo> file_info) {
+  nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
     handler(stat, stat.ok() ? new ReadOperation(&io_service_->io_service(), client_name_, file_info)
                             : nullptr);
   });
