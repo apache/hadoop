@@ -70,7 +70,7 @@ public:
   template <class MutableBufferSequence>
   size_t read_packet(const MutableBufferSequence &buffers, Status *status);
 
-  Status request(const std::string &client_name,
+  Status request_block(const std::string &client_name,
                  const hadoop::common::TokenProto *token,
                  const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                  uint64_t offset);

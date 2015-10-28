@@ -327,7 +327,7 @@ RemoteBlockReader<Stream>::read_packet(const MutableBufferSequence &buffers,
 }
 
 template <class Stream>
-Status RemoteBlockReader<Stream>::request(
+Status RemoteBlockReader<Stream>::request_block(
     const std::string &client_name, const hadoop::common::TokenProto *token,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {
