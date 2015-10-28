@@ -143,11 +143,10 @@ public abstract class GenericTestUtils {
         Joiner.on(",").join(found));
   }
 
-  protected static String E_NULL_THROWABLE = "Null Throwable";
-  protected static String E_NULL_THROWABLE_STRING =
+  static final String E_NULL_THROWABLE = "Null Throwable";
+  static final String E_NULL_THROWABLE_STRING =
       "Null Throwable.toString() value";
-  protected static String E_UNEXPECTED_EXCEPTION =
-      "but got unexpected exception";
+  static final String E_UNEXPECTED_EXCEPTION = "but got unexpected exception";
 
   /**
    * Assert that an exception's <code>toString()</code> value
