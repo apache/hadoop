@@ -117,7 +117,7 @@
     {.}<br/>
     {/CorruptFiles}
   </div>
-  <p>Please check the logs or run fsck in order to identify the missing blocks. See the Hadoop FAQ for common causes and potential solutions.</p>
+  <p>Please check the logs or run fsck in order to identify the missing blocks.{@if cond="{NumberOfSnapshottableDirs} > 0"} Please run fsck with -includeSnapshots in order to see detailed reports about snapshots.{/if} See the Hadoop FAQ for common causes and potential solutions.</p>
 </div>
 {/if}
 {/nn}

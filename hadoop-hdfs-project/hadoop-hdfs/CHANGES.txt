@@ -2167,6 +2167,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-9268. fuse_dfs chown crashes when uid is passed as -1 (cmccabe)
 
+    HDFS-9231. fsck doesn't list correct file path when Bad Replicas/Blocks
+    are in a snapshot. (Xiao Chen via Yongjun Zhang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
