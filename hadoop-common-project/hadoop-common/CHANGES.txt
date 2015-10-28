@@ -246,6 +246,9 @@ Trunk (Unreleased)
     HADOOP-12436. GlobPattern regex library has performance issues with
     wildcard characters (Matthew Paduano via aw)
 
+    HADOOP-12385. Include nested stack trace in SaslRpcClient.getServerToken()
+    (stevel)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
