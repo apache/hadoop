@@ -1028,6 +1028,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4302. SLS not able start due to NPE in SchedulerApplicationAttempt
     (Bibin A Chundatt via vvasudev)
 
+    YARN-4251. TestAMRMClientOnRMRestart#testAMRMClientOnAMRMTokenRollOverOnRMRestart
+    is failing. (Brahma Reddy Battula via ozawa)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
