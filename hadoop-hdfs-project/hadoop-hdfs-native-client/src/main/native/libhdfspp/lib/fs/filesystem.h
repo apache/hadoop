@@ -89,6 +89,29 @@ private:
 };
 
 
+class DataNodeConnection : public std::enable_shared_from_this<DataNodeConnection> {
+public:
+    std::unique_ptr<asio::ip::tcp::socket> conn_;
+    std::array<asio::ip::tcp::endpoint, 1> endpoints_;
+    std::string uuid_;
+    
+    
+    DataNodeConnection(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto) {
+      using namespace ::asio::ip;
+
+      conn_.reset(new tcp::socket(*io_service));
+      auto datanode_addr = dn_proto.id();
+      endpoints_[0] = tcp::endpoint(address::from_string(datanode_addr.ipaddr()),
+                                      datanode_addr.xferport());      
+      uuid_ = dn_proto.id().datanodeuuid();
+    }
+    
+    // Just for test, for now
+    DataNodeConnection() {
+    }
+
+    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler);
+};
 
 /*
  * ReadOperation: given DN connection, does one-shot reads.
@@ -96,9 +119,9 @@ private:
  * Threading model: not thread-safe; consumers and io_service should not call
  *    concurrently
  */
-class ReadOperation : public InputStream {
+class InputStreamImpl : public InputStream {
 public:
-  ReadOperation(::asio::io_service *io_service, const std::string &client_name,
+  InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
                   const std::shared_ptr<const struct FileInfo> file_info);
   virtual void
   PositionRead(void *buf, size_t nbyte, uint64_t offset,
@@ -109,20 +132,27 @@ public:
   void AsyncPreadSome(size_t offset, const MutableBufferSequence &buffers,
                       const std::set<std::string> &excluded_datanodes,
                       const Handler &handler);
-  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
-  void AsyncReadBlock(const hadoop::hdfs::LocatedBlockProto &block,
-                      const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
-                      const MutableBufferSequence &buffers,
-                      const Handler &handler);
-
 private:
   ::asio::io_service *io_service_;
+  std::shared_ptr<DataNodeConnection> dn_;  // The last DN connected to
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
+  struct RemoteBlockReaderTrait;
+};
+
+class ReadOperation {
+public:
+  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
+  static void AsyncReadBlock(
+    std::shared_ptr<DataNodeConnection> dn, 
+    const std::string & client_name,
+    const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
+    const MutableBufferSequence &buffers,
+    const Handler &handler);
+private:
   template <class Reader> struct HandshakeContinuation;
   template <class Reader, class MutableBufferSequence>
   struct ReadBlockContinuation;
-  struct RemoteBlockReaderTrait;
 };
 }
 

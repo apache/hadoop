@@ -22,6 +22,7 @@
 
 #include <asio/ip/tcp.hpp>
 
+#include <functional>
 #include <limits>
 
 namespace hdfs {
@@ -98,6 +99,15 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
 }
 
 
+void DataNodeConnection::Connect(
+             std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) {
+  asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(), 
+          [this, handler](const asio::error_code &ec, std::array<asio::ip::tcp::endpoint, 1>::iterator it) {
+            (void)it;
+            handler(ToStatus(ec), shared_from_this()); });
+}
+
+
 
 FileSystem::~FileSystem() {}
 
@@ -134,7 +144,7 @@ void FileSystemImpl::Open(
     const std::function<void(const Status &, InputStream *)> &handler) {
 
   nn_.GetBlockLocations(path, [this, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
-    handler(stat, stat.ok() ? new ReadOperation(&io_service_->io_service(), client_name_, file_info)
+    handler(stat, stat.ok() ? new InputStreamImpl(&io_service_->io_service(), client_name_, file_info)
                             : nullptr);
   });
 }

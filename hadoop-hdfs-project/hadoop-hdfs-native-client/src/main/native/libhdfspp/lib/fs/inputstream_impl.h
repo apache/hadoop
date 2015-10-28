@@ -22,6 +22,7 @@
 
 #include "common/continuation/asio.h"
 #include "common/continuation/protobuf.h"
+#include "filesystem.h"
 
 #include <functional>
 #include <future>
@@ -29,12 +30,10 @@
 
 namespace hdfs {
 
-struct ReadOperation::RemoteBlockReaderTrait {
+struct InputStreamImpl::RemoteBlockReaderTrait {
   typedef RemoteBlockReader<asio::ip::tcp::socket> Reader;
   struct State {
-    std::unique_ptr<asio::ip::tcp::socket> conn_;
-    std::array<asio::ip::tcp::endpoint, 1> endpoints_;
-
+    std::shared_ptr<DataNodeConnection> dn_;
     std::shared_ptr<Reader> reader_;
     size_t transferred_;
     Reader *reader() { return reader_.get(); }
@@ -42,19 +41,10 @@ struct ReadOperation::RemoteBlockReaderTrait {
     const size_t *transferred() const { return &transferred_; }
   };
   static continuation::Pipeline<State> *
-  Connect(::asio::io_service *io_service,
-                 const ::hadoop::hdfs::DatanodeInfoProto &dn) {
-    using namespace ::asio::ip;
+  CreatePipeline(std::shared_ptr<DataNodeConnection> dn) {
     auto m = continuation::Pipeline<State>::Create();
     auto &s = m->state();
-    s.conn_.reset(new tcp::socket(*io_service));
-    s.reader_ = std::make_shared<Reader>(BlockReaderOptions(), s.conn_.get());
-    auto datanode = dn.id();
-    s.endpoints_[0] = tcp::endpoint(address::from_string(datanode.ipaddr()),
-                                    datanode.xferport());
-
-    m->Push(asio_continuation::Connect(s.conn_.get(), s.endpoints_.begin(),
-                                  s.endpoints_.end()));
+    s.reader_ = std::make_shared<Reader>(BlockReaderOptions(), dn->conn_.get());
     return m;
   }
 };
@@ -128,7 +118,7 @@ private:
 };
 
 template <class MutableBufferSequence, class Handler>
-void ReadOperation::AsyncPreadSome(
+void InputStreamImpl::AsyncPreadSome(
     size_t offset, const MutableBufferSequence &buffers,
     const std::set<std::string> &excluded_datanodes, const Handler &handler) {
   using ::hadoop::hdfs::DatanodeInfoProto;
@@ -144,9 +134,11 @@ void ReadOperation::AsyncPreadSome(
     return;
   }
 
+  ::hadoop::hdfs::LocatedBlockProto targetBlock = *it;
+
   const DatanodeInfoProto *chosen_dn = nullptr;
-  for (int i = 0; i < it->locs_size(); ++i) {
-    const auto &di = it->locs(i);
+  for (int i = 0; i < targetBlock.locs_size(); ++i) {
+    const auto &di = targetBlock.locs(i);
     if (!excluded_datanodes.count(di.id().datanodeuuid())) {
       chosen_dn = &di;
       break;
@@ -158,31 +150,42 @@ void ReadOperation::AsyncPreadSome(
     return;
   }
 
-  uint64_t offset_within_block = offset - it->offset();
+  uint64_t offset_within_block = offset - targetBlock.offset();
   uint64_t size_within_block = std::min<uint64_t>(
-      it->b().numbytes() - offset_within_block, asio::buffer_size(buffers));
+      targetBlock.b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
-  AsyncReadBlock<RemoteBlockReaderTrait>(
-      *it, *chosen_dn, offset_within_block,
-      asio::buffer(buffers, size_within_block), handler);
+  //TODO: re-use DN connection
+  dn_ = std::make_shared<DataNodeConnection>(io_service_, *chosen_dn);
+  dn_->Connect([this,handler,targetBlock,offset_within_block,size_within_block, buffers]
+          (Status status, std::shared_ptr<DataNodeConnection> dn) {
+    if (status.ok()) {
+      ReadOperation::AsyncReadBlock<RemoteBlockReaderTrait, MutableBufferSequence, Handler>(
+          dn, client_name_, targetBlock, offset_within_block,
+          asio::buffer(buffers, size_within_block), handler);
+    } else {
+      handler(status, "", 0);
+    }
+  });
 }
 
 template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
 void ReadOperation::AsyncReadBlock(
+    std::shared_ptr<DataNodeConnection> dn, 
+    const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
-    const hadoop::hdfs::DatanodeInfoProto &dn, size_t offset,
+    size_t offset,
     const MutableBufferSequence &buffers, const Handler &handler) {
 
   typedef typename BlockReaderTrait::Reader Reader;
-  auto m =
-      BlockReaderTrait::Connect(io_service_, dn);
+  auto m = BlockReaderTrait::CreatePipeline(dn);
   auto &s = m->state();
+  
   size_t size = asio::buffer_size(buffers);
-  m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name_, nullptr,
+  m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name, nullptr,
                                             &block.b(), size, offset))
-      .Push(new ReadBlockContinuation<Reader, MutableBufferSequence>(
-          s.reader(), buffers, s.transferred()));
-  const std::string &dnid = dn.id().datanodeuuid();
+    .Push(new ReadBlockContinuation<Reader, MutableBufferSequence>(
+        s.reader(), buffers, s.transferred()));
+  const std::string &dnid = dn->uuid_;
   m->Run([handler, dnid](const Status &status,
                          const typename BlockReaderTrait::State &state) {
     handler(status, dnid, *state.transferred());

@@ -24,13 +24,12 @@ using ::hadoop::hdfs::LocatedBlocksProto;
 
 InputStream::~InputStream() {}
 
-ReadOperation::ReadOperation(::asio::io_service *io_service,
-                                 const std::string &client_name,
+InputStreamImpl::InputStreamImpl(::asio::io_service *io_service, const std::string &client_name,
                                  const std::shared_ptr<const struct FileInfo> file_info)
     : io_service_(io_service), client_name_(client_name), file_info_(file_info) {
 }
 
-void ReadOperation::PositionRead(
+void InputStreamImpl::PositionRead(
     void *buf, size_t nbyte, uint64_t offset,
     const std::set<std::string> &excluded_datanodes,
     const std::function<void(const Status &, const std::string &, size_t)>
