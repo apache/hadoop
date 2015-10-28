@@ -17,14 +17,9 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import static org.junit.Assert.assertSame;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.common.base.Supplier;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
-import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -35,7 +30,10 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertSame;
 
 public class TestLeaseRenewer {
   private final String FAKE_AUTHORITY="hdfs://nn1/";

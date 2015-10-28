@@ -1641,6 +1641,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-9297. Update TestBlockMissingException to use corruptBlockOnDataNodesByDeletingBlockFile().
     (Tony Wu via lei)
 
+    HDFS-9168. Move client side unit test to hadoop-hdfs-client. (wheat9)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
