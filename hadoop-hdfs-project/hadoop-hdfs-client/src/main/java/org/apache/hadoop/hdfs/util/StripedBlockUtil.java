@@ -270,8 +270,7 @@ public class StripedBlockUtil {
     // read the full data aligned stripe
     for (int i = 0; i < dataBlkNum; i++) {
       if (alignedStripe.chunks[i] == null) {
-        final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
-        alignedStripe.chunks[i] = new StripingChunk(decodeInputs[decodeIndex]);
+        alignedStripe.chunks[i] = new StripingChunk(decodeInputs[i]);
         alignedStripe.chunks[i].addByteArraySlice(0,
             (int) alignedStripe.getSpanInBlock());
       }
@@ -287,38 +286,17 @@ public class StripedBlockUtil {
    * finalize decode input buffers.
    */
   public static void finalizeDecodeInputs(final byte[][] decodeInputs,
-      int dataBlkNum, int parityBlkNum, AlignedStripe alignedStripe) {
+                                          AlignedStripe alignedStripe) {
     for (int i = 0; i < alignedStripe.chunks.length; i++) {
       final StripingChunk chunk = alignedStripe.chunks[i];
-      final int decodeIndex = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
       if (chunk != null && chunk.state == StripingChunk.FETCHED) {
-        chunk.copyTo(decodeInputs[decodeIndex]);
+        chunk.copyTo(decodeInputs[i]);
       } else if (chunk != null && chunk.state == StripingChunk.ALLZERO) {
-        Arrays.fill(decodeInputs[decodeIndex], (byte) 0);
+        Arrays.fill(decodeInputs[i], (byte) 0);
       } else {
-        decodeInputs[decodeIndex] = null;
+        decodeInputs[i] = null;
       }
     }
-  }
-
-  /**
-   * Currently decoding requires parity chunks are before data chunks.
-   * The indices are opposite to what we store in NN. In future we may
-   * improve the decoding to make the indices order the same as in NN.
-   *
-   * @param index The index to convert
-   * @param dataBlkNum The number of data blocks
-   * @param parityBlkNum The number of parity blocks
-   * @return converted index
-   */
-  public static int convertIndex4Decode(int index, int dataBlkNum,
-      int parityBlkNum) {
-    return index < dataBlkNum ? index + parityBlkNum : index - dataBlkNum;
-  }
-
-  public static int convertDecodeIndexBack(int index, int dataBlkNum,
-      int parityBlkNum) {
-    return index < parityBlkNum ? index + dataBlkNum : index - parityBlkNum;
   }
 
   /**
@@ -333,7 +311,7 @@ public class StripedBlockUtil {
     for (int i = 0; i < dataBlkNum; i++) {
       if (alignedStripe.chunks[i] != null &&
           alignedStripe.chunks[i].state == StripingChunk.MISSING){
-        decodeIndices[pos++] = convertIndex4Decode(i, dataBlkNum, parityBlkNum);
+        decodeIndices[pos++] = i;
       }
     }
     decodeIndices = Arrays.copyOf(decodeIndices, pos);
@@ -345,8 +323,7 @@ public class StripedBlockUtil {
 
     // Step 3: fill original application buffer with decoded data
     for (int i = 0; i < decodeIndices.length; i++) {
-      int missingBlkIdx = convertDecodeIndexBack(decodeIndices[i],
-          dataBlkNum, parityBlkNum);
+      int missingBlkIdx = decodeIndices[i];
       StripingChunk chunk = alignedStripe.chunks[missingBlkIdx];
       if (chunk.state == StripingChunk.MISSING) {
         chunk.copyFrom(decodeOutputs[i]);

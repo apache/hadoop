@@ -40,7 +40,7 @@ public abstract class TestCoderBase {
   private Configuration conf;
   protected int numDataUnits;
   protected int numParityUnits;
-  protected int baseChunkSize = 513;
+  protected int baseChunkSize = 1024;
   private int chunkSize = baseChunkSize;
   private BufferAllocator allocator;
 
@@ -165,7 +165,9 @@ public abstract class TestCoderBase {
     byte[][] erased = toArrays(erasedChunks);
     byte[][] recovered = toArrays(recoveredChunks);
     boolean result = Arrays.deepEquals(erased, recovered);
-    assertTrue("Decoding and comparing failed.", result);
+    if (!result) {
+      assertTrue("Decoding and comparing failed.", result);
+    }
   }
 
   /**
@@ -175,39 +177,41 @@ public abstract class TestCoderBase {
    */
   protected int[] getErasedIndexesForDecoding() {
     int[] erasedIndexesForDecoding =
-        new int[erasedParityIndexes.length + erasedDataIndexes.length];
+        new int[erasedDataIndexes.length + erasedParityIndexes.length];
 
     int idx = 0;
 
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      erasedIndexesForDecoding[idx ++] = erasedParityIndexes[i];
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
+      erasedIndexesForDecoding[idx ++] = erasedDataIndexes[i];
     }
 
-    for (int i = 0; i < erasedDataIndexes.length; i++) {
-      erasedIndexesForDecoding[idx ++] = erasedDataIndexes[i] + numParityUnits;
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      erasedIndexesForDecoding[idx ++] = erasedParityIndexes[i] + numDataUnits;
     }
 
     return erasedIndexesForDecoding;
   }
 
   /**
-   * Return input chunks for decoding, which is parityChunks + dataChunks.
+   * Return input chunks for decoding, which is dataChunks + parityChunks.
    * @param dataChunks
    * @param parityChunks
    * @return
    */
   protected ECChunk[] prepareInputChunksForDecoding(ECChunk[] dataChunks,
                                                   ECChunk[] parityChunks) {
-    ECChunk[] inputChunks = new ECChunk[numParityUnits + numDataUnits];
+    ECChunk[] inputChunks = new ECChunk[numDataUnits + numParityUnits];
     
     int idx = 0;
-    for (int i = 0; i < numParityUnits; i++) {
-      inputChunks[idx ++] = parityChunks[i];
-    }
+
     for (int i = 0; i < numDataUnits; i++) {
       inputChunks[idx ++] = dataChunks[i];
     }
-    
+
+    for (int i = 0; i < numParityUnits; i++) {
+      inputChunks[idx ++] = parityChunks[i];
+    }
+
     return inputChunks;
   }
 
@@ -221,19 +225,19 @@ public abstract class TestCoderBase {
    */
   protected ECChunk[] backupAndEraseChunks(ECChunk[] dataChunks,
                                       ECChunk[] parityChunks) {
-    ECChunk[] toEraseChunks = new ECChunk[erasedParityIndexes.length +
-        erasedDataIndexes.length];
+    ECChunk[] toEraseChunks = new ECChunk[erasedDataIndexes.length +
+        erasedParityIndexes.length];
 
     int idx = 0;
-
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
-      parityChunks[erasedParityIndexes[i]] = null;
-    }
 
     for (int i = 0; i < erasedDataIndexes.length; i++) {
       toEraseChunks[idx ++] = dataChunks[erasedDataIndexes[i]];
       dataChunks[erasedDataIndexes[i]] = null;
+    }
+
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
+      parityChunks[erasedParityIndexes[i]] = null;
     }
 
     return toEraseChunks;

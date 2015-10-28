@@ -235,14 +235,14 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     int idx = 0;
     TestBlock block;
 
-    for (int i = 0; i < erasedParityIndexes.length; i++) {
-      block = parityBlocks[erasedParityIndexes[i]];
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
+      block = dataBlocks[erasedDataIndexes[i]];
       toEraseBlocks[idx ++] = cloneBlockWithData(block);
       eraseDataFromBlock(block);
     }
 
-    for (int i = 0; i < erasedDataIndexes.length; i++) {
-      block = dataBlocks[erasedDataIndexes[i]];
+    for (int i = 0; i < erasedParityIndexes.length; i++) {
+      block = parityBlocks[erasedParityIndexes[i]];
       toEraseBlocks[idx ++] = cloneBlockWithData(block);
       eraseDataFromBlock(block);
     }

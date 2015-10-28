@@ -79,8 +79,6 @@ import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.base.Preconditions;
 
-import static org.apache.hadoop.hdfs.util.StripedBlockUtil.convertIndex4Decode;
-
 /**
  * ErasureCodingWorker handles the erasure coding recovery work commands. These
  * commands would be issued from Namenode as part of Datanode's heart beat
@@ -621,8 +619,7 @@ public final class ErasureCodingWorker {
       int m = 0;
       for (int i = 0; i < targets.length; i++) {
         if (targetsStatus[i]) {
-          result[m++] = convertIndex4Decode(targetIndices[i], 
-              dataBlkNum, parityBlkNum);
+          result[m++] = targetIndices[i];
         }
       }
       return Arrays.copyOf(result, m);
@@ -636,15 +633,13 @@ public final class ErasureCodingWorker {
         StripedReader reader = stripedReaders.get(success[i]);
         ByteBuffer buffer = reader.buffer;
         paddingBufferToLen(buffer, toRecoverLen);
-        inputs[convertIndex4Decode(reader.index, dataBlkNum, parityBlkNum)] = 
-            (ByteBuffer)buffer.flip();
+        inputs[reader.index] = (ByteBuffer)buffer.flip();
       }
       if (success.length < dataBlkNum) {
         for (int i = 0; i < zeroStripeBuffers.length; i++) {
           ByteBuffer buffer = zeroStripeBuffers[i];
           paddingBufferToLen(buffer, toRecoverLen);
-          int index = convertIndex4Decode(zeroStripeIndices[i], dataBlkNum,
-              parityBlkNum);
+          int index = zeroStripeIndices[i];
           inputs[index] = (ByteBuffer)buffer.flip();
         }
       }

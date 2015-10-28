@@ -35,8 +35,8 @@ public interface RawErasureDecoder extends RawErasureCoder {
   /**
    * Decode with inputs and erasedIndexes, generates outputs.
    * How to prepare for inputs:
-   * 1. Create an array containing parity units + data units. Please note the
-   *    parity units should be first or before the data units.
+   * 1. Create an array containing data units + parity units. Please note the
+   *    data units should be first or before the parity units.
    * 2. Set null in the array locations specified via erasedIndexes to indicate
    *    they're erased and no data are to read from;
    * 3. Set null in the array locations for extra redundant items, as they're
@@ -47,8 +47,8 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * For an example using RS (6, 3), assuming sources (d0, d1, d2, d3, d4, d5)
    * and parities (p0, p1, p2), d2 being erased. We can and may want to use only
    * 6 units like (d1, d3, d4, d5, p0, p2) to recover d2. We will have:
-   *     inputs = [p0, null(p1), p2, null(d0), d1, null(d2), d3, d4, d5]
-   *     erasedIndexes = [5] // index of d2 into inputs array
+   *     inputs = [null(d0), d1, null(d2), d3, d4, d5, p0, null(p1), p2]
+   *     erasedIndexes = [2] // index of d2 into inputs array
    *     outputs = [a-writable-buffer]
    *
    * Note, for both inputs and outputs, no mixing of on-heap buffers and direct

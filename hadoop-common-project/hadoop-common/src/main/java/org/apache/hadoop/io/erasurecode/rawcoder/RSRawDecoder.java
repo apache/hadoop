@@ -72,6 +72,35 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
         numParityUnits);
   }
 
+  @Override
+  public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
+                     ByteBuffer[] outputs) {
+    // Make copies avoiding affecting original ones;
+    ByteBuffer[] newInputs = new ByteBuffer[inputs.length];
+    int[] newErasedIndexes = new int[erasedIndexes.length];
+    ByteBuffer[] newOutputs = new ByteBuffer[outputs.length];
+
+    // Adjust the order to match with underlying requirements.
+    adjustOrder(inputs, newInputs,
+        erasedIndexes, newErasedIndexes, outputs, newOutputs);
+
+    super.decode(newInputs, newErasedIndexes, newOutputs);
+  }
+
+  @Override
+  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
+    // Make copies avoiding affecting original ones;
+    byte[][] newInputs = new byte[inputs.length][];
+    int[] newErasedIndexes = new int[erasedIndexes.length];
+    byte[][] newOutputs = new byte[outputs.length][];
+
+    // Adjust the order to match with underlying requirements.
+    adjustOrder(inputs, newInputs,
+        erasedIndexes, newErasedIndexes, outputs, newOutputs);
+
+    super.decode(newInputs, newErasedIndexes, newOutputs);
+  }
+
   private void doDecodeImpl(ByteBuffer[] inputs, int[] erasedIndexes,
                           ByteBuffer[] outputs) {
     ByteBuffer valid = findFirstValidInput(inputs);
@@ -95,7 +124,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
     }
 
     RSUtil.GF.solveVandermondeSystem(errSignature, outputs, outputOffsets,
-            erasedIndexes.length, dataLen);
+        erasedIndexes.length, dataLen);
   }
 
   @Override
@@ -146,7 +175,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
     }
 
     doDecodeImpl(inputs, inputOffsets, dataLen, erasedOrNotToReadIndexes,
-            adjustedByteArrayOutputsParameter, adjustedOutputOffsets);
+        adjustedByteArrayOutputsParameter, adjustedOutputOffsets);
   }
 
   @Override
@@ -198,6 +227,42 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
 
     doDecodeImpl(inputs, erasedOrNotToReadIndexes,
         adjustedDirectBufferOutputsParameter);
+  }
+
+  /*
+   * Convert data units first order to parity units first order.
+   */
+  private <T> void adjustOrder(T[] inputs, T[] inputs2,
+                               int[] erasedIndexes, int[] erasedIndexes2,
+                               T[] outputs, T[] outputs2) {
+    // Example:
+    // d0 d1 d2 d3 d4 d5 : p0 p1 p2 => p0 p1 p2 : d0 d1 d2 d3 d4 d5
+    System.arraycopy(inputs, getNumDataUnits(), inputs2,
+        0, getNumParityUnits());
+    System.arraycopy(inputs, 0, inputs2,
+        getNumParityUnits(), getNumDataUnits());
+
+    int numErasedDataUnits = 0, numErasedParityUnits = 0;
+    int idx = 0;
+    for (int i = 0; i < erasedIndexes.length; i++) {
+      if (erasedIndexes[i] >= getNumDataUnits()) {
+        erasedIndexes2[idx++] = erasedIndexes[i] - getNumDataUnits();
+        numErasedParityUnits++;
+      }
+    }
+    for (int i = 0; i < erasedIndexes.length; i++) {
+      if (erasedIndexes[i] < getNumDataUnits()) {
+        erasedIndexes2[idx++] = erasedIndexes[i] + getNumParityUnits();
+        numErasedDataUnits++;
+      }
+    }
+
+    // Copy for data units
+    System.arraycopy(outputs, numErasedDataUnits, outputs2,
+        0, numErasedParityUnits);
+    // Copy for parity units
+    System.arraycopy(outputs, 0, outputs2,
+        numErasedParityUnits, numErasedDataUnits);
   }
 
   private byte[] checkGetBytesArrayBuffer(int idx, int bufferLen) {

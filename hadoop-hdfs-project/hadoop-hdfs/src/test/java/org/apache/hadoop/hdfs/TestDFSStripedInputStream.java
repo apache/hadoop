@@ -211,32 +211,33 @@ public class TestDFSStripedInputStream {
       }
     }
 
+    RawErasureDecoder rawDecoder = CodecUtil.createRSRawDecoder(conf,
+        DATA_BLK_NUM, PARITY_BLK_NUM);
+
     // Update the expected content for decoded data
     for (int i = 0; i < NUM_STRIPE_PER_BLOCK; i++) {
       byte[][] decodeInputs = new byte[DATA_BLK_NUM + PARITY_BLK_NUM][CELLSIZE];
-      int[] missingBlkIdx = new int[]{failedDNIdx + PARITY_BLK_NUM, 1, 2};
+      int[] missingBlkIdx = new int[]{failedDNIdx, 7, 8};
       byte[][] decodeOutputs = new byte[PARITY_BLK_NUM][CELLSIZE];
       for (int j = 0; j < DATA_BLK_NUM; j++) {
         int posInBuf = i * CELLSIZE * DATA_BLK_NUM + j * CELLSIZE;
         if (j != failedDNIdx) {
-          System.arraycopy(expected, posInBuf, decodeInputs[j + PARITY_BLK_NUM],
-              0, CELLSIZE);
+          System.arraycopy(expected, posInBuf, decodeInputs[j], 0, CELLSIZE);
         }
       }
       for (int k = 0; k < CELLSIZE; k++) {
         int posInBlk = i * CELLSIZE + k;
-        decodeInputs[0][k] = SimulatedFSDataset.simulatedByte(
+        decodeInputs[DATA_BLK_NUM][k] = SimulatedFSDataset.simulatedByte(
             new Block(bg.getBlock().getBlockId() + DATA_BLK_NUM), posInBlk);
       }
       for (int m : missingBlkIdx) {
         decodeInputs[m] = null;
       }
-      RawErasureDecoder rawDecoder = CodecUtil.createRSRawDecoder(conf,
-          DATA_BLK_NUM, PARITY_BLK_NUM);
       rawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
       int posInBuf = i * CELLSIZE * DATA_BLK_NUM + failedDNIdx * CELLSIZE;
       System.arraycopy(decodeOutputs[0], 0, expected, posInBuf, CELLSIZE);
     }
+
     int delta = 10;
     int done = 0;
     // read a small delta, shouldn't trigger decode

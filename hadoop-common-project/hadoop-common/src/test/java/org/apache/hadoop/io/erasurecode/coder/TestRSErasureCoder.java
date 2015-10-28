@@ -33,9 +33,6 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
     this.encoderClass = RSErasureEncoder.class;
     this.decoderClass = RSErasureDecoder.class;
 
-    this.numDataUnits = 10;
-    this.numParityUnits = 1;
-
     this.numChunksInBlock = 10;
   }
 
@@ -119,8 +116,8 @@ public class TestRSErasureCoder extends TestErasureCoderBase {
   }
 
   @Test
-  public void testCodingDirectBuffer_3x3_erasing_d0_p0() {
-    prepare(null, 3, 3, new int[] {0}, new int[] {0});
+  public void testCodingDirectBuffer_6x3_erasing_d0_p0() {
+    prepare(null, 6, 3, new int[] {0}, new int[] {0});
     testCoding(true);
   }
 }
