@@ -62,6 +62,8 @@ Release 2.7.2 - UNRELEASED
     HDFS-9043. Doc updation for commands in HDFS Federation
     (J.Andreina via vinayakumab)
 
+    HDFS-9083. Replication violates block placement policy (Rushabh Shah)
+
     HDFS-9106. Transfer failure during pipeline recovery causes permanent
     write failures (kihwal)
 
