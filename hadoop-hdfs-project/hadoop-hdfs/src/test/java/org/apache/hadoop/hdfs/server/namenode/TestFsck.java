@@ -1646,4 +1646,92 @@ public class TestFsck {
       }
     }
   }
+
+  /**
+   * Test that corrupted snapshot files are listed with full dir.
+   */
+  @Test
+  public void testFsckListCorruptSnapshotFiles() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
+    DistributedFileSystem hdfs = null;
+    final short REPL_FACTOR = 1;
+
+    MiniDFSCluster cluster = null;
+    try {
+      int numFiles = 3;
+      int numSnapshots = 0;
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      hdfs = cluster.getFileSystem();
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName("testGetCorruptFiles").setNumFiles(numFiles).setMaxLevels(1).
+          setMaxSize(1024).build();
+
+      util.createFiles(hdfs, "/corruptData", (short) 1);
+      final Path fp = new Path("/corruptData/file");
+      util.createFile(hdfs, fp, 1024, REPL_FACTOR, 1000L);
+      numFiles++;
+      util.waitReplication(hdfs, "/corruptData", (short) 1);
+
+      hdfs.allowSnapshot(new Path("/corruptData"));
+      hdfs.createSnapshot(new Path("/corruptData"), "mySnapShot");
+      numSnapshots = numFiles;
+
+      String outStr =
+          runFsck(conf, 0, false, "/corruptData", "-list-corruptfileblocks");
+      System.out.println("1. good fsck out: " + outStr);
+      assertTrue(outStr.contains("has 0 CORRUPT files"));
+      // delete the blocks
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
+      for (int i=0; i<numFiles; i++) {
+        for (int j=0; j<=1; j++) {
+          File storageDir = cluster.getInstanceStorageDir(i, j);
+          File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+          List<File> metadataFiles = MiniDFSCluster.getAllBlockMetadataFiles(
+              data_dir);
+          if (metadataFiles == null)
+            continue;
+          for (File metadataFile : metadataFiles) {
+            File blockFile = Block.metaToBlockFile(metadataFile);
+            assertTrue("Cannot remove file.", blockFile.delete());
+            assertTrue("Cannot remove file.", metadataFile.delete());
+          }
+        }
+      }
+      // Delete file when it has a snapshot
+      hdfs.delete(fp, false);
+      numFiles--;
+
+      // wait for the namenode to see the corruption
+      final NamenodeProtocols namenode = cluster.getNameNodeRpc();
+      CorruptFileBlocks corruptFileBlocks = namenode
+          .listCorruptFileBlocks("/corruptData", null);
+      int numCorrupt = corruptFileBlocks.getFiles().length;
+      while (numCorrupt == 0) {
+        Thread.sleep(1000);
+        corruptFileBlocks = namenode
+            .listCorruptFileBlocks("/corruptData", null);
+        numCorrupt = corruptFileBlocks.getFiles().length;
+      }
+
+      // with -includeSnapshots all files are reported
+      outStr = runFsck(conf, -1, true, "/corruptData",
+          "-list-corruptfileblocks", "-includeSnapshots");
+      System.out.println("2. bad fsck include snapshot out: " + outStr);
+      assertTrue(outStr
+          .contains("has " + (numFiles + numSnapshots) + " CORRUPT files"));
+      assertTrue(outStr.contains("/.snapshot/"));
+
+      // without -includeSnapshots only non-snapshots are reported
+      outStr =
+          runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
+      System.out.println("3. bad fsck exclude snapshot out: " + outStr);
+      assertTrue(outStr.contains("has " + numFiles + " CORRUPT files"));
+      assertFalse(outStr.contains("/.snapshot/"));
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
 }

@@ -195,6 +195,7 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
@@ -231,6 +232,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -6235,6 +6237,79 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.warn("Get corrupt file blocks returned error: " + e.getMessage());
     }
     return JSON.toString(list);
+  }
+
+  @Override  // NameNodeMXBean
+  public long getNumberOfSnapshottableDirs() {
+    return snapshotManager.getNumSnapshottableDirs();
+  }
+
+  /**
+   * Get the list of corrupt blocks and corresponding full file path
+   * including snapshots in given snapshottable directories.
+   * @param path Restrict corrupt files to this portion of namespace.
+   * @param snapshottableDirs Snapshottable directories. Passing in null
+   *                          will only return corrupt blocks in non-snapshots.
+   * @param cookieTab Support for continuation; cookieTab tells where
+   *                  to start from.
+   * @return a list in which each entry describes a corrupt file/block
+   * @throws IOException
+   */
+  List<String> listCorruptFileBlocksWithSnapshot(String path,
+      List<String> snapshottableDirs, String[] cookieTab) throws IOException {
+    final Collection<CorruptFileBlockInfo> corruptFileBlocks =
+        listCorruptFileBlocks(path, cookieTab);
+    List<String> list = new ArrayList<String>();
+
+    // Precalculate snapshottableFeature list
+    List<DirectorySnapshottableFeature> lsf = new ArrayList<>();
+    if (snapshottableDirs != null) {
+      for (String snap : snapshottableDirs) {
+        final INode isnap = getFSDirectory().getINode(snap, false);
+        final DirectorySnapshottableFeature sf =
+            isnap.asDirectory().getDirectorySnapshottableFeature();
+        if (sf == null) {
+          throw new SnapshotException(
+              "Directory is not a snapshottable directory: " + snap);
+        }
+        lsf.add(sf);
+      }
+    }
+
+    for (CorruptFileBlockInfo c : corruptFileBlocks) {
+      if (getFileInfo(c.path, true) != null) {
+        list.add(c.toString());
+      }
+      final Collection<String> snaps = FSDirSnapshotOp
+          .getSnapshotFiles(getFSDirectory(), lsf, c.path);
+      if (snaps != null) {
+        for (String snap : snaps) {
+          // follow the syntax of CorruptFileBlockInfo#toString()
+          list.add(c.block.getBlockName() + "\t" + snap);
+        }
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Get the list of snapshottable directories.
+   * @return The list of all the current snapshottable directories
+   * @see #getSnapshottableDirListing()
+   * @throws IOException
+   */
+  List<String> getSnapshottableDirs() throws IOException {
+    List<String> snapshottableDirs = new ArrayList<String>();
+    final FSPermissionChecker pc = getFSDirectory().getPermissionChecker();
+    final String user = pc.isSuperUser() ? null : pc.getUser();
+    final SnapshottableDirectoryStatus[] snapDirs =
+        snapshotManager.getSnapshottableDirListing(user);
+    if (snapDirs != null) {
+      for (SnapshottableDirectoryStatus sds : snapDirs) {
+        snapshottableDirs.add(sds.getFullPath().toString());
+      }
+    }
+    return snapshottableDirs;
   }
 
   @Override  //NameNodeMXBean

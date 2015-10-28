@@ -184,6 +184,14 @@ public class Snapshot implements Comparable<byte[]> {
     public String getFullPathName() {
       return getSnapshotPath(getParent().getFullPathName(), getLocalName());
     }
+
+    /**
+     * Get the full path name of the root directory of this snapshot.
+     * @return full path to the root directory of the snapshot
+     */
+    public String getRootFullPathName() {
+      return getParent().getFullPathName();
+    }
   }
 
   /** Snapshot ID. */
