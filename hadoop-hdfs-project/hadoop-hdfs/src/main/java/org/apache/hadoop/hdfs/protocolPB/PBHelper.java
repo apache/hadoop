@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECRecoveryCommandProto;
@@ -49,13 +50,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailur
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECRecoveryInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaOptionEntryProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
@@ -367,11 +363,16 @@ public class PBHelper {
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
-    ExtendedBlock block = PBHelperClient.convert(b.getBlock().getB());
-    DatanodeInfo[] locs = PBHelperClient.convert(b.getBlock().getLocsList());
-    return (b.hasTruncateBlock()) ?
-        new RecoveringBlock(block, locs, PBHelperClient.convert(b.getTruncateBlock())) :
-        new RecoveringBlock(block, locs, b.getNewGenStamp());
+    LocatedBlock lb = PBHelperClient.convertLocatedBlockProto(b.getBlock());
+    RecoveringBlock rBlock;
+    if (b.hasTruncateBlock()) {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          PBHelperClient.convert(b.getTruncateBlock()));
+    } else {
+      rBlock = new RecoveringBlock(lb.getBlock(), lb.getLocations(),
+          b.getNewGenStamp());
+    }
+    return rBlock;
   }
 
   public static ReplicaState convert(ReplicaStateProto state) {
