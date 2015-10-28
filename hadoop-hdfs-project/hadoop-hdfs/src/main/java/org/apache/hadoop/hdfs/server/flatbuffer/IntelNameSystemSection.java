@@ -50,5 +50,7 @@ public final class IntelNameSystemSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelNameSystemSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

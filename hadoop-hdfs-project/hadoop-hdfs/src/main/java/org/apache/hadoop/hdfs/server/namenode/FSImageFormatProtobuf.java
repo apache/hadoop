@@ -251,7 +251,8 @@ public final class FSImageFormatProtobuf {
         String n = s.name();
         switch (SectionName.fromString(n)) {
           case NS_INFO:
-            loadNameSystemSection(in);
+            loadIntelNameSystemSection(in);
+//            loadNameSystemSection(in);
             break;
           case STRING_TABLE:
             loadStringTableSection(in);
@@ -404,6 +405,31 @@ public final class FSImageFormatProtobuf {
         }
       }
     }
+
+    private void loadIntelNameSystemSection(InputStream in) throws IOException {
+      DataInputStream inputStream=new DataInputStream(in);
+      int len = inputStream.readInt();
+      byte[] data=new byte[len];
+      inputStream.read(data);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+      IntelNameSystemSection intelNameSystemSection = IntelNameSystemSection.getRootAsIntelNameSystemSection(byteBuffer);
+
+      BlockIdManager blockIdManager = fsn.getBlockIdManager();
+      blockIdManager.setGenerationStampV1(intelNameSystemSection.genstampV1());
+      blockIdManager.setGenerationStampV2(intelNameSystemSection.genstampV2());
+      blockIdManager.setGenerationStampV1Limit(intelNameSystemSection.genstampV1Limit());
+      blockIdManager.setLastAllocatedBlockId(intelNameSystemSection.lastAllocatedBlockId());
+      imgTxId = intelNameSystemSection.transactionId();
+      long roll = intelNameSystemSection.rollingUpgradeStartTime();
+      boolean hasRoll = roll != 0;
+      if (hasRoll
+          && fsn.getFSImage().hasRollbackFSImage()) {
+        // we set the rollingUpgradeInfo only when we make sure we have the
+        // rollback image
+        fsn.setRollingUpgradeInfo(true, intelNameSystemSection.rollingUpgradeStartTime());
+      }
+    }
+
 
     private void loadNameSystemSection(InputStream in) throws IOException {
       NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
@@ -807,25 +833,34 @@ public final class FSImageFormatProtobuf {
       final FSNamesystem fsn = context.getSourceNamesystem();
       OutputStream out = sectionOutputStream;
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
-      NameSystemSection.Builder b = NameSystemSection.newBuilder()
-          .setGenstampV1(blockIdManager.getGenerationStampV1())
-          .setGenstampV1Limit(blockIdManager.getGenerationStampV1Limit())
-          .setGenstampV2(blockIdManager.getGenerationStampV2())
-          .setLastAllocatedBlockId(blockIdManager.getLastAllocatedBlockId())
-          .setTransactionId(context.getTxId());
 
-      // We use the non-locked version of getNamespaceInfo here since
-      // the coordinating thread of saveNamespace already has read-locked
-      // the namespace for us. If we attempt to take another readlock
-      // from the actual saver thread, there's a potential of a
-      // fairness-related deadlock. See the comments on HDFS-2223.
-      b.setNamespaceId(fsn.unprotectedGetNamespaceInfo().getNamespaceID());
+      FlatBufferBuilder nsFbb = new FlatBufferBuilder();
+      ByteBuffer byteBuffer = null;
+
+      IntelNameSystemSection.startIntelNameSystemSection(nsFbb);
+      IntelNameSystemSection.addGenstampV1(nsFbb, blockIdManager.getGenerationStampV1());
+      IntelNameSystemSection.addGenstampV1Limit(nsFbb, blockIdManager.getGenerationStampV1Limit());
+      IntelNameSystemSection.addGenstampV2(nsFbb, blockIdManager.getGenerationStampV2());
+      IntelNameSystemSection.addLastAllocatedBlockId(nsFbb, blockIdManager.getLastAllocatedBlockId());
+      IntelNameSystemSection.addTransactionId(nsFbb, context.getTxId());
+      IntelNameSystemSection.addNamespaceId(nsFbb, fsn.unprotectedGetNamespaceInfo().getNamespaceID());
       if (fsn.isRollingUpgrade()) {
-        b.setRollingUpgradeStartTime(fsn.getRollingUpgradeInfo().getStartTime());
+        IntelNameSystemSection.addRollingUpgradeStartTime(nsFbb, fsn.getRollingUpgradeInfo().getStartTime());
       }
-      NameSystemSection s = b.build();
-      s.writeDelimitedTo(out);
+      int offset = IntelNameSystemSection.endIntelNameSystemSection(nsFbb);
+      IntelNameSystemSection.finishIntelNameSystemSectionBuffer(nsFbb, offset);
+      byteBuffer = nsFbb.dataBuffer();
+      int serialLength = byteBuffer.capacity() - byteBuffer.position();
+      byte[] bytes = nsFbb.sizedByteArray();
+      writeTo(bytes, serialLength, underlyingOutputStream);
       return commitIntelSection(SectionName.NS_INFO ,fbb);
+    }
+
+    public static void writeTo(byte[] b, int serialLength , OutputStream outputStream) throws IOException {
+      DataOutputStream dos = new DataOutputStream(outputStream);
+      dos.writeInt(serialLength);
+      dos.write(b);
+      dos.flush();
     }
 
     private int saveIntelNameSystemSectionV2(FlatBufferBuilder fbb) throws IOException{
