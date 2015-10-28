@@ -75,7 +75,7 @@ struct ReadOperation::HandshakeContinuation : continuation::Continuation {
   }
 
   virtual void Run(const Next &next) override {
-    reader_->async_request(client_name_, token_.get(), &block_, length_,
+    reader_->async_request_block(client_name_, token_.get(), &block_, length_,
                            offset_, next);
   }
 

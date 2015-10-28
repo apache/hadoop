@@ -76,7 +76,7 @@ public:
                  uint64_t offset);
 
   template <class ConnectHandler>
-  void async_request(const std::string &client_name,
+  void async_request_block(const std::string &client_name,
                      const hadoop::common::TokenProto *token,
                      const hadoop::hdfs::ExtendedBlockProto *block,
                      uint64_t length, uint64_t offset,

@@ -40,7 +40,7 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
 
 template <class Stream>
 template <class ConnectHandler>
-void RemoteBlockReader<Stream>::async_request(
+void RemoteBlockReader<Stream>::async_request_block(
     const std::string &client_name, const hadoop::common::TokenProto *token,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const ConnectHandler &handler) {
@@ -333,7 +333,7 @@ Status RemoteBlockReader<Stream>::request(
     uint64_t offset) {
   auto stat = std::make_shared<std::promise<Status>>();
   std::future<Status> future(stat->get_future());
-  async_request(client_name, token, block, length, offset,
+  async_request_block(client_name, token, block, length, offset,
                 [stat](const Status &status) { stat->set_value(status); });
   return future.get();
 }

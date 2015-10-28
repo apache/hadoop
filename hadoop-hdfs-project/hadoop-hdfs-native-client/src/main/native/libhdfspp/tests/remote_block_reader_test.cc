@@ -101,7 +101,7 @@ ReadContent(Stream *conn, TokenProto *token, const ExtendedBlockProto &block,
   BlockReaderOptions options;
   auto reader = std::make_shared<RemoteBlockReader<Stream>>(options, conn);
   Status result;
-  reader->async_request("libhdfs++", token, &block, length, offset,
+  reader->async_request_block("libhdfs++", token, &block, length, offset,
                         [buf, reader, handler](const Status &stat) {
                           if (!stat.ok()) {
                             handler(stat, 0);
@@ -203,7 +203,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   BlockReaderOptions options;
   auto reader = std::make_shared<RemoteBlockReader<MockDNConnection> >(options, &conn);
   Status result;
-  reader->async_request(
+  reader->async_request_block(
       "libhdfs++", nullptr, &block, data.size(), 0,
       [buf, reader, &data, &io_service](const Status &stat) {
         ASSERT_TRUE(stat.ok());
