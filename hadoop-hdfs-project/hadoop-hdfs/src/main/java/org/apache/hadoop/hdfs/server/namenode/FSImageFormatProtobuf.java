@@ -252,10 +252,9 @@ public final class FSImageFormatProtobuf {
         switch (SectionName.fromString(n)) {
           case NS_INFO:
             loadIntelNameSystemSection(in);
-//            loadNameSystemSection(in);
             break;
           case STRING_TABLE:
-            loadStringTableSection(in);
+            loadIntelStringTableSection(in);
             break;
           case INODE: {
             currentStep = new Step(StepType.INODES);
@@ -412,8 +411,8 @@ public final class FSImageFormatProtobuf {
       byte[] data=new byte[len];
       inputStream.read(data);
       ByteBuffer byteBuffer = ByteBuffer.wrap(data);
-      IntelNameSystemSection intelNameSystemSection = IntelNameSystemSection.getRootAsIntelNameSystemSection(byteBuffer);
-
+      IntelNameSystemSection intelNameSystemSection =
+          IntelNameSystemSection.getRootAsIntelNameSystemSection(byteBuffer);
       BlockIdManager blockIdManager = fsn.getBlockIdManager();
       blockIdManager.setGenerationStampV1(intelNameSystemSection.genstampV1());
       blockIdManager.setGenerationStampV2(intelNameSystemSection.genstampV2());
@@ -444,6 +443,26 @@ public final class FSImageFormatProtobuf {
         // we set the rollingUpgradeInfo only when we make sure we have the
         // rollback image
         fsn.setRollingUpgradeInfo(true, s.getRollingUpgradeStartTime());
+      }
+    }
+
+    private void loadIntelStringTableSection(InputStream in) throws IOException {
+      DataInputStream dos = new DataInputStream(in);
+      int length = dos.readInt();
+      byte[] bytes = new byte[length];
+      dos.read(bytes);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+      IntelStringTableSection intelSts =
+          IntelStringTableSection.getRootAsIntelStringTableSection(byteBuffer);
+      ctx.stringTable = new String[(int)intelSts.numEntry() + 1];
+      for (int i = 0; i < intelSts.numEntry(); ++i) {
+        DataInputStream dos1 = new DataInputStream(in);
+        int length1 = dos1.readInt();
+        byte[] bytes1 = new byte[length1];
+        dos1.read(bytes1);
+        ByteBuffer byteBuffer1 = ByteBuffer.wrap(bytes1);
+        IntelEntry intelEntry = IntelEntry.getRootAsIntelEntry(byteBuffer1);
+        ctx.stringTable[(int)intelEntry.id()] = intelEntry.str();
       }
     }
 
@@ -919,13 +938,18 @@ public final class FSImageFormatProtobuf {
     private int saveIntelStringTableSection(FlatBufferBuilder fbb)
         throws IOException {
       OutputStream out = sectionOutputStream;
-      StringTableSection.Builder b = StringTableSection.newBuilder()
-          .setNumEntry(saverContext.stringMap.size());
-      b.build().writeDelimitedTo(out);
+      FlatBufferBuilder stsfbb = new FlatBufferBuilder();
+      FlatBufferBuilder entryfbb = new FlatBufferBuilder();
+      int inv = IntelStringTableSection.createIntelStringTableSection(stsfbb, saverContext.stringMap.size());
+      IntelStringTableSection.finishIntelStringTableSectionBuffer(stsfbb, inv);
+      byte[] bytes = stsfbb.sizedByteArray();
+      writeTo(bytes, bytes.length, out);
+
       for (Entry<String, Integer> e : saverContext.stringMap.entrySet()) {
-        StringTableSection.Entry.Builder eb = StringTableSection.Entry
-            .newBuilder().setId(e.getValue()).setStr(e.getKey());
-        eb.build().writeDelimitedTo(out);
+        int offset = IntelEntry.createIntelEntry(entryfbb, e.getValue(), entryfbb.createString(e.getKey()));
+        IntelEntry.finishIntelEntryBuffer(entryfbb, offset);
+        byte[] bytes1 = entryfbb.sizedByteArray();
+        writeTo(bytes1, bytes1.length, out);
       }
       return commitIntelSection(SectionName.STRING_TABLE, fbb);
     }

@@ -31,5 +31,7 @@ public final class IntelEntry extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelEntryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

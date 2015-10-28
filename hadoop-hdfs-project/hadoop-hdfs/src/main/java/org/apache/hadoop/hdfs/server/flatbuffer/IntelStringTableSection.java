@@ -26,5 +26,6 @@ public final class IntelStringTableSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelStringTableSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 
