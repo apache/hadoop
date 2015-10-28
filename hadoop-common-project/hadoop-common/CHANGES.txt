@@ -919,6 +919,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12472. Make GenericTestUtils.assertExceptionContains robust.
     (Steve Loughran via jing9)
 
+    HADOOP-12514. Make static fields in GenericTestUtils for
+    assertExceptionContains() package-private and final.
+    (Mingliang Liu via stevel)
+
     HADOOP-12520. Use XInclude in hadoop-azure test configuration to isolate
     Azure Storage account keys for service integration tests. (cnauroth)
 
