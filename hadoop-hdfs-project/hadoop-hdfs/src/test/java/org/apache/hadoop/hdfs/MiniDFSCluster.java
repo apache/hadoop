@@ -37,6 +37,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_K
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
@@ -869,23 +870,20 @@ public class MiniDFSCluster {
       nameserviceId, nnId);
     destConf.set(key, srcConf.get(key));
 
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        nameserviceId, nnId);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_HTTPS_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
+    copyKey(srcConf, destConf, nameserviceId, nnId,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+  }
+
+  private static void copyKey(Configuration srcConf, Configuration destConf,
+      String nameserviceId, String nnId, String baseKey) {
+    String key = DFSUtil.addKeySuffixes(baseKey, nameserviceId, nnId);
     String val = srcConf.get(key);
-    if (val != null) {
-      destConf.set(key, srcConf.get(key));
-    }
-
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-        nameserviceId, nnId);
-    val = srcConf.get(key);
-    if (val != null) {
-      destConf.set(key, srcConf.get(key));
-    }
-
-    key = DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-        nameserviceId, nnId);
-    val = srcConf.get(key);
     if (val != null) {
       destConf.set(key, srcConf.get(key));
     }

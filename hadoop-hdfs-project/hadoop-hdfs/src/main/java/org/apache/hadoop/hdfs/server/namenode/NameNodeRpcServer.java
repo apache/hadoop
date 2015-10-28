@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.MAX_PATH_DEPTH;
@@ -210,6 +212,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   /** The RPC server that listens to requests from DataNodes */
   private final RPC.Server serviceRpcServer;
   private final InetSocketAddress serviceRPCAddress;
+
+  /** The RPC server that listens to lifeline requests */
+  private final RPC.Server lifelineRpcServer;
+  private final InetSocketAddress lifelineRPCAddress;
   
   /** The RPC server that listens to requests from clients */
   protected final RPC.Server clientRpcServer;
@@ -336,6 +342,42 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRpcServer = null;
       serviceRPCAddress = null;
     }
+
+    InetSocketAddress lifelineRpcAddr = nn.getLifelineRpcServerAddress(conf);
+    if (lifelineRpcAddr != null) {
+      RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
+          ProtobufRpcEngine.class);
+      String bindHost = nn.getLifelineRpcServerBindHost(conf);
+      if (bindHost == null) {
+        bindHost = lifelineRpcAddr.getHostName();
+      }
+      LOG.info("Lifeline RPC server is binding to {}:{}", bindHost,
+          lifelineRpcAddr.getPort());
+
+      int lifelineHandlerCount = conf.getInt(
+          DFS_NAMENODE_LIFELINE_HANDLER_COUNT_KEY,
+          DFS_NAMENODE_LIFELINE_HANDLER_COUNT_DEFAULT);
+
+      lifelineRpcServer = new RPC.Builder(conf)
+          .setProtocol(HAServiceProtocolPB.class)
+          .setInstance(haPbService)
+          .setBindAddress(bindHost)
+          .setPort(lifelineRpcAddr.getPort())
+          .setNumHandlers(lifelineHandlerCount)
+          .setVerbose(false)
+          .setSecretManager(namesystem.getDelegationTokenSecretManager())
+          .build();
+
+      // Update the address with the correct port
+      InetSocketAddress listenAddr = lifelineRpcServer.getListenerAddress();
+      lifelineRPCAddress = new InetSocketAddress(lifelineRpcAddr.getHostName(),
+          listenAddr.getPort());
+      nn.setRpcLifelineServerAddress(conf, lifelineRPCAddress);
+    } else {
+      lifelineRpcServer = null;
+      lifelineRPCAddress = null;
+    }
+
     InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
     String bindHost = nn.getRpcServerBindHost(conf);
     if (bindHost == null) {
@@ -379,12 +421,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
       if (serviceRpcServer != null) {
         serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
       }
+      if (lifelineRpcServer != null) {
+        lifelineRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      }
     }
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddr = clientRpcServer.getListenerAddress();
-      clientRpcAddress = new InetSocketAddress(
-          rpcAddr.getHostName(), listenAddr.getPort());
+    clientRpcAddress = new InetSocketAddress(
+        rpcAddr.getHostName(), listenAddr.getPort());
     nn.setRpcServerAddress(conf, clientRpcAddress);
     
     minimumDataNodeVersion = conf.get(
@@ -416,7 +461,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (serviceRpcServer != null) {
       serviceRpcServer.setTracer(nn.tracer);
     }
- }
+    if (lifelineRpcServer != null) {
+      lifelineRpcServer.setTracer(nn.tracer);
+    }
+  }
+
+  /** Allow access to the lifeline RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getLifelineRpcServer() {
+    return lifelineRpcServer;
+  }
 
   /** Allow access to the client RPC server for testing */
   @VisibleForTesting
@@ -438,6 +492,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (serviceRpcServer != null) {
       serviceRpcServer.start();      
     }
+    if (lifelineRpcServer != null) {
+      lifelineRpcServer.start();
+    }
   }
   
   /**
@@ -447,6 +504,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     clientRpcServer.join();
     if (serviceRpcServer != null) {
       serviceRpcServer.join();      
+    }
+    if (lifelineRpcServer != null) {
+      lifelineRpcServer.join();
     }
   }
 
@@ -460,8 +520,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (serviceRpcServer != null) {
       serviceRpcServer.stop();
     }
+    if (lifelineRpcServer != null) {
+      lifelineRpcServer.stop();
+    }
   }
-  
+
+  InetSocketAddress getLifelineRpcAddress() {
+    return lifelineRPCAddress;
+  }
+
   InetSocketAddress getServiceRpcAddress() {
     return serviceRPCAddress;
   }

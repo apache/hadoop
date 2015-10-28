@@ -121,6 +121,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_BIND_HOST_K
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
@@ -227,6 +229,8 @@ public class NameNode implements NameNodeStatusMXBean {
     DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
+    DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_HTTP_ADDRESS_KEY,
@@ -488,6 +492,21 @@ public class NameNode implements NameNodeStatusMXBean {
   }
 
   /**
+   * Given a configuration get the address of the lifeline RPC server.
+   * If the lifeline RPC is not configured returns null.
+   *
+   * @param conf configuration
+   * @return address or null
+   */
+  InetSocketAddress getLifelineRpcServerAddress(Configuration conf) {
+    String addr = getTrimmedOrNull(conf, DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
+    if (addr == null) {
+      return null;
+    }
+    return NetUtils.createSocketAddr(addr);
+  }
+
+  /**
    * Given a configuration get the address of the service rpc server
    * If the service rpc is not configured returns null
    */
@@ -498,29 +517,60 @@ public class NameNode implements NameNodeStatusMXBean {
   protected InetSocketAddress getRpcServerAddress(Configuration conf) {
     return DFSUtilClient.getNNAddress(conf);
   }
-  
+
+  /**
+   * Given a configuration get the bind host of the lifeline RPC server.
+   * If the bind host is not configured returns null.
+   *
+   * @param conf configuration
+   * @return bind host or null
+   */
+  String getLifelineRpcServerBindHost(Configuration conf) {
+    return getTrimmedOrNull(conf, DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY);
+  }
+
   /** Given a configuration get the bind host of the service rpc server
    *  If the bind host is not configured returns null.
    */
   protected String getServiceRpcServerBindHost(Configuration conf) {
-    String addr = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
-    if (addr == null || addr.isEmpty()) {
-      return null;
-    }
-    return addr;
+    return getTrimmedOrNull(conf, DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
   }
 
   /** Given a configuration get the bind host of the client rpc server
    *  If the bind host is not configured returns null.
    */
   protected String getRpcServerBindHost(Configuration conf) {
-    String addr = conf.getTrimmed(DFS_NAMENODE_RPC_BIND_HOST_KEY);
+    return getTrimmedOrNull(conf, DFS_NAMENODE_RPC_BIND_HOST_KEY);
+  }
+
+  /**
+   * Gets a trimmed value from configuration, or null if no value is defined.
+   *
+   * @param conf configuration
+   * @param key configuration key to get
+   * @return trimmed value, or null if no value is defined
+   */
+  private static String getTrimmedOrNull(Configuration conf, String key) {
+    String addr = conf.getTrimmed(key);
     if (addr == null || addr.isEmpty()) {
       return null;
     }
     return addr;
   }
    
+  /**
+   * Modifies the configuration to contain the lifeline RPC address setting.
+   *
+   * @param conf configuration to modify
+   * @param lifelineRPCAddress lifeline RPC address
+   */
+  void setRpcLifelineServerAddress(Configuration conf,
+      InetSocketAddress lifelineRPCAddress) {
+    LOG.info("Setting lifeline RPC address {}", lifelineRPCAddress);
+    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY,
+        NetUtils.getHostPortString(lifelineRPCAddress));
+  }
+
   /**
    * Modifies the configuration passed to contain the service rpc address setting
    */
