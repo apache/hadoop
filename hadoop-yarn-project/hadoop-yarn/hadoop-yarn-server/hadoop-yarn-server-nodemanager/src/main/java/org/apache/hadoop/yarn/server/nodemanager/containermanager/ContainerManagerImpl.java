@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.common.net.HostAndPort;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -474,7 +475,7 @@ public class ContainerManagerImpl extends CompositeService implements
       //hostname found when querying for our hostname with the specified
       //address, combine the specified address with the actual port listened
       //on by the server
-      hostOverride = nmAddress.split(":")[0];
+      hostOverride = HostAndPort.fromString(nmAddress).getHostText();
     }
 
     // setup node ID

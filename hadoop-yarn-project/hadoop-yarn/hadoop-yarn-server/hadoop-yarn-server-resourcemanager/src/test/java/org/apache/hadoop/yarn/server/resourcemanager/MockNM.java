@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -75,8 +76,10 @@ public class MockNM {
     this.vCores = vcores;
     this.resourceTracker = resourceTracker;
     this.version = version;
-    String[] splits = nodeIdStr.split(":");
-    nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
+    HostAndPort hostAndPort = HostAndPort.fromString(nodeIdStr);
+    String hostPortStr = hostAndPort.toString();
+    String host = hostPortStr.substring(0, hostPortStr.lastIndexOf(":"));
+    nodeId = BuilderUtils.newNodeId(host, hostAndPort.getPort());
   }
 
   public NodeId getNodeId() {

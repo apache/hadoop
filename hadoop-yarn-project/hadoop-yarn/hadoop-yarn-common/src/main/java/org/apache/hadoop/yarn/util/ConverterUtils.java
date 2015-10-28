@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
+import com.google.common.net.HostAndPort;
 
 /**
  * This class contains a set of utilities which help converting data structures
@@ -152,26 +153,27 @@ public class ConverterUtils {
   public static String toString(ContainerId cId) {
     return cId == null ? null : cId.toString();
   }
-  
+
   public static NodeId toNodeIdWithDefaultPort(String nodeIdStr) {
-    if (nodeIdStr.indexOf(":") < 0) {
-      return toNodeId(nodeIdStr + ":0");
-    }
-    return toNodeId(nodeIdStr);
+    HostAndPort hp = HostAndPort.fromString(nodeIdStr);
+    hp = hp.withDefaultPort(0);
+    return toNodeId(hp.toString());
   }
 
   public static NodeId toNodeId(String nodeIdStr) {
-    String[] parts = nodeIdStr.split(":");
-    if (parts.length != 2) {
+    HostAndPort hp = HostAndPort.fromString(nodeIdStr);
+    if (!hp.hasPort()) {
       throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
           + "]. Expected host:port");
     }
     try {
+      String hostPortStr = hp.toString();
+      String host = hostPortStr.substring(0, hostPortStr.lastIndexOf(":"));
       NodeId nodeId =
-          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
+          NodeId.newInstance(host, hp.getPort());
       return nodeId;
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
+      throw new IllegalArgumentException("Invalid port: " + hp.getPort(), e);
     }
   }
 

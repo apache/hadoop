@@ -29,18 +29,20 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 
 public class AmFilterInitializer extends FilterInitializer {
   private static final String FILTER_NAME = "AM_PROXY_FILTER";
   private static final String FILTER_CLASS = AmIpFilter.class.getCanonicalName();
-  
+
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
     Map<String, String> params = new HashMap<>();
     List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
     StringBuilder sb = new StringBuilder();
     for (String proxy : proxies) {
-      sb.append(proxy.split(":")[0]).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+      sb.append(HostAndPort.fromString(proxy).getHostText())
+          .append(AmIpFilter.PROXY_HOSTS_DELIMITER);
     }
     sb.setLength(sb.length() - 1);
     params.put(AmIpFilter.PROXY_HOSTS, sb.toString());

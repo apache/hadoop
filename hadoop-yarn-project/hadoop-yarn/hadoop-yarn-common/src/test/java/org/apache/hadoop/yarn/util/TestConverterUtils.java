@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.junit.Test;
 
 public class TestConverterUtils {
-  
+
   @Test
   public void testConvertUrlWithNoPort() throws URISyntaxException {
     Path expectedPath = new Path("hdfs://foo.com");
@@ -90,14 +90,22 @@ public class TestConverterUtils {
   @Test
   public void testNodeIdWithDefaultPort() throws URISyntaxException {
     NodeId nid;
-    
+
     nid = ConverterUtils.toNodeIdWithDefaultPort("node:10");
     assertEquals(nid.getPort(), 10);
     assertEquals(nid.getHost(), "node");
-    
+
     nid = ConverterUtils.toNodeIdWithDefaultPort("node");
     assertEquals(nid.getPort(), 0);
     assertEquals(nid.getHost(), "node");
+
+    nid = ConverterUtils.toNodeIdWithDefaultPort("[2401:db00:20:a01e:face:0:5:0]:10");
+    assertEquals(nid.getPort(), 10);
+    assertEquals(nid.getHost(), "[2401:db00:20:a01e:face:0:5:0]");
+
+    nid = ConverterUtils.toNodeIdWithDefaultPort("[2401:db00:20:a01e:face:0:5:0]");
+    assertEquals(nid.getPort(), 0);
+    assertEquals(nid.getHost(), "[2401:db00:20:a01e:face:0:5:0]");
   }
 
   @Test(expected = IllegalArgumentException.class)

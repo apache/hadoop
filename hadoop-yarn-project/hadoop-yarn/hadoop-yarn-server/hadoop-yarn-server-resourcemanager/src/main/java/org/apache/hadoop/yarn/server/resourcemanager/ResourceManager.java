@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -962,9 +963,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
-      String[] proxyParts = proxyHostAndPort.split(":");
-      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
-
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE,
+          HostAndPort.fromString(proxyHostAndPort).getHostText());
     }
     webApp = builder.start(new RMWebApp(this));
   }
