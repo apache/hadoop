@@ -724,7 +724,7 @@ public final class FSImageFormatProtobuf {
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.CACHE_POOLS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      listSection.add(saveIntelCacheManagerSection(fbb));
+      listSection.add(saveIntelCacheManagerSection(fbb)); //success
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       listSection.add(saveIntelStringTableSection(fbb));  // success
       flushSectionOutputStream();
