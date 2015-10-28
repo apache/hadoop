@@ -252,9 +252,9 @@ public class MiniYARNCluster extends CompositeService {
       resourceManagers[i] = createResourceManager();
       if (!useFixedPorts) {
         if (HAUtil.isHAEnabled(conf)) {
-          setHARMConfiguration(i, conf);
+          setHARMConfigurationWithEphemeralPorts(i, conf);
         } else {
-          setNonHARMConfiguration(conf);
+          setNonHARMConfigurationWithEphemeralPorts(conf);
         }
       }
       addService(new ResourceManagerWrapper(i));
@@ -274,7 +274,7 @@ public class MiniYARNCluster extends CompositeService {
         conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
   }
 
-  private void setNonHARMConfiguration(Configuration conf) {
+  private void setNonHARMConfigurationWithEphemeralPorts(Configuration conf) {
     String hostname = MiniYARNCluster.getHostname();
     conf.set(YarnConfiguration.RM_ADDRESS, hostname + ":0");
     conf.set(YarnConfiguration.RM_ADMIN_ADDRESS, hostname + ":0");
@@ -283,7 +283,7 @@ public class MiniYARNCluster extends CompositeService {
     WebAppUtils.setRMWebAppHostnameAndPort(conf, hostname, 0);
   }
 
-  private void setHARMConfiguration(final int index, Configuration conf) {
+  private void setHARMConfigurationWithEphemeralPorts(final int index, Configuration conf) {
     String hostname = MiniYARNCluster.getHostname();
     for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
       conf.set(HAUtil.addSuffix(confKey, rmIds[index]), hostname + ":0");
@@ -704,6 +704,12 @@ public class MiniYARNCluster extends CompositeService {
           MemoryTimelineStore.class, TimelineStore.class);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
           MemoryTimelineStateStore.class, TimelineStateStore.class);
+      if (!useFixedPorts) {
+        String hostname = MiniYARNCluster.getHostname();
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, hostname
+            + ":0");
+      }
       appHistoryServer.init(conf);
       super.serviceInit(conf);
     }
