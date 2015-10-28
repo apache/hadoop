@@ -1293,6 +1293,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12178. NPE during handling of SASL setup if problem with SASL
     resolver class. (Steve Loughran via zxu)
 
+    HADOOP-12519. hadoop-azure tests should avoid creating a metrics
+    configuration file in the module root directory. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
