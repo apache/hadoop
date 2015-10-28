@@ -226,18 +226,25 @@ following failure message:
 
 To resolve this, restart the Azure Emulator.  Ensure it v3.2 or later.
 
-It's also possible to run tests against a live Azure Storage account by adding
-credentials to `src/test/resources/azure-test.xml` and setting
+It's also possible to run tests against a live Azure Storage account by saving a
+file to `src/test/resources/azure-auth-keys.xml` and setting
 `fs.azure.test.account.name` to the name of the storage account.
 
 For example:
 
-    <property>
-      <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-      <value>YOUR ACCESS KEY</value>
-    </property>
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+    <configuration>
+      <property>
+        <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
+        <value>YOUR ACCESS KEY</value>
+      </property>
 
-    <property>
-      <name>fs.azure.test.account.name</name>
-      <value>youraccount</value>
-    </property>
+      <property>
+        <name>fs.azure.test.account.name</name>
+        <value>youraccount</value>
+      </property>
+    </configuration>
+
+DO NOT ADD azure-auth-keys.xml TO REVISION CONTROL.  The keys to your Azure
+Storage account are a secret and must not be shared.
