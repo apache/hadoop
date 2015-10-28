@@ -2170,6 +2170,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9231. fsck doesn't list correct file path when Bad Replicas/Blocks
     are in a snapshot. (Xiao Chen via Yongjun Zhang)
 
+    HDFS-9302. WebHDFS throws NullPointerException if newLength is not
+    provided. (Jagadesh Kiran N via yliu)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

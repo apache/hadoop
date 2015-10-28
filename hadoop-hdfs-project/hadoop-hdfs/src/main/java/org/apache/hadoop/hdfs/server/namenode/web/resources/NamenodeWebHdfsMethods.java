@@ -707,6 +707,10 @@ public class NamenodeWebHdfsMethods {
     }
     case TRUNCATE:
     {
+      if (newLength.getValue() == null) {
+        throw new IllegalArgumentException(
+            "newLength parameter is Missing");
+      }
       // We treat each rest request as a separate client.
       final boolean b = np.truncate(fullpath, newLength.getValue(), 
           "DFSClient_" + DFSUtil.getSecureRandom().nextLong());
