@@ -51,6 +51,7 @@ include_directories(
   third_party/asio-1.10.2/include
   third_party/gmock-1.7.0
   ${OPENSSL_INCLUDE_DIR}
+  ../libhdfs/include
 )
 
 set(PROTO_HDFS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../../../hadoop-hdfs-client/src/main/proto)
