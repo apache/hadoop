@@ -549,6 +549,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3216. Max-AM-Resource-Percentage should respect node labels. 
     (Sunil G via wangda)
 
+    YARN-4310. FairScheduler: Log skipping reservation messages at DEBUG level (asuresh)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
