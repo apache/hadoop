@@ -1133,6 +1133,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4041. Slow delegation token renewal can severely prolong RM recovery
     (Sunil G via jlowe)
 
+    YARN-2902. Killing a container that is localizing can orphan resources in
+    the DOWNLOADING state (Varun Saxena via jlowe)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES

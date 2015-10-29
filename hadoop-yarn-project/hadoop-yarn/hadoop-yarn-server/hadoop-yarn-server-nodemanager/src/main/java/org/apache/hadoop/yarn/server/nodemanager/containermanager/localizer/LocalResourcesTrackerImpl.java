@@ -187,6 +187,16 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
     rsrc.handle(event);
 
+    // Remove the resource if its downloading and its reference count has
+    // become 0 after RELEASE. This maybe because a container was killed while
+    // localizing and no other container is referring to the resource.
+    if (event.getType() == ResourceEventType.RELEASE) {
+      if (rsrc.getState() == ResourceState.DOWNLOADING &&
+          rsrc.getRefCount() <= 0) {
+        removeResource(req);
+      }
+    }
+
     if (event.getType() == ResourceEventType.LOCALIZED) {
       if (rsrc.getLocalPath() != null) {
         try {
