@@ -20,6 +20,7 @@
 
 #include "datatransfer.h"
 #include "common/continuation/asio.h"
+#include "common/continuation/async_stream.h"
 #include "common/continuation/protobuf.h"
 
 #include <asio/buffers_iterator.hpp>
@@ -38,9 +39,8 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
                const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
                uint64_t offset);
 
-template <class Stream>
 template <class ConnectHandler>
-void RemoteBlockReader<Stream>::async_request_block(
+void RemoteBlockReader::async_request_block(
     const std::string &client_name, const hadoop::common::TokenProto *token,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset, const ConnectHandler &handler) {
@@ -65,15 +65,14 @@ void RemoteBlockReader<Stream>::async_request_block(
                                         token, block, length, offset));
 
   auto read_pb_message =
-      new continuation::ReadDelimitedPBMessageContinuation<Stream, 16384>(
+      new continuation::ReadDelimitedPBMessageContinuation<DataNodeConnection, 16384>(
           stream_, &s->response);
 
-  m->Push(asio_continuation::Write(stream_, asio::buffer(s->header)))
+  m->Push(async_stream_continuation::Write(stream_, asio::buffer(s->header)))
       .Push(asio_continuation::WriteDelimitedPBMessage(stream_, &s->request))
       .Push(read_pb_message);
 
-  m->Run([this, handler, offset](const Status &status, const State &s) {
-    Status stat = status;
+  m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
     if (stat.ok()) {
       const auto &resp = s.response;
       if (resp.status() == ::hadoop::hdfs::Status::SUCCESS) {
@@ -90,10 +89,9 @@ void RemoteBlockReader<Stream>::async_request_block(
   });
 }
 
-template <class Stream>
-struct RemoteBlockReader<Stream>::ReadPacketHeader
+struct RemoteBlockReader::ReadPacketHeader
     : continuation::Continuation {
-  ReadPacketHeader(RemoteBlockReader<Stream> *parent) : parent_(parent) {}
+  ReadPacketHeader(RemoteBlockReader *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     parent_->packet_data_read_bytes_ = 0;
@@ -113,7 +111,7 @@ struct RemoteBlockReader<Stream>::ReadPacketHeader
       next(status);
     };
 
-    asio::async_read(*parent_->stream_, asio::buffer(buf_),
+    parent_->stream_->async_read(asio::buffer(buf_),
                      std::bind(&ReadPacketHeader::CompletionHandler, this,
                                std::placeholders::_1, std::placeholders::_2),
                      handler);
@@ -127,7 +125,7 @@ private:
   static const size_t kHeaderLenSize = sizeof(int16_t);
   static const size_t kHeaderStart = kPayloadLenSize + kHeaderLenSize;
 
-  RemoteBlockReader<Stream> *parent_;
+  RemoteBlockReader *parent_;
   std::array<char, kMaxHeaderSize> buf_;
 
   size_t packet_length() const {
@@ -149,9 +147,8 @@ private:
   }
 };
 
-template <class Stream>
-struct RemoteBlockReader<Stream>::ReadChecksum : continuation::Continuation {
-  ReadChecksum(RemoteBlockReader<Stream> *parent) : parent_(parent) {}
+struct RemoteBlockReader::ReadChecksum : continuation::Continuation {
+  ReadChecksum(RemoteBlockReader *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     auto parent = parent_;
@@ -172,20 +169,19 @@ struct RemoteBlockReader<Stream>::ReadChecksum : continuation::Continuation {
     };
     parent->checksum_.resize(parent->packet_len_ - sizeof(int) -
                              parent->header_.datalen());
-    asio::async_read(*parent->stream_, asio::buffer(parent->checksum_),
+    parent->stream_->async_read(asio::buffer(parent->checksum_),
                      handler);
   }
 
 private:
-  RemoteBlockReader<Stream> *parent_;
+  RemoteBlockReader *parent_;
 };
 
-template <class Stream>
-struct RemoteBlockReader<Stream>::ReadPadding : continuation::Continuation {
-  ReadPadding(RemoteBlockReader<Stream> *parent)
+struct RemoteBlockReader::ReadPadding : continuation::Continuation {
+  ReadPadding(RemoteBlockReader *parent)
       : parent_(parent), padding_(parent->chunk_padding_bytes_),
         bytes_transferred_(std::make_shared<size_t>(0)),
-        read_data_(new ReadData<asio::mutable_buffers_1>(
+        read_data_(new ReadData(
             parent, bytes_transferred_, asio::buffer(padding_))) {}
 
   virtual void Run(const Next &next) override {
@@ -207,7 +203,7 @@ struct RemoteBlockReader<Stream>::ReadPadding : continuation::Continuation {
   }
 
 private:
-  RemoteBlockReader<Stream> *parent_;
+  RemoteBlockReader *parent_;
   std::vector<char> padding_;
   std::shared_ptr<size_t> bytes_transferred_;
   std::shared_ptr<continuation::Continuation> read_data_;
@@ -215,12 +211,11 @@ private:
   ReadPadding &operator=(const ReadPadding &) = delete;
 };
 
-template <class Stream>
-template <class MutableBufferSequence>
-struct RemoteBlockReader<Stream>::ReadData : continuation::Continuation {
-  ReadData(RemoteBlockReader<Stream> *parent,
+
+struct RemoteBlockReader::ReadData : continuation::Continuation {
+  ReadData(RemoteBlockReader *parent,
            std::shared_ptr<size_t> bytes_transferred,
-           const MutableBufferSequence &buf)
+           const asio::mutable_buffer &buf)
       : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {}
 
   virtual void Run(const Next &next) override {
@@ -241,19 +236,19 @@ struct RemoteBlockReader<Stream>::ReadData : continuation::Continuation {
 
     auto data_len =
         parent_->header_.datalen() - parent_->packet_data_read_bytes_;
-    async_read(*parent_->stream_, buf_, asio::transfer_exactly(data_len),
+    parent_->stream_->async_read(buf_, asio::transfer_exactly(data_len),
                handler);
   }
 
 private:
-  RemoteBlockReader<Stream> *parent_;
+  RemoteBlockReader *parent_;
   std::shared_ptr<size_t> bytes_transferred_;
   MutableBufferSequence buf_;
 };
 
-template <class Stream>
-struct RemoteBlockReader<Stream>::AckRead : continuation::Continuation {
-  AckRead(RemoteBlockReader<Stream> *parent) : parent_(parent) {}
+
+struct RemoteBlockReader::AckRead : continuation::Continuation {
+  AckRead(RemoteBlockReader *parent) : parent_(parent) {}
 
   virtual void Run(const Next &next) override {
     if (parent_->bytes_to_read_ > 0) {
@@ -273,19 +268,19 @@ struct RemoteBlockReader<Stream>::AckRead : continuation::Continuation {
     m->Run([this, next](const Status &status,
                         const hadoop::hdfs::ClientReadStatusProto &) {
       if (status.ok()) {
-        parent_->state_ = RemoteBlockReader<Stream>::kFinished;
+        parent_->state_ = RemoteBlockReader::kFinished;
       }
       next(status);
     });
   }
 
 private:
-  RemoteBlockReader<Stream> *parent_;
+  RemoteBlockReader *parent_;
 };
 
-template <class Stream>
+
 template <class MutableBufferSequence, class ReadHandler>
-void RemoteBlockReader<Stream>::async_read_packet(
+void RemoteBlockReader::async_read_packet(
     const MutableBufferSequence &buffers, const ReadHandler &handler) {
   assert(state_ != kOpen && "Not connected");
 
@@ -308,10 +303,10 @@ void RemoteBlockReader<Stream>::async_read_packet(
   });
 }
 
-template <class Stream>
+
 template <class MutableBufferSequence>
 size_t
-RemoteBlockReader<Stream>::read_packet(const MutableBufferSequence &buffers,
+RemoteBlockReader::read_packet(const MutableBufferSequence &buffers,
                                      Status *status) {
   size_t transferred = 0;
   auto done = std::make_shared<std::promise<void>>();
@@ -326,8 +321,8 @@ RemoteBlockReader<Stream>::read_packet(const MutableBufferSequence &buffers,
   return transferred;
 }
 
-template <class Stream>
-Status RemoteBlockReader<Stream>::request_block(
+
+Status RemoteBlockReader::request_block(
     const std::string &client_name, const hadoop::common::TokenProto *token,
     const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
     uint64_t offset) {

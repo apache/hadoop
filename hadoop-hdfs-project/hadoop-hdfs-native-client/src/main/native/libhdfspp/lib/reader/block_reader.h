@@ -55,11 +55,10 @@ struct BlockReaderOptions {
       : verify_checksum(true), encryption_scheme(EncryptionScheme::kNone) {}
 };
 
-template <class Stream>
 class RemoteBlockReader
-    : public std::enable_shared_from_this<RemoteBlockReader<Stream>> {
+    : public std::enable_shared_from_this<RemoteBlockReader> {
 public:
-  explicit RemoteBlockReader(const BlockReaderOptions &options, Stream *stream)
+  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> stream)
       : stream_(stream), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
@@ -86,7 +85,7 @@ private:
   struct ReadPacketHeader;
   struct ReadChecksum;
   struct ReadPadding;
-  template <class MutableBufferSequence> struct ReadData;
+  struct ReadData;
   struct AckRead;
   enum State {
     kOpen,
@@ -97,7 +96,7 @@ private:
     kFinished,
   };
 
-  Stream *stream_;
+  std::shared_ptr<DataNodeConnection> stream_;
   hadoop::hdfs::PacketHeaderProto header_;
   State state_;
   BlockReaderOptions options_;

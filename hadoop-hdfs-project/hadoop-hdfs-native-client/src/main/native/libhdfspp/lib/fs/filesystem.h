@@ -89,7 +89,26 @@ private:
 };
 
 
-class DataNodeConnectionImpl : public std::enable_shared_from_this<DataNodeConnectionImpl> {
+class DataNodeConnection {
+public:
+    std::string uuid_;
+
+    virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
+    virtual void async_read(const asio::mutable_buffer	& buffers,
+               std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completed_handler) = 0;
+    virtual void async_read(const asio::mutable_buffer	& buffers,
+               std::function<bool (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completion_handler,
+               std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completed_handler) = 0;
+    virtual void async_write(const asio::const_buffer & buffers, 
+               std::function<void (const asio::error_code &ec, size_t)> handler) = 0;
+    
+};
+
+
+class DataNodeConnectionImpl : public DataNodeConnection, std::enable_shared_from_this<DataNodeConnectionImpl> {
 public:
     std::unique_ptr<asio::ip::tcp::socket> conn_;
     std::array<asio::ip::tcp::endpoint, 1> endpoints_;
@@ -106,7 +125,7 @@ public:
       uuid_ = dn_proto.id().datanodeuuid();
     }
 
-    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnectionImpl> dn)> handler);
+    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
 };
 
 /*
@@ -139,7 +158,7 @@ private:
 
 class ReadOperation {
 public:
-  template <class BlockReaderTrait, class DataNodeConnection, class MutableBufferSequence, class Handler>
+  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
   static void AsyncReadBlock(
     std::shared_ptr<DataNodeConnection> dn,
     const std::string & client_name,
