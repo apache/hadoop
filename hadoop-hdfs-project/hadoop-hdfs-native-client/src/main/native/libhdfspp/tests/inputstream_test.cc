@@ -88,7 +88,6 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   auto file_info = std::make_shared<struct FileInfo>();
   LocatedBlocksProto blocks;
   LocatedBlockProto block;
-  DatanodeInfoProto dn;
   char buf[4096] = {
       0,
   };
@@ -117,123 +116,113 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   read = 0;
 }
 
-//TEST(InputStreamTest, TestReadMultipleTrunk) {
-//  auto file_info = std::make_shared<struct FileInfo>();
-//  LocatedBlockProto block;
-//  DatanodeInfoProto dn;
-//  char buf[4096] = {
-//      0,
-//  };
-//  IoServiceImpl io_service;
-//  Options options;
-//  FileSystemImpl fs(&io_service, options);
-//  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
-//  Status stat;
-//  size_t read = 0;
-//  struct Trait {
-//    static void InitializeMockReader(MockReader *reader) {
-//      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-//          .WillOnce(InvokeArgument<5>(Status::OK()));
-//
-//      EXPECT_CALL(*reader, async_read_packet(_, _))
-//          .Times(4)
-//          .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
-//    }
-//  };
-//
-//  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-//       block, dn, 0, asio::buffer(buf, sizeof(buf)),
-//      [&stat, &read](const Status &status, const std::string &,
-//                     size_t transferred) {
-//        stat = status;
-//        read = transferred;
-//      });
-//  ASSERT_TRUE(stat.ok());
-//  ASSERT_EQ(sizeof(buf), read);
-//  read = 0;
-//}
-//
-//TEST(InputStreamTest, TestReadError) {
-//  auto file_info = std::make_shared<struct FileInfo>();
-//  LocatedBlockProto block;
-//  DatanodeInfoProto dn;
-//  char buf[4096] = {
-//      0,
-//  };
-//  IoServiceImpl io_service;
-//  Options options;
-//  FileSystemImpl fs(&io_service, options);
-//  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
-//  Status stat;
-//  size_t read = 0;
-//  struct Trait {
-//    static void InitializeMockReader(MockReader *reader) {
-//      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-//          .WillOnce(InvokeArgument<5>(Status::OK()));
-//
-//      EXPECT_CALL(*reader, async_read_packet(_, _))
-//          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-//          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-//          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
-//          .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
-//    }
-//  };
-//
-//  is.AsyncReadBlock<MockBlockReaderTrait<Trait>>(
-//       block, dn, 0, asio::buffer(buf, sizeof(buf)),
-//      [&stat, &read](const Status &status, const std::string &,
-//                     size_t transferred) {
-//        stat = status;
-//        read = transferred;
-//      });
-//  ASSERT_FALSE(stat.ok());
-//  ASSERT_EQ(sizeof(buf) / 4 * 3, read);
-//  read = 0;
-//}
-//
-//TEST(InputStreamTest, TestExcludeDataNode) {
-//  auto file_info = std::make_shared<struct FileInfo>();
-//  file_info->blocks_.push_back(LocatedBlockProto());
-//  LocatedBlockProto & block = file_info->blocks_[0];
-//  ExtendedBlockProto *b = block.mutable_b();
-//  b->set_poolid("");
-//  b->set_blockid(1);
-//  b->set_generationstamp(1);
-//  b->set_numbytes(4096);
-//
-//  DatanodeInfoProto *di = block.add_locs();
-//  DatanodeIDProto *dnid = di->mutable_id();
-//  dnid->set_datanodeuuid("foo");
-//
-//  char buf[4096] = {
-//      0,
-//  };
-//  IoServiceImpl io_service;
-//  Options options;
-//  FileSystemImpl fs(&io_service, options);
-//  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
-//  Status stat;
-//  size_t read = 0;
-//  struct Trait {
-//    static void InitializeMockReader(MockReader *reader) {
-//      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-//          .WillOnce(InvokeArgument<5>(Status::OK()));
-//
-//      EXPECT_CALL(*reader, async_read_packet(_, _))
-//          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
-//    }
-//  };
-//
-//
-//  std::set<std::string> excluded_dn({"foo"});
-//  is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), excluded_dn,
-//      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
-//        stat = status;
-//        read = transferred;
-//      });
-//  ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
-//  ASSERT_EQ(0UL, read);
-//}
+TEST(InputStreamTest, TestReadMultipleTrunk) {
+  LocatedBlockProto block;
+  char buf[4096] = {
+      0,
+  };
+  Status stat;
+  size_t read = 0;
+  struct Trait {
+    static void InitializeMockReader(MockReader *reader) {
+      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
+          .WillOnce(InvokeArgument<5>(Status::OK()));
+
+      EXPECT_CALL(*reader, async_read_packet(_, _))
+          .Times(4)
+          .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
+    }
+  };
+
+  auto conn = std::make_shared<MockDataNodeConnection>();
+  ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
+       conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_TRUE(stat.ok());
+  ASSERT_EQ(sizeof(buf), read);
+  read = 0;
+}
+
+TEST(InputStreamTest, TestReadError) {
+  LocatedBlockProto block;
+  char buf[4096] = {
+      0,
+  };
+  Status stat;
+  size_t read = 0;
+  struct Trait {
+    static void InitializeMockReader(MockReader *reader) {
+      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
+          .WillOnce(InvokeArgument<5>(Status::OK()));
+
+      EXPECT_CALL(*reader, async_read_packet(_, _))
+          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
+          .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
+    }
+  };
+
+  auto conn = std::make_shared<MockDataNodeConnection>();
+  ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
+       conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+      [&stat, &read](const Status &status, const std::string &,
+                     size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_FALSE(stat.ok());
+  ASSERT_EQ(sizeof(buf) / 4 * 3, read);
+  read = 0;
+}
+
+TEST(InputStreamTest, TestExcludeDataNode) {
+  auto file_info = std::make_shared<struct FileInfo>();
+  file_info->blocks_.push_back(LocatedBlockProto());
+  LocatedBlockProto & block = file_info->blocks_[0];
+  ExtendedBlockProto *b = block.mutable_b();
+  b->set_poolid("");
+  b->set_blockid(1);
+  b->set_generationstamp(1);
+  b->set_numbytes(4096);
+
+  DatanodeInfoProto *di = block.add_locs();
+  DatanodeIDProto *dnid = di->mutable_id();
+  dnid->set_datanodeuuid("foo");
+
+  char buf[4096] = {
+      0,
+  };
+  IoServiceImpl io_service;
+  Options options;
+  FileSystemImpl fs(&io_service, options);
+  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
+  Status stat;
+  size_t read = 0;
+  struct Trait {
+    static void InitializeMockReader(MockReader *reader) {
+      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
+          .WillOnce(InvokeArgument<5>(Status::OK()));
+
+      EXPECT_CALL(*reader, async_read_packet(_, _))
+          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
+    }
+  };
+
+
+  std::set<std::string> excluded_dn({"foo"});
+  is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), excluded_dn,
+      [&stat, &read](const Status &status, const std::string &, size_t transferred) {
+        stat = status;
+        read = transferred;
+      });
+  ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
+  ASSERT_EQ(0UL, read);
+}
 
 int main(int argc, char *argv[]) {
   // The following line must be executed to initialize Google Mock
