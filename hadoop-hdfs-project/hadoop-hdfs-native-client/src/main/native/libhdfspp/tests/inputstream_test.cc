@@ -190,6 +190,7 @@ TEST(InputStreamTest, TestExcludeDataNode) {
   b->set_generationstamp(1);
   b->set_numbytes(4096);
 
+  // Set up the one block to have one datanode holding it
   DatanodeInfoProto *di = block.add_locs();
   DatanodeIDProto *dnid = di->mutable_id();
   dnid->set_datanodeuuid("foo");
@@ -198,28 +199,19 @@ TEST(InputStreamTest, TestExcludeDataNode) {
       0,
   };
   IoServiceImpl io_service;
-  Options options;
-  FileSystemImpl fs(&io_service, options);
   InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
   Status stat;
   size_t read = 0;
-  struct Trait {
-    static void InitializeMockReader(MockReader *reader) {
-      EXPECT_CALL(*reader, async_request_block(_, _, _, _, _, _))
-          .WillOnce(InvokeArgument<5>(Status::OK()));
 
-      EXPECT_CALL(*reader, async_read_packet(_, _))
-          .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
-    }
-  };
-
-
+  // Exclude the one datanode with the data
   std::set<std::string> excluded_dn({"foo"});
   is.AsyncPreadSome(0, asio::buffer(buf, sizeof(buf)), excluded_dn,
       [&stat, &read](const Status &status, const std::string &, size_t transferred) {
         stat = status;
         read = transferred;
       });
+      
+  // Should fail with no resource available
   ASSERT_EQ(static_cast<int>(std::errc::resource_unavailable_try_again), stat.code());
   ASSERT_EQ(0UL, read);
 }
