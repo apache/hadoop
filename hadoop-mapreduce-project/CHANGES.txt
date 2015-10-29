@@ -620,6 +620,9 @@ Release 2.8.0 - UNRELEASED
    MAPREDUCE-6508. TestNetworkedJob fails consistently due to delegation 
    token changes on RM. (Akira AJISAKA via junping_du)
 
+   MAPREDUCE-6515. Update Application priority in AM side from AM-RM heartbeat
+   (Sunil G via jlowe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

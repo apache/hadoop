@@ -2948,6 +2948,8 @@ public class TestRMContainerAllocator {
           Collections.<NodeReport>emptyList(),
           Resource.newInstance(512000, 1024), null, 10, null,
           Collections.<NMToken>emptyList());
+      // RM will always ensure that a default priority is sent to AM
+      response.setApplicationPriority(Priority.newInstance(0));
       containersToComplete.clear();
       containersToAllocate.clear();
       return response;

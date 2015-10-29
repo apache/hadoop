@@ -120,6 +120,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -653,6 +654,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   private JobState lastNonFinalState = JobState.NEW;
 
+  private volatile Priority jobPriority = Priority.newInstance(0);
+
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener,
@@ -878,7 +881,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           reporterUserName,
           state, appSubmitTime, startTime, finishTime, setupProgress,
           this.mapProgress, this.reduceProgress,
-          cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
+          cleanupProgress, jobFile, amInfos, isUber, diagsb.toString(),
+          jobPriority);
       return report;
     } finally {
       readLock.unlock();
@@ -2166,7 +2170,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
     }
   }
-  
+
   private static class InternalTerminationTransition implements
       SingleArcTransition<JobImpl, JobEvent> {
     JobStateInternal terminationState = null;
@@ -2218,5 +2222,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   public int getMaxFetchFailuresNotifications() {
     return maxFetchFailuresNotifications;
+  }
+
+  @Override
+  public void setJobPriority(Priority priority) {
+    this.jobPriority = priority;
   }
 }
