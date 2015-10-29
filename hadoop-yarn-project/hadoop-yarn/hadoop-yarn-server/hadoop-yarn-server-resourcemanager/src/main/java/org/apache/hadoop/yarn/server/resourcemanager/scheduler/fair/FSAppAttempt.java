@@ -488,13 +488,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       if (existingReservations >= numAllowedReservations) {
         DecimalFormat df = new DecimalFormat();
         df.setMaximumFractionDigits(2);
-        LOG.info("Reservation Exceeds Allowed number of nodes:" +
-                " app_id=" + getApplicationId() +
-                " existingReservations=" + existingReservations +
-                " totalAvailableNodes=" + totalAvailNodes +
-                " reservableNodesRatio=" + df.format(
-                                        scheduler.getReservableNodesRatio()) +
-                " numAllowedReservations=" + numAllowedReservations);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Reservation Exceeds Allowed number of nodes:" +
+                  " app_id=" + getApplicationId() +
+                  " existingReservations=" + existingReservations +
+                  " totalAvailableNodes=" + totalAvailNodes +
+                  " reservableNodesRatio=" + df.format(
+                                          scheduler.getReservableNodesRatio()) +
+                  " numAllowedReservations=" + numAllowedReservations);
+        }
         return true;
       }
     }
