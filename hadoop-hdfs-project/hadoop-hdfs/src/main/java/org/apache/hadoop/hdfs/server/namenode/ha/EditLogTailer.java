@@ -372,6 +372,8 @@ public class EditLogTailer {
           } finally {
             namesystem.cpUnlock();
           }
+          //Update NameDirSize Metric
+          namesystem.getFSImage().getStorage().updateNameDirSize();
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
