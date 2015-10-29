@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
+import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -149,6 +151,11 @@ public class NNStorage extends Storage implements Closeable,
   private HashMap<String, String> deprecatedProperties;
 
   /**
+   * Name directories size for metric.
+   */
+  private Map<String, Long> nameDirSizeMap = new HashMap<>();
+
+  /**
    * Construct the NNStorage.
    * @param conf Namenode configuration.
    * @param imageDirs Directories the image can be stored in.
@@ -166,6 +173,8 @@ public class NNStorage extends Storage implements Closeable,
     setStorageDirectories(imageDirs, 
                           Lists.newArrayList(editsDirs),
                           FSNamesystem.getSharedEditsDirs(conf));
+    //Update NameDirSize metric value after NN start
+    updateNameDirSize();
   }
 
   @Override // Storage
@@ -1074,5 +1083,21 @@ public class NNStorage extends Storage implements Closeable,
         getClusterID(),
         getBlockPoolID(),
         getCTime());
+  }
+
+  public String getNNDirectorySize() {
+    return JSON.toString(nameDirSizeMap);
+  }
+
+  public void updateNameDirSize() {
+    Map<String, Long> nnDirSizeMap = new HashMap<>();
+    for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      if (!sd.isShared()) {
+        nnDirSizeMap.put(sd.getRoot().getAbsolutePath(), sd.getDirecorySize());
+      }
+    }
+    nameDirSizeMap.clear();
+    nameDirSizeMap.putAll(nnDirSizeMap);
   }
 }
