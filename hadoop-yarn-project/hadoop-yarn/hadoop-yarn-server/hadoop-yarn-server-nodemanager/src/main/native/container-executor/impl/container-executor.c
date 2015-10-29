@@ -1729,8 +1729,13 @@ int delete_as_user(const char *user,
     char* full_path = NULL;
     struct stat sb;
     if (stat(*ptr, &sb) != 0) {
-      fprintf(LOGFILE, "Could not stat %s\n", *ptr);
-      return -1;
+      if (errno == ENOENT) {
+        // Ignore missing dir. Continue deleting other directories.
+        continue;
+      } else {
+        fprintf(LOGFILE, "Could not stat %s - %s\n", *ptr, strerror(errno));
+        return -1;
+      }
     }
     if (!S_ISDIR(sb.st_mode)) {
       if (!subDirEmptyStr) {
