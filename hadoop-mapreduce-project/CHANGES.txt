@@ -513,10 +513,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5708. Duplicate String.format in YarnOutputFiles.getSpillFileForWrite.
     (Konstantin Weitz via devaraj)
 
-    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
-    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
-    (zhihai xu via devaraj)
-
     MAPREDUCE-6204. TestJobCounters should use new properties instead of
     JobConf.MAPRED_TASK_JAVA_OPTS. (Sam Liu via ozawa)
 
@@ -670,6 +666,10 @@ Release 2.7.2 - UNRELEASED
 
     MAPREDUCE-6518. Set SO_KEEPALIVE on shuffle connections (Chang Li via
     jlowe)
+
+    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
+    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
+    (zhihai xu via devaraj)
 
 Release 2.7.1 - 2015-07-06 
 
