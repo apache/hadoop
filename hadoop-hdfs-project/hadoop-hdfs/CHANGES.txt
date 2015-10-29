@@ -2196,6 +2196,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9044. Give Priority to FavouredNodes , before selecting
     nodes from FavouredNode's Node Group (J.Andreina via vinayakumarb)
 
+    HDFS-9332. Fix Precondition failures from NameNodeEditLogRoller while
+    saving namespace. (wang)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
