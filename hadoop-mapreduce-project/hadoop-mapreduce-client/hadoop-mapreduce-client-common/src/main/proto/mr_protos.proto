@@ -146,6 +146,7 @@ message JobReportProto {
   repeated AMInfoProto am_infos = 14;
   optional int64 submit_time = 15;
   optional bool is_uber = 16 [default = false];
+  optional hadoop.yarn.PriorityProto jobPriority = 17;
 }
 
 message AMInfoProto {

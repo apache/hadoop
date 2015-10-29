@@ -72,6 +72,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
@@ -92,6 +93,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -887,6 +889,39 @@ public class TestJobImpl {
                       job.getDiagnostics().toString().contains("YarnRuntimeException"));
     Assert.assertTrue("Job diagnostics should contain " + EXCEPTIONMSG,
                       job.getDiagnostics().toString().contains(EXCEPTIONMSG));
+  }
+
+  @Test
+  public void testJobPriorityUpdate() throws Exception {
+    Configuration conf = new Configuration();
+    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    Priority submittedPriority = Priority.newInstance(5);
+
+    AppContext mockContext = mock(AppContext.class);
+    when(mockContext.hasSuccessfullyUnregistered()).thenReturn(false);
+    JobImpl job = createStubbedJob(conf, dispatcher, 2, mockContext);
+
+    JobId jobId = job.getID();
+    job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
+    assertJobState(job, JobStateInternal.INITED);
+    job.handle(new JobStartEvent(jobId));
+    assertJobState(job, JobStateInternal.SETUP);
+    // Update priority of job to 5, and it will be updated
+    job.setJobPriority(submittedPriority);
+    Assert.assertEquals(submittedPriority, job.getReport().getJobPriority());
+
+    job.handle(new JobSetupCompletedEvent(jobId));
+    assertJobState(job, JobStateInternal.RUNNING);
+
+    // Update priority of job to 8, and see whether its updated
+    Priority updatedPriority = Priority.newInstance(5);
+    job.setJobPriority(updatedPriority);
+    assertJobState(job, JobStateInternal.RUNNING);
+    Priority jobPriority = job.getReport().getJobPriority();
+    Assert.assertNotNull(jobPriority);
+
+    // Verify whether changed priority is same as what is set in Job.
+    Assert.assertEquals(updatedPriority, jobPriority);
   }
 
   private static CommitterEventHandler createCommitterEventHandler(

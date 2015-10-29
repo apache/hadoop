@@ -296,19 +296,39 @@ public class TypeConverter {
     }
     return yCntrs;
   }
-  
+
   public static JobStatus fromYarn(JobReport jobreport, String trackingUrl) {
-    JobPriority jobPriority = JobPriority.NORMAL;
+    JobPriority jobPriority = (jobreport.getJobPriority() == null)
+        ? JobPriority.DEFAULT
+        : fromYarnPriority(jobreport.getJobPriority().getPriority());
     JobStatus jobStatus = new org.apache.hadoop.mapred.JobStatus(
-        fromYarn(jobreport.getJobId()), jobreport.getSetupProgress(), jobreport
-            .getMapProgress(), jobreport.getReduceProgress(), jobreport
-            .getCleanupProgress(), fromYarn(jobreport.getJobState()),
-        jobPriority, jobreport.getUser(), jobreport.getJobName(), jobreport
-            .getJobFile(), trackingUrl, jobreport.isUber());
+        fromYarn(jobreport.getJobId()), jobreport.getSetupProgress(),
+        jobreport.getMapProgress(), jobreport.getReduceProgress(),
+        jobreport.getCleanupProgress(), fromYarn(jobreport.getJobState()),
+        jobPriority, jobreport.getUser(), jobreport.getJobName(),
+        jobreport.getJobFile(), trackingUrl, jobreport.isUber());
     jobStatus.setStartTime(jobreport.getStartTime());
     jobStatus.setFinishTime(jobreport.getFinishTime());
     jobStatus.setFailureInfo(jobreport.getDiagnostics());
     return jobStatus;
+  }
+
+  private static JobPriority fromYarnPriority(int priority) {
+    switch (priority) {
+    case 5 :
+      return JobPriority.VERY_HIGH;
+    case 4 :
+      return JobPriority.HIGH;
+    case 3 :
+      return JobPriority.NORMAL;
+    case 2 :
+      return JobPriority.LOW;
+    case 1 :
+      return JobPriority.VERY_LOW;
+    case 0 :
+      return JobPriority.DEFAULT;
+    }
+    return JobPriority.UNDEFINED_PRIORITY;
   }
 
   public static org.apache.hadoop.mapreduce.QueueState fromYarn(

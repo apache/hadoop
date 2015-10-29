@@ -31,6 +31,7 @@ public enum JobPriority {
   HIGH,
   NORMAL,
   LOW,
-  VERY_LOW;
-  
+  VERY_LOW,
+  DEFAULT,
+  UNDEFINED_PRIORITY;
 }
