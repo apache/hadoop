@@ -49,7 +49,7 @@ public:
                     const std::function<void(const Status &)> &));
 };
 
-class MockDataNodeConnection {
+class MockDataNodeConnection : public DataNodeConnection, public std::enable_shared_from_this<MockDataNodeConnection> {
 public:
   MockDataNodeConnection() {
     int id;
@@ -60,6 +60,22 @@ public:
     uuid_ = ss.str();
   }
 
+  MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection>)>));
+  MOCK_METHOD2(async_read, 
+               void(const asio::mutable_buffers_1 & buffers,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
+  MOCK_METHOD3(async_read, 
+               void(const asio::mutable_buffers_1 & buffers,
+                    std::function<bool (const asio::error_code &,
+                                        std::size_t) >,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
+  MOCK_METHOD2(async_write, 
+               void(const asio::const_buffers_1 & buffers,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
+  
   std::string uuid_;
 };
 
@@ -74,7 +90,7 @@ template <class Trait> struct MockBlockReaderTrait {
   };
 
   static continuation::Pipeline<State> *
-  CreatePipeline(std::shared_ptr<MockDataNodeConnection> dn) {
+  CreatePipeline(std::shared_ptr<DataNodeConnection> dn) {
     (void) dn;
     auto m = continuation::Pipeline<State>::Create();
     *m->state().transferred() = 0;

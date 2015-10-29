@@ -65,7 +65,7 @@ void RemoteBlockReader::async_request_block(
                                         token, block, length, offset));
 
   auto read_pb_message =
-      new continuation::ReadDelimitedPBMessageContinuation<DataNodeConnection, 16384>(
+      new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(
           stream_, &s->response);
 
   m->Push(async_stream_continuation::Write(stream_, asio::buffer(s->header)))
@@ -177,6 +177,40 @@ private:
   RemoteBlockReader *parent_;
 };
 
+struct RemoteBlockReader::ReadData : continuation::Continuation {
+  ReadData(RemoteBlockReader *parent,
+           std::shared_ptr<size_t> bytes_transferred,
+           const asio::mutable_buffers_1 &buf)
+      : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {}
+
+  virtual void Run(const Next &next) override {
+    auto handler =
+        [next, this](const asio::error_code &ec, size_t transferred) {
+          Status status;
+          if (ec) {
+            status = Status(ec.value(), ec.message().c_str());
+          }
+          *bytes_transferred_ += transferred;
+          parent_->bytes_to_read_ -= transferred;
+          parent_->packet_data_read_bytes_ += transferred;
+          if (parent_->packet_data_read_bytes_ >= parent_->header_.datalen()) {
+            parent_->state_ = kReadPacketHeader;
+          }
+          next(status);
+        };
+
+    auto data_len =
+        parent_->header_.datalen() - parent_->packet_data_read_bytes_;
+    parent_->stream_->async_read(buf_, asio::transfer_exactly(data_len),
+               handler);
+  }
+
+private:
+  RemoteBlockReader *parent_;
+  std::shared_ptr<size_t> bytes_transferred_;
+  const asio::mutable_buffers_1 & buf_;
+};
+
 struct RemoteBlockReader::ReadPadding : continuation::Continuation {
   ReadPadding(RemoteBlockReader *parent)
       : parent_(parent), padding_(parent->chunk_padding_bytes_),
@@ -209,41 +243,6 @@ private:
   std::shared_ptr<continuation::Continuation> read_data_;
   ReadPadding(const ReadPadding &) = delete;
   ReadPadding &operator=(const ReadPadding &) = delete;
-};
-
-
-struct RemoteBlockReader::ReadData : continuation::Continuation {
-  ReadData(RemoteBlockReader *parent,
-           std::shared_ptr<size_t> bytes_transferred,
-           const asio::mutable_buffer &buf)
-      : parent_(parent), bytes_transferred_(bytes_transferred), buf_(buf) {}
-
-  virtual void Run(const Next &next) override {
-    auto handler =
-        [next, this](const asio::error_code &ec, size_t transferred) {
-          Status status;
-          if (ec) {
-            status = Status(ec.value(), ec.message().c_str());
-          }
-          *bytes_transferred_ += transferred;
-          parent_->bytes_to_read_ -= transferred;
-          parent_->packet_data_read_bytes_ += transferred;
-          if (parent_->packet_data_read_bytes_ >= parent_->header_.datalen()) {
-            parent_->state_ = kReadPacketHeader;
-          }
-          next(status);
-        };
-
-    auto data_len =
-        parent_->header_.datalen() - parent_->packet_data_read_bytes_;
-    parent_->stream_->async_read(buf_, asio::transfer_exactly(data_len),
-               handler);
-  }
-
-private:
-  RemoteBlockReader *parent_;
-  std::shared_ptr<size_t> bytes_transferred_;
-  MutableBufferSequence buf_;
 };
 
 
@@ -293,7 +292,7 @@ void RemoteBlockReader::async_read_packet(
   m->Push(new ReadPacketHeader(this))
       .Push(new ReadChecksum(this))
       .Push(new ReadPadding(this))
-      .Push(new ReadData<MutableBufferSequence>(
+      .Push(new ReadData(
           this, m->state().bytes_transferred, buffers))
       .Push(new AckRead(this));
 
@@ -319,18 +318,6 @@ RemoteBlockReader::read_packet(const MutableBufferSequence &buffers,
                   });
   future.wait();
   return transferred;
-}
-
-
-Status RemoteBlockReader::request_block(
-    const std::string &client_name, const hadoop::common::TokenProto *token,
-    const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
-    uint64_t offset) {
-  auto stat = std::make_shared<std::promise<Status>>();
-  std::future<Status> future(stat->get_future());
-  async_request_block(client_name, token, block, length, offset,
-                [stat](const Status &status) { stat->set_value(status); });
-  return future.get();
 }
 }
 

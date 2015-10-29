@@ -49,11 +49,27 @@ namespace pbio = pb::io;
 
 namespace hdfs {
 
-class MockDNConnection : public MockConnectionBase {
+class MockDNConnection : public MockConnectionBase, public AsyncStream {
 public:
   MockDNConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
+
+  // MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection>)>));
+  MOCK_METHOD2(async_read, 
+               void(const asio::mutable_buffers_1 & buffers,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
+  MOCK_METHOD3(async_read, 
+               void(const asio::mutable_buffers_1 & buffers,
+                    std::function<bool (const asio::error_code &,
+                                        std::size_t) >,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
+  MOCK_METHOD2(async_write, 
+               void(const asio::const_buffers_1 & buffers,
+                    std::function<void (const asio::error_code &,
+                                        std::size_t) >));
 };
 }
 
@@ -94,12 +110,12 @@ ProducePacket(const std::string &data, const std::string &checksum,
 }
 
 template <class Stream = MockDNConnection, class Handler>
-static std::shared_ptr<RemoteBlockReader<Stream>>
-ReadContent(Stream *conn, TokenProto *token, const ExtendedBlockProto &block,
+static std::shared_ptr<RemoteBlockReader>
+ReadContent(std::shared_ptr<Stream> conn, TokenProto *token, const ExtendedBlockProto &block,
             uint64_t length, uint64_t offset, const mutable_buffers_1 &buf,
             const Handler &handler) {
   BlockReaderOptions options;
-  auto reader = std::make_shared<RemoteBlockReader<Stream>>(options, conn);
+  auto reader = std::make_shared<RemoteBlockReader>(options, conn);
   Status result;
   reader->async_request_block("libhdfs++", token, &block, length, offset,
                         [buf, reader, handler](const Status &stat) {
@@ -116,11 +132,11 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   static const size_t kChunkSize = 512;
   static const string kChunkData(kChunkSize, 'a');
   ::asio::io_service io_service;
-  MockDNConnection conn(io_service);
+  auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
 
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
-  EXPECT_CALL(conn, Produce())
+  EXPECT_CALL(*conn, Produce())
       .WillOnce(Return(Produce(ToDelimitedString(&block_op_resp))))
       .WillOnce(Return(ProducePacket(kChunkData, "", 0, 1, true)));
 
@@ -130,7 +146,7 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   block.set_generationstamp(0);
 
   std::string data(kChunkSize, 0);
-  ReadContent(&conn, nullptr, block, kChunkSize, 0,
+  ReadContent(conn, nullptr, block, kChunkSize, 0,
               buffer(const_cast<char *>(data.c_str()), data.size()),
               [&data, &io_service](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
@@ -148,7 +164,7 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   static const string kChunkData = string(kOffset, 'a') + string(kLength, 'b');
 
   ::asio::io_service io_service;
-  MockDNConnection conn(io_service);
+  auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   ReadOpChecksumInfoProto *checksum_info =
       block_op_resp.mutable_readopchecksuminfo();
@@ -158,7 +174,7 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   checksum->set_bytesperchecksum(512);
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
 
-  EXPECT_CALL(conn, Produce())
+  EXPECT_CALL(*conn, Produce())
       .WillOnce(Return(Produce(ToDelimitedString(&block_op_resp))))
       .WillOnce(Return(ProducePacket(kChunkData, "", kOffset, 1, true)));
 
@@ -168,7 +184,7 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   block.set_generationstamp(0);
 
   string data(kLength, 0);
-  ReadContent(&conn, nullptr, block, data.size(), kOffset,
+  ReadContent(conn, nullptr, block, data.size(), kOffset,
               buffer(const_cast<char *>(data.c_str()), data.size()),
               [&data, &io_service](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
@@ -184,11 +200,11 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   static const string kChunkData(kChunkSize, 'a');
 
   ::asio::io_service io_service;
-  MockDNConnection conn(io_service);
+  auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
 
-  EXPECT_CALL(conn, Produce())
+  EXPECT_CALL(*conn, Produce())
       .WillOnce(Return(Produce(ToDelimitedString(&block_op_resp))))
       .WillOnce(Return(ProducePacket(kChunkData, "", 0, 1, false)))
       .WillOnce(Return(ProducePacket(kChunkData, "", kChunkSize, 2, true)));
@@ -201,7 +217,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   string data(kChunkSize, 0);
   mutable_buffers_1 buf = buffer(const_cast<char *>(data.c_str()), data.size());
   BlockReaderOptions options;
-  auto reader = std::make_shared<RemoteBlockReader<MockDNConnection> >(options, &conn);
+  auto reader = std::make_shared<RemoteBlockReader>(options, conn);
   Status result;
   reader->async_request_block(
       "libhdfs++", nullptr, &block, data.size(), 0,
@@ -234,7 +250,7 @@ TEST(RemoteBlockReaderTest, TestSaslConnection) {
                                      "qKah8qh4QZLoOLCDcTtEKhlS\",qop=\"auth\","
                                      "charset=utf-8,algorithm=md5-sess";
   ::asio::io_service io_service;
-  MockDNConnection conn(io_service);
+  auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
 
@@ -247,23 +263,23 @@ TEST(RemoteBlockReaderTest, TestSaslConnection) {
       ::hadoop::hdfs::
           DataTransferEncryptorMessageProto_DataTransferEncryptorStatus_SUCCESS);
 
-  EXPECT_CALL(conn, Produce())
+  EXPECT_CALL(*conn, Produce())
       .WillOnce(Return(Produce(ToDelimitedString(&sasl_resp0))))
       .WillOnce(Return(Produce(ToDelimitedString(&sasl_resp1))))
       .WillOnce(Return(Produce(ToDelimitedString(&block_op_resp))))
       .WillOnce(Return(ProducePacket(kChunkData, "", 0, 1, true)));
 
-  DataTransferSaslStream<MockDNConnection> sasl_conn(&conn, "foo", "bar");
+  auto sasl_conn = std::make_shared<DataTransferSaslStream<MockDNConnection> >(conn, "foo", "bar");
   ExtendedBlockProto block;
   block.set_poolid("foo");
   block.set_blockid(0);
   block.set_generationstamp(0);
 
   std::string data(kChunkSize, 0);
-  sasl_conn.Handshake([&sasl_conn, &block, &data, &io_service](
+  sasl_conn->Handshake([sasl_conn, &block, &data, &io_service](
       const Status &s) {
     ASSERT_TRUE(s.ok());
-    ReadContent(&sasl_conn, nullptr, block, kChunkSize, 0,
+    ReadContent(sasl_conn, nullptr, block, kChunkSize, 0,
                 buffer(const_cast<char *>(data.c_str()), data.size()),
                 [&data, &io_service](const Status &stat, size_t transferred) {
                   ASSERT_TRUE(stat.ok());

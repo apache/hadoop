@@ -20,7 +20,7 @@
 
 #include "datatransfer.pb.h"
 #include "common/continuation/continuation.h"
-#include "common/continuation/asio.h"
+#include "common/continuation/async_stream.h"
 #include "common/continuation/protobuf.h"
 
 #include <asio/read.hpp>
@@ -70,7 +70,7 @@ private:
 template <class Stream>
 struct DataTransferSaslStream<Stream>::ReadSaslMessage
     : continuation::Continuation {
-  ReadSaslMessage(Stream *stream, std::string *data)
+  ReadSaslMessage(std::shared_ptr<Stream> stream, std::string *data)
       : stream_(stream), data_(data), read_pb_(stream, &resp_) {}
 
   virtual void Run(const Next &next) override {
@@ -87,7 +87,7 @@ struct DataTransferSaslStream<Stream>::ReadSaslMessage
   }
 
 private:
-  Stream *stream_;
+  std::shared_ptr<Stream> stream_;
   std::string *data_;
   hadoop::hdfs::DataTransferEncryptorMessageProto resp_;
   continuation::ReadDelimitedPBMessageContinuation<Stream, 1024> read_pb_;
@@ -97,8 +97,8 @@ template <class Stream>
 template <class Handler>
 void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   using ::hadoop::hdfs::DataTransferEncryptorMessageProto;
-  using ::hdfs::asio_continuation::Write;
-  using ::hdfs::asio_continuation::WriteDelimitedPBMessage;
+  using ::hdfs::async_stream_continuation::Write;
+  using ::hdfs::continuation::WriteDelimitedPBMessage;
 
   static const int kMagicNumber = htonl(kDataTransferSasl);
   static const asio::const_buffers_1 kMagicNumberBuffer = asio::buffer(
@@ -109,7 +109,7 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
     std::string resp0;
     DataTransferEncryptorMessageProto req1;
     std::string resp1;
-    Stream *stream;
+    std::shared_ptr<Stream> stream;
   };
   auto m = continuation::Pipeline<State>::Create();
   State *s = &m->state();
@@ -126,19 +126,6 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   m->Run([next](const Status &status, const State &) { next(status); });
 }
 
-template <class Stream>
-template <class MutableBufferSequence, class ReadHandler>
-void DataTransferSaslStream<Stream>::async_read_some(
-    const MutableBufferSequence &buffers, ReadHandler &&handler) {
-  stream_->async_read_some(buffers, handler);
-}
-
-template <class Stream>
-template <typename ConstBufferSequence, typename WriteHandler>
-void DataTransferSaslStream<Stream>::async_write_some(
-    const ConstBufferSequence &buffers, WriteHandler &&handler) {
-  stream_->async_write_some(buffers, handler);
-}
 }
 
 #endif

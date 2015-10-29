@@ -24,11 +24,17 @@
 namespace hdfs {
 
 class AsyncStream {
-	virtual void async_read(const asio::mutable_buffer	& buffers,
-					   std::function<bool (const asio::error_code & error,
-					                       std::size_t bytes_transferred) > completion_handler,
-					   std::function<void (const asio::error_code & error,
-					                       std::size_t bytes_transferred) > completed_handler);
+public:
+  virtual void async_read(const asio::mutable_buffers_1	& buffers,
+             std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > completed_handler) = 0;
+  virtual void async_read(const asio::mutable_buffers_1	& buffers,
+             std::function<bool (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > completion_handler,
+             std::function<void (const asio::error_code & error,
+                                 std::size_t bytes_transferred) > completed_handler) = 0;
+  virtual void async_write(const asio::const_buffers_1 & buffers, 
+             std::function<void (const asio::error_code &ec, size_t)> handler) = 0;
 };
 
 }

@@ -31,6 +31,7 @@
 namespace hdfs {
 
 struct InputStreamImpl::RemoteBlockReaderTrait {
+  typedef RemoteBlockReader Reader;
   struct State {
     std::shared_ptr<DataNodeConnection> dn_;
     std::shared_ptr<RemoteBlockReader> reader_;
@@ -158,7 +159,7 @@ void InputStreamImpl::AsyncPreadSome(
   dn_->Connect([this,handler,targetBlock,offset_within_block,size_within_block, buffers]
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     if (status.ok()) {
-      ReadOperation::AsyncReadBlock<RemoteBlockReaderTrait, DataNodeConnection, MutableBufferSequence, Handler>(
+      ReadOperation::AsyncReadBlock<RemoteBlockReaderTrait, MutableBufferSequence, Handler>(
           dn, client_name_, targetBlock, offset_within_block,
           asio::buffer(buffers, size_within_block), handler);
     } else {

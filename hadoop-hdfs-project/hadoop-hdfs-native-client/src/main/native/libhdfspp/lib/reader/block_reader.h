@@ -19,6 +19,7 @@
 #define BLOCK_READER_H_
 
 #include "libhdfspp/status.h"
+#include "common/async_stream.h"
 #include "datatransfer.pb.h"
 
 #include <memory>
@@ -58,7 +59,7 @@ struct BlockReaderOptions {
 class RemoteBlockReader
     : public std::enable_shared_from_this<RemoteBlockReader> {
 public:
-  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> stream)
+  explicit RemoteBlockReader(const BlockReaderOptions &options, std::shared_ptr<AsyncStream> stream)
       : stream_(stream), state_(kOpen), options_(options),
         chunk_padding_bytes_(0) {}
 
@@ -96,7 +97,7 @@ private:
     kFinished,
   };
 
-  std::shared_ptr<DataNodeConnection> stream_;
+  std::shared_ptr<AsyncStream> stream_;
   hadoop::hdfs::PacketHeaderProto header_;
   State state_;
   BlockReaderOptions options_;

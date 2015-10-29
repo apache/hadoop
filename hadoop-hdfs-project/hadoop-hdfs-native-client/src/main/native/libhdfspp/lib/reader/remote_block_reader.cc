@@ -43,4 +43,16 @@ ReadBlockProto(const std::string &client_name, bool verify_checksum,
   // TODO: p.set_allocated_cachingstrategy();
   return p;
 }
+
+Status RemoteBlockReader::request_block(
+    const std::string &client_name, const hadoop::common::TokenProto *token,
+    const hadoop::hdfs::ExtendedBlockProto *block, uint64_t length,
+    uint64_t offset) {
+  auto stat = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(stat->get_future());
+  async_request_block(client_name, token, block, length, offset,
+                [stat](const Status &status) { stat->set_value(status); });
+  return future.get();
+}
+
 }

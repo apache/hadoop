@@ -19,10 +19,13 @@
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
 #include "common/hdfs_public_api.h"
+#include "common/async_stream.h"
 #include "libhdfspp/hdfs.h"
 #include "rpc/rpc_engine.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
+
+#include "asio.hpp"
 
 namespace hdfs {
 
@@ -89,26 +92,15 @@ private:
 };
 
 
-class DataNodeConnection {
+class DataNodeConnection : public AsyncStream {
 public:
     std::string uuid_;
 
     virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
-    virtual void async_read(const asio::mutable_buffer	& buffers,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler) = 0;
-    virtual void async_read(const asio::mutable_buffer	& buffers,
-               std::function<bool (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completion_handler,
-               std::function<void (const asio::error_code & error,
-                                   std::size_t bytes_transferred) > completed_handler) = 0;
-    virtual void async_write(const asio::const_buffer & buffers, 
-               std::function<void (const asio::error_code &ec, size_t)> handler) = 0;
-    
 };
 
 
-class DataNodeConnectionImpl : public DataNodeConnection, std::enable_shared_from_this<DataNodeConnectionImpl> {
+class DataNodeConnectionImpl : public DataNodeConnection, public std::enable_shared_from_this<DataNodeConnectionImpl> {
 public:
     std::unique_ptr<asio::ip::tcp::socket> conn_;
     std::array<asio::ip::tcp::endpoint, 1> endpoints_;
@@ -126,6 +118,21 @@ public:
     }
 
     void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) override;
+
+    virtual void async_read(const asio::mutable_buffers_1	& buffers,
+               std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completed_handler) 
+      { asio::async_read(*conn_, buffers, completed_handler); }
+    
+    virtual void async_read(const asio::mutable_buffers_1	& buffers,
+               std::function<bool (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completion_handler,
+               std::function<void (const asio::error_code & error,
+                                   std::size_t bytes_transferred) > completed_handler)
+      { asio::async_read(*conn_, buffers, completion_handler, completed_handler); }
+    virtual void async_write(const asio::const_buffers_1 & buffers, 
+               std::function<void (const asio::error_code &ec, size_t)> handler)
+      { asio::async_write(*conn_, buffers, handler); }
 };
 
 /*
