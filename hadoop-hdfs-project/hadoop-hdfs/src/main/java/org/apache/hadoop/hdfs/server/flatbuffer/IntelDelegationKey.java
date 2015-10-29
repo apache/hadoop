@@ -35,5 +35,6 @@ public final class IntelDelegationKey extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelDelegationKeyBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 

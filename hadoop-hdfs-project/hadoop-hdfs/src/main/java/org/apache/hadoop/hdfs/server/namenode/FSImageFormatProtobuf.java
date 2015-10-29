@@ -389,7 +389,8 @@ public final class FSImageFormatProtobuf {
           prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
           Step step = new Step(StepType.DELEGATION_TOKENS);
           prog.beginStep(Phase.LOADING_FSIMAGE, step);
-          loadSecretManagerSection(in, prog, step);
+//          loadSecretManagerSection(in, prog, step);
+          loadIntelSecretManagerSection(in, prog, step);
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;

@@ -262,33 +262,51 @@ public class DelegationTokenSecretManager
         .newArrayListWithCapacity(currentTokens.size());
 
     for (DelegationKey v : allKeys.values()) {
-
       FlatBufferBuilder fbb1 = new FlatBufferBuilder();
       ByteBuffer byteBuffer1 = null;
-      IntelDelegationKey.createIntelDelegationKey(fbb1, v.id(), v.expiryDate(),
-          ));
-
-      SecretManagerSection.DelegationKey.Builder b = SecretManagerSection.DelegationKey
-          .newBuilder().setId(v.getKeyId()).setExpiryDate(v.getExpiryDate());
-
+      IntelDelegationKey.startIntelDelegationKey(fbb1);
+      IntelDelegationKey.addId(fbb1, v.getKeyId());
+      IntelDelegationKey.addExpiryDate(fbb1, v.getExpiryDate());
+//      SecretManagerSection.DelegationKey.Builder b = SecretManagerSection.DelegationKey
+//          .newBuilder().setId(v.getKeyId()).setExpiryDate(v.getExpiryDate());
       if (v.getEncodedKey() != null) {
-        b.setKey(ByteString.copyFrom(v.getEncodedKey()));
+//        b.setKey(ByteString.copyFrom(v.getEncodedKey()));
+        int keyOffset = 0;
+        byte[] bytes = v.getEncodedKey();
+        keyOffset = fbb1.createString(ByteBuffer.wrap(bytes));
+        IntelDelegationKey.addKey(fbb1, keyOffset);
       }
-      keys.add(b.build());
-    } // for end.
+      int inv = IntelDelegationKey.endIntelDelegationKey(fbb1);
+      IntelDelegationKey.finishIntelDelegationKeyBuffer(fbb1, inv);
+      byteBuffer1 = fbb1.dataBuffer();
+      IntelDelegationKey intelDelegationKey =
+          IntelDelegationKey.getRootAsIntelDelegationKey(byteBuffer1);
+      intelKeys.add(intelDelegationKey);
+    }
 
     for (Entry<DelegationTokenIdentifier, DelegationTokenInformation> e : currentTokens
         .entrySet()) {
+
       DelegationTokenIdentifier id = e.getKey();
-      SecretManagerSection.PersistToken.Builder b = SecretManagerSection.PersistToken
-          .newBuilder().setOwner(id.getOwner().toString())
-          .setRenewer(id.getRenewer().toString())
-          .setRealUser(id.getRealUser().toString())
-          .setIssueDate(id.getIssueDate()).setMaxDate(id.getMaxDate())
-          .setSequenceNumber(id.getSequenceNumber())
-          .setMasterKeyId(id.getMasterKeyId())
-          .setExpiryDate(e.getValue().getRenewDate());
-      tokens.add(b.build());
+
+      FlatBufferBuilder fbb2 = new FlatBufferBuilder();
+      ByteBuffer byteBuffer2 = null;
+
+      IntelPersistToken.startIntelPersistToken(fbb2);
+      IntelPersistToken.addOwner(fbb2, fbb2.createString(id.getOwner().toString()));
+      IntelPersistToken.addRenewer(fbb2, fbb2.createString(id.getRenewer().toString()));
+      IntelPersistToken.addRealUser(fbb2, fbb2.createString(id.getRealUser().toString()));
+      IntelPersistToken.addIssueDate(fbb2, id.getIssueDate());
+      IntelPersistToken.addMaxDate(fbb2, id.getMaxDate());
+      IntelPersistToken.addSequenceNumber(fbb2, id.getSequenceNumber());
+      IntelPersistToken.addMasterKeyId(fbb2, id.getMasterKeyId());
+      IntelPersistToken.addExpiryDate(fbb2, e.getValue().getRenewDate());
+      int inv = IntelPersistToken.endIntelPersistToken(fbb2);
+      IntelPersistToken.finishIntelPersistTokenBuffer(fbb2, inv);
+      byteBuffer2 = fbb2.dataBuffer();
+      IntelPersistToken intelPersistToken =
+          IntelPersistToken.getRootAsIntelPersistToken(byteBuffer2);
+      intelTokens.add(intelPersistToken);
     }
 
     return new SecretManagerState(null, is, null, intelKeys, intelTokens, null);

@@ -61,5 +61,6 @@ public final class IntelPersistToken extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelPersistTokenBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 
