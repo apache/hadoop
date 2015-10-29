@@ -37,7 +37,6 @@ public class XORRawEncoder extends AbstractRawErasureEncoder {
 
   protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
     ByteBuffer output = outputs[0];
-    resetBuffer(output);
 
     // Get the first buffer's data.
     int iIdx, oIdx;

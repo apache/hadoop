@@ -603,6 +603,9 @@ Trunk (Unreleased)
 
       HADOOP-11921. Enhance tests for erasure coders. (Kai Zheng)
 
+      HADOOP-12327. Initialize output buffers with ZERO bytes in erasure coder.
+      (Kai Zheng via waltersu4549)
+
 Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

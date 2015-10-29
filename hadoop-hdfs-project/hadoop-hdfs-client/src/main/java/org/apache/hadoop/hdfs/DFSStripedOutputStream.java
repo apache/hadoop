@@ -221,9 +221,6 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     private void clear() {
       for (int i = 0; i< numAllBlocks; i++) {
         buffers[i].clear();
-        if (i >= numDataBlocks) {
-          Arrays.fill(buffers[i].array(), (byte) 0);
-        }
       }
     }
 
