@@ -33,7 +33,7 @@ namespace hdfs {
 struct InputStreamImpl::RemoteBlockReaderTrait {
   typedef RemoteBlockReader<asio::ip::tcp::socket> Reader;
   struct State {
-    std::shared_ptr<DataNodeConnection> dn_;
+    std::shared_ptr<DataNodeConnectionImpl> dn_;
     std::shared_ptr<Reader> reader_;
     size_t transferred_;
     Reader *reader() { return reader_.get(); }
@@ -41,7 +41,7 @@ struct InputStreamImpl::RemoteBlockReaderTrait {
     const size_t *transferred() const { return &transferred_; }
   };
   static continuation::Pipeline<State> *
-  CreatePipeline(std::shared_ptr<DataNodeConnection> dn) {
+  CreatePipeline(std::shared_ptr<DataNodeConnectionImpl> dn) {
     auto m = continuation::Pipeline<State>::Create();
     auto &s = m->state();
     s.reader_ = std::make_shared<Reader>(BlockReaderOptions(), dn->conn_.get());
@@ -155,11 +155,11 @@ void InputStreamImpl::AsyncPreadSome(
       targetBlock.b().numbytes() - offset_within_block, asio::buffer_size(buffers));
 
   //TODO: re-use DN connection
-  dn_ = std::make_shared<DataNodeConnection>(io_service_, *chosen_dn);
+  dn_ = std::make_shared<DataNodeConnectionImpl>(io_service_, *chosen_dn);
   dn_->Connect([this,handler,targetBlock,offset_within_block,size_within_block, buffers]
-          (Status status, std::shared_ptr<DataNodeConnection> dn) {
+          (Status status, std::shared_ptr<DataNodeConnectionImpl> dn) {
     if (status.ok()) {
-      ReadOperation::AsyncReadBlock<RemoteBlockReaderTrait, MutableBufferSequence, Handler>(
+      ReadOperation::AsyncReadBlock<RemoteBlockReaderTrait, DataNodeConnectionImpl, MutableBufferSequence, Handler>(
           dn, client_name_, targetBlock, offset_within_block,
           asio::buffer(buffers, size_within_block), handler);
     } else {
@@ -168,7 +168,7 @@ void InputStreamImpl::AsyncPreadSome(
   });
 }
 
-template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
+template <class BlockReaderTrait, class DataNodeConnection, class MutableBufferSequence, class Handler>
 void ReadOperation::AsyncReadBlock(
     std::shared_ptr<DataNodeConnection> dn, 
     const std::string & client_name,

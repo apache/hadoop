@@ -18,6 +18,7 @@
 
 #include "fs/filesystem.h"
 #include <gmock/gmock.h>
+#include <openssl/rand.h>
 
 using hadoop::common::TokenProto;
 using hadoop::hdfs::DatanodeInfoProto;
@@ -48,6 +49,20 @@ public:
                     const std::function<void(const Status &)> &));
 };
 
+class MockDataNodeConnection {
+public:
+  MockDataNodeConnection() {
+    int id;
+    RAND_pseudo_bytes((unsigned char *)&id, sizeof(id));
+
+    std::stringstream ss;
+    ss << "dn_" << id;
+    uuid_ = ss.str();
+  }
+
+  std::string uuid_;
+};
+
 template <class Trait> struct MockBlockReaderTrait {
   typedef MockReader Reader;
   struct State {
@@ -57,9 +72,9 @@ template <class Trait> struct MockBlockReaderTrait {
     size_t *transferred() { return &transferred_; }
     const size_t *transferred() const { return &transferred_; }
   };
-
+  
   static continuation::Pipeline<State> *
-  CreatePipeline(std::shared_ptr<DataNodeConnection> dn) {
+  CreatePipeline(std::shared_ptr<MockDataNodeConnection> dn) {
     (void) dn;
     auto m = continuation::Pipeline<State>::Create();
     *m->state().transferred() = 0;
@@ -77,10 +92,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
   char buf[4096] = {
       0,
   };
-//  IoServiceImpl io_service;
-//  Options options;
-//  FileSystemImpl fs(&io_service, options);
-//  InputStreamImpl is(&io_service.io_service(), RpcEngine::GetRandomClientName(),  file_info);
+
   Status stat;
   size_t read = 0;
   struct Trait {
@@ -93,7 +105,7 @@ TEST(InputStreamTest, TestReadSingleTrunk) {
     }
   };
 
-  auto conn = std::make_shared<DataNodeConnection>();
+  auto conn = std::make_shared<MockDataNodeConnection>();
   ReadOperation::AsyncReadBlock<MockBlockReaderTrait<Trait>>(
        conn, RpcEngine::GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, const std::string &, size_t transferred) {

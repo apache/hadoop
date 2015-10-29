@@ -89,14 +89,14 @@ private:
 };
 
 
-class DataNodeConnection : public std::enable_shared_from_this<DataNodeConnection> {
+class DataNodeConnectionImpl : public std::enable_shared_from_this<DataNodeConnectionImpl> {
 public:
     std::unique_ptr<asio::ip::tcp::socket> conn_;
     std::array<asio::ip::tcp::endpoint, 1> endpoints_;
     std::string uuid_;
     
     
-    DataNodeConnection(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto) {
+    DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto) {
       using namespace ::asio::ip;
 
       conn_.reset(new tcp::socket(*io_service));
@@ -106,11 +106,7 @@ public:
       uuid_ = dn_proto.id().datanodeuuid();
     }
     
-    // Just for test, for now
-    DataNodeConnection() {
-    }
-
-    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler);
+    void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnectionImpl> dn)> handler);
 };
 
 /*
@@ -134,15 +130,16 @@ public:
                       const Handler &handler);
 private:
   ::asio::io_service *io_service_;
-  std::shared_ptr<DataNodeConnection> dn_;  // The last DN connected to
   const std::string client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
   struct RemoteBlockReaderTrait;
+
+  std::shared_ptr<DataNodeConnectionImpl> dn_;  // The last DN connected to
 };
 
 class ReadOperation {
 public:
-  template <class BlockReaderTrait, class MutableBufferSequence, class Handler>
+  template <class BlockReaderTrait, class DataNodeConnection, class MutableBufferSequence, class Handler>
   static void AsyncReadBlock(
     std::shared_ptr<DataNodeConnection> dn, 
     const std::string & client_name,
