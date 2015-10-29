@@ -764,7 +764,7 @@ public final class FSImageFormatProtobuf {
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      listSection.add(saveIntelSecretManagerSection(fbb)); // in progress ...
+      listSection.add(saveIntelSecretManagerSection(fbb)); // success
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.CACHE_POOLS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
