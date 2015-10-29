@@ -2187,6 +2187,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9297. Decomissioned capacity should not be considered for 
     configured/used capacity (Contributed by Kuhu Shukla)
 
+    HDFS-9044. Give Priority to FavouredNodes , before selecting
+    nodes from FavouredNode's Node Group (J.Andreina via vinayakumarb)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -138,20 +138,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       numOfReplicas = maxNodesAndReplicas[0];
       int maxNodesPerRack = maxNodesAndReplicas[1];
 
-      for (int i = 0; i < favoredNodes.size() && results.size() < numOfReplicas; i++) {
-        DatanodeDescriptor favoredNode = favoredNodes.get(i);
-        // Choose a single node which is local to favoredNode.
-        // 'results' is updated within chooseLocalNode
-        final DatanodeStorageInfo target = chooseLocalStorage(favoredNode,
-            favoriteAndExcludedNodes, blocksize, maxNodesPerRack,
-            results, avoidStaleNodes, storageTypes, false);
-        if (target == null) {
-          LOG.warn("Could not find a target for file " + src
-              + " with favored node " + favoredNode); 
-          continue;
-        }
-        favoriteAndExcludedNodes.add(target.getDatanodeDescriptor());
-      }
+      chooseFavouredNodes(src, numOfReplicas, favoredNodes,
+          favoriteAndExcludedNodes, blocksize, maxNodesPerRack, results,
+          avoidStaleNodes, storageTypes);
 
       if (results.size() < numOfReplicas) {
         // Not enough favored nodes, choose other nodes.
@@ -174,6 +163,29 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       return chooseTarget(src, numOfReplicas, writer, 
           new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
           excludedNodes, blocksize, storagePolicy);
+    }
+  }
+
+  protected void chooseFavouredNodes(String src, int numOfReplicas,
+      List<DatanodeDescriptor> favoredNodes,
+      Set<Node> favoriteAndExcludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
+      EnumMap<StorageType, Integer> storageTypes)
+      throws NotEnoughReplicasException {
+    for (int i = 0; i < favoredNodes.size() && results.size() < numOfReplicas;
+        i++) {
+      DatanodeDescriptor favoredNode = favoredNodes.get(i);
+      // Choose a single node which is local to favoredNode.
+      // 'results' is updated within chooseLocalNode
+      final DatanodeStorageInfo target =
+          chooseLocalStorage(favoredNode, favoriteAndExcludedNodes, blocksize,
+            maxNodesPerRack, results, avoidStaleNodes, storageTypes, false);
+      if (target == null) {
+        LOG.warn("Could not find a target for file " + src
+            + " with favored node " + favoredNode);
+        continue;
+      }
+      favoriteAndExcludedNodes.add(target.getDatanodeDescriptor());
     }
   }
 
