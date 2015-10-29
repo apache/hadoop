@@ -1602,6 +1602,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-9295. Add a thorough test of the full KMS code path. 
     (Daniel Templeton via zhz)
 
+    HDFS-8545. Refactor FS#getUsed() to use ContentSummary and add an API to fetch
+    the total file length from a specific path (J.Andreina via vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

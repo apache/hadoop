@@ -1048,4 +1048,32 @@ public class TestDistributedFileSystem {
       cluster.shutdown();
     }
   }
+
+  @Test(timeout = 30000)
+  public void testTotalDfsUsed() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem fs = cluster.getFileSystem();
+      // create file under root
+      FSDataOutputStream File1 = fs.create(new Path("/File1"));
+      File1.write("hi".getBytes());
+      File1.close();
+      // create file under sub-folder
+      FSDataOutputStream File2 = fs.create(new Path("/Folder1/File2"));
+      File2.write("hi".getBytes());
+      File2.close();
+      // getUsed(Path) should return total len of all the files from a path
+      assertEquals(2, fs.getUsed(new Path("/Folder1")));
+      //getUsed() should return total length of all files in filesystem
+      assertEquals(4, fs.getUsed());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+        cluster = null;
+      }
+    }
+  }
+
 }
