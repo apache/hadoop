@@ -3674,9 +3674,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     public void run() {
       while (fsRunning && shouldRun) {
         try {
-          FSEditLog editLog = getFSImage().getEditLog();
-          long numEdits =
-              editLog.getLastWrittenTxId() - editLog.getCurSegmentTxId();
+          long numEdits = getTransactionsSinceLastLogRoll();
           if (numEdits > rollThreshold) {
             FSNamesystem.LOG.info("NameNode rolling its own edit log because"
                 + " number of edits in open segment exceeds threshold of "
