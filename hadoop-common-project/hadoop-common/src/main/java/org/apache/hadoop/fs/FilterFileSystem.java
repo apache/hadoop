@@ -389,7 +389,13 @@ public class FilterFileSystem extends FileSystem {
   public long getUsed() throws IOException{
     return fs.getUsed();
   }
-  
+
+  /** Return the total size of all files from a specified path.*/
+  @Override
+  public long getUsed(Path path) throws IOException {
+    return fs.getUsed(path);
+  }
+
   @Override
   public long getDefaultBlockSize() {
     return fs.getDefaultBlockSize();

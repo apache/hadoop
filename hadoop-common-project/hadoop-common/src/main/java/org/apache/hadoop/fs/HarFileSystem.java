@@ -1237,6 +1237,12 @@ public class HarFileSystem extends FileSystem {
     return fs.getUsed();
   }
 
+  /** Return the total size of all files from a specified path.*/
+  @Override
+  public long getUsed(Path path) throws IOException {
+    return fs.getUsed(path);
+  }
+
   @SuppressWarnings("deprecation")
   @Override
   public long getDefaultBlockSize() {
