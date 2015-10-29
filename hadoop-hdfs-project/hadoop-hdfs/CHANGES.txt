@@ -3278,7 +3278,7 @@ Release 2.7.0 - 2015-04-20
       HDFS-7700. Document quota support for storage types. (Xiaoyu Yao via
       Arpit Agarwal)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
 

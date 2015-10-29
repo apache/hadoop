@@ -1849,16 +1849,16 @@ Release 2.7.0 - 2015-04-20
     YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers 
     and node-label column (Jason Lowe via wangda)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
-    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
-    in ZKRMStateStore. (Jian He via junping_du)
-
   IMPROVEMENTS
+
+    YARN-3727. For better error recovery, check if the directory exists before
+    using it for localization. (Zhihai Xu via jlowe)
 
     YARN-4092. Fixed UI redirection to print useful messages when both RMs are
     in standby mode. (Xuan Gong via jianhe)
@@ -1870,14 +1870,14 @@ Release 2.6.2 - UNRELEASED
 
   BUG FIXES
 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw
+    in ZKRMStateStore. (Jian He via junping_du)
+
     YARN-4087. Followup fixes after YARN-2019 regarding RM behavior when
     state-store error occurs. (Jian He via xgong)
 
     YARN-3554. Default value for maximum nodemanager connect wait time is too
     high (Naganarasimha G R via jlowe)
-
-    YARN-3727. For better error recovery, check if the directory exists before
-    using it for localization. (Zhihai Xu via jlowe)
 
     YARN-4005. Completed container whose app is finished is possibly not
     removed from NMStateStore. (Jun Gong via jianhe)
@@ -1896,9 +1896,6 @@ Release 2.6.2 - UNRELEASED
 
     YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
     SESSIONEXPIED. (ozawa and Varun Saxena)
-
-    YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
-    (Vinod Kumar Vavilapalli via xgong)
 
 Release 2.6.1 - 2015-09-23
 

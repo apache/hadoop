@@ -885,7 +885,7 @@ Release 2.7.0 - 2015-04-20
     MAPREDUCE-6285. ClientServiceDelegate should not retry upon
     AuthenticationException. (Jonathan Eagles via ozawa)
 
-Release 2.6.2 - UNRELEASED
+Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
 
@@ -896,6 +896,13 @@ Release 2.6.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-6454. Fixed MapReduce to modify HADOOP_CLASSPATH to have distributed
+    cache files so that child processes running hadoop scripts can access these
+    files. (Junping Du via vinodkv)
+
+    MAPREDUCE-6334. Fetcher#copyMapOutput is leaking usedMemory upon
+    IOException during InMemoryMapOutput shuffle handler (Eric Payne via jlowe)
 
     MAPREDUCE-6497. Fix wrong value of JOB_FINISHED event in
     JobHistoryEventHandler. (Shinichi Yamashita via aajisaka)
