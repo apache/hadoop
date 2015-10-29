@@ -184,6 +184,9 @@ Trunk (Unreleased)
     HDFS-9070. Allow fsck display pending replica location information for
     being-written blocks. (GAO Rui via jing9)
 
+    HDFS-9261. Erasure Coding: Skip encoding the data cells if all the parity data 
+    streamers are failed for the current block group. (Rakesh R via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

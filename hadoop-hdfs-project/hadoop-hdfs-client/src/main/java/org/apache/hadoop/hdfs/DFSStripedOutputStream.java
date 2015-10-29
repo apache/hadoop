@@ -844,12 +844,30 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   void writeParityCells() throws IOException {
     final ByteBuffer[] buffers = cellBuffers.getBuffers();
+    // Skips encoding and writing parity cells if there are no healthy parity
+    // data streamers
+    if (!checkAnyParityStreamerIsHealthy()) {
+      return;
+    }
     //encode the data cells
     encode(encoder, numDataBlocks, buffers);
     for (int i = numDataBlocks; i < numAllBlocks; i++) {
       writeParity(i, buffers[i], cellBuffers.getChecksumArray(i));
     }
     cellBuffers.clear();
+  }
+
+  private boolean checkAnyParityStreamerIsHealthy() {
+    for (int i = numDataBlocks; i < numAllBlocks; i++) {
+      if (streamers.get(i).isHealthy()) {
+        return true;
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Skips encoding and writing parity cells as there are "
+          + "no healthy parity data streamers: " + streamers);
+    }
+    return false;
   }
 
   void writeParity(int index, ByteBuffer buffer, byte[] checksumBuf)
