@@ -23,14 +23,18 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelDelegationKey;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelPersistToken;
 import org.apache.hadoop.hdfs.server.flatbuffer.IntelSecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
@@ -180,16 +184,25 @@ public class DelegationTokenSecretManager
 
   public static class SecretManagerState {
     public final SecretManagerSection section;
+    public final IntelSecretManagerSection intelSection;
     public final List<SecretManagerSection.DelegationKey> keys;
+    public final List<IntelDelegationKey> intelKeys;
     public final List<SecretManagerSection.PersistToken> tokens;
+    public final List<IntelPersistToken> intelTokens;
 
     public SecretManagerState(
         SecretManagerSection s,
+        IntelSecretManagerSection intelSection,
         List<SecretManagerSection.DelegationKey> keys,
+        List<IntelDelegationKey> intelKeys,
+        List<IntelPersistToken> intelTokens,
         List<SecretManagerSection.PersistToken> tokens) {
       this.section = s;
+      this.intelSection = intelSection;
       this.keys = keys;
+      this.intelKeys = intelKeys;
       this.tokens = tokens;
+      this.intelTokens = intelTokens;
     }
   }
 
@@ -229,23 +242,40 @@ public class DelegationTokenSecretManager
   }
 
   public synchronized SecretManagerState saveSecretManagerState() {
-    SecretManagerSection s = SecretManagerSection.newBuilder()
-        .setCurrentId(currentId)
-        .setTokenSequenceNumber(delegationTokenSequenceNumber)
-        .setNumKeys(allKeys.size()).setNumTokens(currentTokens.size()).build();
-    ArrayList<SecretManagerSection.DelegationKey> keys = Lists
+
+    FlatBufferBuilder fbb = new FlatBufferBuilder();
+    ByteBuffer byteBuffer = null;
+
+    int offset = IntelSecretManagerSection.createIntelSecretManagerSection(fbb,
+        currentId,
+        delegationTokenSequenceNumber,
+        allKeys.size(),
+        currentTokens.size());
+    IntelSecretManagerSection.finishIntelSecretManagerSectionBuffer(fbb, offset);
+    byteBuffer = fbb.dataBuffer();
+    IntelSecretManagerSection is = IntelSecretManagerSection.
+        getRootAsIntelSecretManagerSection(byteBuffer);
+
+    ArrayList<IntelDelegationKey> intelKeys = Lists
         .newArrayListWithCapacity(allKeys.size());
-    ArrayList<SecretManagerSection.PersistToken> tokens = Lists
+    ArrayList<IntelPersistToken> intelTokens = Lists
         .newArrayListWithCapacity(currentTokens.size());
 
     for (DelegationKey v : allKeys.values()) {
+
+      FlatBufferBuilder fbb1 = new FlatBufferBuilder();
+      ByteBuffer byteBuffer1 = null;
+      IntelDelegationKey.createIntelDelegationKey(fbb1, v.id(), v.expiryDate(),
+          ));
+
       SecretManagerSection.DelegationKey.Builder b = SecretManagerSection.DelegationKey
           .newBuilder().setId(v.getKeyId()).setExpiryDate(v.getExpiryDate());
+
       if (v.getEncodedKey() != null) {
         b.setKey(ByteString.copyFrom(v.getEncodedKey()));
       }
       keys.add(b.build());
-    }
+    } // for end.
 
     for (Entry<DelegationTokenIdentifier, DelegationTokenInformation> e : currentTokens
         .entrySet()) {
@@ -261,7 +291,7 @@ public class DelegationTokenSecretManager
       tokens.add(b.build());
     }
 
-    return new SecretManagerState(s, keys, tokens);
+    return new SecretManagerState(null, is, null, intelKeys, intelTokens, null);
   }
 
   /**

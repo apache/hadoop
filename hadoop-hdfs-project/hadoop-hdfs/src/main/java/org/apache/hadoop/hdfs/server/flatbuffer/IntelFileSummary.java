@@ -52,5 +52,6 @@ public final class IntelFileSummary extends Table {
     return o;
   }
   public static void finishIntelFileSummaryBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
+
 };
 

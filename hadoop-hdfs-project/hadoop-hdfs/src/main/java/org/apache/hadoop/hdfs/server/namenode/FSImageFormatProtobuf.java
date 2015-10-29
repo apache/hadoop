@@ -281,7 +281,8 @@ public final class FSImageFormatProtobuf {
             prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
             Step step = new Step(StepType.DELEGATION_TOKENS);
             prog.beginStep(Phase.LOADING_FSIMAGE, step);
-            loadSecretManagerSection(in, prog, step);
+//            loadSecretManagerSection(in, prog, step);
+            loadIntelSecretManagerSection(in, prog, step);
             prog.endStep(Phase.LOADING_FSIMAGE, step);
           }
           break;
@@ -478,6 +479,48 @@ public final class FSImageFormatProtobuf {
       }
     }
 
+    private void loadIntelSecretManagerSection(InputStream in, StartupProgress prog,
+                                          Step currentStep) throws IOException {
+      DataInputStream dis = new DataInputStream(in);
+      int size = dis.readInt();
+      byte[] bytes = new byte[size];
+      dis.read(bytes);
+      ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+      IntelSecretManagerSection is = IntelSecretManagerSection.
+          getRootAsIntelSecretManagerSection(byteBuffer);
+
+      long numKeys = is.numKeys(), numTokens = is.numTokens();
+      ArrayList<IntelDelegationKey> intelkeys = Lists
+          .newArrayListWithCapacity((int)numKeys);
+      ArrayList<IntelPersistToken> inteltokens = Lists
+          .newArrayListWithCapacity((int)numTokens);
+
+      for (int i = 0; i < numKeys; ++i) {
+        DataInputStream dis1 = new DataInputStream(in);
+        int size1 = dis1.readInt();
+        byte[] bytes1 = new byte[size];
+        dis.read(bytes1);
+        ByteBuffer byteBuffer1 = ByteBuffer.wrap(bytes1);
+        IntelDelegationKey intelDelegationKey = IntelDelegationKey.getRootAsIntelDelegationKey(byteBuffer1);
+        intelkeys.add(intelDelegationKey);
+      }
+
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numTokens);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numTokens; ++i) {
+        DataInputStream dis2 = new DataInputStream(in);
+        int size2 = dis2.readInt();
+        byte[] bytes2 = new byte[size2];
+        dis.read(bytes2);
+        ByteBuffer byteBuffer2 = ByteBuffer.wrap(bytes2);
+        IntelPersistToken intelPersistToken = IntelPersistToken.getRootAsIntelPersistToken(byteBuffer2);
+        inteltokens.add(intelPersistToken);
+        counter.increment();
+      }
+
+      fsn.loadSecretManagerState(null, is, null, intelkeys, inteltokens, null);
+    }
+
     private void loadSecretManagerSection(InputStream in, StartupProgress prog,
         Step currentStep) throws IOException {
       SecretManagerSection s = SecretManagerSection.parseDelimitedFrom(in);
@@ -497,7 +540,7 @@ public final class FSImageFormatProtobuf {
         counter.increment();
       }
 
-      fsn.loadSecretManagerState(s, keys, tokens);
+      fsn.loadSecretManagerState(s, null, keys, null ,null, tokens);
     }
 
 
@@ -720,7 +763,7 @@ public final class FSImageFormatProtobuf {
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.DELEGATION_TOKENS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      listSection.add(saveIntelSecretManagerSection(fbb));
+      listSection.add(saveIntelSecretManagerSection(fbb)); // in progress ...
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
       step = new Step(StepType.CACHE_POOLS, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
@@ -823,14 +866,27 @@ public final class FSImageFormatProtobuf {
       DelegationTokenSecretManager.SecretManagerState state = fsn
           .saveSecretManagerState();
 
-      state.section.writeDelimitedTo(sectionOutputStream);
+      ByteBuffer byteBuffer = state.intelSection.getByteBuffer();
+      int size = byteBuffer.capacity() - byteBuffer.position();
+      byte[] bytes = new byte[size];
+      byteBuffer.get(bytes);
+      writeTo(bytes, bytes.length, sectionOutputStream);
 
-      for (SecretManagerSection.DelegationKey k : state.keys)
-        k.writeDelimitedTo(sectionOutputStream);
+      for(IntelDelegationKey intelK : state.intelKeys) {
+        ByteBuffer byteBuffer1 = intelK.keyAsByteBuffer(); // confusing...
+        int size1 = byteBuffer1.capacity() - byteBuffer1.position();
+        byte[] bytes1 = new byte[size1];
+        byteBuffer1.get(bytes1);
+        writeTo(bytes1, bytes1.length, sectionOutputStream);
+      }
 
-      for (SecretManagerSection.PersistToken t : state.tokens)
-        t.writeDelimitedTo(sectionOutputStream);
-
+      for (IntelPersistToken intelT : state.intelTokens) {
+        ByteBuffer byteBuffer2 = intelT.realUserAsByteBuffer(); // confus...
+        int size2 = byteBuffer2.capacity() - byteBuffer2.position();
+        byte[] bytes2 = new byte[size2];
+        byteBuffer2.get(bytes2);
+        writeTo(bytes2, bytes2.length, sectionOutputStream);
+      }
      return commitIntelSection(SectionName.SECRET_MANAGER, fbb);
     }
 

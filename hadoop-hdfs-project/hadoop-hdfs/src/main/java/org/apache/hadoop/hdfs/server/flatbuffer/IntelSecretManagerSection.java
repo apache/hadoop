@@ -38,5 +38,6 @@ public final class IntelSecretManagerSection extends Table {
     int o = builder.endObject();
     return o;
   }
+  public static void finishIntelSecretManagerSectionBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
 };
 
