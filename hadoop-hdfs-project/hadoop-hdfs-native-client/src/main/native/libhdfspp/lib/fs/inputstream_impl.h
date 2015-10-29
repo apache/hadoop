@@ -170,7 +170,7 @@ void InputStreamImpl::AsyncPreadSome(
 
 template <class BlockReaderTrait, class DataNodeConnection, class MutableBufferSequence, class Handler>
 void ReadOperation::AsyncReadBlock(
-    std::shared_ptr<DataNodeConnection> dn, 
+    std::shared_ptr<DataNodeConnection> dn,
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block,
     size_t offset,
@@ -179,7 +179,7 @@ void ReadOperation::AsyncReadBlock(
   typedef typename BlockReaderTrait::Reader Reader;
   auto m = BlockReaderTrait::CreatePipeline(dn);
   auto &s = m->state();
-  
+
   size_t size = asio::buffer_size(buffers);
   m->Push(new HandshakeContinuation<Reader>(s.reader(), client_name, nullptr,
                                             &block.b(), size, offset))

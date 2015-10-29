@@ -30,7 +30,7 @@
 
 namespace hdfs {
 namespace asio_continuation {
-  
+
 using namespace continuation;
 
 template <class Stream, class MutableBufferSequence>

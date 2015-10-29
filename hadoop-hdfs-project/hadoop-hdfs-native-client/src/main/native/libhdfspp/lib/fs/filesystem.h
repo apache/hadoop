@@ -34,7 +34,7 @@ struct FileInfo {
   unsigned long long file_length_;
   std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
 };
-  
+
 /**
  * NameNodeConnection: abstracts the details of communicating with a NameNode
  * and the implementation of the communications protocol.
@@ -94,18 +94,18 @@ public:
     std::unique_ptr<asio::ip::tcp::socket> conn_;
     std::array<asio::ip::tcp::endpoint, 1> endpoints_;
     std::string uuid_;
-    
-    
+
+
     DataNodeConnectionImpl(asio::io_service * io_service, const ::hadoop::hdfs::DatanodeInfoProto &dn_proto) {
       using namespace ::asio::ip;
 
       conn_.reset(new tcp::socket(*io_service));
       auto datanode_addr = dn_proto.id();
       endpoints_[0] = tcp::endpoint(address::from_string(datanode_addr.ipaddr()),
-                                      datanode_addr.xferport());      
+                                      datanode_addr.xferport());
       uuid_ = dn_proto.id().datanodeuuid();
     }
-    
+
     void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnectionImpl> dn)> handler);
 };
 
@@ -141,7 +141,7 @@ class ReadOperation {
 public:
   template <class BlockReaderTrait, class DataNodeConnection, class MutableBufferSequence, class Handler>
   static void AsyncReadBlock(
-    std::shared_ptr<DataNodeConnection> dn, 
+    std::shared_ptr<DataNodeConnection> dn,
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,
     const MutableBufferSequence &buffers,

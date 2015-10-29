@@ -72,7 +72,7 @@ template <class Trait> struct MockBlockReaderTrait {
     size_t *transferred() { return &transferred_; }
     const size_t *transferred() const { return &transferred_; }
   };
-  
+
   static continuation::Pipeline<State> *
   CreatePipeline(std::shared_ptr<MockDataNodeConnection> dn) {
     (void) dn;

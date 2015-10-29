@@ -80,9 +80,9 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
     if (stat.ok()) {
       auto file_info = std::make_shared<struct FileInfo>();
       auto locations = s.resp->locations();
-      
+
       file_info->file_length_ = locations.filelength();
-      
+
       for (const auto &block : locations.blocks()) {
         file_info->blocks_.push_back(block);
       }
@@ -90,7 +90,7 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
       if (locations.has_lastblock() && locations.lastblock().b().numbytes()) {
         file_info->blocks_.push_back(locations.lastblock());
       }
-      
+
       handler(stat, file_info);
     } else {
       handler(stat, nullptr);
@@ -103,7 +103,7 @@ void DataNodeConnectionImpl::Connect(
              std::function<void(Status status, std::shared_ptr<DataNodeConnectionImpl> dn)> handler) {
   // Keep the DN from being freed until we're done
   auto shared_this = shared_from_this();
-  asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(), 
+  asio::async_connect(*conn_, endpoints_.begin(), endpoints_.end(),
           [shared_this, handler](const asio::error_code &ec, std::array<asio::ip::tcp::endpoint, 1>::iterator it) {
             (void)it;
             handler(ToStatus(ec), shared_this); });
