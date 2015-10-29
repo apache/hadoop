@@ -1031,6 +1031,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4251. TestAMRMClientOnRMRestart#testAMRMClientOnAMRMTokenRollOverOnRMRestart
     is failing. (Brahma Reddy Battula via ozawa)
 
+    YARN-4130. Duplicate declaration of ApplicationId in RMAppManager#submitApplication method. 
+    (Kai Sasaki via rohithsharmaks)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
