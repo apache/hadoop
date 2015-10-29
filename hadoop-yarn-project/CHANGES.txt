@@ -1034,6 +1034,9 @@ Release 2.8.0 - UNRELEASED
     YARN-4130. Duplicate declaration of ApplicationId in RMAppManager#submitApplication method. 
     (Kai Sasaki via rohithsharmaks)
 
+    YARN-4288. Fixed RMProxy to retry on IOException from local host.
+    (Junping Du via jianhe)
+
 Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

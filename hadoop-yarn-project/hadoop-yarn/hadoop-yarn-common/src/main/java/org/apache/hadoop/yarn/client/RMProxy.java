@@ -250,8 +250,10 @@ public class RMProxy<T> {
     exceptionToPolicyMap.put(ConnectTimeoutException.class, retryPolicy);
     exceptionToPolicyMap.put(RetriableException.class, retryPolicy);
     exceptionToPolicyMap.put(SocketException.class, retryPolicy);
-
-    return RetryPolicies.retryByException(
+    // YARN-4288: local IOException is also possible.
+    exceptionToPolicyMap.put(IOException.class, retryPolicy);
+    // Not retry on remote IO exception.
+    return RetryPolicies.retryOtherThanRemoteException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
   }
 }
