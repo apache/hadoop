@@ -966,9 +966,16 @@ public class HistoryFileManager extends AbstractService {
 
   private String getJobSummary(FileContext fc, Path path) throws IOException {
     Path qPath = fc.makeQualified(path);
-    FSDataInputStream in = fc.open(qPath);
-    String jobSummaryString = in.readUTF();
-    in.close();
+    FSDataInputStream in = null;
+    String jobSummaryString = null;
+    try {
+      in = fc.open(qPath);
+      jobSummaryString = in.readUTF();
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
     return jobSummaryString;
   }
 
