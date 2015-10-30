@@ -15,6 +15,9 @@ Release 2.6.3 - UNRELEASED
     YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
     (Vinod Kumar Vavilapalli via xgong)
 
+    YARN-4312. TestSubmitApplicationWithRMHA fails on branch-2.7 and branch-2.6
+    as some of the test cases time out. (Varun Saxena via ozawa)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
