@@ -12,6 +12,9 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    YARN-2859. ApplicationHistoryServer binds to default port 8188 in MiniYARNCluster.
+    (Vinod Kumar Vavilapalli via xgong)
+
 Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
