@@ -49,7 +49,7 @@ public:
       { stream_->async_read(buffers, completed_handler); }
     
     virtual void async_read(const asio::mutable_buffers_1	& buffers,
-               std::function<bool (const asio::error_code & error,
+               std::function<size_t (const asio::error_code & error,
                                    std::size_t bytes_transferred) > completion_handler,
                std::function<void (const asio::error_code & error,
                                    std::size_t bytes_transferred) > completed_handler)

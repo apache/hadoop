@@ -67,7 +67,7 @@ public:
                                         std::size_t) >));
   MOCK_METHOD3(async_read, 
                void(const asio::mutable_buffers_1 & buffers,
-                    std::function<bool (const asio::error_code &,
+                    std::function<size_t(const asio::error_code &,
                                         std::size_t) >,
                     std::function<void (const asio::error_code &,
                                         std::size_t) >));

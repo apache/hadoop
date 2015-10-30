@@ -40,6 +40,8 @@ using ::hadoop::hdfs::ReadOpChecksumInfoProto;
 using ::asio::buffer;
 using ::asio::error_code;
 using ::asio::mutable_buffers_1;
+using ::testing::_;
+using ::testing::InvokeArgument;
 using ::testing::Return;
 using std::make_pair;
 using std::string;
@@ -49,27 +51,34 @@ namespace pbio = pb::io;
 
 namespace hdfs {
 
-class MockDNConnection : public MockConnectionBase, public AsyncStream {
+class MockDNConnection : public MockConnectionBase, public AsyncStream{
 public:
   MockDNConnection(::asio::io_service &io_service)
       : MockConnectionBase(&io_service) {}
   MOCK_METHOD0(Produce, ProducerResult());
+  
+  
+  // Satisfy the AsyncStream contract, delegating to MocKConnectionBase
+  void async_read(const asio::mutable_buffers_1	& buf,
+        std::function<void (const asio::error_code & error,
+                            std::size_t bytes_transferred) > handler) {
+    asio::async_read(*this, buf, handler);
+  }
+  
+  void async_read(const asio::mutable_buffers_1	& buf,
+      std::function<size_t(const asio::error_code & error,
+                          std::size_t bytes_transferred) > completion_handler,
+      std::function<void (const asio::error_code & error,
+                          std::size_t bytes_transferred) > completed_handler) {
+    asio::async_read(*this, buf, completion_handler, completed_handler);
+  }
 
-  // MOCK_METHOD1(Connect, void(std::function<void(Status status, std::shared_ptr<DataNodeConnection>)>));
-  MOCK_METHOD2(async_read, 
-               void(const asio::mutable_buffers_1 & buffers,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
-  MOCK_METHOD3(async_read, 
-               void(const asio::mutable_buffers_1 & buffers,
-                    std::function<bool (const asio::error_code &,
-                                        std::size_t) >,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
-  MOCK_METHOD2(async_write, 
-               void(const asio::const_buffers_1 & buffers,
-                    std::function<void (const asio::error_code &,
-                                        std::size_t) >));
+  void async_write(const asio::const_buffers_1 & buf, 
+           std::function<void (const asio::error_code &ec, size_t)> handler) {
+    asio::async_write(*this, buf, handler);
+  }
+  
+  
 };
 }
 
@@ -145,16 +154,19 @@ TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   block.set_blockid(0);
   block.set_generationstamp(0);
 
+  bool done = false;
   std::string data(kChunkSize, 0);
   ReadContent(conn, nullptr, block, kChunkSize, 0,
               buffer(const_cast<char *>(data.c_str()), data.size()),
-              [&data, &io_service](const Status &stat, size_t transferred) {
+              [&data, &io_service, &done](const Status &stat, size_t transferred) {
                 ASSERT_TRUE(stat.ok());
                 ASSERT_EQ(kChunkSize, transferred);
                 ASSERT_EQ(kChunkData, data);
                 io_service.stop();
+                done = true;
               });
   io_service.run();
+  ASSERT_TRUE(done);
 }
 
 TEST(RemoteBlockReaderTest, TestReadWithinChunk) {

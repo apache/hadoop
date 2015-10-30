@@ -18,6 +18,8 @@
 #ifndef LIBHDFSPP_TEST_MOCK_CONNECTION_H_
 #define LIBHDFSPP_TEST_MOCK_CONNECTION_H_
 
+#include "common/async_stream.h"
+
 #include <asio/error_code.hpp>
 #include <asio/buffer.hpp>
 #include <asio/streambuf.hpp>
