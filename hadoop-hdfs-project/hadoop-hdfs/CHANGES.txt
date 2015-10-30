@@ -187,6 +187,8 @@ Trunk (Unreleased)
     HDFS-9261. Erasure Coding: Skip encoding the data cells if all the parity data 
     streamers are failed for the current block group. (Rakesh R via umamahesh)
 
+    HDFS-9323. Randomize the DFSStripedOutputStreamWithFailure tests. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

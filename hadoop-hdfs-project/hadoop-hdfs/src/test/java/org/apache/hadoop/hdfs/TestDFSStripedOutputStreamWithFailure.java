@@ -131,15 +131,16 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   private static final List<Integer> LENGTHS = newLengths();
 
-  static int getLength(int i) {
-    return LENGTHS.get(i);
+  static Integer getLength(int i) {
+    return i >= 0 && i < LENGTHS.size()? LENGTHS.get(i): null;
   }
+
+  private static final Random RANDOM = new Random();
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
   private final Path dir = new Path("/"
       + TestDFSStripedOutputStreamWithFailure.class.getSimpleName());
-  private final Random random = new Random();
 
   private void setup(Configuration conf) throws IOException {
     final int numDNs = NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS;
@@ -167,19 +168,6 @@ public class TestDFSStripedOutputStreamWithFailure {
   }
 
   @Test(timeout=240000)
-  public void testDatanodeFailure56() throws Exception {
-    runTest(getLength(56));
-  }
-
-  @Test(timeout=240000)
-  public void testDatanodeFailureRandomLength() throws Exception {
-    int lenIndex = random.nextInt(LENGTHS.size());
-    LOG.info("run testMultipleDatanodeFailureRandomLength with length index: "
-        + lenIndex);
-    runTest(getLength(lenIndex));
-  }
-
-  @Test(timeout=240000)
   public void testMultipleDatanodeFailure56() throws Exception {
     runTestWithMultipleFailure(getLength(56));
   }
@@ -190,7 +178,7 @@ public class TestDFSStripedOutputStreamWithFailure {
    */
   //@Test(timeout=240000)
   public void testMultipleDatanodeFailureRandomLength() throws Exception {
-    int lenIndex = random.nextInt(LENGTHS.size());
+    int lenIndex = RANDOM.nextInt(LENGTHS.size());
     LOG.info("run testMultipleDatanodeFailureRandomLength with length index: "
         + lenIndex);
     runTestWithMultipleFailure(getLength(lenIndex));
@@ -484,7 +472,16 @@ public class TestDFSStripedOutputStreamWithFailure {
         = new TestDFSStripedOutputStreamWithFailure();
     private void run(int offset) {
       final int i = offset + getBase();
-      final int length = getLength(i);
+      final Integer length = getLength(i);
+      if (length == null) {
+        System.out.println("Skip test " + i + " since length=null.");
+        return;
+      }
+      if (RANDOM.nextInt(16) != 0) {
+        System.out.println("Test " + i + ", length=" + length
+            + ", is not chosen to run.");
+        return;
+      }
       System.out.println("Run test " + i + ", length=" + length);
       test.runTest(length);
     }
