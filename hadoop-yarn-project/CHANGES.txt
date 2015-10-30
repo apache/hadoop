@@ -1150,6 +1150,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4312. TestSubmitApplicationWithRMHA fails on branch-2.7 and branch-2.6
     as some of the test cases time out. (Varun Saxena via ozawa)
 
+    YARN-4320. TestJobHistoryEventHandler fails as AHS in MiniYarnCluster no longer
+    binds to default port 8188. (Varun Saxena via ozawa)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
