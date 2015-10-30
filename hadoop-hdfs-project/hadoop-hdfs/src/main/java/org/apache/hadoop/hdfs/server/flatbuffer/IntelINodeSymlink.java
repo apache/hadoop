@@ -13,6 +13,7 @@ public final class IntelINodeSymlink extends Table {
 
   public long permission() { int o = __offset(4); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
   public String target() { int o = __offset(6); return o != 0 ? __string(o + bb_pos) : null; }
+
   public ByteBuffer targetAsByteBuffer() { return __vector_as_bytebuffer(6, 1); }
   public long modificationTime() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
   public long accessTime() { int o = __offset(10); return o != 0 ? bb.getLong(o + bb_pos) : 0; }

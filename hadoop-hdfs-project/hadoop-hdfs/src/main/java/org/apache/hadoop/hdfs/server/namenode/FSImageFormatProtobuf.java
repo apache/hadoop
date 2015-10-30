@@ -251,15 +251,15 @@ public final class FSImageFormatProtobuf {
         String n = s.name();
         switch (SectionName.fromString(n)) {
           case NS_INFO:
-            loadIntelNameSystemSection(in);
+            loadIntelNameSystemSection(in);   // success
             break;
           case STRING_TABLE:
-            loadIntelStringTableSection(in);
+            loadIntelStringTableSection(in); // success
             break;
           case INODE: {
             currentStep = new Step(StepType.INODES);
             prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
-            inodeLoader.loadINodeSection(in, prog, currentStep);
+              inodeLoader.loadIntelINodeSection(in, prog, currentStep); // success
           }
           break;
           case INODE_REFERENCE:
@@ -281,16 +281,14 @@ public final class FSImageFormatProtobuf {
             prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
             Step step = new Step(StepType.DELEGATION_TOKENS);
             prog.beginStep(Phase.LOADING_FSIMAGE, step);
-//            loadSecretManagerSection(in, prog, step);
-            loadIntelSecretManagerSection(in, prog, step);
+            loadIntelSecretManagerSection(in, prog, step);  // success
             prog.endStep(Phase.LOADING_FSIMAGE, step);
           }
           break;
           case CACHE_MANAGER: {
             Step step = new Step(StepType.CACHE_POOLS);
             prog.beginStep(Phase.LOADING_FSIMAGE, step);
-//            loadCacheManagerSection(in, prog, step);
-            loadIntelCacheManagerSection(in, prog, step);
+            loadIntelCacheManagerSection(in, prog, step); // success
             prog.endStep(Phase.LOADING_FSIMAGE, step);
           }
           break;
@@ -301,113 +299,111 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-    private void loadInternal(RandomAccessFile raFile, AltFileInputStream fin)
-        throws IOException {
-      if (!FSImageUtil.checkFileFormat(raFile)) {
-        throw new IOException("Unrecognized file format");
-      }
-      FileSummary summary = FSImageUtil.loadSummary(raFile);
-      if (requireSameLayoutVersion && summary.getLayoutVersion() !=
-          HdfsServerConstants.NAMENODE_LAYOUT_VERSION) {
-        throw new IOException("Image version " + summary.getLayoutVersion() +
-            " is not equal to the software version " +
-            HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
-      }
-
-      FileChannel channel = fin.getChannel();
-
-      FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
-          fsn, this);
-      FSImageFormatPBSnapshot.Loader snapshotLoader = new FSImageFormatPBSnapshot.Loader(
-          fsn, this);
-
-      ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
-          .getSectionsList());
-
-      Collections.sort(sections, new Comparator<FileSummary.Section>() {
-        @Override
-        public int compare(FileSummary.Section s1, FileSummary.Section s2) {
-          SectionName n1 = SectionName.fromString(s1.getName());
-          SectionName n2 = SectionName.fromString(s2.getName());
-          if (n1 == null) {
-            return n2 == null ? 0 : -1;
-          } else if (n2 == null) {
-            return -1;
-          } else {
-            return n1.ordinal() - n2.ordinal();
-          }
-        }
-      });
-
-      StartupProgress prog = NameNode.getStartupProgress();
-      /**
-       * beginStep() and the endStep() calls do not match the boundary of the
-       * sections. This is because that the current implementation only allows
-       * a particular step to be started for once.
-       */
-      Step currentStep = null;
-
-      for (FileSummary.Section s : sections) {
-        channel.position(s.getOffset());
-        InputStream in = new BufferedInputStream(new LimitInputStream(fin,
-            s.getLength()));
-
-        in = FSImageUtil.wrapInputStreamForCompression(conf,
-            summary.getCodec(), in);
-
-        String n = s.getName();
-
-        switch (SectionName.fromString(n)) {
-        case NS_INFO:
-          loadNameSystemSection(in);
-          break;
-        case STRING_TABLE:
-          loadStringTableSection(in);
-          break;
-        case INODE: {
-          currentStep = new Step(StepType.INODES);
-          prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
-          inodeLoader.loadINodeSection(in, prog, currentStep);
-        }
-          break;
-        case INODE_REFERENCE:
-          snapshotLoader.loadINodeReferenceSection(in);
-          break;
-        case INODE_DIR:
-          inodeLoader.loadINodeDirectorySection(in);
-          break;
-        case FILES_UNDERCONSTRUCTION:
-          inodeLoader.loadFilesUnderConstructionSection(in);
-          break;
-        case SNAPSHOT:
-          snapshotLoader.loadSnapshotSection(in);
-          break;
-        case SNAPSHOT_DIFF:
-          snapshotLoader.loadSnapshotDiffSection(in);
-          break;
-        case SECRET_MANAGER: {
-          prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
-          Step step = new Step(StepType.DELEGATION_TOKENS);
-          prog.beginStep(Phase.LOADING_FSIMAGE, step);
+//    private void loadInternal(RandomAccessFile raFile, AltFileInputStream fin)
+//        throws IOException {
+//      if (!FSImageUtil.checkFileFormat(raFile)) {
+//        throw new IOException("Unrecognized file format");
+//      }
+//      FileSummary summary = FSImageUtil.loadSummary(raFile);
+//      if (requireSameLayoutVersion && summary.getLayoutVersion() !=
+//          HdfsServerConstants.NAMENODE_LAYOUT_VERSION) {
+//        throw new IOException("Image version " + summary.getLayoutVersion() +
+//            " is not equal to the software version " +
+//            HdfsServerConstants.NAMENODE_LAYOUT_VERSION);
+//      }
+//
+//      FileChannel channel = fin.getChannel();
+//
+//      FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
+//          fsn, this);
+//      FSImageFormatPBSnapshot.Loader snapshotLoader = new FSImageFormatPBSnapshot.Loader(
+//          fsn, this);
+//
+//      ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
+//          .getSectionsList());
+//
+//      Collections.sort(sections, new Comparator<FileSummary.Section>() {
+//        @Override
+//        public int compare(FileSummary.Section s1, FileSummary.Section s2) {
+//          SectionName n1 = SectionName.fromString(s1.getName());
+//          SectionName n2 = SectionName.fromString(s2.getName());
+//          if (n1 == null) {
+//            return n2 == null ? 0 : -1;
+//          } else if (n2 == null) {
+//            return -1;
+//          } else {
+//            return n1.ordinal() - n2.ordinal();
+//          }
+//        }
+//      });
+//
+//      StartupProgress prog = NameNode.getStartupProgress();
+//      /**
+//       * beginStep() and the endStep() calls do not match the boundary of the
+//       * sections. This is because that the current implementation only allows
+//       * a particular step to be started for once.
+//       */
+//      Step currentStep = null;
+//
+//      for (FileSummary.Section s : sections) {
+//        channel.position(s.getOffset());
+//        InputStream in = new BufferedInputStream(new LimitInputStream(fin,
+//            s.getLength()));
+//
+//        in = FSImageUtil.wrapInputStreamForCompression(conf,
+//            summary.getCodec(), in);
+//
+//        String n = s.getName();
+//
+//        switch (SectionName.fromString(n)) {
+//        case NS_INFO:
+//          loadNameSystemSection(in);
+//          break;
+//        case STRING_TABLE:
+//          loadStringTableSection(in);
+//          break;
+//        case INODE: {
+//          currentStep = new Step(StepType.INODES);
+//          prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
+//          inodeLoader.loadINodeSection(in, prog, currentStep);
+//        }
+//          break;
+//        case INODE_REFERENCE:
+//          snapshotLoader.loadINodeReferenceSection(in);
+//          break;
+//        case INODE_DIR:
+//          inodeLoader.loadINodeDirectorySection(in);
+//          break;
+//        case FILES_UNDERCONSTRUCTION:
+//          inodeLoader.loadFilesUnderConstructionSection(in);
+//          break;
+//        case SNAPSHOT:
+//          snapshotLoader.loadSnapshotSection(in);
+//          break;
+//        case SNAPSHOT_DIFF:
+//          snapshotLoader.loadSnapshotDiffSection(in);
+//          break;
+//        case SECRET_MANAGER: {
+//          prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
+//          Step step = new Step(StepType.DELEGATION_TOKENS);
+//          prog.beginStep(Phase.LOADING_FSIMAGE, step);
 //          loadSecretManagerSection(in, prog, step);
-          loadIntelSecretManagerSection(in, prog, step);
-          prog.endStep(Phase.LOADING_FSIMAGE, step);
-        }
-          break;
-        case CACHE_MANAGER: {
-          Step step = new Step(StepType.CACHE_POOLS);
-          prog.beginStep(Phase.LOADING_FSIMAGE, step);
+//          prog.endStep(Phase.LOADING_FSIMAGE, step);
+//        }
+//          break;
+//        case CACHE_MANAGER: {
+//          Step step = new Step(StepType.CACHE_POOLS);
+//          prog.beginStep(Phase.LOADING_FSIMAGE, step);
 //          loadCacheManagerSection(in, prog, step);
-          loadIntelCacheManagerSection(in, prog, step);
-          prog.endStep(Phase.LOADING_FSIMAGE, step);
-        }
-          break;
-        default:
-          LOG.warn("Unrecognized section " + n);
-          break;
-        }
-      }
-    }
+//          prog.endStep(Phase.LOADING_FSIMAGE, step);
+//        }
+//          break;
+//        default:
+//          LOG.warn("Unrecognized section " + n);
+//          break;
+//        }
+//      }
+//    }
 
     private void loadIntelNameSystemSection(InputStream in) throws IOException {
       DataInputStream inputStream=new DataInputStream(in);

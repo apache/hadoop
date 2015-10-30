@@ -189,6 +189,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.flatbuffer.IntelBlockProto;
 import org.apache.hadoop.hdfs.server.flatbuffer.IntelStorageTypeProto;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
@@ -429,6 +430,11 @@ public class PBHelper {
   public static Block convert(BlockProto b) {
     return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
   }
+
+  public static Block convert(IntelBlockProto b) {
+    return new Block(b.blockId(), b.numBytes(), b.genStamp());
+  }
+
 
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {
     return BlockWithLocationsProto.newBuilder()
@@ -1841,20 +1847,19 @@ public class PBHelper {
     return protos; 
   }
 
-  // return IntelStorageTypeProto
-  public static int convertIntelStorageType(StorageType type) {
-    switch (type) {
-      case DISK:
-        return IntelStorageTypeProto.DISK;
-      case SSD:
-        return IntelStorageTypeProto.SSD;
-      case ARCHIVE:
-        return IntelStorageTypeProto.ARCHIVE;
-      case RAM_DISK:
-        return IntelStorageTypeProto.RAM_DISK;
+  public static StorageType convertIntelStorageType(int type) {
+    switch(type) {
+      case IntelStorageTypeProto.DISK:
+        return StorageType.DISK;
+      case IntelStorageTypeProto.SSD:
+        return StorageType.SSD;
+      case IntelStorageTypeProto.ARCHIVE:
+        return StorageType.ARCHIVE;
+      case IntelStorageTypeProto.RAM_DISK:
+        return StorageType.RAM_DISK;
       default:
         throw new IllegalStateException(
-            "BUG: IntelStorageType not found, type=" + type);
+            "BUG: IntelStorageTypeProto not found, type=" + type);
     }
   }
 
