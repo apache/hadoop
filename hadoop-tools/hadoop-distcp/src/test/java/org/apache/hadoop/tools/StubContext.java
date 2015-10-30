@@ -64,6 +64,10 @@ public class StubContext {
     return reader;
   }
 
+  public void setReader(RecordReader<Text, CopyListingFileStatus> reader) {
+    this.reader = reader;
+  }
+
   public StubInMemoryWriter getWriter() {
     return writer;
   }
