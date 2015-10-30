@@ -190,6 +190,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     public JobHistoryServerWrapper() {
       super(JobHistoryServerWrapper.class.getName());
     }
+    private volatile boolean jhsStarted = false;
 
     @Override
     public synchronized void serviceStart() throws Exception {
@@ -211,9 +212,11 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         new Thread() {
           public void run() {
             historyServer.start();
+            jhsStarted = true;
           };
         }.start();
-        while (historyServer.getServiceState() == STATE.INITED) {
+
+        while (!jhsStarted) {
           LOG.info("Waiting for HistoryServer to start...");
           Thread.sleep(1500);
         }
