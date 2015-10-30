@@ -900,6 +900,10 @@ Release 2.6.3 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
+    avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
+    (zhihai xu via devaraj)
+
 Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES
