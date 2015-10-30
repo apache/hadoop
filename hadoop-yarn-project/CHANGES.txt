@@ -1144,6 +1144,9 @@ Release 2.7.2 - UNRELEASED
     YARN-4183. Enabling generic application history forces every job to get a
     timeline service delegation token (Mit Desai via jeagles)
 
+    YARN-4313. Race condition in MiniMRYarnCluster when getting history server
+    address. (Jian He via xgong)
+
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
