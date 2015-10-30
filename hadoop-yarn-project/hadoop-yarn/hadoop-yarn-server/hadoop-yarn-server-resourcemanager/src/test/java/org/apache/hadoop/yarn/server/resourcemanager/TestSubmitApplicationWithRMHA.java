@@ -224,7 +224,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
   // during SubmitApplication Call:
   // 1) RMStateStore already saved the ApplicationState when failover happens
   // 2) RMStateStore did not save the ApplicationState when failover happens
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void
       testHandleRMHADuringSubmitApplicationCallWithSavedApplicationState()
           throws Exception {
@@ -260,7 +260,7 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     Assert.assertEquals(app1.getApplicationId(), app0.getApplicationId());
   }
 
-  @Test (timeout = 5000)
+  @Test (timeout = 50000)
   public void
       testHandleRMHADuringSubmitApplicationCallWithoutSavedApplicationState()
           throws Exception {
