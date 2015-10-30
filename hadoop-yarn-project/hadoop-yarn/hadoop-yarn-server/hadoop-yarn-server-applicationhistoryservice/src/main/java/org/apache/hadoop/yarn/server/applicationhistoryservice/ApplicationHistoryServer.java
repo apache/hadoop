@@ -127,6 +127,12 @@ public class ApplicationHistoryServer extends CompositeService {
     return this.ahsClientService;
   }
 
+  @Private
+  @VisibleForTesting
+  public int getPort() {
+    return this.webApp.httpServer().getConnectorAddress(0).getPort();
+  }
+
   /**
    * @return ApplicationTimelineStore
    */
