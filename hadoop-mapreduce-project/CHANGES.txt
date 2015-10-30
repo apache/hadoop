@@ -671,6 +671,9 @@ Release 2.7.2 - UNRELEASED
     avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
     (zhihai xu via devaraj)
 
+    MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
+    (Junping Du via jlowe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
@@ -903,6 +906,9 @@ Release 2.6.3 - UNRELEASED
     MAPREDUCE-6273. HistoryFileManager should check whether summaryFile exists to 
     avoid FileNotFoundException causing HistoryFileInfo into MOVE_FAILED state.
     (zhihai xu via devaraj)
+
+    MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
+    (Junping Du via jlowe)
 
 Release 2.6.2 - 2015-10-21
 
