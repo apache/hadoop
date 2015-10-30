@@ -674,6 +674,9 @@ Release 2.7.2 - UNRELEASED
     MAPREDUCE-6528. Memory leak for HistoryFileManager.getJobSummary()
     (Junping Du via jlowe)
 
+    MAPREDUCE-6451. DistCp has incorrect chunkFilePath for multiple jobs when
+    strategy is dynamic (Kuhu Shukla via kihwal)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
